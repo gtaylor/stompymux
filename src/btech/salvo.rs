@@ -505,7 +505,6 @@ pub(super) fn resolve_salvo_in_candidate(
         HitGeometry::Direct {
             woods_damage: damage.woods_damage,
             aimed: damage.aimed,
-            damage_penalty: weapon.damage_penalty,
             shooter,
             fire_mode: weapon.fire_mode,
             gatling_damage: weapon.gatling_damage,
@@ -520,7 +519,6 @@ pub(super) fn resolve_salvo_in_candidate(
 /// Shared launch facts consumed by target damage, independent of shooter inventory representation.
 #[derive(Clone, Copy)]
 pub(super) struct SalvoWeapon {
-    pub(super) damage_penalty: u8,
     pub(super) weapon: Weapon,
     pub(super) ammunition_mode: super::AmmunitionMode,
     pub(super) fire_mode: super::FireMode,
@@ -530,7 +528,6 @@ pub(super) struct SalvoWeapon {
 impl From<&super::WeaponUse> for SalvoWeapon {
     fn from(weapon: &super::WeaponUse) -> Self {
         Self {
-            damage_penalty: weapon.damage_penalty,
             weapon: weapon.weapon,
             ammunition_mode: weapon.ammunition_mode,
             fire_mode: weapon.fire_mode,
@@ -542,7 +539,6 @@ impl From<&super::WeaponUse> for SalvoWeapon {
 impl From<&super::VehicleWeaponUse> for SalvoWeapon {
     fn from(weapon: &super::VehicleWeaponUse) -> Self {
         Self {
-            damage_penalty: 0,
             weapon: weapon.weapon,
             ammunition_mode: weapon.ammunition_mode,
             fire_mode: weapon.fire_mode,
@@ -559,7 +555,6 @@ enum HitGeometry {
         woods_damage: bool,
         aimed: Option<super::aimed_hit::AimedShot>,
         shooter: ObjectId,
-        damage_penalty: u8,
         fire_mode: super::FireMode,
         gatling_damage: Option<u8>,
         intercepted: u8,
@@ -714,10 +709,6 @@ fn resolve_salvo_with_effects(
     ) && super::woods_absorption::direct_shells(weapon, mode);
     let mut packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
-            damage_penalty: match geometry {
-                HitGeometry::Direct { damage_penalty, .. } => damage_penalty,
-                HitGeometry::Fixed(_) => 0,
-            },
             weapon,
             ammunition: mode,
             fire_mode,

@@ -81,8 +81,6 @@ pub(super) fn resolve_prepared_launch(
         super::weapon_controls::set_fire_mode(world, shooter, weapon_index, fire_mode);
     }
     let super::launch_roll::LaunchRoll {
-        critical_explosion,
-        critical_jam,
         roll,
         propellant_roll,
         loader_destroyed,
@@ -93,7 +91,6 @@ pub(super) fn resolve_prepared_launch(
         glancing,
     } = super::launch_roll::roll_launch(
         super::launch_roll::LaunchRollRequest {
-            damage: attacker.weapon_damage_effects(weapon_index)?,
             weapon,
             ammunition: attacker.ammunition_mode(weapon_index)?,
             fire_mode,
@@ -116,23 +113,8 @@ pub(super) fn resolve_prepared_launch(
                 .constructed
                 .get_mut(&shooter)
                 .unwrap()
-                .weapon_damage_jams
-                .remove(&weapon_index);
-            world
-                .btech
-                .constructed
-                .get_mut(&shooter)
-                .unwrap()
                 .lost_criticals
                 .extend(mount.criticals.iter().copied());
-        } else if critical_jam {
-            world
-                .btech
-                .constructed
-                .get_mut(&shooter)
-                .unwrap()
-                .weapon_damage_jams
-                .insert(weapon_index);
         } else {
             world
                 .btech
@@ -146,18 +128,6 @@ pub(super) fn resolve_prepared_launch(
             ammunition: Vec::new(),
             fire_mode,
             heat: 0,
-            critical_failure: if critical_jam {
-                Some(super::WeaponDamageKind::Barrel)
-            } else if critical_explosion {
-                Some(if weapon.gunnery_skill(true) == "Gunnery-Laser" {
-                    super::WeaponDamageKind::Crystal
-                } else {
-                    super::WeaponDamageKind::Feed
-                })
-            } else {
-                None
-            },
-            damage_penalty: attacker.weapon_damage_effects(weapon_index)?.damage,
             gatling_damage: None,
             ammunition_mode: attacker.ammunition_mode(weapon_index)?,
         }
@@ -172,21 +142,7 @@ pub(super) fn resolve_prepared_launch(
         )?
     };
     if misload_required {
-        if critical_explosion && mount.one_shot {
-            world
-                .btech
-                .constructed
-                .get_mut(&shooter)
-                .unwrap()
-                .spent_launchers
-                .insert(weapon_index);
-        }
-        let draws =
-            if critical_explosion && (mount.one_shot || weapon.profile().ammunition_per_ton == 0) {
-                Vec::new()
-            } else {
-                attacker.ammunition_feed(weapon_index, fire_mode.rounds_per_cycle())?
-            };
+        let draws = attacker.ammunition_feed(weapon_index, fire_mode.rounds_per_cycle())?;
         let resolve = if character_shooter {
             super::impact::resolve_character_misload_in_candidate
         } else {

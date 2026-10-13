@@ -8,10 +8,6 @@ use std::collections::BTreeSet;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CriticalLoss {
-    WeaponDamage {
-        index: usize,
-        damage: super::WeaponDamageKind,
-    },
     Weapon {
         index: usize,
         /// Enclosing combat resolution applies this after disabling the entire explosive mount.
@@ -147,13 +143,7 @@ impl Mech {
             .iter()
             .filter(|(_, part)| !System::named(&part.equipment).is_some_and(System::is_noncritical))
             .map(|(&slot, _)| CriticalLocation { section, slot })
-            .filter(|location| {
-                !self.critical_destroyed(*location)
-                    && !self
-                        .weapon_damage
-                        .iter()
-                        .any(|damage| damage.location == *location)
-            })
+            .filter(|location| !self.critical_destroyed(*location))
             .collect()
     }
 
@@ -369,7 +359,6 @@ impl Mech {
             self.recalculate_actuators();
         }
         if let CriticalLoss::Weapon { index, .. } = loss {
-            self.weapon_damage_jams.remove(&index);
             self.weapon_failures.remove(&index);
         }
         if self.carried_club.map(super::Arm::section) == Some(location.section)
@@ -471,20 +460,6 @@ impl Mech {
 
     /// Damage clamps controls; destruction cancels power and releases the cockpit claim.
     pub(super) fn reconcile_damage(&mut self) {
-        // Physically destroyed slots no longer carry component degradation or its firing penalties.
-        self.weapon_damage.retain(|damage| {
-            !self.lost_criticals.contains(&damage.location)
-                && self
-                    .sections
-                    .get(&damage.location.section)
-                    .is_some_and(|section| section.internal > 0)
-        });
-        self.weapon_damage_jams = self
-            .weapon_damage_jams
-            .iter()
-            .copied()
-            .filter(|index| self.weapon_intact(*index).unwrap_or(false))
-            .collect();
         self.weapon_failures = self
             .weapon_failures
             .iter()

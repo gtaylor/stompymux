@@ -967,19 +967,15 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
                     world.btech.constructed_units()[&mech].posture(),
                     Posture::Prone
                 );
-                let neighbor_notice = notices
-                    .iter()
-                    .position(|n| {
-                        n.unit == neighbor && n.text == "Water renders your vehicle inoperable."
-                    })
-                    .unwrap();
-                let trigger_notice = notices
-                    .iter()
-                    .position(|n| {
-                        n.unit == id && n.text == "You try to avoid taking personal damage."
-                    })
-                    .unwrap();
-                assert!(neighbor_notice < trigger_notice);
+                assert!(notices.iter().any(|n| {
+                    n.unit == neighbor && n.text == "Water renders your vehicle inoperable."
+                }));
+                // The falling vehicle's crew rolls nothing (Total Warfare p. 152).
+                assert!(
+                    !notices
+                        .iter()
+                        .any(|n| n.unit == id && n.text.contains("personal"))
+                );
                 let mut rejected = before.clone();
                 rejected
                     .objects
@@ -1058,8 +1054,10 @@ async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
     assert!(entered);
 }
 
+/// Bridge and ice collisions drop an in-character vehicle and publish the fall; the crew is
+/// never injured by the fall itself (Total Warfare p. 152).
 #[tokio::test]
-async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
+async fn character_movement_collisions_publish_falls_without_crew_injury() {
     use std::{cell::RefCell, rc::Rc};
     for hazard in ["bridge", "ice"] {
         for initial in [0, 9] {
@@ -1138,21 +1136,29 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
                 ..MovementRules::STANDARD
             };
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-            let afterlife = ObjectId(config.battletech.afterlife_dbref);
             let mut collided = false;
             for _ in 0..100 {
                 let before = scripts.world().clone();
                 scripts.drain_outbox();
                 advance_battle_motion_action(&scripts, &config, rules).unwrap();
                 let output = scripts.drain_outbox();
-                if !scripts.world().btech.vehicles()[&id]
-                    .character_pilot_status()
-                    .is_some_and(|status| status.killed || status.injuries > u16::from(initial))
+                // The collision drops the vehicle, which stops it; its crew is never injured
+                // by the fall (Total Warfare p. 152).
+                if scripts.world().btech.vehicles()[&id]
+                    .motion()
+                    .unwrap()
+                    .active()
                 {
                     continue;
                 }
                 collided = true;
-                if hazard != "ice" {
+                // The vehicle fall itself rolls nothing; only the bridge underside's control
+                // check reaches the driver, and only the driver.
+                let roll_message = |text: &str| {
+                    text.starts_with("You make a piloting")
+                        || text.starts_with("Modified Pilot Skill:")
+                };
+                if hazard == "bridge" {
                     let pilot_output: Vec<_> = output
                         .iter()
                         .filter(|(who, _)| *who == ObjectId(2))
@@ -1163,12 +1169,7 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
                         roll_battle_piloting(&mut probe, id, 0, rules.fall.extended_piloting)
                             .unwrap();
                     if check.roll.is_none() {
-                        assert!(
-                            !pilot_output
-                                .iter()
-                                .any(|text| text.starts_with("You make a piloting")
-                                    || text.starts_with("Modified Pilot Skill:"))
-                        );
+                        assert!(!pilot_output.iter().any(|text| roll_message(text)));
                     } else {
                         let roll = pilot_output
                             .iter()
@@ -1177,42 +1178,31 @@ async fn character_movement_collisions_publish_falls_and_rollback_casualties() {
                         assert!(roll > 0);
                         assert_eq!(
                             pilot_output[roll - 1],
-                            match hazard {
-                                "bridge" =>
-                                    "You notice the underside of the bridge in front of you!",
-                                _ => unreachable!(),
-                            }
+                            "You notice the underside of the bridge in front of you!"
                         );
                         assert!(pilot_output[roll + 1].starts_with("Modified Pilot Skill: BTH "));
                     }
-                    assert!(!output.iter().any(|(who, text)| *who != ObjectId(2)
-                        && (text.source().starts_with("You make a piloting")
-                            || text.source().starts_with("Modified Pilot Skill:"))));
+                    assert!(
+                        !output
+                            .iter()
+                            .any(|(who, text)| *who != ObjectId(2) && roll_message(text.source()))
+                    );
+                } else {
+                    assert!(!output.iter().any(|(_, text)| roll_message(text.source())));
                 }
-
                 let result = scripts.world().clone();
+                assert_eq!(result.btech.vehicles()[&id].pilot_injuries(), initial);
                 assert_eq!(
-                    u16::from(result.btech.vehicles()[&id].pilot_injuries()),
                     result.btech.vehicles()[&id]
                         .character_pilot_status()
-                        .unwrap()
-                        .injuries
+                        .map_or(0, |status| status.injuries),
+                    u16::from(initial)
                 );
                 assert!(!result.btech.vehicles()[&id].motion().unwrap().active());
-                assert_eq!(
-                    result.objects[&ObjectId(2)].location,
-                    Some(if initial == 9 { afterlife } else { id })
-                );
+                assert_eq!(result.objects[&ObjectId(2)].location, Some(id));
                 let mut raw = before.clone();
                 assert!(advance_battle_motion(&mut raw, rules).is_err());
                 assert_eq!(raw.btech, before.btech);
-                if initial == 9 {
-                    *scripts.world_mut() = before.clone();
-                    scripts.world_mut().objects.remove(&afterlife);
-                    assert!(advance_battle_motion_action(&scripts, &config, rules).is_err());
-                    assert_eq!(scripts.world().btech, before.btech);
-                    assert_eq!(scripts.world().objects[&ObjectId(2)].location, Some(id));
-                }
                 *scripts.world_mut() = before;
                 advance_battle_motion_action(&scripts, &config, rules).unwrap();
                 assert_eq!(scripts.world().btech, result.btech);

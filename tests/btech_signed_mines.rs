@@ -105,16 +105,8 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                         assert_eq!(hit.damage, 0);
                         assert!(hit.impacts.is_empty());
                         assert_eq!(report.removed, [0]);
-                        // Only a command-detonated field reaches its neighbours.
-                        let neighbors = kind == MineKind::Command && strength <= -2;
-                        assert_eq!(
-                            report.ignited,
-                            if neighbors {
-                                vec![HexCoordinate { x: 0, y: 1 }]
-                            } else {
-                                vec![]
-                            }
-                        );
+                        // Only an inferno mine lights its hex, and this field is clear ground.
+                        assert!(report.ignited.is_empty());
                         if mech || chassis == "stationary" {
                             // A spent inferno field has no missiles left for a 'Mech.
                             let adjustment = if kind == MineKind::Inferno && !mech {

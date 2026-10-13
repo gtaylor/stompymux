@@ -298,16 +298,11 @@ async fn vehicle_operations_cover_live_damage_falls_templates_and_equipment() {
         )
         .unwrap();
     let messages = scripts.drain_outbox();
+    // The failed check drops the vehicle; a vehicle fall injures no crew (TW p. 152).
     assert!(
-        messages.iter().any(|(_, message)| message
-            .source()
-            .contains("try to avoid taking personal damage")),
-        "{messages:?}"
-    );
-    assert!(
-        messages
+        !messages
             .iter()
-            .any(|(_, message)| message.source().contains("take personal injury")),
+            .any(|(_, message)| message.source().contains("personal")),
         "{messages:?}"
     );
     assert!(root.join("vehicle-contract.toml").is_file());

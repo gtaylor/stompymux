@@ -795,28 +795,7 @@ async fn transmission_failure_restores_delivery_dice_mines_and_outbox() {
         owner: ObjectId(1),
     };
     set_minefield(&mut world, map, 0, Some(mine)).unwrap();
-    set_minefield(
-        &mut world,
-        map,
-        1,
-        Some(Minefield {
-            coordinate: HexCoordinate { x: 1, y: 250 },
-            strength: 2,
-            ..mine
-        }),
-    )
-    .unwrap();
-    support::fail_mine_ignition(&mut world, map, 250);
-    let scripts = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    assert!(send_radio_action(&scripts, &config, source, ObjectId(1), 0, "abort").is_err());
-    assert_eq!(scripts.world().btech, world.btech);
-    assert!(scripts.drain_outbox().is_empty());
-    // A surrounding Lua callback can also undo an otherwise successful complete transmission.
-    set_minefield(&mut world, map, 1, None).unwrap();
+    // A surrounding Lua callback undoes an otherwise successful complete transmission.
     let scripts = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -951,30 +930,6 @@ async fn zero_frequency_audits_follow_map_character_flag_and_rollback_with_mines
     assert!(support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency).is_empty());
     assert_eq!(scripts.world().btech, before.btech);
     assert!(scripts.drain_outbox().is_empty());
-    set_minefield(
-        &mut world,
-        map,
-        0,
-        Some(Minefield {
-            coordinate: HexCoordinate { x: 1, y: 250 },
-            kind: MineKind::Command,
-            strength: 2,
-            extra: 0,
-            owner: ObjectId(1),
-        }),
-    )
-    .unwrap();
-    support::fail_mine_ignition(&mut world, map, 250);
-    let scripts = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    assert!(send_radio_action(&scripts, &config, source, ObjectId(1), 1, "mine failure").is_err());
-    assert!(support::drain_traces(&scripts, TraceTopic::RadioZeroFrequency).is_empty());
-    assert_eq!(scripts.world().btech, world.btech);
-    assert!(scripts.drain_outbox().is_empty());
-    set_minefield(&mut world, map, 0, None).unwrap();
     world
         .objects
         .get_mut(&map)

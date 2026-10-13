@@ -186,7 +186,7 @@ async fn report_access_and_artillery_ranges() {
     }
 }
 
-/// Whole-weapon diagnostics retain mount numbers, report live damage and keep destroyed types in specs.
+/// Whole-weapon diagnostics retain mount numbers, count lost slots and keep destroyed types in specs.
 #[tokio::test]
 async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
     let (_dir, config, mut world, id) =
@@ -198,42 +198,25 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
         .position(|mount| mount.weapon == Weapon::Ppc)
         .unwrap();
     let location = loadout.weapons[index].criticals[0];
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["weapon_damage"] =
-                serde_json::json!([WeaponDamage::new(location, WeaponDamageKind::Focus)]);
-        })
-        .unwrap();
-    world.validate(&config).unwrap();
     let row = &battle_weapon_diagnostics(&world, id).unwrap()[index];
-    assert_eq!(row.condition, EquipmentCondition::Damaged);
-    assert_eq!(row.damaged_slots, 1);
-    assert_eq!(
-        row.effects,
-        world.btech.constructed_units()[&id]
-            .weapon_damage_effects(index)
-            .unwrap()
-    );
-    assert!(
-        battle_weapon_diagnostic_text(&world, id)
-            .unwrap()
-            .contains("Focus misalignment")
-    );
-    let specs = battle_weapon_specifications(&world, id, false).unwrap();
-    destroy_battle_critical(&mut world, id, location).unwrap();
-    assert_eq!(
-        battle_weapon_diagnostics(&world, id).unwrap()[index].condition,
-        EquipmentCondition::Destroyed
-    );
-    let destroyed = &battle_weapon_diagnostics(&world, id).unwrap()[index];
-    assert_eq!(destroyed.damaged_slots, 0);
-    assert_eq!(destroyed.destroyed_slots, 1);
-    assert_eq!(destroyed.effects, WeaponDamageEffects::default());
+    assert_eq!(row.condition, EquipmentCondition::Operational);
+    assert_eq!(row.destroyed_slots, 0);
     assert!(
         !battle_weapon_diagnostic_text(&world, id)
             .unwrap()
-            .contains("Focus misalignment")
+            .contains("Slot status")
+    );
+    let specs = battle_weapon_specifications(&world, id, false).unwrap();
+    destroy_battle_critical(&mut world, id, location).unwrap();
+    world.validate(&config).unwrap();
+    let destroyed = &battle_weapon_diagnostics(&world, id).unwrap()[index];
+    assert_eq!(destroyed.condition, EquipmentCondition::Destroyed);
+    assert_eq!(destroyed.destroyed_slots, 1);
+    assert_eq!(destroyed.disabled_slots, 0);
+    assert!(
+        battle_weapon_diagnostic_text(&world, id)
+            .unwrap()
+            .contains("Slot status: Destroyed: 1. Disabled: 0")
     );
     assert_eq!(
         battle_weapon_specifications(&world, id, false).unwrap(),
@@ -252,7 +235,6 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
     let row = &battle_weapon_diagnostics(&world, id).unwrap()[jam.index];
     assert_eq!(row.condition, EquipmentCondition::Jammed);
     assert_eq!(row.destroyed_slots, 0);
-    assert_eq!(row.effects, WeaponDamageEffects::default());
 }
 
 /// Diagnostic observation requires consciousness and vision; catalogue inspection has no such gate.

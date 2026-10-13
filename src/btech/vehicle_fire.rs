@@ -221,7 +221,6 @@ fn fire_shot(
             intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
             vehicle_impact: rules.shot.vehicle_impact,
             woods_damage: rules.shot.aim.woods_damage,
-            damage_penalty: 0,
             distance: aim.distance,
             gatling_damage: launch.expenditure.gatling_damage,
             coordinate,
@@ -271,7 +270,6 @@ fn fire_shot(
             shooter,
             target,
             VehicleSalvoRequest {
-                damage_penalty: 0,
                 weapon,
                 ammunition,
                 fire_mode: launch.expenditure.fire_mode,

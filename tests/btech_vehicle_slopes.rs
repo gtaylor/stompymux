@@ -168,10 +168,11 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
             } else {
                 assert!(!unit.motion().unwrap().active());
                 assert_eq!(unit.position().unwrap().x, if uphill { 7 } else { 6 });
+                // A vehicle fall injures no crew (Total Warfare p. 152).
                 assert!(
-                    notices
+                    !notices
                         .iter()
-                        .any(|notice| notice.text.contains("personal damage"))
+                        .any(|notice| notice.text.contains("personal"))
                 );
                 if uphill {
                     assert_eq!(

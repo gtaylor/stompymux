@@ -172,7 +172,6 @@ mod tests {
         ] {
             for seed in 0..=31 {
                 let request = |ammunition| WeaponGroupRequest {
-                    damage_penalty: 0,
                     weapon,
                     ammunition,
                     fire_mode: FireMode::Normal,
@@ -217,7 +216,6 @@ mod tests {
                             };
                             let mut groups = roll_weapon_groups(
                                 WeaponGroupRequest {
-                                    damage_penalty: 0,
                                     weapon,
                                     ammunition: mode,
                                     fire_mode,

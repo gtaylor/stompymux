@@ -30,10 +30,6 @@ pub struct WeaponUse {
     /// Effective mode after supply-dependent fallback.
     pub fire_mode: super::FireMode,
     pub heat: u8,
-    /// Energy damage lost to the firing mount’s damaged focusing components.
-    pub damage_penalty: u8,
-    /// Enhanced critical component responsible for a terminal launch failure.
-    pub critical_failure: Option<super::WeaponDamageKind>,
     /// Supply-limited gatling roll, used for both heat and pre-glancing damage.
     pub gatling_damage: Option<u8>,
     pub ammunition_mode: super::AmmunitionMode,
@@ -113,7 +109,6 @@ impl Mech {
             posture_ready,
             spent,
             jammed: self.jammed_weapons.contains(&index)
-                || self.weapon_damage_jams.contains(&index)
                 || self.weapon_failures.contains_key(&index),
             ready: self.power() == Power::Running
                 && !self.is_destroyed()
@@ -152,8 +147,7 @@ impl Mech {
                 .all(|location| !self.critical_unavailable(*location))
                 && !self.powered_down_weapons.contains(&index),
             stunned: self.stun_remaining() > 0,
-            temporary_failure: self.weapon_damage_jams.contains(&index)
-                || self.weapon_failures.contains_key(&index),
+            temporary_failure: self.weapon_failures.contains_key(&index),
             recycle_remaining: self.weapon_recycle.get(&index).copied().unwrap_or(0),
             section_recycle: self
                 .limb_recycle
@@ -265,13 +259,7 @@ pub(super) fn use_weapon(
     } else {
         fire_mode.rounds_per_cycle()
     };
-    let damage_penalty = unit.weapon_damage_effects(index)?.damage;
-    let heat = fire_mode.launch_heat(weapon, gatling_damage, launched)
-        + if launched {
-            unit.weapon_damage_effects(index)?.heat
-        } else {
-            0
-        };
+    let heat = fire_mode.launch_heat(weapon, gatling_damage, launched);
     let ammunition = if !launched || mount.one_shot || weapon.profile().ammunition_per_ton == 0 {
         Vec::new()
     } else {
@@ -304,8 +292,6 @@ pub(super) fn use_weapon(
         ammunition,
         fire_mode,
         heat,
-        damage_penalty,
-        critical_failure: None,
         gatling_damage,
         ammunition_mode: mode,
     })

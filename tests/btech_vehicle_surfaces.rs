@@ -235,7 +235,7 @@ async fn vehicle_shutdown_ice_cascade_keeps_each_pilots_feedback_private() {
             bytes[..2].copy_from_slice(&seed.to_le_bytes());
             let dice = Dice::seeded(bytes);
             let mut probe = dice.clone();
-            (probe.two_d6() == 12 && probe.d6() == 1).then_some(dice)
+            (probe.d6() == 1).then_some(dice)
         })
         .unwrap();
     world
@@ -282,18 +282,21 @@ async fn vehicle_shutdown_ice_cascade_keeps_each_pilots_feedback_private() {
             .map(|(who, message)| (*who, message.source()))
             .collect::<Vec<_>>()
     );
-    for pilot in [ObjectId(1), ObjectId(2)] {
-        let messages: Vec<_> = output
-            .iter()
-            .filter(|(who, _)| *who == pilot)
-            .map(|(_, message)| message.source())
-            .collect();
-        let index = messages
-            .iter()
-            .position(|message| *message == "You make a piloting skill roll!")
-            .unwrap();
-        assert!(messages[index + 1].starts_with("Modified Pilot Skill: BTH "));
-    }
+    // Only the Mech's pilot rolls: a falling vehicle's crew makes no avoidance roll (Total
+    // Warfare p. 152), and each pilot sees only their own roll.
+    let messages: Vec<_> = output
+        .iter()
+        .filter(|(who, _)| *who == ObjectId(2))
+        .map(|(_, message)| message.source())
+        .collect();
+    let index = messages
+        .iter()
+        .position(|message| *message == "You make a piloting skill roll!")
+        .unwrap();
+    assert!(messages[index + 1].starts_with("Modified Pilot Skill: BTH "));
+    assert!(!output.iter().any(|(who, message)| *who == ObjectId(1)
+        && (message.source().starts_with("Modified Pilot Skill:")
+            || message.source() == "You make a piloting skill roll!")));
     assert!(output.iter().any(|(who, _)| *who == passenger));
     assert!(!output.iter().any(|(who, message)| *who == passenger
         && (message.source().starts_with("Modified Pilot Skill:")

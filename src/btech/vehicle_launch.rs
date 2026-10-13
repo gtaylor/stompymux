@@ -123,8 +123,6 @@ fn launch(
             .remove(&weapon_index);
     }
     let super::launch_roll::LaunchRoll {
-        critical_explosion: _,
-        critical_jam: _,
         roll,
         propellant_roll,
         loader_destroyed,
@@ -135,7 +133,6 @@ fn launch(
         glancing,
     } = super::launch_roll::roll_launch(
         super::launch_roll::LaunchRollRequest {
-            damage: Default::default(),
             weapon,
             ammunition,
             fire_mode: effective,

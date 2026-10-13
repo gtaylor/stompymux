@@ -35,7 +35,6 @@ pub struct CriticalReport {
 struct SlotDamage {
     destroyed: bool,
     disabled: bool,
-    damaged: bool,
     failure: Option<EquipmentFailure>,
 }
 
@@ -108,7 +107,6 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Cri
                     destroyed: unit.critical_destroyed(location),
                     disabled: unit.critical_unavailable(location),
                     failure: super::component_failure::at(&unit.component_failures, location),
-                    ..Default::default()
                 },
             ),
         });
@@ -160,10 +158,6 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Cri
                 destroyed: unit.critical_destroyed(location),
                 disabled: unit.critical_unavailable(location),
                 failure: super::component_failure::at(&unit.component_failures, location),
-                damaged: unit
-                    .weapon_damage()
-                    .iter()
-                    .any(|damage| damage.location == location),
             },
         ),
     })
@@ -232,8 +226,6 @@ fn inspect<L: Copy + PartialEq>(
                     && !facts.destroyed
                 {
                     EquipmentCondition::Disabled
-                } else if facts.damaged {
-                    EquipmentCondition::Damaged
                 } else if let Some(failure) = facts.failure.or_else(|| {
                     weapon.and_then(|(index, _)| inventory.failures.get(&index).copied())
                 }) {
@@ -341,10 +333,7 @@ impl CriticalInspection {
         if self.rear_mount {
             text.push_str(" (R)");
         }
-        if matches!(
-            self.condition,
-            EquipmentCondition::Operational | EquipmentCondition::Damaged
-        ) {
+        if self.condition == EquipmentCondition::Operational {
             if let (Some(remaining), Some(capacity)) =
                 (self.ammunition_remaining, self.ammunition_capacity)
             {

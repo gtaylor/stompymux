@@ -136,7 +136,6 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
             _ if row.readiness.recycle_remaining > 0 => {
                 format!(" {:2}    ", row.readiness.recycle_remaining.div_ceil(2))
             }
-            EquipmentCondition::Damaged => "[fg=red]DAMAGED[reset]".into(),
             _ => "[fg=green]Ready[reset]  ".into(),
         };
         let supply = ammo.get(i).map_or_else(|| "   ".into(), ammunition_column);

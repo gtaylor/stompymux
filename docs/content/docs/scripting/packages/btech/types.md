@@ -356,7 +356,6 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `weapon_failures`: `table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam">` — Temporary conditions by mount index; existing recycle clocks govern recovery.
 - `gyro`: `"standard"|"hardened"|"xl"|"compact"` — Construction family.
 - `artemis`: `ArtemisController[]` — Installed controllers and resolved links.
-- `weapon_damage`: `WeaponDamage[]|nil` — Mech weapon critical degradation.
 - `masc`: `BoosterState` — Saved activation and overload/recovery state.
 - `supercharger`: `BoosterState` — Independent compressor timer and failure state.
 - `supercharger_installed`: `boolean` — Template technology flag.
@@ -847,7 +846,6 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `ammunition_accuracy`: `integer` — Selected ammunition adjustment; LB-X cluster is -3 versus VTOLs, otherwise -1; Stinger is -3 versus flying VTOLs and -1 during orbital descent.
 - `targeting_mode`: `integer` — Scenario tracking-mode adjustment, separate from installed computer equipment.
 - `weapon_accuracy`: `integer` — Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
-- `weapon_damage`: `integer` — Penalty from damaged focusing, ranging and other weapon components.
 - `target_lock`: `integer`
 - `perception`: `{channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil` — Nil unless the shooter or its side holds the target as a contact; direct_fire is false behind blocking terrain.
 
@@ -873,8 +871,6 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 ## WeaponUse
 
-- `damage_penalty`: `integer` — Energy damage lost to focusing damage.
-- `critical_failure`: `"barrel"|"crystal"|"feed"|nil` — Component responsible for a failed launch.
 - `weapon`: `string`
 - `ammunition`: `AmmunitionDraw[]` — Actual live-bin expenditure.
 - `fire_mode`: `FireMode` — Effective mode after supply fallback.
@@ -1248,17 +1244,7 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 
 ## EquipmentCondition
 
-Alias: `'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'|'ammo_jam'`
-
-## WeaponDamageEffects
-
-- `moderate`: `integer` — General accuracy penalty.
-- `ranging`: `integer` — Accuracy penalty beyond short range.
-- `heat`: `integer` — Additional firing heat.
-- `damage`: `integer` — Energy damage reduction.
-- `explosion`: `integer` — Nonzero count explodes on an attack roll of count plus one or less.
-- `jam`: `integer` — Nonzero count jams on an attack roll of count plus one or less.
-- `feed_locked`: `boolean` — Prevents changing ammunition modes.
+Alias: `'empty'|'operational'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'|'ammo_jam'`
 
 ## WeaponDiagnostic
 
@@ -1266,10 +1252,8 @@ Alias: `'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'
 - `weapon`: `string` — Catalogue weapon identifier (snake case).
 - `section`: `string` — Chassis-specific location name.
 - `condition`: `EquipmentCondition`
-- `damaged_slots`: `integer`
 - `destroyed_slots`: `integer`
 - `disabled_slots`: `integer`
-- `effects`: `WeaponDamageEffects` — Existing firing penalties, without recomputation in Lua.
 - `preferred_ammunition_section`: `string?`
 
 ## WeaponSpecification
@@ -1575,11 +1559,6 @@ Alias: `"follow_brief" | "include" | "exclude"`
 - `hops`: `SwarmHop[]` — Ordered attacks, at most eleven.
 - `notices`: `Notice[]`
 - `broadcasts`: `Notice[]`
-
-## WeaponDamage
-
-- `location`: `{section: MechSectionName, slot: integer}`
-- `effects`: `("moderate"|"focus"|"crystal"|"ranging"|"barrel"|"feed")[]` — Distinct component effects; empty means superficial damage.
 
 ## RuntimeStats
 

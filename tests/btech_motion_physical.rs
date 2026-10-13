@@ -888,9 +888,10 @@ async fn added_handweapon_profiles_slots_hands_and_heat() {
     }
 }
 
-/// Flails and wrecking balls strike their wielder on a natural 2; wrecking-ball hits unbalance targets.
+/// Flails and wrecking balls strike their wielder on a natural 2; a wrecking-ball hit forces no
+/// Piloting Skill Roll on its target (TO:AUE p. 103).
 #[tokio::test]
-async fn flail_and_wrecking_ball_fumbles_and_knockdown() {
+async fn flail_and_wrecking_ball_fumbles_without_knockdown() {
     use stompymux_rs::*;
     let (_dir, config, original, id, target) = kick_fixture().await;
     let seeded = |roll| {
@@ -946,7 +947,7 @@ async fn flail_and_wrecking_ball_fumbles_and_knockdown() {
     assert!(attack.hit);
     assert!(attack.fumble.is_none());
     assert!(attack.impact.is_some());
-    assert_eq!(attack.balance.as_ref().unwrap().situational, 2);
+    assert!(attack.balance.is_none());
 
     let mut world = original.clone();
     install_right_arm_weapon(&mut world, id, ArmAttack::Flail, 4);

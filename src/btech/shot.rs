@@ -502,7 +502,6 @@ fn resolve_shot_inner(
             intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
             vehicle_impact: rules.vehicle_impact,
             woods_damage: rules.aim.woods_damage,
-            damage_penalty: expenditure.damage_penalty,
             distance: aim.distance,
             gatling_damage: expenditure.gatling_damage,
             coordinate,
@@ -552,7 +551,6 @@ fn resolve_shot_inner(
             shooter,
             target,
             super::VehicleSalvoRequest {
-                damage_penalty: expenditure.damage_penalty,
                 weapon,
                 ammunition: expenditure.ammunition_mode,
                 fire_mode: expenditure.fire_mode,

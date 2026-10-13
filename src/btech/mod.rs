@@ -1159,9 +1159,6 @@ pub use swarm::{SwarmHop, SwarmReport, toggle_swarm};
 pub(crate) mod special_rounds;
 pub use special_rounds::toggle_missile_rounds;
 
-mod weapon_damage;
-pub use weapon_damage::{WeaponDamage, WeaponDamageEffects, WeaponDamageKind};
-
 pub(crate) mod sight;
 pub use sight::{SightAim, SightReport};
 

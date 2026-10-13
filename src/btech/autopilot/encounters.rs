@@ -323,22 +323,17 @@ pub(crate) fn opportunity(
         };
         if bears && !los.blocked && contact.range <= f64::from(profile.long_range) {
             aligned += weight;
-            let (mode, damage_heat, stored) =
-                if let Some(unit) = world.btech.constructed_units().get(&shooter) {
-                    (
-                        unit.effective_fire_mode(index)?,
-                        unit.weapon_damage_effects(index)?.heat,
-                        unit.heat().stored,
-                    )
-                } else {
-                    let unit = &world.btech.vehicles()[&shooter];
-                    (unit.effective_fire_mode(index)?, 0, unit.weapon_heat())
-                };
+            let (mode, stored) = if let Some(unit) = world.btech.constructed_units().get(&shooter) {
+                (unit.effective_fire_mode(index)?, unit.heat().stored)
+            } else {
+                let unit = &world.btech.vehicles()[&shooter];
+                (unit.effective_fire_mode(index)?, unit.weapon_heat())
+            };
             let projected = u16::from(mode.launch_heat(
                 weapon.weapon,
                 (mode == crate::FireMode::Gatling).then_some(6),
                 true,
-            )) + u16::from(damage_heat);
+            ));
             let ceiling = world.btech.controllers()[&shooter].config().heat_ceiling;
             ready |= weapon.ready
                 && observation.own.power == Power::Running

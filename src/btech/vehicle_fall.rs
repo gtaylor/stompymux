@@ -98,7 +98,7 @@ pub(super) fn resolve_material_signed_with_tonnage(
 /// How a vehicle's impact damage is sized and aimed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ImpactProfile {
-    /// A fall: tons/10 per level, a d6 facing change and a crew injury check.
+    /// A fall: tons/10 per level and a d6 facing change.
     Fall,
     /// A VTOL crash (TW p. 68): hexes moved times tons/10 (round up) on the side that struck
     /// the ground, with no facing change and no crew check.
@@ -142,56 +142,17 @@ pub(super) fn resolve_material_profile(
     let tons = tonnage.unwrap_or(u32::from(unit.definition().tons));
     let gravity = position.map(|position| world.btech.maps()[&position.map].gravity);
     let pilot = unit.pilot();
-    let has_pilot = pilot.is_some();
     let safe = rules.vehicle_impact.criticals.combat_safe || unit.combat_safe;
-    let crash = matches!(profile, ImpactProfile::VtolCrash { .. });
     let reversing = unit.motion().is_some_and(|motion| motion.speed < 0.0);
     world.attempt(|world| {
         let mut notices = Vec::new();
         let mut pilot_notices = Vec::new();
-        let mut avoidance = if safe || crash {
-            None
-        } else {
-            notices.push(Notice {
-                unit: id,
-                text: "You try to avoid taking personal damage.".into(),
-            });
-            Some(super::vehicle_piloting::roll(
-                world,
-                id,
-                levels,
-                rules.extended_piloting,
-            )?)
-        };
-        if let Some(check) = &avoidance {
-            super::piloting::capture_feedback(id, pilot, check, &mut notices, &mut pilot_notices);
-        }
-        let experience_messages = if character && let Some(check) = &mut avoidance {
-            super::piloting::award_control_check(world, id, check, rules.extended_piloting)?
-                .into_iter()
-                .collect()
-        } else {
-            Vec::new()
-        };
-        let mut character_injury = None;
-        let pilot_injury = if avoidance.as_ref().is_some_and(|check| !check.success) && has_pilot {
-            notices.push(Notice {
-                unit: id,
-                text: "You take personal injury!".into(),
-            });
-            match super::pilot_injury::injure_in_candidate(world, id, 1, rules.toughness)? {
-                super::pilot_injury::PilotInjury::Tactical(injury) => {
-                    notices.extend(injury.notice(id));
-                    Some(injury)
-                }
-                super::pilot_injury::PilotInjury::Character(injury) => {
-                    character_injury = Some(injury);
-                    None
-                }
-            }
-        } else {
-            None
-        };
+        // Total Warfare p. 152: a falling vehicle takes damage and rolls for motive system
+        // damage; its crew makes no avoidance roll and takes no injury.
+        let avoidance = None;
+        let experience_messages = Vec::new();
+        let character_injury = None;
+        let pilot_injury = None;
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         unit.orbital_drop = None;
         unit.ground_elevation = (below_ice && !unit.definition().is_vtol())

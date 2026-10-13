@@ -43,7 +43,7 @@ impl Mech {
                 "You have weapons recycling in your {}.",
                 self.chassis().section_name(section)
             );
-            modifier += i16::from(self.mounting_modifier(section));
+            modifier += i16::from(self.leg_actuator_penalty(section));
         }
         Ok(modifier)
     }

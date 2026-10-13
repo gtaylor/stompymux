@@ -137,10 +137,11 @@ async fn pain_resistance_applies_only_for_one_and_survives_restart() {
 }
 
 /// Moving shutdown must not grant extra saving dice to non-one values or ignore lowercase names.
+/// Only a Mech's shutdown fall has a saving check; a vehicle's crew makes none (TW p. 152).
 #[tokio::test]
-async fn toughness_shutdown_rules_agree_across_mechs_and_vehicles() {
+async fn toughness_shutdown_rules_ignore_non_one_values_and_case() {
     let sources = firing::templates();
-    for source in [&sources[0], &sources[2]] {
+    for source in [&sources[0]] {
         let (_dir, config, mut base, id, _, _) =
             firing::fixture_with_target(source, None, &sources[0]).await;
         set_battle_character(&mut base, ObjectId(1), profile()).unwrap();

@@ -41,10 +41,6 @@ pub(super) fn available(world: &World, id: ObjectId) -> Result<bool> {
         .context("Unit is unavailable")?;
     Ok(installed(&unit.loadout()?.weapons, |location| {
         unit.critical_destroyed(location)
-            || unit
-                .weapon_damage()
-                .iter()
-                .any(|damage| damage.location == location)
     }))
 }
 

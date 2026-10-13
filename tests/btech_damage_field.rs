@@ -113,25 +113,16 @@ async fn damage_field_reports_powered_down_weapons_without_spurious_slot_losses(
     }
 }
 
-/// Critical failure states retain their distinct codes instead of collapsing into feed jams.
+/// Temporary failure states keep their distinct codes on either chassis instead of reading as feed jams.
 #[tokio::test]
-async fn damage_field_distinguishes_vehicle_and_enhanced_mech_failures() {
+async fn damage_field_reports_weapon_failure_codes_on_both_chassis() {
     for source in firing::templates() {
         let (_dir, _config, mut world, id, _, weapon) =
             firing::fixture_with_target(&source, Some(Weapon::Ac5), &source).await;
-        let mech = world.btech.constructed_units().contains_key(&id);
         firing::edit(&mut world, id, |unit| {
-            if mech {
-                unit["weapon_damage"] = serde_json::json!([{"location":{"section":"LeftTorso","slot":1},"effects":["barrel"]}]);
-                unit["weapon_damage_jams"] = serde_json::json!([weapon]);
-            } else {
-                unit["weapon_failures"] = serde_json::json!({weapon.to_string():"jammed"});
-                unit["weapon_recycle"] = serde_json::json!({weapon.to_string():60});
-            }
+            unit["weapon_failures"] = serde_json::json!({weapon.to_string():"jammed"});
+            unit["weapon_recycle"] = serde_json::json!({weapon.to_string():60});
         });
-        assert_eq!(
-            battle_unit_damage_field(&world, id).unwrap(),
-            if mech { "G:2/0(7)" } else { "G:2/0(1)" }
-        );
+        assert_eq!(battle_unit_damage_field(&world, id).unwrap(), "G:2/0(1)");
     }
 }

@@ -523,55 +523,30 @@ async fn ordinary_hull_loss_leaves_occupants_alive_and_armor_criticals_publish_c
 }
 
 #[tokio::test]
-async fn character_vehicle_falls_share_personal_injury_and_atomic_evacuation() {
+async fn character_vehicle_falls_injure_no_crew() {
+    // Total Warfare p. 152: a vehicle fall damages the vehicle; its crew makes no avoidance
+    // roll and takes no injury, however badly hurt it already is.
     for initial in [0, 9] {
         let (_dir, config, mut world, id, passenger) = fixture().await;
         if initial > 0 {
             injure_battle_character_pilot(&mut world, id, initial, false).unwrap();
         }
-        let seed = (0..=255)
-            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
-            .unwrap();
-        world
-            .btech
-            .set_unit_dice(id, Dice::seeded([seed; 32]))
-            .unwrap();
         let rules = MovementRules::STANDARD.fall;
         let before = world.btech.clone();
         assert!(resolve_battle_vehicle_fall(&mut world, id, 0, rules).is_err());
         assert_eq!(world.btech, before);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let afterlife = ObjectId(config.battletech.afterlife_dbref);
-        if initial == 9 {
-            scripts.world_mut().objects.remove(&afterlife);
-            assert!(resolve_battle_vehicle_fall_action(&scripts, &config, id, 0, rules).is_err());
-            assert_eq!(scripts.world().btech, before);
-            assert_eq!(scripts.world().objects[&ObjectId(2)].location, Some(id));
-            *scripts.world_mut() = world.clone();
-        }
         let report = resolve_battle_vehicle_fall_action(&scripts, &config, id, 0, rules).unwrap();
+        assert!(report.avoidance.is_none());
         assert!(report.pilot_injury.is_none());
-        assert_eq!(
-            report.character_injury.as_ref().unwrap().injury.fatal,
-            initial == 9
-        );
+        assert!(report.character_injury.is_none());
+        assert!(report.experience_messages.is_empty());
         assert_eq!(report.damage, 0);
         assert!(report.groups.is_empty());
         let result = scripts.world().clone();
-        assert_eq!(
-            result.btech.vehicles()[&id].pilot_injuries(),
-            if initial == 9 { 9 } else { 1 }
-        );
-        assert_eq!(
-            result.btech.vehicles()[&id]
-                .character_pilot_status()
-                .unwrap()
-                .injuries,
-            if initial == 9 { 9 } else { 1 }
-        );
-        let destination = if initial == 9 { afterlife } else { id };
-        assert_eq!(result.objects[&ObjectId(2)].location, Some(destination));
-        assert_eq!(result.objects[&passenger].location, Some(destination));
+        assert_eq!(result.btech.vehicles()[&id].pilot_injuries(), initial);
+        assert_eq!(result.objects[&ObjectId(2)].location, Some(id));
+        assert_eq!(result.objects[&passenger].location, Some(id));
         *scripts.world_mut() = world;
         assert_eq!(
             resolve_battle_vehicle_fall_action(&scripts, &config, id, 0, rules).unwrap(),
@@ -589,46 +564,7 @@ async fn character_vehicle_falls_share_personal_injury_and_atomic_evacuation() {
 }
 
 #[tokio::test]
-async fn character_vehicle_fall_protection_reuses_control_experience() {
-    let (_dir, config, mut world, id, _) = fixture().await;
-    world
-        .objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .flags
-        .insert(Flag::Connected);
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
-        .unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-            record["definition"]["attributes"]["specials"] = "ICEEngine_Tech CritProof_Tech".into();
-        })
-        .unwrap();
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let report =
-        resolve_battle_vehicle_fall_action(&scripts, &config, id, 1, MovementRules::STANDARD.fall)
-            .unwrap();
-    assert!(report.avoidance.as_ref().unwrap().success);
-    assert!(
-        report
-            .avoidance
-            .as_ref()
-            .unwrap()
-            .experience
-            .unwrap()
-            .accepted
-    );
-    assert_eq!(report.experience_messages.len(), 1);
-    assert!(report.character_injury.is_none());
-    assert!(report.damage > 0);
-    assert!(!report.groups.is_empty());
-}
-
-#[tokio::test]
-async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
+async fn character_surface_fractures_drop_vehicles_without_crew_injury() {
     for terrain in [Terrain::Ice, Terrain::Bridge] {
         for initial in [0, 9] {
             let tile = format!("{}1", terrain.symbol());
@@ -660,24 +596,6 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
             assert!(raw.is_err());
             assert_eq!(world.btech, before);
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-            let afterlife = ObjectId(config.battletech.afterlife_dbref);
-            if initial == 9 {
-                scripts.world_mut().objects.remove(&afterlife);
-                assert!(
-                    break_battle_surface_action(
-                        &scripts,
-                        &config,
-                        map,
-                        coordinate,
-                        Surface::of(Hex::new(terrain, 1)).unwrap(),
-                        rules
-                    )
-                    .is_err()
-                );
-                assert_eq!(scripts.world().btech, before);
-                assert_eq!(scripts.world().objects[&ObjectId(2)].location, Some(id));
-                *scripts.world_mut() = world.clone();
-            }
             let report = break_battle_surface_action(
                 &scripts,
                 &config,
@@ -687,26 +605,16 @@ async fn character_surface_fractures_publish_vehicle_injuries_atomically() {
                 rules,
             )
             .unwrap();
+            // The fall through the surface damages the vehicle only (Total Warfare p. 152).
             assert_eq!(report.vehicle_falls.len(), 1);
-            assert_eq!(
-                report.vehicle_falls[0]
-                    .1
-                    .character_injury
-                    .as_ref()
-                    .unwrap()
-                    .injury
-                    .fatal,
-                initial == 9
-            );
+            let fall = &report.vehicle_falls[0].1;
+            assert!(fall.avoidance.is_none());
+            assert!(fall.character_injury.is_none());
             let result = scripts.world().clone();
-            assert_eq!(
-                result.btech.vehicles()[&id].pilot_injuries(),
-                if initial == 9 { 9 } else { 1 }
-            );
-            let destination = if initial == 9 { afterlife } else { id };
-            assert_eq!(result.objects[&ObjectId(2)].location, Some(destination));
-            assert_eq!(result.objects[&passenger].location, Some(destination));
-            assert_eq!(result.btech.vehicles()[&id].flooded(), initial == 0);
+            assert_eq!(result.btech.vehicles()[&id].pilot_injuries(), initial);
+            assert_eq!(result.objects[&ObjectId(2)].location, Some(id));
+            assert_eq!(result.objects[&passenger].location, Some(id));
+            assert!(result.btech.vehicles()[&id].flooded());
             *scripts.world_mut() = world;
             assert_eq!(
                 break_battle_surface_action(

@@ -376,7 +376,6 @@ function btech_unit.inspect(dbref) end
 ---@field weapon_failures table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam"> Temporary conditions by mount index; existing recycle clocks govern recovery.
 ---@field gyro "standard"|"hardened"|"xl"|"compact" Construction family.
 ---@field artemis ArtemisController[] Installed controllers and resolved links.
----@field weapon_damage WeaponDamage[]|nil Mech weapon critical degradation.
 ---@field masc BoosterState Saved activation and overload/recovery state.
 ---@field supercharger BoosterState Independent compressor timer and failure state.
 ---@field supercharger_installed boolean Template technology flag.
@@ -1421,7 +1420,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -3 versus VTOLs, otherwise -1; Stinger is -3 versus flying VTOLs and -1 during orbital descent.
 ---@field targeting_mode integer Scenario tracking-mode adjustment, separate from installed computer equipment.
 ---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
----@field weapon_damage integer Penalty from damaged focusing, ranging and other weapon components.
 ---@field target_lock integer
 ---@field perception {channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil Nil unless the shooter or its side holds the target as a contact; direct_fire is false behind blocking terrain.
 
@@ -1443,8 +1441,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field rounds integer
 
 ---@class WeaponUse
----@field damage_penalty integer Energy damage lost to focusing damage.
----@field critical_failure "barrel"|"crystal"|"feed"|nil Component responsible for a failed launch.
 ---@field weapon string
 ---@field ammunition AmmunitionDraw[] Actual live-bin expenditure.
 ---@field fire_mode FireMode Effective mode after supply fallback.
@@ -2212,26 +2208,15 @@ function btech_unit.friendly_fire_safety(dbref, player, enabled) end
 ---@return string
 function btech_unit.status(dbref, options) end
 
----@alias EquipmentCondition 'empty'|'operational'|'damaged'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'|'ammo_jam'
-
----@class WeaponDamageEffects
----@field moderate integer General accuracy penalty.
----@field ranging integer Accuracy penalty beyond short range.
----@field heat integer Additional firing heat.
----@field damage integer Energy damage reduction.
----@field explosion integer Nonzero count explodes on an attack roll of count plus one or less.
----@field jam integer Nonzero count jams on an attack roll of count plus one or less.
----@field feed_locked boolean Prevents changing ammunition modes.
+---@alias EquipmentCondition 'empty'|'operational'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'|'ammo_jam'
 
 ---@class WeaponDiagnostic
 ---@field index integer Zero-based installed mount number, including destroyed mounts.
 ---@field weapon string Catalogue weapon identifier (snake case).
 ---@field section string Chassis-specific location name.
 ---@field condition EquipmentCondition
----@field damaged_slots integer
 ---@field destroyed_slots integer
 ---@field disabled_slots integer
----@field effects WeaponDamageEffects Existing firing penalties, without recomputation in Lua.
 ---@field preferred_ammunition_section string?
 
 ---Inspect durable equipment condition; empty ammunition, shutdown and recycle do not imply damage.
@@ -3163,10 +3148,6 @@ function btech_unit.firesmoke(dbref, pilot, weapon) end
 ---@param weapon integer
 ---@return AmmunitionMode
 function btech_unit.firemine(dbref, pilot, weapon) end
-
----@class WeaponDamage
----@field location {section: MechSectionName, slot: integer}
----@field effects ("moderate"|"focus"|"crystal"|"ranging"|"barrel"|"feed")[] Distinct component effects; empty means superficial damage.
 
 ---Check map membership and world invariants without changing placements or unit state.
 ---@param actor integer Wizard performing the check.

@@ -30,8 +30,6 @@ impl From<VehicleWeaponUse> for WeaponUse {
             ammunition: value.ammunition,
             fire_mode: value.fire_mode,
             heat: value.heat,
-            damage_penalty: 0,
-            critical_failure: None,
             gatling_damage: value.gatling_damage,
             ammunition_mode: value.ammunition_mode,
         }

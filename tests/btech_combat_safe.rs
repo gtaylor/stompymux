@@ -290,10 +290,12 @@ async fn immunity_protects_self_damage_and_fall_crew() {
             set_building_state(&mut world, position.map, building).unwrap();
             let before = state(&world, id);
             let rules = FallRules::configured(&config);
+            let vehicle = world.btech.vehicles().contains_key(&id);
             let report =
                 serde_json::to_value(resolve_battle_unit_fall(&mut world, id, 2, rules).unwrap())
                     .unwrap();
-            assert_eq!(report["avoidance"].is_null(), unit_safe);
+            // A vehicle fall never rolls to avoid crew injury (Total Warfare p. 152).
+            assert_eq!(report["avoidance"].is_null(), unit_safe || vehicle);
             assert_eq!(state(&world, id)["sections"], before["sections"]);
             if unit_safe {
                 assert_eq!(
