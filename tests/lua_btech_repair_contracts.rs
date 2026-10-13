@@ -161,13 +161,13 @@ async fn repair_apply_admits_only_five_immediate_operations_with_c_field_shapes(
         assert(not ok and e.code=='mux.arg.invalid' and e.detail.argument==2
           and e.message:sub(-#suffix)==suffix,tostring(e))
       end
-      -- C btech_repair_bindings.c:95-125 installs exactly these 21 operations and
-      -- lua_btech_repair_apply accepts only the five immediate kinds.
+      -- The catalogue holds exactly these 16 operations (the five weapon-degradation
+      -- repairs went with Expanded Critical Damage) and apply accepts only the five
+      -- immediate kinds.
       local names={'REATTACH','REPAIR_PART','REPAIR_WEAPON_TEMPORARY','REPAIR_ENHANCEMENT',
-        'REPAIR_FOCUS','REPAIR_CRYSTAL','REPAIR_BARREL','REPAIR_AMMO_FEED','REPAIR_RANGING',
         'REPAIR_AMMO_MOUNT','REPLACE_WEAPON','RELOAD','REPAIR_ARMOR','REPAIR_REAR_ARMOR',
         'REPAIR_INTERNAL','DETACH','SCRAP_PART','SCRAP_WEAPON','UNLOAD','RESEAL','REPLACE_SUIT'}
-      assert(#names==21,'catalog size')
+      assert(#names==16,'catalog size')
       local immediate={REPAIR_ARMOR=true,REPAIR_INTERNAL=true,REPAIR_REAR_ARMOR=true,
         REPAIR_PART=true,REATTACH=true}
       for _,name in ipairs(names) do
