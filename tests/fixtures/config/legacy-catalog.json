@@ -549,20 +549,6 @@
     "default": 0
   },
   {
-    "path": "battletech.dig_only_fs",
-    "legacy_name": "btech_dig_only_fs",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
-    "path": "battletech.digbonus",
-    "legacy_name": "btech_digbonus",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 3
-  },
-  {
     "path": "battletech.xp.bthmod",
     "legacy_name": "btech_xp_bthmod",
     "registry_type": "cf_int",

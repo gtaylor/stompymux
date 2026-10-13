@@ -1,4 +1,4 @@
-//! Vehicle observations retain acquisition and reconcile cross-class placement and object cleanup.
+//! Vehicle observations retain contacts and reconcile cross-class placement and object cleanup.
 use crate::support;
 use stompymux_rs::*;
 
@@ -50,16 +50,6 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
     }
 }
 
-/// Explicit team and perception facts for the contact domain action.
-fn rules(acquire: bool) -> ContactRules {
-    ContactRules {
-        hostile: false,
-        hidden: false,
-        perception: 7,
-        acquire,
-    }
-}
-
 /// Vehicles acquire visible units without dice, retain them without change, and lose them
 /// once no channel reaches; saved contacts survive a database round trip.
 #[tokio::test]
@@ -70,36 +60,24 @@ async fn vehicle_contacts_acquire_retain_lose_and_replay_without_extra_rolls() {
     )
     .await;
     power(&mut world, &[vehicle], Power::Running);
-    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::Clear).unwrap();
     for target in [mech, other] {
-        let before = world.btech.clone();
-        let update = update_battle_contact(&mut world, vehicle, target, rules(false)).unwrap();
-        assert_eq!(update.transition, ContactTransition::Unseen);
-        assert_eq!(world.btech, before);
-        let update = update_battle_contact(&mut world, vehicle, target, rules(true)).unwrap();
+        let update = update_battle_contact(&mut world, vehicle, target).unwrap();
         assert_eq!(update.transition, ContactTransition::Acquired);
-        assert_eq!(
-            update.detection,
-            Some(Detection {
-                detected: true,
-                threshold: 0,
-                roll: None,
-            })
-        );
         assert!(world.btech.vehicles()[&vehicle].contacts()[&target].identified);
         let before = world.btech.clone();
-        let update = update_battle_contact(&mut world, vehicle, target, rules(false)).unwrap();
+        let update = update_battle_contact(&mut world, vehicle, target).unwrap();
         assert_eq!(update.transition, ContactTransition::Retained);
-        assert_eq!(update.detection, None);
         assert_eq!(world.btech, before);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, world.btech);
+        // Pitch black limits sight to 3 hexes and the targets sit 4 hexes away; with the map's
+        // sensors switched off no channel reaches them.
         set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Sensors, false).unwrap();
-        set_battle_map_visibility(&mut restored, map, Light::Day, 2).unwrap();
-        let update = update_battle_contact(&mut restored, vehicle, target, rules(true)).unwrap();
+        set_battle_map_conditions(&mut restored, map, Light::PitchBlack, Weather::Clear).unwrap();
+        let update = update_battle_contact(&mut restored, vehicle, target).unwrap();
         assert_eq!(update.transition, ContactTransition::Lost);
-        assert_eq!(update.detection, None);
         assert!(
             !restored.btech.vehicles()[&vehicle]
                 .contacts()
@@ -111,11 +89,11 @@ async fn vehicle_contacts_acquire_retain_lose_and_replay_without_extra_rolls() {
         );
     }
     let before = world.btech.clone();
-    assert!(update_battle_contact(&mut world, vehicle, vehicle, rules(true)).is_err());
+    assert!(update_battle_contact(&mut world, vehicle, vehicle).is_err());
     assert_eq!(world.btech, before);
     power(&mut world, &[vehicle], Power::Off);
     let before = world.btech.clone();
-    assert!(update_battle_contact(&mut world, vehicle, mech, rules(true)).is_err());
+    assert!(update_battle_contact(&mut world, vehicle, mech).is_err());
     assert_eq!(world.btech, before);
 }
 
@@ -136,7 +114,7 @@ async fn mixed_contacts_follow_placement_removal_and_database_purge() {
     power(&mut world, &ids, Power::Running);
     for (observer, target) in [(a, c), (c, a), (c, d), (d, c), (d, b)] {
         assert_eq!(
-            update_battle_contact(&mut world, observer, target, rules(true))
+            update_battle_contact(&mut world, observer, target)
                 .unwrap()
                 .transition,
             ContactTransition::Acquired
@@ -151,8 +129,8 @@ async fn mixed_contacts_follow_placement_removal_and_database_purge() {
     remove_battle_unit(&mut world, b, ObjectId(config.home())).unwrap();
     assert!(world.btech.vehicles()[&d].contacts().is_empty());
     power(&mut world, &[a, d], Power::Running);
-    update_battle_contact(&mut world, a, d, rules(true)).unwrap();
-    update_battle_contact(&mut world, d, a, rules(true)).unwrap();
+    update_battle_contact(&mut world, a, d).unwrap();
+    update_battle_contact(&mut world, d, a).unwrap();
     power(&mut world, &[a, d], Power::Off);
     world.objects.get_mut(&a).unwrap().flags.insert(Flag::Going);
     persistence::save(&config.database(), &world).await.unwrap();

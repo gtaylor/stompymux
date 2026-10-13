@@ -1,7 +1,7 @@
 //! Deterministic dice for test worlds.
 //!
-//! Production gives every new unit, vehicle, crew recovery and map an independent dice
-//! stream drawn from OS entropy, so a scenario that builds them and then rolls would differ
+//! Production gives every new unit, vehicle, crew recovery and map (fire spread and sensor
+//! sweeps) an independent dice stream drawn from OS entropy, so a scenario that builds them and then rolls would differ
 //! from one test process to the next. [`seed_world_dice`] replaces every stream in a world
 //! with one derived from a base seed and the holder's identity.
 use stompymux_rs::{Dice, ObjectId, World};
@@ -21,12 +21,14 @@ enum Holder {
     PlayerRecovery = 3,
     /// A map's fire spread stream.
     MapFire = 4,
+    /// The stream a map's units roll their sensor sweeps from.
+    MapSensor = 5,
 }
 
 /// Reseed every dice stream in `world` deterministically.
 ///
 /// Every constructed Mech and vehicle, each one's cockpit recovery, every player recovery
-/// and every map fire stream gets a fresh stream at position zero, seeded from `seed`, the
+/// and every map fire and sensor sweep stream gets a fresh stream at position zero, seeded from `seed`, the
 /// kind of holder and its `ObjectId`, so no two holders share a stream. A map without a fire
 /// stream keeps none, because whether one exists changes how ignition behaves.
 ///
@@ -97,6 +99,8 @@ fn seed_holders(world: &mut World, seed: u64, select: impl Fn(ObjectId) -> bool)
     for map in maps {
         let dice = Dice::seeded(stream_seed(seed, Holder::MapFire, map));
         world.btech.replace_map_fire_dice(map, dice).unwrap();
+        let dice = Dice::seeded(stream_seed(seed, Holder::MapSensor, map));
+        world.btech.replace_map_sensor_dice(map, dice).unwrap();
     }
 }
 

@@ -158,6 +158,7 @@ pub(super) fn destruction_notices(
 /// Collect Mech damage packets once, regardless of which class fired them.
 pub(super) fn mech_salvo_notices(
     salvo: &super::MechSalvoReport,
+    target: ObjectId,
     private: &mut Vec<super::PilotNotice>,
 ) -> Vec<Notice> {
     let mut notices = salvo
@@ -173,12 +174,35 @@ pub(super) fn mech_salvo_notices(
         super::piloting::append_feedback(private, group.pilot_notices.clone(), notices.len());
         notices.extend(group.notices.iter().cloned());
     }
+    building_notices(salvo, target, private, &mut notices);
     notices
+}
+
+/// The building's share of a salvo on a unit inside it, and its collapse if that was the end
+/// of it.
+fn building_notices<G, I>(
+    salvo: &super::SalvoReport<G, I>,
+    target: ObjectId,
+    private: &mut Vec<super::PilotNotice>,
+    notices: &mut Vec<Notice>,
+) {
+    if let Some(cover) = &salvo.building {
+        notices.push(cover.notice(target));
+    }
+    if let Some(collapse) = &salvo.collapse {
+        super::piloting::append_feedback(
+            private,
+            collapse.pilot_notices.iter().cloned(),
+            notices.len(),
+        );
+        notices.extend(collapse.notices.iter().cloned());
+    }
 }
 
 /// Join vehicle damage packets for either shooter class while retaining pilot-only checks.
 pub(super) fn vehicle_salvo_notices(
     salvo: &super::VehicleSalvoReport,
+    target: ObjectId,
     private: &mut Vec<super::PilotNotice>,
 ) -> Vec<Notice> {
     let mut notices = salvo
@@ -203,5 +227,6 @@ pub(super) fn vehicle_salvo_notices(
         );
         notices.extend(inferno.notices.iter().cloned());
     }
+    building_notices(salvo, target, private, &mut notices);
     notices
 }

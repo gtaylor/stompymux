@@ -152,7 +152,6 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("unit", "unit_land", "land"),
         ("unit", "unit_pickup", "pickup"),
         ("unit", "unit_dropoff", "dropoff"),
-        ("unit", "unit_dig", "dig"),
         ("unit", "unit_hulldown", "hulldown"),
         ("unit", "unit_takeoff", "takeoff"),
         ("unit", "unit_enterbase", "enterbase"),

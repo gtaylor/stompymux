@@ -11,9 +11,6 @@ mod btech_apods;
 #[path = "../btech_crew.rs"]
 mod btech_crew;
 
-#[path = "../btech_dig.rs"]
-mod btech_dig;
-
 #[path = "../btech_fall_heading.rs"]
 mod btech_fall_heading;
 
@@ -55,6 +52,9 @@ mod btech_template_check;
 
 #[path = "../btech_vehicle_contact_display.rs"]
 mod btech_vehicle_contact_display;
+
+#[path = "../btech_building_interior.rs"]
+mod btech_building_interior;
 
 #[path = "../btech_vehicle_driving.rs"]
 mod btech_vehicle_driving;

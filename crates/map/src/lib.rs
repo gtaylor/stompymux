@@ -34,8 +34,9 @@ mod terrain_rules;
 
 pub use asset::{MapAsset, MapPointOfInterest};
 pub use environment::{
-    AttackKind, Light, MAX_VISIBILITY, STANDARD_GRAVITY, Wind, WindStrength,
-    extreme_temperature_steps, gravity_aim_modifier,
+    AttackKind, Illumination, LIT_TARGET_SIGHT, Light, MAX_SIGHT, SEARCHLIGHT_SIGHT,
+    STANDARD_GRAVITY, Weather, Wind, WindStrength, extreme_temperature_steps, gravity_aim_modifier,
+    visual_range,
 };
 pub use flags::{MapFlag, format_map_flags, parse_map_flags};
 pub use geometry::{HexCoordinate, Point};

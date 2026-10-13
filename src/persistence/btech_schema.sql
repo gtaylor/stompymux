@@ -157,6 +157,16 @@ CREATE TABLE btech_map_random (
     dice_word INTEGER NOT NULL CHECK (dice_word BETWEEN 0 AND 15)
 ) STRICT;
 
+-- btech_map_sensor_random.rs.
+-- Map-owned random stream for the sensor sweeps of every unit on the map.
+CREATE TABLE btech_map_sensor_random (
+    map_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref) ON DELETE CASCADE,
+    dice_seed BLOB NOT NULL CHECK (length(dice_seed) = 32),
+    dice_stream INTEGER NOT NULL,
+    dice_block INTEGER NOT NULL,
+    dice_word INTEGER NOT NULL CHECK (dice_word BETWEEN 0 AND 15)
+) STRICT;
+
 -- btech_building_repair.rs.
 -- Committed simulation countdown for interior-map construction repair, stored as the
 -- simulation second the next repair step happens.

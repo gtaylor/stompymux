@@ -14,8 +14,6 @@ pub(super) fn vehicle_criticals(world: &World, id: ObjectId) -> Result<u32> {
     };
     Ok(u32::from(unit.turret_locked())
         | (u32::from(unit.turret_jammed()) << 1)
-        | (u32::from(unit.dig_state().dug_in) << 2)
-        | (u32::from(unit.dig_state().digging) << 3)
         | (u32::from(unit.crew_stunned()) << 4)
         | (u32::from(unit.tail_rotor_destroyed()) << 5))
 }

@@ -37,9 +37,8 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
         ("mapheight", Some("1")),
         ("maplight", Some("0")),
         ("mapname", Some("[reset]海")),
-        ("mapvis", Some("30")),
+        ("mapweather", Some("0")),
         ("mapwidth", Some("2")),
-        ("maxvis", Some("60")),
         ("temperature", Some("20")),
         ("winddir", Some("0")),
         ("windspeed", Some("0")),
@@ -64,7 +63,7 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
         (
             "1MAP",
             1,
-            vec!["mapheight", "maplight", "mapname", "mapvis", "mapwidth"],
+            vec!["mapheight", "maplight", "mapname", "mapweather", "mapwidth"],
         ),
         ("4 cf", 4, vec!["cf", "cfmax"]),
         ("wind", 2, vec!["winddir", "windspeed"]),
@@ -149,7 +148,7 @@ async fn field_reports_leave_every_chassis_unchanged_and_survive_restart() {
         let before = world.btech.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let report = view_battle_map_fields_action(&scripts, &config, actor, map, "1").unwrap();
-        assert_eq!(report.fields.len(), 18);
+        assert_eq!(report.fields.len(), 17);
         assert_eq!(output(&scripts), report.text);
         assert_eq!(scripts.world().btech, before);
         let saved = scripts.world().clone();

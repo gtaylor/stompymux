@@ -286,7 +286,8 @@ async fn heartbeat_links_running_units_without_pilot_action() {
     assert_eq!(battle_c3_members(after, ids[0]).unwrap(), ids);
 }
 
-/// Autopilot observations carry peer sightings, flagged as relayed, with the shared range.
+/// Autopilot observations carry teammate sightings, flagged as relayed, with the shared range
+/// while a network is up; the sighting itself does not depend on the network.
 #[tokio::test]
 async fn autopilot_observation_includes_relayed_network_sightings() {
     let (_dir, config, mut world, units) = field(&[0; 3], false).await;
@@ -302,7 +303,7 @@ async fn autopilot_observation_includes_relayed_network_sightings() {
     .unwrap();
     reconcile_battle_command_networks(&mut world).unwrap();
     assert_eq!(c3i(&world, observer), vec![observer, peer]);
-    // Only the peer holds the enemy; the observer's own sensors hold nothing.
+    // Only the peer holds the enemy as a contact; the observer's own list is empty.
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &(id, _) in &units {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
@@ -324,7 +325,7 @@ async fn autopilot_observation_includes_relayed_network_sightings() {
     assert!((contact.network_range.unwrap() - 1.0).abs() < 1e-8);
     // The peer itself is a direct contact of nobody here, so it is not invented.
     assert!(!observation.contacts.iter().any(|c| c.unit == peer));
-    // Leaving the network removes the relayed sighting.
+    // Leaving the network drops the shared range; the side's sighting stays relayed.
     request_battle_network(
         &mut world,
         observer,
@@ -333,7 +334,21 @@ async fn autopilot_observation_includes_relayed_network_sightings() {
         CommandNetwork::C3i,
     )
     .unwrap();
-    assert!(observe(&world).contacts.is_empty());
+    let unlinked = observe(&world)
+        .contacts
+        .into_iter()
+        .find(|c| c.unit == enemy)
+        .expect("teammate sighting outlives the network");
+    assert!(unlinked.relayed && unlinked.network_range.is_none());
+    // A side that holds nothing relays nothing.
+    let mut unspotted = world.clone();
+    unspotted
+        .btech
+        .rewrite_unit_record(peer, |record| {
+            record["contacts"] = serde_json::json!({});
+        })
+        .unwrap();
+    assert!(observe(&unspotted).contacts.is_empty());
     request_battle_network(
         &mut world,
         observer,
@@ -342,6 +357,13 @@ async fn autopilot_observation_includes_relayed_network_sightings() {
         CommandNetwork::C3i,
     )
     .unwrap();
+    let relinked = observe(&world)
+        .contacts
+        .into_iter()
+        .find(|c| c.unit == enemy)
+        .unwrap();
+    assert!(relinked.relayed);
+    assert!((relinked.network_range.unwrap() - 1.0).abs() < 1e-8);
     // Once the observer acquires the enemy itself, the contact is direct.
     world
         .btech

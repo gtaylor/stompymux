@@ -265,7 +265,7 @@ pub fn validate_for_unit(
                         && contact.identified
                         && !contact.friendly
                         && !contact.known_destroyed),
-                "Attack requires a hostile contact held by the unit or its C3/C3i network"
+                "Attack requires a hostile contact held by the unit or spotted by its side"
             );
         }
         AutopilotOrder::Hold => {}

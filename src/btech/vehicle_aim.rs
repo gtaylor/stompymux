@@ -51,7 +51,6 @@ pub(super) fn modifiers(
     aim.indirect = indirect;
     aim.ammunition_accuracy += target_terms.ammunition_accuracy;
     aim.target_movement = target_terms.movement;
-    aim.dug_in = target_terms.dug_in;
     aim.bogged_down = target_terms.bogged_down;
     aim.woods_cover = target_terms.woods_cover;
     aim.orbital_drop = target_terms.orbital_drop;

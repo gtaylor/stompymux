@@ -13,9 +13,6 @@ pub struct AimRules {
     /// Select the woods-damage variant's occupied-forest accuracy calculation.
     pub woods_damage: bool,
     /// Target cover modifier, bounded to the signed modifier range by configuration.
-    pub dig_bonus: i16,
-    /// Restrict digging cover to attacks from the defender’s front arc.
-    pub dig_only_front: bool,
     /// Shared configured arc geometry for determining the defender’s facing.
     pub hit_arc_mode: i64,
     pub fasa_turning: bool,
@@ -31,10 +28,6 @@ impl AimRules {
     pub(crate) fn configured(config: &crate::config::BattleTechConfig) -> Self {
         Self {
             woods_damage: config.moddamagewithwoods != 0,
-            dig_bonus: config
-                .digbonus
-                .clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16,
-            dig_only_front: config.dig_only_fs != 0,
             hit_arc_mode: config.hit_arcs,
             fasa_turning: config.fasaturn != 0,
             extended_movement: config.extendedmovemod != 0,
@@ -48,9 +41,10 @@ impl AimRules {
 /// How the aiming unit currently perceives its target and what that costs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct PerceptionAim {
-    /// Absent only for a clairvoyant view of a target nobody has acquired.
+    /// How the shooter itself perceives the target; absent for a target only a teammate has
+    /// spotted, or a clairvoyant view of one nobody has.
     pub channel: Option<super::DetectionChannel>,
-    /// Terrain leaves a line of fire; probe contacts behind hills need indirect fire.
+    /// Terrain leaves a line of fire; a target behind a hill needs indirect fire.
     pub direct_fire: bool,
     pub modifier: i16,
 }
@@ -85,8 +79,6 @@ pub struct AimModifiers {
     pub range: Option<WeaponRange>,
     pub attacker_movement: u8,
     pub target_movement: i8,
-    /// Cover from a dug-in target, shared across shooter classes.
-    pub dug_in: i16,
     /// Minus two against a target stuck in soft ground.
     pub bogged_down: i8,
     /// Accuracy credit for a target within occupied woods under the damage-cover option.
@@ -140,7 +132,6 @@ impl AimModifiers {
                 + i32::from(self.range?.modifier)
                 + i32::from(self.attacker_movement)
                 + i32::from(self.target_movement)
-                + i32::from(self.dug_in)
                 + i32::from(self.bogged_down)
                 + i32::from(self.woods_cover)
                 + i32::from(self.orbital_drop)
@@ -334,20 +325,39 @@ pub(super) fn perception_aim(
         direct_fire: true,
         modifier: 10_000,
     });
-    if !attacker.contacts.contains_key(&target) {
-        return Ok(unacquired);
-    }
-    let Some(perception) = super::perceive(world, viewer, target)? else {
+    // A target spotted by any friendly unit may be engaged (Tactical Operations p. 191); the
+    // shooter still needs its own line of fire and clears its own cover.
+    let reader = super::contacts::ContactReader::new(world, viewer)?;
+    let Some(facts) = reader.facts(target)? else {
         return Ok(unacquired);
     };
+    let (terrain, range) = super::los::unit_terrain_geometry(world, viewer, target)?;
+    let (channel, direct_fire) = if attacker.visibility.clairvoyant {
+        // A clairvoyant's contact rows show everything; its shots still need the target
+        // perceived by the unit itself or spotted by its side.
+        let perception = super::perception::perceive_prepared(
+            world,
+            viewer,
+            reader.profile(),
+            target,
+            Some((terrain, range)),
+            None,
+        )?;
+        if perception.is_none() && !reader.team_spots(target) {
+            return Ok(unacquired);
+        }
+        (
+            perception.map(|perception| perception.channel),
+            perception.map_or(!terrain.blocked, |perception| perception.line_of_fire),
+        )
+    } else {
+        (facts.detection, facts.line_of_fire)
+    };
+    let modifier = super::perception::cover_aim(world, reader.profile(), target, terrain, range);
     Ok(Some(PerceptionAim {
-        channel: Some(perception.channel),
-        direct_fire: perception.identified,
-        modifier: if coordinate_spotting {
-            0
-        } else {
-            perception.aim_modifier
-        },
+        channel,
+        direct_fire,
+        modifier: if coordinate_spotting { 0 } else { modifier },
     }))
 }
 
@@ -411,10 +421,14 @@ pub(super) fn selected_front(
         None => return Ok(None),
     }
     .unwrap_or(180.0);
-    Ok(Some(
-        super::SensorArc::from_bearing(bearing, heading, attacker.facing)?
-            == super::SensorArc::Front,
-    ))
+    anyhow::ensure!(
+        bearing.is_finite() && heading.is_finite(),
+        "Invalid lock direction"
+    );
+    let relative =
+        (bearing.rem_euclid(360.0) - heading.rem_euclid(360.0) - attacker.facing.torso.offset())
+            .rem_euclid(360.0);
+    Ok(Some(relative <= 60.0 || relative >= 300.0))
 }
 
 /// Inspect numeric contributions without consuming ammunition/dice or establishing firing permission.
@@ -502,7 +516,6 @@ pub(super) fn aim_modifiers_for_source(
         .map(|range| range.against_stealth(target_terms.concealed));
     modifiers.ammunition_accuracy += target_terms.ammunition_accuracy;
     modifiers.target_movement = target_terms.movement;
-    modifiers.dug_in = target_terms.dug_in;
     modifiers.bogged_down = target_terms.bogged_down;
     modifiers.woods_cover = target_terms.woods_cover;
     modifiers.orbital_drop = target_terms.orbital_drop;
@@ -599,7 +612,6 @@ pub(super) fn weapon_base(
         )?,
         attacker_movement: 0,
         target_movement: 0,
-        dug_in: 0,
         bogged_down: 0,
         woods_cover: 0,
         orbital_drop: 0,
@@ -656,7 +668,6 @@ pub(super) fn ground_physical_target_modifier(world: &World, target: &Mech, exte
 pub(super) struct TargetAimModifiers {
     /// Target-specific ammunition adjustment added to the weapon base.
     pub ammunition_accuracy: i8,
-    pub dug_in: i16,
     /// Minus two against a target stuck in soft ground.
     pub bogged_down: i8,
     pub woods_cover: i8,
@@ -720,7 +731,6 @@ pub(super) fn target_modifiers(
             flying,
             cocoon,
         ),
-        dug_in: super::dig::cover_modifier(world, shooter, target, rules)?,
         bogged_down: super::bog_down::target_modifier(world, target),
         woods_cover: if rules.woods_damage {
             -occupied_woods(world, target)?

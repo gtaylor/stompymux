@@ -57,7 +57,6 @@ no_list: true
 - [`damage`](damage/)
 - [`damage_section`](damage-section/)
 - [`dfa`](dfa/)
-- [`dig`](dig/)
 - [`disable`](disable/)
 - [`display_name`](display-name/)
 - [`dropoff`](dropoff/)

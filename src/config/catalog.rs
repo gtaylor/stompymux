@@ -454,18 +454,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.dig_only_fs",
-        legacy: "btech_dig_only_fs",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.digbonus",
-        legacy: "btech_digbonus",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.xp.bthmod",
         legacy: "btech_xp_bthmod",
         kind: "i64",
@@ -1076,12 +1064,6 @@ pub const KEYS: &[KeySpec] = &[
         legacy: "",
         kind: "u64",
         bounds: Some((1.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.sensor_range",
-        legacy: "",
-        kind: "i64",
-        bounds: Some((0.0, 60.0)),
     },
     KeySpec {
         path: "logging.filter",

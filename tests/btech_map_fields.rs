@@ -24,7 +24,7 @@ async fn every_writable_field_matches_lua_and_restarts_across_chassis() {
             ("gravity", "1000"),
             ("temperature", "-1000"),
             ("maplight", "1"),
-            ("mapvis", "3"),
+            ("mapweather", "3"),
             ("winddir", "359"),
             ("windspeed", "50000"),
             ("cloudbase", "-50000"),
@@ -56,10 +56,7 @@ async fn every_writable_field_matches_lua_and_restarts_across_chassis() {
         assert_eq!(record.building.regeneration, i64::from(i32::MIN));
         assert_eq!(record.building_repair, None);
         assert_eq!((record.gravity, record.temperature), (127, -128));
-        assert_eq!(
-            (record.light, record.visibility, record.maximum_visibility),
-            (1, 3, 24)
-        );
+        assert_eq!((record.light, record.weather), (1, 3));
         assert_eq!((record.wind_direction, record.wind_speed), (359, 32767));
         assert_eq!(record.cloud_base, -32768);
         assert_eq!(record.flags, 4 | 32);
@@ -91,7 +88,7 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for (field, value) in [
         ("maplight", "6"),
-        ("mapvis", "61"),
+        ("mapweather", "18"),
         ("winddir", "360"),
         ("windspeed", "-1"),
         ("cf", "1"),
@@ -101,7 +98,6 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
         ("sensorflags", "!"),
         ("mapname", "bad\nname"),
         ("map", "1"),
-        ("maxvis", "30"),
         ("firstfree", "0"),
         ("buildonmap", "1"),
         ("mapheight", "1"),
@@ -114,15 +110,22 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
         assert_eq!(scripts.world().btech, before);
         assert!(scripts.drain_outbox().is_empty());
     }
-    assert!(set_battle_map_field_action(&scripts, &config, map, map, "mapvis", "3").is_err());
+    assert!(set_battle_map_field_action(&scripts, &config, map, map, "mapweather", "3").is_err());
     assert!(
-        set_battle_map_field_action(&scripts, &config, ObjectId(1), ObjectId(-1), "mapvis", "3")
-            .is_err()
+        set_battle_map_field_action(
+            &scripts,
+            &config,
+            ObjectId(1),
+            ObjectId(-1),
+            "mapweather",
+            "3"
+        )
+        .is_err()
     );
     assert!(
         scripts
             .eval_callback::<()>(&format!(
-                "btech.map.set_field(1,{},'mapvis','3');error('abort')",
+                "btech.map.set_field(1,{},'mapweather','3');error('abort')",
                 map.0
             ))
             .is_err()
@@ -144,7 +147,7 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
         );
     }
     set_battle_map_field_action(&scripts, &config, ObjectId(1), map, "gravity", "100").unwrap();
-    for input in ["@setmap", "@setmap mapvis", "@setmap/nope mapvis 3"] {
+    for input in ["@setmap", "@setmap mapweather", "@setmap/nope mapweather 3"] {
         assert!(!support::run_text(&scripts, &config, ObjectId(1), 1, input).is_empty());
         assert_eq!(scripts.world().btech, before);
     }

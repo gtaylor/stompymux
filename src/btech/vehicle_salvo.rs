@@ -179,6 +179,8 @@ pub(super) fn resolve_with_context_in_candidate(
     packets.limit_missiles(incoming);
     packets.finish_burst_glancing(request.fire_mode, request.glancing && !shell_woods);
     let mut report = VehicleSalvoReport {
+        building: None,
+        collapse: None,
         initial_woods,
         woods: None,
         cluster_roll: packets.cluster_roll,
@@ -224,6 +226,8 @@ pub(super) fn resolve_with_context_in_candidate(
             request.glancing,
         )?;
     }
+    report.building =
+        super::building_interior::absorb(world, attacker, target, &mut packets.damage)?;
     let groups = packets.damage;
     for damage in groups {
         let arc = direction.current(world, target)?;
@@ -267,6 +271,13 @@ pub(super) fn resolve_with_context_in_candidate(
             forced,
         )?;
         report.groups.push(VehicleSalvoGroup { damage, impact });
+    }
+    if let Some(cover) = &report.building {
+        let fall_rules = super::FallRules {
+            vehicle_impact: rules,
+            ..super::FallRules::STANDARD
+        };
+        report.collapse = super::building_interior::collapse(world, target, cover, fall_rules)?;
     }
     world.btech.validate_action(world)?;
     Ok(report)

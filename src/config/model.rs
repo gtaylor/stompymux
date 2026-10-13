@@ -233,8 +233,6 @@ pub struct BattleTechConfig {
     pub techtime_multiplier: f64,
     /// Configuration value for `statengine_obj`; defaults are centralized below.
     pub statengine_obj: i64,
-    /// All-conditions sensor band reach in hexes; weather and darkness do not shorten it.
-    pub sensor_range: i64,
     /// Configuration value for `limitedrepairs`; defaults are centralized below.
     pub limitedrepairs: i64,
     /// Configuration value for `stackpole`; defaults are centralized below.
@@ -245,10 +243,6 @@ pub struct BattleTechConfig {
     pub erange: i64,
     /// Configuration value for `hit_arcs`; defaults are centralized below.
     pub hit_arcs: i64,
-    /// Configuration value for `dig_only_fs`; defaults are centralized below.
-    pub dig_only_fs: i64,
-    /// Configuration value for `digbonus`; defaults are centralized below.
-    pub digbonus: i64,
     /// Configuration value for `xp`; defaults are centralized below.
     pub xp: XpConfig,
 }
@@ -308,14 +302,11 @@ impl Default for BattleTechConfig {
             techtime_mod: 0,
             techtime_multiplier: 1.0,
             statengine_obj: -1,
-            sensor_range: 15,
             limitedrepairs: 0,
             stackpole: 1,
             phys_use_pskill: 1,
             erange: 1,
             hit_arcs: 0,
-            dig_only_fs: 0,
-            digbonus: 3,
             xp: Default::default(),
         }
     }

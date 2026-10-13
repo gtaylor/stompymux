@@ -76,11 +76,14 @@ async fn native_and_lua_map_activation_agree_and_inherit_unnamed_flags() {
                 lua.eval_callback::<bool>(&format!("return {call}"))
                     .unwrap()
             );
-            // Independent map creation seeds independent fire streams; all other state must agree.
+            // Independent map creation seeds independent fire and sensor streams; all other
+            // state must agree.
             let mut native_state = serde_json::to_value(&native.world().btech).unwrap();
             let lua_state = serde_json::to_value(&lua.world().btech).unwrap();
-            native_state["maps"][map.0.to_string()]["fire_dice"] =
-                lua_state["maps"][map.0.to_string()]["fire_dice"].clone();
+            for stream in ["fire_dice", "sensor_dice"] {
+                native_state["maps"][map.0.to_string()][stream] =
+                    lua_state["maps"][map.0.to_string()][stream].clone();
+            }
             assert_eq!(native_state, lua_state);
             let expected = expected.unwrap_or((inherited, 100, 20));
             for scripts in [&native, &lua] {

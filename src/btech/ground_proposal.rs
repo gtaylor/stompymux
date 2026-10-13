@@ -73,7 +73,14 @@ pub fn propose_mech_ground_motion(
         rules.fasa_turning,
         unit.chassis().turn_multiplier(),
     );
-    let divisor = current.ground_speed_divisor(super::GroundMovement::Legged);
+    // Fog adds to the cost of every hex a walker enters (Tactical Operations p. 55), and so
+    // does the building it walks through (Total Warfare p. 167).
+    let divisor = current.ground_speed_divisor(super::GroundMovement::Legged)
+        + f64::from(map.weather_condition()?.movement_cost())
+        + f64::from(super::building_interior::floor_cost_at(
+            current,
+            unit.elevation_level(current),
+        ));
     let desired = motion.desired_speed;
     if unit.definition().has_triple_myomer() && motion.desired_speed >= maximum {
         motion.desired_speed = maximum;
@@ -156,6 +163,11 @@ pub fn propose_vehicle_ground_motion(
             slowdown: rules.slowdown,
             speed_demon: advantage,
             movement_modifier: map.movement_modifier,
+            extra_cost: map.weather_condition()?.movement_cost()
+                + super::building_interior::floor_cost_at(
+                    current,
+                    vehicle.elevation_level(current),
+                ),
         },
         maximum,
     )?;

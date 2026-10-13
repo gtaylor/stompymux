@@ -140,9 +140,22 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
         include_str!("../game/units/Demolisher.toml"),
     )
     .await;
-    let [a, _, c, d] = ids;
+    let [a, b, c, d] = ids;
     for id in ids {
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
+    }
+    // Give every running unit its own side: a running teammate's contacts would otherwise be
+    // relayed into the views checked below.
+    for (team, id) in [(2, a), (3, b)] {
+        set_battle_unit_signature(
+            &mut world,
+            id,
+            UnitSignature {
+                team,
+                ..Default::default()
+            },
+        )
+        .unwrap();
     }
     power(&mut world, &ids, Power::Running);
     refresh_battle_contacts(&mut world, &ids).unwrap();
@@ -199,7 +212,7 @@ async fn vehicle_contact_views_filter_conditions_and_recheck_visibility_without_
         .any(|v| v.target == d)
     );
     // Units sharing one hex always see each other, so hide the targets by operator flag instead.
-    for id in [a, ids[1], d] {
+    for id in [a, b, d] {
         set_battle_visibility(
             &mut world,
             id,

@@ -115,6 +115,8 @@ pub(super) fn advance_all(
             slowdown: rules.slowdown,
             speed_demon,
             movement_modifier: map.movement_modifier,
+            // Fog and buildings slow ground movement, not rotorcraft in flight.
+            extra_cost: 0,
         };
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         let fuel = unit.consume_vtol_fuel(

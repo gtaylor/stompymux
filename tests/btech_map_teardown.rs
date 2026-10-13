@@ -288,8 +288,6 @@ async fn retired_building_target_does_not_panic_or_reappear() {
             stagger: StaggerMode::Retain,
             aim: AimRules {
                 woods_damage: false,
-                dig_bonus: 3,
-                dig_only_front: false,
                 hit_arc_mode: 0,
                 fasa_turning: false,
                 extended_movement: false,

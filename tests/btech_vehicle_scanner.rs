@@ -1,19 +1,21 @@
-//! Automatic mixed-unit acquisition, notification controls and transactional server replay.
+//! Automatic mixed-unit contact sweeps, notification controls and transactional server replay.
 use crate::support;
 use stompymux_rs::*;
 
-/// Two Mechs and two vehicles at opposite ends of a north/south lane.
+/// Two Mechs and two vehicles at opposite ends of a one-hex-wide north/south lane, one row of
+/// `tiles` per hex.
 async fn fixture(
     tiles: &str,
     vehicle: &str,
 ) -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 4]) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Sight lane".into(), Kind::Room);
+    let rows = tiles.lines().count();
     create_battle_map(
         &mut world,
         map,
         "sight",
-        MapAsset::from_cells(&format!("1 5\n{tiles}")).unwrap(),
+        MapAsset::from_cells(&format!("1 {rows}\n{tiles}")).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -36,7 +38,14 @@ async fn fixture(
             )
             .unwrap();
         }
-        place_battle_unit(&mut world, id, map, 0, if index % 2 == 0 { 4 } else { 0 }).unwrap();
+        place_battle_unit(
+            &mut world,
+            id,
+            map,
+            0,
+            if index % 2 == 0 { rows as i64 - 1 } else { 0 },
+        )
+        .unwrap();
         ids.push(id);
     }
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
@@ -64,25 +73,26 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
     (dir, config, world, ids)
 }
 
-/// Spread the fixture one hex apart so weather can hide every pair; sight always reaches a
-/// unit sharing the observer's hex.
+/// Spread the fixture four hexes apart on a longer lane so [`blind_map`] can hide every pair;
+/// sight always reaches a unit within three hexes.
 async fn spread() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 4]) {
     let (dir, config, mut world, map, ids) = fixture(
-        ".0\n.0\n.0\n.0\n.0\n",
+        &".0\n".repeat(13),
         include_str!("../game/units/Demolisher.toml"),
     )
     .await;
-    for (y, id) in ids.into_iter().enumerate() {
-        place_battle_unit(&mut world, id, map, 0, y as i64).unwrap();
+    for (index, id) in ids.into_iter().enumerate() {
+        place_battle_unit(&mut world, id, map, 0, 4 * index as i64).unwrap();
     }
     power(&mut world, &ids, Power::Running);
     (dir, config, world, map, ids)
 }
 
-/// Silence the sensor band and drop weather visibility so no unit perceives another.
+/// Switch the map's sensors off and drop to pitch black, where sight reaches three hexes, so no
+/// unit of the [`spread`] fixture perceives another.
 fn blind_map(world: &mut World, map: ObjectId) {
     set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
-    set_battle_map_visibility(world, map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(world, map, Light::PitchBlack, Weather::Clear).unwrap();
 }
 
 /// Mixed scans acquire every unit at once, retain contacts, lose them together when no channel
@@ -303,139 +313,4 @@ async fn character_scanners_share_cached_perception_and_durable_contact_transiti
     assert!(lost.iter().all(|event| !event.acquired));
     assert_eq!(refresh_battle_contacts(&mut restored, &ids).unwrap(), lost);
     assert_eq!(restored.btech, character.btech);
-}
-
-#[tokio::test]
-async fn hostile_character_acquisition_shares_perception_awards_and_exact_dice() {
-    for vehicle in [false, true] {
-        for case in ["disconnected", "award", "gate", "skill", "throttle"] {
-            let eligible = case != "disconnected";
-            let awarded = case == "award";
-            let (_dir, config, mut world, ids) = formation().await;
-            let observer = if vehicle { ids[2] } else { ids[0] };
-            let target = ids[3];
-            for id in [observer, target] {
-                world
-                    .objects
-                    .get_mut(&id)
-                    .unwrap()
-                    .flags
-                    .insert(Flag::InCharacter);
-            }
-            set_battle_unit_signature(
-                &mut world,
-                target,
-                UnitSignature {
-                    team: 1,
-                    ..Default::default()
-                },
-            )
-            .unwrap();
-            world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
-            if eligible {
-                world
-                    .objects
-                    .get_mut(&ObjectId(1))
-                    .unwrap()
-                    .flags
-                    .insert(Flag::Connected);
-            } else {
-                world
-                    .objects
-                    .get_mut(&ObjectId(1))
-                    .unwrap()
-                    .flags
-                    .remove(Flag::Connected);
-            }
-            assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
-            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-            set_battle_character(
-                &mut world,
-                ObjectId(1),
-                Character {
-                    bruise: 0,
-                    lethal: 0,
-                    build: 5,
-                    reflexes: 5,
-                    intuition: 5,
-                    learn: 5,
-                    charisma: 5,
-                },
-            )
-            .unwrap();
-            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-            if case == "throttle" {
-                set_battle_character_value(
-                    &mut world,
-                    ObjectId(1),
-                    "Perception",
-                    CharacterValue {
-                        last_used: i64::MAX,
-                        ..Default::default()
-                    },
-                )
-                .unwrap();
-            }
-            let seed = (0..=255)
-                .find(|seed| {
-                    let mut dice = Dice::seeded([*seed; 32]);
-                    let gate = dice.die(6).unwrap();
-                    if case == "gate" {
-                        return gate != 1;
-                    }
-                    gate == 1 && (dice.two_d6() >= 4) == (case != "skill")
-                })
-                .unwrap();
-            let mut expected = Dice::seeded([seed; 32]);
-            assert_eq!(expected.die(6).unwrap() == 1, case != "gate");
-            if eligible && case != "gate" {
-                assert_eq!(expected.two_d6() >= 4, case != "skill");
-            }
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            let class = if vehicle { "vehicles" } else { "constructed" };
-            state[class][observer.0.to_string()]["dice"] =
-                serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-            state[class][observer.0.to_string()]["scanner_perception"] = serde_json::json!(6);
-            world.btech = serde_json::from_value(state).unwrap();
-            let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
-            assert_eq!(events.len(), 3);
-            let messages: Vec<_> = events
-                .iter()
-                .filter_map(|e| e.experience_message.as_ref())
-                .collect();
-            assert_eq!(messages.len(), usize::from(awarded), "{case}");
-            if awarded {
-                assert_eq!(messages[0].topic, TraceTopic::Experience);
-                assert!(messages[0].text.contains("gained 1 perception XP"));
-                assert_eq!(
-                    world.btech.character_values()[&ObjectId(1)]["Perception"].experience_balance(),
-                    1
-                );
-            }
-            let balance = world
-                .btech
-                .character_values()
-                .get(&ObjectId(1))
-                .and_then(|values| values.get("Perception"))
-                .map_or(0, |value| value.experience_balance());
-            assert_eq!(balance, u32::from(awarded), "{case}");
-            let state = serde_json::to_value(&world.btech).unwrap();
-            assert_eq!(
-                state[class][observer.0.to_string()]["dice"],
-                serde_json::to_value(expected).unwrap()
-            );
-            let before = world.btech.clone();
-            assert!(
-                refresh_battle_contacts(&mut world, &[observer])
-                    .unwrap()
-                    .is_empty()
-            );
-            assert_eq!(world.btech, before);
-            persistence::save(&config.database(), &world).await.unwrap();
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                world.btech
-            );
-        }
-    }
 }

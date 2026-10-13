@@ -139,18 +139,6 @@ async fn vehicle_critical_fields_distinguish_all_six_flags() {
             cases.push(("turret_locked", serde_json::json!(true), "a"));
             cases.push(("turret_jammed", serde_json::json!(true), "b"));
         }
-        if index == 2 || index == 3 {
-            cases.push((
-                "dig",
-                serde_json::to_value(DigState::covered()).unwrap(),
-                "c",
-            ));
-            cases.push((
-                "dig",
-                serde_json::to_value(DigState::preparing(20)).unwrap(),
-                "d",
-            ));
-        }
         if index == 6 {
             cases.push(("tail_rotor_destroyed", serde_json::json!(true), "f"));
         }
@@ -842,11 +830,7 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
             } else {
                 invalid.extend(["a", "b"]);
             }
-            if index == 2 || index == 3 {
-                valid.extend(["c", "d", "cd", "cde"]);
-            } else {
-                invalid.extend(["c", "d"]);
-            }
+            invalid.extend(["c", "d"]);
             if index == 6 {
                 valid.extend(["f", "ef"]);
             } else {
@@ -894,7 +878,6 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
                     assert_eq!(lua.world().btech, saved.btech);
                 }
                 assert_eq!(unit.crew_stun_remaining(), 0);
-                assert_eq!(unit.dig_state().remaining(), 0);
                 assert!(unit.lost_criticals().is_empty());
             }
             fields.verify(saved, id, "tankcritstatus", bits).await;
@@ -917,7 +900,7 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
         if mech {
             continue;
         }
-        let bits = if index == 2 || index == 3 { "de" } else { "e" };
+        let bits = "e";
         set_battle_unit_field_action(&lua, &config, ObjectId(1), id, "tankcritstatus", bits)
             .unwrap();
         let mut world = lua.world().clone();
@@ -930,11 +913,6 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
             .verify(world.clone(), id, "tankcritstatus", bits)
             .await;
         damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::CrewStun).unwrap();
-        if index == 2 || index == 3 {
-            firing::edit(&mut world, id, |unit| {
-                unit["dig"] = serde_json::to_value(DigState::preparing(3)).unwrap()
-            });
-        }
         firing::edit(&mut world, id, |unit| {
             unit["crew_stun_remaining"] = 3.into()
         });
@@ -958,11 +936,5 @@ async fn vehicle_critical_edits_share_conditions_and_preserve_timers() {
         }
         assert!(!loaded.btech.vehicles()[&id].crew_stunned());
         assert_eq!(loaded.btech.vehicles()[&id].crew_stun_remaining(), 0);
-        if index == 2 || index == 3 {
-            assert_eq!(
-                loaded.btech.vehicles()[&id].dig_state(),
-                DigState::covered()
-            );
-        }
     }
 }

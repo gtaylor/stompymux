@@ -210,6 +210,7 @@ fn fire_shot(
         heat_transfer,
         woods: thermal_woods,
         missed_terrain,
+        missed_building,
     } = super::direct_effects::resolve(
         &mut candidate,
         super::direct_effects::DirectEffectRequest {
@@ -394,6 +395,7 @@ fn fire_shot(
         heat_transfer,
         thermal_woods,
         missed_terrain,
+        missed_building,
         salvo,
         experience_messages,
     })
@@ -431,6 +433,17 @@ impl VehicleShotReport {
         }
         if let Some(terrain) = &self.missed_terrain {
             notices.extend(terrain.notices.iter().cloned());
+        }
+        if let Some(stray) = &self.missed_building {
+            notices.extend(stray.notices.iter().cloned());
+            if let Some(collapse) = &stray.collapse {
+                super::piloting::append_feedback(
+                    private,
+                    collapse.pilot_notices.iter().cloned(),
+                    notices.len(),
+                );
+                notices.extend(collapse.notices.iter().cloned());
+            }
         }
         if let Some(woods) = &self.thermal_woods {
             notices.extend(woods.notices.iter().cloned());

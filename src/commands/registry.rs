@@ -332,8 +332,6 @@ impl CommandRegistry {
         let mut definitions = vec![
             CommandDefinition::native("hulldown", P::EVERYONE, crate::btech::hull_down::command)
                 .policy(SwitchPolicy::Reject("hulldown takes no switches."), false),
-            CommandDefinition::native("dig", P::EVERYONE, crate::btech::dig::command)
-                .policy(SwitchPolicy::Reject("dig takes no switches."), false),
             CommandDefinition::native("pickup", P::EVERYONE, crate::btech::tow_actions::command)
                 .policy(SwitchPolicy::Reject("pickup takes no switches."), false),
             CommandDefinition::native("dropoff", P::EVERYONE, crate::btech::tow_actions::command)

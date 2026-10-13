@@ -1,4 +1,4 @@
-//! Cloud boundaries cut sensors and sight across every supported unit pairing and terrain hex.
+//! Cloud boundaries cut sight across every supported unit pairing and terrain hex.
 use crate::support;
 use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
@@ -21,7 +21,18 @@ fn raised_target(world: &mut World, map: ObjectId, target: ObjectId) {
     world.btech = serde_json::from_value(state).unwrap();
 }
 
-/// Sensors and sight are cut across the boundary, including equality, independently of chassis.
+/// The battlefield hex a placed unit stands in.
+fn unit_hex(world: &World, id: ObjectId) -> HexCoordinate {
+    let position = world.btech.unit(id).unwrap().position().unwrap();
+    HexCoordinate {
+        x: i32::from(position.x),
+        y: i32::from(position.y),
+    }
+}
+
+/// Sight is cut across the boundary, including equality, independently of chassis. Sensors
+/// trace terrain rather than light, so a short-band sweep still blips the neighbour across the
+/// clouds without identifying it, and nothing crosses once the map's sensors are switched off.
 #[tokio::test]
 async fn cloud_boundary_filters_all_supported_unit_pairs() {
     for source in firing::templates() {
@@ -30,23 +41,30 @@ async fn cloud_boundary_filters_all_supported_unit_pairs() {
                 firing::fixture_with_target(&source, None, &target).await;
             let map = world.btech.units()[&observer].map.unwrap();
             raised_target(&mut world, map, target);
-            // With the band switched off, sight carries the same clear-line rule.
+            // A short-band sweep on both units finds the adjacent neighbour on infrared.
+            for id in [observer, target] {
+                firing::edit(&mut world, id, |state| {
+                    state["sensor_sweep"] = serde_json::json!(7)
+                });
+            }
             for sensors in [true, false] {
                 set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, sensors)
                     .unwrap();
                 set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
                 let ordinary = battle_perceive(&world, observer, target).unwrap();
                 assert_eq!(
-                    ordinary.map(|perception| perception.channel),
-                    Some(if sensors {
-                        DetectionChannel::Sensors
-                    } else {
-                        DetectionChannel::Sight
-                    })
+                    ordinary.map(|perception| (perception.channel, perception.identified)),
+                    Some((DetectionChannel::Sight, true))
                 );
                 set_battle_map_cloud_base(&mut world, ObjectId(1), map, 1).unwrap();
                 for (a, b) in [(observer, target), (target, observer)] {
-                    assert_eq!(battle_perceive(&world, a, b).unwrap(), None);
+                    let across = battle_perceive(&world, a, b).unwrap();
+                    assert_eq!(
+                        across.map(|perception| (perception.channel, perception.identified)),
+                        sensors.then_some((DetectionChannel::Sensors, false)),
+                        "sensors {sensors}"
+                    );
+                    assert!(!battle_hex_visible(&world, a, unit_hex(&world, b)).unwrap());
                 }
                 for base in [-1, 0, 2, 200] {
                     set_battle_map_cloud_base(&mut world, ObjectId(1), map, base).unwrap();
@@ -149,7 +167,7 @@ async fn terrain_clouds_follow_level_and_equality_rules_without_consuming_dice()
         let target = HexCoordinate { x: 0, y: 9 };
         set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
         let ordinary = battle_hex_perception(&world, id, target).unwrap();
-        assert_eq!(ordinary, Some(DetectionChannel::Sensors));
+        assert_eq!(ordinary, Some(DetectionChannel::Sight));
         for base in [-1, 0, 1, 2, 3] {
             set_battle_map_cloud_base(&mut world, ObjectId(1), map, base).unwrap();
             let before = world.btech.clone();

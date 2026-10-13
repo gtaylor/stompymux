@@ -70,9 +70,9 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `temperature`: `integer`
 - `flags`: `MapFlag[]` — Enabled map flags.
 - `light`: `integer` — 0 day, 1 dawn, 2 dusk, 3 full moon night, 4 moonless night, 5 pitch black
-- `visibility`: `integer` — Weather range in hexes
-- `sensor_flags`: `integer` — Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
-- `maximum_visibility`: `integer` — Saved map sensor range ceiling
+- `weather`: `integer` — Weather condition index, in the order of btech.map.weather_conditions
+- `visual_range`: `integer` — How far units on the map see under its light and weather, in hexes
+- `sensor_flags`: `integer` — Disabled perception channels: sensors bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 - `terrain_ready`: `boolean` — Whether saved tiles have a valid dictionary.
 
 ## MapPointOfInterest
@@ -210,11 +210,19 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 
 ## DetectionChannel
 
-Alias: `"sensors"|"sight"|"radar"|"probe" Values from btech.unit.detection_channels.`
+Alias: `"sight"|"sensors"|"probe" Values from btech.unit.detection_channels.`
 
 ## PerceptionStatus
 
-Alias: `"ready"|"degraded"|"jammed"|"damaged"|"disabled"|"absent"`
+Alias: `"ready"|"jammed"|"damaged"|"disabled"|"absent"`
+
+## SensorMode
+
+Alias: `"infrared"|"magscan"|"radar"|"seismic"|"probe" A sensor system of a unit's suite.`
+
+## SensorBand
+
+Alias: `"short"|"medium"|"long"`
 
 ## TargetLock
 
@@ -338,6 +346,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `tag`: `TagState`
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
+- `sensor_sweep`: `integer|nil` — This turn's 2d6 sensor sweep, once rolled.
 - `facing`: `{torso: "left"|"center"|"right"|"both", arms_flipped: boolean}`
 - `stun_remaining`: `integer` — Remaining seconds of cockpit stun.
 - `pilot_injuries`: `integer` — Tactical injury count; six means scenario pilot loss.
@@ -403,12 +412,6 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `total`: `integer` — Current physical mass in 1/1024-ton units.
 - `design_total`: `integer` — Current component total with full surviving bins.
 
-## DigState
-
-- `dug_in`: `boolean` — Whether cover applies.
-- `digging`: `boolean` — Whether preparation is active.
-- `completion`: `integer[]` — Pending completion deadlines in seconds; empty means none.
-
 ## VehicleState
 
 - `armor_warning`: `boolean` — Armor severity warnings; enabled by default.
@@ -427,7 +430,6 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `combat_safe`: `boolean` — Operator-imposed immunity to combat damage.
 - `weapons_hold`: `boolean` — Operator-imposed firing restriction; mechanical readiness is independent.
 - `visibility`: `{invisible: boolean, clairvoyant: boolean}` — Operator visibility state.
-- `dig`: `DigState` — Saved ground-vehicle cover preparation.
 - `mass`: `VehicleMass` — Derived from current material and ammunition; units are 1/1024 ton.
 - `inferno_remaining`: `integer` — Stationary-unit jelly duration.
 - `burning_sections`: `table<string, integer>` — Section fire countdowns in seconds.
@@ -454,6 +456,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `lost_stabilizers`: `string[]` — Sections with destroyed weapon stabilizers.
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
+- `sensor_sweep`: `integer|nil` — This turn's 2d6 sensor sweep, once rolled.
 - `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits.
 - `aimed_section`: `AimSelection|nil` — Saved anatomy preference; independent of the current lock.
 - `target_lock`: `TargetLock|HexLock|nil` — Saved selection and settling countdown.
@@ -752,12 +755,11 @@ Alias: `{x: integer, y: integer, z?: integer}`
 ## PerceptionReport
 
 - `light`: `"day"|"dawn"|"dusk"|"full_moon_night"|"moonless_night"|"pitch_black"` — Current battlefield light.
-- `sight_range`: `integer` — Weather visibility in hexes, capped by the map ceiling.
-- `lit_sight_range`: `integer` — Reach to illuminated targets; triple sight at night.
-- `sensor_range`: `integer` — Effective all-conditions sensor band; zero while unavailable.
-- `sensors`: `PerceptionStatus` — Condition of the sensor band.
-- `probe`: `{kind: ProbeKind, range: integer, status: PerceptionStatus}|nil` — Best installed active probe.
-- `radar`: `{range: integer, status: PerceptionStatus}|nil` — Anti-aircraft radar, if installed.
+- `weather`: `string` — Current battlefield weather, as btech.map.weather_conditions names it.
+- `sight_range`: `integer` — How far the unit sees under the light and weather, stretched to 30 by its own searchlight at night.
+- `lit_sight_range`: `integer` — How far it sees a target lit by another source at night.
+- `sensor`: `{systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil}` — Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep.
+- `probe`: `{kind: ProbeKind, range: integer, status: PerceptionStatus}|nil` — Best installed active probe and how far it reveals hidden units.
 - `running`: `boolean` — Stopped units perceive nothing.
 - `text`: `string` — The report printed by the sensor command.
 
@@ -778,7 +780,7 @@ Alias: `"front" | "right" | "rear" | "left"`
 - `verbose_text`: `string` — Plain multiline C0 contact report.
 - `identified`: `boolean` — Current terrain permits identification.
 - `weapon_arc`: `ContactArc` — Observer torso direction; individual weapons may have different arcs.
-- `detection`: `DetectionChannel|nil` — How the observer currently perceives this contact; nil for clairvoyant-only views.
+- `detection`: `DetectionChannel|nil` — How the observer itself perceives this contact; nil for a target only a teammate spotted or a clairvoyant view.
 - `status`: `string` — Five visible condition columns; blank behind blocking terrain.
 - `target`: `integer` — Acquired unit dbref.
 - `name`: `string` — Chassis name, or "something" for unidentified signals.
@@ -843,7 +845,6 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `attacker_movement`: `integer`
 - `woods_cover`: `integer` — Configured occupied-forest accuracy credit: zero, minus one or minus two.
 - `target_movement`: `integer` — Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
-- `dug_in`: `integer` — Configured cover modifier, shared by Mech and vehicle attackers.
 - `bogged_down`: `integer` — Minus two against a target stuck in soft ground.
 - `orbital_drop`: `integer` — Minus two while the target has an intact cocoon; zero after a breach.
 - `light`: `integer` — Darkness on the target's map, less what searchlights and target heat offset.
@@ -860,7 +861,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `weapon_accuracy`: `integer` — Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 - `weapon_damage`: `integer` — Penalty from damaged focusing, ranging and other weapon components.
 - `target_lock`: `integer`
-- `perception`: `{channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil` — Nil without a current contact; direct_fire is false behind blocking terrain.
+- `perception`: `{channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil` — Nil unless the shooter or its side holds the target as a contact; direct_fire is false behind blocking terrain.
 
 ## SectionExposureReport
 
@@ -917,6 +918,14 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `map`: `integer`
 - `coordinate`: `HexCoordinate`
 - `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"}|{effect: "damage", total: integer}` — What the attack did to the woods; damage is the terrain factor spent so far.
+- `notices`: `Notice[]`
+
+## StrayHit
+
+- `coordinate`: `HexCoordinate` — The building hex the miss struck.
+- `damage`: `integer` — Construction factor the hex lost.
+- `remaining`: `integer` — Construction factor left; zero means it collapsed.
+- `collapse`: `table|nil` — The collapse and its occupant falls, when the shot brought the hex down.
 - `notices`: `Notice[]`
 
 ## WoodsAbsorption
@@ -1031,6 +1040,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `heat_transfer`: `integer` — Heat already added to the target, zero unless a heat-mode shot hits.
 - `thermal_woods`: `WoodsAbsorption|nil` — Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
 - `missed_terrain`: `WoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
+- `missed_building`: `StrayHit|nil` — A miss from the next hex that struck the building around a target inside one.
 - `cooling`: `number?` — Coolant reduction applied to stored heat, including temporary negative credit.
 
 ## VehicleShotReport
@@ -1061,6 +1071,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `heat_transfer`: `integer` — Direct flamer heat added to the target, otherwise zero.
 - `thermal_woods`: `WoodsAbsorption|nil` — Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
 - `missed_terrain`: `WoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
+- `missed_building`: `StrayHit|nil` — A miss from the next hex that struck the building around a target inside one.
 - `salvo`: `{kind: 'mech'|'vehicle'|'swarm', report: table}|nil` — Target-specific ordered damage groups.
 
 ## VehicleInfernoHit

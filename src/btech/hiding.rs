@@ -1,4 +1,7 @@
-//! Shared camouflage preparation, cached observer checks and cover loss for supported units.
+//! Hidden units (Total Warfare p. 259): a stopped unit settles into cover over time and then
+//! cannot be perceived by the enemy until something reveals it. Revealing follows the book:
+//! an enemy ending up next to the hidden unit, an enemy active probe in range with line of
+//! sight, movement, weapons fire, or damage.
 use super::{Ground, Notice, Power};
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -17,22 +20,21 @@ impl super::Vehicle {
     }
 }
 
+/// Seconds a unit needs to settle into cover; rotorcraft fold up a little faster.
+pub const HIDE_SECONDS: u16 = 50;
+/// Seconds a landed rotorcraft needs to settle into cover.
+pub const VTOL_HIDE_SECONDS: u16 = 40;
+
 /// Borrow only the common hiding facts, retaining anatomy at the storage boundary.
-fn facts(world: &World, id: ObjectId) -> Option<(Option<u16>, bool, bool)> {
+fn facts(world: &World, id: ObjectId) -> Option<(Option<u16>, bool)> {
     if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Some((
-            unit.hide_elapsed,
-            unit.definition().has_special("Camo_Tech"),
-            unit.definition().is_vtol(),
-        ));
+        return Some((unit.hide_elapsed, unit.definition().is_vtol()));
     }
-    world.btech.constructed_units().get(&id).map(|unit| {
-        (
-            unit.hide_elapsed,
-            unit.definition().has_special("Camo_Tech"),
-            false,
-        )
-    })
+    world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .map(|unit| (unit.hide_elapsed, false))
 }
 
 /// Mutable timer and signature fields are the only chassis-specific hiding state.
@@ -42,28 +44,71 @@ fn state_mut(world: &mut World, id: ObjectId) -> (&mut Option<u16>, &mut bool) {
     })
 }
 
-/// Begin hiding with wizard authority or installed camouflage, without acquiring any contacts.
+/// Where a unit may hide (Total Warfare p. 259): never on pavement, a road or a bridge; a
+/// 'Mech never in a clear hex; in water only when fully submerged. Returns the cockpit
+/// message for starting to hide there.
+fn hiding_place(tile: super::Hex, mech: bool, submerged: bool) -> Result<&'static str> {
+    ensure!(
+        !tile.is_paved() && !tile.is_road(),
+        "You cannot hide on pavement."
+    );
+    if tile.holds_water() {
+        ensure!(
+            submerged,
+            "You would have to be fully submerged to hide in the water."
+        );
+        return Ok("You settle onto the bottom to hide beneath the water...");
+    }
+    if tile.has_standing_structure() {
+        return Ok("You start to hide inside the building...");
+    }
+    Ok(match (tile.foliage(), tile.ground()) {
+        (Some(super::Foliage::PlantedFields), _) => "You start to hide amongst the crops...",
+        (Some(_), _) => "You start to hide amongst the trees...",
+        (None, Ground::UltraRough) => "You start to hide behind some rocky outcroppings...",
+        (None, Ground::Rubble | Ground::UltraRubble) => {
+            "You find some wreckage to try to hide behind..."
+        }
+        (None, Ground::Rough) => "You find some boulders to try to hide behind...",
+        (None, Ground::Clear | Ground::HeavyIndustrial) if mech => {
+            anyhow::bail!("There is nothing here big enough to hide a 'Mech behind.")
+        }
+        (None, _) => "You start to hide where you stand...",
+    })
+}
+
+/// Begin hiding. Any stopped, grounded unit may try; the terrain decides whether it can.
 pub fn begin_battle_hiding(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Notice> {
     super::power::controlled_running_unit(world, id, pilot)?;
-    let (elapsed, camouflage, vtol) = facts(world, id).context("Unit is unavailable")?;
-    ensure!(
-        camouflage || crate::authority::is_wizard(world, pilot),
-        "You aren't capable of such curious things."
-    );
+    let (elapsed, vtol) = facts(world, id).context("Unit is unavailable")?;
     let unit = super::scanner::scanner_unit(world, id).unwrap();
     let position = unit.position.unwrap();
-    if let Some(mech) = world.btech.constructed_units().get(&id) {
+    let tile =
+        world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
+    let (mech, submerged) = if let Some(mech) = world.btech.constructed_units().get(&id) {
         ensure!(
             !mech.airborne() && mech.free_fall().is_none(),
             "Hide where? Up here?"
         );
+        let level = mech.elevation_level(tile);
+        let height = if mech.posture() == super::Posture::Prone {
+            1
+        } else {
+            2
+        };
+        (true, level + height <= i32::from(tile.level()))
     } else {
+        let vehicle = &world.btech.vehicles()[&id];
         ensure!(
-            (world.btech.vehicles()[&id].free_fall().is_none()
-                && world.btech.vehicles()[&id].orbital_drop().is_none()),
+            vehicle.free_fall().is_none() && vehicle.orbital_drop().is_none(),
             "Hide where? Up here?"
         );
-    }
+        // A vehicle is one level tall: submerged when its top stays below the surface.
+        (
+            false,
+            vehicle.elevation_level(tile) < i32::from(tile.level()),
+        )
+    };
     ensure!(unit.speed.abs() <= 10.75, "Come to a complete stop first.");
     ensure!(elapsed.is_none(), "You are looking for cover already!");
     if vtol {
@@ -74,20 +119,7 @@ pub fn begin_battle_hiding(world: &mut World, id: ObjectId, pilot: ObjectId) -> 
             "You must be landed!"
         );
     }
-    let tile =
-        world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let text = match (tile.foliage(), tile.is_rocky(), tile.ground()) {
-        (Some(super::Foliage::PlantedFields), _, _) => "You start to hide amongst the crops...",
-        (Some(_), _, _) => "You start to hide amongst the trees...",
-        (None, true, Ground::UltraRough) => "You start to hide behind some rocky outcroppings...",
-        (None, true, Ground::Rubble | Ground::UltraRubble) => {
-            "You find some wreckage to try to hide behind..."
-        }
-        (None, true, _) => "You find some boulders to try to hide behind...",
-        _ => anyhow::bail!(
-            "You begin to hide in this terrain...\n... then realize that just isn't going to work!"
-        ),
-    };
+    let text = hiding_place(tile, mech, submerged)?;
     *state_mut(world, id).0 = Some(0);
     Ok(Notice {
         unit: id,
@@ -109,7 +141,8 @@ pub fn hiding_pending(world: &World) -> bool {
             .any(|u| u.hide_elapsed.is_some())
 }
 
-/// Reject hostile acquired observations and height above the terrain without consuming detection dice.
+/// Whether an enemy currently has the unit as a contact, or the unit stands above its
+/// terrain: either keeps it from settling into cover.
 fn exposed(world: &World, id: ObjectId) -> Result<bool> {
     let unit = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     let position = unit.position.context("Unit is not on a map")?;
@@ -150,11 +183,11 @@ pub fn advance_battle_hiding(world: &mut World) -> Result<Vec<Notice>> {
     let mut candidate = world.clone();
     let ids: Vec<_> = super::scanner::scanner_ids(world)
         .into_iter()
-        .filter(|&id| facts(world, id).is_some_and(|(elapsed, _, _)| elapsed.is_some()))
+        .filter(|&id| facts(world, id).is_some_and(|(elapsed, _)| elapsed.is_some()))
         .collect();
     let mut notices = Vec::new();
     for id in ids {
-        let (elapsed, camouflage, vtol) = facts(&candidate, id).unwrap();
+        let (elapsed, vtol) = facts(&candidate, id).unwrap();
         if candidate
             .objects
             .get(&id)
@@ -175,7 +208,11 @@ pub fn advance_battle_hiding(world: &mut World) -> Result<Vec<Notice>> {
             });
             continue;
         }
-        let threshold = if vtol { 40 } else { 50 } * if camouflage { 1 } else { 2 };
+        let threshold = if vtol {
+            VTOL_HIDE_SECONDS
+        } else {
+            HIDE_SECONDS
+        };
         let (timer, hidden) = state_mut(&mut candidate, id);
         if elapsed.unwrap() < threshold {
             *timer = Some(elapsed.unwrap() + 1);
@@ -191,6 +228,101 @@ pub fn advance_battle_hiding(world: &mut World) -> Result<Vec<Notice>> {
     candidate.btech.validate_action(&candidate)?;
     *world = candidate;
     Ok(notices)
+}
+
+/// How an enemy found a hidden unit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Discovery {
+    /// An enemy unit is in the hidden unit's hex or next to it.
+    Adjacent,
+    /// An enemy active probe reaches the hidden unit with line of sight.
+    Probe,
+}
+
+/// Enemy units that would find each hidden unit this tick: anyone within one hex of it, or
+/// an active probe within its reach that has line of sight and is not shut out by stealth
+/// or an ECM bubble around the hidden unit (Total Warfare pp. 129, 134 and 259).
+pub(super) fn discoveries(world: &World) -> Result<Vec<(ObjectId, ObjectId, Discovery)>> {
+    let mut found = Vec::new();
+    for id in super::scanner::scanner_ids(world) {
+        let Some(hidden) = super::scanner::scanner_unit(world, id) else {
+            continue;
+        };
+        let Some(position) = hidden.position else {
+            continue;
+        };
+        if !hidden.signature.hidden
+            || world
+                .objects
+                .get(&id)
+                .is_none_or(|o| o.flags.contains(Flag::Going))
+        {
+            continue;
+        }
+        let field = super::electronic_field(world, id)?;
+        for observer in super::map_slots::all_unit_order(world, position.map)? {
+            let Some(other) = super::scanner::scanner_unit(world, observer) else {
+                continue;
+            };
+            if observer == id
+                || other.observer
+                || other.destroyed
+                || other.power != Power::Running
+                || other.signature.team == hidden.signature.team
+                || other.position.is_none_or(|p| p.map != position.map)
+                || world
+                    .objects
+                    .get(&observer)
+                    .is_none_or(|o| o.flags.contains(Flag::Going))
+            {
+                continue;
+            }
+            let range = super::unit_range(world, observer, id)?;
+            if range.hex_distance <= 1 {
+                found.push((id, observer, Discovery::Adjacent));
+                break;
+            }
+            let profile = super::perception_profile(world, observer)?;
+            let Some(probe) = profile.ready_probe() else {
+                continue;
+            };
+            if range.hex_distance > u64::from(probe.range)
+                || (hidden.concealed && !probe.kind.sees_concealed())
+                || (field.protected && !probe.kind.sees_concealed())
+            {
+                continue;
+            }
+            if super::los::unit_terrain_los(world, observer, id)?.blocked {
+                continue;
+            }
+            found.push((id, observer, Discovery::Probe));
+            break;
+        }
+    }
+    Ok(found)
+}
+
+/// Reveal one hidden unit `finder` has found, returning the notices to publish.
+pub(super) fn reveal_discovered_unit(
+    world: &mut World,
+    id: ObjectId,
+    finder: ObjectId,
+    how: Discovery,
+) -> Vec<Notice> {
+    let finder_name = super::scanner::scanner_unit(world, finder)
+        .map(|unit| crate::text::plain(unit.name))
+        .unwrap_or_else(|| "something".into());
+    let (text, broadcast) = match how {
+        Discovery::Adjacent => (
+            format!("{finder_name} has blundered right into your hiding place!"),
+            "is discovered in its hiding place!",
+        ),
+        Discovery::Probe => (
+            format!("An active probe on {finder_name} has found you!"),
+            "is picked out of hiding by an active probe!",
+        ),
+    };
+    reveal(world, id, true, &text, broadcast)
 }
 
 /// Clear active cover and optionally cancel preparation, preserving observer visibility for feedback.
@@ -288,4 +420,32 @@ pub(crate) fn command(ctx: &CommandContext<'_>, _: &CommandInput) -> Result<Comm
         Ok(()) => CommandAction::Continue,
         Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::btech::{Hex, Terrain};
+
+    /// Pavement, roads and bridges never hide anything; clear ground hides a vehicle but not
+    /// a 'Mech; water hides only a submerged unit; woods, rough ground and buildings hide both.
+    #[test]
+    fn hiding_places_follow_the_forbidden_hex_list() {
+        for terrain in [Terrain::Pavement, Terrain::Road, Terrain::Bridge] {
+            assert!(hiding_place(Hex::new(terrain, 0), false, false).is_err());
+        }
+        assert!(hiding_place(Hex::new(Terrain::Clear, 0), true, false).is_err());
+        assert!(hiding_place(Hex::new(Terrain::Clear, 0), false, false).is_ok());
+        assert!(hiding_place(Hex::new(Terrain::Water, 1), true, false).is_err());
+        assert!(hiding_place(Hex::new(Terrain::Water, 2), true, true).is_ok());
+        for terrain in [
+            Terrain::LightWoods,
+            Terrain::Rough,
+            Terrain::Rubble,
+            Terrain::Building,
+            Terrain::PlantedFields,
+        ] {
+            assert!(hiding_place(Hex::new(terrain, 0), true, false).is_ok());
+        }
+    }
 }

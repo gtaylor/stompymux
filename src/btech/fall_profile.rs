@@ -2,7 +2,8 @@
 use super::{Hex, HitArc};
 use anyhow::{Context, Result, ensure};
 
-/// Select the supporting surface for descent, including ice and passage below a bridge.
+/// Select the supporting surface for descent, including ice, passage below a bridge and the
+/// floor a unit inside a building stands on.
 pub(super) fn surface(tile: Hex, elevation: i32) -> i16 {
     let upper = tile.standing_height();
     if i32::from(upper) <= elevation {
@@ -10,6 +11,9 @@ pub(super) fn surface(tile: Hex, elevation: i32) -> i16 {
     }
     if tile.has_bridge() {
         return tile.water_line() - 1;
+    }
+    if super::building_interior::inside(tile, elevation) {
+        return i16::try_from(elevation).unwrap_or(upper);
     }
     tile.surface_height()
 }

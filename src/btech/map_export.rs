@@ -29,7 +29,7 @@ impl StoredMap {
             gravity: u8::try_from(self.gravity)?,
             temperature: i8::try_from(self.temperature)?,
             light: Some(self.light_level()?),
-            visibility: Some(u8::try_from(self.visibility)?),
+            weather: Some(self.weather_condition()?),
             wind: Some(super::Wind {
                 direction: u16::try_from(self.wind_direction)?,
                 speed: u16::try_from(self.wind_speed)?,
@@ -70,7 +70,7 @@ mod tests {
     /// and export back into the overlay grid.
     #[test]
     fn overlay_grid_becomes_permanent_decorations() {
-        let source = "light = 'moonless_night'\nvisibility = 12\nwind = { direction = 90, speed = 5 }\n\
+        let source = "light = 'moonless_night'\nweather = 'heavy_fog'\nwind = { direction = 90, speed = 5 }\n\
             terrain = '..~'\nlevel = '120'\ndepth = '..2'\nfoliage = '.`.'\noverlay = '&:.'\n";
         let map = stored(source);
         assert_eq!(
@@ -95,7 +95,7 @@ mod tests {
     /// Points of interest survive loading as a live map and exporting it again.
     #[test]
     fn points_of_interest_survive_export() {
-        let source = "light = 'day'\nvisibility = 30\nwind = { direction = 0, speed = 0 }\n\
+        let source = "light = 'day'\nweather = 'clear'\nwind = { direction = 0, speed = 0 }\n\
             terrain = '..'\nlevel = '00'\n\n[[points_of_interest]]\ntype = 'objective'\nname = 'Ford'\nx = 1\ny = 0\nelevation = -2\n";
         let asset = MapAsset::parse(source).unwrap();
         let map = stored(source);

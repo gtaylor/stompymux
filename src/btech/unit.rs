@@ -215,6 +215,9 @@ pub struct Mech {
     pub(super) signature: super::UnitSignature,
     #[serde(default = "super::scanner::default_perception")]
     pub(super) scanner_perception: i16,
+    /// This turn's 2d6 sensor sweep, once rolled.
+    #[serde(default)]
+    pub(super) sensor_sweep: Option<u8>,
     #[serde(default)]
     pub(super) contacts: BTreeMap<ObjectId, super::Contact>,
     #[serde(default)]
@@ -377,6 +380,7 @@ super::saved_parts::saved_parts!(Mech {
         building_entry,
         signature,
         scanner_perception,
+        sensor_sweep,
         contacts,
         searchlight,
         pilot_injuries,
@@ -943,6 +947,7 @@ impl Mech {
             artillery_adjustment: 0,
             signature: Default::default(),
             scanner_perception: super::scanner::default_perception(),
+            sensor_sweep: None,
             posture: Default::default(),
             stand_timer: None,
             building_entry: None,

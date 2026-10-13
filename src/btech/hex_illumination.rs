@@ -5,7 +5,7 @@ use anyhow::{Context, Result, ensure};
 
 /// Inspect whether a checked battlefield hex is lit, without identifying any emitting unit.
 /// Fires and infernos light their own hex and six neighbors. Searchlights project
-/// within their forward arc to terrain less than sixty spatial hexes away.
+/// within their forward arc to terrain up to thirty hexes away (Tactical Operations p. 55).
 pub fn hex_illuminated(world: &World, map: ObjectId, target: HexCoordinate) -> Result<bool> {
     ensure!(
         world
@@ -69,7 +69,7 @@ pub fn hex_illuminated(world: &World, map: ObjectId, target: HexCoordinate) -> R
             continue;
         }
         let (los, distance) = super::los::unit_hex_los(world, id, target)?;
-        if distance < 60.0 && !los.blocked && los.obscuring_points() <= 2 && los.water == 0 {
+        if distance <= 30.0 && !los.blocked && los.obscuring_points() <= 2 {
             return Ok(true);
         }
     }

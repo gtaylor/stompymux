@@ -62,19 +62,63 @@ async fn fixture_with_ranges(
     (dir, config, world, map, source, target)
 }
 
-/// Leave no channel that reaches anything: the sensor band switched off and no visibility.
+/// Every Mech and vehicle placed on `map`.
+fn map_units(world: &World, map: ObjectId) -> Vec<ObjectId> {
+    world
+        .btech
+        .constructed_units()
+        .keys()
+        .chain(world.btech.vehicles().keys())
+        .copied()
+        .filter(|id| {
+            world
+                .btech
+                .unit(*id)
+                .and_then(|unit| unit.position())
+                .is_some_and(|position| position.map == map)
+        })
+        .collect()
+}
+
+/// Leave observers on `map` no channel that reaches a unit and only three hexes of terrain:
+/// sensors switched off, pitch-black night, and every unit on the map flagged invisible,
+/// since no light or weather ever hides a unit within three hexes under the rules.
 fn blind(world: &mut World, map: ObjectId) {
     set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
-    set_battle_map_visibility(world, map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(world, map, Light::PitchBlack, Weather::Clear).unwrap();
+    for id in map_units(world, map) {
+        let clairvoyant = visibility(world, id).unwrap().clairvoyant;
+        set_battle_visibility(
+            world,
+            id,
+            Visibility {
+                invisible: true,
+                clairvoyant,
+            },
+        )
+        .unwrap();
+    }
 }
 
-/// Restore the fixture's clear day with the sensor band switched back on.
+/// Restore the fixture's clear day with sensors switched back on and every unit visible again.
 fn unblind(world: &mut World, map: ObjectId) {
     set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, true).unwrap();
-    set_battle_map_visibility(world, map, Light::Day, 30).unwrap();
+    set_battle_map_conditions(world, map, Light::Day, Weather::Clear).unwrap();
+    for id in map_units(world, map) {
+        let clairvoyant = visibility(world, id).unwrap().clairvoyant;
+        set_battle_visibility(
+            world,
+            id,
+            Visibility {
+                invisible: false,
+                clairvoyant,
+            },
+        )
+        .unwrap();
+    }
 }
 
-/// Save a known contact without consuming acquisition dice.
+/// Save a known contact directly, without perceiving the target.
 fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
     world
         .btech
@@ -205,9 +249,9 @@ async fn observer_scan_bypasses_range_but_not_visibility_or_failed_hardware() {
     assert!(scan_battle_unit(&world, source, ObjectId(1), target, "I").is_ok());
     assert!(scan_battle_unit(&world, source, ObjectId(2), target, "I").is_err());
     assert!(scan_battle_unit(&world, source, ObjectId(1), target, "N").is_err());
-    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::HeavyFog).unwrap();
     assert!(scan_battle_unit(&world, source, ObjectId(1), target, "I").is_err());
-    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::Clear).unwrap();
     world
         .btech
         .rewrite_unit_record(source, |record| {
@@ -394,8 +438,23 @@ async fn coordinate_scan_selects_visible_occupants_in_saved_order() {
         );
     }
     assert!(scan_battle_hex_unit_action(&scripts, source, ObjectId(2), coordinate, "").is_err());
+    // An unseen occupant reads as an empty hex; a hex beyond sight is refused outright.
+    acquire(&mut shared.borrow_mut(), source, other);
+    assert_eq!(
+        scan_battle_hex_unit_action(&scripts, source, ObjectId(1), coordinate, "").unwrap(),
+        second
+    );
+    let far = HexCoordinate { x: 1, y: 5 };
+    assert_eq!(
+        scan_battle_hex_unit_action(&scripts, source, ObjectId(1), far, "").unwrap(),
+        empty
+    );
     blind(&mut shared.borrow_mut(), map);
-    assert!(scan_battle_hex_unit_action(&scripts, source, ObjectId(1), coordinate, "").is_err());
+    assert_eq!(
+        scan_battle_hex_unit_action(&scripts, source, ObjectId(1), coordinate, "").unwrap(),
+        empty
+    );
+    assert!(scan_battle_hex_unit_action(&scripts, source, ObjectId(1), far, "").is_err());
 }
 
 /// Register an entrance whose interior owns the construction integrity.
@@ -892,9 +951,10 @@ async fn selected_observer_coordinates_bypass_distance_but_keep_visibility_and_r
     let report = scan_battle_selected_action(&scripts, source, ObjectId(1), "").unwrap();
     assert!(matches!(report, SelectedScan::Hex(_)));
     assert!(scan_battle_hex_action(&scripts, source, ObjectId(1), far).is_err());
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(&mut shared.borrow_mut(), map, Light::Day, Weather::HeavyFog)
+        .unwrap();
     assert!(scan_battle_selected_action(&scripts, source, ObjectId(1), "").is_err());
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 30).unwrap();
+    set_battle_map_conditions(&mut shared.borrow_mut(), map, Light::Day, Weather::Clear).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 2 };
     scan_mine(&mut shared.borrow_mut(), map, coordinate);
     scan_perception(&mut shared.borrow_mut(), source);
@@ -981,7 +1041,7 @@ async fn brief_reports_are_silent_and_do_not_use_detailed_scan_range() {
         report
     );
     assert!(report_battle_unit(&world, source, ObjectId(2), target).is_err());
-    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::HeavyFog).unwrap();
     assert!(report_battle_unit(&world, source, ObjectId(1), target).is_err());
 }
 
@@ -1126,7 +1186,7 @@ async fn display_center_observer_exemption_is_projection_only() {
             .is_err()
     );
     assert!(parse_battle_view_center(&world, source, ObjectId(2), ViewKind::Tactical, "").is_err());
-    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::HeavyFog).unwrap();
     assert!(
         parse_battle_view_center(&world, source, ObjectId(1), ViewKind::LongRange, "AB").is_err()
     );
@@ -1780,7 +1840,7 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
 #[tokio::test]
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
     let (_dir, config, mut world, map, source, target) = fixture().await;
-    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 3).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::HeavyFog).unwrap();
     // Without the sensor band, only sight (and therefore illumination) reaches past three hexes.
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 7 };
@@ -2412,6 +2472,20 @@ async fn tactical_mines_filter_trigger_fields_and_visibility_without_recognition
         battle_tactical_map(&world, source, ObjectId(1), "M", ViewDimensions::default()).unwrap();
     assert!(!text::plain(&trigger.text).contains("<>"));
     set_minefield(&mut world, map, 0, None).unwrap();
+    // A field five hexes out is drawn in daylight and vanishes once sight stops short of it.
+    set_minefield(
+        &mut world,
+        map,
+        1,
+        Some(Minefield {
+            coordinate: HexCoordinate { x: 1, y: 6 },
+            ..mine
+        }),
+    )
+    .unwrap();
+    let far =
+        battle_tactical_map(&world, source, ObjectId(1), "M", ViewDimensions::default()).unwrap();
+    assert!(text::plain(&far.text).contains("<>"));
     blind(&mut world, map);
     let hidden =
         battle_tactical_map(&world, source, ObjectId(1), "M", ViewDimensions::default()).unwrap();
@@ -2558,9 +2632,21 @@ async fn navigation_combines_local_map_continuous_plot_and_readouts_without_muta
         .nth(14),
         Some('X')
     );
-    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
+    // On a dark map a ridge masks the hex behind it, and an unseen unit in the center hex is
+    // not plotted. Sight always reaches the two-hex radius, so only terrain can hide a hex.
+    // Destroyed sensors leave no scanner range for projected centers.
+    set_battle_visibility(
+        &mut world,
+        target,
+        Visibility {
+            invisible: true,
+            clairvoyant: false,
+        },
+    )
+    .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["flags"] = 32.into();
+    support::set_hex_elevation(&mut state["maps"][map.0.to_string()]["terrain"][7], 9);
     state["constructed"][source.0.to_string()]["lost_criticals"] =
         serde_json::json!([{"section":"Head","slot":1},{"section":"Head","slot":4}]);
     world.btech = serde_json::from_value(state).unwrap();
@@ -3192,6 +3278,29 @@ async fn building_contacts_identify_concealed_structures_and_rollback_failed_loc
             "_parents['default_room.lua'].locks.identify_building=function(ctx) return true end",
         )
         .unwrap();
+    // An entrance four hexes out is listed in daylight and dropped once sight stops short of it.
+    let entrance = |coordinate| {
+        Some(BuildingEntrance {
+            coordinate,
+            interior,
+            data_char: 0,
+            data_short: 0,
+            data_int: 0,
+        })
+    };
+    set_building_entrance(
+        &mut shared.borrow_mut(),
+        map,
+        0,
+        entrance(HexCoordinate { x: 1, y: 5 }),
+    )
+    .unwrap();
+    assert_eq!(
+        battle_building_contacts(&scripts, source, ObjectId(1))
+            .unwrap()
+            .len(),
+        1
+    );
     blind(&mut shared.borrow_mut(), map);
     assert!(
         battle_building_contacts(&scripts, source, ObjectId(1))
@@ -3199,6 +3308,13 @@ async fn building_contacts_identify_concealed_structures_and_rollback_failed_loc
             .is_empty()
     );
     unblind(&mut shared.borrow_mut(), map);
+    set_building_entrance(
+        &mut shared.borrow_mut(),
+        map,
+        0,
+        entrance(HexCoordinate { x: 1, y: 2 }),
+    )
+    .unwrap();
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -3371,7 +3487,7 @@ async fn brief_modes_are_unit_owned_and_control_buildings_and_notices() {
         );
     }
     let event = ContactEvent {
-        experience_message: None,
+        revealed: None,
         identified: true,
         observer: source,
         target,
@@ -3637,19 +3753,43 @@ async fn contact_status_columns_share_precedence_with_native_and_lua() {
     );
 }
 
-/// Contact views recheck which channel reaches the target from current map conditions without
-/// rewriting the saved acquisition, and native rows, Lua and restart agree on the channel.
+/// Contact views recheck which channel reaches the target from current map conditions and the
+/// saved sensor sweep without rewriting the saved contact, and native rows, Lua and restart
+/// agree on the channel.
 #[tokio::test]
 async fn contact_detection_rechecks_channels_without_rewriting_acquisition() {
-    let (_dir, config, world, map, source, target) = fixture().await;
+    let (_dir, config, mut world, map, source, target) = fixture().await;
+    // Four hexes out: heavy fog (five hexes of sight) still shows the target, pitch black
+    // (three) does not, and a short-band infrared sweep (ten hexes) finds it in the dark.
+    place_battle_unit(&mut world, target, map, 1, 5).unwrap();
+    acquire(&mut world, source, target);
     let baseline = world.btech.clone();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    for (sensors, visibility, expected) in [
-        (true, 30, Some(DetectionChannel::Sensors)),
-        (true, 0, Some(DetectionChannel::Sensors)),
-        (false, 30, Some(DetectionChannel::Sight)),
-        (false, 0, None),
+    for (sensors, light, weather, sweep, expected) in [
+        (
+            true,
+            Light::Day,
+            Weather::Clear,
+            7,
+            Some(DetectionChannel::Sight),
+        ),
+        (
+            true,
+            Light::Day,
+            Weather::HeavyFog,
+            9,
+            Some(DetectionChannel::Sight),
+        ),
+        (
+            true,
+            Light::PitchBlack,
+            Weather::Clear,
+            7,
+            Some(DetectionChannel::Sensors),
+        ),
+        (true, Light::PitchBlack, Weather::Clear, 9, None),
+        (false, Light::PitchBlack, Weather::Clear, 7, None),
     ] {
         shared.borrow_mut().btech = baseline.clone();
         set_battle_map_perception(
@@ -3659,12 +3799,21 @@ async fn contact_detection_rechecks_channels_without_rewriting_acquisition() {
             sensors,
         )
         .unwrap();
-        set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, visibility).unwrap();
+        set_battle_map_conditions(&mut shared.borrow_mut(), map, light, weather).unwrap();
+        shared
+            .borrow_mut()
+            .btech
+            .rewrite_unit_record(source, |record| {
+                record["sensor_sweep"] = serde_json::json!(sweep);
+            })
+            .unwrap();
         let before = scripts.world().btech.clone();
         let contact = visible_battle_contact(&scripts.world(), source, target).unwrap();
         assert_eq!(contact.as_ref().map(|c| c.detection), expected.map(Some));
         if let Some(channel) = expected {
             let contact = contact.unwrap();
+            // Sight identifies the target; a sensor blip stays anonymous.
+            assert_eq!(contact.identified, channel == DetectionChannel::Sight);
             let text = support::run_text(
                 &scripts,
                 &config,
@@ -3675,7 +3824,7 @@ async fn contact_detection_rechecks_channels_without_rewriting_acquisition() {
             assert!(
                 text::plain(&text).contains(&format!(
                     "{} {}[{}]",
-                    channel.code(true),
+                    channel.code(contact.identified),
                     contact.weapon_arc.symbol(),
                     contact.label
                 )),
@@ -3705,7 +3854,7 @@ async fn contact_detection_rechecks_channels_without_rewriting_acquisition() {
             .unwrap()
             .unwrap()
             .detection,
-        Some(DetectionChannel::Sensors)
+        Some(DetectionChannel::Sight)
     );
     let mut state = serde_json::to_value(&restored.btech).unwrap();
     state["constructed"][source.0.to_string()]["contacts"] = serde_json::json!({});
@@ -3755,7 +3904,7 @@ async fn contact_weapon_arc_tracks_observer_pose_in_native_lua_and_restart() {
             &format!("contacts #{}", target.0),
         );
         assert!(
-            text::plain(&text).contains(&format!("S {}[{}]", expected.symbol(), contact.label)),
+            text::plain(&text).contains(&format!("V {}[{}]", expected.symbol(), contact.label)),
             "{text}"
         );
         let arc: String = scripts
@@ -3790,7 +3939,7 @@ async fn automatic_contact_modes_control_detail_color_and_escaping() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let event = ContactEvent {
-        experience_message: None,
+        revealed: None,
         identified: true,
         observer: source,
         target,
@@ -3938,11 +4087,14 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     for _ in 0..5 {
         let _ = advance_battle_units(&mut world, 0, true);
     }
+    // Fit a Beagle probe and give the suite a short-band sweep, which a ridge does not stop
+    // for the probe (Tactical Operations double-blind rules).
     world
         .btech
         .rewrite_unit_record(source, |record| {
             record["definition"]["sections"]["LeftTorso"]["criticals"]["8"] =
                 serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
+            record["sensor_sweep"] = serde_json::json!(7);
         })
         .unwrap();
     assert!(
@@ -3950,6 +4102,9 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
             .unwrap()
             .blocked
     );
+    let perception = battle_perceive(&world, source, target).unwrap().unwrap();
+    assert_eq!(perception.channel, DetectionChannel::Probe);
+    assert!(!perception.identified && !perception.line_of_fire);
     acquire(&mut world, source, target);
     let _ = refresh_battle_contacts(&mut world, &[source]).unwrap();
     assert!(!world.btech.constructed_units()[&source].contacts()[&target].identified);
@@ -4012,7 +4167,7 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let event = ContactEvent {
-        experience_message: None,
+        revealed: None,
         identified: true,
         observer: source,
         target,
@@ -4098,7 +4253,7 @@ async fn compact_contact_rows_have_fixed_columns_and_bounded_names() {
     let row = visible_battle_contact(&scripts.world(), source, target)
         .unwrap()
         .unwrap();
-    let expected = "S v[ab]B Jenner       x:  1 y:  2 z:  0 r: 1.0 b:180 s:  0.0 h:  0 S:   S ";
+    let expected = "V v[ab]B Jenner       x:  1 y:  2 z:  0 r: 1.0 b:180 s:  0.0 h:  0 S:   S ";
     assert_eq!(row.short_text, expected);
     assert_eq!(row.label, "ab");
     assert_eq!(row.coordinate, HexCoordinate { x: 1, y: 2 });
@@ -4141,20 +4296,20 @@ async fn compact_contact_rows_have_fixed_columns_and_bounded_names() {
     let row = visible_battle_contact(&scripts.world(), source, target)
         .unwrap()
         .unwrap();
-    assert!(row.short_text.starts_with("S v[ab]B Very Long Un x:"));
+    assert!(row.short_text.starts_with("V v[ab]B Very Long Un x:"));
     assert!(!row.short_text.contains("[fg="));
 }
 
 /// Building rows lead with the channel that reaches the entrance hex, shared by native, Lua and
-/// restart, and disappear once neither the sensor band nor sight reaches it.
+/// restart, and disappear once sight no longer reaches it: structures are seen, never swept.
 #[tokio::test]
 async fn compact_building_rows_share_terrain_detection_channels() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
-    let _ = scan_structure(&mut world, &config, map);
+    let interior = scan_structure(&mut world, &config, map);
     let baseline = world.btech.clone();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    let expected = "S v Hangar                  x:  1 y:  2 z: 1 r: 1.0 b:180 CF:  31 /  50 S:  ";
+    let expected = "V v Hangar                  x:  1 y:  2 z: 1 r: 1.0 b:180 CF:  31 /  50 S:  ";
     let contacts = battle_building_contacts(&scripts, source, ObjectId(1)).unwrap();
     assert_eq!(contacts[0].short_text, expected);
     assert_eq!(contacts[0].text(), expected);
@@ -4166,12 +4321,39 @@ async fn compact_building_rows_share_terrain_detection_channels() {
         ))
         .unwrap();
     assert_eq!(lua, expected);
-    for (sensors, visibility, expected) in [
-        (true, 0, Some(DetectionChannel::Sensors)),
-        (false, 30, Some(DetectionChannel::Sight)),
-        (false, 0, None),
+    // Move the entrance four hexes out: fog (five hexes of sight) still reaches it, pitch black
+    // (three) does not, and the map's sensor switch changes nothing for a structure.
+    let far = HexCoordinate { x: 1, y: 5 };
+    for (sensors, light, weather, expected) in [
+        (
+            true,
+            Light::Day,
+            Weather::HeavyFog,
+            Some(DetectionChannel::Sight),
+        ),
+        (
+            false,
+            Light::Day,
+            Weather::Clear,
+            Some(DetectionChannel::Sight),
+        ),
+        (true, Light::PitchBlack, Weather::Clear, None),
+        (false, Light::PitchBlack, Weather::Clear, None),
     ] {
         shared.borrow_mut().btech = baseline.clone();
+        set_building_entrance(
+            &mut shared.borrow_mut(),
+            map,
+            0,
+            Some(BuildingEntrance {
+                coordinate: far,
+                interior,
+                data_char: 0,
+                data_short: 0,
+                data_int: 0,
+            }),
+        )
+        .unwrap();
         set_battle_map_perception(
             &mut shared.borrow_mut(),
             map,
@@ -4179,10 +4361,9 @@ async fn compact_building_rows_share_terrain_detection_channels() {
             sensors,
         )
         .unwrap();
-        set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, visibility).unwrap();
+        set_battle_map_conditions(&mut shared.borrow_mut(), map, light, weather).unwrap();
         let before = scripts.world().btech.clone();
-        let detection =
-            battle_hex_perception(&scripts.world(), source, HexCoordinate { x: 1, y: 2 }).unwrap();
+        let detection = battle_hex_perception(&scripts.world(), source, far).unwrap();
         assert_eq!(detection, expected);
         let contacts = battle_building_contacts(&scripts, source, ObjectId(1)).unwrap();
         assert_eq!(contacts.is_empty(), expected.is_none());

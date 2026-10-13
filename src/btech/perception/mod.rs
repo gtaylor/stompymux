@@ -1,93 +1,68 @@
-//! Automatic perception: how one unit detects another.
+//! Automatic perception, after Total Warfare's line of sight and the double-blind rules of
+//! Tactical Operations (pp. 188–191), adapted to realtime play.
 //!
-//! Every observer/target pair is traced once, and up to four channels may reach the target:
+//! * **Sight** needs a clear line and reaches as far as the light and weather allow: sixty
+//!   hexes in daylight, three in pitch black. At night a unit's own searchlight stretches its
+//!   sight to thirty hexes and a target lit by anything else is seen at forty-five. Smoke
+//!   along the line shortens sight by its density. A sighted unit is identified.
+//! * **Sensors** are one selected system (infrared, magscan, radar, seismic or an active
+//!   probe) swept with 2d6 once a turn; the sweep's result picks the range band that turn's
+//!   sweep finds targets in. Sensors do not need a clear line, though hills stop infrared and
+//!   radar, buildings stop radar and magscan, and nothing but magscan crosses the water's
+//!   surface. A sensor contact is a blip: a position and height, not an identity.
+//! * A **hidden** unit is perceived by no enemy until something reveals it.
 //!
-//! * **Sensors**: every unit detects anything with a clear line inside a short band
-//!   ([`DEFAULT_SENSOR_RANGE`] hexes unless configured), whatever the darkness or weather.
-//! * **Sight**: beyond the band, weather visibility sets the reach. At night an illuminated
-//!   target can be seen three times as far. Darkness itself costs to hit through the map's
-//!   light, not through perception.
-//! * **Probe**: an active probe sees through terrain, woods, smoke and darkness within its
-//!   radius and reveals hidden units. Behind blocking terrain the contact can be locked,
-//!   spotted and shared, but not engaged with direct fire.
-//! * **Radar**: anti-aircraft radar tracks airborne targets at long range.
-//!
-//! A clear line means no blocking terrain, fire, smoke, dense woods or cloud boundary between
-//! the two units. Hostile ECM silences the sensor band and probes; stealth armor and null
-//! signature systems hide a unit from enemy sensors and all probes but the Bloodhound. When
-//! several channels reach a target, the one with the lowest aim modifier wins.
+//! Darkness and weather cost to hit through the map's conditions, not here; cover along the
+//! line and in the target's hex is reported as the perception's aim modifier.
 
-mod acquisition;
 mod probe;
-mod radar;
 mod report;
+mod sensors;
 mod sight;
 
-pub(crate) use acquisition::acquire;
-pub use acquisition::{
-    AUTOMATIC_DETECTION_RANGE, AcquisitionRules, Detection, HIDDEN_DETECTION_RANGE, SensorArc,
-    perception_factor,
-};
 pub use probe::ActiveProbe;
-pub use radar::{RADAR_RANGE, RadarTarget};
 pub use report::{PerceptionReport, perception_report};
+pub use sensors::{
+    SensorBand, SensorBands, SensorMode, SweepResult, SweepTarget, TargetSystems, ecm_modifier,
+    sweep,
+};
 
 use crate::btech::{
-    HexCoordinate, Light, Power, Range, StoredMap, System, TerrainLos, VehicleMovement,
+    Ground, HexCoordinate, Light, Power, Range, StoredMap, System, TerrainLos, VehicleMovement,
+    Weather,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use sight::SightFacts;
 
-/// Default reach of the all-conditions sensor band, in hexes.
-pub const DEFAULT_SENSOR_RANGE: u16 = 15;
-
-/// Host-configured sensor band reach, defaulting to [`DEFAULT_SENSOR_RANGE`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SensorRange(pub u16);
-
-impl Default for SensorRange {
-    fn default() -> Self {
-        Self(DEFAULT_SENSOR_RANGE)
-    }
-}
-
-/// Apply the host's sensor band reach; negative or oversized values are clamped to the map ceiling.
-pub fn configure_perception(world: &mut World, sensor_range: i64) {
-    world.btech.sensor_range = SensorRange(sensor_range.clamp(0, 60) as u16);
-}
-
-/// How a target is perceived. Declaration order breaks ties between equal aim modifiers.
+/// How a target is perceived. Declaration order breaks ties: sight identifies, so it wins.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DetectionChannel {
-    Sensors,
     Sight,
-    Radar,
+    Sensors,
     Probe,
 }
 
 impl DetectionChannel {
     /// Every channel, in tie-break order.
-    pub const ALL: [Self; 4] = [Self::Sensors, Self::Sight, Self::Radar, Self::Probe];
+    pub const ALL: [Self; 3] = [Self::Sight, Self::Sensors, Self::Probe];
 
     /// Stable name shared by serialization and Lua constants.
     pub fn name(self) -> &'static str {
         match self {
-            Self::Sensors => "sensors",
             Self::Sight => "sight",
-            Self::Radar => "radar",
+            Self::Sensors => "sensors",
             Self::Probe => "probe",
         }
     }
 
-    /// One-letter contact-row code. A contact behind blocking terrain uses lowercase.
+    /// One-letter contact-row code; a blip that is not identified uses lowercase.
     pub fn code(self, identified: bool) -> char {
         let code = match self {
-            Self::Sensors => 'S',
             Self::Sight => 'V',
-            Self::Radar => 'R',
+            Self::Sensors => 'S',
             Self::Probe => 'P',
         };
         if identified {
@@ -102,24 +77,25 @@ impl DetectionChannel {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Perception {
     pub channel: DetectionChannel,
-    /// Terrain leaves a line of fire. Only probe contacts behind blocking terrain are unidentified.
+    /// The target is seen, so its identity and condition are known; sensor blips are not.
     pub identified: bool,
-    /// Perception's contribution to weapon aim: concealment, cover, darkness or radar tracking.
+    /// Terrain leaves a line of fire; a blip behind a hill can only be engaged indirectly.
+    pub line_of_fire: bool,
+    /// Perception's contribution to weapon aim: woods, smoke and crops along the line and in
+    /// the target's hex, partial cover, and hull-down posture behind it.
     pub aim_modifier: i16,
-    /// An active probe reaches the target, which reveals hidden units.
-    pub probed: bool,
     pub range: Range,
+    /// What this turn's sensor sweep made of the target, when sensors were tried.
+    pub sweep: Option<SweepResult>,
 }
 
 /// Condition of one perception system on the observing unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PerceptionStatus {
-    /// Working at full reach.
+    /// Working.
     Ready,
-    /// Working at reduced reach after damage.
-    Degraded,
-    /// Silenced by hostile electronic countermeasures or the unit's own stealth systems.
+    /// Working while hostile ECM adds to its sweeps.
     Jammed,
     /// Destroyed or otherwise failed equipment.
     Damaged,
@@ -129,103 +105,94 @@ pub enum PerceptionStatus {
     Absent,
 }
 
-/// The best installed active probe and its current condition.
+/// The selected sensor system and its current sweep.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SensorProfile {
+    /// Every sensor system the unit sweeps with this turn and its brackets on this chassis,
+    /// in the order they are tried: a working active probe, then the built-in infrared,
+    /// magscan, radar and seismic sensors.
+    pub systems: Vec<SensorSystem>,
+    /// Condition of the built-in sensors.
+    pub status: PerceptionStatus,
+    /// Hostile ECM covers the unit, so its radar and probe sweeps take the jamming modifier.
+    pub jammed: bool,
+    /// This turn's 2d6 sweep, once rolled.
+    pub sweep: Option<u8>,
+    /// The band the unmodified sweep detects in.
+    pub band: Option<SensorBand>,
+    /// The installed probe the probe sweep uses.
+    pub probe: Option<ActiveProbe>,
+}
+
+/// One sensor system of a unit's suite and the brackets it detects in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct SensorSystem {
+    pub mode: SensorMode,
+    pub bands: SensorBands,
+}
+
+/// The best installed active probe and its standard-rules reach for finding hidden units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ProbeProfile {
     pub kind: ActiveProbe,
-    /// Reach in hexes, including the stationary-installation bonus.
-    pub range: u16,
-    pub status: PerceptionStatus,
-}
-
-/// Installed anti-aircraft radar and its current condition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct RadarProfile {
-    /// Reach in hexes; line of sight caps radar here on every chassis, fixed or mobile.
+    /// Hexes within which the probe reveals a hidden unit it has line of sight to (Total
+    /// Warfare p. 129).
     pub range: u16,
     pub status: PerceptionStatus,
 }
 
 /// Everything an observer can currently perceive with, computed once per observation.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PerceptionProfile {
     pub light: Light,
-    /// Weather visibility, capped by the battlefield ceiling.
+    pub weather: Weather,
+    /// How far the observer sees under the light and weather, stretched to thirty hexes by
+    /// its own searchlight at night.
     pub sight_range: u16,
-    /// Reach to an illuminated target; three times sight at night, otherwise equal to it.
+    /// How far the observer sees a target lit by another source at night.
     pub lit_sight_range: u16,
-    /// Effective all-conditions band; zero while the sensors are unavailable.
-    pub sensor_range: u16,
-    pub sensors: PerceptionStatus,
+    pub sensor: SensorProfile,
     pub probe: Option<ProbeProfile>,
-    pub radar: Option<RadarProfile>,
     #[serde(skip)]
     pub(crate) clairvoyant: bool,
-    #[serde(skip)]
-    ceiling: u16,
     #[serde(skip)]
     cloud_base: i16,
     #[serde(skip)]
     level: i32,
+    #[serde(skip)]
+    team: i32,
+    #[serde(skip)]
+    vehicle: bool,
+    #[serde(skip)]
+    underwater: bool,
+    /// Hostile ECM covers the observer: any suite, and an Angel suite.
+    #[serde(skip)]
+    disturbed: (bool, bool),
 }
 
 impl PerceptionProfile {
-    /// The probe that can currently reach targets, if any.
-    fn ready_probe(&self) -> Option<ProbeProfile> {
+    /// The probe that can currently reveal hidden units, if any.
+    pub(super) fn ready_probe(&self) -> Option<ProbeProfile> {
         self.probe
             .filter(|probe| probe.status == PerceptionStatus::Ready)
     }
 
-    /// Installed radar that can currently track targets, if any.
-    fn ready_radar(&self) -> Option<RadarProfile> {
-        self.radar
-            .filter(|radar| radar.status == PerceptionStatus::Ready)
+    /// The farthest hex any channel could reach this turn: sight of a lit target, or the
+    /// sensor's long band stretched by the most heat and mass can add. Nothing beyond it needs
+    /// its terrain traced.
+    pub(super) fn reach(&self) -> u64 {
+        let sensors = if self.sensor.sweep.is_some() {
+            self.sensor
+                .systems
+                .iter()
+                .map(|system| u64::from(system.bands.long) + 8)
+                .max()
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        u64::from(self.sight_range.max(self.lit_sight_range)).max(sensors)
     }
-}
-
-/// Fixed installations extend sensor band and probe reach by forty percent.
-pub(crate) fn installation_reach(world: &World, observer: ObjectId, ordinary: u16) -> u16 {
-    if world
-        .btech
-        .vehicles()
-        .get(&observer)
-        .is_some_and(|unit| unit.definition().movement == VehicleMovement::Stationary)
-    {
-        return ordinary * 140 / 100;
-    }
-    ordinary
-}
-
-/// Radar's aim term when it reaches an airborne target, excluding hull-down cover.
-///
-/// Low-flying targets stay within the ordinary map ceiling until either end climbs to
-/// altitude eleven.
-fn radar_aim(
-    world: &World,
-    profile: &PerceptionProfile,
-    target: ObjectId,
-    point: &crate::btech::los::UnitSightPoint,
-    terrain: TerrainLos,
-    range: Range,
-) -> Result<Option<i16>> {
-    let Some(radar) = profile.ready_radar() else {
-        return Ok(None);
-    };
-    let map = world
-        .btech
-        .maps()
-        .get(&point.position.map)
-        .context("Map not found")?;
-    if range.spatial > map.maximum_visibility as f64 && point.level < 11 && profile.level < 11 {
-        return Ok(None);
-    }
-    let tile = map.base_hex(i64::from(point.position.x), i64::from(point.position.y))?;
-    let flying = world
-        .btech
-        .vehicles()
-        .get(&target)
-        .is_some_and(|unit| unit.definition().is_vtol());
-    RadarTarget::above_tile(point.level, tile, flying).evaluate(terrain, range.spatial, radar.range)
 }
 
 /// Battlefield switches that turn off one perception channel for every unit on the map.
@@ -332,70 +299,109 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         .get(&position.map)
         .context("Map not found")?;
     let light = map.light_level()?;
-    let ceiling = u16::try_from(map.maximum_visibility.clamp(0, 60))?;
-    let visibility = u16::try_from(map.visibility.clamp(0, 60))?;
-    let sight_range = visibility.min(ceiling);
-    let lit_sight_range = if light.is_night() {
-        (visibility * 3).min(ceiling)
+    let weather = map.weather_condition()?;
+    let visual = u16::from(map.visual_range()?);
+    let searchlight_on = crate::btech::searchlight::lamp_on(world, observer);
+    let sight_range = if light.searchlights_help_sight() && searchlight_on {
+        visual.max(u16::from(crate::btech::SEARCHLIGHT_SIGHT))
+    } else {
+        visual
+    };
+    let lit_sight_range = if light.searchlights_help_sight() {
+        sight_range.max(u16::from(crate::btech::LIT_TARGET_SIGHT))
     } else {
         sight_range
     };
-    let jammed = crate::btech::electronic_field(world, observer)?.blocks_outgoing_guidance();
-    let (sensors, sensor_range) = sensor_band(world, observer, map, jammed)?;
-    let radar = unit.radar.then(|| RadarProfile {
-        range: RADAR_RANGE,
-        status: if map.perception_disabled(MapPerceptionFlag::Radar) {
-            PerceptionStatus::Disabled
-        } else {
-            PerceptionStatus::Ready
-        },
-    });
+    let field = crate::btech::electronic_field(world, observer)?;
+    let probe = probe_profile(world, observer, map)?;
+    let sensor = sensor_profile(world, observer, &unit, map, probe, field.disturbed)?;
+    let point = crate::btech::los::unit_sight_point(world, observer)?;
     Ok(PerceptionProfile {
         light,
+        weather,
         sight_range,
         lit_sight_range,
-        sensor_range,
-        sensors,
-        probe: probe_profile(world, observer, map, jammed)?,
-        radar,
+        sensor,
+        probe,
         clairvoyant: unit.visibility.clairvoyant,
-        ceiling,
         cloud_base: map.cloud_base,
-        level: crate::btech::los::unit_sight_point(world, observer)?.level,
+        level: point.level,
+        team: unit.signature.team,
+        vehicle: unit.vehicle,
+        underwater: point.below_waterline(),
+        disturbed: (field.disturbed, field.angel_disturbed),
     })
 }
 
-/// Resolve the all-conditions band from equipment, damage, jamming and map switches.
-fn sensor_band(
+/// Resolve the selected sensor from equipment, damage, jamming and map switches.
+fn sensor_profile(
     world: &World,
     observer: ObjectId,
+    unit: &crate::btech::scanner::ScannerUnit<'_>,
     map: &StoredMap,
+    probe: Option<ProbeProfile>,
     jammed: bool,
-) -> Result<(PerceptionStatus, u16)> {
-    let mech = world.btech.constructed_units().get(&observer);
-    let absent = match (mech, world.btech.vehicles().get(&observer)) {
-        (Some(unit), _) => unit.definition().has_special("NoSensors"),
-        (None, Some(vehicle)) => vehicle.definition().has_special("NoSensors"),
-        (None, None) => anyhow::bail!("Observer is not constructed"),
+) -> Result<SensorProfile> {
+    let (clan, hits, no_sensors) = match world.btech.constructed_units().get(&observer) {
+        Some(mech) => (
+            mech.definition().has_special("Clan"),
+            mech.system_hits(System::Sensors),
+            mech.definition().has_special("NoSensors"),
+        ),
+        None => {
+            let vehicle = &world.btech.vehicles()[&observer];
+            (
+                vehicle.definition().has_special("Clan"),
+                0,
+                vehicle.definition().has_special("NoSensors"),
+            )
+        }
     };
-    if absent {
-        return Ok((PerceptionStatus::Absent, 0));
+    let status = if no_sensors {
+        PerceptionStatus::Absent
+    } else if map.perception_disabled(MapPerceptionFlag::Sensors) {
+        PerceptionStatus::Disabled
+    } else if hits >= 2 {
+        PerceptionStatus::Damaged
+    } else {
+        PerceptionStatus::Ready
+    };
+    let probe_kind = probe.map(|probe| probe.kind);
+    let mut systems = Vec::new();
+    // A working probe sweeps first, with its own brackets, so a target it finds shows as a
+    // probe contact; the built-in sensors follow.
+    if probe.is_some_and(|probe| probe.status == PerceptionStatus::Ready) {
+        systems.push(SensorSystem {
+            mode: SensorMode::Probe,
+            bands: SensorBands::of(SensorMode::Probe, unit.vehicle, probe_kind, clan),
+        });
     }
-    if map.perception_disabled(MapPerceptionFlag::Sensors) {
-        return Ok((PerceptionStatus::Disabled, 0));
+    if status == PerceptionStatus::Ready {
+        for mode in [
+            SensorMode::Infrared,
+            SensorMode::Magscan,
+            SensorMode::Radar,
+            SensorMode::Seismic,
+        ] {
+            if mode == SensorMode::Radar && map.perception_disabled(MapPerceptionFlag::Radar) {
+                continue;
+            }
+            systems.push(SensorSystem {
+                mode,
+                bands: SensorBands::of(mode, unit.vehicle, None, clan),
+            });
+        }
     }
-    let hits = mech.map_or(0, |unit| unit.system_hits(System::Sensors));
-    if hits >= 2 {
-        return Ok((PerceptionStatus::Damaged, 0));
-    }
-    if jammed {
-        return Ok((PerceptionStatus::Jammed, 0));
-    }
-    let range = installation_reach(world, observer, world.btech.sensor_range.0);
-    if hits == 1 {
-        return Ok((PerceptionStatus::Degraded, range / 2));
-    }
-    Ok((PerceptionStatus::Ready, range))
+    Ok(SensorProfile {
+        systems,
+        status,
+        jammed,
+        sweep: unit.sensor_sweep,
+        band: unit
+            .sensor_sweep
+            .and_then(|roll| SensorBand::of_result(i16::from(roll))),
+        probe: probe_kind,
+    })
 }
 
 /// Pick the working probe with the longest reach, or else the best installed one as damaged.
@@ -403,7 +409,6 @@ fn probe_profile(
     world: &World,
     observer: ObjectId,
     map: &StoredMap,
-    jammed: bool,
 ) -> Result<Option<ProbeProfile>> {
     // Build the equipment projection once and check every family against it.
     let (clan, fittings) = match world.btech.vehicles().get(&observer) {
@@ -432,7 +437,7 @@ fn probe_profile(
         if !fitting.installed {
             continue;
         }
-        let range = installation_reach(world, observer, u16::from(kind.range(clan)));
+        let range = u16::from(kind.range(clan));
         if !fitting.available {
             damaged.get_or_insert(ProbeProfile {
                 kind,
@@ -443,8 +448,6 @@ fn probe_profile(
         }
         let status = if map.perception_disabled(MapPerceptionFlag::Probes) {
             PerceptionStatus::Disabled
-        } else if jammed {
-            PerceptionStatus::Jammed
         } else {
             PerceptionStatus::Ready
         };
@@ -461,6 +464,30 @@ fn probe_profile(
 pub fn perceive(world: &World, observer: ObjectId, target: ObjectId) -> Result<Option<Perception>> {
     let profile = perception_profile(world, observer)?;
     perceive_prepared(world, observer, &profile, target, None, None)
+}
+
+/// Cover an attack on `target` must clear, from the terrain already traced between the
+/// units: woods, smoke and crops along the line and in the target's hex, partial cover and
+/// hull-down posture behind it, less the woods a probe within reach lets the shooter see
+/// through (Tactical Operations p. 97).
+pub(crate) fn cover_aim(
+    world: &World,
+    profile: &PerceptionProfile,
+    target: ObjectId,
+    terrain: TerrainLos,
+    range: Range,
+) -> i16 {
+    let hull_down = crate::btech::hull_down::cover_modifier(world, target, terrain.partial_cover);
+    let cover = sight::cover(terrain, hull_down);
+    let woods = i16::from(terrain.woods) + i16::from(terrain.target_woods);
+    let probe_helps = profile
+        .ready_probe()
+        .is_some_and(|probe| !terrain.blocked && range.hex_distance <= u64::from(probe.range));
+    if probe_helps && woods > 0 {
+        cover - 1
+    } else {
+        cover
+    }
 }
 
 /// Perceive one target, reusing an observation's profile, pair geometry and lighting cache.
@@ -484,16 +511,34 @@ pub(crate) fn perceive_prepared(
     if other.visibility.invisible {
         return Ok(None);
     }
+    // A hidden unit stays unseen by the enemy until something reveals it (Total Warfare
+    // p. 259); its own side always knows where it is.
+    if other.signature.hidden && other.signature.team != profile.team {
+        return Ok(None);
+    }
     let (terrain, range) = match geometry {
         Some(geometry) => geometry,
-        None => crate::btech::los::unit_terrain_geometry(world, observer, target)?,
+        None => {
+            // Too far for every channel: skip the terrain trace, the costly part of a sweep
+            // over a crowded battlefield.
+            if crate::btech::unit_range(world, observer, target)?.hex_distance > profile.reach() {
+                return Ok(None);
+            }
+            crate::btech::los::unit_terrain_geometry(world, observer, target)?
+        }
     };
     let point = crate::btech::los::unit_sight_point(world, target)?;
-    let hull_down = crate::btech::hull_down::cover_modifier(world, target, terrain.partial_cover);
+    let target_underwater = point.below_waterline();
+    let lit = || -> Result<bool> {
+        Ok(illumination.map_or_else(
+            || crate::btech::unit_illuminated(world, target),
+            |context| context.illuminated(target),
+        ))
+    };
     let facts = SightFacts {
         terrain,
         distance: range.spatial,
-        target_underwater: point.below_waterline(),
+        target_underwater,
         crosses_clouds: crate::btech::clouds::crosses(
             profile.cloud_base,
             profile.level,
@@ -502,52 +547,131 @@ pub(crate) fn perceive_prepared(
         light: profile.light,
         sight_range: profile.sight_range,
         lit_sight_range: profile.lit_sight_range,
-        ceiling: profile.ceiling,
-        sensor_range: if other.concealed {
-            0
-        } else {
-            profile.sensor_range
-        },
-        hull_down,
     };
-    let mut best: Option<(i16, DetectionChannel)> = None;
-    let mut offer = |channel: DetectionChannel, aim: i16| {
-        if best.is_none_or(|current| (aim, channel) < current) {
-            best = Some((aim, channel));
+    let aim_modifier = cover_aim(world, profile, target, terrain, range);
+    let mut channel = None;
+    let mut sweep = None;
+    if sight::sees(&facts, lit)? {
+        channel = Some(DetectionChannel::Sight);
+    } else if let Some(roll) = profile.sensor.sweep {
+        sweep = sweep_suite(
+            world,
+            profile,
+            target,
+            &other,
+            &terrain,
+            range,
+            target_underwater,
+            roll,
+        )?;
+        if let Some(result) = sweep.filter(|result| result.detected) {
+            channel = Some(if result.mode == SensorMode::Probe {
+                DetectionChannel::Probe
+            } else {
+                DetectionChannel::Sensors
+            });
         }
-    };
-    let lit = || {
-        Ok(illumination.map_or_else(
-            || crate::btech::unit_illuminated(world, target),
-            |context| context.illuminated(target),
-        ))
-    };
-    if let Some((channel, aim)) = sight::perceive(&facts, lit)? {
-        offer(channel, aim);
     }
-    let mut probed = false;
-    if let Some(probe) = profile.ready_probe()
-        && range.spatial <= f64::from(probe.range)
-        && range.spatial <= f64::from(profile.ceiling)
-        && (!other.concealed || probe.kind.sees_concealed())
-        && !crate::btech::electronic_field(world, target)?.angel_protected
-    {
-        probed = true;
-        offer(
-            DetectionChannel::Probe,
-            sight::partial_cover(terrain, hull_down),
-        );
-    }
-    if let Some(aim) = radar_aim(world, profile, target, &point, terrain, range)? {
-        offer(DetectionChannel::Radar, aim + hull_down);
-    }
-    Ok(best.map(|(aim_modifier, channel)| Perception {
+    Ok(channel.map(|channel| Perception {
         channel,
-        identified: !terrain.blocked,
+        identified: channel == DetectionChannel::Sight,
+        line_of_fire: !terrain.blocked,
         aim_modifier,
-        probed,
         range,
+        sweep,
     }))
+}
+
+/// Try this turn's roll against every system of the observer's suite. The first system to
+/// find the target wins; otherwise a jammed sweep is reported over a plain miss, and `None`
+/// means the suite has no system to sweep with.
+#[allow(clippy::too_many_arguments)]
+fn sweep_suite(
+    world: &World,
+    profile: &PerceptionProfile,
+    target: ObjectId,
+    other: &crate::btech::scanner::ScannerUnit<'_>,
+    terrain: &TerrainLos,
+    range: Range,
+    target_underwater: bool,
+    roll: u8,
+) -> Result<Option<SweepResult>> {
+    if profile.sensor.systems.is_empty() {
+        return Ok(None);
+    }
+    let position = other.position.context("Target is not placed")?;
+    let map = &world.btech.maps()[&position.map];
+    let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+    let burning_hex = map
+        .decoration(HexCoordinate {
+            x: i32::from(position.x),
+            y: i32::from(position.y),
+        })?
+        .is_some_and(|effect| effect.kind == crate::btech::DecorationKind::Fire);
+    let field = crate::btech::electronic_field(world, target)?;
+    let (heat_penalties, tons, airborne, inferno, stealth, null_signature) =
+        match world.btech.constructed_units().get(&target) {
+            Some(mech) => (
+                (mech.heat().excess / 5.0).floor().clamp(0.0, 5.0) as u8,
+                u32::from(mech.definition().tons),
+                mech.airborne(),
+                mech.inferno_remaining() > 0,
+                mech.stealth().enabled,
+                mech.null_signature().enabled,
+            ),
+            None => {
+                let vehicle = &world.btech.vehicles()[&target];
+                (
+                    0,
+                    u32::from(vehicle.definition().tons),
+                    vehicle.definition().movement == VehicleMovement::Vtol
+                        && vehicle.vtol_flight().is_some_and(|flight| {
+                            flight.phase != crate::btech::VtolFlightPhase::Landed
+                        }),
+                    vehicle.inferno_remaining() > 0,
+                    false,
+                    false,
+                )
+            }
+        };
+    let systems = TargetSystems {
+        angel: profile.disturbed.1 || field.angel_protected,
+        guardian: (profile.disturbed.0 && !profile.disturbed.1)
+            || (field.protected && !field.angel_protected),
+        null_signature,
+        stealth,
+    };
+    let sweep_target = SweepTarget {
+        distance: range.hex_distance,
+        terrain,
+        across_water_surface: profile.underwater != target_underwater,
+        heat_penalties,
+        burning: inferno || burning_hex,
+        tons,
+        heavy_industrial: tile.ground() == Ground::HeavyIndustrial,
+        moving_on_ground: other.speed.abs() > 0.0 && !airborne,
+        systems,
+    };
+    let mut reported = None;
+    for system in &profile.sensor.systems {
+        let result = sweep(
+            system.mode,
+            system.bands,
+            profile.vehicle,
+            (system.mode == SensorMode::Probe)
+                .then_some(profile.sensor.probe)
+                .flatten(),
+            roll,
+            sweep_target,
+        );
+        if result.detected {
+            return Ok(Some(result));
+        }
+        if reported.is_none_or(|previous: SweepResult| !previous.jammed) {
+            reported = Some(result);
+        }
+    }
+    Ok(reported)
 }
 
 /// Perceive an empty battlefield hex with a freshly computed observer profile.
@@ -560,7 +684,7 @@ pub fn hex_perception(
     hex_perception_prepared(world, observer, &profile, target, true)
 }
 
-/// Resolve whether the sensor band or sight reaches a hex; probes and radar need a unit to find.
+/// Resolve whether sight reaches a hex; sensors need a unit to find.
 ///
 /// Clairvoyant observers see every hex. Stopped units see nothing unless `require_running`
 /// is false, which lets callers inspect a parked unit's view.
@@ -602,12 +726,53 @@ pub(crate) fn hex_perception_prepared(
         light: profile.light,
         sight_range: profile.sight_range,
         lit_sight_range: profile.lit_sight_range,
-        ceiling: profile.ceiling,
-        sensor_range: profile.sensor_range,
-        hull_down: 0,
     };
     let lit = || crate::btech::hex_illuminated(world, position.map, target);
-    Ok(sight::perceive(&facts, lit)?.map(|(channel, _)| channel))
+    Ok(sight::sees(&facts, lit)?.then_some(DetectionChannel::Sight))
+}
+
+/// Roll one unit's sweep from its map's sensor stream.
+pub(crate) fn sweep_unit(world: &mut World, id: ObjectId) -> Result<()> {
+    let position = crate::btech::scanner::scanner_unit(world, id)
+        .and_then(|unit| unit.position)
+        .context("Unit is not placed")?;
+    let map = world
+        .btech
+        .maps
+        .get_mut(&position.map)
+        .context("Map not found")?;
+    let roll = map
+        .sensor_dice
+        .get_or_insert_with(crate::btech::Dice::fresh)
+        .two_d6();
+    crate::btech::with_unit_mut!(
+        world.btech.unit_mut(id).context("Unit is unavailable")?,
+        |unit| unit.sensor_sweep = Some(roll)
+    );
+    Ok(())
+}
+
+/// Sweep every running, placed unit at the start of a turn, as Tactical Operations rolls
+/// sensors once a turn.
+pub fn advance_sensor_sweeps(world: &mut World) -> Result<()> {
+    if !world.btech.turn_clock.starts_turn() {
+        return Ok(());
+    }
+    let ids: Vec<_> = crate::btech::scanner::scanner_ids(world)
+        .into_iter()
+        .filter(|&id| {
+            crate::btech::scanner::scanner_unit(world, id)
+                .is_some_and(|unit| unit.power == Power::Running && unit.position.is_some())
+                && world
+                    .objects
+                    .get(&id)
+                    .is_some_and(|object| !object.flags.contains(Flag::Going))
+        })
+        .collect();
+    for id in ids {
+        sweep_unit(world, id)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -630,20 +795,11 @@ mod tests {
                 .map(|channel| channel.code(true))
                 .iter()
                 .collect::<String>(),
-            "SVRP"
+            "VSP"
         );
-    }
-
-    /// Declaration order is the tie-break when two channels give the same aim.
-    #[test]
-    fn channel_order_prefers_everyday_channels_on_ties() {
         let mut sorted = DetectionChannel::ALL;
         sorted.sort();
         assert_eq!(sorted, DetectionChannel::ALL);
-        assert!(
-            (0, DetectionChannel::Sensors) < (0, DetectionChannel::Probe)
-                && (-3, DetectionChannel::Radar) < (0, DetectionChannel::Sensors)
-        );
     }
 
     /// Map switches use the reference bit positions and leave other bits alone.
@@ -651,7 +807,7 @@ mod tests {
     fn map_flags_use_reference_bits() {
         let mut map: StoredMap = serde_json::from_value(serde_json::json!({
             "name": "flags", "width": 1, "height": 1, "gravity": 100, "temperature": 20,
-            "flags": 0, "light": 2, "visibility": 30, "maximum_visibility": 60,
+            "flags": 0, "light": 2, "weather": 0,
             "cloud_base": 0, "sensor_flags": 2
         }))
         .unwrap();
@@ -669,16 +825,8 @@ mod tests {
             .map(MapPerceptionFlag::bit),
             [1, 32, 64]
         );
-    }
-
-    /// Unconfigured worlds use the default band and configuration clamps to the map ceiling.
-    #[test]
-    fn sensor_range_defaults_and_clamps() {
-        let mut world = World::default();
-        assert_eq!(world.btech.sensor_range, SensorRange(DEFAULT_SENSOR_RANGE));
-        configure_perception(&mut world, 90);
-        assert_eq!(world.btech.sensor_range, SensorRange(60));
-        configure_perception(&mut world, -1);
-        assert_eq!(world.btech.sensor_range, SensorRange(0));
+        assert_eq!(parse_perception_flags("radar, probes").unwrap(), 96);
+        assert_eq!(format_perception_flags(97), "sensors radar probes");
+        assert!(parse_perception_flags("sonar").is_err());
     }
 }

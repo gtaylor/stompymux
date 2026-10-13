@@ -861,10 +861,12 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
 }
 
 /// Six water hexes break the clear line only once the target settles below the waterline,
-/// using the retained altitude before and after a restart.
+/// using the retained altitude before and after a restart. Sensors are switched off so only
+/// sight answers.
 #[tokio::test]
 async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, 1, 8).await;
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     for (pilot, id, y) in [(ObjectId(1), units[0], 0), (ObjectId(2), units[1], 7)] {
         stop_battle_unit(
             &mut world,
@@ -890,8 +892,8 @@ async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
         assert_eq!(terrain.water, 6);
         let perception = battle_perceive(world, units[0], units[1]).unwrap();
         assert_eq!(
-            perception.map(|perception| perception.channel),
-            perceived.then_some(DetectionChannel::Sensors)
+            perception.map(|perception| (perception.channel, perception.identified)),
+            perceived.then_some((DetectionChannel::Sight, true))
         );
     };
     check(&world, true);
@@ -1879,7 +1881,8 @@ async fn bridge_motion_does_not_replace_a_retained_lower_altitude_with_deck_heig
 #[tokio::test]
 async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
     for descending in [false, true] {
-        for symbol in ['.', '/', '@', '='] {
+        // Buildings are entered, not climbed; see btech_building_interior for them.
+        for symbol in ['.', '/', '='] {
             let heights = if descending {
                 [3, 3, 2, 0, 0]
             } else {
@@ -2157,11 +2160,6 @@ async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_s
 }
 
 #[tokio::test]
-async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_at() {
-    reverse_ground_steps_matrix('@').await;
-}
-
-#[tokio::test]
 async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_equals() {
     reverse_ground_steps_matrix('=').await;
 }
@@ -2356,16 +2354,6 @@ async fn tall_bridge_approached_from_the_bank_is_an_underpass_not_a_cliff() {
         assert_eq!(unit.motion().unwrap().speed, speed);
         world.validate(&config).unwrap();
     }
-}
-
-#[tokio::test]
-async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_at_down() {
-    cliffs_apply_speed_checks_matrix('@', true).await;
-}
-
-#[tokio::test]
-async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_at_up() {
-    cliffs_apply_speed_checks_matrix('@', false).await;
 }
 
 #[tokio::test]
@@ -6221,18 +6209,7 @@ async fn inferno_water_extinction_and_fall_publish_saved_steam() {
 async fn inferno_missile_exposure_rounds_pairs_and_replays_without_damage_or_dice() {
     let (_dir, config, mut base, _map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let target = units[0];
-    update_battle_contact(
-        &mut base,
-        units[1],
-        target,
-        ContactRules {
-            hostile: true,
-            hidden: false,
-            perception: 7,
-            acquire: true,
-        },
-    )
-    .unwrap();
+    update_battle_contact(&mut base, units[1], target).unwrap();
     for (missiles, seconds) in [(1, 180), (2, 180), (3, 360), (6, 540), (65535, 5_898_240)] {
         let mut world = base.clone();
         let report = resolve_inferno_hit(&mut world, target, missiles).unwrap();

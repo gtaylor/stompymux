@@ -112,10 +112,13 @@ pub(super) fn select(
             continue;
         }
         // C3 range sharing checks power and interference, but not the peer pilot's consciousness.
+        // The peer must perceive the target itself with a line of fire to it (Total Warfare
+        // p. 132); a row its side relays to it does not count.
         let distance = match target {
-            NetworkTarget::Unit(target) => {
-                super::visible_contact(world, peer, target)?.map(|contact| contact.range.spatial)
-            }
+            NetworkTarget::Unit(target) => super::contacts::ContactReader::new(world, peer)?
+                .facts(target)?
+                .filter(|facts| facts.detection.is_some() && facts.line_of_fire)
+                .map(|facts| facts.range.spatial),
             NetworkTarget::Hex(hex) => {
                 // The network's coordinate targeting path requires positive map coordinates.
                 if hex.x <= 0 || hex.y <= 0 {

@@ -56,13 +56,13 @@
 // lua-types-end
 
 // lua-types-begin btech 00099
-//|---Change saved light/weather conditions without reloading occupied terrain.
-//|---Perception follows the new light and visibility on the next scan; contacts and locks remain until then.
+//|---Change saved light and weather conditions without reloading occupied terrain.
+//|---Perception follows the new conditions on the next scan; contacts and locks remain until then.
 //|---@param dbref integer Map object dbref.
 //|---@param light LightLevel Typed constant from btech.map.light_levels.
-//|---@param visibility integer Weather range from 0 through 60.
+//|---@param weather WeatherCondition Typed constant from btech.map.weather_conditions.
 //|---@return boolean
-//|function btech_map.conditions(dbref, light, visibility) end
+//|function btech_map.conditions(dbref, light, weather) end
 // lua-types-end
 
 // lua-types-begin btech 00100

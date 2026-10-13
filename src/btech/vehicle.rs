@@ -58,7 +58,6 @@ pub struct Vehicle {
     /// Operator visibility privileges, independent of sensor equipment.
     #[serde(default)]
     pub(super) visibility: super::Visibility,
-    pub(super) dig: super::DigState,
     /// Stuck in soft ground until a driving roll at the start of a turn frees it.
     #[serde(default)]
     pub(super) bogged_down: bool,
@@ -137,6 +136,8 @@ pub struct Vehicle {
     pub(super) tics: super::Tics,
     pub(super) signature: super::UnitSignature,
     pub(super) scanner_perception: i16,
+    /// This turn's 2d6 sensor sweep, once rolled.
+    pub(super) sensor_sweep: Option<u8>,
     pub(super) radio: [super::RadioChannel; 16],
     pub(super) radio_skill: i16,
     pub(super) fired_recently: bool,
@@ -243,8 +244,6 @@ struct VehicleRecord {
     #[serde(default)]
     visibility: super::Visibility,
     #[serde(default)]
-    dig: super::DigState,
-    #[serde(default)]
     bogged_down: bool,
     #[serde(default)]
     slick: super::SlickTrack,
@@ -318,6 +317,8 @@ struct VehicleRecord {
     tics: super::Tics,
     signature: super::UnitSignature,
     scanner_perception: i16,
+    #[serde(default)]
+    sensor_sweep: Option<u8>,
     #[serde(default)]
     radio: [super::RadioChannel; 16],
     #[serde(default = "super::radio::default_skill")]
@@ -436,6 +437,7 @@ super::saved_parts::saved_parts!(Vehicle {
         tics,
         signature,
         scanner_perception,
+        sensor_sweep,
         radio,
         radio_skill,
         radio_experience_remaining,
@@ -479,7 +481,6 @@ super::saved_parts::saved_parts!(Vehicle {
         orbital_drop,
         ground_elevation,
         hide_elapsed,
-        dig,
         bogged_down,
         slick,
         inferno_remaining,
@@ -934,6 +935,7 @@ impl Vehicle {
             tics: Default::default(),
             signature: Default::default(),
             scanner_perception: super::scanner::default_perception(),
+            sensor_sweep: None,
             radio: Default::default(),
             radio_skill: super::radio::default_skill(),
             fired_recently: false,
@@ -944,7 +946,6 @@ impl Vehicle {
             weapons_hold: false,
             combat_safe: false,
             visibility: super::Visibility::default(),
-            dig: super::DigState::default(),
             bogged_down: false,
             slick: Default::default(),
             experience: Default::default(),
@@ -1062,7 +1063,6 @@ impl Vehicle {
         super::spotter_events::clear(&mut self.spotter_events);
         self.self_destruct = None;
         self.hide_elapsed = None;
-        self.cancel_digging();
         self.lose_vtol_lift();
         self.pilot = None;
         self.crew_recovery.clear();
@@ -1307,7 +1307,6 @@ impl Vehicle {
         self.ground_elevation = None;
         self.free_fall = None;
         self.orbital_drop = None;
-        self.dig = super::DigState::default();
         if let Some(flight) = &mut self.vtol_flight {
             *flight = super::VtolFlight::default();
         }
@@ -1341,7 +1340,6 @@ impl Vehicle {
         self.c3_network = None;
         self.tag.target = None;
         self.c3i_network = None;
-        self.dig = super::DigState::default();
         self.building_entry = None;
     }
 
@@ -1629,7 +1627,6 @@ impl Vehicle {
             weapons_hold: record.weapons_hold,
             combat_safe: record.combat_safe,
             visibility: record.visibility,
-            dig: record.dig,
             bogged_down: record.bogged_down,
             slick: record.slick,
             definition: record.definition,
@@ -1679,6 +1676,7 @@ impl Vehicle {
             tics: record.tics,
             signature: record.signature,
             scanner_perception: record.scanner_perception,
+            sensor_sweep: record.sensor_sweep,
             radio: record.radio,
             radio_skill: record.radio_skill,
             fired_recently: record.fired_recently,
@@ -2158,7 +2156,6 @@ impl Vehicle {
         super::crew_recovery::validate(&self.crew_recovery, self.pilot(), self.pilot_injuries())?;
         self.validate_flight_state()?;
         self.validate_orbital_drop()?;
-        self.validate_dig()?;
         Ok(())
     }
 }

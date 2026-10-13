@@ -135,8 +135,7 @@ pub(super) fn vehicle_criticals(world: &mut World, id: ObjectId, bits: u32) -> R
         .get_mut(&id)
         .context("Unit is unavailable")?;
     unit.set_turret_conditions(bits & 1 != 0, bits & 2 != 0)?;
-    unit.dig.dug_in = bits & 4 != 0;
-    unit.dig.digging = bits & 8 != 0;
+    ensure!(bits & 12 == 0, "Vehicles no longer dig in");
     unit.crew_stun_condition = Some(bits & 16 != 0);
     ensure!(
         bits & 32 == 0 || unit.definition().is_vtol(),

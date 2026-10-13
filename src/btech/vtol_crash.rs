@@ -291,7 +291,6 @@ pub(super) fn begin_descent(world: &mut World, id: ObjectId) -> Result<()> {
     world.attempt(|world| {
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         unit.halt();
-        unit.dig = super::DigState::default();
         unit.building_entry = None;
         unit.ground_elevation = None;
         unit.orbital_drop = None;

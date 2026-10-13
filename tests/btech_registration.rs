@@ -193,15 +193,7 @@ async fn map_registration_defaults_view_load_and_restart() {
             (field.gravity, field.temperature, field.flags),
             (100, 20, 0)
         );
-        assert_eq!(
-            (
-                field.light,
-                field.visibility,
-                field.maximum_visibility,
-                field.cloud_base
-            ),
-            (0, 30, 60, 200)
-        );
+        assert_eq!((field.light, field.weather, field.cloud_base), (0, 0, 200));
         assert_eq!(field.building.regeneration, 1);
         for y in 0..11 {
             for x in 0..21 {

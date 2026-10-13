@@ -18,7 +18,7 @@ fn edit(world: &mut World, map: ObjectId, field: &str, value: &str) -> Result<Ve
     };
     let short = || integer().map(|n| i64::from(n.clamp(i16::MIN.into(), i16::MAX.into())));
     match field.to_ascii_lowercase().as_str() {
-        "buildonmap" | "firstfree" | "mapheight" | "mapwidth" | "maxvis" => {
+        "buildonmap" | "firstfree" | "mapheight" | "mapwidth" => {
             bail!("Read-only map field")
         }
         "cf" | "cfmax" | "regen_factor" => {
@@ -29,22 +29,15 @@ fn edit(world: &mut World, map: ObjectId, field: &str, value: &str) -> Result<Ve
             }
             return super::set_building_state(world, map, record.building).map(|()| Vec::new());
         }
-        "maplight" | "mapvis" => {
+        "maplight" | "mapweather" => {
             if field.eq_ignore_ascii_case("maplight") {
                 record.light = i64::from(integer()?);
             } else {
-                record.visibility = i64::from(integer()?);
+                record.weather = i64::from(integer()?);
             }
             let light = super::Light::from_stored(record.light)?;
-            super::set_map_visibility(
-                world,
-                map,
-                light,
-                record
-                    .visibility
-                    .try_into()
-                    .context("Invalid battlefield visibility")?,
-            )?;
+            let weather = super::Weather::from_stored(record.weather)?;
+            super::set_map_conditions(world, map, light, weather)?;
             return Ok(Vec::new());
         }
         "winddir" | "windspeed" => {

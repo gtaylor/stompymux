@@ -354,8 +354,22 @@ pub fn advance_searchlights(world: &mut World) -> Vec<Notice> {
     notices
 }
 
-/// A target is lit by inferno fire, its own lamp, scenario lighting or an unobstructed forward beam.
+/// Whether a unit's own searchlight is on.
+pub(super) fn lamp_on(world: &World, id: ObjectId) -> bool {
+    lamp_state(world, id).is_some_and(|lamp| lamp.on && !lamp.destroyed)
+}
+
+/// A target is lit by its own lamp, scenario lighting, an unobstructed searchlight beam, or
+/// by fire: inferno fuel on it or a neighbour, a burning hex under or beside it, or glowing
+/// laser heat sinks.
 pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
+    unit_illumination(world, target) != super::Illumination::None
+}
+
+/// What lights a target: a searchlight (including its own lamp and scenario lighting) offsets
+/// darkness as the light conditions say, and fire takes up to two off it (Tactical
+/// Operations pp. 55–56).
+pub fn unit_illumination(world: &World, target: ObjectId) -> super::Illumination {
     let _measurement = crate::btech::autopilot::diagnostics::measure(
         crate::btech::autopilot::diagnostics::Category::Illumination,
     );
@@ -363,15 +377,89 @@ pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
         .objects
         .get(&target)
         .is_none_or(|o| o.flags.contains(crate::Flag::Going))
+        || lamp_state(world, target).is_none()
     {
-        return false;
+        return super::Illumination::None;
     }
-    lamp_state(world, target).is_some_and(|_| {
-        inferno(world, target) > 0
-            || laser_heat_sink_glow(world, target)
-            || beam(world, target).is_some()
-            || externally_illuminated(world, target)
-    })
+    if beam(world, target).is_some() || searchlit(world, target, illumination_sources(world)) {
+        return super::Illumination::Searchlight;
+    }
+    if inferno(world, target) > 0
+        || laser_heat_sink_glow(world, target)
+        || fire_lit(world, target, illumination_sources(world))
+    {
+        return super::Illumination::Fire;
+    }
+    super::Illumination::None
+}
+
+/// Scenario lighting or another unit's beam lights the target.
+fn searchlit(
+    world: &World,
+    target: ObjectId,
+    emitters: impl Iterator<Item = (ObjectId, bool)>,
+) -> bool {
+    let Some(position) = unit_position(world, target) else {
+        return false;
+    };
+    if scenario_lit(world, target) {
+        return true;
+    }
+    external_sources_illuminate(
+        world,
+        target,
+        position,
+        emitters.filter(|(_, burning)| !burning),
+    )
+}
+
+/// A burning hex under or beside the target, or a burning unit beside it, lights it.
+fn fire_lit(
+    world: &World,
+    target: ObjectId,
+    emitters: impl Iterator<Item = (ObjectId, bool)>,
+) -> bool {
+    let Some(position) = unit_position(world, target) else {
+        return false;
+    };
+    let Some(map) = world.btech.maps().get(&position.map) else {
+        return false;
+    };
+    let hex = super::HexCoordinate {
+        x: i32::from(position.x),
+        y: i32::from(position.y),
+    };
+    let burning_hex = |coordinate| {
+        map.decoration(coordinate).is_ok_and(|effect| {
+            effect.is_some_and(|effect| effect.kind == super::DecorationKind::Fire)
+        })
+    };
+    if burning_hex(hex)
+        || map
+            .neighbors(hex)
+            .is_ok_and(|neighbors| neighbors.into_iter().flatten().any(burning_hex))
+    {
+        return true;
+    }
+    external_sources_illuminate(
+        world,
+        target,
+        position,
+        emitters.filter(|(_, burning)| *burning),
+    )
+}
+
+/// Where a live unit stands.
+fn unit_position(world: &World, id: ObjectId) -> Option<super::Position> {
+    super::scanner::scanner_unit(world, id).and_then(|unit| unit.position)
+}
+
+/// Scenario lighting flagged on the unit's signature.
+fn scenario_lit(world: &World, target: ObjectId) -> bool {
+    world
+        .btech
+        .unit(target)
+        .is_some_and(|unit| super::with_unit!(unit, |unit| unit.signature().illuminated))
 }
 
 /// Running laser heat sinks glow, so the unit counts as illuminated in darkness.
@@ -492,7 +580,7 @@ fn external_sources_illuminate(
         range.spatial <= 30.0
             && !(angle > 60.0 && angle < 300.0)
             && super::unit_terrain_los(world, source, target)
-                .is_ok_and(|los| !los.blocked && los.woods <= 2 && los.water == 0)
+                .is_ok_and(|los| !los.blocked && los.obscuring_points() <= 2)
     })
 }
 

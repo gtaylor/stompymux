@@ -74,3 +74,4 @@ no_list: true
 - [`btech.map.route_types`](route_types/)
 - [`btech.map.structure_kinds`](structure_kinds/)
 - [`btech.map.terrain_types`](terrain_types/)
+- [`btech.map.weather_conditions`](weather_conditions/)

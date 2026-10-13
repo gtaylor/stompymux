@@ -17,6 +17,8 @@ pub struct SurfaceBreak {
     pub falls: Vec<(ObjectId, MechFallReport)>,
     pub vehicle_falls: Vec<(ObjectId, super::VehicleFallReport)>,
     pub flooded_vehicles: Vec<ObjectId>,
+    /// Units that were inside the collapsing building and took its rubble.
+    pub buried: Vec<ObjectId>,
     /// Private occupant fall checks ordered within surface notices.
     pub pilot_notices: Vec<super::PilotNotice>,
     pub notices: Vec<Notice>,
@@ -400,9 +402,22 @@ fn break_surface(
         falls: Vec::new(),
         vehicle_falls: Vec::new(),
         flooded_vehicles: Vec::new(),
+        buried: Vec::new(),
         pilot_notices: Vec::new(),
         notices,
     };
+    if roof {
+        report.buried = super::building_interior::bury_occupants(
+            &mut candidate,
+            map,
+            coordinate,
+            tile,
+            rules,
+            policy.character,
+            &mut report.notices,
+            &mut report.pilot_notices,
+        )?;
+    }
     if fall_levels > 0 {
         for id in occupants {
             if let Some(notices) = swimming.get(&id) {

@@ -203,10 +203,6 @@ impl Scripts {
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         self.commands = commands;
         self.lua.set_app_data(std::sync::Arc::new(config.clone()));
-        crate::configure_battle_perception(
-            &mut self.world.borrow_mut(),
-            config.battletech.sensor_range,
-        );
         Ok(())
     }
 }

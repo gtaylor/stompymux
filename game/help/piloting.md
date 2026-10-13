@@ -185,23 +185,26 @@ facing on chassis that support it. Both require a running unit and its conscious
 pilot. Facing survives restart; leg weapons follow the body heading. These
 commands take no switches, and `fliparms` takes no arguments.
 
-Sensors are automatic; there is nothing to switch. `sensor` shows how far and by
-what means your unit can perceive right now:
+Perception is automatic; there is nothing to switch. `sensor` shows how far and
+by what means your unit can perceive right now:
 
-- Sensors: within fifteen hexes you detect anything with a clear line, whatever
-  the darkness or weather.
-- Sight: beyond that, weather visibility sets how far you see. At night a lit
-  target can be seen three times as far. Darkness also costs to hit; see
-  `help night`.
-- Probe and radar: special equipment, if your unit carries it.
+- Sight: the light and the weather set how far you see; at night a lit target
+  can be seen out to forty-five hexes and your own searchlight lets you see
+  thirty. Darkness also costs to hit; see `help night`.
+- Sensors: your infrared, magnetic anomaly, radar and seismic sensors. Every
+  thirty seconds each unit rolls one sweep, and a target sight misses is found
+  if any system's range band for that roll covers it; the report lists each
+  system's brackets and the current roll and band.
+- Probe: a carried active probe, which sweeps ahead of the built-in sensors
+  with longer brackets and reveals hidden units nearby.
 
-See `help line of sight` for the full rules. `sensor` takes no arguments or
-switches. Lua `btech.unit.perception(unit)` returns the same report as a table.
+See `help line of sight` for the full rules. `sensor` takes no arguments. Lua
+`btech.unit.perception(unit)` returns the same report as a table.
 
 `contacts` lists acquired targets that are currently visible, nearest first, with
 unit number, chassis, friendly/hostile relation, range, bearing, heading and speed.
 `contacts #unit` limits the display to one acquired target. Conscious occupants can
-use this display while the unit is running. It does not roll for new contacts or
+use this display while the unit is running. It does not re-sweep sensors or
 reveal positions from stale observations. `contacts` takes no switches.
 
 Use `lock #unit` to select a currently visible contact from `contacts`, or `lock -`
@@ -234,16 +237,15 @@ tactical units can stand on land or in water while at least one leg remains usab
 Ice and bridge standing still require their terrain rules. `stand` takes no switches.
 
 
-Use `hide` in forest, mountains or rough terrain when your unit has camouflage
-equipment, or when you are a wizard. Come to a stop first; a VTOL must be landed.
-Preparation takes 51 seconds for Mechs and ground vehicles, or 41 seconds for
-VTOLs. Without camouflage, wizard operators take 101 or 81 seconds respectively.
-Hostile units that have acquired you can interrupt preparation. Moving into
-another hex or attempting to fire cancels hiding and reveals you. Being towed
-or completing an explicit building entry does not itself break cover; moving
-through a map edge does. Taking armor damage reveals existing cover but does
-not itself cancel preparation. Shutdown cancels preparation. Lua uses
-`btech.unit.hide(unit, pilot)`.
+Use `hide` where Total Warfare allows a hidden unit: not on pavement, a road or
+a bridge, Mechs not in clear terrain, and in water only when fully submerged.
+Come to a stop first; a VTOL must be landed. Preparation takes 50 seconds for
+Mechs and ground vehicles, or 40 seconds for VTOLs. Once hidden, enemies do not
+perceive you until an enemy moves adjacent, an enemy active probe reaches you
+with a clear line, or you move, fire or take damage. Moving into another hex or
+attempting to fire cancels hiding and reveals you. Being towed or completing an
+explicit building entry does not itself break cover; moving through a map edge
+does. Shutdown cancels preparation. Lua uses `btech.unit.hide(unit, pilot)`.
 
 An operator can place your unit in weapons hold. While held, `fire` and
 `firetic` are rejected without breaking cover; `status info` shows `WEAPONS HOLD`.
@@ -705,9 +707,11 @@ Angel ECM suite. Stealth armor cannot be combined with a null signature system.
 Repeated requests leave the current transition unchanged.
 
 Active armor produces ten additional heat and disrupts your own electronic
-guidance. Enemy sensors cannot detect you, so enemies must see you or
-probe you with a Bloodhound; your own sensor band and probe are jammed too. Enemies firing at you take range penalties of 3 at medium range, 6 at
-long range and 12 at extreme range. Short and minimum range are unchanged.
+guidance. Enemy radar and probe sweeps take +4 to +7 against you (Tactical
+Operations ECM/Stealth table), so enemies mostly rely on sight, infrared,
+magscan and seismic sensors, or a Bloodhound probe. Enemies firing at you take
+range penalties of 3 at medium range, 6 at long range and 12 at extreme range.
+Short and minimum range are unchanged.
 Shutdown or ECM damage disables active armor. A pending switch only completes
 if the unit is running and its ECM works when the delay expires.
 
@@ -725,9 +729,10 @@ requires the assigned conscious pilot, a running placed unit, and intact devices
 A repeated request does not restart a pending switch.
 
 Active NSS adds ten heat and raises enemy range penalties to 3 at medium range,
-6 at long range and 12 at extreme range. Enemy sensors and probes other than
-the Bloodhound cannot detect you. It does not create ECM interference or
-require enemies to settle a firing lock. If stealth armor is also active, the
+6 at long range and 12 at extreme range. Enemy radar and probe sweeps take the
+Tactical Operations ECM/Stealth modifier against you; infrared, magscan and
+seismic sweeps do not. It does not create ECM interference or require enemies
+to settle a firing lock. If stealth armor is also active, the
 range penalty applies once and the two systems' heat adds together.
 
 Shutdown or device loss disables NSS. Pending switches only take effect if power
@@ -736,30 +741,23 @@ inspection includes `null_signature` and its pending destination/countdown.
 
 ### Active probes
 
-A working Beagle, Light or Bloodhound Active Probe works automatically out to six,
-three or eight hexes; fixed installations reach eight, four and eleven. Probes
-see through hills, buildings, woods, smoke and darkness, and they find hidden
-units. Aiming through a probe ignores woods and darkness; partial cover still
-counts.
-
-A probe contact behind blocking terrain shows a lowercase `p` in `contacts`. You
-can lock it, spot it for indirect fire and share it over C3, but you cannot fire
-at it directly or scan it until you have a clear line.
-
-Hostile ECM on your unit, or Angel ECM protecting the target, blocks probes. Only
-the Bloodhound sees through stealth armor and null signature systems. A damaged
-probe stops working; `sensor` shows its condition.
+A working Beagle, Light, Watchdog or Bloodhound Active Probe reveals hidden units
+within four, three, five or eight hexes (Clan probes five) when it has a clear
+line to them, and lets you ignore one point of woods when aiming at a target in
+that reach. It also sweeps with your sensor suite, ahead of the built-in
+sensors, using its longer brackets (Beagle 12/24/36, Clan 15/30/45, Light and
+Watchdog 9/18/27, Bloodhound 16/32/48); nothing blocks a probe sweep but the
+surface of water, and a target it finds shows as a probe contact. Guardian and
+Angel ECM, stealth armor and null signature systems add to the sweep roll
+against them; only the Bloodhound finds stealth and null signature units. A
+damaged probe stops working; `sensor` shows its condition.
 
 ### Radar
 
-Units with AntiAircraft equipment track airborne targets automatically. Radar
-needs a target above altitude two and more than one level above its local
-surface. Below altitude ten its range is less than altitude squared; higher
-targets permit up to 180 hexes. Going beyond the map's ordinary visibility limit
-also requires either unit to reach altitude eleven. Radar ignores darkness, smoke,
-fire and ECM, but terrain can still block it. VTOL targets and targets at altitude
-ten or higher give a three-point aiming bonus; woods and partial cover add
-penalties.
+Your unit's radar sweeps with the rest of the suite: 8/16/24 hexes for Mechs,
+6/12/18 for vehicles. Hills and buildings block it, heavy woods shorten it and
+ECM and stealth systems add to the sweep roll. It has no special treatment of
+airborne targets.
 
 Use `tag ID` or `tag #unit` to illuminate an enemy within fifteen hexes with
 working TAG hardware and an unobstructed line of sight. Mechs and vehicles
@@ -1004,13 +1002,14 @@ with farther contacts first within each group. C0 follows battlefield membership
 order. Short lists contain at most 250 entries.
 
 
-When your unit is in an active C3 or C3i network, `contacts` also lists targets
-that only your available network peers can see. Such rows carry no detection
-letter, since your own sensors do not hold them, and identify the target when a
-peer does. Every row then gains a `c:` column after `r:` with the shared targeting
-range: the closest usable sighting in the network, which is what your weapons aim
-with. Peer sightings never grant a lock, a firing line, or a spot on their own.
-`contacts #unit` reads a peer-only sighting the same way.
+`contacts` also lists targets that only running units on your side can see
+(Tactical Operations: only targets spotted by a friendly unit may be attacked).
+Such rows carry no detection letter, since your own sensors do not hold them,
+and identify the target when a teammate does. You may fire at them when you
+have your own line of fire. When your unit is in an active C3 or C3i network,
+every row gains a `c:` column after `r:` with the shared targeting range: the
+closest usable sighting in the network, which is what your weapons aim with.
+`contacts #unit` reads a side-spotted target the same way.
 
 
 The five characters after `S:` summarize contact condition. They show, in order:
@@ -1020,9 +1019,9 @@ or standing transition (f); shutdown (S), starting (s), excess heat (+) or infer
 or interference (e). A higher-priority condition in a column hides the others.
 
 
-Contact rows begin with how you currently perceive the contact: `S` sensors, `V`
-sight, `R` radar or `P` probe. A lowercase `p` is a probe contact behind blocking
-terrain, which you can lock and spot but not fire at directly.
+Contact rows begin with how you currently perceive the contact: `V` sight, `S`
+a built-in sensor or `P` a probe sweep; a blank means only a teammate perceives
+it.
 
 
 After that letter, `*` means the contact is in your forward torso arc,
@@ -1037,8 +1036,9 @@ red and losses yellow when your terminal supports color; A4/A5 use no color.
 A2/A3/A5 show enemies only, and A6 disables routine notices.
 
 
-A probe contact behind blocking terrain appears as "something". Its condition
-columns stay blank, and it is not classified as friendly until identified.
+A contact found by sensors rather than sight appears as "something". Its
+condition columns stay blank, and it is not classified as friendly until
+identified.
 
 
 Routine notices normally skip shutdown targets. Use `unitprefs AutoconShutdown ON`
@@ -1177,6 +1177,32 @@ the front. The building loses a tenth of your tonnage either way.
 Entry also follows teleport policies. A damaged building permits forcing its enter
 lock only when it is unsafe and below half its maximum integrity.
 
+## Buildings on the battlefield
+
+Building hexes follow Total Warfare. Walking or driving into a building hex
+below its roof puts you inside it, at the level you came from (no lower than
+its ground floor); arriving at roof height, from a hill or a jump, puts you on
+the roof, which is ordinary terrain. Every building hex you enter below the
+roof costs a piloting or driving roll at +0 for a light building, +1 medium,
++2 heavy and +5 hardened; a failure costs you a tenth of the hex's construction
+factor from the front (the rear when reversing), and a vehicle that fails also
+rolls for motive damage. The hex loses a tenth of your tonnage either way, and
+collapses when that spends it or when the units sharing your level above the
+ground floor outweigh what is left. Inside, each hex costs a light building one
+extra movement point, a medium two, a heavy three and a hardened four.
+
+A unit inside a building is seen and shot at by its level; the building's own
+hex never blocks the line. A standing Mech one level below the roof has partial
+cover from every direction. Every hit grouping fired at a unit inside from
+another hex loses a tenth of the hex's construction factor to the building,
+which takes the same, and a miss from the next hex strikes the building. Punches
+and kicks cannot reach a unit inside from outside its hex. When a hex collapses,
+every unit inside takes a tenth of the construction factor for its own level and
+each level above it, in five-point groups from the front, and stands on the
+rubble; units on the roof fall. Aircraft, VTOLs and naval units cannot enter a
+building hex. Buildings with an entrance into a separate interior map are
+unchanged; see "Entering a hangar".
+
 Use `pickup <target>` to attach tow lines to a visible unit in your hex. Targets
 can be given by map label or `#dbref`. Bipeds need both arms and a working
 shoulder/hand pair; ground vehicles and VTOLs need salvage equipment. Quads cannot
@@ -1191,19 +1217,8 @@ surface and affect nearby units. Use `dropoff` to release your tow. A target mor
 than two levels above its supporting surface falls; closer targets settle.
 Reversing while towing requires SalvageTech equipment.
 
-Use `dig` in a stopped tracked or wheeled vehicle to prepare cover over twenty
-simulation seconds. Finish turning first. Roads, bridges, buildings, walls and
-water cannot be dug into. `status info` shows preparation and completed cover.
-
-Once dug in, only turret weapons can fire and the chassis cannot turn. The lower
-sight position can hide the vehicle behind terrain and also restrict its own view. Request
-speed greater than 0.1 KPH in either direction to leave cover. A heading change
-or movement request cancels preparation; shutdown cancels preparation but keeps
-completed cover. Pickup removes cover.
-
-Cover makes the vehicle harder to hit from its elevation or below, according to
-the configured cover bonus and front-only setting. Hits are more likely to strike
-the turret. These rules apply to attacks from both Mechs and vehicles.
+Vehicles cannot dig in. Total Warfare gives them no such cover, and the Tactical
+Operations hull-down rule for vehicles needs the half-level hexes maps do not have.
 
 Mech pilots can use `hulldown` to lower the chassis, `hulldown -` to raise it,
 and `hulldown stop` to cancel a pending change. A quad squats; a biped takes a

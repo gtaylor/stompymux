@@ -87,6 +87,12 @@ pub use aim::{
 };
 pub use arcs::{ContactArc, Facing, Torso, flip_arms, rotate_torso, weapon_bears_on};
 mod surface_break;
+pub use building_interior::{
+    BuildingCover, Interior as BuildingInterior, StrayHit,
+    collapse_damage as building_collapse_damage, entry_level as building_entry_level,
+    floor_cost as building_floor_cost, inside as inside_building,
+    unit_inside as unit_inside_building,
+};
 pub use surface_break::{Surface, SurfaceBreak, break_bridge, break_ice, collapse_structure};
 mod balance;
 pub use balance::{BalanceCause, BalanceReport};
@@ -178,13 +184,14 @@ pub use assets::{read_map, read_template, read_unit_template, read_vehicle_templ
 mod unit_template;
 pub use state::{
     BtechState, StoredBattleUnit, StoredMap, create_map, create_unit, register_empty_battle_unit,
-    reload_map, set_map_visibility,
+    reload_map, set_map_conditions,
 };
 pub use stompymux_map::{
     AttackKind, Condition, ConstructionClass, DecorationKind, Density, Flow, Foliage, Ground,
-    GroundMovement, Hex, MAX_CONSTRUCTION_FACTOR, MAX_DEPTH, MAX_HEIGHT, MAX_VISIBILITY, MapAsset,
-    MapPointOfInterest, MapRegion, Prohibition, Route, Structure, StructureKind, Terrain, Water,
-    Wind, WindStrength, extreme_temperature_steps, gravity_aim_modifier,
+    GroundMovement, Hex, Illumination, LIT_TARGET_SIGHT, MAX_CONSTRUCTION_FACTOR, MAX_DEPTH,
+    MAX_HEIGHT, MAX_SIGHT, MapAsset, MapPointOfInterest, MapRegion, Prohibition, Route,
+    SEARCHLIGHT_SIGHT, Structure, StructureKind, Terrain, Water, Weather, Wind, WindStrength,
+    extreme_temperature_steps, gravity_aim_modifier, visual_range,
 };
 pub use unit_template::UnitTemplateExt;
 mod vehicle;
@@ -310,18 +317,17 @@ pub use stompymux_map::Light;
 
 mod perception;
 pub use perception::{
-    AUTOMATIC_DETECTION_RANGE, AcquisitionRules, ActiveProbe, DEFAULT_SENSOR_RANGE, Detection,
-    DetectionChannel, HIDDEN_DETECTION_RANGE, MapPerceptionFlag, Perception, PerceptionProfile,
-    PerceptionReport, PerceptionStatus, ProbeProfile, RADAR_RANGE, RadarProfile, RadarTarget,
-    SensorArc, SensorRange, configure_perception, format_perception_flags, hex_perception,
-    parse_perception_flags, perceive, perception_factor, perception_profile, perception_report,
-    set_map_perception,
+    ActiveProbe, DetectionChannel, MapPerceptionFlag, Perception, PerceptionProfile,
+    PerceptionReport, PerceptionStatus, ProbeProfile, SensorBand, SensorBands, SensorMode,
+    SensorProfile, SensorSystem, SweepResult, SweepTarget, TargetSystems, advance_sensor_sweeps,
+    ecm_modifier, format_perception_flags, hex_perception, parse_perception_flags, perceive,
+    perception_profile, perception_report, set_map_perception, sweep,
 };
 
 mod contacts;
 pub use contacts::{
-    Contact, ContactRules, ContactTransition, ContactUpdate, ContactView, displayed_contact,
-    displayed_contacts, update_contact, visible_contact, visible_contacts,
+    Contact, ContactTransition, ContactUpdate, ContactView, displayed_contact, displayed_contacts,
+    update_contact, visible_contact, visible_contacts,
 };
 
 mod skills;
@@ -1050,6 +1056,7 @@ mod map_transfer;
 pub use map_transfer::transfer_unit;
 
 mod building_entry;
+mod building_interior;
 pub use building_entry::{
     BuildingEntry, advance_building_entry, begin_building_entry, building_entry,
     building_entry_destination_for_unit, building_entry_lock_allows, clear_building_entry,
@@ -1092,9 +1099,6 @@ pub use pickup_transaction::{PickupReport, pickup_unit};
 
 pub(crate) mod tow_actions;
 pub use tow_actions::tow_action;
-
-pub(crate) mod dig;
-pub use dig::{DigState, dig_action, dig_unit};
 
 pub(crate) mod hull_down;
 pub use hull_down::{HullDownState, hull_down_action, set_hull_down};
@@ -1145,7 +1149,9 @@ pub(crate) mod prone;
 pub use prone::{ProneReport, prone_action};
 
 pub(crate) mod hiding;
-pub use hiding::{advance_battle_hiding, begin_battle_hiding, hiding_pending};
+pub use hiding::{
+    HIDE_SECONDS, VTOL_HIDE_SECONDS, advance_battle_hiding, begin_battle_hiding, hiding_pending,
+};
 
 mod weapons_hold;
 pub use weapons_hold::{set_battle_weapons_hold, weapons_hold};

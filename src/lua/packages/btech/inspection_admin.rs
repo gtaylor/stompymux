@@ -39,8 +39,11 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         )?;
         result.set("building_exits", detached(lua, map.building_exits())?)?;
         result.set("light", map.light)?;
-        result.set("visibility", map.visibility)?;
-        result.set("maximum_visibility", map.maximum_visibility)?;
+        result.set("weather", map.weather)?;
+        result.set(
+            "visual_range",
+            map.visual_range().map_err(mlua::Error::external)?,
+        )?;
         result.set("sensor_flags", map.sensor_flags)?;
         Ok(result)
     })?;

@@ -381,6 +381,11 @@ impl Hex {
         matches!(self.structure, Some(structure) if structure.is_bridge())
     }
 
+    /// Whether a building stands in this hex: a structure units can be inside of.
+    pub const fn has_building(self) -> bool {
+        matches!(self.structure, Some(structure) if matches!(structure.kind, StructureKind::Building))
+    }
+
     /// Whether a building or wall stands in this hex.
     pub const fn has_standing_structure(self) -> bool {
         matches!(self.structure, Some(structure) if structure.is_standing())

@@ -221,7 +221,6 @@ pub(super) fn prepare_target(
     // Pickup arrests translation before shutdown, avoiding a shutdown-induced moving fall.
     if let Some(unit) = world.btech.vehicles.get_mut(&target) {
         unit.halt();
-        unit.dig = super::DigState::default();
         unit.building_entry = None;
         if let Some(flight) = &mut unit.vtol_flight {
             *flight = super::VtolFlight {

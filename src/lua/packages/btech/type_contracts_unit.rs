@@ -292,7 +292,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00152
-//|---Read-only summary of a placed unit's automatic perception: sensor band, sight, probe and radar.
+//|---Read-only summary of a placed unit's perception: sight, the selected sensor and its sweep, and its active probe.
 //|---@param dbref integer
 //|---@return PerceptionReport
 //|function btech_unit.perception(dbref) end
@@ -301,12 +301,11 @@
 // lua-types-begin btech 00153
 //|---@class PerceptionReport
 //|---@field light "day"|"dawn"|"dusk"|"full_moon_night"|"moonless_night"|"pitch_black" Current battlefield light.
-//|---@field sight_range integer Weather visibility in hexes, capped by the map ceiling.
-//|---@field lit_sight_range integer Reach to illuminated targets; triple sight at night.
-//|---@field sensor_range integer Effective all-conditions sensor band; zero while unavailable.
-//|---@field sensors PerceptionStatus Condition of the sensor band.
-//|---@field probe {kind: ProbeKind, range: integer, status: PerceptionStatus}|nil Best installed active probe.
-//|---@field radar {range: integer, status: PerceptionStatus}|nil Anti-aircraft radar, if installed.
+//|---@field weather string Current battlefield weather, as btech.map.weather_conditions names it.
+//|---@field sight_range integer How far the unit sees under the light and weather, stretched to 30 by its own searchlight at night.
+//|---@field lit_sight_range integer How far it sees a target lit by another source at night.
+//|---@field sensor {systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil} Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep.
+//|---@field probe {kind: ProbeKind, range: integer, status: PerceptionStatus}|nil Best installed active probe and how far it reveals hidden units.
 //|---@field running boolean Stopped units perceive nothing.
 //|---@field text string The report printed by the sensor command.
 // lua-types-end
@@ -1540,15 +1539,6 @@
 //|---@param enabled boolean? Omit to inspect without changing state.
 //|---@return boolean Current permission.
 //|function btech_unit.towable(dbref, enabled) end
-// lua-types-end
-
-// lua-types-begin btech 00393
-//|---Begin twenty seconds of digging in a stopped tracked or wheeled vehicle.
-//|---Completed cover permits only turret weapons; requesting movement leaves cover.
-//|---@param dbref integer
-//|---@param pilot integer Conscious assigned pilot; scripts own authority to act for them.
-//|---@return boolean
-//|function btech_unit.dig(dbref, pilot) end
 // lua-types-end
 
 // lua-types-begin btech 00394

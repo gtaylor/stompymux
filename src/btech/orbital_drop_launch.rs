@@ -84,7 +84,6 @@ pub fn initiate_action(
             (unit.effective_mass()?, false)
         } else {
             let unit = &before.btech.vehicles()[&id];
-            ensure!(!unit.dig_state().digging, "You're too busy digging in.");
             (unit.effective_mass()?, unit.definition().is_vtol())
         };
         let drop = (!vtol)

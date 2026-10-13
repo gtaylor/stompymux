@@ -1,4 +1,4 @@
-//! Automatic perception and acquisition apply the same rules to every supported observer and target chassis.
+//! Automatic perception applies the same rules to every supported observer and target chassis.
 use crate::support;
 use stompymux_rs::*;
 
@@ -144,7 +144,7 @@ fn airborne(world: &mut World, id: ObjectId, altitude: f64) {
     });
 }
 
-/// The observer's saved dice stream, which only hidden-unit searches may advance.
+/// The observer's saved dice stream, which perception never advances.
 fn observer_dice(world: &World, id: ObjectId) -> serde_json::Value {
     let key = if world.btech.vehicles().contains_key(&id) {
         "vehicles"
@@ -154,25 +154,7 @@ fn observer_dice(world: &World, id: ObjectId) -> serde_json::Value {
     serde_json::to_value(&world.btech).unwrap()[key][id.0.to_string()]["dice"].clone()
 }
 
-/// Destroy every installed part of one probe family on either anatomy.
-fn destroy_probe(world: &mut World, id: ObjectId, system: System) {
-    if world.btech.vehicles().contains_key(&id) {
-        let parts = world.btech.vehicles()[&id].loadout().unwrap().systems;
-        for part in parts.into_iter().filter(|part| part.system == system) {
-            destroy_battle_vehicle_critical(world, id, part.location).unwrap();
-        }
-        return;
-    }
-    let parts = world.btech.constructed_units()[&id]
-        .loadout()
-        .unwrap()
-        .systems;
-    for part in parts.into_iter().filter(|part| part.system == system) {
-        let _ = destroy_battle_critical(world, id, part.location).unwrap();
-    }
-}
-
-/// Every observer acquires every target chassis at once without dice; radar wins on airborne VTOLs.
+/// Every observer sees every target chassis at once without dice, airborne VTOLs included.
 async fn automatic_scanning_matrix(source: &str) {
     for target_source in templates() {
         let (_dir, config, base, observer, target) =
@@ -191,20 +173,16 @@ async fn automatic_scanning_matrix(source: &str) {
                 airborne(&mut world, target, 5.0);
             }
             assert!(battle_contact_observers(&world).contains(&observer));
-            let (channel, aim) = if flying {
-                (DetectionChannel::Radar, -3)
-            } else {
-                (DetectionChannel::Sensors, 0)
-            };
+            let channel = DetectionChannel::Sight;
             let perception = battle_perceive(&world, observer, target).unwrap().unwrap();
             assert_eq!(
                 (
                     perception.channel,
                     perception.aim_modifier,
                     perception.identified,
-                    perception.probed
+                    perception.line_of_fire
                 ),
-                (channel, aim, true, true),
+                (channel, 0, true, true),
                 "flying={flying}"
             );
             let dice = observer_dice(&world, observer);
@@ -275,198 +253,6 @@ async fn automatic_scanning_covers_all_supported_chassis_pairs_06() {
 #[tokio::test]
 async fn automatic_scanning_covers_all_supported_chassis_pairs_07() {
     automatic_scanning_matrix(&templates()[6]).await;
-}
-
-/// Fixed probes reach further through terrain; the shared LOS ceiling still bounds both radars.
-#[tokio::test]
-async fn stationary_probe_extension_and_shared_radar_ceiling() {
-    let sources = templates();
-    for (radar, distance, mobile, fixed) in [
-        (false, 8, true, true),
-        (false, 9, false, true),
-        (false, 11, false, true),
-        (false, 12, false, false),
-        (true, 179, true, true),
-        (true, 200, false, false),
-    ] {
-        for (source, expected) in [(&sources[2], mobile), (&sources[5], fixed)] {
-            let (_dir, config, mut world, observer, target) =
-                fixture(source, &sources[6], distance, !radar).await;
-            if radar {
-                airborne(&mut world, target, 11.0);
-            }
-            let perception = battle_perceive(&world, observer, target).unwrap();
-            let channel = if radar {
-                DetectionChannel::Radar
-            } else {
-                DetectionChannel::Probe
-            };
-            assert_eq!(
-                perception.map(|perception| (perception.channel, perception.identified)),
-                expected.then_some((channel, radar)),
-                "radar={radar} distance={distance}"
-            );
-            world.validate(&config).unwrap();
-        }
-    }
-}
-
-/// Probes find units behind hills as unidentified contacts until every probe family is destroyed.
-#[tokio::test]
-async fn probe_contacts_cross_obstacles_and_reconcile_after_equipment_loss() {
-    use std::{cell::RefCell, rc::Rc};
-    for source in templates() {
-        let (_dir, config, world, observer, target) = fixture(
-            &source,
-            include_str!("../game/units/Demolisher.toml"),
-            3,
-            true,
-        )
-        .await;
-        let terrain = battle_unit_terrain_los(&world, observer, target).unwrap();
-        assert!(terrain.blocked);
-        let cover = if terrain.partial_cover { 3 } else { 0 };
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        assert_eq!(
-            refresh_battle_contacts(&mut native.world_mut(), &[observer]).unwrap(),
-            refresh_battle_contacts(&mut lua.world_mut(), &[observer]).unwrap()
-        );
-        let contact = visible_battle_contact(&native.world(), observer, target)
-            .unwrap()
-            .unwrap();
-        assert!(!contact.identified);
-        assert_eq!(contact.detection, Some(DetectionChannel::Probe));
-        assert!(
-            contact.short_text.starts_with("p "),
-            "{}",
-            contact.short_text
-        );
-        let shown: (usize, String) = lua
-            .eval_callback(&format!(
-                "local c=btech.unit.contacts({}); return #c,c[1].detection",
-                observer.0
-            ))
-            .unwrap();
-        assert_eq!(shown, (1, "probe".into()));
-        let text = support::run_text(&native, &config, ObjectId(1), 1, "contacts");
-        assert!(text.contains("something"), "{text}");
-        let mut damaged = native.world().clone();
-        let _ = select_battle_target(&mut damaged, observer, ObjectId(1), Some(target)).unwrap();
-        let rules = AimRules {
-            woods_damage: false,
-            dig_bonus: 3,
-            dig_only_front: false,
-            hit_arc_mode: 0,
-            fasa_turning: false,
-            extended_movement: false,
-            extended_ranges: false,
-            hotload_half_minimum: false,
-            override_weapon_arcs: true,
-        };
-        assert_eq!(
-            battle_aim_modifiers(&damaged, observer, target, 0, 4, rules)
-                .unwrap()
-                .perception,
-            Some(PerceptionAim {
-                channel: Some(DetectionChannel::Probe),
-                direct_fire: false,
-                modifier: cover
-            })
-        );
-        for (system, fallback) in [
-            (System::BloodhoundProbe, Some(ActiveProbe::Beagle)),
-            (System::BeagleProbe, Some(ActiveProbe::Light)),
-            (System::LightProbe, None),
-        ] {
-            destroy_probe(&mut damaged, observer, system);
-            let profile = battle_perception_profile(&damaged, observer).unwrap();
-            let working = profile
-                .probe
-                .filter(|probe| probe.status == PerceptionStatus::Ready)
-                .map(|probe| probe.kind);
-            assert_eq!(working, fallback, "{system:?}");
-            assert_eq!(
-                battle_perceive(&damaged, observer, target)
-                    .unwrap()
-                    .map(|perception| perception.channel),
-                fallback.map(|_| DetectionChannel::Probe)
-            );
-        }
-        assert!(
-            battle_aim_modifiers(&damaged, observer, target, 0, 4, rules)
-                .unwrap()
-                .perception
-                .is_none()
-        );
-        let events = refresh_battle_contacts(&mut damaged, &[observer]).unwrap();
-        assert!(
-            events
-                .iter()
-                .any(|event| event.target == target && !event.acquired)
-        );
-        assert!(
-            visible_battle_contact(&damaged, observer, target)
-                .unwrap()
-                .is_none()
-        );
-        persistence::save(&config.database(), &damaged)
-            .await
-            .unwrap();
-        assert_eq!(
-            persistence::load(&config.database()).await.unwrap().btech,
-            damaged.btech
-        );
-        damaged.validate(&config).unwrap();
-    }
-}
-
-/// A launch countdown keeps the target on the sensor band; radar tracks it only after liftoff.
-#[tokio::test]
-async fn radar_tracks_launching_vtols_only_after_liftoff() {
-    let source = include_str!("../game/units/Kestrel.toml");
-    let (_dir, config, mut base, observer, target) = fixture(source, source, 3, false).await;
-    edit(&mut base, observer, |state| {
-        state["contacts"] = serde_json::json!({target.0.to_string():{"identified":true}});
-    });
-    for phase in [
-        VtolFlightPhase::Landed,
-        VtolFlightPhase::Launching { remaining: 1 },
-        VtolFlightPhase::Airborne,
-    ] {
-        let mut world = base.clone();
-        let flying = phase == VtolFlightPhase::Airborne;
-        edit(&mut world, target, |state| {
-            state["vtol_flight"] = serde_json::to_value(VtolFlight {
-                phase,
-                altitude: if flying { 5.0 } else { 0.0 },
-                ..Default::default()
-            })
-            .unwrap()
-        });
-        let channel = if flying {
-            DetectionChannel::Radar
-        } else {
-            DetectionChannel::Sensors
-        };
-        assert_eq!(
-            battle_perceive(&world, observer, target)
-                .unwrap()
-                .unwrap()
-                .channel,
-            channel
-        );
-        let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
-        assert!(!events.iter().any(|event| event.target == target));
-        assert_eq!(
-            visible_battle_contact(&world, observer, target)
-                .unwrap()
-                .unwrap()
-                .detection,
-            Some(channel)
-        );
-        world.validate(&config).unwrap();
-    }
 }
 
 /// Add one machine gun and a normal bin to unused slots without replacing probe hardware.
@@ -604,7 +390,7 @@ async fn gatling_attack_order_replays_across_chassis() {
             let perception = battle_perceive(&world, shooter, target).unwrap().unwrap();
             assert_eq!(
                 (perception.channel, perception.aim_modifier),
-                (DetectionChannel::Sensors, 0)
+                (DetectionChannel::Sight, 0)
             );
             let mut expected = Dice::seeded([17; 32]);
             let damage = expected.d6().min((supply.min(18) / 3).max(1) as u8);

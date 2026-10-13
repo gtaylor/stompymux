@@ -219,16 +219,12 @@ async fn insertion_replaces_jump_and_rejects_prone_or_digging_units_without_relo
             .is_some()
     );
     scripts.world().validate(&config).unwrap();
-    for index in [0, 2] {
-        let source = &firing::templates()[index];
+    {
+        let source = &firing::templates()[0];
         let (_dir, config, mut world, unit, _, _) =
             firing::fixture_with_target(source, None, source).await;
         firing::edit(&mut world, unit, |state| {
-            if index == 0 {
-                state["posture"] = serde_json::to_value(Posture::Prone).unwrap();
-            } else {
-                state["dig"] = serde_json::to_value(DigState::preparing(10)).unwrap();
-            }
+            state["posture"] = serde_json::to_value(Posture::Prone).unwrap();
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         assert!(

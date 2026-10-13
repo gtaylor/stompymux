@@ -1,4 +1,4 @@
-//! Shared LOS ceilings use spatial distance and radar installation on either endpoint.
+//! The shared line-of-sight cutoff is daylight's sixty hexes of spatial distance for every chassis.
 use crate::support;
 use stompymux_rs::*;
 
@@ -45,8 +45,10 @@ fn edit(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Va
     world.btech.rewrite_unit_record(id, update).unwrap();
 }
 
+/// Every chassis stops seeing at daylight's sixty hexes, measured spatially, in both directions
+/// and without the query changing anything; equipment on either endpoint never stretches it.
 #[tokio::test]
-async fn all_chassis_share_symmetric_map_and_radar_cutoffs_without_mutation() {
+async fn all_chassis_share_symmetric_sight_cutoffs_without_mutation() {
     let ground = include_str!("../game/units/Demolisher.toml");
     for source in [
         include_str!("../game/units/JR7-D.toml").to_owned(),
@@ -58,9 +60,10 @@ async fn all_chassis_share_symmetric_map_and_radar_cutoffs_without_mutation() {
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         let (_dir, config, base, map, observer, target) = fixture(&source).await;
-        for radar_endpoint in [None, Some(observer), Some(target)] {
+        for anti_aircraft in [None, Some(observer), Some(target)] {
             let mut world = base.clone();
-            // RadioTower is normally radar-equipped; make each installation case explicit.
+            // RadioTower is normally anti-aircraft equipped; make each installation case
+            // explicit so no endpoint's equipment can stretch the cutoff.
             for id in [observer, target] {
                 edit(&mut world, id, |unit| {
                     let flags = unit["definition"]["attributes"]["specials"]
@@ -70,7 +73,7 @@ async fn all_chassis_share_symmetric_map_and_radar_cutoffs_without_mutation() {
                         .filter(|flag| *flag != "-" && !flag.eq_ignore_ascii_case("AntiAircraft"))
                         .collect::<Vec<_>>()
                         .join(" ");
-                    unit["definition"]["attributes"]["specials"] = if Some(id) == radar_endpoint {
+                    unit["definition"]["attributes"]["specials"] = if Some(id) == anti_aircraft {
                         format!("{flags} AntiAircraft")
                     } else if flags.is_empty() {
                         "-".into()
@@ -80,23 +83,18 @@ async fn all_chassis_share_symmetric_map_and_radar_cutoffs_without_mutation() {
                     .into();
                 });
             }
-            for distance in [59.999_f64, 60.0, 60.001, 179.999, 180.0, 180.001] {
+            for distance in [59.999_f64, 60.0, 60.001, 180.0] {
                 place_battle_unit(&mut world, target, map, 0, distance.round() as i64).unwrap();
                 edit(&mut world, target, |unit| {
                     unit["motion"]["point"]["y"] = (0.5 + distance).into()
                 });
                 let before = world.btech.clone();
-                let expected = distance
-                    > if radar_endpoint.is_some() {
-                        180.0
-                    } else {
-                        60.0
-                    };
+                let expected = distance > f64::from(MAX_SIGHT);
                 for (a, b) in [(observer, target), (target, observer)] {
                     assert_eq!(
                         battle_unit_terrain_los(&world, a, b).unwrap().blocked,
                         expected,
-                        "distance {distance}, radar {radar_endpoint:?}"
+                        "distance {distance}, anti-aircraft {anti_aircraft:?}"
                     );
                 }
                 assert_eq!(world.btech, before);
@@ -111,11 +109,14 @@ async fn all_chassis_share_symmetric_map_and_radar_cutoffs_without_mutation() {
     }
 }
 
+/// Height counts toward the spatial cutoff, and two endpoints high above the terrain still
+/// obey it before the clear-sky shortcut skips the terrain walk.
 #[tokio::test]
-async fn spatial_height_and_live_map_ceiling_apply_before_the_high_altitude_shortcut() {
+async fn spatial_height_and_sight_cutoff_apply_before_the_high_altitude_shortcut() {
     let (_dir, _config, mut world, map, observer, target) =
         fixture(include_str!("../game/units/JR7-D.toml")).await;
     place_battle_unit(&mut world, target, map, 0, 0).unwrap();
+    // Five levels of height weigh as one hex of range: three hundred levels reach the cutoff.
     for height in [299.999, 300.0, 300.001] {
         edit(&mut world, target, |unit| {
             unit["ground_elevation"] = height.into()
@@ -127,29 +128,17 @@ async fn spatial_height_and_live_map_ceiling_apply_before_the_high_altitude_shor
             height > 300.0
         );
     }
-    // Both endpoints above terrain must still obey the map cutoff before the clear-sky shortcut.
+    // Both endpoints above terrain must still obey the cutoff before the clear-sky shortcut.
     edit(&mut world, observer, |unit| {
         unit["ground_elevation"] = 20.0.into()
     });
-    edit(&mut world, target, |unit| {
-        unit["ground_elevation"] = 20.0.into()
-    });
-    place_battle_unit(&mut world, target, map, 0, 11).unwrap();
-    edit(&mut world, target, |unit| {
-        unit["ground_elevation"] = 20.0.into()
-    });
-    for maximum in [11, 10] {
-        world
-            .btech
-            .rewrite_map_record(map, |record| {
-                record["maximum_visibility"] = maximum.into();
-            })
-            .unwrap();
-        assert_eq!(
-            battle_unit_terrain_los(&world, observer, target)
-                .unwrap()
-                .blocked,
-            maximum == 10
-        );
+    for y in [60, 61] {
+        place_battle_unit(&mut world, target, map, 0, y).unwrap();
+        edit(&mut world, target, |unit| {
+            unit["ground_elevation"] = 20.0.into()
+        });
+        let los = battle_unit_terrain_los(&world, observer, target).unwrap();
+        assert_eq!(los.blocked, y > i64::from(MAX_SIGHT), "y {y}");
+        assert!(!los.hills, "no terrain is traced above the shortcut height");
     }
 }

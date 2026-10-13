@@ -624,6 +624,14 @@ impl Server {
                 return false;
             }
         };
+        if let Err(error) =
+            crate::advance_battle_sensor_sweeps(&mut self.scripts.world.borrow_mut())
+        {
+            tracing::error!(system = "sensors", error = %format_args!("{error:#}"), "BattleTech update failed");
+            *self.scripts.world.borrow_mut() = before;
+            self.scripts.effects.rollback();
+            return false;
+        }
         match crate::advance_battle_hiding(&mut self.scripts.world.borrow_mut()) {
             Ok(updates) => notices.extend(updates),
             Err(error) => {

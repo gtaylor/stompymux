@@ -405,16 +405,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_dig_only_fs",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_digbonus",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "cache_depth",
         parser: "cf_int",
         permission: P::DISABLED,

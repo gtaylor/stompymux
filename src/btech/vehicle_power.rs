@@ -186,7 +186,6 @@ pub(super) fn stop_admitted(
 
 /// Shared control cleanup after location-dependent shutdown consequences have been resolved.
 pub(super) fn finish_shutdown(unit: &mut super::Vehicle) {
-    unit.cancel_digging();
     unit.target_lock = None;
     unit.power = Power::Off;
     unit.tag.stop();

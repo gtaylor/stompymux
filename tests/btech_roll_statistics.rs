@@ -61,8 +61,6 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
             false,
             AimRules {
                 woods_damage: false,
-                dig_bonus: 2,
-                dig_only_front: true,
                 hit_arc_mode: 0,
                 fasa_turning: false,
                 extended_movement: false,

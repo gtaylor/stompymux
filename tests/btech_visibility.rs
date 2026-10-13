@@ -1,4 +1,4 @@
-//! Operator visibility persists across chassis without replacing ordinary sensor acquisition.
+//! Operator visibility persists across chassis without replacing ordinary perception.
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
@@ -155,7 +155,7 @@ async fn visibility_controls_all_chassis_are_atomic_and_durable() {
     }
 }
 
-/// Invisibility hides cached contacts immediately and the next scan reports their loss without new rolls.
+/// Invisibility hides cached contacts immediately and the next scan reports their loss.
 #[tokio::test]
 async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
     for observer_source in templates() {
@@ -171,12 +171,10 @@ async fn visibility_sensor_loss_and_clairvoyant_contacts_cross_all_chassis() {
                     .unwrap()
                     .is_some()
             );
+            let perception = battle_perceive(&world, observer, target).unwrap().unwrap();
             assert_eq!(
-                battle_perceive(&world, observer, target)
-                    .unwrap()
-                    .unwrap()
-                    .channel,
-                DetectionChannel::Sensors
+                (perception.channel, perception.identified),
+                (DetectionChannel::Sight, true)
             );
             set_battle_visibility(
                 &mut world,
@@ -276,8 +274,6 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
         assert_eq!(view.detection, None);
         let rules = AimRules {
             woods_damage: false,
-            dig_bonus: 3,
-            dig_only_front: false,
             hit_arc_mode: 0,
             fasa_turning: false,
             extended_movement: false,
@@ -314,29 +310,28 @@ async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
     { at = 5, item = "Light_BAP" },
     { at = "6-8", item = "BloodhoundProbe" },"#,
     );
-    let source = support::templates::with_flags(&source, &["AntiAircraft"]);
-    let (_dir, config, base, observer, target) =
-        fixture(&source, include_str!("../game/units/JR7-D.toml"), false).await;
-    let map = base.btech.units()[&observer].map.unwrap();
     for channel in DetectionChannel::ALL {
+        // A hill hides the target from sight; a magscan or probe sweep still finds it.
+        let blocked = channel != DetectionChannel::Sight;
+        let (_dir, config, base, observer, target) =
+            fixture(&source, include_str!("../game/units/JR7-D.toml"), blocked).await;
         let mut world = base.clone();
-        // Silence every channel that would win the tie-break ahead of the one under test.
-        if channel != DetectionChannel::Sensors {
-            set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
-        }
-        if matches!(channel, DetectionChannel::Radar | DetectionChannel::Probe) {
-            set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
-        }
-        if channel == DetectionChannel::Radar {
+        // Without probes the magscan sweep finds the target behind the hill; with them the
+        // probe does. A short-band sweep is already rolled, so the refresh has nothing to roll.
+        if channel == DetectionChannel::Sensors {
+            let map = world.btech.constructed_units()[&observer]
+                .position()
+                .unwrap()
+                .map;
             set_battle_map_perception(&mut world, map, MapPerceptionFlag::Probes, false).unwrap();
-            edit(&mut world, target, |state| {
-                state["ground_elevation"] = 5.into()
-            });
         }
+        edit(&mut world, observer, |state| {
+            state["sensor_sweep"] = 7.into();
+        });
         let ordinary = battle_perceive(&world, observer, target).unwrap();
         assert_eq!(
-            ordinary.map(|perception| perception.channel),
-            Some(channel),
+            ordinary.map(|perception| (perception.channel, perception.identified)),
+            Some((channel, channel == DetectionChannel::Sight)),
             "{channel:?} must have a detectable control target"
         );
         set_battle_visibility(

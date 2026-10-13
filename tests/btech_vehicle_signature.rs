@@ -14,7 +14,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
         MapAsset::from_cells(&format!("1 20\n{}", ".0\n".repeat(20))).unwrap(),
     )
     .unwrap();
-    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -101,8 +101,8 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     assert_eq!(restored.btech.vehicles()[&id].scanner_perception(), 6);
 }
 
-/// Scenario illumination removes the night sight penalty beyond the sensor band and survives
-/// replay and detached Lua state.
+/// Scenario illumination extends moonless-night sight to a target beyond the five-hex reach,
+/// and survives replay and detached Lua state.
 #[tokio::test]
 async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     let (_dir, config, mut world, observer) =
@@ -117,23 +117,32 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
             .unwrap(),
     )
     .unwrap();
-    // Beyond the fifteen-hex sensor band, only night sight reaches the target.
+    // Seventeen hexes is beyond the five-hex moonless-night sight; with the map's sensors off,
+    // only a lit target can be perceived.
     place_battle_unit(&mut world, target, map, 0, 17).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     assert_eq!(
         world.btech.vehicles()[&target].signature(),
         UnitSignature::default()
     );
     assert!(!battle_unit_illuminated(&world, target));
-    let unlit = battle_perceive(&world, observer, target).unwrap().unwrap();
-    assert_eq!(
-        (unlit.channel, unlit.aim_modifier),
-        (DetectionChannel::Sight, 0)
-    );
+    assert!(battle_perceive(&world, observer, target).unwrap().is_none());
     let signature = UnitSignature {
         team: -17,
         hidden: true,
         illuminated: true,
     };
+    // Enemies never perceive a hidden unit, so put the observer on the target's side and let
+    // the lighting alone decide.
+    set_battle_unit_signature(
+        &mut world,
+        observer,
+        UnitSignature {
+            team: -17,
+            ..Default::default()
+        },
+    )
+    .unwrap();
     set_battle_unit_signature(&mut world, target, signature).unwrap();
     assert!(battle_unit_illuminated(&world, target));
     let lit = battle_perceive(&world, observer, target).unwrap().unwrap();

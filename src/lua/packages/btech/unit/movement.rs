@@ -317,16 +317,6 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         "unit_hulldown",
         error::wrap(lua, hull_down, "btech.operation.failed")?,
     )?;
-    let dig = lua.create_function(move |lua, (unit, pilot): (i64, i64)| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        crate::lua::transactions::run(lua, &scripts.world, || {
-            crate::battle_dig_action(&scripts, ObjectId(unit), ObjectId(pilot))
-                .map_err(mlua::Error::external)?;
-            Ok(true)
-        })
-    })?;
-    native.set("unit_dig", error::wrap(lua, dig, "btech.operation.failed")?)?;
     let land = lua.create_function(move |lua, (unit, pilot): (i64, i64)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;

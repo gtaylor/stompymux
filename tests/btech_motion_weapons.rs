@@ -4473,13 +4473,17 @@ async fn observer_broadcasts_use_current_acquired_contacts_without_mutation() {
             place_battle_unit(&mut altered, subject, map, 0, 0).unwrap();
         }
         if case == "hidden" {
-            let map = altered.btech.constructed_units()[&observer]
-                .position()
-                .unwrap()
-                .map;
-            set_battle_map_perception(&mut altered, map, MapPerceptionFlag::Sensors, false)
-                .unwrap();
-            set_battle_map_visibility(&mut altered, map, Light::Day, 0).unwrap();
+            // An adjacent subject is always in sight; only invisibility leaves the saved
+            // contact stale.
+            set_battle_visibility(
+                &mut altered,
+                subject,
+                Visibility {
+                    invisible: true,
+                    clairvoyant: false,
+                },
+            )
+            .unwrap();
         }
         if case == "shutdown" {
             assert!(visible_battle_contact(&altered, observer, subject).is_err());
@@ -4691,6 +4695,9 @@ async fn firing_observers_hide_unseen_participants_and_replay_transactionally() 
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 state["constructed"][observer.0.to_string()]["power"] =
                     serde_json::json!({"state":"running"});
+                // A hostile observer: the shooter's own contacts are not relayed to it
+                // (Tactical Operations p. 191), so what it sees is only what it holds.
+                state["constructed"][observer.0.to_string()]["signature"]["team"] = 1.into();
                 world.btech = serde_json::from_value(state).unwrap();
                 for _ in 0..16 {
                     let contacts = world.btech.constructed_units()[&observer].contacts();

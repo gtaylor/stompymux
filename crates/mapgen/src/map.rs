@@ -140,7 +140,7 @@ impl HexMap {
             gravity: self.gravity,
             temperature: self.temperature,
             light: None,
-            visibility: None,
+            weather: None,
             wind: None,
             hexes: Arc::new(self.hexes.clone()),
             points_of_interest: self.points_of_interest.clone(),

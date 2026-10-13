@@ -24,51 +24,52 @@ pub use btech::{MinePlacement, add_mine_action as add_battle_mine_action};
 pub use btech::{
     AimModifiers, AimRules, AmmunitionAdjustment, AmmunitionBin, AmmunitionDraw, AmmunitionHazard,
     AmmunitionMode, AmsReport, ArtemisController, BalanceCause, BalanceReport, BeaconKind,
-    BtechState, Character, CharacterInjury, CharacterNotice, CharacterValue, ConsciousnessCheck,
-    Contact, ContactEvent, ContactRules, ContactTransition, ContactUpdate, ContactView,
-    CriticalDefinition, CriticalLocation, CriticalLoss, DamagePhase, DamageResult, Detection, Dice,
-    ElectronicField, ElectronicMode, ElectronicSource, ElectronicSuite, Electronics, Engine,
+    BtechState, BuildingCover, BuildingInterior, Character, CharacterInjury, CharacterNotice,
+    CharacterValue, ConsciousnessCheck, Contact, ContactEvent, ContactTransition, ContactUpdate,
+    ContactView, CriticalDefinition, CriticalLocation, CriticalLoss, DamagePhase, DamageResult,
+    Dice, ElectronicField, ElectronicMode, ElectronicSource, ElectronicSuite, Electronics, Engine,
     Facing, FallRules, FireMode, FreeFall, FreeFallStep, GlancingMode, Gyro, Heat, HeatCheck,
     HeatRates, Hex, HexCoordinate, Hit, HitArc, HitRules, HitTable, ImpactEffect, ImpactReport,
-    IndirectAim, JumpCapacity, JumpFlight, JumpOutcome, JumpPath, JumpSample, JumpStep, Light,
-    MapAsset, MapPointOfInterest, MapRegion, Mass, Mech, MechFallReport, MechLoadout,
-    MechSalvoReport, MechSection, MechShotReport, MechTemplate, MessageTarget, Mobility, Motion,
-    MovementRules, NarcReport, Notice, OverheatClock, OverheatReport, OverheatRules, PerceptionAim,
-    PersonalEquipment, PersonalLoadout, PilotNotice, PilotingCheck, PlayerConfiguration,
-    PodRemoval, PodRow, Point, Position, Posture, Power, Range, RangeBracket, RawMovement,
-    RawSectionCode, RawTemplate, RawUnitClass, RecoilReport, Recovery, RecoveryMode,
-    ResolvedLoadout, SalvoGroup, SalvoReport, SectionDefinition, SectionExposure,
-    SectionExposureReport, SectionState, SensorArc, ShotReport, ShotRules, SkillCategory,
+    IndirectAim, JumpCapacity, JumpFlight, JumpOutcome, JumpPath, JumpSample, JumpStep,
+    LIT_TARGET_SIGHT, Light, MAX_SIGHT, MapAsset, MapPointOfInterest, MapRegion, Mass, Mech,
+    MechFallReport, MechLoadout, MechSalvoReport, MechSection, MechShotReport, MechTemplate,
+    MessageTarget, Mobility, Motion, MovementRules, NarcReport, Notice, OverheatClock,
+    OverheatReport, OverheatRules, PerceptionAim, PersonalEquipment, PersonalLoadout, PilotNotice,
+    PilotingCheck, PlayerConfiguration, PodRemoval, PodRow, Point, Position, Posture, Power, Range,
+    RangeBracket, RawMovement, RawSectionCode, RawTemplate, RawUnitClass, RecoilReport, Recovery,
+    RecoveryMode, ResolvedLoadout, SEARCHLIGHT_SIGHT, SalvoGroup, SalvoReport, SectionDefinition,
+    SectionExposure, SectionExposureReport, SectionState, ShotReport, ShotRules, SkillCategory,
     StackingEntry, StackingInput, StackingRules, Stagger, StaggerHit, StaggerMode, StaggerReport,
-    StaggerRules, StandAttempt, StandMode, StandTimer, StoredBattleUnit, StoredMap, Surface,
-    SurfaceBreak, System, SystemCritical, TacticalImpact, TacticalPilotInjury, TargetLock,
+    StaggerRules, StandAttempt, StandMode, StandTimer, StoredBattleUnit, StoredMap, StrayHit,
+    Surface, SurfaceBreak, System, SystemCritical, TacticalImpact, TacticalPilotInjury, TargetLock,
     TemplateCheck, Terrain, TerrainLos, Torso, UnitConfiguration, UnitDefinition, UnitEdit,
     UnitMut, UnitRef, UnitSignature, Unjam, VehicleHit, VehicleHitRules, VehicleMotiveHit,
     WaterRanges, Weapon, WeaponDamage, WeaponDamageEffects, WeaponDamageKind, WeaponMount,
-    WeaponProfile, WeaponRange, WeaponReadiness, WeaponUse, advance_heat as advance_battle_heat,
-    advance_jumps as advance_battle_jumps, advance_motion as advance_battle_motion,
-    advance_overheat as advance_battle_overheat, advance_recovery as advance_battle_recovery,
-    advance_recycle as advance_battle_recycle, advance_stagger as advance_battle_stagger,
-    advance_standing as advance_battle_standing, advance_stun as advance_battle_stun,
-    advance_target_locks as advance_battle_target_locks, advance_units as advance_battle_units,
-    advance_unjamming as advance_battle_unjamming,
+    WeaponProfile, WeaponRange, WeaponReadiness, WeaponUse, Weather,
+    advance_heat as advance_battle_heat, advance_jumps as advance_battle_jumps,
+    advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
+    advance_recovery as advance_battle_recovery, advance_recycle as advance_battle_recycle,
+    advance_stagger as advance_battle_stagger, advance_standing as advance_battle_standing,
+    advance_stun as advance_battle_stun, advance_target_locks as advance_battle_target_locks,
+    advance_units as advance_battle_units, advance_unjamming as advance_battle_unjamming,
     advance_unjamming_action as advance_battle_unjamming_action,
     aim_modifiers as battle_aim_modifiers, apply_damage_phase, assign_pilot as assign_battle_pilot,
     begin_stand as begin_battle_stand, begin_unjam as begin_battle_unjam,
-    break_bridge as break_battle_bridge, break_ice as break_battle_ice,
-    check_character_consciousness, check_template as check_battle_template,
-    collapse_structure as collapse_battle_structure, contact_observers as battle_contact_observers,
-    create_map as create_battle_map, create_unit as create_battle_unit,
-    destroy_unit_critical as destroy_battle_critical,
+    break_bridge as break_battle_bridge, break_ice as break_battle_ice, building_collapse_damage,
+    building_entry_level, building_floor_cost, check_character_consciousness,
+    check_template as check_battle_template, collapse_structure as collapse_battle_structure,
+    contact_observers as battle_contact_observers, create_map as create_battle_map,
+    create_unit as create_battle_unit, destroy_unit_critical as destroy_battle_critical,
     displayed_contact as displayed_battle_contact, displayed_contacts as displayed_battle_contacts,
     electronic_field as battle_electronic_field,
     electronic_fields_pending as battle_electronic_fields_pending,
     explode_ammunition as explode_battle_ammunition, flip_arms as flip_battle_arms,
     flood_unit as flood_battle_unit, ground_terrain_los, gunnery_target as battle_gunnery_target,
     injure_character as injure_battle_character,
-    injure_tactical_pilot as injure_battle_tactical_pilot, inspect_pods as inspect_battle_pods,
-    land_jump as land_battle_jump, launch_jump as launch_battle_jump,
-    observer_messages as battle_observer_messages, perception_target as battle_perception_target,
+    injure_tactical_pilot as injure_battle_tactical_pilot, inside_building,
+    inspect_pods as inspect_battle_pods, land_jump as land_battle_jump,
+    launch_jump as launch_battle_jump, observer_messages as battle_observer_messages,
+    perception_target as battle_perception_target,
     pilot_aim_modifiers as battle_pilot_aim_modifiers, place_unit as place_battle_unit,
     pod_status as battle_pod_status, prepare_recovery as prepare_battle_recovery,
     read_map as read_battle_map, read_template as read_battle_template,
@@ -86,7 +87,7 @@ pub use btech::{
     set_ams as set_battle_ams, set_auto_fall as set_battle_auto_fall,
     set_character as set_battle_character, set_character_value as set_battle_character_value,
     set_heading as set_battle_heading, set_inarc_ammunition as set_battle_inarc_ammunition,
-    set_map_visibility as set_battle_map_visibility, set_rotary as set_battle_rotary,
+    set_map_conditions as set_battle_map_conditions, set_rotary as set_battle_rotary,
     set_speed as set_battle_speed, set_unit_signature as set_battle_unit_signature,
     spend_weapon as spend_battle_weapon, stand_target as battle_stand_target,
     start_unit as start_battle_unit, stop_unit as stop_battle_unit, stun_unit as stun_battle_unit,
@@ -99,10 +100,11 @@ pub use btech::{
     toggle_narc as toggle_battle_narc, toggle_precision as toggle_battle_precision,
     toggle_rapid as toggle_battle_rapid, toggle_ultra as toggle_battle_ultra,
     unit_elevation as battle_unit_elevation, unit_gunnery_target as battle_unit_gunnery_target,
+    unit_inside_building as battle_unit_inside_building,
     unit_piloting_target as battle_unit_piloting_target, unit_range as battle_unit_range,
     unit_terrain_los as battle_unit_terrain_los, update_contact as update_battle_contact,
     visible_contact as visible_battle_contact, visible_contacts as visible_battle_contacts,
-    weapon_bears_on as battle_weapon_bears_on,
+    visual_range, weapon_bears_on as battle_weapon_bears_on,
 };
 pub mod accounts;
 pub use accounts::{Account, Login};
@@ -382,15 +384,15 @@ pub use btech::{
 
 pub use btech::clear_recent_fire as clear_battle_recent_fire;
 
-/// Automatic perception: sensor band, sight, active probes and radar.
+/// Automatic perception: sight, sensor sweeps and active probes.
 pub use btech::{
-    AUTOMATIC_DETECTION_RANGE, AcquisitionRules, ActiveProbe, DEFAULT_SENSOR_RANGE,
-    DetectionChannel, HIDDEN_DETECTION_RANGE, MapFlag, MapPerceptionFlag, Perception,
-    PerceptionProfile, PerceptionReport, PerceptionStatus, ProbeProfile, RADAR_RANGE, RadarProfile,
-    RadarTarget, SensorRange, configure_perception as configure_battle_perception,
+    ActiveProbe, DetectionChannel, MapFlag, MapPerceptionFlag, Perception, PerceptionProfile,
+    PerceptionReport, PerceptionStatus, ProbeProfile, SensorBand, SensorBands, SensorMode,
+    SensorProfile, SensorSystem, SweepResult, SweepTarget, TargetSystems,
+    advance_sensor_sweeps as advance_battle_sensor_sweeps, ecm_modifier as battle_ecm_modifier,
     hex_perception as battle_hex_perception, perceive as battle_perceive,
-    perception_factor as battle_perception_factor, perception_profile as battle_perception_profile,
-    perception_report as battle_perception_report, set_map_perception as set_battle_map_perception,
+    perception_profile as battle_perception_profile, perception_report as battle_perception_report,
+    set_map_perception as set_battle_map_perception, sweep as battle_sensor_sweep,
 };
 
 pub use btech::{
@@ -901,12 +903,7 @@ pub use btech::{PickupReport, pickup_unit as pickup_battle_unit};
 /// Atomic pickup/dropoff with host publication and casualty handling.
 pub use btech::tow_action as battle_tow_action;
 
-/// Ground-vehicle cover preparation and saved digging state.
-pub use btech::{DigState, dig_unit as dig_battle_unit};
-
-/// Begin vehicle cover with atomic host notification.
-pub use btech::dig_action as battle_dig_action;
-
+/// Hull-down posture for quads and kneeling bipeds, with atomic host notification.
 pub use btech::{
     HullDownState, hull_down_action as battle_hull_down_action,
     set_hull_down as set_battle_hull_down,

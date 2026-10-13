@@ -248,28 +248,22 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
         let terrain = battle_unit_terrain_los(&world, shooter, id).unwrap();
         assert!(terrain.partial_cover);
         let cover = i16::from(terrain.woods) + i16::from(terrain.target_woods) + 1;
-        // The sensor band reaches first; with it switched off, sight carries the same cover.
-        for (sensors, channel) in [
-            (true, DetectionChannel::Sensors),
-            (false, DetectionChannel::Sight),
-        ] {
-            set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, sensors)
-                .unwrap();
-            let before = battle_perceive(&world, shooter, id).unwrap().unwrap();
-            assert_eq!((before.channel, before.aim_modifier), (channel, cover));
-            lower(&mut world, id);
-            let after = battle_perceive(&world, shooter, id).unwrap().unwrap();
-            assert_eq!(after.aim_modifier - before.aim_modifier, 2);
-            assert_eq!(
-                (after.channel, after.identified, after.probed),
-                (before.channel, before.identified, before.probed)
-            );
-            set_battle_hull_down(&mut world, id, ObjectId(1), "-").unwrap();
-            for _ in 0..3 {
-                advance_battle_units(&mut world, 0, true);
-            }
+        let before = battle_perceive(&world, shooter, id).unwrap().unwrap();
+        assert_eq!(
+            (before.channel, before.aim_modifier),
+            (DetectionChannel::Sight, cover)
+        );
+        lower(&mut world, id);
+        let after = battle_perceive(&world, shooter, id).unwrap().unwrap();
+        assert_eq!(after.aim_modifier - before.aim_modifier, 2);
+        assert_eq!(
+            (after.channel, after.identified, after.line_of_fire),
+            (before.channel, before.identified, before.line_of_fire)
+        );
+        set_battle_hull_down(&mut world, id, ObjectId(1), "-").unwrap();
+        for _ in 0..3 {
+            advance_battle_units(&mut world, 0, true);
         }
-        set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, true).unwrap();
         // Open ground removes the bonus, even though the unit remains lowered.
         world
             .btech

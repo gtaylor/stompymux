@@ -525,8 +525,11 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 }
                 if let Some(map) = world.btech.maps().get(&id) {
                     lines.push(format!(
-                        "Light {}; visibility {}; maximum visibility {} hexes",
-                        map.light, map.visibility, map.maximum_visibility
+                        "Light {}; weather {}; units see {} hexes",
+                        map.light_level().map_or("?", |light| light.name()),
+                        map.weather_condition()
+                            .map_or("?", |weather| weather.name()),
+                        map.visual_range().unwrap_or(0)
                     ));
                     let terrain = if map.terrain_ready() {
                         "Terrain decoded; supported tactical units can use this map."
@@ -685,24 +688,18 @@ fn mutate_object(ctx: &CommandContext<'_>, operation: &str, argument: &str) -> R
         return Ok(format!("Map #{} cloud base saved: {}.", id.0, altitude));
     }
     if operation.eq_ignore_ascii_case("map-conditions") {
-        let (light, visibility) = name
+        let (light, weather) = name
             .split_once(',')
-            .context("Usage: @btech map-conditions <map>=<light>,<visibility 0-60>")?;
+            .context("Usage: @btech map-conditions <map>=<light>,<weather>")?;
         let light: super::Light = light.parse()?;
-        super::set_map_visibility(
-            &mut ctx.scripts.world.borrow_mut(),
-            id,
-            light,
-            visibility
-                .trim()
-                .parse()
-                .context("Expected visibility from 0 through 60")?,
-        )?;
+        let weather: super::Weather = weather.parse()?;
+        super::set_map_conditions(&mut ctx.scripts.world.borrow_mut(), id, light, weather)?;
         return Ok(format!(
-            "Map #{} conditions saved: {}, visibility {} hexes.",
+            "Map #{} conditions saved: {}, {}; units see {} hexes.",
             id.0,
             light.name(),
-            visibility.trim()
+            weather.name(),
+            super::visual_range(light, weather)
         ));
     }
     if operation.eq_ignore_ascii_case("unit-place") || operation.eq_ignore_ascii_case("unit-remove")
@@ -1016,11 +1013,12 @@ pub(crate) fn sensor_command(
     ctx: &CommandContext<'_>,
     input: &CommandInput,
 ) -> Result<CommandAction> {
+    if !input.args.trim().is_empty() {
+        return Ok(CommandAction::Report(CommandReport::Reply(
+            "Sensors sweep on their own; `sensor` takes no arguments.".into(),
+        )));
+    }
     let result = (|| -> Result<String> {
-        ensure!(
-            input.args.trim().is_empty(),
-            "Sensors are automatic; the sensor command takes no arguments."
-        );
         let world = ctx.scripts.world.borrow();
         let unit = world
             .objects
