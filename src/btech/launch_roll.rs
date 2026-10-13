@@ -1,5 +1,5 @@
 //! Shared launch outcomes for every unit class; adapters own inventory and anatomy-specific damage.
-use super::{AmmunitionMode, BeaconLaunch, Dice, FireMode, GlancingMode, Weapon};
+use super::{AmmunitionMode, BeaconLaunch, Dice, FireMode, Weapon};
 use anyhow::{Result, ensure};
 
 /// Current weapon and admitted target facts after gatling preparation and ammunition fallback.
@@ -11,7 +11,6 @@ pub(super) struct LaunchRollRequest {
     pub distance: f64,
     pub target_number: Option<i32>,
     pub streak_confused: bool,
-    pub glancing: GlancingMode,
 }
 
 /// Unit-independent decisions consumed by both launch adapters.
@@ -38,15 +37,10 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result
         distance,
         target_number,
         streak_confused,
-        glancing,
     } = request;
     ensure!(
         distance.is_finite() && distance >= 0.0,
         "Invalid weapon range"
-    );
-    ensure!(
-        target_number != Some(i32::MIN) || glancing != GlancingMode::BelowTarget,
-        "Invalid glancing target number"
     );
     let roll = attack_roll(weapon, distance, dice);
     let propellant_roll =
@@ -70,13 +64,7 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result
             || streak_confused
             || target_number.is_some_and(|number| i32::from(roll) >= number));
     let pod = weapon.beacon_kind(ammunition).is_some();
-    let threshold = target_number.map(|number| {
-        if pod {
-            number
-        } else {
-            glancing.threshold(number)
-        }
-    });
+    let threshold = target_number;
     Ok(LaunchRoll {
         critical_explosion,
         critical_jam,
@@ -88,10 +76,10 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result
         misload_required: critical_explosion
             || (loader_destroyed && (fire_mode == FireMode::Rapid || propellant_roll.is_some())),
         hit: launched && threshold.is_some_and(|number| i32::from(roll) >= number),
+        // Tactical Operations glancing blows: a roll exactly equal to the target number halves damage.
         glancing: launched
             && !pod
             && (!weapon.is_streak() || streak_confused)
-            && glancing != GlancingMode::Disabled
             && threshold == Some(i32::from(roll)),
     })
 }
@@ -140,7 +128,6 @@ mod tests {
                     distance,
                     target_number: Some(2),
                     streak_confused: false,
-                    glancing: GlancingMode::Disabled,
                 },
                 &mut dice,
             )
@@ -202,7 +189,6 @@ mod tests {
                     distance: 1.0,
                     target_number: Some(2),
                     streak_confused: false,
-                    glancing: GlancingMode::Disabled,
                 },
                 &mut dice,
             )

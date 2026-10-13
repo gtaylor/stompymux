@@ -13,8 +13,6 @@ pub struct AimRules {
     /// Select the woods-damage variant's occupied-forest accuracy calculation.
     pub woods_damage: bool,
     /// Target cover modifier, bounded to the signed modifier range by configuration.
-    /// Shared configured arc geometry for determining the defender’s facing.
-    pub hit_arc_mode: i64,
     pub fasa_turning: bool,
     pub extended_movement: bool,
     pub extended_ranges: bool,
@@ -28,7 +26,6 @@ impl AimRules {
     pub(crate) fn configured(config: &crate::config::BattleTechConfig) -> Self {
         Self {
             woods_damage: config.moddamagewithwoods != 0,
-            hit_arc_mode: config.hit_arcs,
             fasa_turning: config.fasaturn != 0,
             extended_movement: config.extendedmovemod != 0,
             extended_ranges: config.erange != 0,

@@ -25,6 +25,11 @@ fn recovery_mut(world: &mut World, id: ObjectId) -> &mut Recovery {
     })
 }
 
+/// Stop a wreck's crew recovery attempt; a destroyed unit has no cockpit to wake up in.
+pub(super) fn clear(world: &mut World, id: ObjectId) {
+    recovery_mut(world, id).clear();
+}
+
 /// Resolve a tactical injury without assigning a fictitious player or starting a new random stream.
 pub(super) fn check(
     world: &mut World,

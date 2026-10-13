@@ -14,14 +14,14 @@ fn field(world: &World, id: ObjectId, name: &str) -> serde_json::Value {
     serde_json::to_value(&world.btech).unwrap()[owner][id.0.to_string()][name].clone()
 }
 
-/// Standard heat explosions and advanced first pulses retain attribution through both launchers.
+/// Inferno heat explosions retain attribution through both launchers.
 #[tokio::test]
 async fn inferno_initial_effects_credit_the_shooter_and_replay() {
     let targets = firing::templates();
     for shooter in [&targets[0], &targets[2]] {
         for target_source in targets.iter().skip(2) {
-            for advanced in [false, true] {
-                let (dir, _, mut base, id, target, index) = firing::fixture_with_supply(
+            {
+                let (_dir, config, mut base, id, target, index) = firing::fixture_with_supply(
                     shooter,
                     Some(Weapon::Srm2),
                     target_source,
@@ -29,15 +29,6 @@ async fn inferno_initial_effects_credit_the_shooter_and_replay() {
                     Some("Inferno"),
                 )
                 .await;
-                let path = dir.path().join("stompymux.toml");
-                let mut settings: toml::Value =
-                    toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-                settings["battletech"]
-                    .as_table_mut()
-                    .unwrap()
-                    .insert("fasaadvvhlfire".into(), i64::from(advanced).into());
-                std::fs::write(path, toml::to_string(&settings).unwrap()).unwrap();
-                let config = Config::load(dir.path()).unwrap();
                 toggle_battle_inferno(&mut base, id, ObjectId(1), index).unwrap();
                 let seed = (0..=255)
                     .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
@@ -55,7 +46,6 @@ async fn inferno_initial_effects_credit_the_shooter_and_replay() {
                 firing::edit(&mut base, target, |unit| {
                     unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
                 });
-                let vtol = base.btech.vehicles()[&target].definition().is_vtol();
                 let stationary = base.btech.vehicles()[&target].definition().movement
                     == VehicleMovement::Stationary;
                 let command = format!("btech.unit.fire({},1,{index},{})", id.0, target.0);
@@ -69,52 +59,29 @@ async fn inferno_initial_effects_credit_the_shooter_and_replay() {
                 let report: mlua::Table = lua.eval_callback(&format!("return {command}")).unwrap();
                 let report = serde_json::to_value(report).unwrap();
                 let inferno = &report["salvo"]["report"]["inferno"];
-                assert!(inferno["missiles"].as_u64().unwrap() > 0);
-                let inflicted: u64 = inferno["damage"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .map(|damage| damage["armor_damage"].as_u64().unwrap())
-                    .sum();
-                if !advanced && !stationary {
-                    assert_eq!(inferno["explosion_roll"], 9, "{inferno}");
-                }
-                assert_eq!(
-                    field(&lua.world(), id, "damage_counters")["inflicted"],
-                    inflicted
-                );
-                assert_eq!(
-                    field(&lua.world(), id, "units_killed"),
-                    i32::from(!stationary && (!advanced || vtol))
-                );
-                if advanced && vtol {
-                    // This seed penetrates the rotor and rolls a power-plant
-                    // catastrophe, which must not add another kill per hull face.
-                    let rotor = inferno["damage"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .find(|d| d["section"] == "rotor")
-                        .unwrap();
+                let missiles = inferno["missiles"].as_u64().unwrap();
+                assert!(missiles > 0);
+                // Infernos deal no armor damage; each missile rolls once on the vehicle's
+                // critical hits table (Total Warfare p. 142).
+                if !stationary {
                     assert_eq!(
-                        rotor["internal"]["criticals"][0]["selection"]["effect"],
-                        "power_plant"
+                        inferno["criticals"].as_array().unwrap().len() as u64,
+                        missiles,
+                        "{inferno}"
                     );
                 }
-                if !stationary {
+                assert_eq!(field(&lua.world(), id, "damage_counters")["inflicted"], 0);
+                let killed = lua.world().btech.vehicles()[&target].is_destroyed();
+                assert_eq!(field(&lua.world(), id, "units_killed"), i32::from(killed));
+                if killed {
                     let overflow =
                         Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
-                    let field_name = if advanced {
-                        "damage_inflicted"
-                    } else {
-                        "units_killed"
-                    };
                     set_battle_unit_field_action(
                         &overflow,
                         &config,
                         ObjectId(1),
                         id,
-                        field_name,
+                        "units_killed",
                         "2147483647",
                     )
                     .unwrap();
@@ -145,28 +112,6 @@ async fn inferno_initial_effects_credit_the_shooter_and_replay() {
                     field(&restored, id, "damage_counters"),
                     field(&saved, id, "damage_counters")
                 );
-                if advanced && !stationary && !vtol {
-                    let mut burning = restored;
-                    for _ in 0..60 {
-                        let _ = advance_battle_vehicle_fires(&mut burning, &config).unwrap();
-                    }
-                    assert!(
-                        field(&burning, target, "damage_counters")["taken"]
-                            .as_i64()
-                            .unwrap()
-                            > field(&saved, target, "damage_counters")["taken"]
-                                .as_i64()
-                                .unwrap()
-                    );
-                    assert_eq!(
-                        field(&burning, id, "damage_counters"),
-                        field(&saved, id, "damage_counters")
-                    );
-                    assert_eq!(
-                        field(&burning, id, "units_killed"),
-                        field(&saved, id, "units_killed")
-                    );
-                }
             }
         }
     }

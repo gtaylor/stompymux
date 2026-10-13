@@ -232,13 +232,6 @@ CREATE TABLE btech_character_recovery (
     CHECK (mode <> 0 OR recovers_at IS NULL)
 ) STRICT;
 
--- btech_reactor.rs: the initial reactor instability window. `closes_at` is the
--- simulation second the startup window closes, or NULL once it has closed.
-CREATE TABLE btech_reactor_clock (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    closes_at INTEGER CHECK (closes_at > 0)
-) STRICT;
-
 -- btech_autopilot.rs.
 -- Rust autopilot controllers, one typed row per controller plus child rows for its
 -- orders, patrol waypoints and feedback history. Sensor memory is never stored.

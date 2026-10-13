@@ -8,21 +8,6 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
     world.btech.rewrite_unit_record(id, change).unwrap();
 }
 
-/// Reload actual validated configuration rather than constructing a parallel set of rules.
-fn configure(dir: &std::path::Path, values: &[(&str, i64)]) -> Config {
-    let path = dir.join("stompymux.toml");
-    let mut settings: toml::Value =
-        toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    for (name, value) in values {
-        settings["battletech"]
-            .as_table_mut()
-            .unwrap()
-            .insert((*name).into(), (*value).into());
-    }
-    std::fs::write(path, toml::to_string(&settings).unwrap()).unwrap();
-    Config::load(dir).unwrap()
-}
-
 /// One running cockpit on a flat map, with an ordinary, present pilot and destructive ammunition.
 async fn fixture(chassis: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     fixture_on(chassis, ".0").await
@@ -92,7 +77,6 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
             dice.consciousness_roll(false) < 10 && dice.consciousness_roll(false) >= 10
         })
         .unwrap();
-    // This fixture exercises a single detonation; reactor tests cover the additional instability blast.
     let combat_seed = (0..=255)
         .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 8)
         .unwrap();
@@ -101,6 +85,20 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
         s["dice"] = serde_json::to_value(Dice::seeded([combat_seed; 32])).unwrap();
     });
     (dir, config, world, id)
+}
+
+/// Run a wizard override countdown through its two waiting ticks, returning the detonation tick.
+fn detonate(scripts: &Scripts, config: &Config) -> Vec<SelfDestructOutcome> {
+    for remaining in [2, 1] {
+        let outcomes = advance_battle_self_destructs_action(scripts, config).unwrap();
+        assert!(
+            outcomes
+                .iter()
+                .all(|outcome| matches!(outcome, SelfDestructOutcome::Countdown { remaining: r, .. } if *r == remaining)),
+            "{outcomes:?}"
+        );
+    }
+    advance_battle_self_destructs_action(scripts, config).unwrap()
 }
 
 /// Airborne wreck placement uses terrain support, then raises the wreck and restarts descent.
@@ -114,8 +112,7 @@ async fn self_destruct_airborne_vehicle_placement() {
             ("~3", 20.0, 3),
             ("-3", 20.0, 3),
         ] {
-            let (dir, _, mut world, id) = fixture_on(chassis, tile).await;
-            let config = configure(dir.path(), &[("explode_time", 2)]);
+            let (_dir, config, mut world, id) = fixture_on(chassis, tile).await;
             edit(&mut world, id, |state| {
                 if chassis != "vtol" {
                     state["ground_elevation"] = altitude.into();
@@ -130,8 +127,8 @@ async fn self_destruct_airborne_vehicle_placement() {
                 .unwrap();
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-            self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo").unwrap();
-            let outcomes = advance_battle_self_destructs_action(&scripts, &config).unwrap();
+            self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo override").unwrap();
+            let outcomes = detonate(&scripts, &config);
             assert!(matches!(outcomes[0], SelfDestructOutcome::Vehicle { .. }));
             let world = scripts.world();
             let unit = &world.btech.vehicles()[&id];
@@ -173,8 +170,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
         "stationary",
         "vtol",
     ] {
-        let (dir, _, world, id) = fixture(chassis).await;
-        let config = configure(dir.path(), &[("explode_time", 6)]);
+        let (_dir, config, world, id) = fixture(chassis).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         assert!(
             scripts
@@ -185,7 +181,7 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
                 .is_err()
         );
         assert_eq!(scripts.world().btech, world.btech);
-        let output = support::run_text(&scripts, &config, ObjectId(1), 1, "explode ammo ignored");
+        let output = support::run_text(&scripts, &config, ObjectId(1), 1, "explode ammo override");
         assert!(
             output.contains("ammunition will explode in 3 seconds"),
             "{output}"
@@ -213,16 +209,15 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
         let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
         assert_eq!(reports.len(), 1);
         if chassis == "biped" || chassis == "quad" {
-            let SelfDestructOutcome::Reactor { report } = &reports[0] else {
+            let SelfDestructOutcome::Ammunition { impacts, .. } = &reports[0] else {
                 panic!("{reports:?}")
             };
-            assert_eq!(report.crew_injury.as_ref().unwrap().injuries, 4);
-            assert_eq!(
-                scripts.world().btech.constructed_units()[&id]
-                    .crew_recovery()
-                    .remaining,
-                30
-            );
+            assert!(!impacts.is_empty());
+            let snapshot = scripts.world();
+            let unit = &snapshot.btech.constructed_units()[&id];
+            assert!(unit.self_destruct().is_none());
+            assert!(unit.largest_ammunition_hazard_bin().unwrap().is_none());
+            assert!(unit.is_destroyed());
         } else {
             let SelfDestructOutcome::Vehicle {
                 damage,
@@ -237,7 +232,8 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
             let snapshot = scripts.world();
             let vehicle = &snapshot.btech.vehicles()[&id];
             assert!(vehicle.is_destroyed());
-            assert_eq!(vehicle.crew_recovery().remaining, 30);
+            // A wreck's crew makes no consciousness rolls, so no recovery attempt starts.
+            assert_eq!(vehicle.crew_recovery().remaining, 0);
             assert_eq!(vehicle.elevation_level(Hex::new(Terrain::Clear, 0)), 6);
             assert!(vehicle.sections()[&VehicleSection::Front].internal > 0);
         }
@@ -267,25 +263,22 @@ async fn self_destruct_cross_chassis_native_lua_and_restart() {
     }
 }
 
-/// Configuration, safety, cooldowns and override cannot bypass physical cockpit ownership.
+/// Safety, cooldowns and override cannot bypass physical cockpit ownership; stop is always available.
 #[tokio::test]
 async fn self_destruct_admission_stop_and_atomic_cancel() {
-    let (dir, _, world, id) = fixture("biped").await;
-    let config = configure(
-        dir.path(),
-        &[
-            ("explode_time", 10),
-            ("explode_ammo", 0),
-            ("explode_reactor", 0),
-            ("explode_stop", 0),
-        ],
-    );
+    let (_dir, config, world, id) = fixture("biped").await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-    for args in ["", "ammo", "anything", "ammo OVERRIDE"] {
-        assert!(self_destruct_action(&scripts, &config, id, ObjectId(1), args).is_err());
+    for args in ["anything", "reactor"] {
+        assert!(
+            self_destruct_action(&scripts, &config, id, ObjectId(1), args)
+                .unwrap_err()
+                .to_string()
+                .contains("Usage")
+        );
         assert_eq!(scripts.world().btech, world.btech);
     }
     assert!(self_destruct_action(&scripts, &config, id, ObjectId(2), "ammo override").is_err());
+    assert_eq!(scripts.world().btech, world.btech);
     let before_flag = scripts.world().btech.clone();
     assert!(
         scripts
@@ -297,18 +290,37 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
     );
     assert_eq!(scripts.world().btech, before_flag);
     set_battle_self_destruct_safe(&mut scripts.world_mut(), id, true).unwrap();
+    assert!(
+        self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo")
+            .unwrap_err()
+            .to_string()
+            .contains("possibility")
+    );
     edit(&mut scripts.world_mut(), id, |s| {
         s["weapon_recycle"]["0"] = 1.into();
         s["limb_recycle"]["LeftArm"] = 1.into();
     });
     scripts.world().validate(&config).unwrap();
     assert!(
-        self_destruct_action(&scripts, &config, id, ObjectId(1), "reactor")
+        self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo")
             .unwrap_err()
             .to_string()
             .contains("weapons recycling")
     );
     self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo ignored override").unwrap();
+    assert_eq!(
+        scripts.world().btech.constructed_units()[&id]
+            .self_destruct()
+            .unwrap()
+            .remaining,
+        3
+    );
+    assert!(
+        self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo override")
+            .unwrap_err()
+            .to_string()
+            .contains("already undergoing")
+    );
     let pending = scripts.world().btech.clone();
     assert!(self_destruct_action(&scripts, &config, id, ObjectId(2), "stop override").is_err());
     assert_eq!(scripts.world().btech, pending);
@@ -318,7 +330,6 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
         ObjectId(1),
         support::FIXTURE_DICE_SEED,
     );
-    assert!(self_destruct_action(&scripts, &config, id, ObjectId(1), "stop").is_err());
     let assigned = scripts.world().btech.clone();
     assert!(
         scripts
@@ -329,34 +340,32 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
             .is_err()
     );
     assert_eq!(scripts.world().btech, assigned);
-    self_destruct_action(&scripts, &config, id, ObjectId(1), "stop override").unwrap();
+    // Aborting never waits for weapon or limb recovery.
+    self_destruct_action(&scripts, &config, id, ObjectId(1), "stop").unwrap();
     assert!(!self_destructs_pending(&scripts.world()));
-    assert!(self_destruct_action(&scripts, &config, id, ObjectId(1), "stop override").is_err());
-    *scripts.world_mut() = world;
-    let enabled = configure(
-        dir.path(),
-        &[
-            ("explode_ammo", 1),
-            ("explode_reactor", 1),
-            ("explode_stop", 1),
-        ],
-    );
-    set_battle_self_destruct_safe(&mut scripts.world_mut(), id, true).unwrap();
     assert!(
-        self_destruct_action(&scripts, &enabled, id, ObjectId(1), "ammo")
+        self_destruct_action(&scripts, &config, id, ObjectId(1), "stop override")
             .unwrap_err()
             .to_string()
-            .contains("possibility")
+            .contains("isn't undergoing")
     );
-    self_destruct_action(&scripts, &enabled, id, ObjectId(1), "reactor").unwrap();
+    *scripts.world_mut() = world;
+    self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo").unwrap();
+    assert_eq!(
+        scripts.world().btech.constructed_units()[&id]
+            .self_destruct()
+            .unwrap()
+            .remaining,
+        SELF_DESTRUCT_DELAY
+    );
     assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
     support::seed_object_dice(
         &mut scripts.world_mut(),
         ObjectId(1),
         support::FIXTURE_DICE_SEED,
     );
-    self_destruct_action(&scripts, &enabled, id, ObjectId(1), "stop").unwrap();
-    self_destruct_action(&scripts, &enabled, id, ObjectId(1), "reactor").unwrap();
+    self_destruct_action(&scripts, &config, id, ObjectId(1), "stop").unwrap();
+    self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo").unwrap();
     assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
     support::seed_object_dice(
         &mut scripts.world_mut(),
@@ -371,17 +380,16 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
     )
     .unwrap();
     assert!(matches!(
-        &advance_battle_self_destructs_action(&scripts, &enabled).unwrap()[..],
+        &advance_battle_self_destructs_action(&scripts, &config).unwrap()[..],
         [SelfDestructOutcome::Cancelled { .. }]
     ));
 }
 
-/// Long configured delays select ammunition mode; loss of its final hazardous bin silently cancels it.
+/// The cockpit countdown runs a full minute; loss of its final hazardous bin silently cancels it.
 #[tokio::test]
-async fn self_destruct_ammunition_mode_and_live_supply_cancellation() {
+async fn self_destruct_countdown_and_live_supply_cancellation() {
     for chassis in ["biped", "track"] {
-        let (dir, _, world, id) = fixture(chassis).await;
-        let config = configure(dir.path(), &[("explode_time", 514)]);
+        let (_dir, config, world, id) = fixture(chassis).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo").unwrap();
         let saved = scripts.world().clone();
@@ -395,6 +403,16 @@ async fn self_destruct_ammunition_mode_and_live_supply_cancellation() {
             [SelfDestructOutcome::Cancelled { .. }]
         ));
         *scripts.world_mut() = saved;
+        for remaining in (1..SELF_DESTRUCT_DELAY).rev() {
+            let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
+            assert!(
+                matches!(
+                    &reports[..],
+                    [SelfDestructOutcome::Countdown { remaining: r, .. }] if *r == remaining
+                ),
+                "{reports:?}"
+            );
+        }
         let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
         match (&reports[..], chassis) {
             ([SelfDestructOutcome::Ammunition { impacts, .. }], "biped") => {
@@ -411,18 +429,27 @@ async fn self_destruct_ammunition_mode_and_live_supply_cancellation() {
 /// Stored command order, corrupt-state rejection, and a later failed action preserve the entire tick.
 #[tokio::test]
 async fn self_destruct_order_and_failed_tick_replay() {
-    let (dir, _, mut world, first) = fixture("biped").await;
-    let config = configure(dir.path(), &[("explode_time", 1)]);
+    let (_dir, config, mut world, first) = fixture("biped").await;
     let map = world.btech.constructed_units()[&first]
         .position()
         .unwrap()
         .map;
-    let second = world.create(&config, "Second reactor".into(), Kind::Thing);
+    let second = world.create(&config, "Second cockpit".into(), Kind::Thing);
     world.objects.get_mut(&second).unwrap().home = Some(ObjectId(config.home()));
+    // Ammunition stored in the head makes the detonation lethal, forcing an evacuation.
+    let template = include_str!("../game/units/JR7-D.toml")
+        .replace(
+            "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n",
+            "",
+        )
+        .replace(
+            "    { at = 4, item = \"HeatSink\" },",
+            "    { at = 4, item = \"Ammo_IS.SRM-4\", rounds = 25 },",
+        );
     create_battle_unit(
         &mut world,
         second,
-        MechTemplate::parse("Daishi-H", include_str!("../game/units/Daishi-H.toml")).unwrap(),
+        MechTemplate::parse("JR7-D", &template).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, second, support::FIXTURE_DICE_SEED);
@@ -436,16 +463,16 @@ async fn self_destruct_order_and_failed_tick_replay() {
         advance_battle_units(&mut world, 0, true);
     }
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    // Reverse identifier order; cancellation outcomes make order observable without mutual blast damage.
-    self_destruct_action(&scripts, &config, second, pilot, "reactor").unwrap();
-    self_destruct_action(&scripts, &config, first, ObjectId(1), "reactor").unwrap();
+    // Reverse identifier order; cancellation outcomes make order observable without blast damage.
+    self_destruct_action(&scripts, &config, second, pilot, "ammo override").unwrap();
+    self_destruct_action(&scripts, &config, first, ObjectId(1), "ammo override").unwrap();
     let pending = scripts.world().clone();
     let mut corrupt = serde_json::to_value(&pending.btech).unwrap();
     corrupt["constructed"][first.0.to_string()]["self_destruct"]["order"] = 0.into();
     let mut invalid = pending.clone();
     invalid.btech = serde_json::from_value(corrupt).unwrap();
     assert!(invalid.validate(&config).is_err());
-    for remaining in [0, 257] {
+    for remaining in [0, SELF_DESTRUCT_DELAY + 1] {
         let mut invalid = pending.clone();
         edit(&mut invalid, first, |s| {
             s["self_destruct"]["remaining"] = remaining.into()
@@ -466,7 +493,7 @@ async fn self_destruct_order_and_failed_tick_replay() {
         ]
     );
     *scripts.world_mut() = pending;
-    // The first detonation damages both reactors; its casualty callback fails after mutations.
+    // The head detonation is lethal; its casualty callback fails after mutations.
     scripts
         .world_mut()
         .objects
@@ -481,6 +508,22 @@ async fn self_destruct_order_and_failed_tick_replay() {
         .unwrap()
         .flags
         .remove(Flag::Wizard);
+    for remaining in [2, 1] {
+        let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
+        assert_eq!(
+            reports,
+            vec![
+                SelfDestructOutcome::Countdown {
+                    unit: second,
+                    remaining
+                },
+                SelfDestructOutcome::Countdown {
+                    unit: first,
+                    remaining
+                }
+            ]
+        );
+    }
     let before = scripts.world().clone();
     let parents: mlua::Table = scripts
         .inspect_lua()
@@ -507,7 +550,19 @@ async fn self_destruct_order_and_failed_tick_replay() {
     assert_eq!(scripts.world().btech, before.btech);
     assert_eq!(scripts.world().objects[&pilot].location, Some(second));
     parent.set("events", previous).unwrap();
-    advance_battle_self_destructs_action(&scripts, &config).unwrap();
+    let reports = advance_battle_self_destructs_action(&scripts, &config).unwrap();
+    assert!(matches!(
+        &reports[..],
+        [
+            SelfDestructOutcome::Ammunition { unit: a, .. },
+            SelfDestructOutcome::Ammunition { unit: b, .. }
+        ] if *a == second && *b == first
+    ));
+    assert_eq!(
+        scripts.world().btech.constructed_units()[&second].sections()[&MechSection::Head].internal,
+        0
+    );
+    assert_ne!(scripts.world().objects[&pilot].location, Some(second));
     assert!(!self_destructs_pending(&scripts.world()));
 }
 
@@ -516,11 +571,10 @@ async fn self_destruct_order_and_failed_tick_replay() {
 async fn self_destruct_server_restart_retries_failed_commit() {
     use sqlx::Connection;
     tokio::task::LocalSet::new().run_until(async {
-        let (dir,_,mut world,id)=fixture("biped").await;
-        let config=configure(dir.path(),&[("explode_time",2)]);
+        let (_dir,config,mut world,id)=fixture("biped").await;
         world.accounts.get_mut(&ObjectId(1)).unwrap().hash=Some(accounts::hash("secret",&config).unwrap());
         let scripts=Scripts::new(&config,Rc::new(RefCell::new(world))).unwrap();
-        self_destruct_action(&scripts,&config,id,ObjectId(1),"reactor").unwrap();
+        self_destruct_action(&scripts,&config,id,ObjectId(1),"ammo override").unwrap();
         let saved=scripts.world().clone();
         persistence::save(&config.database(),&saved).await.unwrap();
         let (address,shutdown,task,_lua,mut heartbeats)=support::start(&config,Rc::new(std::cell::Cell::new(1))).await;
@@ -534,14 +588,13 @@ async fn self_destruct_server_restart_retries_failed_commit() {
         sqlx::query("CREATE TRIGGER deny_self_destruct BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'self-destruct commit failure'); END").execute(&mut sql).await.unwrap();
         heartbeats.attempt().await;
         let persisted=persistence::load(&config.database()).await.unwrap();
-        assert_eq!(persisted.btech.constructed_units()[&id].self_destruct().unwrap().remaining,2);
+        assert_eq!(persisted.btech.constructed_units()[&id].self_destruct().unwrap().remaining,3);
         client.send("status").await;
-        let output=client.until("Self-destruction: 2s remaining").await;
-        assert!(!output.contains("Self-destruction in 1 second"));
+        let output=client.until("Self-destruction: 3s remaining").await;
+        assert!(!output.contains("Self-destruction in 2 second"));
         sqlx::query("DROP TRIGGER deny_self_destruct").execute(&mut sql).await.unwrap();
-        let loaded=heartbeats.until_saved(&config,6,|loaded| loaded.btech.constructed_units()[&id].is_destroyed()).await;
+        let loaded=heartbeats.until_saved(&config,8,|loaded| loaded.btech.constructed_units()[&id].is_destroyed()).await;
         assert!(loaded.btech.constructed_units()[&id].self_destruct().is_none());
-        assert_eq!(loaded.btech.constructed_units()[&id].pilot_injuries(),4);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -550,8 +603,7 @@ async fn self_destruct_server_restart_retries_failed_commit() {
 /// Pilot ownership applies to in-character crews; wizard and out-of-character occupants have exceptions.
 #[tokio::test]
 async fn self_destruct_character_ownership_and_wizard_exception() {
-    let (dir, _, mut world, id) = fixture("track").await;
-    let config = configure(dir.path(), &[("explode_stop", 1)]);
+    let (_dir, config, mut world, id) = fixture("track").await;
     let pilot = ObjectId(2);
     release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     world
@@ -600,15 +652,14 @@ async fn self_destruct_character_ownership_and_wizard_exception() {
 async fn self_destruct_ground_wreck_descends_after_restart() {
     tokio::task::LocalSet::new()
         .run_until(async {
-            let (dir, _, mut world, id) = fixture("track").await;
-            let config = configure(dir.path(), &[("explode_time", 2)]);
+            let (_dir, config, mut world, id) = fixture("track").await;
             edit(&mut world, id, |state| {
                 state["ground_elevation"] = 20.into();
                 state["pilot_injuries"] = 2.into();
             });
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-            self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo").unwrap();
-            advance_battle_self_destructs_action(&scripts, &config).unwrap();
+            self_destruct_action(&scripts, &config, id, ObjectId(1), "ammo override").unwrap();
+            detonate(&scripts, &config);
             let saved = scripts.world().clone();
             let unit = &saved.btech.vehicles()[&id];
             assert!(unit.is_destroyed());

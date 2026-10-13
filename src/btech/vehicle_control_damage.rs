@@ -1,11 +1,18 @@
-//! Persistent vehicle control damage and crew recovery feed driving and firing admission.
+//! Persistent vehicle control damage (Total Warfare pp. 195 and 197): driver, commander, pilot,
+//! co-pilot, sensor and stabilizer hits, crew stun, and the escalations between them.
 use super::{Vehicle, VehicleSection};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 use std::collections::BTreeSet;
 
-/// Direct control-system consequences; the enclosing critical action owns notices and crew effects.
+/// Sensor hits that stop a vehicle firing altogether (TW p. 195).
+pub const SENSOR_HITS_TO_BLIND: u8 = 4;
+
+/// Realtime length of a one-turn crew stun, in simulation seconds.
+pub const CREW_STUN_SECONDS: u8 = 30;
+
+/// Direct control-system consequences; the enclosing critical action owns notices.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum VehicleControlHit {
@@ -13,11 +20,29 @@ pub enum VehicleControlHit {
     CrewStun,
     Commander,
     Sensors,
-    Stabilizers { section: VehicleSection },
+    Stabilizers {
+        section: VehicleSection,
+    },
+    /// VTOL pilot hit; the caller makes the immediate control roll.
+    Pilot,
+    /// VTOL co-pilot or gunner hit.
+    Copilot,
+}
+
+/// What a control hit became once the crew's earlier injuries were taken into account.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VehicleControlOutcome {
+    /// The named hit applied as written.
+    Applied,
+    /// A repeated Driver or Commander hit stunned the crew instead.
+    Stunned,
+    /// A stun on a crew with Driver and Commander hits, or a repeated pilot or co-pilot hit, killed the crew.
+    CrewKilled,
 }
 
 impl Vehicle {
-    /// Seconds until the crew recovers; another stun restarts the full minute.
+    /// Seconds until the crew recovers; another stun restarts the full turn.
     pub fn crew_stun_remaining(&self) -> u8 {
         self.crew_stun_remaining
     }
@@ -28,9 +53,9 @@ impl Vehicle {
             .unwrap_or(self.crew_stun_remaining > 0)
     }
 
-    /// Limit forward throttle without instantly changing actual velocity.
+    /// Limit forward throttle to cruising speed without instantly changing actual velocity.
     fn stun_crew(&mut self) {
-        self.crew_stun_remaining = 60;
+        self.crew_stun_remaining = CREW_STUN_SECONDS;
         self.crew_stun_condition = None;
         let cruise = self.maximum_speed() * 2.0 / 3.0;
         if let Some(motion) = self.motion.as_mut()
@@ -45,9 +70,29 @@ impl Vehicle {
         self.piloting_damage
     }
 
-    /// Cumulative firing penalty from sensor and commander criticals, separate from visibility acquisition.
+    /// Cumulative firing penalty from sensor, commander and co-pilot hits.
     pub fn gunnery_damage(&self) -> u8 {
         self.gunnery_damage
+    }
+
+    /// Sensor critical hits taken; the fourth stops all weapon fire.
+    pub fn sensor_hits(&self) -> u8 {
+        self.sensor_hits
+    }
+
+    /// Whether sensor damage has made firing impossible.
+    pub fn sensors_blind(&self) -> bool {
+        self.sensor_hits >= SENSOR_HITS_TO_BLIND
+    }
+
+    /// Whether the driver (or VTOL pilot) has already been hit once.
+    pub fn driver_hit(&self) -> bool {
+        self.driver_hit
+    }
+
+    /// Whether the commander (or VTOL co-pilot) has already been hit once.
+    pub fn commander_hit(&self) -> bool {
+        self.commander_hit
     }
 
     /// Sections whose weapon stabilizers have been destroyed.
@@ -75,24 +120,72 @@ impl Vehicle {
         Ok(self.weapon_movement_modifier(index, fasa_turning)? + self.gunnery_damage)
     }
 
-    /// Apply a direct control hit without mutating construction or crew skill values.
-    /// Cumulative penalties saturate at the reference's signed-byte ceiling of 127.
-    pub fn apply_control_hit(&mut self, hit: VehicleControlHit) -> Result<()> {
+    fn add_piloting_damage(&mut self, amount: u8) {
+        self.piloting_damage = self.piloting_damage.saturating_add(amount).min(127);
+    }
+
+    fn add_gunnery_damage(&mut self, amount: u8) {
+        self.gunnery_damage = self.gunnery_damage.saturating_add(amount).min(127);
+    }
+
+    /// Apply a control hit, escalating repeated hits as Total Warfare directs:
+    /// a second Driver or Commander hit is Crew Stunned, a stun on a crew that has both is
+    /// Crew Killed, and a second VTOL Pilot or Co-Pilot hit is Crew Killed.
+    pub fn apply_control_hit(&mut self, hit: VehicleControlHit) -> Result<VehicleControlOutcome> {
         ensure!(!self.is_destroyed(), "Vehicle is destroyed");
-        match hit {
-            VehicleControlHit::CrewStun => self.stun_crew(),
-            VehicleControlHit::Commander => {
-                self.piloting_damage = self.piloting_damage.saturating_add(1).min(127);
-                self.gunnery_damage = self.gunnery_damage.saturating_add(1).min(127);
+        use VehicleControlHit as H;
+        use VehicleControlOutcome as O;
+        Ok(match hit {
+            H::CrewStun => {
+                if self.driver_hit && self.commander_hit {
+                    self.kill_crew();
+                    return Ok(O::CrewKilled);
+                }
                 self.stun_crew();
+                O::Stunned
             }
-            VehicleControlHit::Driver => {
-                self.piloting_damage = self.piloting_damage.saturating_add(2).min(127)
+            H::Driver => {
+                if self.driver_hit {
+                    return self.apply_control_hit(H::CrewStun);
+                }
+                self.driver_hit = true;
+                self.add_piloting_damage(2);
+                O::Applied
             }
-            VehicleControlHit::Sensors => {
-                self.gunnery_damage = self.gunnery_damage.saturating_add(1).min(127)
+            H::Commander => {
+                if self.commander_hit {
+                    return self.apply_control_hit(H::CrewStun);
+                }
+                self.commander_hit = true;
+                self.add_piloting_damage(1);
+                self.add_gunnery_damage(1);
+                self.stun_crew();
+                O::Applied
             }
-            VehicleControlHit::Stabilizers { section } => {
+            H::Pilot => {
+                if self.driver_hit {
+                    self.kill_crew();
+                    return Ok(O::CrewKilled);
+                }
+                self.driver_hit = true;
+                self.add_piloting_damage(2);
+                O::Applied
+            }
+            H::Copilot => {
+                if self.commander_hit {
+                    self.kill_crew();
+                    return Ok(O::CrewKilled);
+                }
+                self.commander_hit = true;
+                self.add_gunnery_damage(1);
+                O::Applied
+            }
+            H::Sensors => {
+                self.sensor_hits = self.sensor_hits.saturating_add(1);
+                self.add_gunnery_damage(1);
+                O::Applied
+            }
+            H::Stabilizers { section } => {
                 ensure!(
                     self.sections()
                         .get(&section)
@@ -100,9 +193,9 @@ impl Vehicle {
                     "Vehicle section is unavailable"
                 );
                 self.lost_stabilizers.insert(section);
+                O::Applied
             }
-        }
-        Ok(())
+        })
     }
 }
 
@@ -111,7 +204,7 @@ pub fn damage_vehicle_controls(
     world: &mut World,
     id: ObjectId,
     hit: VehicleControlHit,
-) -> Result<()> {
+) -> Result<VehicleControlOutcome> {
     ensure!(
         world
             .objects

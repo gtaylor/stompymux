@@ -121,8 +121,23 @@ pub struct Vehicle {
     pub(super) breached_sections: std::collections::BTreeSet<VehicleSection>,
     /// Hull disabled by destruction of its carrier, independently of crew injury.
     transport_destroyed: bool,
-    /// Tail rotor loss constrains flight controls without destroying the hull.
+    /// Flight stabilizer (tail rotor) hit: cruising speed only, harder to control and aim.
     pub(super) tail_rotor_destroyed: bool,
+    /// Engine Hit: immobile, direct-fire energy weapons dead, turret locked.
+    #[serde(default)]
+    pub(super) engine_destroyed: bool,
+    /// The driver (or VTOL pilot) has taken the one hit the crew survives.
+    #[serde(default)]
+    pub(super) driver_hit: bool,
+    /// The commander (or VTOL co-pilot) has taken the one hit the crew survives.
+    #[serde(default)]
+    pub(super) commander_hit: bool,
+    /// Sensor critical hits; the fourth stops all weapon fire.
+    #[serde(default)]
+    pub(super) sensor_hits: u8,
+    /// Motive System Damage Table driving-roll tiers already applied, one bit per tier.
+    #[serde(default)]
+    pub(super) motive_penalties: u8,
     pub(super) vtol_fuel: Option<super::VtolFuel>,
     pub(super) vtol_flight: Option<super::VtolFlight>,
     /// Instant loss of the entire crew, independent of accumulated pilot injuries.
@@ -149,8 +164,6 @@ pub struct Vehicle {
     /// Passive weapon heat and coolant credit; ground vehicles do not sample overheating.
     pub(super) weapon_heat: f64,
     pub(super) inferno_remaining: u32,
-    pub(super) burning_sections: BTreeMap<VehicleSection, u8>,
-    pub(super) extinguishing: Option<u8>,
     pub(super) building_entry: Option<super::BuildingEntry>,
     pub(super) beacons: BTreeMap<VehicleSection, std::collections::BTreeSet<super::BeaconKind>>,
     pub(super) target_lock: Option<super::TargetSelection>,
@@ -299,8 +312,18 @@ struct VehicleRecord {
     breached_sections: std::collections::BTreeSet<VehicleSection>,
     /// Hull disabled by destruction of its carrier, independently of crew injury.
     transport_destroyed: bool,
-    /// Tail rotor loss constrains flight controls without destroying the hull.
+    /// Flight stabilizer (tail rotor) hit: cruising speed only, harder to control and aim.
     tail_rotor_destroyed: bool,
+    #[serde(default)]
+    engine_destroyed: bool,
+    #[serde(default)]
+    driver_hit: bool,
+    #[serde(default)]
+    commander_hit: bool,
+    #[serde(default)]
+    sensor_hits: u8,
+    #[serde(default)]
+    motive_penalties: u8,
     #[serde(default)]
     vtol_fuel: Option<super::VtolFuel>,
     #[serde(default)]
@@ -335,9 +358,6 @@ struct VehicleRecord {
     weapon_heat: f64,
     #[serde(default)]
     inferno_remaining: u32,
-    burning_sections: BTreeMap<VehicleSection, u8>,
-    #[serde(default)]
-    extinguishing: Option<u8>,
     #[serde(default)]
     building_entry: Option<super::BuildingEntry>,
     beacons: BTreeMap<VehicleSection, std::collections::BTreeSet<super::BeaconKind>>,
@@ -427,6 +447,11 @@ super::saved_parts::saved_parts!(Vehicle {
         breached_sections,
         transport_destroyed,
         tail_rotor_destroyed,
+        engine_destroyed,
+        driver_hit,
+        commander_hit,
+        sensor_hits,
+        motive_penalties,
         crew_killed,
         crew_recovery,
         piloting_damage,
@@ -445,7 +470,6 @@ super::saved_parts::saved_parts!(Vehicle {
         friendly_fire_safety,
         auto_fall,
         ams_enabled,
-        burning_sections,
         building_entry,
         beacons,
         artillery_adjustment,
@@ -484,7 +508,6 @@ super::saved_parts::saved_parts!(Vehicle {
         bogged_down,
         slick,
         inferno_remaining,
-        extinguishing,
         unjam,
         pod_removal,
         spotter_events,
@@ -920,6 +943,11 @@ impl Vehicle {
             breached_sections: Default::default(),
             transport_destroyed: false,
             tail_rotor_destroyed: false,
+            engine_destroyed: false,
+            driver_hit: false,
+            commander_hit: false,
+            sensor_hits: 0,
+            motive_penalties: 0,
             vtol_fuel,
             vtol_flight,
             crew_killed: false,
@@ -955,8 +983,6 @@ impl Vehicle {
             ams_enabled: loadout.weapons.iter().any(|mount| mount.weapon.is_ams()),
             weapon_heat: 0.0,
             inferno_remaining: 0,
-            burning_sections: BTreeMap::new(),
-            extinguishing: None,
             building_entry: None,
             beacons: BTreeMap::new(),
             target_lock: None,
@@ -1017,11 +1043,22 @@ impl Vehicle {
         Ok(())
     }
 
-    /// Disable propulsion, retaining the distinct standard and advanced immobility flags.
-    pub(super) fn disable_engine(&mut self, advanced: bool) {
+    /// Engine Hit (TW p. 195): the vehicle is immobile, its direct-fire energy weapons stop
+    /// working and a surviving turret locks in place.
+    pub(super) fn disable_engine(&mut self) {
+        self.engine_destroyed = true;
         self.motive_speed_loss = self.definition.max_speed;
-        self.immobilized |= advanced;
+        self.immobilized = true;
+        if self.turret_heading().is_some() {
+            self.turret_locked = true;
+            self.turret_jammed = false;
+        }
         self.halt();
+    }
+
+    /// Whether an Engine Hit has disabled propulsion and direct-fire energy weapons.
+    pub fn engine_destroyed(&self) -> bool {
+        self.engine_destroyed
     }
 
     /// Stored weapon heat, including coolant credit; never sampled as ground-vehicle overheating.
@@ -1066,7 +1103,7 @@ impl Vehicle {
         self.lose_vtol_lift();
         self.pilot = None;
         self.crew_recovery.clear();
-        self.clear_fires();
+        self.inferno_remaining = 0;
         self.target_lock = None;
         self.power = super::Power::Off;
         self.searchlight.shutdown();
@@ -1140,6 +1177,13 @@ impl Vehicle {
                 self.motive_speed_loss = (self.motive_speed_loss
                     + f64::from(movement_points) * 10.75)
                     .min(self.definition.max_speed);
+            }
+            // Heavy motive damage halves the remaining movement (TW p. 193).
+            super::VehicleMotiveHit::HalveSpeed => {
+                let remaining = (self.definition.max_speed - self.motive_speed_loss).max(0.0);
+                self.propulsion.lower(remaining / 2.0);
+                self.motive_speed_loss =
+                    (self.motive_speed_loss + remaining / 2.0).min(self.definition.max_speed);
             }
         }
         let maximum = self.maximum_speed();
@@ -1452,7 +1496,8 @@ impl Vehicle {
         Ok(projection)
     }
 
-    /// Flooding, crew loss or any lost hull face destroys a vehicle; turret loss alone does not.
+    /// Flooding, crew loss or any location with no internal structure left destroys a vehicle
+    /// (TW p. 128), including the turret; a rotor lost in flight destroys the VTOL when it crashes.
     pub fn is_destroyed(&self) -> bool {
         self.transport_destroyed
             || self.flooded
@@ -1462,11 +1507,14 @@ impl Vehicle {
             || self.hull_destroyed()
     }
 
-    /// Hull loss is distinct from crew death, turret loss and rotor loss.
+    /// Material loss is distinct from crew death. A destroyed rotor only counts once the VTOL
+    /// is no longer falling: the realtime engine plays Rotors Destroyed out as a crash.
     pub(super) fn hull_destroyed(&self) -> bool {
+        let falling = self
+            .vtol_flight
+            .is_some_and(|flight| flight.phase == super::VtolFlightPhase::Falling);
         self.sections.iter().any(|(&section, state)| {
-            !matches!(section, VehicleSection::Turret | VehicleSection::Rotor)
-                && state.internal == 0
+            state.internal == 0 && (section != VehicleSection::Rotor || !falling)
         })
     }
 
@@ -1664,6 +1712,11 @@ impl Vehicle {
             breached_sections: record.breached_sections,
             transport_destroyed: record.transport_destroyed,
             tail_rotor_destroyed: record.tail_rotor_destroyed,
+            engine_destroyed: record.engine_destroyed,
+            driver_hit: record.driver_hit,
+            commander_hit: record.commander_hit,
+            sensor_hits: record.sensor_hits,
+            motive_penalties: record.motive_penalties,
             vtol_fuel: record.vtol_fuel,
             vtol_flight: record.vtol_flight,
             crew_killed: record.crew_killed,
@@ -1687,8 +1740,6 @@ impl Vehicle {
             ams_enabled: record.ams_enabled,
             weapon_heat: record.weapon_heat,
             inferno_remaining: record.inferno_remaining,
-            burning_sections: record.burning_sections,
-            extinguishing: record.extinguishing,
             building_entry: record.building_entry,
             beacons: record.beacons,
             target_lock: record.target_lock,
@@ -1839,12 +1890,8 @@ impl Vehicle {
             "Invalid vehicle stabilizer section"
         );
         ensure!(
-            self.crew_stun_remaining <= 60
-                && (!self
-                    .sections
-                    .iter()
-                    .any(|(section, state)| *section != VehicleSection::Turret
-                        && state.internal == 0)
+            self.crew_stun_remaining <= super::vehicle_control_damage::CREW_STUN_SECONDS
+                && (!self.hull_destroyed()
                     || (self.crew_stun_remaining == 0 && self.crew_stun_condition != Some(true))),
             "Invalid vehicle crew stun countdown"
         );
@@ -2123,18 +2170,6 @@ impl Vehicle {
         ensure!(
             self.inferno_remaining <= i32::MAX as u32,
             "Invalid inferno duration"
-        );
-        ensure!(
-            self.burning_sections
-                .iter()
-                .all(|(section, remaining)| self.sections.contains_key(section)
-                    && (1..=60).contains(remaining)),
-            "Invalid vehicle section fire"
-        );
-        ensure!(
-            self.extinguishing
-                .is_none_or(|remaining| (1..=120).contains(&remaining)),
-            "Invalid vehicle extinguishing countdown"
         );
         if let Some(entry) = self.building_entry {
             entry.validate()?;

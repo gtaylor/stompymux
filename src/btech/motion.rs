@@ -145,7 +145,6 @@ pub struct MovementRules {
     /// Enable hot-myomer assistance when calculating towing load.
     pub tsm_tow_bonus: bool,
     /// Use pilot-based aim for DFA landing attacks.
-    pub physical_pilot_skill: bool,
     pub fasa_turning: bool,
     /// Charge tracking and collision options for each committed movement update.
     pub charge: super::ChargePolicy,
@@ -160,11 +159,8 @@ impl MovementRules {
     /// Physical landing policy shares movement, hit arcs and fall settings with the tick.
     pub(super) fn landing_physical(self) -> super::PhysicalRules {
         super::PhysicalRules {
-            use_pilot_skill: self.physical_pilot_skill,
             fasa_turning: self.fasa_turning,
             extended_movement: self.charge.extended_movement,
-            hit_arc_mode: self.charge.hit_arc_mode,
-            glancing: super::GlancingMode::Disabled,
             fall: self.fall,
         }
     }
@@ -173,19 +169,12 @@ impl MovementRules {
     pub const STANDARD: Self = Self {
         free_fusion_vtol_fuel: false,
         tsm_tow_bonus: true,
-        physical_pilot_skill: true,
         fasa_turning: false,
         charge: super::ChargePolicy::STANDARD,
         slowdown: 2,
         roll_on_backwalk: true,
         fall: super::FallRules {
             vehicle_impact: crate::VehicleImpactRules::STANDARD,
-            stacking: crate::StackingRules::STANDARD,
-            stagger: super::StaggerMode::Retain,
-            hit: super::HitRules {
-                inferno_penalty: false,
-                exile_stun_mode: 0,
-            },
             extended_piloting: true,
             toughness: false,
         },
@@ -550,6 +539,7 @@ fn advance_motion_inner(
     let mut vehicle_falls = Vec::new();
     let mut mines = Vec::new();
     let mut charges = Vec::new();
+    let mut surface_breaks = Vec::new();
     let mut experience_messages = Vec::new();
     let mut collisions = super::stacking::StackingEffects::default();
     for id in ids {
@@ -628,6 +618,8 @@ fn advance_motion_inner(
             notices.extend(skid.notices);
             experience_messages.extend(skid.experience_messages);
             vehicle_falls.extend(skid.vehicle_falls);
+            charges.extend(skid.charges);
+            surface_breaks.extend(skid.collapses);
             if character {
                 falls.extend(skid.falls);
             }
@@ -636,12 +628,8 @@ fn advance_motion_inner(
             }
             motion = world.btech.constructed_units()[&id].motion().unwrap();
         }
-        notices.extend(super::charge_tracking::begin_update(
-            world,
-            id,
-            rules.charge,
-        ));
-        super::charge_tracking::record_distance(world, id, motion.point, proposed, rules.charge);
+        notices.extend(super::charge_tracking::begin_update(world, id));
+        super::charge_tracking::record_distance(world, id, motion.point, proposed);
         let segment = resolve_ground_segment(
             world,
             id,
@@ -684,13 +672,12 @@ fn advance_motion_inner(
                     world,
                     id,
                     input,
-                    rules.fall.stacking,
                     rules.fall,
                     &mut collisions,
                     (&mut pilot_notices, notices.len()),
                 )?
             } else {
-                super::resolve_stacking(world, id, input, rules.fall.stacking, rules.fall)?
+                super::resolve_stacking(world, id, input, rules.fall)?
             };
             notices.extend(events);
         }
@@ -718,6 +705,7 @@ fn advance_motion_inner(
         falls,
         stacking: collisions,
         charges,
+        surface_breaks,
     };
     report.extend(aircraft);
     report.extend(vehicles);
@@ -983,6 +971,17 @@ fn resolve_ground_segment(
         position.x = hex.x as u16;
         position.y = hex.y as u16;
     }
+    // Moving out of a burning hex adds two heat (Tactical Operations p. 42).
+    let leaving_fire = {
+        let unit = &world.btech.constructed_units()[&id];
+        unit.position().is_some_and(|previous| {
+            previous != position
+                && !unit.airborne()
+                && world.btech.maps()[&previous.map]
+                    .base_hex(i64::from(previous.x), i64::from(previous.y))
+                    .is_ok_and(|tile| tile.is_burning())
+        })
+    };
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     if unit
         .motion
@@ -996,6 +995,12 @@ fn resolve_ground_segment(
     }
     unit.motion = Some(motion);
     unit.position = Some(position);
+    if leaving_fire && unit.absorb_outside_heat(2) > 0 {
+        notices.push(Notice {
+            unit: id,
+            text: "The flames you leave behind heat your 'Mech.".to_owned(),
+        });
+    }
     if blocked.is_some() || checked_steps.is_empty() {
         return Ok(GroundSegmentReport {
             boundary,

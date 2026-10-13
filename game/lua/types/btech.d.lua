@@ -259,18 +259,11 @@ function btech_unit.inspect(dbref) end
 ---@field target integer Selected unit dbref; may no longer be visible.
 ---@field remaining integer Settling seconds, 0..8; zero does not establish visibility.
 
----@class StaggerHit
----@field damage integer
----@field remaining integer Seconds until this incoming damage group expires.
----@field counted boolean Whether a rolling check already used this group.
-
 ---@class Stagger
----@field action_damage integer Restored signed action-time scalar, independent of incoming damage history.
----@field hits StaggerHit[]
----@field elapsed integer Committed seconds since the last rolling check.
----@field turn_damage integer Unchecked traditional damage.
+---@field action_damage integer Restored signed action-time scalar, independent of the turn's damage total.
+---@field turn_damage integer Damage taken since the current turn's check; twenty or more forces a piloting check.
 ---@field phase integer Saved per-unit turn phase, 0 through 29.
----@field checked_phase integer? Phase of the previous traditional check.
+---@field checked_phase integer? Phase of the previous check.
 
 ---@class StandTimer
 ---@field state "rising"|"recovering"
@@ -339,7 +332,6 @@ function btech_unit.inspect(dbref) end
 ---@field hex_sync_pending boolean A collision interrupted synchronization of motion.point and position.
 ---@field elevation integer|nil Current signed altitude with terrain-effect jump rounding; nil when unplaced.
 ---@field stand_timer StandTimer?
----@field reactor_instability_remaining integer? Damage window ticks remaining; nil uses initial world startup grace.
 ---@field triple_myomer_active boolean Derived from installed myomer and sampled excess heat.
 ---@field movement_maximum_speed number Current throttle ceiling, including active myomer.
 ---@field charge {target: integer?, elapsed: integer, distance: number} Persistent charge intent and movement counters.
@@ -369,8 +361,8 @@ function btech_unit.inspect(dbref) end
 ---@field facing {torso: "left"|"center"|"right"|"both", arms_flipped: boolean}
 ---@field stun_remaining integer Remaining seconds of cockpit stun.
 ---@field pilot_injuries integer Tactical injury count; six means scenario pilot loss.
----@field self_destruct {remaining: integer, ammunition: boolean}|nil Admitted timer and its actual Mech detonation mode.
----@field self_destruct_safe boolean Scenario protection from new ammunition self-destruct requests.
+---@field self_destruct {remaining: integer}|nil Admitted ammunition self-destruct countdown.
+---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
 ---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 ---@field crew_recovery_remaining integer Empty-crew consciousness countdown; random state stays private.
 ---@field character_pilot {injuries: integer, killed: boolean}? Saved character-mode injury status; character health determines death.
@@ -378,8 +370,7 @@ function btech_unit.inspect(dbref) end
 ---@field last_jump {heading: integer, length: integer} Current course bearing and signed length in field units, retained after landing.
 ---@field heat_sample {production: number, dissipation: number} Last committed thermal sample; production includes stored weapon heat.
 ---@field heat {stored: number, excess: number} Weapon heat (possibly negative coolant credit until the next sample) and sampled excess heat.
----@field inferno_remaining integer Saved burn seconds; cooling is reduced by six while positive.
----@field overheat_clock {elapsed: integer, phase: integer, injury_due: boolean} Saved committed-second thermal checks.
+---@field overheat_clock {elapsed: integer, phase: integer, injury_due: boolean, outside_heat: integer} Saved committed-second thermal checks and the turn's absorbed outside heat.
 ---@field weapon_recycle table<integer, integer> Remaining seconds keyed by zero-based weapon index.
 ---@field component_failures {location: table, failure: string}[] Nonweapon diagnostic conditions; material damage determines system operation.
 ---@field weapon_failures table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam"> Temporary conditions by mount index; existing recycle clocks govern recovery.
@@ -449,8 +440,6 @@ function btech_unit.inspect(dbref) end
 ---@field visibility {invisible: boolean, clairvoyant: boolean} Operator visibility state.
 ---@field mass VehicleMass Derived from current material and ammunition; units are 1/1024 ton.
 ---@field inferno_remaining integer Stationary-unit jelly duration.
----@field burning_sections table<string, integer> Section fire countdowns in seconds.
----@field extinguishing integer|nil Seconds until the crew completes its attempt.
 ---@field pod_removal integer|nil Remaining seconds of the crew iNarc-removal attempt.
 ---@field beacons table<string, string[]> Attached effects keyed by surviving vehicle section.
 ---@field ams_enabled boolean Saved automatic anti-missile defense switch.
@@ -464,8 +453,8 @@ function btech_unit.inspect(dbref) end
 ---@field weapon_failures table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam"> Temporary conditions by mount index; existing recycle clocks govern recovery.
 ---@field crew_stun_remaining integer Seconds until the pending recovery event; zero means none.
 ---@field crew_stunned boolean Effective crew stun, independent of its timer.
----@field self_destruct {remaining: integer, ammunition: boolean}|nil Admitted timer and its actual Mech detonation mode.
----@field self_destruct_safe boolean Scenario protection from new ammunition self-destruct requests.
+---@field self_destruct {remaining: integer}|nil Admitted self-destruct countdown.
+---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
 ---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 ---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
 ---@field weapon_heat number Passive weapon heat and coolant credit; ground vehicles do not overheat.
@@ -1439,7 +1428,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@class SectionExposureReport
 ---@field cause "water"|"vacuum"
 ---@field section MechSectionName
----@field reactor_explosion table|nil
 ---@field fall table|nil
 ---@field notices {unit: integer, text: string}[]
 
@@ -1466,7 +1454,7 @@ function btech_unit.autoturret(dbref, pilot) end
 
 ---@class SalvoGroup
 ---@field damage integer
----@field hit {section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean, crew_stun: boolean}
+---@field hit {section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean}
 ---@field impact table Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat rolls, searchlight_destroyed and remaining scenario effects.
 ---@field pilot_injuries table[] Applied tactical injuries and consciousness results.
 ---@field notices {unit: integer, text: string}[] Already staged by unit.fire.
@@ -1476,8 +1464,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@class InfernoHit
 ---@field target integer
 ---@field missiles integer Surviving missiles after interception.
----@field burn_seconds integer Duration added before immersion.
----@field extinguished boolean
+---@field heat integer Heat added: two per missile within the turn's fifteen-point outside-heat cap.
 ---@field notices Notice[]
 
 ---@class WoodlandImpact
@@ -1542,7 +1529,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field mines table Mine activation after the fall damage sequence.
 ---@field ice_break SurfaceBreak|nil Ice fracture can cause nested water falls for this unit and its neighbors.
 ---@field flooding SectionExposureReport[]
----@field inferno_notices Notice[]
 ---@class RecoilReport
 ---@field experience_messages DiagnosticMessage[] Accepted recoil XP diagnostics published with the shot.
 ---@field check PilotingCheck
@@ -1626,11 +1612,10 @@ function btech_unit.autoturret(dbref, pilot) end
 
 ---@class VehicleInfernoHit
 ---@field missiles integer Surviving missiles after clustering and interception.
----@field explosion_roll integer|nil Standard mobile-vehicle heat check.
+---@field criticals table[] One critical roll per missile against a mobile vehicle, at -2.
 ---@field burn_seconds integer Jelly duration added to a stationary unit.
----@field damage table[] Ordered initial section fire damage.
----@field explosion table|nil Completed heat catastrophe.
 ---@field notices Notice[] Already staged by firing.
+---@field pilot_notices table[] Pilot-only control feedback indexed into the notices.
 ---@field broadcasts Notice[] Raw damage broadcasts handled by firing.
 
 ---@class VehicleSalvoReport
@@ -1718,7 +1703,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---An IDF observer takes precedence when the firer has no unit lock, even with explicit arguments.
 ---Explicit coordinates select an occupant for conventional weapons or use terrain effects when empty.
 ---Artillery always uses coordinates and queues its impact. Explicit requests do not change saved locks.
----Missile effects require the base target number even with near-miss glancing enabled.
+---Missile effects require the base target number; meeting it exactly is a glancing blow.
 ---Such a near miss spends its launch and aimed preparation, but starts no AMS, pod effect or Swarm flight.
 ---Results are detached; optional fields use nil.
 ---@param dbref integer
@@ -3051,12 +3036,6 @@ function btech_unit.turret(dbref, pilot, heading) end
 ---@return boolean
 function btech_unit.fixturret(unit, pilot) end
 
----Begin a two-minute attempt to put out vehicle section fires while shut down.
----@param dbref integer
----@param pilot integer
----@return boolean
-function btech_unit.extinguish(dbref, pilot) end
-
 ---Pick up a visible unit using shared towing, shutdown and terrain rules.
 ---@param dbref integer Carrier unit.
 ---@param pilot integer Conscious assigned pilot; scripts own authority to act for them.
@@ -3107,17 +3086,11 @@ function btech_unit.observer(dbref, enabled) end
 ---@return boolean enabled
 function btech_unit.weapons_hold(dbref, enabled) end
 
----Detonate a Mech reactor in a trusted callback; damage, sensor flashes and casualties commit together.
----This scenario action bypasses cockpit self-destruct configuration and countdown admission.
----@param dbref integer
----@return table report
-function btech_unit.reactor_explode(dbref) end
-
 ---Start or stop cockpit self-destruction. Engagement releases the pilot assignment.
----The same argument grammar, configuration and override checks apply as the native explode command.
+---The same argument grammar and override checks apply as the native explode command.
 ---@param dbref integer
 ---@param pilot integer
----@param argument string "ammo", "reactor", "stop", optionally followed by wizard "override".
+---@param argument string "ammo" (default), "stop", optionally followed by wizard "override".
 ---@return boolean
 function btech_unit.explode(dbref, pilot, argument) end
 
@@ -3227,7 +3200,6 @@ function btech_inventory.forms(actor) end
 ---@class RuntimeStats
 ---@field simulation_pending boolean Same work predicate as the server's one-second simulation tick.
 ---@field scanner_observers integer
----@field reactor_startup_remaining integer
 ---@field artillery_shots integer
 ---@field maps integer
 ---@field mechs integer

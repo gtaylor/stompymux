@@ -95,12 +95,6 @@ async fn fixture_source(
 fn rules() -> FallRules {
     FallRules {
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
         extended_piloting: true,
         toughness: false,
     }

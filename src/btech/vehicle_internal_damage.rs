@@ -11,7 +11,7 @@ pub struct VehicleInternalDamage {
     pub section: VehicleSection,
     pub incoming: u32,
     pub structural_damage: u32,
-    /// Internal critical roll, preceded by a damage-entry roll for standalone explosions.
+    /// Damage-entry roll for standalone explosions; the critical roll lives in `criticals`.
     pub rolls: Vec<u8>,
     pub absorbed: u16,
     /// Vehicle-local internal explosions do not transfer excess to another section.
@@ -42,11 +42,14 @@ pub fn resolve_vehicle_internal_damage(
     })
 }
 
-/// Source attribution and recursion budget travel together through vehicle critical cascades.
+/// Source attribution, recursion budget and the attack's critical-roll modifier travel together
+/// through vehicle critical cascades.
 #[derive(Debug, Clone, Copy, Default)]
 pub(super) struct DamageContext {
     pub attacker: Option<ObjectId>,
     pub depth: u8,
+    /// Added to every critical roll of this attack: −2 for a glancing blow (TO:AR p. 79).
+    pub critical_modifier: i8,
 }
 
 impl DamageContext {
@@ -74,7 +77,7 @@ pub(super) fn resolve_in_candidate(
         .get(&id)
         .context("Vehicle is unavailable")?;
     ensure!(!vehicle.is_destroyed(), "Vehicle is destroyed");
-    resolve_damage(world, id, section, amount, rules, context, None)
+    resolve_damage(world, id, section, amount, rules, context, false)
 }
 
 /// Armor overflow stays in the same damage event: no second entry roll or duplicate hit notice.
@@ -84,18 +87,9 @@ pub(super) fn resolve_penetration(
     section: VehicleSection,
     amount: u32,
     rules: VehicleCriticalRules,
-    armor_criticals: bool,
     context: DamageContext,
 ) -> Result<VehicleInternalDamage> {
-    resolve_damage(
-        world,
-        id,
-        section,
-        amount,
-        rules,
-        context,
-        Some(armor_criticals),
-    )
+    resolve_damage(world, id, section, amount, rules, context, true)
 }
 
 /// Apply internal structure damage with either explosion entry or preceding armor-stage context.
@@ -106,7 +100,7 @@ fn resolve_damage(
     amount: u32,
     rules: VehicleCriticalRules,
     context: DamageContext,
-    armor_criticals: Option<bool>,
+    penetrating: bool,
 ) -> Result<VehicleInternalDamage> {
     ensure!(
         context.depth < 64,
@@ -166,7 +160,7 @@ fn resolve_damage(
     let safe = rules.combat_safe || super::combat_safe::protects(world, context.attacker, id);
     let warning = super::weapons_hold::damage_notice(world, context.attacker, id);
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-    if armor_criticals.is_none() {
+    if !penetrating {
         result.rolls.push(vehicle.dice.generic_roll());
         if safe {
             result
@@ -191,47 +185,7 @@ fn resolve_damage(
         });
     }
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-    let roll = vehicle.dice.generic_roll();
-    result.rolls.push(roll);
-    // Damage that penetrated hardened armor rolls criticals two lower.
-    let penalty = if armor_criticals.is_some()
-        && vehicle
-            .definition()
-            .has_technology(super::Technology::HardenedArmor)
-    {
-        super::Technology::HARDENED_CRITICAL_PENALTY
-    } else {
-        0
-    };
-    let count = match roll.saturating_sub(penalty) {
-        _ if armor_criticals == Some(true) => 0,
-        8 | 9 => 1,
-        10 | 11 => 2,
-        12 => 3,
-        _ => 0,
-    };
-    for _ in 0..count {
-        let vehicle = &world.btech.vehicles()[&id];
-        if vehicle.is_destroyed() || vehicle.sections()[&section].internal == 0 {
-            break;
-        }
-        let critical = super::vehicle_critical_resolution::resolve_in_candidate(
-            world,
-            id,
-            section,
-            rules,
-            context.nested(),
-        )?;
-        super::piloting::append_feedback(
-            &mut result.pilot_notices,
-            critical.pilot_notices.iter().cloned(),
-            result.notices.len(),
-        );
-        result.notices.extend(critical.notices.clone());
-        result.broadcasts.extend(critical.broadcasts.clone());
-        result.criticals.push(critical);
-    }
-    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
+    let modifier = context.critical_modifier;
     let was_destroyed = vehicle.is_destroyed();
     let damage = vehicle.damage_phase(
         section,
@@ -255,13 +209,31 @@ fn resolve_damage(
         });
     }
     result.destroyed_sections = damage.destroyed_sections;
-    if vehicle.sections()[&section].internal > 0 {
-        let penetrating = armor_criticals.is_some();
-        if !penetrating || result.discarded == 0 {
-            let (roll, notice) = super::vacuum::check_vehicle(world, id, section, penetrating)?;
-            result.rolls.extend(roll);
-            result.notices.extend(notice);
-        }
+    // Any internal structure damage rolls once on the critical hits table (TW pp. 193 and 197);
+    // a location that lost its last structure has already destroyed the vehicle.
+    if !destroyed && vehicle.sections()[&section].internal > 0 {
+        let critical = super::vehicle_critical_resolution::resolve_modified_in_candidate(
+            world,
+            id,
+            section,
+            rules,
+            context.nested(),
+            modifier,
+        )?;
+        super::piloting::append_feedback(
+            &mut result.pilot_notices,
+            critical.pilot_notices.iter().cloned(),
+            result.notices.len(),
+        );
+        result.notices.extend(critical.notices.clone());
+        result.broadcasts.extend(critical.broadcasts.clone());
+        result.criticals.push(critical);
+    }
+    let vehicle = &world.btech.vehicles()[&id];
+    if vehicle.sections()[&section].internal > 0 && (!penetrating || result.discarded == 0) {
+        let (roll, notice) = super::vacuum::check_vehicle(world, id, section, penetrating)?;
+        result.rolls.extend(roll);
+        result.notices.extend(notice);
     }
     result.unit_destroyed = world.btech.vehicles()[&id].is_destroyed();
     Ok(result)

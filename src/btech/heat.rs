@@ -4,9 +4,6 @@ use crate::{Flag, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
-/// Most heat a turn that outside sources other than magma, such as fire, can add to a 'Mech.
-const MAX_OUTSIDE_HEAT: f64 = 15.0;
-
 /// Weapon heat (including temporary coolant credit) and the last sampled excess.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Heat {
@@ -98,6 +95,15 @@ impl Mech {
         self.heat_sample
     }
 
+    /// Add heat from an outside source such as inferno missiles or a burning hex left behind
+    /// (Total Warfare p. 159, Outside Heat Sources). Outside heat is cumulative to at most
+    /// fifteen points a turn; the points that fit are added to the Heat Scale and returned.
+    pub(super) fn absorb_outside_heat(&mut self, points: u8) -> u8 {
+        let applied = self.overheat_clock.absorb_outside_heat(points);
+        self.heat.stored += f64::from(applied);
+        applied
+    }
+
     /// Derive rates from surviving equipment, motion and the occupied map tile.
     pub fn heat_rates(&self, world: &World) -> HeatRates {
         self.heat_rates_with_disabled(
@@ -139,29 +145,23 @@ impl Mech {
             production,
             dissipation: f64::from(self.cooling_capacity().saturating_sub(disabled)),
         };
-        let inferno = |mut rates: HeatRates| {
-            if self.inferno_remaining > 0 {
-                rates.dissipation = (rates.dissipation - 6.0).max(0.0);
-            }
-            rates
-        };
         let Some(position) = self.position() else {
-            return inferno(rates);
+            return rates;
         };
         let Some(map) = world.btech.maps().get(&position.map) else {
-            return inferno(rates);
+            return rates;
         };
         let tile = map
             .hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
         let elevation = self.elevation_level(tile);
-        let mut outside_heat: f64 = 0.0;
+        // A Mech standing in a burning hex absorbs five heat points a turn (Tactical
+        // Operations: Advanced Rules p. 42); the two points for each burning hex it leaves
+        // arrive through `absorb_outside_heat`. Magma heat comes from the hex itself.
         if tile.is_burning() && self.reaches_flames(tile, elevation) {
-            outside_heat += 5.0;
+            rates.production += 5.0;
         }
-        // Magma's heat is the one outside source the cap does not limit.
-        rates.production +=
-            outside_heat.min(MAX_OUTSIDE_HEAT) + f64::from(tile.ground_heat(elevation));
+        rates.production += f64::from(tile.ground_heat(elevation));
         if tile.immerses(elevation) {
             // Heat sinks under water dissipate twice as much, up to six extra points a turn
             // (Total Warfare p. 159). Wading puts only the leg sinks under; deeper water, or
@@ -182,7 +182,6 @@ impl Mech {
         if tile.chills(elevation) && self.leg_heat_sinks() > 0 {
             rates.dissipation += 1.0;
         }
-        rates = inferno(rates);
         rates.dissipation -= f64::from(super::extreme_temperature_steps(map.temperature()));
         rates
     }

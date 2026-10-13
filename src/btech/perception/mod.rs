@@ -615,7 +615,7 @@ fn sweep_suite(
                 (mech.heat().excess / 5.0).floor().clamp(0.0, 5.0) as u8,
                 u32::from(mech.definition().tons),
                 mech.airborne(),
-                mech.inferno_remaining() > 0,
+                false,
                 mech.stealth().enabled,
                 mech.null_signature().enabled,
             ),

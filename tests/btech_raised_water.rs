@@ -253,26 +253,16 @@ async fn lifting_a_map_lifts_vehicles_without_changing_what_happens() {
 /// Standard shooting rules for comparing combat at either height.
 fn shot_rules() -> ShotRules {
     ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
         aim: AimRules {
             woods_damage: false,
-            hit_arc_mode: 0,
             fasa_turning: false,
             extended_movement: false,
             extended_ranges: false,
             hotload_half_minimum: false,
             override_weapon_arcs: true,
         },
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
         extended_gunnery: false,
         extended_piloting: false,
         target_toughness: false,
@@ -386,15 +376,6 @@ async fn lifting_a_map_keeps_combat_in_water_unchanged() {
                 "{context} weapon {index}"
             );
         }
-        for id in units {
-            apply_inferno_burn(&mut low, id, 30).unwrap();
-            apply_inferno_burn(&mut high, id, 30).unwrap();
-            assert_eq!(
-                format!("{:?}", extinguish_inferno_in_water(&mut low, id)),
-                format!("{:?}", extinguish_inferno_in_water(&mut high, id)),
-                "{context}"
-            );
-        }
         // Strip the target's armor so any submerged section floods.
         for world in [&mut low, &mut high] {
             world
@@ -429,12 +410,6 @@ async fn lifting_a_map_keeps_combat_in_water_unchanged() {
 fn rules_fall() -> FallRules {
     FallRules {
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
         extended_piloting: true,
         toughness: false,
     }

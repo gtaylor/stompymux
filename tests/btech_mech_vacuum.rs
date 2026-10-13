@@ -9,7 +9,6 @@ fn hit(section: MechSection) -> Hit {
         section,
         rear_armor: false,
         through_armor_critical: false,
-        crew_stun: false,
     }
 }
 
@@ -411,54 +410,48 @@ async fn internal_explosion_can_breach_surviving_armored_section() {
     );
 }
 
-/// Engine exposure shares configured reactor explosions while retaining structure when blasts are disabled.
+/// Engine exposure shuts the reactor down and retains the breached section's structure.
 #[tokio::test]
-async fn core_exposure_shares_engine_and_reactor_consequences() {
-    let (_dir, config, initial, id, _, _) = firing::fixture_with_target(
+async fn core_exposure_shuts_down_the_engine() {
+    let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
         include_str!("../game/units/JR7-D.toml"),
         None,
         include_str!("../game/units/AS7-D.toml"),
     )
     .await;
-    for enabled in [false, true] {
-        let mut world = initial.clone();
-        configure_battle_reactor_policy(&mut world, enabled, false);
-        environment(&mut world, id, 100, true);
-        seed(&mut world, id, 4);
-        let before =
-            world.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].clone();
-        let report = resolve_battle_tactical_impact(
-            &mut world,
-            id,
-            hit(MechSection::CenterTorso),
-            before.armor + 1,
-            MovementRules::STANDARD.fall,
-        )
-        .unwrap();
-        assert!(report.impact.destroyed);
-        let exposure = report
+    environment(&mut world, id, 100, true);
+    seed(&mut world, id, 4);
+    let before = world.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].clone();
+    let report = resolve_battle_tactical_impact(
+        &mut world,
+        id,
+        hit(MechSection::CenterTorso),
+        before.armor + 1,
+        MovementRules::STANDARD.fall,
+    )
+    .unwrap();
+    assert!(report.impact.destroyed);
+    assert!(
+        report
             .impact
             .exposures
             .iter()
-            .find(|exposure| exposure.section == MechSection::CenterTorso)
-            .unwrap();
-        assert_eq!(exposure.reactor_explosion.is_some(), enabled);
-        let unit = &world.btech.constructed_units()[&id];
-        assert_eq!(
-            unit.sections()[&MechSection::CenterTorso].internal,
-            if enabled { 0 } else { before.internal - 1 }
-        );
-        assert_eq!(unit.power(), Power::Off);
-        assert!(unit.system_hits(System::Engine) >= 3);
-        world.validate(&config).unwrap();
-        persistence::save(&config.database(), &world).await.unwrap();
-        let loaded = persistence::load(&config.database()).await.unwrap();
-        // Reactor policy is host configuration, while the consequences are durable.
-        assert_eq!(
-            loaded.btech.constructed_units(),
-            world.btech.constructed_units()
-        );
-    }
+            .any(|exposure| exposure.section == MechSection::CenterTorso)
+    );
+    let unit = &world.btech.constructed_units()[&id];
+    assert_eq!(
+        unit.sections()[&MechSection::CenterTorso].internal,
+        before.internal - 1
+    );
+    assert_eq!(unit.power(), Power::Off);
+    assert!(unit.system_hits(System::Engine) >= 3);
+    world.validate(&config).unwrap();
+    persistence::save(&config.database(), &world).await.unwrap();
+    let loaded = persistence::load(&config.database()).await.unwrap();
+    assert_eq!(
+        loaded.btech.constructed_units(),
+        world.btech.constructed_units()
+    );
 }
 
 /// Support exposure cancels a pending stand recovery even when the Mech is already prone.

@@ -490,7 +490,6 @@ fn weapon_index(world: &World, id: ObjectId, weapon: Weapon) -> usize {
 fn aim_rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         fasa_turning: true,
         extended_movement: false,
         extended_ranges: false,
@@ -502,18 +501,9 @@ fn aim_rules() -> AimRules {
 /// Deterministic shot rules built on [`aim_rules`] for resolving network-assisted shots.
 fn shot_rules() -> ShotRules {
     ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
         aim: aim_rules(),
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
         extended_gunnery: true,
         extended_piloting: true,
         target_toughness: false,
@@ -591,7 +581,6 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
             4,
             AimRules {
                 woods_damage: false,
-                hit_arc_mode: 0,
                 hotload_half_minimum: half,
                 ..aim_rules()
             },
@@ -604,7 +593,6 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     relocate(&mut world, first, 8);
     let extended = AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         extended_ranges: true,
         ..aim_rules()
     };

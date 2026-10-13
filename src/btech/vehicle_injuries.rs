@@ -11,28 +11,13 @@ pub(super) fn collect_armor(report: &VehicleArmorDamage, injuries: &mut Vec<Char
     }
 }
 
-/// Nested weapon explosions finish before their surviving-pilot injury is applied.
+/// Critical hits injure vehicle crews only through nested explosions.
 pub(super) fn collect_critical(
     report: &VehicleCriticalResolution,
     injuries: &mut Vec<CharacterPilotInjury>,
 ) {
     for damage in &report.internal_damage {
         collect_internal(damage, injuries);
-    }
-    if let Some(injury) = &report.character_injury {
-        injuries.push(injury.clone());
-    }
-}
-
-/// Blast heat applies advanced fire damage after its ordinary impact packets.
-pub(super) fn collect_heat(
-    report: &super::VehicleHeatExposure,
-    injuries: &mut Vec<CharacterPilotInjury>,
-) {
-    if let Some(fire) = &report.fire {
-        for damage in &fire.effects.damage {
-            collect_armor(damage, injuries);
-        }
     }
 }
 
@@ -57,8 +42,8 @@ pub(super) fn collect_salvo(
         }
     }
     if let Some(inferno) = &report.inferno {
-        for damage in &inferno.damage {
-            collect_armor(damage, injuries);
+        for missile in &inferno.criticals {
+            collect_critical(&missile.critical, injuries);
         }
     }
 }

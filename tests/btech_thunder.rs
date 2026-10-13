@@ -111,26 +111,16 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
 /// Deterministic conventional firing policy.
 fn shot_rules() -> ShotRules {
     ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
         vehicle_impact: VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
         aim: AimRules {
             woods_damage: false,
-            hit_arc_mode: 0,
             fasa_turning: false,
             extended_movement: false,
             extended_ranges: false,
             hotload_half_minimum: false,
             override_weapon_arcs: true,
         },
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
         extended_gunnery: false,
         extended_piloting: false,
         target_toughness: false,
@@ -260,8 +250,10 @@ async fn thunder_controls_toggle_and_reject_other_weapons() {
 }
 
 /// Hovercraft skim above the mines on a flooded hex; only an active field reaches them.
+/// Nothing moving along the ground sets off an active field, and a hovercraft skimming the
+/// water is above a conventional one (Tactical Operations p. 177).
 #[tokio::test]
-async fn active_mines_catch_hovercraft_over_water() {
+async fn active_mines_ignore_hovercraft_over_water() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Flooded ford".into(), Kind::Room);
     create_battle_map(
@@ -304,12 +296,6 @@ async fn active_mines_catch_hovercraft_over_water() {
         .unwrap();
     }
     let selected = mine_activations(&world, id, MineTriggerReason::Step).unwrap();
-    assert_eq!(
-        selected
-            .iter()
-            .map(|field| field.mine.kind)
-            .collect::<Vec<_>>(),
-        [MineKind::Active]
-    );
+    assert!(selected.is_empty(), "{selected:?}");
     assert_eq!(MineKind::parse("ACTIVE").unwrap(), MineKind::Active);
 }

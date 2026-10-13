@@ -318,11 +318,7 @@ async fn live_modes_control_reservations_and_hotloaded_critical_eligibility() {
             id,
             VehicleSection::Front,
             VehicleCriticalRules {
-                rotor_damage_divisor: 0,
                 extended_piloting: false,
-                vtol_table: None,
-                table: VehicleCriticalTable::Advanced,
-                enabled: true,
                 combat_safe: false,
                 toughness: false,
             },

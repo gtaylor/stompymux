@@ -147,10 +147,6 @@ pub(super) fn check_with_dice(
     if !self_cooling {
         super::aim::ensure_perceived(&aim)?;
     }
-    super::hit_direction::HitDirection::Direct {
-        shooter,
-        mode: rules.hit_arc_mode,
-    }
-    .current(world, target)?;
+    super::hit_direction::HitDirection::Direct { shooter }.current(world, target)?;
     Ok((aim, prepared))
 }

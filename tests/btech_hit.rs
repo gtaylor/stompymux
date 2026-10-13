@@ -1,6 +1,7 @@
-//! Biped location probabilities, arc boundaries, critical gating and head-hit variants.
+//! Biped location probabilities, attack-direction diagrams, through-armor criticals and head hits.
 use stompymux_rs::{
-    Dice, HitArc as Arc, HitRules, HitTable as Table, Mech, MechSection as Section, MechTemplate,
+    Dice, HitArc as Arc, HitTable as Table, Mech, MechSection as Section, MechTemplate,
+    resolve_battle_hit,
 };
 
 /// Build an undamaged conventional biped; owned JSON permits isolated damaged-state fixtures.
@@ -14,40 +15,63 @@ fn unit(armor: u16) -> Mech {
     serde_json::from_value(state).unwrap()
 }
 
+/// The 'Mech Attack Direction Diagram: a 180-degree front centred on the heading, 60-degree
+/// sides and a 60-degree rear, with angles normalized before classification.
 #[test]
-fn biped_arc_boundaries_wrap_and_follow_all_three_configured_modes() {
-    for mode in [0, 2] {
-        for (angle, expected) in [
-            (0.0, Arc::Front),
-            (90.0, Arc::Front),
-            (90.01, Arc::Right),
-            (149.99, Arc::Right),
-            (150.0, Arc::Rear),
-            (210.0, Arc::Rear),
-            (210.01, Arc::Left),
-            (269.99, Arc::Left),
-            (270.0, Arc::Front),
-            (360.0, Arc::Front),
-        ] {
-            assert_eq!(Arc::from_bearing(angle, 0.0, mode).unwrap(), expected);
-            assert_eq!(
-                Arc::from_bearing(angle + 721.0, 721.0, mode).unwrap(),
-                expected
-            );
-        }
-    }
+fn mech_arc_boundaries_follow_the_total_warfare_diagram_and_wrap() {
     for (angle, expected) in [
-        (45.0, Arc::Front),
-        (45.01, Arc::Right),
-        (135.0, Arc::Rear),
-        (225.0, Arc::Rear),
-        (225.01, Arc::Left),
-        (315.0, Arc::Front),
+        (0.0, Arc::Front),
+        (90.0, Arc::Front),
+        (90.01, Arc::Right),
+        (149.99, Arc::Right),
+        (150.0, Arc::Rear),
+        (180.0, Arc::Rear),
+        (210.0, Arc::Rear),
+        (210.01, Arc::Left),
+        (269.99, Arc::Left),
+        (270.0, Arc::Front),
+        (360.0, Arc::Front),
     ] {
-        assert_eq!(Arc::from_bearing(angle, 0.0, 1).unwrap(), expected);
+        assert_eq!(Arc::from_bearing(angle, 0.0).unwrap(), expected);
+        assert_eq!(Arc::from_bearing(angle + 721.0, 721.0).unwrap(), expected);
+        assert_eq!(Arc::from_bearing(angle + 60.0, 60.0).unwrap(), expected);
+        assert_eq!(Arc::from_bearing(angle - 400.0, -400.0).unwrap(), expected);
     }
-    assert!(Arc::from_bearing(f64::NAN, 0.0, 0).is_err());
-    assert!(Arc::from_bearing(0.0, 0.0, 3).is_err());
+    assert!(Arc::from_bearing(f64::NAN, 0.0).is_err());
+    assert!(Arc::from_bearing(0.0, f64::INFINITY).is_err());
+}
+
+/// The Vehicle Attack Direction Diagram: one hexside each for the front and rear, two hexsides
+/// for each side, with the same boundary inclusion as the 'Mech diagram.
+#[test]
+fn vehicle_arc_boundaries_follow_the_total_warfare_diagram_and_wrap() {
+    for (angle, expected) in [
+        (0.0, Arc::Front),
+        (30.0, Arc::Front),
+        (30.01, Arc::Right),
+        (90.0, Arc::Right),
+        (149.99, Arc::Right),
+        (150.0, Arc::Rear),
+        (180.0, Arc::Rear),
+        (210.0, Arc::Rear),
+        (210.01, Arc::Left),
+        (270.0, Arc::Left),
+        (329.99, Arc::Left),
+        (330.0, Arc::Front),
+        (360.0, Arc::Front),
+    ] {
+        assert_eq!(Arc::from_vehicle_bearing(angle, 0.0).unwrap(), expected);
+        assert_eq!(
+            Arc::from_vehicle_bearing(angle + 721.0, 721.0).unwrap(),
+            expected
+        );
+        assert_eq!(
+            Arc::from_vehicle_bearing(angle + 120.0, 120.0).unwrap(),
+            expected
+        );
+    }
+    assert!(Arc::from_vehicle_bearing(f64::NAN, 0.0).is_err());
+    assert!(Arc::from_vehicle_bearing(0.0, f64::NEG_INFINITY).is_err());
 }
 
 #[test]
@@ -127,74 +151,49 @@ fn weapon_distribution_and_physical_tables_preserve_location_and_transfer_rules(
     );
 }
 
+/// A location roll of 2 is always a through-armor critical chance regardless of remaining
+/// armor, no roll other than 2 ever is, and ordinary resolution never consumes dice.
 #[test]
-fn conditional_critical_rolls_and_head_grazes_consume_only_required_dice() {
-    let standard = HitRules {
-        inferno_penalty: false,
-        exile_stun_mode: 0,
-    };
+fn through_armor_criticals_are_unconditional_on_a_roll_of_two_without_dice() {
     let mut dice = Dice::seeded([42; 32]);
     let before = dice.clone();
     assert!(dice.die(0).is_err());
-    assert!(
-        standard
-            .resolve(&unit(10), Arc::Front, 1, &mut dice)
-            .is_err()
-    );
+    assert!(resolve_battle_hit(&unit(10), Arc::Front, 1, &mut dice).is_err());
     assert_eq!(dice, before);
-    for armor in [6, 9] {
-        assert!(
-            !standard
-                .resolve(&unit(armor), Arc::Front, 2, &mut dice)
-                .unwrap()
-                .through_armor_critical
-        );
-        assert_eq!(dice, before);
-    }
-    // At 50% armor and at full armor, compare conditional rolls to independently consumed dice.
-    for (armor, sides, success) in [(5, 12, 6), (10, 71, 23)] {
-        let target = unit(armor);
-        let mut expected = dice.clone();
-        for _ in 0..512 {
-            let critical = expected.die(sides).unwrap() == success;
+    for armor in [0, 1, 5, 6, 9, 10] {
+        for arc in [Arc::Front, Arc::Rear, Arc::Left, Arc::Right] {
+            let hit = resolve_battle_hit(&unit(armor), arc, 2, &mut dice).unwrap();
+            assert!(hit.through_armor_critical);
             assert_eq!(
-                standard
-                    .resolve(&target, Arc::Front, 2, &mut dice)
-                    .unwrap()
-                    .through_armor_critical,
-                critical
+                hit.section,
+                match arc {
+                    Arc::Front | Arc::Rear => Section::CenterTorso,
+                    Arc::Left => Section::LeftTorso,
+                    Arc::Right => Section::RightTorso,
+                }
             );
-            assert_eq!(dice, expected);
+            assert_eq!(hit.rear_armor, arc == Arc::Rear);
+            for roll in 3..=12 {
+                let hit = resolve_battle_hit(&unit(armor), arc, roll, &mut dice).unwrap();
+                assert!(!hit.through_armor_critical);
+                assert_eq!(
+                    hit.section,
+                    Table::Weapon
+                        .location(stompymux_rs::MechChassis::Biped, arc, roll)
+                        .unwrap()
+                );
+            }
         }
     }
-    for mode in [0, 1, 2] {
-        let rules = HitRules {
-            exile_stun_mode: mode,
-            ..standard
-        };
-        let target = unit(10);
-        let mut expected = dice.clone();
-        for _ in 0..50 {
-            let section = if mode == 0 {
-                Section::Head
-            } else {
-                Table::Punch
-                    .location(stompymux_rs::MechChassis::Biped, Arc::Rear, expected.d6())
-                    .unwrap()
-            };
-            let hit = rules.resolve(&target, Arc::Rear, 12, &mut dice).unwrap();
-            assert_eq!(hit.section, section);
-            assert_eq!(hit.crew_stun, mode == 1 && section != Section::Head);
-            assert_eq!(
-                hit.rear_armor,
-                matches!(
-                    section,
-                    Section::LeftTorso | Section::RightTorso | Section::CenterTorso
-                )
-            );
-            assert_eq!(dice, expected);
-        }
+    assert_eq!(dice, before);
+    // A roll of 12 is a head hit in every direction; rear head hits are not rear armor.
+    for arc in [Arc::Front, Arc::Rear, Arc::Left, Arc::Right] {
+        let hit = resolve_battle_hit(&unit(10), arc, 12, &mut dice).unwrap();
+        assert_eq!(hit.section, Section::Head);
+        assert!(!hit.rear_armor);
+        assert!(!hit.through_armor_critical);
     }
+    assert_eq!(dice, before);
 }
 
 /// Quad physical distributions distinguish the front and rear pairs in every direction.
@@ -255,37 +254,29 @@ fn quad_tables_cover_all_rolls_and_preserve_shared_weapon_distribution() {
     }
 }
 
-/// Head grazes use the target's anatomy and consume exactly one secondary die after restart.
+/// Quad head hits use the shared weapon table and never consume secondary dice.
 #[test]
-fn quad_head_rerolls_follow_chassis_and_preserve_dice_replay() {
-    use stompymux_rs::MechChassis::Quad;
+fn quad_head_hits_follow_chassis_and_preserve_dice_replay() {
     let mut encoded = serde_json::to_value(unit(10)).unwrap();
     // Component fixture isolates hit-table behavior from world registration.
     encoded["definition"]["attributes"]["move_type"] = "Quad".into();
     let target: Mech = serde_json::from_value(encoded).unwrap();
     for arc in [Arc::Front, Arc::Rear, Arc::Left, Arc::Right] {
-        for mode in [0, 1, 2] {
-            for seed in 0..32 {
-                let rules = HitRules {
-                    inferno_penalty: false,
-                    exile_stun_mode: mode,
-                };
-                let mut dice = Dice::seeded([seed; 32]);
-                let mut expected = dice.clone();
-                let section = if mode == 0 {
-                    Section::Head
-                } else {
-                    Table::Punch.location(Quad, arc, expected.d6()).unwrap()
-                };
-                let mut restored: Dice =
-                    serde_json::from_value(serde_json::to_value(&dice).unwrap()).unwrap();
-                let hit = rules.resolve(&target, arc, 12, &mut dice).unwrap();
-                assert_eq!(hit.section, section);
-                assert_eq!(hit.crew_stun, mode == 1 && section != Section::Head);
-                assert_eq!(hit, rules.resolve(&target, arc, 12, &mut restored).unwrap());
-                assert_eq!(dice, expected);
-                assert_eq!(dice, restored);
-            }
+        for seed in 0..32 {
+            let mut dice = Dice::seeded([seed; 32]);
+            let expected = dice.clone();
+            let mut restored: Dice =
+                serde_json::from_value(serde_json::to_value(&dice).unwrap()).unwrap();
+            let hit = resolve_battle_hit(&target, arc, 12, &mut dice).unwrap();
+            assert_eq!(hit.section, Section::Head);
+            assert!(!hit.rear_armor);
+            assert!(!hit.through_armor_critical);
+            assert_eq!(
+                hit,
+                resolve_battle_hit(&target, arc, 12, &mut restored).unwrap()
+            );
+            assert_eq!(dice, expected);
+            assert_eq!(dice, restored);
         }
     }
 }
@@ -321,65 +312,49 @@ fn delegated_mech_tables_cover_anatomy_precedence_immunity_and_replay() {
                 }
                 let target: Mech = serde_json::from_value(state).unwrap();
 
-                for mode in [0, 1, 2] {
-                    let rules = HitRules {
-                        inferno_penalty: false,
-                        exile_stun_mode: mode,
-                    };
-                    for arc in [Arc::Front, Arc::Rear, Arc::Left, Arc::Right] {
-                        for selected in 2..=12 {
-                            let mut dice = seed_for_location(selected);
-                            let mut expected = dice.clone();
-                            let entry = if proof {
-                                assert_eq!(expected.two_d6(), selected);
-                                if selected == 3 { 9 } else { 3 }
-                            } else {
-                                selected
-                            };
-                            let expected_section = if safe {
-                                Section::LeftArm
-                            } else if selected == 12 && mode != 0 {
-                                Table::Punch.location(chassis, arc, expected.d6()).unwrap()
-                            } else {
-                                Table::Weapon.location(chassis, arc, selected).unwrap()
-                            };
-                            let mut replay: Dice =
-                                serde_json::from_value(serde_json::to_value(&dice).unwrap())
-                                    .unwrap();
-                            let hit = rules.resolve(&target, arc, entry, &mut dice).unwrap();
-                            assert_eq!(hit.section, expected_section);
-                            assert!(!hit.through_armor_critical);
-                            assert_eq!(
-                                hit.crew_stun,
-                                !safe
-                                    && mode == 1
-                                    && selected == 12
-                                    && expected_section != Section::Head
-                            );
-                            assert_eq!(
-                                hit.rear_armor,
-                                !safe
-                                    && arc == Arc::Rear
-                                    && matches!(
-                                        expected_section,
-                                        Section::LeftTorso
-                                            | Section::RightTorso
-                                            | Section::CenterTorso
-                                    )
-                            );
-                            assert_eq!(dice, expected);
-                            assert_eq!(
-                                rules.resolve(&target, arc, entry, &mut replay).unwrap(),
-                                hit
-                            );
-                            assert_eq!(dice, replay);
-                        }
-                        for invalid in [0, 1, 13, 255] {
-                            let mut dice = seed_for_location(12);
-                            let original = dice.clone();
-                            assert!(rules.resolve(&target, arc, invalid, &mut dice).is_err());
-                            assert_eq!(dice, original);
-                        }
+                for arc in [Arc::Front, Arc::Rear, Arc::Left, Arc::Right] {
+                    for selected in 2..=12 {
+                        let mut dice = seed_for_location(selected);
+                        let mut expected = dice.clone();
+                        // Critical-proof targets draw their own location roll; the caller's
+                        // entry roll is ignored, so a different entry must not change the result.
+                        let entry = if proof {
+                            assert_eq!(expected.two_d6(), selected);
+                            if selected == 3 { 9 } else { 3 }
+                        } else {
+                            selected
+                        };
+                        let expected_section = if safe {
+                            Section::LeftArm
+                        } else {
+                            Table::Weapon.location(chassis, arc, selected).unwrap()
+                        };
+                        let mut replay: Dice =
+                            serde_json::from_value(serde_json::to_value(&dice).unwrap()).unwrap();
+                        let hit = resolve_battle_hit(&target, arc, entry, &mut dice).unwrap();
+                        assert_eq!(hit.section, expected_section);
+                        assert_eq!(hit.through_armor_critical, !safe && !proof && selected == 2);
+                        assert_eq!(
+                            hit.rear_armor,
+                            !safe
+                                && arc == Arc::Rear
+                                && matches!(
+                                    expected_section,
+                                    Section::LeftTorso | Section::RightTorso | Section::CenterTorso
+                                )
+                        );
+                        assert_eq!(dice, expected);
+                        assert_eq!(
+                            resolve_battle_hit(&target, arc, entry, &mut replay).unwrap(),
+                            hit
+                        );
+                        assert_eq!(dice, replay);
+                    }
+                    for invalid in [0, 1, 13, 255] {
+                        let mut dice = seed_for_location(12);
+                        let original = dice.clone();
+                        assert!(resolve_battle_hit(&target, arc, invalid, &mut dice).is_err());
+                        assert_eq!(dice, original);
                     }
                 }
             }

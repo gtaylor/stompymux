@@ -466,7 +466,7 @@
 //|---An IDF observer takes precedence when the firer has no unit lock, even with explicit arguments.
 //|---Explicit coordinates select an occupant for conventional weapons or use terrain effects when empty.
 //|---Artillery always uses coordinates and queues its impact. Explicit requests do not change saved locks.
-//|---Missile effects require the base target number even with near-miss glancing enabled.
+//|---Missile effects require the base target number; meeting it exactly is a glancing blow.
 //|---Such a near miss spends its launch and aimed preparation, but starts no AMS, pod effect or Swarm flight.
 //|---Results are detached; optional fields use nil.
 //|---@param dbref integer
@@ -1506,14 +1506,6 @@
 //|function btech_unit.fixturret(unit, pilot) end
 // lua-types-end
 
-// lua-types-begin btech 00389
-//|---Begin a two-minute attempt to put out vehicle section fires while shut down.
-//|---@param dbref integer
-//|---@param pilot integer
-//|---@return boolean
-//|function btech_unit.extinguish(dbref, pilot) end
-// lua-types-end
-
 // lua-types-begin btech 00390
 //|---Pick up a visible unit using shared towing, shutdown and terrain rules.
 //|---@param dbref integer Carrier unit.
@@ -1578,20 +1570,12 @@
 //|function btech_unit.weapons_hold(dbref, enabled) end
 // lua-types-end
 
-// lua-types-begin btech 00398
-//|---Detonate a Mech reactor in a trusted callback; damage, sensor flashes and casualties commit together.
-//|---This scenario action bypasses cockpit self-destruct configuration and countdown admission.
-//|---@param dbref integer
-//|---@return table report
-//|function btech_unit.reactor_explode(dbref) end
-// lua-types-end
-
 // lua-types-begin btech 00399
 //|---Start or stop cockpit self-destruction. Engagement releases the pilot assignment.
-//|---The same argument grammar, configuration and override checks apply as the native explode command.
+//|---The same argument grammar and override checks apply as the native explode command.
 //|---@param dbref integer
 //|---@param pilot integer
-//|---@param argument string "ammo", "reactor", "stop", optionally followed by wizard "override".
+//|---@param argument string "ammo" (default), "stop", optionally followed by wizard "override".
 //|---@return boolean
 //|function btech_unit.explode(dbref, pilot, argument) end
 // lua-types-end
@@ -1693,7 +1677,6 @@
 //|---@return AmmunitionMode
 //|function btech_unit.fireactive(dbref, pilot, weapon) end
 // lua-types-end
-
 
 // lua-types-begin btech 00418
 //|---Wizard-only predictive firing using fixed horizontal target orders and normal weapon launches.

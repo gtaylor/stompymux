@@ -44,18 +44,7 @@ async fn field(
     (dir, config, world, shooter, target, index)
 }
 
-/// Host range policy changes only the intended damage rule in each isolated world.
-fn configured(dir: &tempfile::TempDir, enabled: bool) -> Config {
-    let path = dir.path().join("stompymux.toml");
-    let mut value: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    let table = value["battletech"].as_table_mut().unwrap();
-    table.insert("moddamagewithrange".into(), i64::from(enabled).into());
-    table.insert("glancing_blows".into(), 0.into());
-    std::fs::write(path, toml::to_string(&value).unwrap()).unwrap();
-    Config::load(dir.path()).unwrap()
-}
-
-/// A submerged small laser's absent long band halves range-based damage beyond one hex.
+/// A submerged small laser keeps its catalogue damage; only its range bands shrink underwater.
 #[tokio::test]
 async fn submerged_shots_share_damage_native_lua_rollback_and_restart() {
     for source in firing::templates()
@@ -67,10 +56,9 @@ async fn submerged_shots_share_damage_native_lua_rollback_and_restart() {
             include_str!("../game/units/JR7-D.toml"),
             include_str!("../game/units/Demolisher.toml"),
         ] {
-            let (dir, _, base, shooter, target, index) =
+            let (_dir, config, base, shooter, target, index) =
                 field(&source, recipient, Weapon::SmallLaser).await;
-            for enabled in [false, true] {
-                let config = configured(&dir, enabled);
+            {
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
                 let before = scripts.world().btech.clone();
                 let preview = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
@@ -96,7 +84,7 @@ async fn submerged_shots_share_damage_native_lua_rollback_and_restart() {
                         "local r={call}; return r.salvo.report.groups[1].damage"
                     ))
                     .unwrap();
-                assert_eq!(damage, if enabled { 1 } else { 3 });
+                assert_eq!(damage, 3);
                 let output = support::run_text(
                     &native,
                     &config,
@@ -161,13 +149,12 @@ async fn underwater_coordinate_fire_matches_native_and_lua() {
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/Demolisher.toml"),
     ] {
-        let (dir, _, world, shooter, _, index) = field(
+        let (_dir, config, world, shooter, _, index) = field(
             source,
             include_str!("../game/units/JR7-D.toml"),
             Weapon::SmallLaser,
         )
         .await;
-        let config = configured(&dir, true);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let call = format!("btech.unit.fire({},1,{index},{{x=0,y=1}})", shooter.0);

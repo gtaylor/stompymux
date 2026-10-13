@@ -34,35 +34,13 @@ impl SavedTimers for Mech {
             clock.phase,
             if thermal { Wrap } else { Held },
         );
-        list.add(T::Inferno, 0, self.inferno_remaining, Down);
         let stagger = &self.stagger;
-        for (index, hit) in stagger.hits.iter().enumerate() {
-            list.add(
-                T::StaggerHit,
-                index as i64,
-                hit.remaining,
-                if destroyed { Held } else { Down },
-            );
-        }
-        // The rolling damage window counts while damage is on record. The turn phase
-        // advances only under traditional rules, which is when it is ever nonzero; a
-        // phase at zero is held, so a traditional unit rewrites its row twice a turn.
-        let windowed = !destroyed && (!stagger.hits.is_empty() || stagger.turn_damage > 0);
-        list.add(
-            T::StaggerElapsed,
-            0,
-            i64::try_from(stagger.elapsed).unwrap_or(i64::MAX),
-            if windowed { Up } else { Held },
-        );
+        // A phase at zero is held, so a running unit rewrites its row twice a turn.
         list.add(
             T::StaggerPhase,
             0,
             stagger.phase,
-            if !destroyed && running && stagger.phase != 0 {
-                Wrap
-            } else {
-                Held
-            },
+            if !destroyed && running { Wrap } else { Held },
         );
         if let Some(timer) = self.stand_timer {
             list.add(T::Stand, 0, timer.remaining(), Down);
@@ -82,9 +60,6 @@ impl SavedTimers for Mech {
                 remaining,
                 if running { Down } else { Held },
             );
-        }
-        if let Some(remaining) = self.reactor_instability_remaining {
-            list.add(T::ReactorInstability, 0, remaining, Down);
         }
         list.add(T::Stun, 0, self.stun_remaining, Down);
         if let Some(fall) = self.free_fall {

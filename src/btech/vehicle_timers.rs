@@ -13,17 +13,6 @@ impl SavedTimers for Vehicle {
             list.add(T::Startup, 0, remaining, Down);
         }
         list.add(T::Inferno, 0, self.inferno_remaining, Down);
-        for (&section, &remaining) in &self.burning_sections {
-            list.add(
-                T::BurningSection,
-                T::vehicle_section_slot(section),
-                remaining,
-                Down,
-            );
-        }
-        if let Some(remaining) = self.extinguishing() {
-            list.add(T::Extinguishing, 0, remaining, Down);
-        }
         if let Some(remaining) = self.pod_removal() {
             list.add(T::PodRemoval, 0, remaining, Down);
         }

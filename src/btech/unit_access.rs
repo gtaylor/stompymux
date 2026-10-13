@@ -189,8 +189,6 @@ impl<'a> UnitRef<'a> {
         pub fn hex_lock(&self) -> Option<HexLock>;
         /// Elapsed committed hide checks; zero is the initial scheduled event.
         pub fn hide_elapsed(&self) -> Option<u16>;
-        /// Remaining inferno seconds; positive duration suppresses six points of heat dissipation.
-        pub fn inferno_remaining(&self) -> u32;
         /// Core structure, cockpit loss or three engine hits destroy the unit, not its MUX object.
         pub fn is_destroyed(&self) -> bool;
         /// Administrator-controlled observer mode; cockpit pilots cannot enable it through radio settings.

@@ -73,7 +73,7 @@ mod gyro;
 mod mass;
 pub use mass::Mass;
 mod stacking;
-pub use stacking::{StackingEntry, StackingInput, StackingRules, resolve_stacking};
+pub use stacking::{StackingEntry, StackingInput, resolve_stacking};
 mod preferences;
 mod water_movement;
 pub use preferences::set_auto_fall;
@@ -130,7 +130,7 @@ mod jump_fields;
 mod jump_flight;
 pub use free_fall::{FreeFall, FreeFallStep};
 pub(crate) mod jumping;
-pub use hit::{Hit, HitArc, HitRules, HitTable};
+pub use hit::{Hit, HitArc, HitTable, resolve_hit};
 pub use impact::{CrewCasualty, ImpactEffect, ImpactReport, explode_ammunition, resolve_impact};
 pub use jump::{JumpCapacity, JumpPath, JumpSample};
 pub use jump_flight::{JumpFlight, JumpOutcome, JumpStep};
@@ -352,7 +352,7 @@ mod shot;
 mod shot_transaction;
 mod validation_contacts;
 mod validation_context;
-pub use shot::{GlancingMode, MechShotReport, RecoilReport, ShotReport, ShotRules, resolve_shot};
+pub use shot::{MechShotReport, RecoilReport, ShotReport, ShotRules, resolve_shot};
 
 mod magma;
 mod piloting;
@@ -362,11 +362,13 @@ pub use magma::{MagmaSnapshot, advance_magma_action, magma_snapshot};
 mod vehicle_arcs;
 pub use vehicle_arcs::VehicleMountArcs;
 mod vehicle_control_damage;
-pub use vehicle_control_damage::{VehicleControlHit, damage_vehicle_controls};
+pub use vehicle_control_damage::{
+    VehicleControlHit, VehicleControlOutcome, damage_vehicle_controls,
+};
 mod vehicle_critical_table;
 pub use vehicle_critical_table::{
-    VehicleCriticalEffect, VehicleCriticalReport, VehicleCriticalRules, VehicleCriticalTable,
-    roll_vehicle_critical,
+    VehicleCriticalEffect, VehicleCriticalReport, VehicleCriticalRules, roll_vehicle_critical,
+    roll_vehicle_critical_modified,
 };
 mod vehicle_critical;
 pub use vehicle_critical::{destroy_vehicle_critical, select_vehicle_weapon_critical};
@@ -376,7 +378,8 @@ mod vehicle_hit;
 mod vehicle_piloting;
 mod vehicle_turret;
 pub use piloting::{PilotNotice, PilotingCheck, roll_piloting};
-pub use vehicle_hit::{VehicleHit, VehicleHitRules, VehicleMotiveHit};
+pub use vehicle_hit::{VehicleHit, VehicleMotiveHit};
+pub use vehicle_motive_effects::MotiveSystemDamage;
 pub use vehicle_turret::{lock_vehicle_turret, set_turret, turret_readout};
 
 mod fall;
@@ -386,7 +389,7 @@ pub(crate) mod stand;
 pub use stand::{StandAttempt, StandMode, StandTimer, advance_standing, begin_stand, stand_target};
 
 mod stagger;
-pub use stagger::{Stagger, StaggerHit, StaggerMode, StaggerReport, StaggerRules, advance_stagger};
+pub use stagger::{Stagger, StaggerReport, StaggerRules, advance_stagger};
 
 mod flooding;
 pub use flooding::flood_unit;
@@ -695,9 +698,6 @@ mod mine_blast;
 pub use evacuation::resolve_mine_blast_action;
 pub use mine_blast::{MineBlastHit, MineBlastReport, resolve_mine_blast};
 
-mod inferno;
-pub use inferno::{advance_inferno_burns, apply_inferno_burn, extinguish_inferno_in_water};
-
 mod inferno_hit;
 pub use inferno_hit::{InfernoHit, resolve_inferno_hit};
 
@@ -937,8 +937,6 @@ pub use vehicle_turret::{begin_vehicle_turret_repair, jam_vehicle_turret};
 mod vehicle_critical_resolution;
 pub use vehicle_critical_resolution::{VehicleCriticalResolution, resolve_vehicle_critical};
 
-pub use vehicle_weapon_failure::{VehicleMainWeaponJam, jam_vehicle_main_weapon};
-
 mod vehicle_ammunition_cascade;
 pub use vehicle_ammunition_cascade::{
     VehicleAmmunitionCascade, discharge_vehicle_ammunition_cascade,
@@ -954,7 +952,10 @@ mod vehicle_armor_damage;
 pub use vehicle_armor_damage::{VehicleArmorDamage, VehicleArmorHit, resolve_vehicle_armor_damage};
 
 mod vehicle_impact;
-pub use vehicle_impact::{VehicleImpact, VehicleImpactRules, resolve_vehicle_impact};
+pub use vehicle_impact::{
+    GLANCING_CRITICAL_MODIFIER, ROTOR_DAMAGE_DIVISOR, VehicleImpact, VehicleImpactRules,
+    resolve_vehicle_impact,
+};
 
 mod vehicle_aim;
 
@@ -980,18 +981,17 @@ mod crew_recovery;
 
 pub(crate) mod vehicle_burning;
 pub use vehicle_burning::{
-    VehicleFireTick, VehicleHeatExposure, VehicleInfernoHit, advance_vehicle_fires,
-    begin_vehicle_extinguishing, begin_vehicle_extinguishing_action, resolve_vehicle_heat_exposure,
+    INFERNO_CRITICAL_MODIFIER, VehicleFireTick, VehicleHeatExposure, VehicleInfernoCritical,
+    VehicleInfernoHit, advance_vehicle_fires, resolve_vehicle_heat_exposure,
     resolve_vehicle_inferno_hit,
 };
 
 mod vehicle_injuries;
 mod vehicle_motive_effects;
 pub use evacuation::{
-    advance_vehicle_fires_action, resolve_vehicle_fire_exposure_action,
-    resolve_vehicle_heat_exposure_action, resolve_vehicle_inferno_hit_action,
+    advance_vehicle_fires_action, resolve_vehicle_heat_exposure_action,
+    resolve_vehicle_inferno_hit_action,
 };
-pub use vehicle_burning::{VehicleFireEffects, VehicleFireExposure, resolve_vehicle_fire_exposure};
 
 mod fall_profile;
 mod vehicle_fall;
@@ -1013,7 +1013,6 @@ mod terrain_control;
 mod transport_loss;
 
 mod vtol_hit;
-pub use vtol_hit::VtolHitLocation;
 pub use vtol_hit::{RotorHit, VtolHit};
 
 mod rotor_damage;
@@ -1126,21 +1125,13 @@ pub use automatic_turret::{
     advance_battle_automatic_turrets, automatic_turrets_pending, toggle_battle_automatic_turret,
 };
 
-mod reactor_explosion;
-pub use reactor_explosion::{ReactorBlastHit, ReactorExplosion, reactor_explosion_action};
-
 pub(crate) mod self_destruct;
 pub use self_destruct::{
-    SelfDestruct, SelfDestructOutcome, advance_battle_self_destructs_action, self_destruct_action,
-    self_destructs_pending,
+    SELF_DESTRUCT_DELAY, SelfDestruct, SelfDestructOutcome, advance_battle_self_destructs_action,
+    self_destruct_action, self_destructs_pending,
 };
 
 pub use self_destruct::set_battle_self_destruct_safe;
-
-pub(crate) mod reactor_instability;
-pub use reactor_instability::{
-    advance_battle_reactor_windows, configure_battle_reactor_policy, reactor_windows_pending,
-};
 
 pub(crate) mod wreck_cleanup;
 pub use wreck_cleanup::{advance_battle_wrecks_action, wrecks_pending};

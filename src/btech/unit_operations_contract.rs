@@ -85,7 +85,7 @@ pub(crate) fn apply_unit_damage_action(
                         let state = &world.btech.constructed_units()[&id];
                         let mut dice = state.dice.clone();
                         let roll = dice.generic_roll();
-                        let hit = rules.hit.resolve(state, arc, roll, &mut dice)?;
+                        let hit = super::resolve_hit(state, arc, roll, &mut dice)?;
                         (hit, dice)
                     };
                     hit.rear_armor = rear;
@@ -157,7 +157,6 @@ pub(crate) fn apply_unit_damage_action(
                             section,
                             rear_armor: rear,
                             through_armor_critical: request.critical,
-                            crew_stun: false,
                         },
                         amount,
                     )?;

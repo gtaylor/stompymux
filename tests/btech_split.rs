@@ -213,7 +213,6 @@ async fn split_gauss_explosion_origin_case_and_restart() {
         section: LeftTorso,
         rear_armor: false,
         through_armor_critical: true,
-        crew_stun: false,
     };
     for seed in 0..=255 {
         base.btech
@@ -414,8 +413,10 @@ fn critical_stream(unit: &Mech, location: CriticalLocation, weapon_roll: Option<
             trial.two_d6(); // Material entry precedes critical selection.
             (matches!(trial.two_d6(), 8 | 9)
                 && trial.die(candidates.len() as u16).unwrap() == selected
-                && weapon_roll.is_none_or(|roll| trial.two_d6() == roll))
-            .then_some(dice)
+                && weapon_roll.is_none_or(|roll| trial.two_d6() == roll)
+                // The penetrating damage's own Determining Critical Hits roll scores nothing.
+                && trial.two_d6() < 8)
+                .then_some(dice)
         })
         .expect("seed for the requested critical sequence")
 }
@@ -455,7 +456,6 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                 section: extension,
                 rear_armor: false,
                 through_armor_critical: true,
-                crew_stun: false,
             };
             for (step, roll) in [Some(5), Some(6), Some(2), Some(2), Some(12), None]
                 .into_iter()

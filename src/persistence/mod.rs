@@ -27,7 +27,6 @@ mod btech_object_order;
 mod btech_part_costs;
 mod btech_player_configuration;
 mod btech_points_of_interest;
-mod btech_reactor;
 mod btech_recovery;
 mod btech_regions;
 mod btech_static_decorations;
@@ -78,7 +77,6 @@ const TABLES: &[&str] = &[
     "btech_tows",
     "btech_wrecks",
     "btech_character_recovery",
-    "btech_reactor_clock",
     "btech_autopilot_controllers",
     "btech_autopilot_controller_orders",
     "btech_autopilot_controller_waypoints",

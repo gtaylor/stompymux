@@ -176,16 +176,13 @@ async fn detached_vehicle_keeps_the_scheduler_awake() {
         firing::fixture_with_target(source, None, source).await;
     remove_battle_map_membership(&mut world, other).unwrap();
     advance_battle_units(&mut world, 0, true);
-    for _ in 0..31 {
-        advance_battle_reactor_windows(&mut world);
-    }
     remove_battle_map_membership(&mut world, unit).unwrap();
-    let stats = battle_runtime_stats(&world, &config, ObjectId(1)).unwrap();
+    let stats = battle_runtime_stats(&world, ObjectId(1)).unwrap();
     assert_eq!(stats.scanner_observers, 0);
     assert!(stats.simulation_pending);
     advance_battle_units(&mut world, 0, true);
     assert!(
-        !battle_runtime_stats(&world, &config, ObjectId(1))
+        !battle_runtime_stats(&world, ObjectId(1))
             .unwrap()
             .simulation_pending
     );

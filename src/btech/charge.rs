@@ -8,15 +8,17 @@ use serde::Serialize;
 #[derive(Debug, Clone, Copy)]
 pub struct ChargeRules {
     pub distance: f32,
-    pub new_rules: bool,
-    pub technology_level_three: bool,
     pub physical: PhysicalRules,
 }
 
-/// Read-only collision calculation using current mass, velocity and pilot skills.
+/// Read-only collision calculation using tonnage, distance travelled and pilot skills.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ChargeProfile {
     pub target_number: i32,
+    /// The attacker's Piloting Skill less the target's (Total Warfare p. 144).
+    pub skill: i32,
+    /// Woods and smoke over the target's hex.
+    pub terrain: u8,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -65,17 +67,11 @@ const RECOVERY: [MechSection; 6] = [
     MechSection::RightTorso,
 ];
 
-/// Match the collision formula's single-precision arithmetic and truncation toward zero.
-fn collision_damage(
-    speed: f32,
-    opponent_speed: f32,
-    heading_difference: f32,
-    mass: u32,
-    divisor: f32,
-    bonus: f32,
-) -> i32 {
-    let relative = speed - opponent_speed * heading_difference.to_radians().cos();
-    (relative * 0.093_023_3 * (mass as f32 + 5.0) / divisor + bonus) as i32
+/// Charge damage: the attacker's tonnage over ten for every hex it moved, rounded up (Total
+/// Warfare p. 148). The realtime engine counts whole hexes of tracked travel.
+pub(super) fn charge_damage(tons: u16, hexes: u32) -> Result<u16> {
+    u16::try_from((u32::from(tons) * hexes).div_ceil(10))
+        .context("Charge damage exceeds supported range")
 }
 
 /// A participant's role selects the characterized one-way or mutual arithmetic.
@@ -86,20 +82,17 @@ enum ChargeRole {
     Second,
 }
 
-/// One-way defenders use control skill; mutual collisions compare raw piloting skills.
+/// The difference between the two pilots' Piloting Skill Ratings, added to the attack (Total
+/// Warfare p. 144). Physical attacks are not Piloting Skill Rolls, so chassis and damage
+/// modifiers to those rolls play no part.
 fn charge_skill_difference(
     world: &World,
     attacker: ObjectId,
     target: ObjectId,
     extended: bool,
-    role: ChargeRole,
 ) -> Result<i32> {
     let attack = unit_piloting_target(world, attacker, extended)?;
-    let defense = if role == ChargeRole::OneWay {
-        super::skills::control_target(world, target, extended)?
-    } else {
-        unit_piloting_target(world, target, extended)?
-    };
+    let defense = unit_piloting_target(world, target, extended)?;
     Ok(i32::from(attack) - i32::from(defense))
 }
 
@@ -250,52 +243,54 @@ fn charge_profile_for(
         .pilot()
         .and_then(|pilot| world.btech.character_values().get(&pilot))
         .is_some_and(|values| super::advantages::enabled(values, "Melee_Specialist"));
-    let speed = if rules.new_rules {
-        rules.distance * 10.75
-    } else {
-        motion.speed as f32
-    };
-    let heading_difference = (motion.heading as i32 - opponent.heading as i32) as f32;
+    let tons = source.definition().tons;
+    // The second unit of a mutual charge has no run-up of its own: the realtime extension
+    // credits it one point per ten tons.
+    // Contact comes before the charger finishes entering the target's hex, so a unit in
+    // motion is credited with at least the hex it collides in.
     let inflicted = if role == ChargeRole::Second {
-        ((source.effective_mass()? / 1024 + 5) / 10) as i32
+        tons.div_ceil(10)
     } else {
-        collision_damage(
-            speed,
-            opponent.speed as f32,
-            heading_difference,
-            source.effective_mass()? / 1024,
-            10.0,
-            if role == ChargeRole::OneWay { 1.0 } else { 0.0 },
-        )
-    } + i32::from(specialist);
+        charge_damage(tons, (rules.distance as u32).max(1))?
+    } + u16::from(specialist);
     ensure!(
         inflicted > 0,
-        "Your target pulls away from you and you are unable to charge it."
+        "You have not covered enough ground to charge."
     );
-    let recoil_mass =
-        if role == ChargeRole::First && rules.new_rules && rules.technology_level_three {
-            source.effective_mass()? / 1024
-        } else {
-            victim.effective_mass()? / 1024
-        };
-    let received = recoil_damage(source, victim, recoil_mass, rules)?;
+    let received = recoil_damage(victim.definition().tons);
     let movement = i16::from(source.attacker_movement_modifier(rules.physical.fasa_turning));
-    let target_number =
-        5 + charge_skill_difference(
-            world,
-            attacker,
-            target,
-            rules.physical.fall.extended_piloting,
-            role,
-        )? + i32::from(if specialist {
+    let skill = charge_skill_difference(
+        world,
+        attacker,
+        target,
+        rules.physical.fall.extended_piloting,
+    )?;
+    // Woods and smoke over the target's hex obscure it, light counting one and heavy two.
+    let target_position = victim.position().context("Target is not placed")?;
+    let obscured = world
+        .btech
+        .maps()
+        .get(&target_position.map)
+        .context("Map not found")?
+        .hex(i64::from(target_position.x), i64::from(target_position.y))?;
+    let terrain = obscured.woods_density() + obscured.smoke_density();
+    let target_number = i32::from(unit_piloting_target(
+        world,
+        attacker,
+        rules.physical.fall.extended_piloting,
+    )?) + skill
+        + i32::from(if specialist {
             (movement - 1).min(0)
         } else {
             movement
-        }) + i32::from(super::aim::ground_physical_target_modifier(
+        })
+        + i32::from(super::aim::ground_physical_target_modifier(
             world,
             victim,
             rules.physical.extended_movement,
-        )) + i32::from(super::light_aim::modifier(world, target, true)?);
+        ))
+        + i32::from(terrain)
+        + i32::from(super::light_aim::modifier(world, target, true)?);
     ensure!(
         target_number <= 12,
         "Charge: BTH {target_number}\tYou choose not to charge."
@@ -303,40 +298,19 @@ fn charge_profile_for(
     let reverse = unit_range(world, target, attacker)?;
     Ok(ChargeProfile {
         target_number,
-        inflicted_damage: u16::try_from(inflicted)
-            .context("Charge damage exceeds supported range")?,
+        skill,
+        terrain,
+        inflicted_damage: inflicted,
         received_damage: received,
-        target_arc: HitArc::from_bearing(
-            reverse.bearing.unwrap_or(180.0),
-            opponent.heading,
-            rules.physical.hit_arc_mode,
-        )?,
-        attacker_arc: HitArc::from_bearing(
-            range.bearing.unwrap_or(180.0),
-            motion.heading,
-            rules.physical.hit_arc_mode,
-        )?,
+        target_arc: HitArc::from_bearing(reverse.bearing.unwrap_or(180.0), opponent.heading)?,
+        attacker_arc: HitArc::from_bearing(range.bearing.unwrap_or(180.0), motion.heading)?,
     })
 }
 
-/// Recoil uses current relative motion with the collision's sampled tonnage.
-fn recoil_damage(source: &Mech, victim: &Mech, mass: u32, rules: ChargeRules) -> Result<u16> {
-    let damage = if rules.new_rules && rules.technology_level_three {
-        let motion = source.motion().context("Unit is not placed")?;
-        let opponent = victim.motion().context("Target is not placed")?;
-        collision_damage(
-            rules.distance * 10.75,
-            opponent.speed as f32,
-            (motion.heading as i32 - opponent.heading as i32) as f32,
-            mass,
-            20.0,
-            0.0,
-        )
-        .max(0)
-    } else {
-        ((mass + 5) / 10) as i32
-    };
-    u16::try_from(damage).context("Charge recoil exceeds supported range")
+/// The charging unit takes one point per ten tons of its target, rounded up (Total Warfare
+/// p. 148).
+fn recoil_damage(tons: u16) -> u16 {
+    tons.div_ceil(10)
 }
 
 /// Applied packets and their pre-damage experience awards.
@@ -347,11 +321,14 @@ struct ChargePackets {
 }
 
 /// Apply independently located packets in order, including normal damage/crew/fall cascades.
+/// `table` is the Hit Location Table for a standing target; a prone one always uses the
+/// ordinary table.
 fn packets(
     world: &mut World,
     id: ObjectId,
     mut damage: u16,
     arc: HitArc,
+    table: HitTable,
     rules: FallRules,
     attack: (ObjectId, bool),
 ) -> Result<ChargePackets> {
@@ -362,8 +339,16 @@ fn packets(
     while damage > 0 {
         let unit = &world.btech.constructed_units()[&id];
         let mut dice = unit.dice.clone();
-        let roll = dice.generic_roll();
-        let hit = rules.hit.resolve(unit, arc, roll, &mut dice)?;
+        let hit = if table == HitTable::Weapon || unit.posture() == Posture::Prone {
+            let roll = dice.generic_roll();
+            super::resolve_hit(unit, arc, roll, &mut dice)?
+        } else {
+            Hit {
+                section: table.location(unit.chassis(), arc, dice.d6())?,
+                rear_armor: arc == HitArc::Rear,
+                through_armor_critical: false,
+            }
+        };
         world.btech.constructed.get_mut(&id).unwrap().dice = dice;
         let amount = damage.min(5);
         if character
@@ -444,7 +429,7 @@ fn resolve_charge_inner(
     let unit = candidate.btech.constructed.get_mut(&attacker).unwrap();
     unit.facing.torso = unit.facing.torso.restored_after_forward_arc();
     let roll = unit.dice.generic_roll();
-    let recoil_mass = world.btech.constructed_units()[&target].effective_mass()? / 1024;
+    let recoil_tons = world.btech.constructed_units()[&target].definition().tons;
     let report = resolve_prepared(
         &mut candidate,
         PreparedCharge {
@@ -455,11 +440,111 @@ fn resolve_charge_inner(
             roll,
             role: ChargeRole::OneWay,
             character,
-            recoil_mass,
+            recoil_tons,
+            target_table: HitTable::Weapon,
         },
     )?;
     *world = candidate;
     Ok(report)
+}
+
+/// Unintentional charge target number: Piloting +3 (Total Warfare p. 63).
+const UNINTENTIONAL_CHARGE_MODIFIER: i32 = 3;
+
+/// A 'Mech skidding into another 'Mech's hex charges it unintentionally (Total Warfare p. 63):
+/// Piloting +3 with the movement, terrain and light modifiers but no skill comparison, damage
+/// of tonnage over ten for every hex moved before the skid, on the Kick Location Table against
+/// a standing 'Mech. Vehicles and other occupants are not charged and return `None`. The
+/// skidder lies prone already, so only the target's +2 check can knock anyone down.
+pub(super) fn resolve_skid_charge(
+    world: &mut World,
+    attacker: ObjectId,
+    target: ObjectId,
+    hexes: u32,
+    rules: FallRules,
+    character: bool,
+) -> Result<Option<ChargeReport>> {
+    let Some(victim) = world.btech.constructed_units().get(&target) else {
+        return Ok(None);
+    };
+    if victim.is_destroyed() || victim.airborne() || victim.free_fall().is_some() {
+        return Ok(None);
+    }
+    if world
+        .objects
+        .get(&target)
+        .is_none_or(|object| object.flags.contains(Flag::Going))
+        || (!character && world.objects[&target].flags.contains(Flag::InCharacter))
+    {
+        return Ok(None);
+    }
+    let source = &world.btech.constructed_units()[&attacker];
+    let inflicted = charge_damage(source.definition().tons, hexes)?;
+    let recoil_tons = victim.definition().tons;
+    let target_position = victim.position().context("Target is not placed")?;
+    let obscured = world
+        .btech
+        .maps()
+        .get(&target_position.map)
+        .context("Map not found")?
+        .hex(i64::from(target_position.x), i64::from(target_position.y))?;
+    let terrain = obscured.woods_density() + obscured.smoke_density();
+    let target_number = i32::from(unit_piloting_target(
+        world,
+        attacker,
+        rules.extended_piloting,
+    )?) + UNINTENTIONAL_CHARGE_MODIFIER
+        + i32::from(source.attacker_movement_modifier(false))
+        + i32::from(super::aim::ground_physical_target_modifier(
+            world, victim, false,
+        ))
+        + i32::from(terrain)
+        + i32::from(super::light_aim::modifier(world, target, true)?);
+    let range = unit_range(world, attacker, target)?;
+    let reverse = unit_range(world, target, attacker)?;
+    let heading = source.motion().context("Unit is not placed")?.heading;
+    let profile = ChargeProfile {
+        target_number,
+        skill: 0,
+        terrain,
+        inflicted_damage: inflicted,
+        received_damage: recoil_damage(recoil_tons),
+        target_arc: HitArc::from_bearing(
+            reverse.bearing.unwrap_or(180.0),
+            victim.motion().context("Target is not placed")?.heading,
+        )?,
+        attacker_arc: HitArc::from_bearing(range.bearing.unwrap_or(180.0), heading)?,
+    };
+    let roll = world
+        .btech
+        .constructed
+        .get_mut(&attacker)
+        .unwrap()
+        .dice
+        .generic_roll();
+    let physical = PhysicalRules {
+        fasa_turning: false,
+        extended_movement: false,
+        fall: rules,
+    };
+    let report = resolve_prepared(
+        world,
+        PreparedCharge {
+            attacker,
+            target,
+            profile,
+            rules: ChargeRules {
+                distance: hexes as f32,
+                physical,
+            },
+            roll,
+            role: ChargeRole::OneWay,
+            recoil_tons,
+            target_table: HitTable::Kick,
+            character,
+        },
+    )?;
+    Ok(Some(report))
 }
 
 /// Frozen eligibility and roll with phase-specific rules; the outer transaction owns sequencing.
@@ -470,7 +555,9 @@ struct PreparedCharge {
     rules: ChargeRules,
     roll: u8,
     role: ChargeRole,
-    recoil_mass: u32,
+    recoil_tons: u16,
+    /// Hit Location Table for the target's packets while it stands.
+    target_table: HitTable,
     character: bool,
 }
 
@@ -483,7 +570,8 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
         rules,
         roll,
         role,
-        recoil_mass,
+        recoil_tons,
+        target_table,
         character,
     } = prepared;
     world.attempt(|world| {
@@ -493,11 +581,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
                 .motion()
                 .context("Target is not placed")?
                 .heading;
-            profile.target_arc = HitArc::from_bearing(
-                range.bearing.unwrap_or(180.0),
-                heading,
-                rules.physical.hit_arc_mode,
-            )?;
+            profile.target_arc = HitArc::from_bearing(range.bearing.unwrap_or(180.0), heading)?;
         }
         let hit = i32::from(roll) >= profile.target_number;
         let target_number = profile.target_number;
@@ -551,18 +635,14 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
                 target,
                 report.profile.inflicted_damage,
                 report.profile.target_arc,
+                target_table,
                 target_rules,
                 (attacker, character),
             )?;
             report.target_impacts = target_packets.impacts;
             report.experience = target_packets.experience;
             report.experience_messages = target_packets.experience_messages;
-            report.received_damage = recoil_damage(
-                &world.btech.constructed_units()[&attacker],
-                &world.btech.constructed_units()[&target],
-                recoil_mass,
-                rules,
-            )?;
+            report.received_damage = recoil_damage(recoil_tons);
             if role == ChargeRole::Second {
                 report.received_damage =
                     report.received_damage / 5 * 5 + report.profile.inflicted_damage % 5;
@@ -572,17 +652,14 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
                 .motion()
                 .context("Unit is not placed")?
                 .heading;
-            let recoil_arc = HitArc::from_bearing(
-                range.bearing.unwrap_or(180.0),
-                heading,
-                rules.physical.hit_arc_mode,
-            )?;
+            let recoil_arc = HitArc::from_bearing(range.bearing.unwrap_or(180.0), heading)?;
             report.recoil_arc = Some(recoil_arc);
             report.attacker_impacts = packets(
                 world,
                 attacker,
                 report.received_damage,
                 recoil_arc,
+                HitTable::Weapon,
                 attacker_rules,
                 (attacker, character),
             )?
@@ -836,26 +913,16 @@ fn resolve_mutual_charge_inner(
                 });
             }
         }
-        let first_mass = world.btech.constructed_units()[&first].effective_mass()? / 1024;
-        let second_mass = world.btech.constructed_units()[&second].effective_mass()? / 1024;
+        let first_tons = world.btech.constructed_units()[&first].definition().tons;
+        let second_tons = world.btech.constructed_units()[&second].definition().tons;
         for (index, profile) in profiles.into_iter().enumerate() {
             let Ok(profile) = profile else {
                 continue;
             };
-            let (attacker, target, role, rules, recoil_mass) = if index == 0 {
-                (
-                    first,
-                    second,
-                    ChargeRole::First,
-                    rules,
-                    if rules.new_rules && rules.technology_level_three {
-                        first_mass
-                    } else {
-                        second_mass
-                    },
-                )
+            let (attacker, target, role, rules, recoil_tons) = if index == 0 {
+                (first, second, ChargeRole::First, rules, second_tons)
             } else {
-                (second, first, ChargeRole::Second, second_rules, first_mass)
+                (second, first, ChargeRole::Second, second_rules, first_tons)
             };
             let collision = resolve_prepared(
                 &mut candidate,
@@ -866,7 +933,8 @@ fn resolve_mutual_charge_inner(
                     rules,
                     roll: report.attempts[index].roll.unwrap(),
                     role,
-                    recoil_mass,
+                    recoil_tons,
+                    target_table: HitTable::Weapon,
                     character,
                 },
             )?;
@@ -889,9 +957,10 @@ fn resolve_mutual_charge_inner(
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// Chassis bonuses affect only the defender of a one-way charge, including after serialization.
+    /// The skill comparison reads raw Piloting Skill Ratings for either chassis, before and
+    /// after serialization: Piloting Skill Roll modifiers never touch a physical attack.
     #[test]
-    fn charge_roles_distinguish_raw_and_control_skill() {
+    fn charge_skill_difference_ignores_chassis_bonuses() {
         let template = MechTemplate::parse(
             "JR7-D",
             include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
@@ -913,38 +982,26 @@ mod tests {
                 let restored: World =
                     serde_json::from_value(serde_json::to_value(&world).unwrap()).unwrap();
                 for extended in [false, true] {
-                    for role in [ChargeRole::OneWay, ChargeRole::First, ChargeRole::Second] {
-                        let expected = if role == ChargeRole::OneWay && target == "Quad" {
-                            2
-                        } else {
-                            0
-                        };
-                        for state in [&world, &restored] {
-                            assert_eq!(
-                                charge_skill_difference(
-                                    state,
-                                    ObjectId(41),
-                                    ObjectId(42),
-                                    extended,
-                                    role
-                                )
+                    for state in [&world, &restored] {
+                        assert_eq!(
+                            charge_skill_difference(state, ObjectId(41), ObjectId(42), extended)
                                 .unwrap(),
-                                expected
-                            );
-                        }
+                            0
+                        );
                     }
                 }
             }
         }
     }
 
-    /// Relative headings, actual mass and truncation affect damage independently of the movement owner.
+    /// Tonnage over ten per hex moved, rounded up; recoil is the target's tonnage over ten.
     #[test]
-    fn relative_collision_damage_rounding() {
-        assert_eq!(collision_damage(21.5, 0.0, 0.0, 35, 10.0, 1.0), 9);
-        assert_eq!(collision_damage(21.5, 21.5, 0.0, 35, 10.0, 1.0), 1);
-        assert_eq!(collision_damage(21.5, 21.5, 180.0, 35, 10.0, 1.0), 17);
-        assert_eq!(collision_damage(10.75, 21.5, 0.0, 35, 10.0, 1.0), -3);
-        assert_eq!(collision_damage(21.5, 0.0, 0.0, 35, 20.0, 0.0), 4);
+    fn charge_damage_follows_tonnage_and_hexes() {
+        assert_eq!(charge_damage(65, 5).unwrap(), 33);
+        assert_eq!(charge_damage(35, 4).unwrap(), 14);
+        assert_eq!(charge_damage(35, 1).unwrap(), 4);
+        assert_eq!(charge_damage(35, 0).unwrap(), 0);
+        assert_eq!(recoil_damage(65), 7);
+        assert_eq!(recoil_damage(20), 2);
     }
 }

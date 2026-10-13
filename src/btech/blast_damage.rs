@@ -35,6 +35,8 @@ pub(super) struct BlastCell {
 /// Live target facts sampled immediately before its packets, after earlier targets' effects.
 pub(super) struct BlastTarget {
     pub arc: HitArc,
+    /// The target's level in the blast cell.
+    pub elevation: i32,
     pub character: bool,
     pub rules: FallRules,
 }
@@ -76,6 +78,7 @@ impl BlastCell {
         rules.vehicle_impact.criticals.toughness |= rules.toughness;
         Ok(Some(BlastTarget {
             arc: blast_arc(bearing, motion.heading),
+            elevation,
             character: object.flags.contains(Flag::InCharacter),
             rules,
         }))
@@ -88,6 +91,8 @@ pub(super) struct BlastDamage {
     pub packet_size: u8,
     pub table: HitTable,
     pub arc: HitArc,
+    /// Inferno missiles reaching the target: two heat points each on a 'Mech, within the
+    /// turn's fifteen-point cap on outside heat (Total Warfare p. 159); a vehicle's fire check.
     pub heat: i32,
     pub character: bool,
     /// Artillery is area-effect damage; mines and reactor blasts are ordinary.
@@ -98,6 +103,8 @@ pub(super) struct BlastDamage {
 pub(super) struct BlastEffects {
     pub impacts: Vec<BlastImpact>,
     pub vehicle_heat: Option<VehicleHeatExposure>,
+    /// Heat a 'Mech took from the blast's infernos.
+    pub mech_heat: u8,
     pub burn_seconds: i64,
     pub notices: Vec<Notice>,
     /// Packet-local private messages offset into this occupant's notice stream.
@@ -120,6 +127,7 @@ pub(super) fn resolve(
     let mut effects = BlastEffects {
         impacts: Vec::new(),
         vehicle_heat: None,
+        mech_heat: 0,
         burn_seconds: 0,
         notices: Vec::new(),
         pilot_notices: Vec::new(),
@@ -158,9 +166,16 @@ pub(super) fn resolve(
         effects.notices.extend(heat.notices.clone());
         append_broadcasts(&before, &mut effects.notices, &heat.broadcasts);
         effects.vehicle_heat = Some(heat);
-    } else if request.heat != 0 {
-        effects.burn_seconds = i64::from(request.heat) * 6;
-        super::inferno::adjust_burn(world, id, effects.burn_seconds)?;
+    } else if request.heat > 0 {
+        // Infernos heat a 'Mech rather than setting it alight: two points a missile, as many
+        // as the turn's outside-heat cap admits.
+        let missiles = u8::try_from(request.heat.min(i32::from(u8::MAX / 2))).unwrap_or(0);
+        effects.mech_heat = world
+            .btech
+            .constructed
+            .get_mut(&id)
+            .context("Blast target is unavailable")?
+            .absorb_outside_heat(2 * missiles);
     }
     Ok(effects)
 }
@@ -207,7 +222,7 @@ pub(super) fn resolve_packet(
     let mut dice = unit.dice.clone();
     let location = if request.table == HitTable::Weapon {
         let roll = dice.generic_roll();
-        let mut location = rules.hit.resolve(unit, request.arc, roll, &mut dice)?;
+        let mut location = super::resolve_hit(unit, request.arc, roll, &mut dice)?;
         location.rear_armor = rear;
         location
     } else {
@@ -217,7 +232,6 @@ pub(super) fn resolve_packet(
                 .location(unit.chassis(), request.arc, dice.d6())?,
             rear_armor: rear,
             through_armor_critical: false,
-            crew_stun: false,
         }
     };
     world.btech.constructed.get_mut(&id).unwrap().dice = dice;

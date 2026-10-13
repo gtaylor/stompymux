@@ -273,12 +273,6 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
     .unwrap();
     let rules = FallRules {
         vehicle_impact: VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
         extended_piloting: true,
         toughness: false,
     };

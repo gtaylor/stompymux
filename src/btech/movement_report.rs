@@ -9,6 +9,8 @@ pub(super) struct MovementReport {
     pub experience_messages: Vec<super::DiagnosticMessage>,
     pub dfas: Vec<super::DfaReport>,
     pub charges: Vec<super::ChargeReport>,
+    /// Surface collapses caused by skids into buildings.
+    pub surface_breaks: Vec<super::SurfaceBreak>,
     pub notices: Vec<super::Notice>,
     pub character_injuries: Vec<super::CharacterPilotInjury>,
     pub mines: Vec<super::MineEventReport>,
@@ -58,6 +60,7 @@ impl MovementReport {
         self.experience_messages.extend(other.experience_messages);
         self.dfas.extend(other.dfas);
         self.charges.extend(other.charges);
+        self.surface_breaks.extend(other.surface_breaks);
         self.notices.extend(other.notices);
         self.character_injuries.extend(other.character_injuries);
         self.mines.extend(other.mines);

@@ -255,21 +255,12 @@
 //|---@field remaining integer Settling seconds, 0..8; zero does not establish visibility.
 // lua-types-end
 
-// lua-types-begin btech 00045
-//|---@class StaggerHit
-//|---@field damage integer
-//|---@field remaining integer Seconds until this incoming damage group expires.
-//|---@field counted boolean Whether a rolling check already used this group.
-// lua-types-end
-
 // lua-types-begin btech 00046
 //|---@class Stagger
-//|---@field action_damage integer Restored signed action-time scalar, independent of incoming damage history.
-//|---@field hits StaggerHit[]
-//|---@field elapsed integer Committed seconds since the last rolling check.
-//|---@field turn_damage integer Unchecked traditional damage.
+//|---@field action_damage integer Restored signed action-time scalar, independent of the turn's damage total.
+//|---@field turn_damage integer Damage taken since the current turn's check; twenty or more forces a piloting check.
 //|---@field phase integer Saved per-unit turn phase, 0 through 29.
-//|---@field checked_phase integer? Phase of the previous traditional check.
+//|---@field checked_phase integer? Phase of the previous check.
 // lua-types-end
 
 // lua-types-begin btech 00047
@@ -354,7 +345,6 @@
 //|---@field hex_sync_pending boolean A collision interrupted synchronization of motion.point and position.
 //|---@field elevation integer|nil Current signed altitude with terrain-effect jump rounding; nil when unplaced.
 //|---@field stand_timer StandTimer?
-//|---@field reactor_instability_remaining integer? Damage window ticks remaining; nil uses initial world startup grace.
 //|---@field triple_myomer_active boolean Derived from installed myomer and sampled excess heat.
 //|---@field movement_maximum_speed number Current throttle ceiling, including active myomer.
 //|---@field charge {target: integer?, elapsed: integer, distance: number} Persistent charge intent and movement counters.
@@ -384,8 +374,8 @@
 //|---@field facing {torso: "left"|"center"|"right"|"both", arms_flipped: boolean}
 //|---@field stun_remaining integer Remaining seconds of cockpit stun.
 //|---@field pilot_injuries integer Tactical injury count; six means scenario pilot loss.
-//|---@field self_destruct {remaining: integer, ammunition: boolean}|nil Admitted timer and its actual Mech detonation mode.
-//|---@field self_destruct_safe boolean Scenario protection from new ammunition self-destruct requests.
+//|---@field self_destruct {remaining: integer}|nil Admitted ammunition self-destruct countdown.
+//|---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
 //|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown; random state stays private.
 //|---@field character_pilot {injuries: integer, killed: boolean}? Saved character-mode injury status; character health determines death.
@@ -393,8 +383,7 @@
 //|---@field last_jump {heading: integer, length: integer} Current course bearing and signed length in field units, retained after landing.
 //|---@field heat_sample {production: number, dissipation: number} Last committed thermal sample; production includes stored weapon heat.
 //|---@field heat {stored: number, excess: number} Weapon heat (possibly negative coolant credit until the next sample) and sampled excess heat.
-//|---@field inferno_remaining integer Saved burn seconds; cooling is reduced by six while positive.
-//|---@field overheat_clock {elapsed: integer, phase: integer, injury_due: boolean} Saved committed-second thermal checks.
+//|---@field overheat_clock {elapsed: integer, phase: integer, injury_due: boolean, outside_heat: integer} Saved committed-second thermal checks and the turn's absorbed outside heat.
 //|---@field weapon_recycle table<integer, integer> Remaining seconds keyed by zero-based weapon index.
 //|---@field component_failures {location: table, failure: string}[] Nonweapon diagnostic conditions; material damage determines system operation.
 //|---@field weapon_failures table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam"> Temporary conditions by mount index; existing recycle clocks govern recovery.
@@ -468,8 +457,6 @@
 //|---@field visibility {invisible: boolean, clairvoyant: boolean} Operator visibility state.
 //|---@field mass VehicleMass Derived from current material and ammunition; units are 1/1024 ton.
 //|---@field inferno_remaining integer Stationary-unit jelly duration.
-//|---@field burning_sections table<string, integer> Section fire countdowns in seconds.
-//|---@field extinguishing integer|nil Seconds until the crew completes its attempt.
 //|---@field pod_removal integer|nil Remaining seconds of the crew iNarc-removal attempt.
 //|---@field beacons table<string, string[]> Attached effects keyed by surviving vehicle section.
 //|---@field ams_enabled boolean Saved automatic anti-missile defense switch.
@@ -483,8 +470,8 @@
 //|---@field weapon_failures table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam"> Temporary conditions by mount index; existing recycle clocks govern recovery.
 //|---@field crew_stun_remaining integer Seconds until the pending recovery event; zero means none.
 //|---@field crew_stunned boolean Effective crew stun, independent of its timer.
-//|---@field self_destruct {remaining: integer, ammunition: boolean}|nil Admitted timer and its actual Mech detonation mode.
-//|---@field self_destruct_safe boolean Scenario protection from new ammunition self-destruct requests.
+//|---@field self_destruct {remaining: integer}|nil Admitted self-destruct countdown.
+//|---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
 //|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
 //|---@field weapon_heat number Passive weapon heat and coolant credit; ground vehicles do not overheat.
@@ -880,7 +867,6 @@
 //|---@class SectionExposureReport
 //|---@field cause "water"|"vacuum"
 //|---@field section MechSectionName
-//|---@field reactor_explosion table|nil
 //|---@field fall table|nil
 //|---@field notices {unit: integer, text: string}[]
 // lua-types-end
@@ -915,7 +901,7 @@
 // lua-types-begin btech 00184
 //|---@class SalvoGroup
 //|---@field damage integer
-//|---@field hit {section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean, crew_stun: boolean}
+//|---@field hit {section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean}
 //|---@field impact table Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat rolls, searchlight_destroyed and remaining scenario effects.
 //|---@field pilot_injuries table[] Applied tactical injuries and consciousness results.
 //|---@field notices {unit: integer, text: string}[] Already staged by unit.fire.
@@ -927,8 +913,7 @@
 //|---@class InfernoHit
 //|---@field target integer
 //|---@field missiles integer Surviving missiles after interception.
-//|---@field burn_seconds integer Duration added before immersion.
-//|---@field extinguished boolean
+//|---@field heat integer Heat added: two per missile within the turn's fifteen-point outside-heat cap.
 //|---@field notices Notice[]
 // lua-types-end
 
@@ -1007,7 +992,6 @@
 //|---@field mines table Mine activation after the fall damage sequence.
 //|---@field ice_break SurfaceBreak|nil Ice fracture can cause nested water falls for this unit and its neighbors.
 //|---@field flooding SectionExposureReport[]
-//|---@field inferno_notices Notice[]
 //|---@class RecoilReport
 //|---@field experience_messages DiagnosticMessage[] Accepted recoil XP diagnostics published with the shot.
 //|---@field check PilotingCheck
@@ -1101,11 +1085,10 @@
 // lua-types-begin btech 00197
 //|---@class VehicleInfernoHit
 //|---@field missiles integer Surviving missiles after clustering and interception.
-//|---@field explosion_roll integer|nil Standard mobile-vehicle heat check.
+//|---@field criticals table[] One critical roll per missile against a mobile vehicle, at -2.
 //|---@field burn_seconds integer Jelly duration added to a stationary unit.
-//|---@field damage table[] Ordered initial section fire damage.
-//|---@field explosion table|nil Completed heat catastrophe.
 //|---@field notices Notice[] Already staged by firing.
+//|---@field pilot_notices table[] Pilot-only control feedback indexed into the notices.
 //|---@field broadcasts Notice[] Raw damage broadcasts handled by firing.
 // lua-types-end
 
@@ -1704,7 +1687,6 @@
 //|---@class RuntimeStats
 //|---@field simulation_pending boolean Same work predicate as the server's one-second simulation tick.
 //|---@field scanner_observers integer
-//|---@field reactor_startup_remaining integer
 //|---@field artillery_shots integer
 //|---@field maps integer
 //|---@field mechs integer

@@ -70,7 +70,7 @@ async fn vehicles_save_damage_replay_and_purge_with_their_objects() {
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, loaded.btech);
     assert_eq!(restored.btech.vehicles()[&id].ammunition(), &[0, 0, 0, 0]);
-    assert!(!restored.btech.vehicles()[&id].is_destroyed());
+    assert!(restored.btech.vehicles()[&id].is_destroyed());
     restored
         .objects
         .get_mut(&id)

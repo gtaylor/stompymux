@@ -403,13 +403,12 @@ fn touchdown(
                     world,
                     id,
                     input,
-                    rules.stacking,
                     rules,
                     &mut report.stacking,
                     (&mut report.pilot_notices, report.notices.len()),
                 )?
             } else {
-                super::stacking::resolve_stacking(world, id, input, rules.stacking, rules)?
+                super::stacking::resolve_stacking(world, id, input, rules)?
             };
             report.notices.extend(notices);
         }

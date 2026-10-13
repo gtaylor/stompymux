@@ -725,7 +725,7 @@ fn install_test_narc(
 async fn narc_pod_outcomes_and_restart() {
     use stompymux_rs::*;
     for weapon in [Weapon::NarcBeacon, Weapon::ClanNarcBeacon] {
-        for case in ["hit", "miss", "intercepted", "explosive", "stun"] {
+        for case in ["hit", "miss", "intercepted", "explosive"] {
             let (_dir, config, mut world, id, target) = shot_fixture().await;
             let (index, normal_bin) = install_test_narc(&mut world, id, weapon);
             shot_skill(&mut world, 30);
@@ -768,13 +768,10 @@ async fn narc_pod_outcomes_and_restart() {
                 })
                 .unwrap();
             shot_seed(&mut world, target, target_seed);
-            let mut rules = shot_rules();
-            if case == "stun" {
-                rules.hit.exile_stun_mode = 1;
-            }
             let before = world.clone();
             let report =
-                resolve_battle_shot(&mut world, id, ObjectId(1), target, index, rules).unwrap();
+                resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules())
+                    .unwrap();
             if case == "explosive" {
                 assert!(report.narc.is_none());
                 assert!(report.salvo.is_some());
@@ -787,7 +784,7 @@ async fn narc_pod_outcomes_and_restart() {
                 let pod = report.narc.as_ref().unwrap();
                 assert_eq!(pod.hit, case != "miss");
                 assert_eq!(pod.intercepted, case == "intercepted");
-                assert_eq!(pod.section.is_some(), matches!(case, "hit" | "stun"));
+                assert_eq!(pod.section.is_some(), case == "hit");
                 assert!(report.salvo.is_none());
                 assert_eq!(
                     world.btech.constructed_units()[&target].sections(),
@@ -797,11 +794,8 @@ async fn narc_pod_outcomes_and_restart() {
                     world.btech.constructed_units()[&id].ammunition()[normal_bin],
                     5
                 );
-                assert_eq!(
-                    world.btech.constructed_units()[&target].stun_remaining(),
-                    if case == "stun" { 10 } else { 0 }
-                );
-                assert_eq!(pod.notices.len(), usize::from(case == "stun"));
+                assert_eq!(world.btech.constructed_units()[&target].stun_remaining(), 0);
+                assert!(pod.notices.is_empty());
                 if matches!(case, "miss" | "intercepted") {
                     assert_eq!(
                         serde_json::to_value(&world.btech).unwrap()["constructed"]
@@ -1170,20 +1164,7 @@ async fn electronics_modes_fields_damage_and_restart() {
                     .unwrap();
                 }
                 _ => {
-                    stop_battle_unit(
-                        &mut world,
-                        id,
-                        ObjectId(1),
-                        stompymux_rs::FallRules {
-                            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-                            stacking: shot_rules().stacking,
-                            stagger: shot_rules().stagger,
-                            hit: shot_rules().hit,
-                            extended_piloting: true,
-                            toughness: false,
-                        },
-                    )
-                    .unwrap();
+                    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
                 }
             }
             assert!(
@@ -1417,12 +1398,7 @@ async fn electronics_angel_disables_streak_homing() {
     use stompymux_rs::*;
     for weapon in [Weapon::StreakSrm4, Weapon::ClanStreakSrm4] {
         for suite in [ElectronicSuite::Guardian, ElectronicSuite::Angel] {
-            for (hit, glance) in [
-                (false, None),
-                (true, None),
-                (true, Some(GlancingMode::AtTarget)),
-                (true, Some(GlancingMode::BelowTarget)),
-            ] {
+            for (hit, glance) in [(false, false), (true, false), (true, true)] {
                 let (_dir, config, mut world, id, target) = shot_fixture().await;
                 install_test_electronics(&mut world, target, suite);
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
@@ -1510,8 +1486,9 @@ async fn electronics_angel_disables_streak_homing() {
                     .unwrap();
                 shot_seed(&mut world, id, attack_seed);
                 shot_seed(&mut world, target, cluster_seed);
-                let mut rules = shot_rules();
-                if let Some(mode) = glance {
+                let rules = shot_rules();
+                if glance {
+                    // A roll of two against a target number of two glances (Tactical Operations).
                     let mut preview = world.clone();
                     set_battle_character_value(
                         &mut preview,
@@ -1529,31 +1506,26 @@ async fn electronics_angel_disables_streak_homing() {
                             .unwrap()
                             .target_number
                             .unwrap();
-                    let target_number = if mode == GlancingMode::AtTarget { 2 } else { 3 };
                     set_battle_character_value(
                         &mut world,
                         ObjectId(1),
                         "Gunnery-Missile",
                         CharacterValue {
-                            value: (baseline - target_number).try_into().unwrap(),
+                            value: (baseline - 2).try_into().unwrap(),
                             experience: 0,
                             last_used: 0,
                         },
                     )
                     .unwrap();
-                    rules.glancing = mode;
                 }
                 let before = world.clone();
                 let report =
                     resolve_battle_shot(&mut world, id, ObjectId(1), target, index, rules).unwrap();
                 let angel = suite == ElectronicSuite::Angel;
                 assert_eq!(report.streak_confused, angel);
-                let landed = hit && glance != Some(GlancingMode::BelowTarget);
+                let landed = hit;
                 assert_eq!(report.launched, landed || angel);
-                assert_eq!(
-                    report.glancing,
-                    angel && glance == Some(GlancingMode::AtTarget)
-                );
+                assert_eq!(report.glancing, angel && glance);
                 assert!(
                     !report
                         .notices()
@@ -1568,11 +1540,7 @@ async fn electronics_angel_disables_streak_homing() {
                 if landed {
                     assert_eq!(
                         report.salvo.unwrap().into_mech().unwrap().groups.len(),
-                        if angel {
-                            if glance.is_some() { 1 } else { 2 }
-                        } else {
-                            4
-                        }
+                        if angel { if glance { 1 } else { 2 } } else { 4 }
                     );
                 } else {
                     assert!(report.salvo.is_none());
@@ -5398,7 +5366,7 @@ async fn hex_fire_collapses_buildings_onto_their_occupants() {
         }
         assert_eq!(after, Hex::new(Terrain::Rubble, 0));
         let fracture = impact.fracture.as_ref().unwrap();
-        assert_eq!(fracture.fall_levels, 2);
+        assert_eq!(fracture.fall_levels, 3);
         assert!(fracture.falls.iter().any(|(id, _)| *id == target));
         assert!(
             impact
@@ -6031,21 +5999,22 @@ async fn inferno_ammunition_native_lua_fire_restart_and_rollback() {
         &format!("fire {index} #{}", target.0),
     )
     .unwrap();
-    let seconds = lua
+    let heat = lua
         .eval_callback::<u32>(&format!(
-            "local r=btech.unit.fire({},1,{index},{}); return r.salvo.report.inferno.burn_seconds",
+            "local r=btech.unit.fire({},1,{index},{}); return r.salvo.report.inferno.heat",
             id.0, target.0
         ))
         .unwrap();
-    assert!(seconds > 0);
+    assert!(heat > 0);
     assert_eq!(lua.world().btech, native.world().btech);
     assert_eq!(
         lua.world().btech.constructed_units()[&target].sections(),
         selected.btech.constructed_units()[&target].sections()
     );
+    // Each inferno missile adds two heat (Total Warfare p. 141).
     assert_eq!(
-        lua.world().btech.constructed_units()[&target].heat(),
-        selected.btech.constructed_units()[&target].heat()
+        lua.world().btech.constructed_units()[&target].heat().stored,
+        selected.btech.constructed_units()[&target].heat().stored + f64::from(heat)
     );
     let messages = |out: Vec<(ObjectId, stompymux_rs::text::Document)>| {
         out.into_iter()
@@ -6082,21 +6051,6 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
         },
     )
     .unwrap();
-    let mut overflowing = base.clone();
-    apply_inferno_burn(&mut overflowing, target, i32::MAX as u32).unwrap();
-    let before = overflowing.clone();
-    assert!(
-        resolve_battle_shot(
-            &mut overflowing,
-            id,
-            ObjectId(1),
-            target,
-            index,
-            shot_rules()
-        )
-        .is_err()
-    );
-    assert_eq!(overflowing.btech, before.btech);
     install_test_ams(&mut base, target, Weapon::AntiMissileSystem);
     base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);
     assign_battle_pilot(&mut base, target, ObjectId(2)).unwrap();
@@ -6129,18 +6083,29 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
             world.btech.constructed_units()[&target].sections(),
             before.btech.constructed_units()[&target].sections()
         );
+        // Firing the anti-missile system heats the defender (Total Warfare p. 129).
+        let ams_heat = if intercepted > 0 {
+            f64::from(Weapon::AntiMissileSystem.profile().heat)
+        } else {
+            0.0
+        };
         if hits == 0 {
             all = true;
             assert!(salvo.inferno.is_none());
             assert_eq!(
-                world.btech.constructed_units()[&target].inferno_remaining(),
-                0
+                world.btech.constructed_units()[&target].heat().stored,
+                before.btech.constructed_units()[&target].heat().stored + ams_heat
             );
         } else {
             partial |= intercepted > 0;
+            // Two heat points per missile (Total Warfare p. 141), plus the AMS heat.
+            let heat = salvo.inferno.unwrap().heat;
+            assert_eq!(heat, (hits * 2).min(15) as u8);
             assert_eq!(
-                salvo.inferno.unwrap().burn_seconds,
-                u32::from(hits).div_ceil(2) * 180
+                world.btech.constructed_units()[&target].heat().stored,
+                before.btech.constructed_units()[&target].heat().stored
+                    + f64::from(heat)
+                    + ams_heat
             );
         }
         if all && partial {
@@ -6182,30 +6147,21 @@ async fn inferno_ammunition_heat_penalty_selects_inferno_before_larger_bins() {
         let mut world = base.clone();
         overheat_due(&mut world, id, heat, false);
         shot_seed(&mut world, id, seed);
-        let mut rules = overheat_rules();
-        rules.hit.inferno_penalty = true;
-        let report = advance_battle_overheat(&mut world, rules)
+        let report = advance_battle_overheat(&mut world, overheat_rules())
             .unwrap()
             .remove(0);
-        assert_eq!(report.ammunition_check.unwrap().target, target);
-        assert!(report.explosion.is_some());
-        assert_eq!(world.btech.constructed_units()[&id].ammunition(), &[0, 25]);
+        assert_eq!(report.inferno_check.unwrap().target, target);
+        assert!(report.inferno_explosion.is_some());
+        // The ordinary Avoid Roll at 19+ is separate and may detonate the larger bin too.
+        let ordinary = report.ammunition_check.is_some_and(|check| !check.success);
+        assert_eq!(report.explosion.is_some(), ordinary);
+        assert_eq!(report.ammunition_check.is_some(), heat >= 19.0);
         assert_eq!(
-            world.btech.constructed_units()[&id].inferno_remaining(),
-            180
+            world.btech.constructed_units()[&id].ammunition(),
+            &[0, if ordinary { 0 } else { 25 }]
         );
-        assert_eq!(
-            world.btech.constructed_units()[&id].heat().stored,
-            heat + 40.0
-        );
+        assert!(world.btech.constructed_units()[&id].heat().stored > heat + 10.0);
     }
-    overheat_due(&mut base, id, 10.0, false);
-    assert!(
-        advance_battle_overheat(&mut base, overheat_rules())
-            .unwrap()
-            .is_empty()
-    );
-    assert_eq!(base.btech.constructed_units()[&id].ammunition(), &[1, 25]);
 }
 
 #[tokio::test]
@@ -6967,6 +6923,13 @@ async fn weapons_hold_physical_damage_warns_without_suppressing_transfers() {
         set_battle_weapons_hold(&mut held, id, true).unwrap();
         persistence::save(&config.database(), &held).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
+        // Connection state is not persisted; the kick base is the connected pilot's skill.
+        replay
+            .objects
+            .get_mut(&ObjectId(1))
+            .unwrap()
+            .flags
+            .insert(Flag::Connected);
         let expected = resolve_battle_kick(
             &mut ordinary,
             id,
@@ -7035,6 +6998,7 @@ async fn weapons_hold_charge_and_dfa_warn_only_for_target_packets() {
     for dfa in [false, true] {
         let (_dir, config, mut base, id, target) = kick_fixture().await;
         if dfa {
+            dfa_pilot(&mut base);
             launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
         } else {
             prepare_test_charge(&mut base, id);
@@ -7056,8 +7020,6 @@ async fn weapons_hold_charge_and_dfa_warn_only_for_target_packets() {
                         target,
                         ChargeRules {
                             distance: 2.0,
-                            new_rules: true,
-                            technology_level_three: true,
                             physical: kick_rules(),
                         },
                     )
@@ -7388,11 +7350,28 @@ async fn edited_hardened_protection_controls_live_hit_messages_and_balance() {
     );
 }
 
+/// A DFA to-hit number starts from the attacker's Piloting Skill (Total Warfare p. 144), so the
+/// unskilled fixture pilot needs a skill before a landing attack is admitted.
+fn dfa_pilot(world: &mut stompymux_rs::World) {
+    stompymux_rs::set_battle_character_value(
+        world,
+        ObjectId(1),
+        "Piloting-Biped",
+        stompymux_rs::CharacterValue {
+            value: 5,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
+}
+
 /// Melee specialist has the reference exact-one and case-insensitive semantics in DFA planning.
 #[tokio::test]
 async fn melee_specialist_requires_exact_one_for_dfa() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
+    dfa_pilot(&mut base);
     launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
     let ordinary = battle_dfa_profile(&base, id, target, kick_rules()).unwrap();
     for name in ["Melee_Specialist", "melee_specialist"] {
@@ -7670,8 +7649,6 @@ async fn charge_control_feedback_is_private_for_single_and_mutual_collisions() {
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         let rules = ChargeRules {
             distance: 2.0,
-            new_rules: false,
-            technology_level_three: false,
             physical: kick_rules(),
         };
         let collisions = if mutual {

@@ -40,14 +40,10 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
         .unwrap();
 }
 
-/// Isolated internal damage with criticals disabled still consumes its two diagnostic rolls.
+/// Ordinary critical policy for standalone internal damage.
 fn rules() -> VehicleCriticalRules {
     VehicleCriticalRules {
-        rotor_damage_divisor: 0,
         extended_piloting: false,
-        vtol_table: None,
-        table: VehicleCriticalTable::Advanced,
-        enabled: false,
         combat_safe: false,
         toughness: false,
     }
@@ -56,23 +52,29 @@ fn rules() -> VehicleCriticalRules {
 #[tokio::test]
 async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow() {
     for (special, structural, absorbed) in [
-        ("", 5, 5),
-        ("ReinforcedInternal_Tech", 3, 3),
-        ("CompositeInternal_Tech", 10, 8),
+        ("", 3, 3),
+        ("ReinforcedInternal_Tech", 2, 2),
+        ("CompositeInternal_Tech", 6, 6),
     ] {
         let text = support::templates::with_flags(
             include_str!("../game/units/Demolisher.toml"),
             &[special],
         );
         let (_dir, config, mut world, id) = fixture(&text).await;
-        seed(&mut world, id, 31);
-        let mut dice = Dice::seeded([31; 32]);
-        let expected = vec![dice.two_d6(), dice.two_d6()];
+        // Entry roll, then a critical roll below six.
+        let stream = matching_seed(|dice| {
+            dice.two_d6();
+            dice.two_d6() < 6
+        });
+        set_seed(&mut world, id, stream);
+        let mut dice = Dice::seeded(stream);
+        let expected = vec![dice.two_d6()];
+        dice.two_d6();
         let report = resolve_battle_vehicle_internal_damage(
             &mut world,
             id,
             VehicleSection::Turret,
-            5,
+            3,
             rules(),
         )
         .unwrap();
@@ -95,53 +97,36 @@ async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow()
 }
 
 #[tokio::test]
-async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_damage() {
+async fn internal_damage_rolls_one_critical_after_the_structure_damage() {
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/units/Demolisher.toml")).await;
     let value = (0..=255)
         .find(|value| {
             let mut dice = Dice::seeded([*value; 32]);
             dice.two_d6();
-            matches!(dice.two_d6(), 8 | 9) && dice.two_d6() == 6
+            dice.two_d6() == 6
         })
         .unwrap();
     seed(&mut world, id, value);
-    let mut critical_rules = rules();
-    critical_rules.enabled = true;
-    let result = resolve_battle_vehicle_internal_damage(
-        &mut world,
-        id,
-        VehicleSection::Front,
-        8,
-        critical_rules,
-    )
-    .unwrap();
+    let result =
+        resolve_battle_vehicle_internal_damage(&mut world, id, VehicleSection::Front, 7, rules())
+            .unwrap();
+    assert_eq!(result.rolls.len(), 1);
     assert_eq!(result.criticals.len(), 1);
     assert_eq!(
         result.criticals[0].selection.effect,
         Some(VehicleCriticalEffect::Driver)
     );
     assert_eq!(world.btech.vehicles()[&id].piloting_damage(), 2);
-    assert!(result.unit_destroyed);
-    assert!(
-        result
-            .notices
-            .last()
-            .unwrap()
-            .text
-            .contains("has been destroyed")
+    assert!(!result.unit_destroyed);
+    assert_eq!(
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
+        1
     );
+    // A location that loses its last structure destroys the vehicle, so nothing is rolled.
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/units/Demolisher.toml")).await;
-    let value = (0..=255)
-        .find(|value| {
-            let mut dice = Dice::seeded([*value; 32]);
-            dice.two_d6();
-            dice.two_d6() >= 8 && dice.die(3).unwrap() != 2 && dice.d6() >= 5
-        })
-        .unwrap();
     seed(&mut world, id, value);
-    critical_rules.table = VehicleCriticalTable::Standard;
     world
         .objects
         .get_mut(&id)
@@ -153,21 +138,27 @@ async fn internal_criticals_precede_structure_and_nested_errors_roll_back_all_da
         id,
         VehicleSection::Turret,
         400,
-        critical_rules,
+        rules(),
     )
     .unwrap();
     assert!(report.unit_destroyed);
-    assert!(world.btech.vehicles()[&id].crew_killed());
-    assert!(
-        world.btech.vehicles()[&id]
-            .sections()
-            .values()
-            .all(|state| state.internal == 0)
+    assert!(report.criticals.is_empty());
+    assert!(!world.btech.vehicles()[&id].crew_killed());
+    assert_eq!(
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Turret].internal,
+        0
     );
+    assert_eq!(
+        world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
+        8
+    );
+    let mut dice = Dice::seeded([value; 32]);
+    dice.two_d6();
+    assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), vec![dice.d6()]);
 }
 
 #[tokio::test]
-async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew() {
+async fn weapon_explosions_disable_mount_before_damage_without_injuring_the_crew() {
     let text = include_str!("../game/units/Demolisher.toml").replace(
         "[sections.front_side]\n",
         "[sections.front_side]\nslots = [{ at = 1, item = \"IS.MagshotGaussRifle\" }]\n",
@@ -181,7 +172,7 @@ async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew
             }
             dice.die(1).unwrap();
             dice.two_d6();
-            dice.two_d6() < 8
+            dice.two_d6() < 6
         })
         .unwrap();
     for disabled in [false, true] {
@@ -195,10 +186,8 @@ async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew
                 })
                 .unwrap();
         }
-        let mut critical_rules = rules();
-        critical_rules.enabled = true;
         let result =
-            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, critical_rules)
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules())
                 .unwrap();
         assert_eq!(
             result.selection.effect,
@@ -206,10 +195,7 @@ async fn weapon_explosions_disable_mount_before_damage_and_injure_surviving_crew
         );
         assert_eq!(world.btech.vehicles()[&id].lost_criticals().len(), 1);
         assert_eq!(result.internal_damage.len(), usize::from(!disabled));
-        assert_eq!(
-            world.btech.vehicles()[&id].pilot_injuries(),
-            if disabled { 0 } else { 2 }
-        );
+        assert_eq!(world.btech.vehicles()[&id].pilot_injuries(), 0);
         assert_eq!(
             world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
             if disabled { 8 } else { 5 }
@@ -242,15 +228,8 @@ fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
 #[tokio::test]
 async fn ammunition_cascade_commits_complete_damage_or_rolls_back_spent_bins() {
     let (_dir, config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
-    let mut rules = rules();
-    rules.enabled = true;
-    let success = matching_seed(|dice| {
-        if dice.two_d6() != 12 {
-            return false;
-        }
-        dice.two_d6();
-        dice.two_d6() < 8
-    });
+    let rules = rules();
+    let success = matching_seed(|dice| dice.two_d6() == 11);
     let mut world = base.clone();
     set_seed(&mut world, id, success);
     persistence::save(&config.database(), &world).await.unwrap();
@@ -265,7 +244,9 @@ async fn ammunition_cascade_commits_complete_damage_or_rolls_back_spent_bins() {
     assert_eq!(result.ammunition_cascade.as_ref().unwrap().damage, 400);
     assert_eq!(result.internal_damage[0].absorbed, 8);
     assert_eq!(result.internal_damage[0].discarded, 392);
-    assert!(!world.btech.vehicles()[&id].is_destroyed());
+    // Blowing out the turret's structure destroys the vehicle (TW p. 128).
+    assert!(world.btech.vehicles()[&id].is_destroyed());
+    assert!(!world.btech.vehicles()[&id].crew_killed());
     assert_eq!(
         world.btech.vehicles()[&id].sections()[&VehicleSection::Rear].armor,
         20
@@ -276,15 +257,8 @@ async fn ammunition_cascade_commits_complete_damage_or_rolls_back_spent_bins() {
             .iter()
             .all(|rounds| *rounds == 0)
     );
-    let fail = matching_seed(|dice| {
-        if dice.two_d6() != 11 {
-            return false;
-        }
-        dice.two_d6();
-        dice.two_d6() >= 8 && dice.two_d6() == 12
-    });
     let mut world = base;
-    set_seed(&mut world, id, fail);
+    set_seed(&mut world, id, success);
     world
         .objects
         .get_mut(&id)
@@ -300,9 +274,8 @@ async fn ammunition_cascade_commits_complete_damage_or_rolls_back_spent_bins() {
             .iter()
             .any(|damage| damage.unit_destroyed)
     );
-    assert!(world.btech.vehicles()[&id].crew_killed());
+    assert!(!world.btech.vehicles()[&id].crew_killed());
     world.btech = before;
-    rules.enabled = false;
     let report =
         resolve_battle_vehicle_internal_damage(&mut world, id, VehicleSection::Front, 100, rules)
             .unwrap();
@@ -319,7 +292,7 @@ async fn hotloaded_vehicle_criticals_require_usable_normal_ammunition() {
         }
         dice.die(1).unwrap();
         dice.two_d6();
-        dice.two_d6() < 8
+        dice.two_d6() < 6
     });
     for (mode, rounds, lost_bin, disabled, expected) in [
         ("", 2, false, false, 5),
@@ -370,8 +343,7 @@ async fn hotloaded_vehicle_criticals_require_usable_normal_ammunition() {
         let ammo = world.btech.vehicles()[&id].ammunition().to_vec();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        let mut rules = rules();
-        rules.enabled = true;
+        let rules = rules();
         let report =
             resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
         assert_eq!(
@@ -418,7 +390,7 @@ async fn incendiary_vehicle_criticals_require_recycling_and_matching_supply() {
         }
         dice.die(1).unwrap();
         dice.two_d6();
-        dice.two_d6() < 8
+        dice.two_d6() < 6
     });
     for (recycling, rounds, bin_mode, expected) in [
         (true, 2, ", modes = [\"Incendiary\"]", 2),
@@ -455,8 +427,7 @@ async fn incendiary_vehicle_criticals_require_recycling_and_matching_supply() {
         }
         set_seed(&mut world, id, stream);
         let ammo = world.btech.vehicles()[&id].ammunition().to_vec();
-        let mut rules = rules();
-        rules.enabled = true;
+        let rules = rules();
         let report =
             resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
         let vehicle = &world.btech.vehicles()[&id];
@@ -483,7 +454,7 @@ async fn incendiary_vehicle_criticals_require_recycling_and_matching_supply() {
 }
 
 #[tokio::test]
-async fn hotloaded_nested_crew_and_hull_loss_preserves_surviving_ammunition() {
+async fn hotloaded_hull_loss_preserves_surviving_ammunition() {
     let text = include_str!("../game/units/Demolisher.toml")
         .replace(
             "[sections.front_side]\n",
@@ -506,16 +477,17 @@ async fn hotloaded_nested_crew_and_hull_loss_preserves_surviving_ammunition() {
         }
         dice.die(1).unwrap();
         dice.two_d6();
-        matches!(dice.two_d6(), 8 | 9) && dice.two_d6() == 12
+        dice.two_d6() == 12
     });
     set_seed(&mut world, id, stream);
     let ammo = world.btech.vehicles()[&id].ammunition().to_vec();
-    let mut rules = rules();
-    rules.enabled = true;
+    let rules = rules();
     let report =
         resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
+    // The launcher's explosion guts the front, which wrecks the vehicle without a crew roll.
     assert!(report.internal_damage[0].unit_destroyed);
-    assert!(world.btech.vehicles()[&id].crew_killed());
+    assert!(report.internal_damage[0].criticals.is_empty());
+    assert!(!world.btech.vehicles()[&id].crew_killed());
     assert_eq!(
         world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
         0
@@ -536,12 +508,10 @@ async fn nonexplosive_vehicle_firing_modes_allow_weapon_destruction() {
         let (_dir, _config, mut world, id) = fixture(&text).await;
         let stream = matching_seed(|dice| dice.two_d6() == 11);
         set_seed(&mut world, id, stream);
-        let mut rules = rules();
-        rules.enabled = true;
         let report =
-            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules())
+                .unwrap();
         assert!(report.internal_damage.is_empty());
-        assert!(report.pilot_injury.is_none());
         assert!(
             world.btech.vehicles()[&id].critical_destroyed(VehicleCriticalLocation {
                 section: VehicleSection::Front,

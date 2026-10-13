@@ -241,27 +241,14 @@ not announce routine contact changes; weapon-lock loss still warns. The role
 survives restart and appears in `@btech inspect <unit>`. Contact acquisition and
 terrain visibility still apply; this is not a general visibility bypass.
 
-## Reactor explosion scenario action
+## Self-destruct scenario actions
 
-A trusted Lua callback can use `btech.unit.reactor_explode(unit)` to detonate a
-constructed Mech. It returns the ordered blast hits, ignited hexes and
-notices. An optional `section_explosion` records an earlier instability
-blast caused by destroying the reactor itself. Damage, crew evacuation and notifications roll back together
-if the callback fails. This scenario action bypasses cockpit self-destruct
-permission and countdown settings. Pilot-owned sequences use
-`btech.unit.explode(unit, pilot, argument)`. The scenario flag
-`btech.unit.explode_safe(unit, enabled)` protects against new ammunition requests
-without canceling an admitted sequence. Ejected MechWarrior infantry is deferred.
-
-
-With `btech_stackpole` enabled, destruction or flooding of an engine compartment
-can trigger this blast when engine losses reach three and the reactor is running
-or starting. An ordinary third engine critical does not perform this check.
-The instability window includes
-30 seconds after the first center-torso internal damage; the hit opens that
-window after resolving its criticals. New worlds have the same initial grace.
-Windows expire while stopped and survive restarts. Trusted unit state exposes
-`reactor_instability_remaining` for scenario inspection.
+Pilot-owned self-destruct sequences use `btech.unit.explode(unit, pilot, argument)`
+with the same `ammo`, `stop` and wizard `override` grammar as the cockpit
+command. The scenario flag `btech.unit.explode_safe(unit, enabled)` protects
+against new requests without canceling an admitted sequence. Fusion reactors
+never explode: destroying a Mech's engine or center torso shuts the unit down,
+as in Total Warfare.
 
 ## Fully destroyed wrecks
 
@@ -1137,7 +1124,7 @@ Reading unit status does not run or change a line-of-sight observation.
 `i` C3i, `j` null signature hardware, `k` destroyed searchlight,
 `l` last observed illumination, `p` heat cutoff, `q` towable,
 `s` targeting computer, `t` C3, `u` ECM, `v` Beagle probe,
-`w` inferno effects, `z/A` clairvoyant/invisible, `C` observer,
+`w` burning jelly on a stationary unit, `z/A` clairvoyant/invisible, `C` observer,
 `D` Bloodhound probe, and `E` Mech crew stun. Equipment letters indicate
 unavailable hardware, not equipment absence. Cache and per-update bookkeeping
 bits remain clear. This field currently supports inspection only.

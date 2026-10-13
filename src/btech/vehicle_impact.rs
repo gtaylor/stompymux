@@ -4,20 +4,17 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
-/// Vehicle hit-table, critical and environmental fire policy; the caller supplies configuration.
+/// Admission that varies per combat action; the Total Warfare tables themselves are fixed.
 #[derive(Debug, Clone, Copy)]
 pub struct VehicleImpactRules {
-    /// Inferno ignites section fires instead of rolling for a heat explosion.
-    pub advanced_fire: bool,
     pub criticals: VehicleCriticalRules,
-    pub hit: VehicleHitRules,
 }
 
 /// One damage group's table selection and all staged effects, before visibility publication.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[must_use = "Publish impact effects only with the enclosing attack transaction"]
 pub struct VehicleImpact {
-    /// Initial routing roll, plus the selected table's own roll for advanced or critical-proof routing.
+    /// The hit-location roll; combat-safe routing still draws it.
     pub rolls: Vec<u8>,
     /// Combat-safe routing has no hit location or motive effects.
     pub hit: Option<VehicleHit>,
@@ -28,8 +25,8 @@ pub struct VehicleImpact {
     pub broadcasts: Vec<Notice>,
 }
 
-/// Resolve one already successful attack group from its incoming arc, preserving all-or-nothing dice and damage.
-/// Weapon targeting and publication still belong to the enclosing attack.
+/// Resolve one already successful weapon attack group from its incoming arc, preserving
+/// all-or-nothing dice and damage. Weapon targeting and publication still belong to the attack.
 pub fn resolve_vehicle_impact(
     world: &mut World,
     id: ObjectId,
@@ -45,7 +42,7 @@ pub fn resolve_vehicle_impact(
         .context("Vehicle is unavailable")?;
     ensure!(!vehicle.is_destroyed(), "Vehicle is destroyed");
     world.attempt(|world| {
-        let result = resolve_followup_in_candidate(
+        let result = resolve_impact(
             world,
             id,
             arc,
@@ -57,6 +54,9 @@ pub fn resolve_vehicle_impact(
                 class: DamageClass::Ordinary,
             },
             rules,
+            None,
+            true,
+            false,
         )?;
         Ok(result)
     })
@@ -72,7 +72,8 @@ pub(super) struct ImpactRequest {
     pub class: DamageClass,
 }
 
-/// Continue a previously admitted attack, retaining location and damage rolls after hull loss.
+/// Continue a previously admitted non-weapon impact (falls, blasts), retaining location and
+/// damage rolls after hull loss. Damage without a weapon Damage Value is not reduced on rotors.
 pub(super) fn resolve_followup_in_candidate(
     world: &mut World,
     id: ObjectId,
@@ -80,20 +81,39 @@ pub(super) fn resolve_followup_in_candidate(
     request: ImpactRequest,
     rules: VehicleImpactRules,
 ) -> Result<VehicleImpact> {
-    resolve_directed_followup(world, id, arc, request, rules, None)
+    resolve_impact(world, id, arc, request, rules, None, false, false)
 }
 
-/// Directed hits bypass random location effects while sharing material damage and critical resolution.
+/// A weapon damage group, optionally aimed at a known section, bypassing random location
+/// effects. A glancing blow lowers every critical roll of the group by two (TO:AR p. 79).
 pub(super) fn resolve_directed_followup(
     world: &mut World,
     id: ObjectId,
     arc: HitArc,
     request: ImpactRequest,
     rules: VehicleImpactRules,
+    glancing: bool,
     forced: Option<VehicleHit>,
 ) -> Result<VehicleImpact> {
+    resolve_impact(world, id, arc, request, rules, forced, true, glancing)
+}
+
+/// Critical-roll modifier of a glancing blow (TO:AR p. 79).
+pub const GLANCING_CRITICAL_MODIFIER: i8 = -2;
+
+/// Shared material path: location, rotor scaling, armor, criticals and internal damage.
+fn resolve_impact(
+    world: &mut World,
+    id: ObjectId,
+    arc: HitArc,
+    request: ImpactRequest,
+    rules: VehicleImpactRules,
+    forced: Option<VehicleHit>,
+    weapon: bool,
+    glancing: bool,
+) -> Result<VehicleImpact> {
     let ImpactRequest {
-        amount,
+        mut amount,
         armor_piercing,
         rear,
         attacker,
@@ -118,30 +138,7 @@ pub(super) fn resolve_directed_followup(
     } else {
         resolve_location_followup(world, id, arc, rules)?
     };
-    if let Some(hit) = result.hit {
-        let damage = super::vehicle_armor_damage::resolve_rear_followup_in_candidate(
-            world,
-            id,
-            VehicleArmorHit {
-                section: hit.section,
-                amount,
-                through_armor_critical: hit.through_armor_critical,
-                armor_piercing,
-                damage_class: class,
-            },
-            rear,
-            rules.criticals,
-            super::vehicle_internal_damage::DamageContext { attacker, depth: 0 },
-        )?;
-        super::piloting::append_feedback(
-            &mut result.pilot_notices,
-            damage.pilot_notices.iter().cloned(),
-            result.notices.len(),
-        );
-        result.notices.extend(damage.notices.clone());
-        result.broadcasts.extend(damage.broadcasts.clone());
-        result.damage = Some(damage);
-    } else {
+    let Some(hit) = result.hit else {
         result
             .notices
             .extend(super::combat_safe::notice(attacker, id));
@@ -153,9 +150,50 @@ pub(super) fn resolve_directed_followup(
             .unwrap()
             .dice
             .generic_roll();
+        return Ok(result);
+    };
+    // Rotor hits take one point per ten points (or fraction) of a weapon's damage (TW p. 197).
+    if weapon
+        && hit.section == VehicleSection::Rotor
+        && world.btech.vehicles()[&id].definition().is_vtol()
+    {
+        amount = amount.div_ceil(ROTOR_DAMAGE_DIVISOR);
     }
+    let damage = super::vehicle_armor_damage::resolve_rear_followup_in_candidate(
+        world,
+        id,
+        VehicleArmorHit {
+            section: hit.section,
+            amount,
+            through_armor_critical: hit.through_armor_critical,
+            armor_piercing,
+            damage_class: class,
+        },
+        rear,
+        rules.criticals,
+        super::vehicle_internal_damage::DamageContext {
+            attacker,
+            depth: 0,
+            critical_modifier: if glancing {
+                GLANCING_CRITICAL_MODIFIER
+            } else {
+                0
+            },
+        },
+    )?;
+    super::piloting::append_feedback(
+        &mut result.pilot_notices,
+        damage.pilot_notices.iter().cloned(),
+        result.notices.len(),
+    );
+    result.notices.extend(damage.notices.clone());
+    result.broadcasts.extend(damage.broadcasts.clone());
+    result.damage = Some(damage);
     Ok(result)
 }
+
+/// Weapon damage against rotors counts one point per this many points, rounding up.
+pub const ROTOR_DAMAGE_DIVISOR: u32 = 10;
 
 /// Resolve table routing and its direct effects inside an unpublished attack candidate.
 /// Pod hits stop here; ordinary impacts continue into armor and internal damage.
@@ -193,15 +231,10 @@ fn resolve_location_followup(
         .vehicles()
         .get(&id)
         .context("Vehicle is unavailable")?;
-    let table = rules.criticals.table_for(vehicle);
-    let proof = vehicle.definition().has_special("CritProof_Tech");
     let mut dice = vehicle.dice.clone();
-    let mut rolls = vec![dice.generic_roll()];
-    if table != VehicleCriticalTable::Standard || proof {
-        rolls.push(dice.generic_roll());
-    }
+    let roll = dice.generic_roll();
     let mut result = VehicleImpact {
-        rolls,
+        rolls: vec![roll],
         hit: None,
         damage: None,
         notices: Vec::new(),
@@ -212,172 +245,100 @@ fn resolve_location_followup(
         world.btech.vehicles.get_mut(&id).unwrap().dice = dice;
         return Ok(result);
     }
-    let roll = *result.rolls.last().unwrap();
     if vehicle.definition().is_vtol() {
-        let selected = if table == VehicleCriticalTable::Advanced {
-            vehicle.advanced_vtol_hit(
-                arc,
-                roll,
-                rules.hit.critical_mode,
-                rules.hit.critical_level,
-                &mut dice,
-            )?
-        } else {
-            vehicle.definition().vtol_hit(arc, roll)?
-        };
+        let selected = vehicle.vtol_hit(arc, roll)?;
         world.btech.vehicles.get_mut(&id).unwrap().dice = dice;
-        if let Some(effect) = selected.rotor {
-            let rotor = super::rotor_damage::apply_in_world(world, id, effect)?;
+        if selected.rotor {
+            let rotor = super::rotor_damage::apply_in_world(
+                world,
+                id,
+                RotorHit::Damage,
+                rules.criticals.extended_piloting,
+            )?;
             result.notices.push(Notice {
                 unit: id,
                 text: rotor.message().into(),
             });
+            append_landing(
+                world,
+                id,
+                rotor,
+                &mut result.notices,
+                &mut result.pilot_notices,
+            );
         }
         result.hit = Some(selected.hit);
         return Ok(result);
     }
 
-    let hit = if table == VehicleCriticalTable::Advanced {
-        vehicle.advanced_hit(
-            arc,
-            roll,
-            rules.hit.critical_mode,
-            rules.hit.critical_level,
-            &mut dice,
-        )?
-    } else if proof {
-        vehicle.critical_proof_hit(arc, roll)?
-    } else {
-        vehicle.standard_hit(arc, roll, rules.hit.critical_mode, &mut dice)?
-    };
-    let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-    vehicle.dice = dice;
-    let (notices, broadcasts) = super::vehicle_motive_effects::apply(
-        vehicle,
-        id,
-        hit.motive,
-        hit.piloting_penalty,
-        hit.motive_roll,
-    );
-    result.notices.extend(notices);
-    result.broadcasts.extend(broadcasts);
+    let hit = vehicle.hit(arc, roll, &mut dice)?;
+    world.btech.vehicles.get_mut(&id).unwrap().dice = dice;
+    if let Some(motive) = hit.motive {
+        let (notices, broadcasts) =
+            super::vehicle_motive_effects::apply_located(world, id, motive)?;
+        result.notices.extend(notices);
+        result.broadcasts.extend(broadcasts);
+    }
     result.hit = Some(hit);
     Ok(result)
 }
 
+/// Report the engine-damage landing a rotor hit forced, with pilot-only roll diagnostics.
+pub(super) fn append_landing(
+    world: &World,
+    id: ObjectId,
+    rotor: super::RotorDamage,
+    notices: &mut Vec<Notice>,
+    pilot_notices: &mut Vec<PilotNotice>,
+) {
+    let Some(check) = &rotor.landing else {
+        let falling = world.btech.vehicles()[&id]
+            .vtol_flight()
+            .is_some_and(|flight| flight.phase == VtolFlightPhase::Falling);
+        if rotor.grounded && falling {
+            notices.push(Notice {
+                unit: id,
+                text: "There is nowhere to set down: you lose lift and start to fall!".into(),
+            });
+        }
+        return;
+    };
+    super::piloting::capture_feedback(
+        id,
+        world.btech.vehicles()[&id].pilot(),
+        check,
+        notices,
+        pilot_notices,
+    );
+    notices.push(Notice {
+        unit: id,
+        text: if check.success {
+            "You manage to set down before the rotor fails completely!"
+        } else {
+            "You lose lift and start to fall!"
+        }
+        .into(),
+    });
+}
+
 impl VehicleImpactRules {
-    /// Standard tactical vehicle hit and critical policy.
+    /// Standard tactical vehicle policy: no combat-safe shortcut, no toughness, basic piloting.
     pub const STANDARD: Self = Self {
-        advanced_fire: false,
         criticals: VehicleCriticalRules {
-            rotor_damage_divisor: 0,
             extended_piloting: false,
-            vtol_table: None,
-            table: VehicleCriticalTable::Standard,
-            enabled: true,
             combat_safe: false,
             toughness: false,
         },
-        hit: VehicleHitRules {
-            critical_mode: 2,
-            critical_level: 60,
-        },
     };
 
-    /// Apply configured hit-table and critical policy consistently for either shooter class.
+    /// The Total Warfare vehicle policy for either shooter class with the server's skill settings.
     pub(crate) fn configured(config: &crate::config::BattleTechConfig, toughness: bool) -> Self {
         Self {
-            advanced_fire: config.fasaadvvhlfire != 0,
             criticals: VehicleCriticalRules {
-                rotor_damage_divisor: config.divrotordamage.clamp(0, i64::from(u32::MAX)) as u32,
                 extended_piloting: config.extended_piloting != 0,
-                vtol_table: Some(VehicleCriticalTable::from_settings(
-                    config.fasaadvvtolcrit != 0,
-                )),
-                table: VehicleCriticalTable::from_settings(config.fasaadvvhlcrit != 0),
-                enabled: config.vcrit != 0,
                 combat_safe: false,
                 toughness,
             },
-            hit: VehicleHitRules {
-                critical_mode: config.vcrit,
-                critical_level: config.critlevel,
-            },
-        }
-    }
-}
-
-#[cfg(test)]
-mod policy_tests {
-    use super::*;
-
-    /// Host settings propagate to exterior damage while nonpositive settings disable scaling.
-    #[test]
-    fn configured_rotor_divisor_is_bounded_and_retained() {
-        for (setting, expected) in [(-1, 0), (0, 0), (1, 1), (5, 5), (i64::MAX, u32::MAX)] {
-            let config = crate::config::BattleTechConfig {
-                divrotordamage: setting,
-                ..Default::default()
-            };
-            let rules = VehicleImpactRules::configured(&config, false);
-            assert_eq!(rules.criticals.rotor_damage_divisor, expected);
-        }
-    }
-
-    #[test]
-    fn configured_critical_tables_are_selected_per_victim_class() {
-        let ground = Vehicle::new(
-            VehicleTemplate::parse(
-                "Demolisher",
-                include_str!("../../game/units/Demolisher.toml"),
-            )
-            .unwrap(),
-        )
-        .unwrap();
-        let aircraft = Vehicle::new(
-            VehicleTemplate::parse("Kestrel", include_str!("../../game/units/Kestrel.toml"))
-                .unwrap(),
-        )
-        .unwrap();
-        let observation = Vehicle::new(
-            VehicleTemplate::parse(
-                "ObservationVTOL",
-                include_str!("../../game/units/ObservationVTOL.toml"),
-            )
-            .unwrap(),
-        )
-        .unwrap();
-        for ground_advanced in [false, true] {
-            for aircraft_advanced in [false, true] {
-                let config = crate::config::BattleTechConfig {
-                    fasaadvvhlcrit: i64::from(ground_advanced),
-                    fasaadvvtolcrit: i64::from(aircraft_advanced),
-                    ..Default::default()
-                };
-                let rules = VehicleImpactRules::configured(&config, true);
-                for (unit, advanced) in [
-                    (&ground, ground_advanced),
-                    (&aircraft, aircraft_advanced),
-                    (&observation, aircraft_advanced),
-                ] {
-                    let expected = if advanced {
-                        VehicleCriticalTable::Advanced
-                    } else {
-                        VehicleCriticalTable::Standard
-                    };
-                    assert_eq!(rules.criticals.table_for(unit), expected);
-                }
-                assert!(rules.criticals.toughness);
-                // Shared launcher policy updates must preserve both victim choices.
-                let launch = VehicleCriticalRules {
-                    toughness: false,
-                    ..rules.criticals
-                };
-                assert_eq!(
-                    launch.table_for(&aircraft),
-                    rules.criticals.table_for(&aircraft)
-                );
-            }
         }
     }
 }

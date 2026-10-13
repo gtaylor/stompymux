@@ -277,7 +277,7 @@ fn live_vehicle_mass_tracks_ammunition_protection_and_section_loss() {
     );
     assert_eq!(mass.structure, 6 * 1024);
     assert_eq!(mass.armor, 13 * 512);
-    assert!(!unit.is_destroyed());
+    assert!(unit.is_destroyed());
     assert_eq!(unit.definition().mass().unwrap(), intact);
     let restored: Vehicle = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
     assert_eq!(restored.mass().unwrap(), mass);

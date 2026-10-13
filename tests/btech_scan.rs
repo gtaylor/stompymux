@@ -1839,7 +1839,7 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
 /// Terrain fires and inferno burns light hexes at night so sight reaches them beyond visibility.
 #[tokio::test]
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
-    let (_dir, config, mut world, map, source, target) = fixture().await;
+    let (_dir, config, mut world, map, source, _target) = fixture().await;
     set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::HeavyFog).unwrap();
     // Without the sensor band, only sight (and therefore illumination) reaches past three hexes.
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
@@ -1896,9 +1896,6 @@ async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acqui
     );
     set_map_decoration(&mut world, map, fire, None).unwrap();
     assert!(!battle_hex_visible(&world, source, coordinate).unwrap());
-    apply_inferno_burn(&mut world, target, 1).unwrap();
-    assert!(battle_hex_illuminated(&world, map, HexCoordinate { x: 1, y: 3 }).unwrap());
-    let _ = advance_inferno_burns(&mut world);
     assert!(!battle_hex_illuminated(&world, map, HexCoordinate { x: 1, y: 3 }).unwrap());
     assert!(battle_hex_illuminated(&world, map, HexCoordinate { x: -1, y: 0 }).is_err());
 }
@@ -3677,12 +3674,8 @@ async fn contact_status_columns_share_precedence_with_native_and_lua() {
             " DFS ",
         ),
         (
-            serde_json::json!({"power":{"state":"running"},"inferno_remaining":10}),
-            " l I ",
-        ),
-        (
-            serde_json::json!({"power":{"state":"running"},"inferno_remaining":10,"heat":{"stored":3.0,"excess":3.0}}),
-            " l + ",
+            serde_json::json!({"power":{"state":"running"},"heat":{"stored":3.0,"excess":3.0}}),
+            "   + ",
         ),
         (
             serde_json::json!({"beacons":{"CenterTorso":["narc"]}}),

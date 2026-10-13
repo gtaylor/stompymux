@@ -24,8 +24,6 @@ async fn prelaunch_stagger_shares_native_lua_and_saved_attempts() {
                         .unwrap();
                     firing::edit(&mut world, unit, |s| {
                         s["stagger"]["action_damage"] = scalar.into();
-                        s["stagger"]["hits"] =
-                            serde_json::json!([{"damage":60,"remaining":60,"counted":false}]);
                         s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                     });
                     persistence::save(&config.database(), &world).await.unwrap();

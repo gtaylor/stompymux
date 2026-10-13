@@ -127,7 +127,9 @@ impl Recovery {
     }
 }
 
-/// The reference tactical table caps the consciousness lookup at four injuries.
+/// The Warrior Consciousness Table (Total Warfare p. 41): 3, 5, 7, 10 and 11 for one through
+/// five points of damage; a sixth point kills. Character-mode pilots map RPG bruising onto the
+/// same numbers, and the Pain_Resistance advantage lowers them by one as a skill extension.
 fn target(world: &World, player: ObjectId, mode: RecoveryMode, pain: bool) -> Result<u8> {
     match mode {
         RecoveryMode::Ready => Ok(0),
@@ -137,7 +139,9 @@ fn target(world: &World, player: ObjectId, mode: RecoveryMode, pain: bool) -> Re
             .get(&player)
             .context("Character state is unavailable")?
             .consciousness_target(pain),
-        RecoveryMode::Tactical { injuries } => Ok([0, 3, 5, 7, 10][usize::from(injuries.min(4))]),
+        RecoveryMode::Tactical { injuries } => {
+            Ok([0, 3, 5, 7, 10, 11][usize::from(injuries.min(5))])
+        }
     }
 }
 

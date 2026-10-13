@@ -1,141 +1,93 @@
-//! Rotorcraft hit selection reuses vehicle hull identities and keeps rotor effects explicit.
-use super::{HitArc, VehicleHit, VehicleSection, VehicleTemplate};
+//! The VTOL Combat Vehicle Hit Location Table (Total Warfare p. 196, with the turret row of
+//! Tactical Operations: Advanced Rules p. 193) and the rotor outcomes shared with its critical table.
+use super::{HitArc, VehicleHit, VehicleSection};
 use anyhow::{Result, ensure};
 use serde::Serialize;
 
-/// Rotor consequences selected before the owning impact applies damage and flight effects.
+/// Rotors-column consequences, selected before the owning impact applies damage and flight effects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RotorHit {
+    /// Rotor Damage: one less Cruising MP.
     Damage,
-    TailRotor,
+    /// Flight Stabilizer Hit: cruising speed only, +3 to Driving Skill Rolls, +1 to-hit.
+    FlightStabilizer,
+    /// Rotors Destroyed: the VTOL is destroyed; in flight it crashes first.
     Destroy,
 }
 
-/// Located aircraft hit with the common armor request and aircraft-specific secondary effects.
+/// Located aircraft hit with the common armor request and the rotor footnote.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[must_use = "Apply rotor and weapon consequences with the enclosing vehicle impact"]
 pub struct VtolHit {
     pub hit: VehicleHit,
-    pub rotor: Option<RotorHit>,
-}
-
-/// VTOL hit-location selection from a supplied roll.
-pub trait VtolHitLocation {
-    /// Select a VTOL location from a supplied 2d6 roll without drawing dice or mutating material.
-    /// Critical-proof equipment uses standard locations and suppresses all secondary effects.
-    fn vtol_hit(&self, arc: HitArc, roll: u8) -> Result<VtolHit>;
-}
-
-impl VtolHitLocation for VehicleTemplate {
-    fn vtol_hit(&self, arc: HitArc, roll: u8) -> Result<VtolHit> {
-        ensure!(
-            self.is_vtol(),
-            "VTOL hit selection requires a VTOL template"
-        );
-        ensure!(
-            (2..=12).contains(&roll),
-            "Hit location roll must be between 2 and 12"
-        );
-        let proof = self.has_special("CritProof_Tech");
-        let rotor_hit = matches!(roll, 2..=4 | 10..=12);
-        let section = if rotor_hit {
-            VehicleSection::Rotor
-        } else {
-            arc.vehicle_section()
-        };
-        let rotor = if proof || !rotor_hit {
-            None
-        } else if roll == 2 {
-            Some(RotorHit::Destroy)
-        } else {
-            Some(RotorHit::Damage)
-        };
-        Ok(VtolHit {
-            hit: VehicleHit {
-                section,
-                through_armor_critical: !proof && matches!(roll, 2 | 12),
-                motive: None,
-                motive_roll: None,
-                piloting_penalty: 0,
-            },
-            rotor,
-        })
-    }
-}
-
-impl RotorHit {
-    /// Advanced rotor critical table; rolls below six have no effect.
-    pub fn from_critical_roll(roll: u8) -> Result<Option<Self>> {
-        ensure!(
-            (2..=12).contains(&roll),
-            "Critical roll must be between 2 and 12"
-        );
-        Ok(match roll {
-            6..=8 => Some(Self::Damage),
-            9 | 10 => Some(Self::TailRotor),
-            11 | 12 => Some(Self::Destroy),
-            _ => None,
-        })
-    }
+    /// A Rotors result: weapon damage is divided by ten and the VTOL loses one Cruising MP.
+    pub rotor: bool,
 }
 
 impl super::Vehicle {
-    /// Advanced aircraft routing uses surviving turret state and the shared armor critical gate.
-    /// The gate runs even for noncritical table entries to preserve the saved random stream.
-    pub fn advanced_vtol_hit(
-        &self,
-        arc: HitArc,
-        roll: u8,
-        critical_mode: i64,
-        critical_level: i64,
-        dice: &mut super::Dice,
-    ) -> Result<VtolHit> {
+    /// Resolve the VTOL Combat Vehicle Hit Location Table from an existing 2d6 roll without
+    /// drawing dice or changing material state.
+    pub fn vtol_hit(&self, arc: HitArc, roll: u8) -> Result<VtolHit> {
+        let (section, critical) = self.vtol_table_row(arc, roll)?;
+        let proof = self.definition().has_special("CritProof_Tech");
+        Ok(VtolHit {
+            hit: VehicleHit {
+                section,
+                through_armor_critical: critical && !proof,
+                motive: None,
+            },
+            rotor: section == VehicleSection::Rotor && !proof,
+        })
+    }
+
+    /// The location alone, for attacks such as infernos that deal no damage but need a column.
+    pub fn vtol_hit_location(&self, arc: HitArc, roll: u8) -> Result<VehicleSection> {
+        Ok(self.vtol_table_row(arc, roll)?.0)
+    }
+
+    /// Location and critical flag for one row of the table.
+    fn vtol_table_row(&self, arc: HitArc, roll: u8) -> Result<(VehicleSection, bool)> {
         ensure!(
             self.definition().is_vtol(),
-            "Advanced aircraft hit selection requires a VTOL"
+            "VTOL hit selection requires a VTOL"
         );
         ensure!(
             (2..=12).contains(&roll),
             "Hit location roll must be between 2 and 12"
         );
         use VehicleSection as S;
+        let face = arc.vehicle_section();
         let side = matches!(arc, HitArc::Left | HitArc::Right);
-        let section = match roll {
-            4 => {
-                if self
-                    .sections()
-                    .get(&S::Turret)
-                    .is_some_and(|section| section.internal > 0)
-                {
-                    S::Turret
-                } else {
-                    S::Rotor
-                }
-            }
-            5 => match arc {
-                HitArc::Front => S::Right,
-                HitArc::Rear => S::Left,
-                _ => S::Front,
-            },
-            9 => match arc {
-                HitArc::Front => S::Left,
-                HitArc::Rear => S::Right,
-                _ => S::Rear,
-            },
-            10..=12 => S::Rotor,
-            _ => arc.vehicle_section(),
+        // Tactical Operations: a turret strike on a turretless VTOL hits the rotors.
+        let turret = if self.turret_heading().is_some() {
+            S::Turret
+        } else {
+            S::Rotor
         };
-        let eligible = self.critical_candidate(section, critical_mode, critical_level, dice)?;
-        Ok(VtolHit {
-            hit: VehicleHit {
-                section,
-                through_armor_critical: eligible && (matches!(roll, 2 | 12) || (side && roll == 8)),
-                motive: None,
-                motive_roll: None,
-                piloting_penalty: 0,
-            },
-            rotor: None,
+        Ok(match roll {
+            2 => (face, true),
+            3 | 10 | 11 => (S::Rotor, false),
+            4 => (turret, false),
+            5 => (
+                match arc {
+                    HitArc::Front => S::Right,
+                    HitArc::Rear => S::Left,
+                    _ => S::Front,
+                },
+                false,
+            ),
+            6 | 7 => (face, false),
+            8 => (face, side),
+            9 => (
+                match arc {
+                    HitArc::Front => S::Left,
+                    HitArc::Rear => S::Right,
+                    _ => S::Rear,
+                },
+                false,
+            ),
+            _ => (S::Rotor, true),
         })
     }
 }

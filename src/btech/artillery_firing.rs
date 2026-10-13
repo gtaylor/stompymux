@@ -69,9 +69,6 @@ pub(super) fn resolve_in_action(
     let character_shooter = world.objects[&shooter].flags.contains(Flag::InCharacter);
     let fall = FallRules {
         vehicle_impact: rules.vehicle_impact,
-        stacking: rules.stacking,
-        stagger: rules.stagger,
-        hit: rules.hit,
         extended_piloting: rules.extended_piloting,
         toughness: character_shooter
             && world
@@ -110,7 +107,6 @@ pub(super) fn resolve_in_action(
             distance,
             target_number: Some(aim.target_number),
             streak_confused: false,
-            glancing: GlancingMode::Disabled,
             fall,
             character_shooter,
         },

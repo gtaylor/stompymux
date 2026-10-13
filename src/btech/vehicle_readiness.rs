@@ -246,6 +246,10 @@ pub(super) fn reserve_prepared_weapon(
         "You are too stunned to fire a weapon!"
     );
     ensure!(
+        !vehicle.sensors_blind(),
+        "Your sensors are wrecked! You cannot fire your weapons!"
+    );
+    ensure!(
         vehicle.turret_repairs().is_empty(),
         "You are too busy unjamming your turret!"
     );
@@ -261,6 +265,11 @@ pub(super) fn reserve_prepared_weapon(
     let mount = &loadout.weapons[index];
     let ammunition_mode = vehicle.ammunition_mode(index)?;
     ensure!(!mount.weapon.is_ams(), "That weapon is defensive only!");
+    // An Engine Hit leaves direct-fire energy weapons without power (TW p. 195).
+    ensure!(
+        !(vehicle.engine_destroyed() && mount.weapon.is_energy()),
+        "Your engine is dead! The energy weapons have no power!"
+    );
     ensure!(
         launched || mount.weapon.is_streak(),
         "Only Streak weapons can fail to lock"

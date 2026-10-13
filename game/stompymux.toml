@@ -121,38 +121,18 @@ allow_cargo_commands = true
 # Overall repair-time multiplier, from 0.0 through 10.0. Zero makes newly
 # started repairs complete on the event scheduler's next one-second tick.
 techtime_multiplier = 1.0
-# Armor percentage below which through-armor criticals may occur.
-critlevel = 66
-# Enable vehicle critical-hit handling; zero disables it.
-vcrit = 101
-# Allow players to self-destruct a unit by exploding its reactor.
-explode_reactor = 1
-# Allow players to self-destruct a unit by exploding its ammunition.
-explode_ammo = 1
-# Allow players to abort a self-destruction sequence after starting it.
-explode_stop = 0
-# Seconds for reactor self-destruction; ammunition self-destruction takes half as long.
-explode_time = 120
 # Enable extended weapon ranges, up to twice a weapon's medium range.
 erange = 0
-# Hit-arc rules: 0 for Total Warfare, 1 for classic BTMUX, 2 for BattleMech Manual.
-hit_arcs = 0
 # Enable MechWarrior embark/disembark behavior and experience loss.
 ic = 0
-# Use the pilot's piloting skill for physical-attack to-hit rolls.
-phys_use_pskill = 1
 # Speed-reduction rules while turning: 0 disables them, 1 is legacy, 2 is facing-based.
 slowdown = 2
 # Apply FASA turning rules and their associated to-hit modifier.
 fasaturn = 0
-# Use the newer charge movement, damage, and distance rules.
-newcharge = 1
 # Require units to be stalled before non-wizard players can perform serious repairs.
 limitedrepairs = 1
 # Database object that stores destroyed units.
 usedunitstore = 3
-# Enable catastrophic explosions after a third engine critical hit.
-stackpole = 1
 # Database object to which players are moved after death.
 afterlife_dbref = 5
 

@@ -245,7 +245,7 @@ pub(super) fn primary_criticals(world: &World, id: ObjectId) -> Result<u32> {
             unit.towable,
             unit.searchlight().destroyed,
             unit.illumination_observed,
-            unit.inferno_remaining > 0,
+            false,
             unit.stun_remaining > 0,
             unit.has_active_probe(ActiveProbe::Beagle)?
                 && !unit.active_probe_available(ActiveProbe::Beagle)?,

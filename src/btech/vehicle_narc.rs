@@ -23,7 +23,6 @@ pub(super) fn attach(
     target: ObjectId,
     shot: super::narc::PodShot,
     rules: VehicleImpactRules,
-    hit_arc_mode: i64,
 ) -> Result<NarcReport<UnitSection>> {
     let mut report = NarcReport {
         kind: shot.kind,
@@ -37,11 +36,7 @@ pub(super) fn attach(
     if !shot.hit || shot.intercepted {
         return Ok(report);
     }
-    let arc = super::hit_direction::HitDirection::Direct {
-        shooter,
-        mode: hit_arc_mode,
-    }
-    .current(world, target)?;
+    let arc = super::hit_direction::HitDirection::Direct { shooter }.current(world, target)?;
     let location = super::vehicle_impact::resolve_location(world, target, arc, rules)?;
     report.notices = location.notices;
     report.broadcasts = location.broadcasts;

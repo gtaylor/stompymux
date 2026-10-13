@@ -35,12 +35,9 @@ impl RotaryDamage for Weapon {
             FireMode::Rotary6 => Self::Srm6,
             _ => bail!("Rotary burst mode is required"),
         };
-        let adjusted = roll.saturating_sub(if glancing { 4 } else { 0 });
-        let hits = if adjusted < 2 {
-            1
-        } else {
-            table.missile_hits(adjusted)?
-        };
+        // Tactical Operations p. 79: the glancing −4 never takes the cluster roll below 2.
+        let adjusted = roll.saturating_sub(if glancing { 4 } else { 0 }).max(2);
+        let hits = table.missile_hits(adjusted)?;
         Ok(vec![u16::from(self.profile().damage); usize::from(hits)])
     }
 }
@@ -129,12 +126,9 @@ mod tests {
             ] {
                 for roll in 2..=12 {
                     for glancing in [false, true] {
-                        let adjusted = roll - if glancing { 4_i16 } else { 0 };
-                        let count = if adjusted < 2 {
-                            1
-                        } else {
-                            counts[(adjusted - 2) as usize]
-                        };
+                        // The glancing −4 never takes the cluster roll below row 2.
+                        let adjusted = (roll - if glancing { 4_i16 } else { 0 }).max(2);
+                        let count = counts[(adjusted - 2) as usize];
                         let groups = weapon
                             .rotary_damage_groups(burst_mode(rounds).unwrap(), roll as u8, glancing)
                             .unwrap();

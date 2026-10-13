@@ -2,19 +2,10 @@
 use crate::support;
 use stompymux_rs::*;
 
-/// Ordinary blast rules, with both mobile-vehicle fire policies exercised below.
-fn rules(advanced_fire: bool) -> FallRules {
+/// Ordinary blast rules.
+fn rules() -> FallRules {
     FallRules {
-        vehicle_impact: VehicleImpactRules {
-            advanced_fire,
-            ..VehicleImpactRules::STANDARD
-        },
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
+        vehicle_impact: VehicleImpactRules::STANDARD,
         extended_piloting: true,
         toughness: false,
     }
@@ -88,13 +79,17 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
             MineKind::Vibra,
         ] {
             for strength in [i16::MIN, -2, -1, 0] {
-                for initial in [0_u32, 60] {
+                // Only a stationary unit carries a jelly duration; Mechs take infernos as heat.
+                for initial in if mech { &[0_u32][..] } else { &[0, 60] } {
+                    let initial = *initial;
                     for advanced in [false, true] {
                         let mut world = base.clone();
-                        let mut state = serde_json::to_value(&world.btech).unwrap();
                         let key = if mech { "constructed" } else { "vehicles" };
-                        state[key][id.0.to_string()]["inferno_remaining"] = initial.into();
-                        world.btech = serde_json::from_value(state).unwrap();
+                        if !mech {
+                            let mut state = serde_json::to_value(&world.btech).unwrap();
+                            state[key][id.0.to_string()]["inferno_remaining"] = initial.into();
+                            world.btech = serde_json::from_value(state).unwrap();
+                        }
                         let mine = Minefield {
                             coordinate: HexCoordinate { x: 1, y: 1 },
                             kind,
@@ -104,15 +99,14 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                         };
                         set_minefield(&mut world, map, 0, Some(mine)).unwrap();
                         let before = world.clone();
-                        let report =
-                            resolve_mine_blast(&mut world, map, 0, rules(advanced)).unwrap();
+                        let report = resolve_mine_blast(&mut world, map, 0, rules()).unwrap();
                         assert_eq!(report.hits.len(), 1, "{chassis} {kind:?} {strength}");
                         let hit = &report.hits[0];
                         assert_eq!(hit.damage, 0);
                         assert!(hit.impacts.is_empty());
                         assert_eq!(report.removed, [0]);
-                        let neighbors =
-                            matches!(kind, MineKind::Command | MineKind::Vibra) && strength <= -2;
+                        // Only a command-detonated field reaches its neighbours.
+                        let neighbors = kind == MineKind::Command && strength <= -2;
                         assert_eq!(
                             report.ignited,
                             if neighbors {
@@ -122,11 +116,13 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                             }
                         );
                         if mech || chassis == "stationary" {
-                            let adjustment = if kind == MineKind::Inferno {
+                            // A spent inferno field has no missiles left for a 'Mech.
+                            let adjustment = if kind == MineKind::Inferno && !mech {
                                 i64::from(strength) * 6
                             } else {
                                 0
                             };
+                            assert_eq!(hit.heat, 0);
                             let expected = if adjustment == 0 {
                                 initial
                             } else {
@@ -136,7 +132,9 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                             let mut expected_state = serde_json::to_value(&before.btech).unwrap()
                                 [key][id.0.to_string()]
                             .clone();
-                            expected_state["inferno_remaining"] = expected.into();
+                            if !mech {
+                                expected_state["inferno_remaining"] = expected.into();
+                            }
                             assert_eq!(
                                 serde_json::to_value(&world.btech).unwrap()[key][id.0.to_string()],
                                 expected_state
@@ -148,7 +146,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                                 &mut zero,
                                 id,
                                 0,
-                                rules(advanced).vehicle_impact,
+                                rules().vehicle_impact,
                             )
                             .unwrap();
                             assert_eq!(hit.vehicle_heat.as_ref(), Some(&exposure));
@@ -156,7 +154,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                         }
                         let mut replay = before;
                         assert_eq!(
-                            resolve_mine_blast(&mut replay, map, 0, rules(advanced)).unwrap(),
+                            resolve_mine_blast(&mut replay, map, 0, rules()).unwrap(),
                             report
                         );
                         assert_eq!(replay.btech, world.btech);

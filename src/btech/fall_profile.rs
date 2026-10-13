@@ -18,12 +18,14 @@ pub(super) fn surface(tile: Hex, elevation: i32) -> i16 {
     tile.surface_height()
 }
 
-/// Water halves structural damage; special gravity reduces it but never increases it.
+/// Fall damage: one point per ten tons, rounded up, per level fallen plus one (Total Warfare
+/// p. 68). Water halves it (p. 57), and unusual gravity scales it by the world's G-rating in
+/// either direction (Tactical Operations p. 53). `levels` is the multiplier, levels fallen plus one.
 pub(super) fn damage(tons: u32, levels: i32, wet: bool, gravity: Option<i64>) -> Result<u32> {
     let mut damage =
         u64::from(levels.max(0) as u32) * (u64::from(tons) + 5) / if wet { 20 } else { 10 };
     if let Some(gravity) = gravity {
-        damage = damage * gravity.clamp(0, 100) as u64 / 100;
+        damage = damage * gravity.max(0) as u64 / 100;
     }
     u32::try_from(damage).context("Fall damage exceeds supported range")
 }
@@ -44,6 +46,17 @@ pub(super) fn direction(roll: u8) -> Result<(HitArc, u16)> {
 mod tests {
     use super::*;
     use crate::btech::Terrain;
+
+    /// Water halves, and gravity scales the result in both directions.
+    #[test]
+    fn damage_scales_with_levels_water_and_gravity() {
+        assert_eq!(damage(55, 1, false, None).unwrap(), 6);
+        assert_eq!(damage(55, 3, false, None).unwrap(), 18);
+        assert_eq!(damage(55, 2, true, None).unwrap(), 6);
+        assert_eq!(damage(50, 1, false, Some(50)).unwrap(), 2);
+        assert_eq!(damage(50, 1, false, Some(200)).unwrap(), 10);
+        assert_eq!(damage(50, 1, false, Some(-5)).unwrap(), 0);
+    }
 
     #[test]
     fn descent_surface_preserves_decks_ice_and_submerged_passage() {

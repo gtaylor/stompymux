@@ -46,7 +46,8 @@ fn unit(world: &mut World, config: &Config, map: ObjectId, chassis: &str) -> Obj
     id
 }
 
-/// A reactor finishes its own wreck and, for vehicles, a wreck with one remaining rear point.
+/// Zero every section but one through the chassis damage primitives, then let one conventional
+/// mine blast finish the wreck inside a single committed action.
 async fn fixture(
     chassis: &str,
     ic: bool,
@@ -62,12 +63,13 @@ async fn fixture(
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = unit(&mut world, &config, map, chassis);
-    let source = if world.btech.vehicles().contains_key(&id) {
+    if world.btech.vehicles().contains_key(&id) {
         let mut vehicle = world.btech.vehicles()[&id].clone();
         let sections: Vec<_> = vehicle.sections().keys().copied().collect();
         for section in sections {
             let internal = vehicle.sections()[&section].internal;
-            let amount = if section == VehicleSection::Rear {
+            // Mine blasts strike the front arc, so the front is the section a blast can finish.
+            let amount = if section == VehicleSection::Front {
                 internal.saturating_sub(1)
             } else {
                 internal
@@ -77,17 +79,48 @@ async fn fixture(
                 .unwrap();
         }
         let mut encoded = serde_json::to_value(&vehicle).unwrap();
-        encoded["sections"]["rear"]["armor"] = 0.into();
+        encoded["sections"]["front"]["armor"] = 0.into();
         world
             .btech
             .rewrite_unit_record(id, |record| {
                 *record = encoded;
             })
             .unwrap();
-        unit(&mut world, &config, map, "biped")
     } else {
-        id
-    };
+        let mut mech = world.btech.constructed_units()[&id].clone();
+        let sections: Vec<_> = mech.sections().keys().copied().collect();
+        // Mine blasts use the Kick Location Table from the front, so a front leg is the
+        // section a blast can finish. A quad's front leg dies with its side torso, so that
+        // torso keeps a point too and takes the blast's transferred damage.
+        let keep: &[(MechSection, &str)] = if chassis == "quad" {
+            &[
+                (MechSection::LeftArm, "LeftArm"),
+                (MechSection::LeftTorso, "LeftTorso"),
+            ]
+        } else {
+            &[(MechSection::LeftLeg, "LeftLeg")]
+        };
+        for section in sections {
+            let internal = mech.sections()[&section].internal;
+            let amount = if keep.iter().any(|(kept, _)| *kept == section) {
+                internal.saturating_sub(1)
+            } else {
+                internal
+            };
+            mech.damage_phase(section, amount, DamagePhase::Internal);
+        }
+        let mut encoded = serde_json::to_value(&mech).unwrap();
+        for (_, name) in keep {
+            encoded["sections"][*name]["armor"] = 0.into();
+            encoded["sections"][*name]["rear"] = 0.into();
+        }
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                *record = encoded;
+            })
+            .unwrap();
+    }
     if ic {
         world
             .objects
@@ -109,29 +142,65 @@ async fn fixture(
         }),
     )
     .unwrap();
-    // Find a fixed victim stream that hits its remaining rear section in the reactor packets.
+    // A standard mine of this strength survives its own blast, so later tests can reuse it.
+    set_minefield(
+        &mut world,
+        map,
+        BLAST_MINE,
+        Some(Minefield {
+            coordinate: HexCoordinate { x: 0, y: 0 },
+            kind: MineKind::Standard,
+            strength: 5,
+            extra: 0,
+            owner: ObjectId(1),
+        }),
+    )
+    .unwrap();
+    // Find a fixed victim stream whose blast lands on the remaining section.
     for seed in 0..=255u8 {
         let mut candidate = world.clone();
         candidate
             .btech
             .rewrite_unit_record(id, |record| {
-                if source != id {
-                    record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-                }
+                record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             })
             .unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(candidate))).unwrap();
-        reactor_explosion_action(&scripts, &config, source).unwrap();
-        if source == id
-            || scripts.world().btech.vehicles()[&id]
-                .sections()
-                .values()
-                .all(|section| section.internal == 0)
-        {
+        let report = blast(&scripts, &config, map);
+        assert!(report.hits.iter().any(|hit| hit.unit == id));
+        let finished = {
+            let world = scripts.world();
+            let sections: Vec<u16> = if let Some(unit) = world.btech.vehicles().get(&id) {
+                unit.sections().values().map(|s| s.internal).collect()
+            } else {
+                world.btech.constructed_units()[&id]
+                    .sections()
+                    .values()
+                    .map(|s| s.internal)
+                    .collect()
+            };
+            sections.iter().all(|internal| *internal == 0)
+        };
+        if finished {
             return (dir, config, scripts, id, map);
         }
     }
-    panic!("No complete vehicle wreck");
+    panic!("No complete {chassis} wreck");
+}
+
+/// Ordinal of the reusable conventional mine under the wreck.
+const BLAST_MINE: u32 = 0;
+
+/// Detonate the reusable mine beneath the wreck; blasts tolerate already destroyed occupants.
+fn blast(scripts: &Scripts, config: &Config, map: ObjectId) -> MineBlastReport {
+    resolve_mine_blast_action(
+        scripts,
+        config,
+        map,
+        BLAST_MINE,
+        MovementRules::STANDARD.fall,
+    )
+    .unwrap()
 }
 
 /// Every supported chassis keeps one ten-tick timer and preserves game-object-owned mines on retirement.
@@ -193,14 +262,7 @@ async fn wreck_retirement_cross_chassis_and_restart() {
             .unwrap()
             .remove("membership_extent")
             .unwrap();
-        assert_eq!(
-            extent,
-            if before.btech.vehicles().contains_key(&id) {
-                2
-            } else {
-                0
-            }
-        );
+        assert_eq!(extent, 0);
         before_map
             .as_object_mut()
             .unwrap()
@@ -397,7 +459,6 @@ async fn wreck_idle_server_commit_retry() {
         let (_dir, config, scripts, id, _) = fixture("biped", true).await;
         for _ in 0..9 { advance_battle_wrecks_action(&scripts, &config).unwrap(); }
         let mut world = scripts.world().clone();
-        for _ in 0..31 { advance_battle_reactor_windows(&mut world); }
         // No other running systems are needed to keep the retirement timer alive.
         world.btech
             .rewrite_unit_record(id, |record| {
@@ -487,9 +548,8 @@ async fn wreck_repeated_ordinary_blast_preserves_cleanup_admission() {
                 .unwrap()
                 .flags
                 .insert(Flag::InCharacter);
-            let source = unit(&mut scripts.world_mut(), &config, map, "biped");
             let before = remaining(&scripts.world(), id);
-            let report = reactor_explosion_action(&scripts, &config, source).unwrap();
+            let report = blast(&scripts, &config, map);
             assert!(report.hits.iter().any(|hit| hit.unit == id));
             assert_eq!(remaining(&scripts.world(), id), before);
         }

@@ -63,9 +63,11 @@ pub(super) fn resolve_shells(
             notices,
         })
     };
+    // Tactical Operations p. 79: a glancing blow halves damage, rounding down. Callers drop
+    // packets that reach zero.
     if glancing {
         for packet in packets {
-            *packet = packet.div_ceil(2);
+            *packet /= 2;
         }
     }
     Ok(absorption)

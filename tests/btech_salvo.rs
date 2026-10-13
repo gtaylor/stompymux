@@ -2,7 +2,7 @@
 use crate::support;
 use stompymux_rs::WeaponSalvo;
 use stompymux_rs::{
-    Dice, HitArc, HitRules, Kind, MechTemplate, ObjectId, Weapon, create_battle_unit, persistence,
+    Dice, HitArc, Kind, MechTemplate, ObjectId, Weapon, create_battle_unit, persistence,
     resolve_battle_salvo,
 };
 
@@ -94,15 +94,9 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let before = world.clone();
-    let rules = HitRules {
-        inferno_penalty: false,
-        exile_stun_mode: 0,
-    };
-    assert!(
-        resolve_battle_salvo(&mut world, ObjectId(-1), Weapon::Srm6, HitArc::Front, rules).is_err()
-    );
+    assert!(resolve_battle_salvo(&mut world, ObjectId(-1), Weapon::Srm6, HitArc::Front).is_err());
     assert_eq!(world.btech, before.btech);
-    let report = resolve_battle_salvo(&mut world, id, Weapon::Srm6, HitArc::Front, rules).unwrap();
+    let report = resolve_battle_salvo(&mut world, id, Weapon::Srm6, HitArc::Front).unwrap();
     assert_eq!(
         report.groups.len(),
         usize::from(
@@ -123,7 +117,7 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
     );
     let mut repeated = before.clone();
     assert_eq!(
-        resolve_battle_salvo(&mut repeated, id, Weapon::Srm6, HitArc::Front, rules).unwrap(),
+        resolve_battle_salvo(&mut repeated, id, Weapon::Srm6, HitArc::Front).unwrap(),
         report
     );
     assert_eq!(repeated.btech, world.btech);
@@ -146,8 +140,8 @@ async fn salvo_locations_replay_and_restart_preserves_every_group_and_roll() {
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
     assert_eq!(
-        resolve_battle_salvo(&mut loaded, id, Weapon::MediumLaser, HitArc::Rear, rules).unwrap(),
-        resolve_battle_salvo(&mut world, id, Weapon::MediumLaser, HitArc::Rear, rules).unwrap()
+        resolve_battle_salvo(&mut loaded, id, Weapon::MediumLaser, HitArc::Rear).unwrap(),
+        resolve_battle_salvo(&mut world, id, Weapon::MediumLaser, HitArc::Rear).unwrap()
     );
 }
 
@@ -189,16 +183,11 @@ fn seeded_target(world: &stompymux_rs::World, id: ObjectId, seed: u8) -> stompym
 async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_failed_cascade() {
     use stompymux_rs::{MechSection, resolve_battle_tactical_salvo};
     let (_dir, config, world, id) = tactical_fixture().await;
-    let rules = HitRules {
-        inferno_penalty: false,
-        exile_stun_mode: 0,
-    };
     let mut selected = None;
     for seed in 0..=255 {
         let original = seeded_target(&world, id, seed);
         let mut trial = original.clone();
-        let material =
-            resolve_battle_salvo(&mut trial, id, Weapon::Srm6, HitArc::Front, rules).unwrap();
+        let material = resolve_battle_salvo(&mut trial, id, Weapon::Srm6, HitArc::Front).unwrap();
         if material.groups.len() >= 2
             && material.groups[0].hit.section != MechSection::Head
             && material.groups[1].hit.section == MechSection::Head
@@ -219,11 +208,8 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
             HitArc::Front,
             stompymux_rs::FallRules {
                 vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-                stacking: stompymux_rs::StackingRules::STANDARD,
-                stagger: stompymux_rs::StaggerMode::Retain,
-                hit: rules,
                 extended_piloting: true,
-                toughness: false
+                toughness: false,
             }
         )
         .is_err()
@@ -236,9 +222,6 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
         HitArc::Front,
         stompymux_rs::FallRules {
             vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-            stacking: stompymux_rs::StackingRules::STANDARD,
-            stagger: stompymux_rs::StaggerMode::Retain,
-            hit: rules,
             extended_piloting: true,
             toughness: false,
         },
@@ -270,10 +253,6 @@ async fn tactical_salvo_applies_later_head_injury_and_rolls_back_an_entire_faile
 async fn pilot_loss_stops_remaining_missile_groups_without_rolling_them() {
     use stompymux_rs::{MechSection, resolve_battle_tactical_salvo};
     let (_dir, config, mut world, id) = tactical_fixture().await;
-    let rules = HitRules {
-        inferno_penalty: false,
-        exile_stun_mode: 0,
-    };
     world
         .btech
         .rewrite_unit_record(id, |record| {
@@ -294,9 +273,6 @@ async fn pilot_loss_stops_remaining_missile_groups_without_rolling_them() {
             HitArc::Front,
             stompymux_rs::FallRules {
                 vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-                stacking: stompymux_rs::StackingRules::STANDARD,
-                stagger: stompymux_rs::StaggerMode::Retain,
-                hit: rules,
                 extended_piloting: true,
                 toughness: false,
             },

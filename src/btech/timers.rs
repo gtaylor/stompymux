@@ -9,7 +9,7 @@
 //! held while the unit is off. A wrong motion never loses a value: a held counter is
 //! stored as it is, and a moving one is stored as the second it reaches or was zero, so
 //! the only cost of a misjudged motion is a row rewrite on the next save.
-use super::{MechSection, VehicleSection};
+use super::MechSection;
 use anyhow::{Context, Result, ensure};
 use serde_json::Value;
 
@@ -86,13 +86,9 @@ pub(crate) enum Timer {
     OverheatElapsed = 2,
     /// `overheat_clock.phase`, wrapping every thirty seconds.
     OverheatPhase = 3,
-    /// `inferno_remaining`.
+    /// A vehicle's `inferno_remaining`.
     Inferno = 4,
-    /// `stagger.hits[slot].remaining`.
-    StaggerHit = 5,
-    /// `stagger.elapsed`, rising until the configured window resets it.
-    StaggerElapsed = 6,
-    /// `stagger.phase`, wrapping every thirty seconds under traditional rules.
+    /// `stagger.phase`, wrapping every thirty seconds.
     StaggerPhase = 7,
     /// `stand_timer.remaining`.
     Stand = 8,
@@ -100,8 +96,6 @@ pub(crate) enum Timer {
     WeaponRecycle = 9,
     /// `limb_recycle[slot]`, keyed by the section's position in [`MechSection::ALL`].
     LimbRecycle = 10,
-    /// `reactor_instability_remaining`.
-    ReactorInstability = 11,
     /// `stun_remaining`.
     Stun = 12,
     /// `free_fall.remaining`.
@@ -148,10 +142,6 @@ pub(crate) enum Timer {
     CrewStun = 33,
     /// `turret_repairs[slot]`.
     TurretRepair = 34,
-    /// `burning_sections[slot]`, keyed by the vehicle section's position in [`VEHICLE_SECTIONS`].
-    BurningSection = 35,
-    /// `extinguishing`.
-    Extinguishing = 36,
     /// `pod_removal`.
     PodRemoval = 37,
     /// `vtol_fuel.remaining`.
@@ -160,30 +150,17 @@ pub(crate) enum Timer {
     TargetLock = 39,
 }
 
-/// Vehicle sections in slot order.
-pub(crate) const VEHICLE_SECTIONS: [VehicleSection; 6] = [
-    VehicleSection::Left,
-    VehicleSection::Right,
-    VehicleSection::Front,
-    VehicleSection::Rear,
-    VehicleSection::Turret,
-    VehicleSection::Rotor,
-];
-
 impl Timer {
     /// Every timer, in code order.
-    pub(crate) const ALL: [Self; 39] = [
+    pub(crate) const ALL: [Self; 34] = [
         Self::Startup,
         Self::OverheatElapsed,
         Self::OverheatPhase,
         Self::Inferno,
-        Self::StaggerHit,
-        Self::StaggerElapsed,
         Self::StaggerPhase,
         Self::Stand,
         Self::WeaponRecycle,
         Self::LimbRecycle,
-        Self::ReactorInstability,
         Self::Stun,
         Self::FreeFall,
         Self::Charge,
@@ -207,8 +184,6 @@ impl Timer {
         Self::CrewRecovery,
         Self::CrewStun,
         Self::TurretRepair,
-        Self::BurningSection,
-        Self::Extinguishing,
         Self::PodRemoval,
         Self::VtolFuel,
         Self::TargetLock,
@@ -243,14 +218,6 @@ impl Timer {
             .expect("every section is listed") as i64
     }
 
-    /// The slot of a vehicle section.
-    pub(crate) fn vehicle_section_slot(section: VehicleSection) -> i64 {
-        VEHICLE_SECTIONS
-            .iter()
-            .position(|candidate| *candidate == section)
-            .expect("every vehicle section is listed") as i64
-    }
-
     /// JSON pointer of the value this timer stands for in a record's saved parts.
     pub(crate) fn pointer(self, slot: i64) -> Result<String> {
         let fixed = |path: &str| Ok(path.to_owned());
@@ -259,8 +226,6 @@ impl Timer {
             Self::OverheatElapsed => fixed("/overheat_clock/elapsed"),
             Self::OverheatPhase => fixed("/overheat_clock/phase"),
             Self::Inferno => fixed("/inferno_remaining"),
-            Self::StaggerHit => Ok(format!("/stagger/hits/{slot}/remaining")),
-            Self::StaggerElapsed => fixed("/stagger/elapsed"),
             Self::StaggerPhase => fixed("/stagger/phase"),
             Self::Stand => fixed("/stand_timer/remaining"),
             Self::WeaponRecycle => Ok(format!("/weapon_recycle/{slot}")),
@@ -271,7 +236,6 @@ impl Timer {
                     .with_context(|| format!("unknown section slot {slot}"))?;
                 Ok(format!("/limb_recycle/{}", key(&serde_name(section)?)))
             }
-            Self::ReactorInstability => fixed("/reactor_instability_remaining"),
             Self::Stun => fixed("/stun_remaining"),
             Self::FreeFall => fixed("/free_fall/remaining"),
             Self::Charge => fixed("/charge/elapsed"),
@@ -295,14 +259,6 @@ impl Timer {
             Self::CrewRecovery => fixed("/crew_recovery/remaining"),
             Self::CrewStun => fixed("/crew_stun_remaining"),
             Self::TurretRepair => Ok(format!("/turret_repairs/{slot}")),
-            Self::BurningSection => {
-                let section = usize::try_from(slot)
-                    .ok()
-                    .and_then(|slot| VEHICLE_SECTIONS.get(slot))
-                    .with_context(|| format!("unknown vehicle section slot {slot}"))?;
-                Ok(format!("/burning_sections/{}", key(&serde_name(section)?)))
-            }
-            Self::Extinguishing => fixed("/extinguishing"),
             Self::PodRemoval => fixed("/pod_removal"),
             Self::VtolFuel => fixed("/vtol_fuel/remaining"),
             Self::TargetLock => fixed("/target_lock/remaining"),
@@ -378,10 +334,6 @@ mod tests {
             .pointer(Timer::section_slot(MechSection::LeftArm))
             .unwrap();
         assert_eq!(pointer, "/limb_recycle/LeftArm");
-        let pointer = Timer::BurningSection
-            .pointer(Timer::vehicle_section_slot(VehicleSection::Rear))
-            .unwrap();
-        assert_eq!(pointer, "/burning_sections/rear");
         let mut part = serde_json::json!({"stun_remaining": 7, "limb_recycle": {"LeftArm": 12}});
         let timers = [
             SavedTimer {

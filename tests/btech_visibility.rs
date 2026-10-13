@@ -274,7 +274,6 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
         assert_eq!(view.detection, None);
         let rules = AimRules {
             woods_damage: false,
-            hit_arc_mode: 0,
             fasa_turning: false,
             extended_movement: false,
             extended_ranges: false,

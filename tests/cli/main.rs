@@ -46,8 +46,5 @@ pub async fn stable_world(database: &Path) -> serde_json::Value {
         .expect("btech state object");
     btech.insert("turn_clock".into(), 0.into());
     btech.insert("simulation_seconds".into(), 0.into());
-    if let Some(reactor) = btech.get_mut("reactor").and_then(|r| r.as_object_mut()) {
-        reactor.insert("startup_remaining".into(), 0.into());
-    }
     value
 }

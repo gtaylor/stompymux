@@ -1,4 +1,4 @@
-//! Configured Mech hit routing and critical-proof construction share host actions and durable state.
+//! Mech hit routing and critical-proof construction share host actions and durable state.
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
@@ -8,24 +8,13 @@ fn edit(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Va
     world.btech.rewrite_unit_record(id, update).unwrap();
 }
 
-/// Use host configuration, a piloted laser or cannon, and a constructed Mech target.
+/// Use a piloted laser or cannon and a constructed Mech target.
 async fn fixture(
     vehicle: bool,
     quad: bool,
     proof: bool,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
-    let (dir, _, mut world) = support::isolated_world().await;
-    let path = dir.path().join("stompymux.toml");
-    let mut settings: toml::Value =
-        toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    for (key, value) in [("exile_stun_code", 1), ("glancing_blows", 0)] {
-        settings["battletech"]
-            .as_table_mut()
-            .unwrap()
-            .insert(key.into(), value.into());
-    }
-    std::fs::write(&path, toml::to_string(&settings).unwrap()).unwrap();
-    let config = Config::load(dir.path()).unwrap();
+    let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Hit field".into(), Kind::Room);
     create_battle_map(
         &mut world,
@@ -108,9 +97,9 @@ async fn fixture(
     (dir, config, world, shooter, target)
 }
 
-/// Both launchers reach the configured target route, with exact callback rollback and restart replay.
+/// Both launchers reach the same target route, with exact callback rollback and restart replay.
 #[tokio::test]
-async fn configured_hit_routes_share_native_lua_and_restart() {
+async fn hit_routes_share_native_lua_and_restart() {
     let selected = (0..=255)
         .find(|seed| {
             let mut dice = Dice::seeded([*seed; 32]);
@@ -133,14 +122,6 @@ async fn configured_hit_routes_share_native_lua_and_restart() {
                     // The shooter approaches the target from behind.
                     let section = if safe {
                         MechSection::LeftArm
-                    } else if roll == 12 {
-                        HitTable::Punch
-                            .location(
-                                base.btech.constructed_units()[&target].chassis(),
-                                HitArc::Rear,
-                                expected_dice.d6(),
-                            )
-                            .unwrap()
                     } else {
                         HitTable::Weapon
                             .location(
@@ -175,22 +156,13 @@ async fn configured_hit_routes_share_native_lua_and_restart() {
                     );
                     assert!(output.contains("Hit."), "{output}");
                     let inspect = format!(
-                        "local r={call}; local h=r.salvo.report.groups[1].hit; return h.section,h.crew_stun,h.through_armor_critical"
+                        "local r={call}; local h=r.salvo.report.groups[1].hit; return h.section,h.through_armor_critical"
                     );
-                    let actual: (String, bool, bool) = lua.eval_callback(&inspect).unwrap();
-                    assert_eq!(
-                        actual,
-                        (
-                            format!("{section:?}"),
-                            !safe && roll == 12 && section != MechSection::Head,
-                            false
-                        )
-                    );
+                    let actual: (String, bool) = lua.eval_callback(&inspect).unwrap();
+                    assert_eq!(actual, (format!("{section:?}"), false));
                     assert_eq!(native.world().btech, lua.world().btech);
                     assert_eq!(
-                        replay
-                            .eval_callback::<(String, bool, bool)>(&inspect)
-                            .unwrap(),
+                        replay.eval_callback::<(String, bool)>(&inspect).unwrap(),
                         actual
                     );
                     assert_eq!(lua.world().btech, replay.world().btech);
@@ -238,7 +210,11 @@ async fn critical_proof_preserves_damage_head_injury_and_limb_loss() {
                 let mut expected_dice = Dice::seeded([seed; 32]);
                 expected_dice.two_d6();
                 assert_eq!(expected_dice.two_d6(), roll);
-                if tac {
+                // A 12 on either Determining Critical Hits roll blows a limb or head off and
+                // ends the hit; otherwise the hit location critical and the structure roll
+                // are both made.
+                let severed = roll == 12 && section != MechSection::CenterTorso;
+                if tac && !severed {
                     expected_dice.two_d6();
                 }
                 let original =
@@ -250,7 +226,6 @@ async fn critical_proof_preserves_damage_head_injury_and_limb_loss() {
                         section,
                         rear_armor: false,
                         through_armor_critical: tac,
-                        crew_stun: false,
                     },
                     1,
                 )
@@ -258,11 +233,7 @@ async fn critical_proof_preserves_damage_head_injury_and_limb_loss() {
                 assert!(report.criticals.is_empty());
                 assert_eq!(
                     world.btech.constructed_units()[&target].sections()[&section].internal,
-                    if !tac && roll == 12 && section != MechSection::CenterTorso {
-                        0
-                    } else {
-                        original - 1
-                    }
+                    if severed { 0 } else { original - 1 }
                 );
                 assert_eq!(
                     report.pending_effects.contains(&ImpactEffect::HeadInjury),

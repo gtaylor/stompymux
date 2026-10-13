@@ -269,11 +269,12 @@ fn break_surface(
     let bridge = expected == Surface::Bridge;
     let roof = expected == Surface::Roof;
     // Occupants stand on the deck, the ice or the roof. A collapsing deck drops them to the
-    // river bed, and a collapsing building or wall to the rubble at its foot.
+    // river bed, and a collapsing building or wall to the rubble at its foot: a fall of the
+    // structure's height in levels, so the damage multiplier is one more (Total Warfare p. 177).
     let (surface_height, fall_levels, replacement) = match tile.structure() {
         Some(structure) if roof => (
             i32::from(tile.surface_height()),
-            structure.height,
+            structure.height.saturating_add(1),
             tile.collapsed(),
         ),
         _ => (

@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "extinguish", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
 article_tags = ["show_in_index"]
 +++
 
@@ -173,8 +173,8 @@ into the water, and ice that holds takes a piloting check to keep your feet.
 Landing in a swamp sticks you fast, and landing in liquid magma or other soft
 ground rolls against getting stuck. Buildings and walls block jumps that are too
 low to clear them. DFA remains unavailable.
-Accumulated damage does not block takeoff. Rolling stagger checks continue
-during flight and can still cause a fall.
+Accumulated damage does not block takeoff. Twenty or more points of damage in
+one turn still force a piloting check, which can cause a fall in flight.
 
 Cockpit stun blocks firing for ten simulation seconds and slows a running unit
 toward walking speed. Another stunning hit restarts that countdown.
@@ -333,21 +333,18 @@ it also uses water ranges.
 
 
 `inferno <selection>` toggles a ready missile launcher between normal and inferno
-ammunition. It requires a matching bin to fire. Surviving inferno missiles cause
-burning instead of armor damage: each pair, rounded up, adds three minutes. AMS
-can intercept them. One-shot launchers cannot change ammunition modes. `weapons`
-marks selected launchers with `[Inferno]`.
-
-Inferno burns reduce cooling by six until their saved timer expires. `status heat`
-shows the remaining seconds. Entering deep water or falling prone in shallow water
-extinguishes the flames in a cloud of steam. Burning units also light up nearby hexes.
+ammunition. It requires a matching bin to fire. Surviving inferno missiles add
+two heat points each to a Mech instead of armor damage, as in Total Warfare;
+outside heat is capped at fifteen points per turn. AMS can intercept them.
+One-shot launchers cannot change ammunition modes. `weapons` marks selected
+launchers with `[Inferno]`.
 
 Sustained firing can overheat the reactor. Thermal checks run on saved simulation
-timers. At high heat, ammunition can explode before the reactor attempts to shut
-down. Your Computer skill can override shutdown; the cockpit shows its target
-number and roll. A successful override in an in-character unit awards one
-Computer XP when the normal skill cooldown permits it. Heat can also injure the
-pilot, especially with damaged life support. A reactor shutdown clears your
+timers using the Total Warfare heat scale: at high heat, ammunition can explode
+before the reactor attempts to shut down, and each check is a 2d6 avoid roll
+whose target rises with heat. Shutdown at 30 heat cannot be avoided. Carrying
+inferno ammunition adds its own, earlier ammunition avoid rolls. Heat can also
+injure the pilot once life support is destroyed. A reactor shutdown clears your
 cockpit assignment and target and stops the unit. If you were moving faster than 10.75 kph, a failed piloting check can
 also knock the unit prone. Take the cockpit again and wait for safe startup heat
 before restarting. These checks currently cover supported tactical units.
@@ -385,10 +382,9 @@ normally. CASE-II is not yet supported.
 
 
 Missile attacks must meet their base target number to reach the target or trigger
-AMS. When near-miss glancing is enabled, a roll one below that number still
-spends the launch but causes no missile damage, pod attachment or Swarm flight.
-A roll exactly meeting the base number uses the missile glancing adjustment when
-glancing is enabled. Aimed preparation still occurs against an immobile target.
+AMS. A roll exactly meeting the target number is a glancing blow (Tactical
+Operations): direct damage is halved, rounding down, and a missile cluster roll
+treats results below 2 as 2. Aimed preparation still occurs against an immobile target.
 
 Streak SRM-2/4/6 and Clan Streak LRM-5/10/15/20 launchers require a successful
 lock before launching. A failed lock still starts the normal recycle time, but
@@ -429,10 +425,10 @@ including pulse lasers. It does not assist missiles, flamers, machine guns or
 LB-X cluster rounds. Losing or flooding any computer slot disables the bonus
 for the whole unit. The bonus applies automatically when firing.
 
-A hardened gyro absorbs its first critical hit without a piloting penalty or
-fall check. The second hit damages stability; the third destroys gyro support.
-The first hit also preserves an active jump. Hardened gyros weigh twice as much
-as standard gyros.
+A heavy-duty gyro absorbs its first critical hit with only a +1 piloting
+penalty and no fall check. The second hit counts as an ordinary gyro hit (+3
+and a piloting check); the third destroys gyro support. The first hit also
+preserves an active jump. Heavy-duty gyros weigh twice as much as standard gyros.
 
 `artemis <selection>` toggles compatible missile ammunition on a recycled
 launcher with a working linked Artemis IV controller. Selection accepts weapon
@@ -499,9 +495,9 @@ with rapid fire. Selecting the mode again returns to normal ammunition.
 
 `armorpiercing <selection>` toggles AP rounds for conventional and light IS
 autocannons. AP bins hold half the ordinary rounds. Shots take +1 to their target
-number; a hit absorbed by armor can roll for critical damage when the remaining
-front or rear armor is below half its original strength. Smaller autocannons
-apply a larger penalty to that critical roll. AP can be combined with rapid fire.
+number; every hit that damages armor rolls once for a critical hit, with a
+penalty of -1 to -4 that grows as the autocannon gets smaller (Total Warfare
+p. 140). Hardened armor negates the roll. AP can be combined with rapid fire.
 
 `caseless <selection>` toggles caseless ammunition for conventional and light IS
 autocannons. Ordinary bins hold twice as many rounds. A firing roll of two or
@@ -586,10 +582,11 @@ Use `charge` to select your current target for a ground charge, or `charge #unit
 to select a visible unit. `charge -` cancels. Selection does not start movement:
 set your heading and speed to approach the target. A charge is attempted when
 movement brings you within collision range. Status shows your charge selection.
-With the new charge rules enabled, travel accumulates damage potential and the
+Travel toward the target accumulates the charge distance that sets its damage, and the
 selection expires after 61 movement updates. Retargeting keeps accumulated time
 and distance; cancelling clears them. Jumping ages the timer without increasing charge distance. An in-range airborne
-charge attempt clears the selection without attacking.
+charge attempt clears the selection without attacking. The charging unit takes
+one point of damage per ten tons of its target, as in Total Warfare.
 
 
 Use `jump #unit` for a death-from-above attack, or `jump` with no arguments to
@@ -597,8 +594,9 @@ use your current target. You jump toward the hex occupied by the target when
 you launch. If it moves out of that hex, you land normally. Status shows the
 selected DFA target during flight.
 
-A successful attack damages the target and your legs. A miss damages your rear
-armor and leaves you prone, with a chance of pilot injury. Both outcomes impose
+A successful attack damages the target and your legs. A miss is a two-level fall
+onto your back: every hit strikes your rear and your pilot makes the fall's
+piloting check at +1. Both outcomes impose
 physical recovery on your arms, legs and side torsos. An accepted DFA uses this
 physical recovery instead of ordinary jump stabilization. `land` can trigger the
 attack early if you are already in the target's hex.
@@ -800,10 +798,14 @@ the coordinates when that unit moves. Artillery always fires at the selected hex
 and arrives after a flight delay, applying its ammunition payload to the area.
 
 
-Crossing into a mined hex, landing or falling can trigger its mines. Inferno mines
-also leave you burning. Vibra mines can detonate nearby when a sufficiently heavy
-unit moves through their coverage. Small bomblets spotted on the ground are command
-mines; spotting them does not detonate them.
+Crossing into a mined hex, landing or falling can trigger its mines. Conventional
+and inferno fields detonate on a 2d6 roll that gets easier as the field grows
+denser (9+, 8+ or 7+); a falling Mech or a hovercraft sets one off only on a 12,
+and each blast can thin the field by five points. Inferno mines heat a Mech like
+inferno missiles. Vibra mines detonate under a Mech heavy enough for their
+setting, from up to a few hexes away for much heavier Mechs, and damage only
+that hex. Active mines go off under a landing jumper. Small bomblets spotted on
+the ground are command mines; spotting them does not detonate them.
 
 
 Use `listchannels` (or `listfreqs`) to inspect radio channels. Set a frequency with
@@ -899,7 +901,7 @@ over filtered terrain. These modes work
 on ordinary maps as well as dark maps. Question marks mean the requested terrain
 information is obscured.
 
-Active fires and inferno-burning units light nearby terrain. Forward searchlights
+Active fires and burning stationary units light nearby terrain. Forward searchlights
 can reveal terrain farther away at night, but obstructions block their beams.
 Visibility-filtered maps update as those light sources move or expire.
 
@@ -1014,8 +1016,8 @@ closest usable sighting in the network, which is what your weapons aim with.
 
 The five characters after `S:` summarize contact condition. They show, in order:
 carried club (C); destroyed (D), lamp (L) or illuminated (l); jumping (J), prone (F)
-or standing transition (f); shutdown (S), starting (s), excess heat (+) or inferno
-(I); and homing beacon (n friendly/N hostile), ECCM (P), ECM (E), protection (p)
+or standing transition (f); shutdown (S), starting (s), excess heat (+) or, for a
+stationary unit, burning jelly (I); and homing beacon (n friendly/N hostile), ECCM (P), ECM (E), protection (p)
 or interference (e). A higher-priority condition in a column hides the others.
 
 
@@ -1144,23 +1146,11 @@ Ground vehicles also accept `lbx`, `sguided`, `precision`, `flechette`,
 These change the ammunition selection on compatible, intact, recycled weapons.
 
 
-Inferno hits on moving-capable ground vehicles follow the configured vehicle fire
-rules. Standard rules check for a heat explosion; advanced rules ignite surviving
-sections, causing immediate damage and another fire pulse every minute. A fire
-can go out after a pulse. Repeated hits do not restart existing section timers.
-Stationary installations instead accumulate burning-jelly duration.
-
-Use `shutdown`, then `extinguish` to begin a two-minute crew attempt to put out
-section fires. Fires continue to cause damage while the vehicle is shut down.
-Lua uses `btech.unit.extinguish(unit, pilot)`; state inspection shows the pending
-attempt and section countdowns.
-
-
-Vehicles can drive through burning terrain. With advanced vehicle fire enabled,
-each newly entered burning hex can damage the motive system, sweep the vehicle
-with flames, or ignite persistent section fires. Wheeled vehicles and hovercraft
-are more vulnerable than tracked vehicles. Staying within one hex does not repeat
-the entry check. A disabling result stops the vehicle at that crossing.
+Inferno hits on moving-capable ground vehicles and VTOLs follow Total Warfare: every
+missile that strikes rolls once on the vehicle's critical hits table for the location
+hit, at −2 (Total Warfare p. 142). Infernos deal no armor damage to a vehicle.
+Stationary installations instead accumulate burning-jelly duration. Vehicles have
+no heat scale, so blast heat affects only stationary installations.
 
 ## Entering a hangar
 
@@ -1293,25 +1283,22 @@ Automatic missile defense retains its own mount-first ammunition selection.
 
 ## Self-destruction
 
-Use `explode reactor` or `explode ammo` from a running unit. In-character units
-require the assigned pilot, except for wizards; out-of-character units allow
-other cockpit occupants. The command requires map placement and completed weapon and physical
-recovery. Server settings can disable either request or prevent cancellation.
-Ground vehicles and VTOLs normally accept only `explode ammo`, which requires
-live destructive ammunition. Gauss ammunition does not qualify.
+Use `explode` (or `explode ammo`) from a running unit to start a sixty-second
+self-destruct countdown. In-character units require the assigned pilot, except
+for wizards; out-of-character units allow other cockpit occupants. The command
+requires map placement, completed weapon and physical recovery, and live
+destructive ammunition. Gauss ammunition does not qualify.
 
-Engagement releases the pilot assignment. On an in-character unit, a non-wizard
-must take the cockpit again before attempting `explode stop`. Shutdown or destruction cancels a pending sequence. Wizards
-can append lowercase `override` to use a three-second delay and bypass the
-configuration, cooldown and ammunition-safety gates; cockpit authority and the
-ammunition-presence check still apply.
+Engagement releases the pilot assignment. `explode stop` aborts the countdown;
+on an in-character unit, a non-wizard must take the cockpit again first.
+Shutdown, destruction or losing the last destructive ammunition cancels a
+pending sequence. Wizards can append lowercase `override` to use a
+three-second delay and bypass the cooldown and ammunition-safety gates; cockpit
+authority and the ammunition-presence check still apply.
 
-The command retains the reference server's timer behavior: with the standard
-120-second setting, `explode ammo` advertises ammunition destruction after 60
-seconds but a Mech actually detonates its reactor. Vehicles instead lose their
-rear section and receive a crew injury. Both requests and all configured timer
-boundary cases are preserved; ask the game's administrator about its settings.
-Once a sequence is admitted, changing those permission settings does not stop it.
+When the countdown ends, a Mech's destructive ammunition explodes bin by bin
+with the ordinary ammunition-explosion rules. Vehicles instead lose their rear
+section and receive a crew injury. Fusion reactors never explode.
 
 
 ## Dropping prone
@@ -1324,7 +1311,7 @@ At up to one-third of effective maximum speed, the drop requires no control
 roll or fall damage. Faster movement requires a control check; above two-thirds
 of effective maximum speed the check is two points harder and failure causes a
 more severe fall. Reverse travel uses the same absolute-speed thresholds.
-Dropping into water can flood exposed compartments and extinguish infernos.
+Dropping into water can flood exposed compartments.
 The final ground contact also activates stepping mines.
 
 

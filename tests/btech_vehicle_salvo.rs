@@ -50,29 +50,13 @@ fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
 }
 
 /// Explicit policy for the hit table and critical consequences.
-fn rules(table: VehicleCriticalTable) -> VehicleImpactRules {
-    VehicleImpactRules {
-        advanced_fire: false,
-        criticals: VehicleCriticalRules {
-            rotor_damage_divisor: 0,
-            extended_piloting: false,
-            vtol_table: None,
-            table,
-            enabled: false,
-            combat_safe: false,
-            toughness: false,
-        },
-        hit: VehicleHitRules {
-            critical_mode: 1,
-            critical_level: 40,
-        },
-    }
+fn rules() -> VehicleImpactRules {
+    VehicleImpactRules::STANDARD
 }
 
 /// Ordinary direct packet inputs supplied after the firing action has admitted a hit.
 fn request(weapon: Weapon) -> VehicleSalvoRequest {
     VehicleSalvoRequest {
-        range_damage: false,
         damage_penalty: 0,
         weapon,
         ammunition: AmmunitionMode::Normal,
@@ -139,14 +123,8 @@ async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
         let mut input = request(weapon);
         input.fire_mode = mode;
         input.ammunition = ammunition;
-        let report = resolve_battle_vehicle_salvo(
-            &mut world,
-            id,
-            HitArc::Front,
-            input,
-            rules(VehicleCriticalTable::Standard),
-        )
-        .unwrap();
+        let report =
+            resolve_battle_vehicle_salvo(&mut world, id, HitArc::Front, input, rules()).unwrap();
         assert_eq!(
             report
                 .groups
@@ -168,7 +146,7 @@ async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
                 HitArc::Front,
                 u32::from(amount),
                 None,
-                rules(VehicleCriticalTable::Standard),
+                rules(),
             )
             .unwrap();
             assert_eq!(group.impact, expected);
@@ -187,14 +165,8 @@ async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
         set_seed(&mut world, id, seed);
         let mut input = request(Weapon::Lrm20);
         input.intercepted = intercepted;
-        let report = resolve_battle_vehicle_salvo(
-            &mut world,
-            id,
-            HitArc::Front,
-            input,
-            rules(VehicleCriticalTable::Standard),
-        )
-        .unwrap();
+        let report =
+            resolve_battle_vehicle_salvo(&mut world, id, HitArc::Front, input, rules()).unwrap();
         assert_eq!(report.missiles_before_defense, Some(20));
         assert_eq!(
             report
@@ -223,14 +195,8 @@ async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
         set_seed(&mut world, id, matching_seed(|dice| dice.two_d6() == 2));
         let mut input = request(Weapon::StreakSrm6);
         input.angel_blocked = confused;
-        let report = resolve_battle_vehicle_salvo(
-            &mut world,
-            id,
-            HitArc::Front,
-            input,
-            rules(VehicleCriticalTable::Standard),
-        )
-        .unwrap();
+        let report =
+            resolve_battle_vehicle_salvo(&mut world, id, HitArc::Front, input, rules()).unwrap();
         assert_eq!(
             report.missiles_before_defense,
             Some(if confused { 2 } else { 6 })
@@ -248,15 +214,9 @@ async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
             input.fire_mode = FireMode::Gatling;
             input.gatling_damage = Some(5);
         }
-        let report = resolve_battle_vehicle_salvo(
-            &mut world,
-            id,
-            HitArc::Front,
-            input,
-            rules(VehicleCriticalTable::Standard),
-        )
-        .unwrap();
-        assert_eq!(report.groups[0].damage, 3);
+        let report =
+            resolve_battle_vehicle_salvo(&mut world, id, HitArc::Front, input, rules()).unwrap();
+        assert_eq!(report.groups[0].damage, 2, "glancing halves rounding down");
         assert_eq!(report.cluster_roll, None);
     }
 }
@@ -281,7 +241,7 @@ async fn vehicle_salvos_finish_after_hull_loss_and_reject_invalid_effects_atomic
         id,
         HitArc::Front,
         request(Weapon::Srm6),
-        rules(VehicleCriticalTable::Standard),
+        rules(),
     )
     .unwrap();
     assert!(world.btech.vehicles()[&id].is_destroyed());
@@ -294,7 +254,7 @@ async fn vehicle_salvos_finish_after_hull_loss_and_reject_invalid_effects_atomic
             id,
             HitArc::Front,
             request(Weapon::Srm6),
-            rules(VehicleCriticalTable::Standard)
+            rules()
         )
         .unwrap(),
         report
@@ -319,14 +279,7 @@ async fn vehicle_salvos_finish_after_hull_loss_and_reject_invalid_effects_atomic
         }
         let before = world.btech.clone();
         assert!(
-            resolve_battle_vehicle_salvo(
-                &mut world,
-                id,
-                HitArc::Front,
-                input,
-                rules(VehicleCriticalTable::Standard)
-            )
-            .is_err()
+            resolve_battle_vehicle_salvo(&mut world, id, HitArc::Front, input, rules()).is_err()
         );
         assert_eq!(world.btech, before);
     }

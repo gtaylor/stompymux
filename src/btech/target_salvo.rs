@@ -61,8 +61,10 @@ impl TargetSalvo {
             Self::Vehicle(report) => (
                 super::fire_feedback::vehicle_salvo_notices(report, target, private),
                 report.inferno.as_ref().is_some_and(|inferno| {
-                    inferno.explosion.is_some()
-                        || inferno.damage.iter().any(|damage| damage.unit_destroyed)
+                    inferno
+                        .criticals
+                        .iter()
+                        .any(|missile| missile.critical.unit_destroyed)
                 }) || report.groups.iter().any(|group| {
                     group
                         .impact
@@ -105,20 +107,11 @@ pub(super) fn resolve_vehicle_target(
     shooter: ObjectId,
     target: ObjectId,
     request: VehicleSalvoRequest,
-    hit_arc_mode: i64,
     rules: VehicleImpactRules,
     context: super::vehicle_salvo::SalvoContext<'_>,
 ) -> Result<TargetSalvo> {
     world.attempt(|world| {
-        resolve_vehicle_target_in_candidate(
-            world,
-            shooter,
-            target,
-            request,
-            hit_arc_mode,
-            rules,
-            context,
-        )
+        resolve_vehicle_target_in_candidate(world, shooter, target, request, rules, context)
     })
 }
 
@@ -128,14 +121,10 @@ pub(super) fn resolve_vehicle_target_in_candidate(
     shooter: ObjectId,
     target: ObjectId,
     mut request: VehicleSalvoRequest,
-    hit_arc_mode: i64,
     rules: VehicleImpactRules,
     context: super::vehicle_salvo::SalvoContext<'_>,
 ) -> Result<TargetSalvo> {
-    let direction = super::hit_direction::HitDirection::Direct {
-        shooter,
-        mode: hit_arc_mode,
-    };
+    let direction = super::hit_direction::HitDirection::Direct { shooter };
     direction.current(world, target)?;
     let source = electronic_field(world, shooter)?;
     let recipient = electronic_field(world, target)?;

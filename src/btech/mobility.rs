@@ -64,7 +64,8 @@ impl Mech {
             piloting_modifier += actuators;
         }
         maximum_speed = self.propulsion.maximum(maximum_speed);
-        if (chassis == MechChassis::Biped && hips == 2)
+        // Total Warfare p. 127: a biped's second or a quad's fourth hip critical leaves no MP.
+        if hips == legs.len()
             || missing >= if chassis == MechChassis::Quad { 3 } else { 2 }
             || gyro >= 2
             || self.is_destroyed()

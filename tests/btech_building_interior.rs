@@ -43,12 +43,6 @@ async fn field(rows: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, [O
 fn rules() -> FallRules {
     FallRules {
         vehicle_impact: VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
         extended_piloting: false,
         toughness: false,
     }
@@ -236,7 +230,8 @@ async fn buildings_absorb_fire_and_collapse_onto_their_occupants() {
     assert_eq!(cf(&world, map, 1, 1), 36 - 4 * cover.groups);
 
     // A nearly spent hex gives way: the unit inside takes the rubble and stands on it.
-    let (_dir, config, mut world, map, [target, _]) = field(&[".0.0.0", "@3@3@3", ".0.0.0"]).await;
+    let (_dir, config, mut world, map, [target, roof]) =
+        field(&[".0.0.0", "@3@3@3", ".0.0.0"]).await;
     step_inside(&mut world, target, 0);
     world
         .btech
@@ -260,7 +255,9 @@ async fn buildings_absorb_fire_and_collapse_onto_their_occupants() {
     assert_eq!((cover.absorbed, cover.remaining), (1, 0));
     assert_eq!(report.groups[0].damage, 4);
     let collapse = report.collapse.expect("the hex collapsed");
-    assert_eq!(collapse.buried, vec![target]);
+    // The unit inside takes the rubble; the one on the roof takes its share and drops with it
+    // (Total Warfare pp. 176–177).
+    assert_eq!(collapse.buried, vec![target, roof]);
     assert!(
         collapse
             .notices
@@ -304,11 +301,8 @@ async fn interiors_give_partial_cover_and_block_outside_physical_attacks() {
     let terrain = battle_unit_terrain_los(&world, attacker, target).unwrap();
     assert!(terrain.partial_cover && !terrain.blocked);
     let physical = PhysicalRules {
-        use_pilot_skill: true,
         fasa_turning: false,
         extended_movement: false,
-        hit_arc_mode: 0,
-        glancing: GlancingMode::Disabled,
         fall: rules(),
     };
     relocate(&mut world, attacker, _map, 1, 1);

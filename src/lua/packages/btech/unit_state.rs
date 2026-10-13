@@ -197,11 +197,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("self_destruct_safe", vehicle.self_destruct_safe())?;
             state.set("weapon_heat", vehicle.weapon_heat())?;
             state.set("inferno_remaining", vehicle.inferno_remaining())?;
-            state.set(
-                "burning_sections",
-                detached(lua, vehicle.burning_sections())?,
-            )?;
-            state.set("extinguishing", vehicle.extinguishing())?;
             state.set("crew_stun_remaining", vehicle.crew_stun_remaining())?;
             state.set("crew_stunned", vehicle.crew_stunned())?;
             state.set("gunnery_damage", vehicle.gunnery_damage())?;
@@ -322,10 +317,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("stun_remaining", unit.stun_remaining())?;
         state.set("pilot_injuries", unit.pilot_injuries())?;
         state.set("crew_recovery_remaining", unit.crew_recovery().remaining)?;
-        state.set(
-            "reactor_instability_remaining",
-            unit.reactor_instability_remaining(),
-        )?;
         state.set("self_destruct", detached(lua, &unit.self_destruct())?)?;
         state.set("self_destruct_safe", unit.self_destruct_safe())?;
         state.set(
@@ -335,7 +326,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("heat", detached(lua, &unit.heat())?)?;
         state.set("heat_cutoff", detached(lua, &unit.heat_cutoff())?)?;
         state.set("hide_elapsed", unit.hide_elapsed())?;
-        state.set("inferno_remaining", unit.inferno_remaining())?;
         state.set("overheat_clock", detached(lua, &unit.overheat_clock())?)?;
         state.set("weapon_recycle", detached(lua, unit.weapon_recycle())?)?;
         state.set(

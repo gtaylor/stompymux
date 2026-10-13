@@ -120,7 +120,6 @@ async fn recovery_ticks_without_a_unit_and_failed_save_replays_the_same_roll() {
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
         let mut expected = world.clone();
-        stompymux_rs::advance_battle_reactor_windows(&mut expected);
         advance_battle_recovery(&mut expected);
         // A successful server heartbeat also advances the shared turn phase.
         let mut phase_state = serde_json::to_value(&expected.btech).unwrap();

@@ -1,4 +1,5 @@
-//! Ground-vehicle critical table outcomes, suppression and saved random stream replay.
+//! The Ground Combat Vehicle Critical Hits Table: columns, move-down for inapplicable results,
+//! roll modifiers, suppression and saved random stream replay.
 use crate::support;
 use stompymux_rs::*;
 
@@ -40,42 +41,65 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
         .unwrap();
 }
 
+fn rules() -> VehicleCriticalRules {
+    VehicleCriticalRules {
+        extended_piloting: false,
+        toughness: false,
+        combat_safe: false,
+    }
+}
+
+/// Rows 6–12 for a pristine Demolisher (weapons and ammunition only in the turret, ICE engine)
+/// after inapplicable results move down the column (TW p. 194).
+fn demolisher_rows(section: VehicleSection) -> [&'static str; 7] {
+    use VehicleSection as S;
+    match section {
+        S::Front => [
+            "driver",
+            "stabilizer",
+            "stabilizer",
+            "sensors",
+            "commander",
+            "crew_killed",
+            "crew_killed",
+        ],
+        S::Left | S::Right => [
+            "crew_stunned",
+            "crew_stunned",
+            "crew_stunned",
+            "stabilizer",
+            "engine",
+            "engine",
+            "fuel_tank",
+        ],
+        S::Rear => [
+            "stabilizer",
+            "stabilizer",
+            "stabilizer",
+            "engine",
+            "engine",
+            "ammunition",
+            "fuel_tank",
+        ],
+        S::Turret => [
+            "stabilizer",
+            "turret_jam",
+            "weapon_jam",
+            "turret_lock",
+            "weapon_destroyed",
+            "ammunition",
+            "turret_blown_off",
+        ],
+        S::Rotor => unreachable!("ground vehicles have no rotor"),
+    }
+}
+
 #[tokio::test]
-async fn advanced_ground_tables_cover_every_face_and_roll() {
+async fn ground_columns_move_down_past_inapplicable_results() {
     use VehicleSection as S;
     let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
-    let rules = VehicleCriticalRules {
-        rotor_damage_divisor: 0,
-        extended_piloting: false,
-        vtol_table: None,
-        toughness: false,
-        table: VehicleCriticalTable::Advanced,
-        enabled: true,
-        combat_safe: false,
-    };
-    for (section, golden) in [
-        (
-            S::Front,
-            "driver weapon_jam stabilizer sensors commander weapon_destroyed crew_killed",
-        ),
-        (
-            S::Left,
-            "cargo weapon_jam crew_stunned stabilizer weapon_destroyed engine fuel_tank",
-        ),
-        (
-            S::Right,
-            "cargo weapon_jam crew_stunned stabilizer weapon_destroyed engine fuel_tank",
-        ),
-        (
-            S::Rear,
-            "weapon_jam cargo stabilizer weapon_destroyed engine ammunition fuel_tank",
-        ),
-        (
-            S::Turret,
-            "stabilizer turret_jam weapon_jam turret_lock weapon_destroyed turret_blown_off ammunition",
-        ),
-    ] {
-        let golden: Vec<_> = golden.split_whitespace().collect();
+    for section in [S::Front, S::Left, S::Right, S::Rear, S::Turret] {
+        let golden = demolisher_rows(section);
         let mut seen = std::collections::BTreeSet::new();
         for value in 0..=255 {
             let mut world = base.clone();
@@ -83,10 +107,10 @@ async fn advanced_ground_tables_cover_every_face_and_roll() {
             let mut dice = Dice::seeded([value; 32]);
             let roll = dice.two_d6();
             seen.insert(roll);
-            let report = roll_battle_vehicle_critical(&mut world, id, section, rules).unwrap();
+            let report = roll_battle_vehicle_critical(&mut world, id, section, rules()).unwrap();
             assert_eq!(report.rolls, vec![roll]);
             assert_eq!(report.section, section);
-            assert_eq!(report.table, rules.table);
+            assert_eq!(report.modifier, 0);
             let effect = serde_json::to_value(report.effect).unwrap();
             assert_eq!(
                 effect,
@@ -94,7 +118,8 @@ async fn advanced_ground_tables_cover_every_face_and_roll() {
                     serde_json::Value::Null
                 } else {
                     serde_json::json!(golden[usize::from(roll - 6)])
-                }
+                },
+                "{section:?}/{roll}"
             );
             assert_eq!(
                 world.btech.vehicles()[&id].sections(),
@@ -110,106 +135,94 @@ async fn advanced_ground_tables_cover_every_face_and_roll() {
 }
 
 #[tokio::test]
-async fn standard_branches_preserve_suppression_and_replay() {
-    use VehicleCriticalEffect as E;
-    use VehicleCriticalTable as T;
-    let (_dir, config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
-    for table in [T::Standard] {
-        for section in [VehicleSection::Front, VehicleSection::Turret] {
-            for damaged in [false, true] {
-                for value in 0..32 {
-                    let mut world = base.clone();
-                    if damaged {
-                        damage_battle_vehicle_motive(&mut world, id, VehicleMotiveHit::Immobilize)
-                            .unwrap();
-                        lock_battle_vehicle_turret(&mut world, id).unwrap();
-                    }
-                    seed(&mut world, id, value);
-                    let rules = VehicleCriticalRules {
-                        rotor_damage_divisor: 0,
-                        extended_piloting: false,
-                        vtol_table: None,
-                        toughness: false,
-                        table,
-                        enabled: true,
-                        combat_safe: false,
-                    };
-                    let mut dice = Dice::seeded([value; 32]);
-                    let mut draws = Vec::new();
-                    let early = if table == T::Standard {
-                        let turret = section == VehicleSection::Turret;
-                        let roll = dice.die(if turret { 3 } else { 10 }).unwrap() as u8;
-                        draws.push(roll);
-                        if turret && roll == 2 {
-                            Some((!damaged).then_some(E::TurretLock))
-                        } else if !turret && roll <= 5 {
-                            Some((!damaged).then_some(if roll == 5 {
-                                E::Immobilize
-                            } else {
-                                E::MotiveSpeedLoss
-                            }))
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    };
-                    let effect = early.unwrap_or_else(|| {
-                        let roll = dice.d6();
-                        draws.push(roll);
-                        Some(
-                            [
-                                E::CrewHit,
-                                E::MainWeaponJam,
-                                E::Engine,
-                                E::CrewKilled,
-                                E::FuelTank,
-                                E::PowerPlant,
-                            ][usize::from(roll - 1)],
-                        )
-                    });
-                    let report =
-                        roll_battle_vehicle_critical(&mut world, id, section, rules).unwrap();
-                    assert_eq!(report.effect, effect);
-                    assert_eq!(report.rolls, draws);
-                    assert_eq!(
-                        roll_unit_dice(&mut world, id, 2).unwrap(),
-                        vec![dice.d6(), dice.d6()]
-                    );
-                }
-            }
-        }
-    }
-    let mut world = base;
-    let rules = VehicleCriticalRules {
-        rotor_damage_divisor: 0,
-        extended_piloting: false,
-        vtol_table: None,
-        toughness: false,
-        table: T::Advanced,
-        enabled: true,
-        combat_safe: false,
-    };
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut loaded = persistence::load(&config.database()).await.unwrap();
-    for _ in 0..5 {
-        assert_eq!(
-            roll_battle_vehicle_critical(&mut world, id, VehicleSection::Rear, rules).unwrap(),
-            roll_battle_vehicle_critical(&mut loaded, id, VehicleSection::Rear, rules).unwrap()
-        );
-        assert_eq!(loaded.btech, world.btech);
-    }
+async fn fusion_fuel_tank_is_an_engine_hit_and_empty_bins_become_weapon_destroyed() {
+    use VehicleSection as S;
+    let fusion = support::templates::without_flags(
+        include_str!("../game/units/Demolisher.toml"),
+        &["ICEEngine_Tech"],
+    );
+    let (_dir, _config, base, id) = fixture(&fusion).await;
+    let twelve = (0..=255)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
+        .unwrap();
+    let mut world = base.clone();
+    seed(&mut world, id, twelve);
+    let report = roll_battle_vehicle_critical(&mut world, id, S::Left, rules()).unwrap();
+    assert_eq!(report.effect, Some(VehicleCriticalEffect::Engine));
+    // With the engine already gone, a side 12 wraps to the top of the column and becomes
+    // the first applicable result, Crew Stunned.
+    let eleven = (0..=255)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 11)
+        .unwrap();
+    let mut world = base.clone();
+    seed(&mut world, id, eleven);
+    let _ = resolve_battle_vehicle_critical(&mut world, id, S::Left, rules()).unwrap();
+    assert!(world.btech.vehicles()[&id].engine_destroyed());
+    seed(&mut world, id, twelve);
+    let report = roll_battle_vehicle_critical(&mut world, id, S::Left, rules()).unwrap();
+    assert_eq!(report.effect, Some(VehicleCriticalEffect::CrewStunned));
+    // An Ammunition result without live ammunition is Weapon Destroyed.
+    let mut world = base.clone();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            let bins = record["ammunition"].as_array().unwrap().len();
+            record["ammunition"] = serde_json::json!(vec![0u16; bins]);
+        })
+        .unwrap();
+    seed(&mut world, id, eleven);
+    let report = roll_battle_vehicle_critical(&mut world, id, S::Turret, rules()).unwrap();
+    assert_eq!(report.effect, Some(VehicleCriticalEffect::WeaponDestroyed));
 }
 
 #[tokio::test]
-async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() {
-    use VehicleCriticalTable as T;
-    assert_eq!(T::from_settings(true), T::Advanced);
-    assert_eq!(T::from_settings(false), T::Standard);
-    for (template, critproof, stationary) in [
+async fn roll_modifiers_shift_the_row_and_a_taken_column_ignores_the_hit() {
+    use VehicleSection as S;
+    let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
+    let eight = (0..=255)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 8)
+        .unwrap();
+    // Armor-piercing −2 turns a turret 8 (Weapon Malfunction) into a 6 (Stabilizer); −3 misses.
+    let mut world = base.clone();
+    seed(&mut world, id, eight);
+    let report =
+        roll_battle_vehicle_critical_modified(&mut world, id, S::Turret, rules(), -2).unwrap();
+    assert_eq!(report.modifier, -2);
+    assert_eq!(report.rolls, vec![8]);
+    assert_eq!(report.effect, Some(VehicleCriticalEffect::Stabilizer));
+    let mut world = base.clone();
+    seed(&mut world, id, eight);
+    let report =
+        roll_battle_vehicle_critical_modified(&mut world, id, S::Turret, rules(), -3).unwrap();
+    assert_eq!(report.effect, None);
+    // Positive modifiers cap at the bottom row.
+    let mut world = base.clone();
+    seed(&mut world, id, eight);
+    let report =
+        roll_battle_vehicle_critical_modified(&mut world, id, S::Turret, rules(), 6).unwrap();
+    assert_eq!(report.effect, Some(VehicleCriticalEffect::TurretBlownOff));
+    // Stabilizer once, then the row moves down to the next untaken result.
+    let mut world = base.clone();
+    let six = (0..=255)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 6)
+        .unwrap();
+    seed(&mut world, id, six);
+    let _ = resolve_battle_vehicle_critical(&mut world, id, S::Rear, rules()).unwrap();
+    assert!(
+        world.btech.vehicles()[&id]
+            .lost_stabilizers()
+            .contains(&S::Rear)
+    );
+    seed(&mut world, id, six);
+    let report = roll_battle_vehicle_critical(&mut world, id, S::Rear, rules()).unwrap();
+    assert_eq!(report.effect, Some(VehicleCriticalEffect::Engine));
+}
+
+#[tokio::test]
+async fn safe_critproof_and_stationary_criticals_draw_no_dice_and_replay() {
+    for (template, suppressed) in [
         (
             include_str!("../game/units/Demolisher.toml").to_owned(),
-            false,
             false,
         ),
         (
@@ -218,61 +231,53 @@ async fn disabled_safe_critproof_and_stationary_criticals_preserve_draw_order() 
                 &["CritProof_Tech"],
             ),
             true,
-            false,
         ),
         (
             include_str!("../game/units/Demolisher.toml")
                 .replace("movement = \"track\"", "movement = \"none\"")
                 .replace("walk_mp = 5", "walk_mp = 0"),
-            false,
             true,
         ),
     ] {
-        let (_dir, _config, base, id) = fixture(&template).await;
-        for table in [T::Standard, T::Advanced] {
-            for (enabled, combat_safe) in [(false, false), (true, true), (true, false)] {
-                if !critproof && !stationary && enabled && !combat_safe {
-                    continue;
-                }
-                let mut world = base.clone();
-                seed(&mut world, id, 0);
-                let before = world.btech.clone();
-                let mut dice = Dice::seeded([0; 32]);
-                let rolls = if stationary
-                    && !critproof
-                    && enabled
-                    && !combat_safe
-                    && table == T::Advanced
-                {
-                    vec![dice.two_d6()]
-                } else {
-                    Vec::new()
-                };
-                let report = roll_battle_vehicle_critical(
-                    &mut world,
-                    id,
-                    VehicleSection::Front,
-                    VehicleCriticalRules {
-                        rotor_damage_divisor: 0,
-                        extended_piloting: false,
-                        vtol_table: None,
-                        toughness: false,
-                        table,
-                        enabled,
-                        combat_safe,
-                    },
-                )
-                .unwrap();
+        let (_dir, config, base, id) = fixture(&template).await;
+        for combat_safe in [false, true] {
+            let mut world = base.clone();
+            seed(&mut world, id, 0);
+            let before = world.btech.clone();
+            let mut dice = Dice::seeded([0; 32]);
+            let report = roll_battle_vehicle_critical(
+                &mut world,
+                id,
+                VehicleSection::Front,
+                VehicleCriticalRules {
+                    combat_safe,
+                    ..rules()
+                },
+            )
+            .unwrap();
+            if suppressed || combat_safe {
                 assert!(report.effect.is_none());
-                assert_eq!(report.rolls, rolls);
-                if rolls.is_empty() {
-                    assert_eq!(world.btech, before);
-                }
-                assert_eq!(
-                    roll_unit_dice(&mut world, id, 2).unwrap(),
-                    vec![dice.d6(), dice.d6()]
-                );
+                assert!(report.rolls.is_empty());
+                assert_eq!(world.btech, before);
+            } else {
+                assert_eq!(report.rolls, vec![dice.two_d6()]);
             }
+            assert_eq!(
+                roll_unit_dice(&mut world, id, 2).unwrap(),
+                vec![dice.d6(), dice.d6()]
+            );
+        }
+        let mut world = base;
+        persistence::save(&config.database(), &world).await.unwrap();
+        let mut loaded = persistence::load(&config.database()).await.unwrap();
+        for _ in 0..5 {
+            assert_eq!(
+                roll_battle_vehicle_critical(&mut world, id, VehicleSection::Rear, rules())
+                    .unwrap(),
+                roll_battle_vehicle_critical(&mut loaded, id, VehicleSection::Rear, rules())
+                    .unwrap()
+            );
+            assert_eq!(loaded.btech, world.btech);
         }
     }
 }

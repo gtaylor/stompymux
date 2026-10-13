@@ -8,7 +8,6 @@ fn hit(section: MechSection) -> Hit {
         section,
         rear_armor: false,
         through_armor_critical: false,
-        crew_stun: false,
     }
 }
 

@@ -44,7 +44,7 @@
     "profile": {
       "ammunition_per_ton": 5,
       "critical_slots": 30,
-      "damage": 20,
+      "damage": 25,
       "heat": 20,
       "long_range": 20,
       "medium_range": 0,
@@ -63,7 +63,7 @@
     "profile": {
       "ammunition_per_ton": 10,
       "critical_slots": 20,
-      "damage": 10,
+      "damage": 20,
       "heat": 10,
       "long_range": 12,
       "medium_range": 0,
@@ -82,7 +82,7 @@
     "profile": {
       "ammunition_per_ton": 20,
       "critical_slots": 15,
-      "damage": 5,
+      "damage": 15,
       "heat": 5,
       "long_range": 14,
       "medium_range": 0,

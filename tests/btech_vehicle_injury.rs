@@ -83,49 +83,6 @@ async fn vehicle_injury_recovery_and_scenario_death_replay_without_material_dama
 #[tokio::test]
 async fn vehicle_injury_guards_and_critical_casualties_are_atomic() {
     let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
-    let rules = VehicleCriticalRules {
-        rotor_damage_divisor: 0,
-        extended_piloting: false,
-        vtol_table: None,
-        table: VehicleCriticalTable::Standard,
-        enabled: true,
-        combat_safe: false,
-        toughness: true,
-    };
-    let seed = (0..=255)
-        .find(|value| {
-            let mut dice = Dice::seeded([*value; 32]);
-            dice.die(10).unwrap() > 5 && dice.d6() == 1
-        })
-        .unwrap();
-    for absent in [false, true] {
-        let mut world = base.clone();
-        world
-            .btech
-            .set_unit_dice(id, Dice::seeded([seed; 32]))
-            .unwrap();
-        if absent {
-            release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
-        } else {
-            world
-                .objects
-                .get_mut(&id)
-                .unwrap()
-                .flags
-                .insert(Flag::InCharacter);
-        }
-        let before = world.btech.clone();
-        let result = resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules);
-        if absent {
-            let report = result.unwrap();
-            assert_eq!(report.pilot_injury.unwrap().injuries, 1);
-            assert_eq!(world.btech.vehicles()[&id].pilot_injuries(), 1);
-            assert_eq!(world.btech.recoveries(), before.recoveries());
-        } else {
-            assert!(result.is_err());
-            assert_eq!(world.btech, before);
-        }
-    }
     let mut world = base;
     damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::CrewStun).unwrap();
     jam_battle_vehicle_turret(&mut world, id).unwrap();

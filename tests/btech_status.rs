@@ -277,17 +277,11 @@ async fn vehicle_damage_banners_follow_owned_motive_state() {
 async fn concurrent_fire_sources_have_one_status_banner() {
     let (_dir, _config, mut world, id, _) =
         fixture(include_str!("../game/units/Demolisher.toml")).await;
-    for (burning, inferno) in [(true, 0), (false, 30), (true, 30)] {
+    for inferno in [30, 60] {
         world
             .btech
             .rewrite_unit_record(id, |record| {
-                let vehicle = record;
-                vehicle["burning_sections"] = if burning {
-                    serde_json::json!({"front": 30})
-                } else {
-                    serde_json::json!({})
-                };
-                vehicle["inferno_remaining"] = serde_json::json!(inferno);
+                record["inferno_remaining"] = serde_json::json!(inferno);
             })
             .unwrap();
         let before = world.btech.clone();
@@ -297,7 +291,7 @@ async fn concurrent_fire_sources_have_one_status_banner() {
     }
 }
 
-/// A landed rotorcraft names its destroyed rotor without reporting hull destruction.
+/// A landed rotorcraft without its rotor is a wreck (TW p. 197) and names the lost rotor.
 #[tokio::test]
 async fn landed_rotor_loss_has_its_own_damage_banner() {
     let (_dir, _config, mut world, id, _) =
@@ -313,7 +307,7 @@ async fn landed_rotor_loss_has_its_own_damage_banner() {
     let before = world.btech.clone();
     let report = text::plain(&battle_unit_status(&world, id, "").unwrap());
     assert!(report.lines().any(|line| line == "ROTOR DESTROYED"));
-    assert!(!report.lines().any(|line| line == "DESTROYED"));
+    assert!(report.lines().any(|line| line == "DESTROYED"));
     assert_eq!(world.btech, before);
 }
 
@@ -705,16 +699,14 @@ async fn model_header_selector_retains_custom_name_and_markup_safety() {
     }
 }
 
-/// New-charge timers use reference two-second display ticks and the shared host policy.
+/// Charge timers use reference two-second display ticks in the shared native and Lua layout.
 #[tokio::test]
-async fn charge_target_timer_uses_configured_native_and_lua_layout() {
+async fn charge_target_timer_uses_native_and_lua_layout() {
     for template in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/GOL-3S.toml"),
     ] {
-        let (dir, config, mut world, id, target) = fixture(template).await;
-        let config_path = dir.path().join("stompymux.toml");
-        let original_config = std::fs::read_to_string(&config_path).unwrap();
+        let (_dir, config, mut world, id, target) = fixture(template).await;
         for elapsed in [0, 1, 3, 4, 60] {
             world
                 .btech
@@ -724,16 +716,7 @@ async fn charge_target_timer_uses_configured_native_and_lua_layout() {
                     });
                 })
                 .unwrap();
-            for enabled in [false, true] {
-                std::fs::write(
-                    &config_path,
-                    original_config.replace(
-                        "newcharge = 1",
-                        &format!("newcharge = {}", i64::from(enabled)),
-                    ),
-                )
-                .unwrap();
-                let config = Config::load(dir.path()).unwrap();
+            {
                 let scripts = Scripts::new(
                     &config,
                     std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -748,7 +731,7 @@ async fn charge_target_timer_uses_configured_native_and_lua_layout() {
                         .unwrap();
                     let plain = text::plain(&lua);
                     let charge = plain.lines().find(|line| line.starts_with("ChargeTarget:"));
-                    if enabled && matches!(selector, "" | "I" | "S") {
+                    if matches!(selector, "" | "I" | "S") {
                         let line = charge.expect("charge target line");
                         assert!(line.starts_with("ChargeTarget: Jenner ["), "{line}");
                         assert!(

@@ -89,16 +89,6 @@ pub fn send_radio_action(
         let settings = &config.battletech;
         let rules = FallRules {
             vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
-            stacking: StackingRules {
-                mode: settings.stacking,
-                damage_percent: settings.stackdamage,
-                hit_arcs: settings.hit_arcs,
-            },
-            stagger: StaggerMode::from_setting(settings.newstagger),
-            hit: HitRules {
-                inferno_penalty: settings.inferno_penalty != 0,
-                exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
-            },
             extended_piloting: settings.extended_piloting != 0,
             toughness: false,
         };

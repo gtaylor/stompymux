@@ -1,8 +1,13 @@
-//! Saved thermal-check cadence and atomic heat injuries, ammunition hazards and shutdowns.
+//! Saved thermal-check cadence and atomic heat injuries, ammunition hazards and shutdowns,
+//! following the Total Warfare Heat Scale (p. 159–160).
 use super::{Mech, Notice, Power};
-use crate::{Flag, Kind, ObjectId, World};
+use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
+
+/// Most heat that outside sources (fire, infernos, heat-causing weapons) can add to a Mech in
+/// one turn (Total Warfare p. 159, Outside Heat Sources).
+pub const MAX_OUTSIDE_HEAT: u8 = 15;
 
 /// Unit-local committed-second timing; elapsed saturates until heat reaches a checkable level.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -10,13 +15,20 @@ pub struct OverheatClock {
     pub elapsed: u8,
     pub phase: u8,
     pub injury_due: bool,
+    /// Outside heat absorbed during the current thirty-second turn, capped at
+    /// [`MAX_OUTSIDE_HEAT`] and cleared when the turn ends.
+    #[serde(default)]
+    pub outside_heat: u8,
 }
 
 impl OverheatClock {
     /// Validate saved counters and the once-per-turn injury marker.
     pub(super) fn validate(self) -> Result<()> {
         ensure!(
-            self.elapsed <= 30 && self.phase < 30 && (!self.injury_due || self.phase == 0),
+            self.elapsed <= 30
+                && self.phase < 30
+                && (!self.injury_due || self.phase == 0)
+                && self.outside_heat <= MAX_OUTSIDE_HEAT,
             "Invalid overheat clock"
         );
         Ok(())
@@ -27,6 +39,16 @@ impl OverheatClock {
         self.elapsed = (self.elapsed + 1).min(30);
         self.phase = (self.phase + 1) % 30;
         self.injury_due = self.phase == 0;
+        if self.phase == 0 {
+            self.outside_heat = 0;
+        }
+    }
+
+    /// Record outside heat against the turn's cap, returning the points that still fit.
+    pub(super) fn absorb_outside_heat(&mut self, points: u8) -> u8 {
+        let applied = points.min(MAX_OUTSIDE_HEAT - self.outside_heat);
+        self.outside_heat += applied;
+        applied
     }
 }
 
@@ -47,19 +69,19 @@ impl Mech {
 pub struct OverheatRules {
     /// Vehicle damage policy for mines reached by this consequence chain.
     pub vehicle_impact: super::VehicleImpactRules,
-    pub stacking: super::StackingRules,
-    pub hit: super::HitRules,
     pub extended_piloting: bool,
-    pub stagger: super::StaggerMode,
 }
 
-/// An avoidance roll, or an automatic result without RNG; Computer rolls may use unskilled dice.
+/// A 2d6 Avoid Roll against a Heat Scale number, or an automatic result without dice.
+///
+/// `roll` is `None` when the book allows no roll: shutdown at 30 or more heat, and shutdown
+/// with no conscious MechWarrior to override it. Such a check always fails, and its `target`
+/// is 13 when no 2d6 result could ever reach it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct HeatCheck {
     pub target: i16,
     pub roll: Option<u8>,
     pub success: bool,
-    pub computer: bool,
 }
 
 /// A due thermal event; all effects have been applied and notices await the enclosing commit.
@@ -71,14 +93,19 @@ pub struct OverheatReport {
     pub character_injury: Option<super::CharacterPilotInjury>,
     pub stacking_impacts: Vec<super::TacticalImpact>,
     pub stacking_falls: Vec<super::MechFallReport>,
+    /// The Inferno Ammo Explosion Table roll a Mech carrying inferno rounds makes at 10+ heat.
+    pub inferno_check: Option<HeatCheck>,
+    /// The inferno bin detonated by a failed inferno Avoid Roll.
+    pub inferno_explosion: Option<super::TacticalImpact>,
+    /// The ordinary Ammunition Avoid Roll at 19+ heat.
     pub ammunition_check: Option<HeatCheck>,
+    /// The most destructive bin, detonated by a failed ordinary Avoid Roll.
     pub explosion: Option<super::TacticalImpact>,
+    /// The Shutdown Avoid Roll at 14+ heat.
     pub shutdown_check: Option<HeatCheck>,
-    /// Normal Computer skill award after a successful in-character shutdown override.
-    pub computer_experience: Option<super::ExperienceAward>,
     pub shutdown: bool,
     pub balance: Option<super::PilotingCheck>,
-    /// Accepted Computer and shutdown balance XP captured before publication.
+    /// Accepted shutdown balance XP captured before publication.
     pub experience_messages: Vec<super::DiagnosticMessage>,
     pub fall: Option<super::MechFallReport>,
     /// Private control rolls indexed within the unformatted notice stream.
@@ -86,44 +113,31 @@ pub struct OverheatReport {
     pub notices: Vec<Notice>,
 }
 
-/// Shared marker keeps the formatted Computer roll adjacent to its override notice.
-const COMPUTER_OVERRIDE_NOTICE: &str = "You frantically attempt to override the shutdown process!";
-
 impl OverheatReport {
-    /// Render ordered cockpit messages, including the target and result of a Computer override.
+    /// Render ordered cockpit messages.
     pub fn messages(&self) -> Vec<(ObjectId, String)> {
         self.messages_with_feedback(&mut Vec::new())
     }
 
-    /// Account for inserted Computer diagnostics when carrying private notice positions.
+    /// Render ordered cockpit messages while carrying private notice positions.
     pub(crate) fn messages_with_feedback(
         &self,
         private: &mut Vec<super::PilotNotice>,
     ) -> Vec<(ObjectId, String)> {
-        let mut messages = Vec::new();
-        let mut offsets = Vec::with_capacity(self.notices.len() + 1);
-        for notice in &self.notices {
-            offsets.push(messages.len());
-            messages.push((notice.unit, notice.text.to_owned()));
-            if notice.text == COMPUTER_OVERRIDE_NOTICE
-                && let Some(check) = self.shutdown_check.filter(|check| check.computer)
-                && let Some(roll) = check.roll
-            {
-                messages.push((
-                    self.unit,
-                    format!(
-                        "You make a computer skill roll! Modified skill BTH: {} Roll: {roll}",
-                        check.target
-                    ),
-                ));
-            }
-        }
-        offsets.push(messages.len());
-        private.extend(self.pilot_notices.iter().cloned().map(|mut notice| {
-            notice.before_notice = offsets[notice.before_notice];
-            notice
-        }));
-        messages
+        private.extend(self.pilot_notices.iter().cloned());
+        self.notices
+            .iter()
+            .map(|notice| (notice.unit, notice.text.to_owned()))
+            .collect()
+    }
+
+    /// Whether any check or injury happened, so the event is worth reporting.
+    fn is_eventful(&self) -> bool {
+        self.character_injury.is_some()
+            || self.injury.is_some()
+            || self.inferno_check.is_some()
+            || self.ammunition_check.is_some()
+            || self.shutdown_check.is_some()
     }
 }
 
@@ -169,10 +183,7 @@ fn advance_overheat_inner(
             let toughness = advantage(world, id, "Toughness");
             let fall_rules = super::FallRules {
                 vehicle_impact: rules.vehicle_impact,
-                stacking: rules.stacking,
-                hit: rules.hit,
                 extended_piloting: rules.extended_piloting,
-                stagger: rules.stagger,
                 toughness,
             };
             let mut report = OverheatReport {
@@ -181,13 +192,14 @@ fn advance_overheat_inner(
                 character_injury: None,
                 stacking_impacts: Vec::new(),
                 stacking_falls: Vec::new(),
+                inferno_check: None,
+                inferno_explosion: None,
                 ammunition_check: None,
                 explosion: None,
                 shutdown_check: None,
                 shutdown: false,
                 balance: None,
                 experience_messages: Vec::new(),
-                computer_experience: None,
                 fall: None,
                 notices: Vec::new(),
                 pilot_notices: Vec::new(),
@@ -196,15 +208,8 @@ fn advance_overheat_inner(
             let heat = unit.heat().excess;
             let injury_due = std::mem::take(&mut unit.overheat_clock.injury_due);
             if injury_due {
-                let failed_support = unit.system_hits(super::System::LifeSupport) > 0;
-                let exposed = failed_support || (heat > 30.0 && unit.dice.die(2)? == 1);
-                let hits = if exposed && heat > 25.0 {
-                    if failed_support { 2 } else { 1 }
-                } else if exposed && heat >= 15.0 {
-                    1
-                } else {
-                    0
-                };
+                let hits =
+                    life_support_injury(heat, unit.system_hits(super::System::LifeSupport) > 0);
                 if hits > 0 && unit.pilot().is_some() {
                     report.notices.push(Notice {
                         unit: id,
@@ -225,226 +230,256 @@ fn advance_overheat_inner(
             let unit = &world.btech.constructed_units()[&id];
             if !unit.is_destroyed() && heat >= 10.0 && unit.overheat_clock.elapsed == 30 {
                 unit_mut(world, id).overheat_clock.elapsed = 0;
-                let inferno = if rules.hit.inferno_penalty {
-                    world.btech.constructed_units()[&id].inferno_ammunition_hazard()?
-                } else {
-                    None
-                };
-                if let Some(target) = ammunition_target(heat, inferno.is_some()) {
-                    let roll = unit_mut(world, id).dice.generic_roll();
-                    let check = HeatCheck {
-                        target,
-                        roll: Some(roll),
-                        success: i16::from(roll) >= target,
-                        computer: false,
-                    };
-                    report.ammunition_check = Some(check);
-                    if !check.success {
-                        let hazard = match inferno {
-                            Some(hazard) => Some(hazard),
-                            None => {
-                                world.btech.constructed_units()[&id].ammunition_hazard_maximum()?
-                            }
-                        };
-                        if let Some(hazard) = hazard {
-                            let explode = if character {
-                                super::impact::explode_ammunition_in_action
-                            } else {
-                                super::explode_ammunition
-                            };
-                            let explosion = explode(world, id, hazard.index, fall_rules)?;
-                            super::piloting::append_feedback(
-                                &mut report.pilot_notices,
-                                explosion.pilot_notices.clone(),
-                                report.notices.len(),
-                            );
-                            report.notices.extend(explosion.notices.iter().cloned());
-                            report.explosion = Some(explosion);
-                        } else {
-                            report.notices.push(Notice {
-                                unit: id,
-                                text: "You have no ammunition, lucky you!".to_owned(),
-                            });
-                        }
-                    }
-                }
+                resolve_ammunition_checks(world, id, heat, character, fall_rules, &mut report)?;
                 if !world.btech.constructed_units()[&id].is_destroyed() {
-                    let check = shutdown_check(world, id, heat)?;
-                    if check.computer {
-                        report.notices.push(Notice {
-                            unit: id,
-                            text: COMPUTER_OVERRIDE_NOTICE.to_owned(),
-                        });
-                        if check.success && character_unit {
-                            let (award, message) = award_computer_override(world, id)?;
-                            report.computer_experience = Some(award);
-                            report.experience_messages.extend(message);
-                        }
-                    }
-                    report.shutdown_check = check
-                        .computer
-                        .then_some(check)
-                        .or_else(|| (heat >= 14.0 || !check.success).then_some(check));
-                    if !check.success
-                        && world.btech.constructed_units()[&id].power() == Power::Running
-                    {
-                        report.notices.push(Notice {
-                            unit: id,
-                            text: "Reactor shutting down...".to_owned(),
-                        });
-                        let airborne = world.btech.constructed_units()[&id].airborne();
-                        if airborne {
-                            report.notices.push(Notice {
-                                unit: id,
-                                text: "Reactor shutdown cuts your jump short!".to_owned(),
-                            });
-                        }
-                        report.notices.extend(super::broadcast::observer_notices(
-                            world,
-                            id,
-                            if airborne {
-                                "falls from the sky!"
-                            } else {
-                                "stops in mid-motion!"
-                            },
-                        ));
-                        if airborne {
-                            let input = super::stacking::physical_input(
-                                world,
-                                id,
-                                super::StackingEntry::Fall,
-                            )?;
-                            let resolve = if character_unit {
-                                super::fall::resolve_character_signed_fall
-                            } else {
-                                super::fall::resolve_signed_fall
-                            };
-                            let fall = resolve(
-                                world,
-                                id,
-                                i16::try_from(input.jump_movement_points)
-                                    .context("Jump fall multiplier exceeds supported range")?,
-                                fall_rules,
-                            )?;
-                            fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
-                            report.fall = Some(fall);
-                            let input = super::stacking::physical_input(
-                                world,
-                                id,
-                                super::StackingEntry::Fall,
-                            )?;
-                            if character {
-                                let mut effects = super::stacking::StackingEffects::default();
-                                report.notices.extend(super::stacking::resolve_in_action(
-                                    world,
-                                    id,
-                                    input,
-                                    rules.stacking,
-                                    fall_rules,
-                                    &mut effects,
-                                    (&mut report.pilot_notices, report.notices.len()),
-                                )?);
-                                report
-                                    .experience_messages
-                                    .extend(effects.experience_messages);
-                                report.stacking_impacts = effects.impacts;
-                                report.stacking_falls = effects.falls;
-                            } else {
-                                report.notices.extend(super::resolve_stacking(
-                                    world,
-                                    id,
-                                    input,
-                                    rules.stacking,
-                                    fall_rules,
-                                )?);
-                            }
-                        }
-                        let unit = &world.btech.constructed_units()[&id];
-                        if unit.posture() != super::Posture::Prone
-                            && unit
-                                .motion()
-                                .is_some_and(|motion| motion.speed.abs() > 10.75)
-                        {
-                            let mut balance =
-                                super::roll_piloting(world, id, 3, rules.extended_piloting)?;
-                            super::piloting::capture_feedback(
-                                id,
-                                world.btech.constructed_units()[&id].pilot(),
-                                &balance,
-                                &mut report.notices,
-                                &mut report.pilot_notices,
-                            );
-                            if character {
-                                report.experience_messages.extend(
-                                    super::piloting::award_control_check(
-                                        world,
-                                        id,
-                                        &mut balance,
-                                        rules.extended_piloting,
-                                    )?,
-                                );
-                            }
-                            if !balance.success {
-                                report.notices.extend(super::broadcast::observer_notices(
-                                    world,
-                                    id,
-                                    "falls down!",
-                                ));
-                                let fall = if character_unit {
-                                    super::fall::resolve_character_fall(world, id, 0, fall_rules)?
-                                } else {
-                                    super::fall::resolve_zero_fall(world, id, fall_rules)?
-                                };
-                                report.notices.push(Notice {
-                                    unit: id,
-                                    text: "You lose your balance and fall down!".to_owned(),
-                                });
-                                fall.append_notices(
-                                    id,
-                                    &mut report.notices,
-                                    &mut report.pilot_notices,
-                                );
-                                report.fall = Some(fall);
-                            }
-                            report.balance = Some(balance);
-                        }
-                        let unit = unit_mut(world, id);
-                        let dropped = unit.carried_club.take().is_some();
-                        unit.power = Power::Off;
-                        unit.hide_elapsed = None;
-                        unit.masc.shutdown();
-                        unit.supercharger.shutdown();
-                        unit.reconcile_electronics();
-                        unit.charge.target = None;
-                        unit.jump_stabilization = 0;
-                        unit.pilot = None;
-                        unit.target_lock = None;
-                        unit.stand_timer = None;
-                        if let Some(motion) = &mut unit.motion {
-                            motion.speed = 0.0;
-                            motion.desired_speed = 0.0;
-                            motion.desired_heading = motion.heading;
-                        }
-                        if dropped {
-                            report
-                                .notices
-                                .extend(super::club::dropped_notices(world, id));
-                        }
-                        report.shutdown = true;
-                    }
+                    resolve_shutdown(world, id, heat, rules, character, fall_rules, &mut report)?;
                 }
             }
             world.btech.constructed_units()[&id].validate()?;
-            if report.character_injury.is_some()
-                || report.injury.is_some()
-                || report.ammunition_check.is_some()
-                || report.shutdown_check.is_some()
-            {
+            if report.is_eventful() {
                 reports.push(report);
             }
         }
         Ok(reports)
     })
+}
+
+/// MechWarrior hits from heat with a destroyed life support system (Total Warfare p. 41, 160):
+/// one per turn at 15 or more heat, two at 26 or more. Intact life support never injures.
+fn life_support_injury(heat: f64, life_support_destroyed: bool) -> u8 {
+    if !life_support_destroyed {
+        return 0;
+    }
+    if heat >= 26.0 {
+        return 2;
+    }
+    if heat >= 15.0 {
+        return 1;
+    }
+    0
+}
+
+/// Roll the inferno and ordinary Ammunition Avoid Rolls due at this heat and detonate the
+/// bins the book names for each failure (Total Warfare p. 141, 160).
+fn resolve_ammunition_checks(
+    world: &mut World,
+    id: ObjectId,
+    heat: f64,
+    character: bool,
+    fall_rules: super::FallRules,
+    report: &mut OverheatReport,
+) -> Result<()> {
+    let inferno_bin = heat_explosion_hazard(&world.btech.constructed_units()[&id], true)?;
+    if let Some(bin) = inferno_bin
+        && let Some(target) = inferno_ammunition_target(heat)
+    {
+        let check = avoid_roll(world, id, target);
+        report.inferno_check = Some(check);
+        if !check.success {
+            let explosion = explode(world, id, bin.index, character, fall_rules, report)?;
+            report.inferno_explosion = Some(explosion);
+        }
+    }
+    if world.btech.constructed_units()[&id].is_destroyed() {
+        return Ok(());
+    }
+    let Some(target) = ammunition_target(heat) else {
+        return Ok(());
+    };
+    let check = avoid_roll(world, id, target);
+    report.ammunition_check = Some(check);
+    if check.success {
+        return Ok(());
+    }
+    let Some(bin) = heat_explosion_hazard(&world.btech.constructed_units()[&id], false)? else {
+        report.notices.push(Notice {
+            unit: id,
+            text: "You have no ammunition, lucky you!".to_owned(),
+        });
+        return Ok(());
+    };
+    let explosion = explode(world, id, bin.index, character, fall_rules, report)?;
+    report.explosion = Some(explosion);
+    Ok(())
+}
+
+/// Detonate one bin, merging its notices and private feedback into the thermal report.
+fn explode(
+    world: &mut World,
+    id: ObjectId,
+    index: usize,
+    character: bool,
+    fall_rules: super::FallRules,
+    report: &mut OverheatReport,
+) -> Result<super::TacticalImpact> {
+    let explode = if character {
+        super::impact::explode_ammunition_in_action
+    } else {
+        super::explode_ammunition
+    };
+    let explosion = explode(world, id, index, fall_rules)?;
+    super::piloting::append_feedback(
+        &mut report.pilot_notices,
+        explosion.pilot_notices.clone(),
+        report.notices.len(),
+    );
+    report.notices.extend(explosion.notices.iter().cloned());
+    Ok(explosion)
+}
+
+/// Roll 2d6 from the unit's dice against an Avoid Number.
+fn avoid_roll(world: &mut World, id: ObjectId, target: i16) -> HeatCheck {
+    let roll = unit_mut(world, id).dice.generic_roll();
+    HeatCheck {
+        target,
+        roll: Some(roll),
+        success: i16::from(roll) >= target,
+    }
+}
+
+/// Shut the reactor down after a failed or impossible Shutdown Avoid Roll, with the fall and
+/// balance consequences of stopping in mid-motion.
+fn resolve_shutdown(
+    world: &mut World,
+    id: ObjectId,
+    heat: f64,
+    rules: OverheatRules,
+    character: bool,
+    fall_rules: super::FallRules,
+    report: &mut OverheatReport,
+) -> Result<()> {
+    let Some(check) = shutdown_check(world, id, heat) else {
+        return Ok(());
+    };
+    report.shutdown_check = Some(check);
+    if check.success || world.btech.constructed_units()[&id].power() != Power::Running {
+        return Ok(());
+    }
+    let character_unit = character && world.objects[&id].flags.contains(Flag::InCharacter);
+    report.notices.push(Notice {
+        unit: id,
+        text: "Reactor shutting down...".to_owned(),
+    });
+    let airborne = world.btech.constructed_units()[&id].airborne();
+    if airborne {
+        report.notices.push(Notice {
+            unit: id,
+            text: "Reactor shutdown cuts your jump short!".to_owned(),
+        });
+    }
+    report.notices.extend(super::broadcast::observer_notices(
+        world,
+        id,
+        if airborne {
+            "falls from the sky!"
+        } else {
+            "stops in mid-motion!"
+        },
+    ));
+    if airborne {
+        let input = super::stacking::physical_input(world, id, super::StackingEntry::Fall)?;
+        let resolve = if character_unit {
+            super::fall::resolve_character_signed_fall
+        } else {
+            super::fall::resolve_signed_fall
+        };
+        let fall = resolve(
+            world,
+            id,
+            i16::try_from(input.jump_movement_points)
+                .context("Jump fall multiplier exceeds supported range")?,
+            fall_rules,
+        )?;
+        fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
+        report.fall = Some(fall);
+        let input = super::stacking::physical_input(world, id, super::StackingEntry::Fall)?;
+        if character {
+            let mut effects = super::stacking::StackingEffects::default();
+            report.notices.extend(super::stacking::resolve_in_action(
+                world,
+                id,
+                input,
+                fall_rules,
+                &mut effects,
+                (&mut report.pilot_notices, report.notices.len()),
+            )?);
+            report
+                .experience_messages
+                .extend(effects.experience_messages);
+            report.stacking_impacts = effects.impacts;
+            report.stacking_falls = effects.falls;
+        } else {
+            report
+                .notices
+                .extend(super::resolve_stacking(world, id, input, fall_rules)?);
+        }
+    }
+    let unit = &world.btech.constructed_units()[&id];
+    if unit.posture() != super::Posture::Prone
+        && unit
+            .motion()
+            .is_some_and(|motion| motion.speed.abs() > 10.75)
+    {
+        let mut balance = super::roll_piloting(world, id, 3, rules.extended_piloting)?;
+        super::piloting::capture_feedback(
+            id,
+            world.btech.constructed_units()[&id].pilot(),
+            &balance,
+            &mut report.notices,
+            &mut report.pilot_notices,
+        );
+        if character {
+            report
+                .experience_messages
+                .extend(super::piloting::award_control_check(
+                    world,
+                    id,
+                    &mut balance,
+                    rules.extended_piloting,
+                )?);
+        }
+        if !balance.success {
+            report
+                .notices
+                .extend(super::broadcast::observer_notices(world, id, "falls down!"));
+            let fall = if character_unit {
+                super::fall::resolve_character_fall(world, id, 0, fall_rules)?
+            } else {
+                super::fall::resolve_zero_fall(world, id, fall_rules)?
+            };
+            report.notices.push(Notice {
+                unit: id,
+                text: "You lose your balance and fall down!".to_owned(),
+            });
+            fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
+            report.fall = Some(fall);
+        }
+        report.balance = Some(balance);
+    }
+    let unit = unit_mut(world, id);
+    let dropped = unit.carried_club.take().is_some();
+    unit.power = Power::Off;
+    unit.hide_elapsed = None;
+    unit.masc.shutdown();
+    unit.supercharger.shutdown();
+    unit.reconcile_electronics();
+    unit.charge.target = None;
+    unit.jump_stabilization = 0;
+    unit.pilot = None;
+    unit.target_lock = None;
+    unit.stand_timer = None;
+    if let Some(motion) = &mut unit.motion {
+        motion.speed = 0.0;
+        motion.desired_speed = 0.0;
+        motion.desired_heading = motion.heading;
+    }
+    if dropped {
+        report
+            .notices
+            .extend(super::club::dropped_notices(world, id));
+    }
+    report.shutdown = true;
+    Ok(())
 }
 
 /// Read a canonical boolean advantage from the currently assigned pilot.
@@ -460,23 +495,8 @@ fn unit_mut(world: &mut World, id: ObjectId) -> &mut Mech {
     world.btech.constructed.get_mut(&id).unwrap()
 }
 
-/// Conventional ammunition avoidance bands; inferno ammunition is not supported by construction.
-fn ammunition_target(heat: f64, inferno: bool) -> Option<i16> {
-    if inferno {
-        return if heat >= 28.0 {
-            Some(12)
-        } else if heat >= 23.0 {
-            Some(10)
-        } else if heat >= 19.0 {
-            Some(8)
-        } else if heat >= 14.0 {
-            Some(6)
-        } else if heat >= 10.0 {
-            Some(4)
-        } else {
-            None
-        };
-    }
+/// Ordinary Ammunition Avoid Numbers (Total Warfare p. 159–160): 4 at 19, 6 at 23, 8 at 28.
+fn ammunition_target(heat: f64) -> Option<i16> {
     if heat >= 28.0 {
         Some(8)
     } else if heat >= 23.0 {
@@ -488,107 +508,142 @@ fn ammunition_target(heat: f64, inferno: bool) -> Option<i16> {
     }
 }
 
-/// Successful in-character overrides use the ordinary skill interval, threshold and experience trace.
-/// Shutdown admission has already established a player pilot with a successful Computer roll.
-fn award_computer_override(
-    world: &mut World,
-    id: ObjectId,
-) -> Result<(super::ExperienceAward, Option<super::DiagnosticMessage>)> {
-    let pilot = world.btech.constructed_units()[&id]
-        .pilot()
-        .context("Computer override has no pilot")?;
-    let award = super::award_skill_experience(
-        world,
-        pilot,
-        "Computer",
-        1,
-        crate::clock::wall_time(),
-        false,
-    )?;
-    let message = award.accepted.then(|| {
-        super::DiagnosticMessage::new(
-            super::TraceTopic::Experience,
-            format!(
-                "{} gained 1 computer XP (mech #{})",
-                world.objects[&pilot].name, id.0
-            ),
-        )
-    });
-    Ok((award, message))
+/// Inferno Ammo Explosion Table (Total Warfare p. 141): 4 at 10, 6 at 14, 8 at 19, 10 at 23
+/// and 12 at 28, rolled in addition to the ordinary Avoid Rolls.
+fn inferno_ammunition_target(heat: f64) -> Option<i16> {
+    if heat >= 28.0 {
+        Some(12)
+    } else if heat >= 23.0 {
+        Some(10)
+    } else if heat >= 19.0 {
+        Some(8)
+    } else if heat >= 14.0 {
+        Some(6)
+    } else if heat >= 10.0 {
+        Some(4)
+    } else {
+        None
+    }
 }
 
-/// Player Computer overrides and unpiloted reactor thresholds use separate reference rules.
-fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Result<HeatCheck> {
-    let pilot = world.btech.constructed_units()[&id]
-        .pilot()
-        .filter(|pilot| {
-            world
-                .objects
-                .get(pilot)
-                .is_some_and(|object| object.kind == Kind::Player)
-        });
-    if let Some(pilot) = pilot {
-        if heat < 14.0 {
-            return Ok(HeatCheck {
-                target: 0,
-                roll: None,
-                success: true,
-                computer: false,
-            });
-        }
-        let modifier = if heat >= 30.0 {
-            8
-        } else if heat >= 26.0 {
-            6
-        } else if heat >= 22.0 {
-            4
-        } else if heat >= 18.0 {
-            2
-        } else {
-            0
-        };
-        let target = super::skills::character_skill_target(
-            world,
-            pilot,
-            "Computer",
-            super::SkillCategory::Mental,
-        )? + modifier;
-        let skilled = world
-            .btech
-            .character_values()
-            .get(&pilot)
-            .and_then(|values| values.get("Computer"))
-            .is_some_and(|value| value.effective_skill() > 0);
-        let dice = &mut unit_mut(world, id).dice;
-        let roll = if skilled {
-            dice.two_d6()
-        } else {
-            let rolls = [dice.d6(), dice.d6(), dice.d6()];
-            rolls.iter().sum::<u8>() - rolls.iter().max().unwrap()
-        };
-        return Ok(HeatCheck {
+/// Shutdown Avoid Numbers (Total Warfare p. 159): 4 at 14, 6 at 18, 8 at 22, 10 at 26; at 30
+/// no roll can avoid shutdown, so the target is 13.
+fn shutdown_target(heat: f64) -> Option<i16> {
+    if heat >= 30.0 {
+        Some(13)
+    } else if heat >= 26.0 {
+        Some(10)
+    } else if heat >= 22.0 {
+        Some(8)
+    } else if heat >= 18.0 {
+        Some(6)
+    } else if heat >= 14.0 {
+        Some(4)
+    } else {
+        None
+    }
+}
+
+/// The Shutdown Avoid Roll (Total Warfare p. 159–160). Below 14 heat no check is due. Only a
+/// conscious MechWarrior may override the safety shutdown, with one 2d6 roll against the
+/// highest Avoid Number for the heat level; at 30 or more heat, or with no conscious crew,
+/// the reactor shuts down without a roll.
+fn shutdown_check(world: &mut World, id: ObjectId, heat: f64) -> Option<HeatCheck> {
+    let target = shutdown_target(heat)?;
+    if heat >= 30.0 || super::crew::unit_unconscious(world, id) {
+        return Some(HeatCheck {
             target,
-            roll: Some(roll),
-            success: i16::from(roll) >= target,
-            computer: true,
+            roll: None,
+            success: false,
         });
     }
-    let target = if !(14.0..30.0).contains(&heat) {
-        13
-    } else if heat >= 26.0 {
-        10
-    } else if heat >= 22.0 {
-        8
-    } else if heat >= 18.0 {
-        6
-    } else {
-        4
-    };
-    let roll = (target != 13).then(|| unit_mut(world, id).dice.generic_roll());
-    Ok(HeatCheck {
-        target,
-        roll,
-        success: roll.is_some_and(|roll| i16::from(roll) >= target),
-        computer: false,
-    })
+    Some(avoid_roll(world, id, target))
+}
+
+/// The bin a failed Avoid Roll detonates (Total Warfare p. 160): the available bin whose
+/// one-turn salvo Damage Value is highest; among equals, the one with the most rounds left; a
+/// remaining tie takes the first bin in loadout order where the book rolls randomly. Exploding
+/// weapons' ammunition (Gauss) never explodes from heat. `inferno_only` restricts the choice to
+/// inferno rounds for the Inferno Ammo Explosion Table.
+fn heat_explosion_hazard(
+    unit: &Mech,
+    inferno_only: bool,
+) -> Result<Option<super::critical::AmmunitionHazard>> {
+    let loadout = unit.loadout()?;
+    let mut best: Option<(u32, u16, super::critical::AmmunitionHazard)> = None;
+    for (index, bin) in loadout.ammunition.iter().enumerate() {
+        if inferno_only && bin.mode != super::AmmunitionMode::Inferno {
+            continue;
+        }
+        let hazard = unit.ammunition_hazard(index)?;
+        if hazard.damage == 0 || unit.critical_unavailable(hazard.location) {
+            continue;
+        }
+        let profile = bin.weapon.profile_for_ammunition(bin.mode);
+        let salvo = u32::from(profile.damage) * u32::from(profile.missiles.max(1));
+        let rounds = unit.ammunition()[index];
+        if best
+            .is_none_or(|(best_salvo, best_rounds, _)| (salvo, rounds) > (best_salvo, best_rounds))
+        {
+            best = Some((salvo, rounds, hazard));
+        }
+    }
+    Ok(best.map(|(_, _, hazard)| hazard))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Avoid Numbers follow the printed Heat Scale, with no check below each first trigger.
+    #[test]
+    fn avoid_numbers_match_the_heat_scale() {
+        for (heat, shutdown, ammunition, inferno) in [
+            (9.99, None, None, None),
+            (10.0, None, None, Some(4)),
+            (13.99, None, None, Some(4)),
+            (14.0, Some(4), None, Some(6)),
+            (18.0, Some(6), None, Some(6)),
+            (19.0, Some(6), Some(4), Some(8)),
+            (22.0, Some(8), Some(4), Some(8)),
+            (23.0, Some(8), Some(6), Some(10)),
+            (26.0, Some(10), Some(6), Some(10)),
+            (28.0, Some(10), Some(8), Some(12)),
+            (29.99, Some(10), Some(8), Some(12)),
+            (30.0, Some(13), Some(8), Some(12)),
+        ] {
+            assert_eq!(shutdown_target(heat), shutdown, "{heat}");
+            assert_eq!(ammunition_target(heat), ammunition, "{heat}");
+            assert_eq!(inferno_ammunition_target(heat), inferno, "{heat}");
+        }
+    }
+
+    /// Only a destroyed life support system exposes the MechWarrior to heat.
+    #[test]
+    fn life_support_injuries_follow_the_heat_scale() {
+        for (heat, hits) in [(14.99, 0), (15.0, 1), (25.99, 1), (26.0, 2), (40.0, 2)] {
+            assert_eq!(life_support_injury(heat, true), hits, "{heat}");
+            assert_eq!(life_support_injury(heat, false), 0, "{heat}");
+        }
+    }
+
+    /// The outside heat cap resets with the turn, and the clock rejects an overfull counter.
+    #[test]
+    fn outside_heat_is_capped_per_turn() {
+        let mut clock = OverheatClock::default();
+        assert_eq!(clock.absorb_outside_heat(12), 12);
+        assert_eq!(clock.absorb_outside_heat(6), 3);
+        assert_eq!(clock.absorb_outside_heat(2), 0);
+        assert_eq!(clock.outside_heat, 15);
+        clock.validate().unwrap();
+        for _ in 0..29 {
+            clock.tick();
+            assert_eq!(clock.outside_heat, 15);
+        }
+        clock.tick();
+        assert_eq!(clock.phase, 0);
+        assert_eq!(clock.outside_heat, 0);
+        clock.outside_heat = 16;
+        assert!(clock.validate().is_err());
+    }
 }

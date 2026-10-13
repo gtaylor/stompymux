@@ -52,7 +52,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
             .iter()
             .map(|field| field.ordinal)
             .collect::<Vec<_>>(),
-        [1, 3, 5, 9]
+        [1, 5, 9]
     );
     assert_eq!(
         mine_activations(&world, id, MineTriggerReason::Fall)
@@ -60,7 +60,7 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
             .iter()
             .map(|field| field.ordinal)
             .collect::<Vec<_>>(),
-        [3, 5, 9]
+        [5, 9]
     );
     assert_eq!(world.btech, original);
     world.btech.set_unit_ammunition_bin(id, 0, 4).unwrap();
@@ -201,10 +201,7 @@ async fn blast_fixture(
 
 /// Keep hit-location diagnostics but exclude critical cascades from packet arithmetic assertions.
 fn blast_rules() -> FallRules {
-    let mut rules = MovementRules::STANDARD.fall;
-    rules.vehicle_impact.criticals.enabled = false;
-    rules.vehicle_impact.hit.critical_mode = 0;
-    rules
+    MovementRules::STANDARD.fall
 }
 
 #[tokio::test]
@@ -238,7 +235,8 @@ async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
                 .map(|section| section.armor)
                 .sum();
             let report = resolve_mine_blast(&mut world, map, 0, blast_rules()).unwrap();
-            let area = kind != MineKind::Standard;
+            // Command mines fill their hex; vibrabombs no longer reach neighbours (TO:AR p. 177).
+            let area = kind == MineKind::Command;
             assert_eq!(
                 report.hits.iter().map(|hit| hit.unit).collect::<Vec<_>>(),
                 if area {
@@ -267,13 +265,10 @@ async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
                 .map(|section| section.armor)
                 .sum();
             assert_eq!(original_armor - armor, strength as u16);
+            // A field below five points after its blast is removed; an eleven-point one is depleted.
             assert_eq!(
                 report.removed,
-                if area || strength < 5 {
-                    vec![0, 1]
-                } else {
-                    vec![]
-                }
+                if strength < 5 { vec![0, 1] } else { vec![] }
             );
             assert!(report.notices.iter().any(|notice| notice.unit == ids[0] && notice.text.contains("points of damage")));
             persistence::save(&config.database(), &before)
@@ -290,99 +285,78 @@ async fn mixed_mine_blasts_preserve_packets_slots_fields_and_restart() {
     }
 }
 
+/// Vehicles have no heat scale: inferno mine heat only adds jelly to a stationary unit.
 #[tokio::test]
-async fn inferno_mine_heat_uses_blast_duration_and_vehicle_fire_policy() {
+async fn inferno_mine_heat_only_affects_stationary_units() {
     let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Tracked).await;
     for stationary in [false, true] {
-        for advanced in [false, true] {
-            for roll in [8, 9] {
-                let mut world = base.clone();
-                // Keep this heat-only blast isolated from the Mech; strength two supplies no shrapnel.
-                place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
-                let seed = (0u32..)
-                    .find_map(|seed| {
-                        let mut bytes = [0; 32];
-                        bytes[..4].copy_from_slice(&seed.to_le_bytes());
-                        let dice = Dice::seeded(bytes);
-                        (dice.clone().two_d6() == roll).then_some(dice)
-                    })
-                    .unwrap();
-                let mut saved = serde_json::to_value(&world.btech).unwrap();
-                saved["vehicles"][ids[0].0.to_string()]["dice"] =
-                    serde_json::to_value(&seed).unwrap();
-                if stationary {
-                    saved["units"][ids[0].0.to_string()]["movement_code"] = 10.into();
-                    saved["vehicles"][ids[0].0.to_string()]["definition"]["movement"] =
-                        "stationary".into();
-                }
-                world.btech = serde_json::from_value(saved).unwrap();
-                set_minefield(
-                    &mut world,
-                    map,
-                    0,
-                    Some(Minefield {
-                        coordinate: HexCoordinate { x: 1, y: 1 },
-                        kind: MineKind::Inferno,
-                        strength: 2,
-                        extra: 0,
-                        owner: ObjectId(1),
-                    }),
-                )
-                .unwrap();
-                let before = world.clone();
-                let mut rules = blast_rules();
-                rules.vehicle_impact.advanced_fire = advanced;
-                if stationary {
-                    let mut overflow = world.clone();
-                    overflow
-                        .btech
-                        .rewrite_unit_record(ids[0], |record| {
-                            record["inferno_remaining"] = i32::MAX.into();
-                        })
-                        .unwrap();
-                    let checkpoint = overflow.btech.clone();
-                    assert!(resolve_mine_blast(&mut overflow, map, 0, rules).is_err());
-                    assert_eq!(overflow.btech, checkpoint);
-                }
-                let report = resolve_mine_blast(&mut world, map, 0, rules).unwrap();
-                let hit = &report.hits[0];
-                assert_eq!(hit.unit, ids[0]);
-                assert!(hit.impacts.is_empty());
-                let heat = hit.vehicle_heat.as_ref().unwrap();
-                let mut dice = seed.clone();
-                if stationary {
-                    assert_eq!(hit.burn_seconds, 12);
-                    assert_eq!(world.btech.vehicles()[&ids[0]].inferno_remaining(), 12);
-                    assert!(heat.explosion_roll.is_none() && heat.fire.is_none());
-                } else if advanced {
-                    assert_eq!(heat.fire.as_ref().unwrap().roll, roll);
-                    assert!(heat.explosion_roll.is_none() && heat.explosion.is_none());
-                    assert!(
-                        world.btech.vehicles()[&ids[0]]
-                            .burning_sections()
-                            .is_empty()
-                    );
-                    // Tracked raw eight/nine performs a second motive roll, without forced inferno ignition.
-                    dice.two_d6();
-                    dice.two_d6();
-                } else {
-                    assert_eq!(heat.explosion_roll, Some(roll));
-                    assert_eq!(heat.explosion.is_some(), roll == 9);
-                    assert_eq!(world.btech.vehicles()[&ids[0]].is_destroyed(), roll == 9);
-                    dice.two_d6();
-                }
-                let mut replay = before;
-                assert_eq!(
-                    resolve_mine_blast(&mut replay, map, 0, rules).unwrap(),
-                    report
-                );
-                assert_eq!(replay.btech, world.btech);
-                if stationary || advanced || roll == 8 {
-                    assert_eq!(roll_unit_dice(&mut world, ids[0], 1).unwrap(), [dice.d6()]);
-                }
-                world.validate(&config).unwrap();
-            }
+        let mut world = base.clone();
+        // Keep this heat-only blast isolated from the Mech; strength two supplies no shrapnel.
+        place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
+        let mut saved = serde_json::to_value(&world.btech).unwrap();
+        saved["vehicles"][ids[0].0.to_string()]["dice"] =
+            serde_json::to_value(Dice::seeded([9; 32])).unwrap();
+        if stationary {
+            saved["units"][ids[0].0.to_string()]["movement_code"] = 10.into();
+            saved["vehicles"][ids[0].0.to_string()]["definition"]["movement"] = "stationary".into();
         }
+        world.btech = serde_json::from_value(saved).unwrap();
+        set_minefield(
+            &mut world,
+            map,
+            0,
+            Some(Minefield {
+                coordinate: HexCoordinate { x: 1, y: 1 },
+                kind: MineKind::Inferno,
+                strength: 2,
+                extra: 0,
+                owner: ObjectId(1),
+            }),
+        )
+        .unwrap();
+        let before = world.clone();
+        let rules = blast_rules();
+        if stationary {
+            let mut overflow = world.clone();
+            overflow
+                .btech
+                .rewrite_unit_record(ids[0], |record| {
+                    record["inferno_remaining"] = i32::MAX.into();
+                })
+                .unwrap();
+            let checkpoint = overflow.btech.clone();
+            assert!(resolve_mine_blast(&mut overflow, map, 0, rules).is_err());
+            assert_eq!(overflow.btech, checkpoint);
+        }
+        let report = resolve_mine_blast(&mut world, map, 0, rules).unwrap();
+        let hit = &report.hits[0];
+        assert_eq!(hit.unit, ids[0]);
+        assert!(hit.impacts.is_empty());
+        let heat = hit.vehicle_heat.as_ref().unwrap();
+        if stationary {
+            assert_eq!(hit.burn_seconds, 12);
+            assert_eq!(heat.burn_seconds, 12);
+            assert_eq!(world.btech.vehicles()[&ids[0]].inferno_remaining(), 12);
+        } else {
+            assert_eq!(heat.burn_seconds, 0);
+            assert!(heat.notices.is_empty());
+            assert_eq!(
+                world.btech.vehicles()[&ids[0]].sections(),
+                before.btech.vehicles()[&ids[0]].sections()
+            );
+            assert!(!world.btech.vehicles()[&ids[0]].is_destroyed());
+        }
+        let mut replay = before;
+        assert_eq!(
+            resolve_mine_blast(&mut replay, map, 0, rules).unwrap(),
+            report
+        );
+        assert_eq!(replay.btech, world.btech);
+        assert_eq!(
+            roll_unit_dice(&mut world, ids[0], 1).unwrap(),
+            [Dice::seeded([9; 32]).d6()]
+        );
+        world.validate(&config).unwrap();
     }
 }
 
@@ -441,10 +415,7 @@ async fn vehicle_mine_events_and_command_detonation_are_atomic() {
 #[tokio::test]
 async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
     let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Stationary).await;
-    for table in [
-        VehicleCriticalTable::Standard,
-        VehicleCriticalTable::Advanced,
-    ] {
+    {
         let mut world = base.clone();
         place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
         set_minefield(
@@ -469,7 +440,6 @@ async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
             .unwrap();
         let protection = world.btech.vehicles()[&ids[0]].sections().clone();
         let mut rules = blast_rules();
-        rules.vehicle_impact.criticals.table = table;
         rules.vehicle_impact.criticals.combat_safe = true;
         let report = resolve_mine_blast(&mut world, map, 0, rules).unwrap();
         assert_eq!(report.hits.len(), 1);
@@ -479,11 +449,7 @@ async fn mine_vehicle_hit_policy_controls_location_dice_and_safe_damage() {
             let BlastImpact::Vehicle(impact) = impact else {
                 panic!("Wrong target anatomy");
             };
-            let mut rolls = vec![dice.two_d6()];
-            if table != VehicleCriticalTable::Standard {
-                rolls.push(dice.two_d6());
-            }
-            assert_eq!(impact.rolls, rolls);
+            assert_eq!(impact.rolls, vec![dice.two_d6()]);
             assert!(impact.hit.is_none() && impact.damage.is_none());
             dice.two_d6();
         }
@@ -506,13 +472,12 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
                 bytes[..4].copy_from_slice(&number.to_le_bytes());
                 let initial = Dice::seeded(bytes);
                 let mut dice = initial.clone();
+                // Front (7), entry; the gutted front wrecks the vehicle without a critical roll.
                 if dice.two_d6() != 7 {
                     return None;
                 }
                 dice.two_d6();
-                if dice.two_d6() > 7 {
-                    return None;
-                }
+                // A wasted face hit, then a turret hit.
                 if dice.two_d6() > 9 {
                     return None;
                 }
@@ -589,15 +554,6 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
                 39
             );
         }
-        let mut dice = seed;
-        for _ in 0..if internal { 8 } else { 7 } {
-            dice.two_d6();
-        }
-        let mut probe = world.clone();
-        assert_eq!(
-            roll_unit_dice(&mut probe, ids[0], 1).unwrap(),
-            [dice.clone().d6()]
-        );
         // Wrecks remain in the mine footprint; ordinary new attacks still reject them without mutation.
         let checkpoint = world.btech.clone();
         assert!(
@@ -612,15 +568,10 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
             .is_err()
         );
         assert_eq!(world.btech, checkpoint);
+        // The eleven-point field was depleted to six by its first blast: two packets.
         let again = resolve_mine_blast(&mut world, map, 0, blast_rules()).unwrap();
         assert_eq!(again.hits.len(), 1);
-        assert_eq!(again.hits[0].impacts.len(), 3);
-        if !internal {
-            for _ in 0..6 {
-                dice.two_d6();
-            }
-            assert_eq!(roll_unit_dice(&mut world, ids[0], 1).unwrap(), [dice.d6()]);
-        }
+        assert_eq!(again.hits[0].impacts.len(), 2);
         world.validate(&config).unwrap();
     }
 }
@@ -629,10 +580,7 @@ async fn mine_packets_finish_after_hull_loss_and_retain_wreck_material_damage() 
 #[tokio::test]
 async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
     let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Stationary).await;
-    for table in [
-        VehicleCriticalTable::Standard,
-        VehicleCriticalTable::Advanced,
-    ] {
+    {
         let mut world = base.clone();
         place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
         let seed = (0u32..1000000)
@@ -641,17 +589,11 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
                 bytes[..4].copy_from_slice(&number.to_le_bytes());
                 let initial = Dice::seeded(bytes);
                 let mut dice = initial.clone();
-                for (index, wanted) in [10, 7, 7, 7].into_iter().enumerate() {
-                    if table != VehicleCriticalTable::Standard {
-                        dice.two_d6();
-                    }
+                for wanted in [10, 7, 7, 7] {
                     if dice.two_d6() != wanted {
                         return None;
                     }
                     dice.two_d6();
-                    if index < 2 && dice.two_d6() > 7 {
-                        return None;
-                    }
                 }
                 Some(initial)
             })
@@ -682,8 +624,7 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
             }),
         )
         .unwrap();
-        let mut policy = blast_rules();
-        policy.vehicle_impact.criticals.table = table;
+        let policy = blast_rules();
         let report = resolve_mine_blast(&mut world, map, 0, policy).unwrap();
         let packets: Vec<_> = report.hits[0]
             .impacts
@@ -708,8 +649,10 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
                 VehicleSection::Front
             ]
         );
-        assert!(!packets[0].damage.as_ref().unwrap().unit_destroyed);
-        assert!(packets[1].damage.as_ref().unwrap().unit_destroyed);
+        // Losing the turret's last structure destroys the vehicle (TW p. 128); the wreck's
+        // front still takes its last point before the remaining packets are wasted.
+        assert!(packets[0].damage.as_ref().unwrap().unit_destroyed);
+        assert!(packets[1].damage.as_ref().unwrap().internal.is_some());
         for packet in &packets[2..] {
             assert_eq!(packet.damage.as_ref().unwrap().absorbed, 0);
             assert!(packet.damage.as_ref().unwrap().internal.is_none());
@@ -721,89 +664,10 @@ async fn mine_followups_reselect_locations_after_turret_and_hull_loss() {
                 .all(|rounds| *rounds == 0)
         );
         let mut dice = seed;
-        for _ in 0..if table == VehicleCriticalTable::Standard {
-            10
-        } else {
-            14
-        } {
+        for _ in 0..8 {
             dice.two_d6();
         }
         assert_eq!(roll_unit_dice(&mut world, ids[0], 1).unwrap(), [dice.d6()]);
-        world.validate(&config).unwrap();
-    }
-}
-
-/// Both ordinary and Inferno blasts run their heat response after material damage on wrecks.
-#[tokio::test]
-async fn mine_heat_explodes_remaining_wreck_sections() {
-    let (_dir, config, base, map, ids) = blast_fixture(VehicleMovement::Tracked).await;
-    for inferno in [false, true] {
-        let mut world = base.clone();
-        place_battle_unit(&mut world, ids[1], map, 2, 2).unwrap();
-        let _ = damage_battle_vehicle_phase(
-            &mut world,
-            ids[0],
-            VehicleSection::Front,
-            100,
-            DamagePhase::Internal,
-        )
-        .unwrap();
-        let dice = (0u32..100000)
-            .find_map(|number| {
-                let mut bytes = [0; 32];
-                bytes[..4].copy_from_slice(&number.to_le_bytes());
-                let initial = Dice::seeded(bytes);
-                let mut dice = initial.clone();
-                if !inferno {
-                    dice.two_d6();
-                    dice.two_d6();
-                }
-                (dice.two_d6() == 9).then_some(initial)
-            })
-            .unwrap();
-        world
-            .btech
-            .rewrite_unit_record(ids[0], |record| {
-                record["dice"] = serde_json::to_value(dice).unwrap();
-            })
-            .unwrap();
-        set_minefield(
-            &mut world,
-            map,
-            0,
-            Some(Minefield {
-                coordinate: HexCoordinate { x: 1, y: 1 },
-                kind: if inferno {
-                    MineKind::Inferno
-                } else {
-                    MineKind::Standard
-                },
-                strength: if inferno { 2 } else { 1 },
-                extra: 0,
-                owner: ObjectId(1),
-            }),
-        )
-        .unwrap();
-        persistence::save(&config.database(), &world).await.unwrap();
-        let mut restored = persistence::load(&config.database()).await.unwrap();
-        let report = resolve_mine_blast(&mut world, map, 0, blast_rules()).unwrap();
-        assert_eq!(
-            resolve_mine_blast(&mut restored, map, 0, blast_rules()).unwrap(),
-            report
-        );
-        assert_eq!(world.btech, restored.btech);
-        let hit = &report.hits[0];
-        assert_eq!(hit.unit, ids[0]);
-        assert_eq!(hit.impacts.len(), usize::from(!inferno));
-        let heat = hit.vehicle_heat.as_ref().unwrap();
-        assert_eq!(heat.explosion_roll, Some(9));
-        assert_eq!(heat.explosion.as_ref().unwrap().destroyed_sections.len(), 4);
-        assert!(
-            world.btech.vehicles()[&ids[0]]
-                .sections()
-                .values()
-                .all(|section| section.internal == 0)
-        );
         world.validate(&config).unwrap();
     }
 }

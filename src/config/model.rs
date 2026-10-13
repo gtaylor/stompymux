@@ -127,66 +127,28 @@ impl Default for ServerConfig {
 #[serde(default)]
 /// Typed battle tech config.
 pub struct BattleTechConfig {
-    /// Configuration value for `explode_reactor`; defaults are centralized below.
-    pub explode_reactor: i64,
-    /// Configuration value for `explode_time`; defaults are centralized below.
-    pub explode_time: i64,
-    /// Configuration value for `explode_ammo`; defaults are centralized below.
-    pub explode_ammo: i64,
-    /// Configuration value for `explode_stop`; defaults are centralized below.
-    pub explode_stop: i64,
     /// Configuration value for `parts`; defaults are centralized below.
     pub parts: i64,
     /// Configuration value for `ic`; defaults are centralized below.
     pub ic: i64,
     /// Configuration value for `afterlife_dbref`; defaults are centralized below.
     pub afterlife_dbref: i64,
-    /// Configuration value for `vcrit`; defaults are centralized below.
-    pub vcrit: i64,
     /// Configuration value for `slowdown`; defaults are centralized below.
     pub slowdown: i64,
     /// Configuration value for `fasaturn`; defaults are centralized below.
     pub fasaturn: i64,
-    /// Configuration value for `fasaadvvtolcrit`; defaults are centralized below.
-    pub fasaadvvtolcrit: i64,
-    /// Configuration value for `fasaadvvhlcrit`; defaults are centralized below.
-    pub fasaadvvhlcrit: i64,
-    /// Configuration value for `fasaadvvhlfire`; defaults are centralized below.
-    pub fasaadvvhlfire: i64,
-    /// Configuration value for `divrotordamage`; defaults are centralized below.
-    pub divrotordamage: i64,
-    /// Configuration value for `moddamagewithrange`; defaults are centralized below.
-    pub moddamagewithrange: i64,
     /// Configuration value for `moddamagewithwoods`; defaults are centralized below.
     pub moddamagewithwoods: i64,
     /// Configuration value for `hotloadaddshalfbthmod`; defaults are centralized below.
     pub hotloadaddshalfbthmod: i64,
     /// Configuration value for `nofusionvtolfuel`; defaults are centralized below.
     pub nofusionvtolfuel: i64,
-    /// Configuration value for `newcharge`; defaults are centralized below.
-    pub newcharge: i64,
-    /// Configuration value for `tl3_charge`; defaults are centralized below.
-    pub tl3_charge: i64,
     /// Configuration value for `xploss`; defaults are centralized below.
     pub xploss: i64,
-    /// Configuration value for `critlevel`; defaults are centralized below.
-    pub critlevel: i64,
-    /// Configuration value for `newstagger`; defaults are centralized below.
-    pub newstagger: i64,
-    /// Configuration value for `newstaggertons`; defaults are centralized below.
-    pub newstaggertons: i64,
-    /// Configuration value for `newstaggertime`; defaults are centralized below.
-    pub newstaggertime: i64,
     /// Configuration value for `extendedmovemod`; defaults are centralized below.
     pub extendedmovemod: i64,
-    /// Configuration value for `stacking`; defaults are centralized below.
-    pub stacking: i64,
-    /// Configuration value for `stackdamage`; defaults are centralized below.
-    pub stackdamage: i64,
     /// Configuration value for `mw_losmap`; defaults are centralized below.
     pub mw_losmap: i64,
-    /// Configuration value for `exile_stun_code`; defaults are centralized below.
-    pub exile_stun_code: i64,
     /// Configuration value for `roll_on_backwalk`; defaults are centralized below.
     pub roll_on_backwalk: i64,
     /// Configuration value for `usedunitstore`; defaults are centralized below.
@@ -213,10 +175,6 @@ pub struct BattleTechConfig {
     pub maxtechtime: i64,
     /// Configuration value for `vtol_ice_causes_fire`; defaults are centralized below.
     pub vtol_ice_causes_fire: i64,
-    /// Configuration value for `glancing_blows`; defaults are centralized below.
-    pub glancing_blows: i64,
-    /// Configuration value for `inferno_penalty`; defaults are centralized below.
-    pub inferno_penalty: i64,
     /// Configuration value for `blzmapmode`; defaults are centralized below.
     pub blzmapmode: i64,
     /// Configuration value for `extended_piloting`; defaults are centralized below.
@@ -235,50 +193,25 @@ pub struct BattleTechConfig {
     pub statengine_obj: i64,
     /// Configuration value for `limitedrepairs`; defaults are centralized below.
     pub limitedrepairs: i64,
-    /// Configuration value for `stackpole`; defaults are centralized below.
-    pub stackpole: i64,
-    /// Configuration value for `phys_use_pskill`; defaults are centralized below.
-    pub phys_use_pskill: i64,
     /// Configuration value for `erange`; defaults are centralized below.
     pub erange: i64,
-    /// Configuration value for `hit_arcs`; defaults are centralized below.
-    pub hit_arcs: i64,
     /// Configuration value for `xp`; defaults are centralized below.
     pub xp: XpConfig,
 }
 impl Default for BattleTechConfig {
     fn default() -> Self {
         Self {
-            explode_reactor: 1,
-            explode_time: 120,
-            explode_ammo: 1,
-            explode_stop: 0,
             parts: 1,
             ic: 1,
             afterlife_dbref: 5,
-            vcrit: 2,
             slowdown: 2,
             fasaturn: 1,
-            fasaadvvtolcrit: 0,
-            fasaadvvhlcrit: 0,
-            fasaadvvhlfire: 0,
-            divrotordamage: 0,
-            moddamagewithrange: 0,
             moddamagewithwoods: 0,
             hotloadaddshalfbthmod: 0,
             nofusionvtolfuel: 0,
-            newcharge: 0,
-            tl3_charge: 0,
             xploss: 666,
-            critlevel: 100,
-            newstagger: 1,
-            newstaggertons: 1,
-            newstaggertime: 5,
             extendedmovemod: 1,
-            stacking: 2,
-            stackdamage: 100,
             mw_losmap: 1,
-            exile_stun_code: 0,
             roll_on_backwalk: 1,
             usedunitstore: 3,
             ooc_comsys: 0,
@@ -292,8 +225,6 @@ impl Default for BattleTechConfig {
             standcareful: 1,
             maxtechtime: 600,
             vtol_ice_causes_fire: 1,
-            glancing_blows: 1,
-            inferno_penalty: 0,
             blzmapmode: 0,
             extended_piloting: 1,
             extended_gunnery: 1,
@@ -303,10 +234,7 @@ impl Default for BattleTechConfig {
             techtime_multiplier: 1.0,
             statengine_obj: -1,
             limitedrepairs: 0,
-            stackpole: 1,
-            phys_use_pskill: 1,
             erange: 1,
-            hit_arcs: 0,
             xp: Default::default(),
         }
     }

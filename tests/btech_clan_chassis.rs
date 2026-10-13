@@ -138,7 +138,6 @@ async fn clan_ammunition_containment_and_sink_losses_survive_restart() {
             section: MechSection::RightTorso,
             rear_armor: false,
             through_armor_critical: true,
-            crew_stun: false,
         };
         let mut damaged = base.clone();
         let report = resolve_battle_impact(&mut damaged, id, hit, 1).unwrap();

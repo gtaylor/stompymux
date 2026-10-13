@@ -558,6 +558,11 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
         damaged["vehicles"][id.0.to_string()]["sections"]["turret"]["armor"] = 0.into();
         damaged["vehicles"][id.0.to_string()]["sections"]["turret"]["internal"] = 0.into();
         damaged["vehicles"][id.0.to_string()]["turret_offset"] = 0.into();
+        // A lost turret wrecks the vehicle (TW p. 128), and wrecks are shut down.
+        damaged["vehicles"][id.0.to_string()]["power"] = serde_json::to_value(Power::Off).unwrap();
+        damaged["vehicles"][id.0.to_string()]["motion"]["speed"] = 0.into();
+        damaged["vehicles"][id.0.to_string()]["motion"]["desired_speed"] = 0.into();
+        damaged["vehicles"][id.0.to_string()]["target_lock"] = serde_json::Value::Null;
         for (index, bin) in world.btech.vehicles()[&id]
             .loadout()
             .unwrap()

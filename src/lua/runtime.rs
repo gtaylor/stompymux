@@ -109,11 +109,6 @@ impl Scripts {
         }
         scripts.publish_services();
         scripts.flows.ready();
-        crate::configure_battle_reactor_policy(
-            &mut scripts.world.borrow_mut(),
-            config.battletech.stackpole != 0,
-            config.battletech.explode_reactor > 1,
-        );
         Ok(scripts)
     }
 }

@@ -86,27 +86,9 @@ impl Mech {
     /// Select the most destructive remaining bin; equal hazards retain the first section/slot.
     /// No dice are consumed, and unavailable or empty bins cannot become heat hazards.
     pub fn ammunition_hazard_maximum(&self) -> Result<Option<AmmunitionHazard>> {
-        self.maximum_ammunition_hazard(false)
-    }
-
-    /// The bin a self-destruct detonates: the most destructive one, first on a tie.
-    pub fn largest_ammunition_hazard_bin(&self) -> Result<Option<usize>> {
-        Ok(self.ammunition_hazard_maximum()?.map(|hazard| hazard.index))
-    }
-
-    /// Inferno penalties select the largest available inferno bin before other ammunition.
-    pub(super) fn inferno_ammunition_hazard(&self) -> Result<Option<AmmunitionHazard>> {
-        self.maximum_ammunition_hazard(true)
-    }
-
-    /// Shared stable hazard ordering, optionally restricted to inferno ammunition.
-    fn maximum_ammunition_hazard(&self, inferno_only: bool) -> Result<Option<AmmunitionHazard>> {
         let loadout = self.loadout()?;
         let mut maximum: Option<AmmunitionHazard> = None;
         for index in 0..loadout.ammunition.len() {
-            if inferno_only && loadout.ammunition[index].mode != super::AmmunitionMode::Inferno {
-                continue;
-            }
             let hazard = self.ammunition_hazard(index)?;
             if hazard.damage == 0 || self.critical_unavailable(hazard.location) {
                 continue;
@@ -116,6 +98,11 @@ impl Mech {
             }
         }
         Ok(maximum)
+    }
+
+    /// The bin a self-destruct detonates: the most destructive one, first on a tie.
+    pub fn largest_ammunition_hazard_bin(&self) -> Result<Option<usize>> {
+        Ok(self.ammunition_hazard_maximum()?.map(|hazard| hazard.index))
     }
 
     /// Calculate one bin's potential from its live salvo count and conventional weapon profile.
@@ -377,20 +364,7 @@ impl Mech {
                             | System::HandOrFootActuator
                     }
                 );
-        let gyro_before = if matches!(
-            loss,
-            CriticalLoss::System {
-                system: System::Gyro
-            }
-        ) {
-            Some((self.gyro_damage(), self.gyro_piloting_modifier()))
-        } else {
-            None
-        };
         self.lost_criticals.insert(location);
-        if let Some((damage, modifier)) = gyro_before {
-            self.record_gyro_critical(damage, modifier);
-        }
         if recalculate_propulsion {
             self.recalculate_actuators();
         }

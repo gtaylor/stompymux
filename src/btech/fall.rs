@@ -1,5 +1,5 @@
 //! Durable biped posture and atomic ground/water tactical fall resolution.
-use super::{HitArc, HitRules, PilotingCheck, SalvoGroup, TacticalPilotInjury};
+use super::{HitArc, PilotingCheck, SalvoGroup, TacticalPilotInjury};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -32,10 +32,6 @@ pub(super) fn set_prone(unit: &mut super::Mech) {
 pub struct FallRules {
     /// Vehicle damage policy for mines reached by this consequence chain.
     pub vehicle_impact: super::VehicleImpactRules,
-    /// Crowding policy for airborne critical-damage falls inside the damage transaction.
-    pub stacking: super::StackingRules,
-    pub stagger: super::StaggerMode,
-    pub hit: HitRules,
     pub extended_piloting: bool,
     pub toughness: bool,
 }
@@ -75,7 +71,6 @@ pub struct FallReport<G, F> {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MechFallFeedback {
     pub flooding: Vec<super::SectionExposureReport>,
-    pub inferno_notices: Vec<super::Notice>,
     /// The 'Mech came down in soft ground and is stuck there.
     pub bogged_down: Option<super::Notice>,
 }
@@ -134,6 +129,7 @@ pub(super) fn resolve_character_signed_fall(
     resolve_fall_inner(world, id, i32::from(levels), rules, true)
 }
 
+/// Contract-driven fall with an explicit tonnage for the damage formula.
 pub(super) fn resolve_contract_fall(
     world: &mut World,
     id: ObjectId,
@@ -142,7 +138,40 @@ pub(super) fn resolve_contract_fall(
     character: bool,
     tons: u32,
 ) -> Result<MechFallReport> {
-    resolve_fall_inner_with_tonnage(world, id, levels, rules, character, Some(tons))
+    resolve_fall_inner_with_tonnage(
+        world,
+        id,
+        levels,
+        rules,
+        character,
+        FallShape {
+            tonnage: Some(tons),
+            arc: None,
+        },
+    )
+}
+
+/// A fall whose damage always lands on the rear, such as a missed death from above (Total
+/// Warfare p. 150): the Facing After Fall roll still turns the 'Mech, but the hit location is
+/// the rear regardless.
+pub(super) fn resolve_rear_fall(
+    world: &mut World,
+    id: ObjectId,
+    levels: u8,
+    rules: FallRules,
+    character: bool,
+) -> Result<MechFallReport> {
+    resolve_fall_inner_with_tonnage(
+        world,
+        id,
+        i32::from(levels),
+        rules,
+        character,
+        FallShape {
+            tonnage: None,
+            arc: Some(HitArc::Rear),
+        },
+    )
 }
 
 /// Shared posture, injury, flooding and direction resolution for both fall causes.
@@ -153,7 +182,22 @@ fn resolve_fall_inner(
     rules: FallRules,
     character: bool,
 ) -> Result<MechFallReport> {
-    resolve_fall_inner_with_tonnage(world, id, levels, rules, character, None)
+    resolve_fall_inner_with_tonnage(world, id, levels, rules, character, FallShape::default())
+}
+
+/// Overrides a fall's caller may impose on the damage formula and hit direction.
+#[derive(Default, Clone, Copy)]
+struct FallShape {
+    /// Tonnage for the damage formula instead of the unit's own.
+    tonnage: Option<u32>,
+    /// Hit direction used for every group instead of the Facing After Fall result.
+    arc: Option<HitArc>,
+}
+
+/// Modifier on the MechWarrior's fall-damage check: one for every level fallen above one
+/// (Total Warfare p. 68). `levels` is the damage multiplier, levels fallen plus one.
+pub(super) fn pilot_check_modifier(levels: i32) -> i32 {
+    (levels - 2).max(0)
 }
 
 fn resolve_fall_inner_with_tonnage(
@@ -162,7 +206,7 @@ fn resolve_fall_inner_with_tonnage(
     levels: i32,
     rules: FallRules,
     character: bool,
-    tonnage: Option<u32>,
+    shape: FallShape,
 ) -> Result<MechFallReport> {
     let unit = world
         .btech
@@ -173,7 +217,7 @@ fn resolve_fall_inner_with_tonnage(
         !unit.is_destroyed() || unit.free_fall().is_some(),
         "Unit is destroyed"
     );
-    resolve_material_with_tonnage(world, id, levels, rules, character, tonnage)
+    resolve_material_with_tonnage(world, id, levels, rules, character, shape)
 }
 
 /// Resolve an admitted environmental fall even if an earlier casualty destroyed this unit.
@@ -185,7 +229,7 @@ pub(super) fn resolve_material(
     rules: FallRules,
     character: bool,
 ) -> Result<MechFallReport> {
-    resolve_material_with_tonnage(world, id, levels, rules, character, None)
+    resolve_material_with_tonnage(world, id, levels, rules, character, FallShape::default())
 }
 
 fn resolve_material_with_tonnage(
@@ -194,7 +238,7 @@ fn resolve_material_with_tonnage(
     levels: i32,
     rules: FallRules,
     character: bool,
-    tonnage: Option<u32>,
+    shape: FallShape,
 ) -> Result<MechFallReport> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(
@@ -231,7 +275,7 @@ fn resolve_material_with_tonnage(
     let inside_building = tile
         .filter(|tile| super::building_interior::inside(*tile, unit.elevation_level(*tile)))
         .map(|tile| unit.elevation_level(tile));
-    let tons = tonnage.unwrap_or(u32::from(unit.definition().tons));
+    let tons = shape.tonnage.unwrap_or(u32::from(unit.definition().tons));
     let pilot = unit.pilot();
     let has_pilot = pilot.is_some();
     let safe = unit.combat_safe;
@@ -242,7 +286,7 @@ fn resolve_material_with_tonnage(
             Some(super::piloting::roll_piloting_i32(
                 world,
                 id,
-                levels,
+                pilot_check_modifier(levels),
                 rules.extended_piloting,
             )?)
         };
@@ -326,15 +370,11 @@ fn resolve_material_with_tonnage(
         } else {
             super::flood_unit(world, id, rules)?
         };
-        let inferno_notices = if position.is_some() {
-            super::extinguish_inferno_in_water(world, id)?
-        } else {
-            Vec::new()
-        };
         let bogged_down = super::bog_down::stick_after_fall(world, id);
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         let direction_roll = unit.dice.d6();
-        let (arc, offset) = super::fall_profile::direction(direction_roll)?;
+        let (rolled_arc, offset) = super::fall_profile::direction(direction_roll)?;
+        let arc = shape.arc.unwrap_or(rolled_arc);
         if let Some(motion) = &mut unit.motion {
             motion.speed = 0.0;
             motion.desired_speed = 0.0;
@@ -350,7 +390,7 @@ fn resolve_material_with_tonnage(
             let unit = &world.btech.constructed_units()[&id];
             let mut dice = unit.dice.clone();
             let roll = dice.generic_roll();
-            let hit = rules.hit.resolve(unit, arc, roll, &mut dice)?;
+            let hit = super::resolve_hit(unit, arc, roll, &mut dice)?;
             world.btech.constructed.get_mut(&id).unwrap().dice = dice;
             // Native falling continues rolling each five-point group after a lethal packet;
             // its damage entry point then ignores the already destroyed unit.
@@ -407,7 +447,6 @@ fn resolve_material_with_tonnage(
             ice_break,
             feedback: MechFallFeedback {
                 flooding,
-                inferno_notices,
                 bogged_down,
             },
         })
@@ -439,7 +478,6 @@ impl MechFallReport {
         {
             notices.push(notice);
         }
-        notices.extend(self.feedback.inferno_notices.clone());
         notices.extend(self.feedback.bogged_down.clone());
         if let Some(fracture) = &self.ice_break {
             super::piloting::append_feedback(
@@ -479,12 +517,6 @@ impl FallRules {
     /// action, such as a building collapsing onto it.
     pub const STANDARD: Self = Self {
         vehicle_impact: super::VehicleImpactRules::STANDARD,
-        stacking: super::StackingRules::STANDARD,
-        stagger: super::StaggerMode::Retain,
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
         extended_piloting: false,
         toughness: false,
     };
@@ -494,18 +526,24 @@ impl FallRules {
         let config = &settings.battletech;
         Self {
             vehicle_impact: crate::VehicleImpactRules::configured(config, false),
-            stacking: super::StackingRules {
-                mode: config.stacking,
-                damage_percent: config.stackdamage,
-                hit_arcs: config.hit_arcs,
-            },
-            hit: super::HitRules {
-                inferno_penalty: config.inferno_penalty != 0,
-                exile_stun_mode: config.exile_stun_code.clamp(0, 2) as u8,
-            },
-            stagger: super::StaggerMode::from_setting(config.newstagger),
             extended_piloting: config.extended_piloting != 0,
             toughness: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pilot_check_modifier;
+
+    /// Zero- and one-level falls add nothing to the pilot's check; each level above one adds one.
+    #[test]
+    fn pilot_check_modifier_counts_levels_above_one() {
+        assert_eq!(pilot_check_modifier(0), 0);
+        assert_eq!(pilot_check_modifier(1), 0);
+        assert_eq!(pilot_check_modifier(2), 0);
+        assert_eq!(pilot_check_modifier(3), 1);
+        assert_eq!(pilot_check_modifier(5), 3);
+        assert_eq!(pilot_check_modifier(-2), 0);
     }
 }

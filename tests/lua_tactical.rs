@@ -175,7 +175,6 @@ async fn shared_sightings_admit_attacks_but_do_not_leak_hidden_changes() {
     "#).unwrap();
     let rules = AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
         extended_ranges: false,

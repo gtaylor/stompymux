@@ -1,5 +1,5 @@
 //! Atomic vehicle launch preparation and attack rolls, before target damage and publication.
-use super::{GlancingMode, VehicleWeaponUse};
+use super::VehicleWeaponUse;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -13,7 +13,6 @@ pub struct VehicleLaunchRequest {
     pub distance: f64,
     pub target_number: Option<i32>,
     pub streak_confused: bool,
-    pub glancing: GlancingMode,
     /// Shooter-local critical policy for a rapid misload or caseless propellant ignition.
     pub critical_rules: super::VehicleCriticalRules,
 }
@@ -80,7 +79,6 @@ fn launch(
         distance,
         target_number,
         streak_confused,
-        glancing,
         critical_rules,
     } = request;
     super::combat_operator::controlled(world, shooter, pilot)?;
@@ -144,7 +142,6 @@ fn launch(
             distance,
             target_number,
             streak_confused,
-            glancing,
         },
         &mut world.btech.vehicles.get_mut(&shooter).unwrap().dice,
     )?;

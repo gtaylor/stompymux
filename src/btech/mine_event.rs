@@ -1,4 +1,6 @@
-//! Ordered mine activation, shared by physical events and host publication.
+//! Ordered mine activation, shared by physical events and host publication. Conventional and
+//! active fields roll to go off (Tactical Operations pp. 176–177); a failed roll leaves the
+//! field hidden and the unit none the wiser.
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
@@ -69,6 +71,12 @@ pub(super) fn resolve(
                 }),
                 MineResponse::Trigger => report.triggers += 1,
                 MineResponse::Explode => {
+                    if let Some(target) = activation.target {
+                        // A failed roll leaves the field hidden; the unit walks on unaware.
+                        if super::dice::unit_dice_mut(world, unit)?.two_d6() < target {
+                            continue;
+                        }
+                    }
                     let (cockpit, observed) = if reason == MineTriggerReason::Step {
                         (
                             format!(

@@ -430,7 +430,6 @@ async fn casualty_impact_action_rolls_back_damage_and_moves() {
         section,
         rear_armor: false,
         through_armor_critical: false,
-        crew_stun: false,
     };
     let report =
         resolve_battle_impact_action(&scripts, &config, unit, hit(MechSection::CenterTorso), 100)
@@ -589,7 +588,6 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
             section: MechSection::Head,
             rear_armor: false,
             through_armor_critical: false,
-            crew_stun: false,
         },
         1,
     )

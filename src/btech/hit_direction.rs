@@ -9,12 +9,9 @@ pub(super) enum HitDirection {
     Fixed(HitArc),
     Direct {
         shooter: ObjectId,
-        mode: i64,
     },
     /// Self-inflicted scenario damage also permits an unplaced unit's default heading.
-    SelfHit {
-        mode: i64,
-    },
+    SelfHit,
 }
 
 impl HitDirection {
@@ -24,21 +21,20 @@ impl HitDirection {
             return Ok(arc);
         }
         let unit = scanner_unit(world, target).context("Target is unavailable")?;
-        let (bearing, heading, mode) = match self {
+        let (bearing, heading) = match self {
             Self::Fixed(_) => unreachable!("fixed direction returned above"),
-            Self::Direct { shooter, mode } => (
+            Self::Direct { shooter } => (
                 unit_range(world, target, shooter)?.bearing.unwrap_or(180.0),
                 unit.heading.context("Target is not placed")?,
-                mode,
             ),
-            Self::SelfHit { mode } => (180.0, unit.heading.unwrap_or(0.0), mode),
+            Self::SelfHit => (180.0, unit.heading.unwrap_or(0.0)),
         };
         let classify = if world.btech.vehicles().contains_key(&target) {
             HitArc::from_vehicle_bearing
         } else {
             HitArc::from_bearing
         };
-        classify(bearing, heading, mode)
+        classify(bearing, heading)
     }
 }
 
@@ -86,12 +82,14 @@ mod tests {
                     .unwrap();
                 place_battle_unit(&mut world, shooter, map, 0, 2).unwrap();
                 place_battle_unit(&mut world, target, map, 0, 1).unwrap();
-                let direction = HitDirection::Direct { shooter, mode: 1 };
+                let direction = HitDirection::Direct { shooter };
+                // The shooter sits due south; these headings fall in the same arc on both the
+                // Mech (180/60/60/60) and vehicle (60/120/120/60) diagrams.
                 for (heading, expected) in [
                     (0.0, HitArc::Rear),
-                    (90.0, HitArc::Right),
+                    (60.0, HitArc::Right),
                     (180.0, HitArc::Front),
-                    (270.0, HitArc::Left),
+                    (300.0, HitArc::Left),
                 ] {
                     let motion = crate::btech::with_unit_mut!(
                         world.btech.unit_mut(target).unwrap(),
@@ -99,7 +97,12 @@ mod tests {
                     );
                     motion.heading = heading;
                     motion.desired_heading = heading;
-                    assert_eq!(direction.current(&world, target).unwrap(), expected);
+                    assert_eq!(
+                        direction.current(&world, target).unwrap(),
+                        expected,
+                        "target {} heading {heading}",
+                        &recipient[..recipient.find('\n').unwrap_or(40).min(40)]
+                    );
                     assert_eq!(
                         HitDirection::Fixed(HitArc::Front)
                             .current(&world, target)
@@ -107,62 +110,54 @@ mod tests {
                         HitArc::Front
                     );
                 }
-                // Sample every degree and both sides of each boundary for all rule modes.
+                // Sample every degree and both sides of each boundary of the chassis's diagram.
                 let vehicle = world.btech.vehicles().contains_key(&target);
-                for mode in 0..=2 {
-                    let (front, rear) = match (mode, vehicle) {
-                        (0, true) => (30.0, 30.0),
-                        (1, _) => (45.0, 45.0),
-                        _ => (90.0, 30.0),
-                    };
-                    for degree in 0..360 {
-                        for offset in [-0.001, 0.0, 0.001] {
-                            let angle = (f64::from(degree) + offset).rem_euclid(360.0);
-                            let expected = if angle <= front || angle >= 360.0 - front {
-                                HitArc::Front
-                            } else if angle >= 180.0 - rear && angle <= 180.0 + rear {
-                                HitArc::Rear
-                            } else if angle > 180.0 {
-                                HitArc::Left
-                            } else {
-                                HitArc::Right
-                            };
-                            let motion = if vehicle {
-                                world
-                                    .btech
-                                    .vehicles
-                                    .get_mut(&target)
-                                    .unwrap()
-                                    .motion
-                                    .as_mut()
-                                    .unwrap()
-                            } else {
-                                world
-                                    .btech
-                                    .constructed
-                                    .get_mut(&target)
-                                    .unwrap()
-                                    .motion
-                                    .as_mut()
-                                    .unwrap()
-                            };
-                            motion.heading = (180.0 - angle).rem_euclid(360.0);
-                            motion.desired_heading = motion.heading;
-                            assert_eq!(
-                                HitDirection::Direct { shooter, mode }
-                                    .current(&world, target)
-                                    .unwrap(),
-                                expected,
-                                "vehicle={vehicle}, mode={mode}, angle={angle}"
-                            );
-                            assert_eq!(
-                                HitDirection::SelfHit { mode }
-                                    .current(&world, target)
-                                    .unwrap(),
-                                expected,
-                                "self hit: vehicle={vehicle}, mode={mode}, angle={angle}"
-                            );
-                        }
+                let (front, rear) = if vehicle { (30.0, 30.0) } else { (90.0, 30.0) };
+                for degree in 0..360 {
+                    for offset in [-0.001, 0.0, 0.001] {
+                        let angle = (f64::from(degree) + offset).rem_euclid(360.0);
+                        let expected = if angle <= front || angle >= 360.0 - front {
+                            HitArc::Front
+                        } else if angle >= 180.0 - rear && angle <= 180.0 + rear {
+                            HitArc::Rear
+                        } else if angle > 180.0 {
+                            HitArc::Left
+                        } else {
+                            HitArc::Right
+                        };
+                        let motion = if vehicle {
+                            world
+                                .btech
+                                .vehicles
+                                .get_mut(&target)
+                                .unwrap()
+                                .motion
+                                .as_mut()
+                                .unwrap()
+                        } else {
+                            world
+                                .btech
+                                .constructed
+                                .get_mut(&target)
+                                .unwrap()
+                                .motion
+                                .as_mut()
+                                .unwrap()
+                        };
+                        motion.heading = (180.0 - angle).rem_euclid(360.0);
+                        motion.desired_heading = motion.heading;
+                        assert_eq!(
+                            HitDirection::Direct { shooter }
+                                .current(&world, target)
+                                .unwrap(),
+                            expected,
+                            "vehicle={vehicle}, angle={angle}"
+                        );
+                        assert_eq!(
+                            HitDirection::SelfHit.current(&world, target).unwrap(),
+                            expected,
+                            "self hit: vehicle={vehicle}, angle={angle}"
+                        );
                     }
                 }
                 place_battle_unit(&mut world, target, map, 0, 1).unwrap();

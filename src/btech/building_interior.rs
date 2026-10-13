@@ -333,9 +333,12 @@ fn motive_damage(world: &mut World, id: ObjectId, breach: &mut WallBreach) -> Re
     let roll = super::dice::unit_dice_mut(world, id)?.two_d6();
     let (motive, penalty) = super::vehicle_motive_effects::outcome(movement, roll);
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-    let (notices, broadcasts) =
+    let (notices, mut broadcasts) =
         super::vehicle_motive_effects::apply(vehicle, id, motive, penalty, Some(roll));
     breach.notices.extend(notices);
+    let (sank, observed) = super::vehicle_motive_effects::sink_immobilized_hovercraft(world, id)?;
+    breach.notices.extend(sank);
+    broadcasts.extend(observed);
     for broadcast in broadcasts {
         breach.notices.extend(super::broadcast::observer_notices(
             world,
@@ -555,10 +558,12 @@ pub(super) fn check_physical(world: &World, attacker: ObjectId, target: ObjectId
     Ok(())
 }
 
-/// Units inside a collapsing building hex take its rubble (Total Warfare p. 176): a tenth of
+/// Units in a collapsing building hex take its rubble (Total Warfare pp. 176–177): a tenth of
 /// the construction factor for their own level and each level above them, in five-point
-/// groups from the front, 'Mechs on the punch table; then they stand on the rubble.
-/// `tile` is the hex before the collapse. Returns the buried units' ids.
+/// groups from the front, 'Mechs inside on the Punch Location Table and 'Mechs on the roof on
+/// the Hit Location Table. Units inside above the ground floor then fall to the rubble; those
+/// on the ground floor stand on it. The caller drops the roof's occupants afterwards. `tile` is
+/// the hex before the collapse. Returns the buried units' ids.
 pub(super) fn bury_occupants(
     world: &mut World,
     map: ObjectId,
@@ -595,7 +600,8 @@ pub(super) fn bury_occupants(
                 vehicle.vtol_flight().is_some(),
             ),
         };
-        if airborne || !inside(tile, level) {
+        let roof = level == i32::from(tile.surface_height());
+        if airborne || !(roof || inside(tile, level)) {
             continue;
         }
         let interior = Interior {
@@ -607,12 +613,20 @@ pub(super) fn bury_occupants(
         let damage = collapse_damage(cf, interior.floors_above());
         notices.push(Notice {
             unit: id,
-            text: format!("The building comes down on top of you for {damage} points!"),
+            text: if roof {
+                format!("The roof gives way beneath you for {damage} points!")
+            } else {
+                format!("The building comes down on top of you for {damage} points!")
+            },
         });
         notices.extend(super::broadcast::observer_notices(
             world,
             id,
-            "is buried as the building collapses!",
+            if roof {
+                "drops as the roof gives way!"
+            } else {
+                "is buried as the building collapses!"
+            },
         ));
         let in_character = character && world.objects[&id].flags.contains(Flag::InCharacter);
         let mut remaining = damage;
@@ -629,7 +643,11 @@ pub(super) fn bury_occupants(
                 id,
                 super::blast_damage::MaterialPacket {
                     amount: group,
-                    table: HitTable::Punch,
+                    table: if roof {
+                        HitTable::Weapon
+                    } else {
+                        HitTable::Punch
+                    },
                     arc: HitArc::Front,
                     character: in_character,
                     attacker: None,
@@ -641,6 +659,21 @@ pub(super) fn bury_occupants(
             impact.append_feedback(pilot_notices, notices.len());
             notices.extend(impact_notices);
         }
+        if roof {
+            buried.push(id);
+            continue;
+        }
+        let drop = level - i32::from(tile.level());
+        if drop > 0 {
+            // Floors above the ground give way: a fall of that many levels onto the rubble.
+            notices.push(Notice {
+                unit: id,
+                text: "The floor drops away beneath you!".into(),
+            });
+            collapse_fall(world, id, drop, rules, in_character, notices, pilot_notices)?;
+            buried.push(id);
+            continue;
+        }
         // The rubble is the ground now; the unit stands on it.
         match world.btech.unit_mut(id).context("Unit is unavailable")? {
             super::UnitMut::Mech(mech) => mech.ground_elevation = None,
@@ -649,6 +682,42 @@ pub(super) fn bury_occupants(
         buried.push(id);
     }
     Ok(buried)
+}
+
+/// Drop a unit `levels` floors from inside a collapsing building to its rubble, whichever
+/// chassis it is, keeping the fall's feedback in the collapse's notice stream.
+fn collapse_fall(
+    world: &mut World,
+    id: ObjectId,
+    levels: i32,
+    rules: FallRules,
+    character: bool,
+    notices: &mut Vec<Notice>,
+    pilot_notices: &mut Vec<PilotNotice>,
+) -> Result<()> {
+    let destroyed = super::with_unit!(world.btech.unit(id).unwrap(), |unit| unit.is_destroyed());
+    if destroyed {
+        return Ok(());
+    }
+    if world.btech.vehicles().contains_key(&id) {
+        let fall = super::vehicle_fall::resolve_material(
+            world,
+            id,
+            u32::try_from(levels + 1).unwrap_or(u32::MAX),
+            rules,
+            character,
+        )?;
+        super::piloting::append_feedback(
+            pilot_notices,
+            fall.feedback.pilot_notices.iter().cloned(),
+            notices.len(),
+        );
+        notices.extend(fall.feedback.notices.iter().cloned());
+        return Ok(());
+    }
+    let fall = super::fall::resolve_material(world, id, levels + 1, rules, character)?;
+    fall.append_notices(id, notices, pilot_notices);
+    Ok(())
 }
 
 /// The construction class of the building a unit stands in, for movement cost.

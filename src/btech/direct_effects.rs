@@ -13,13 +13,8 @@ pub(super) struct DirectEffectRequest {
     pub hit: bool,
     pub launched: bool,
     pub intercepted: bool,
-    pub hit_rules: HitRules,
     pub vehicle_impact: VehicleImpactRules,
-    pub hit_arc_mode: i64,
     pub woods_damage: bool,
-    pub range_damage: bool,
-    /// Whether the launching mount is below the waterline.
-    pub submerged: bool,
     pub damage_penalty: u8,
     pub distance: f64,
     pub gatling_damage: Option<u8>,
@@ -56,24 +51,15 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
                 request.target,
                 shot,
                 request.vehicle_impact,
-                request.hit_arc_mode,
             )?
         } else {
-            super::narc::attach(
-                world,
-                request.shooter,
-                request.target,
-                shot,
-                request.hit_rules,
-                request.hit_arc_mode,
-            )?
-            .map_section(UnitSection::Mech)
+            super::narc::attach(world, request.shooter, request.target, shot)?
+                .map_section(UnitSection::Mech)
         });
     }
     if !request.hit {
         let fall_rules = super::FallRules {
             vehicle_impact: request.vehicle_impact,
-            hit: request.hit_rules,
             ..super::FallRules::STANDARD
         };
         // A miss from the hex next door strikes the building the target is in (Total Warfare
@@ -163,8 +149,6 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
 fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u16> {
     let packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
-            submerged: request.submerged,
-            range_damage: request.range_damage,
             damage_penalty: request.damage_penalty,
             weapon: request.weapon,
             ammunition: if request.ammunition == AmmunitionMode::Cluster {

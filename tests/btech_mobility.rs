@@ -137,7 +137,8 @@ fn quad_leg_loss_patterns_and_flooded_support_have_distinct_limits() {
     }
 }
 
-/// Four hip hits continue to halve speed, and a hip replaces the same leg's lesser penalties.
+/// Each hip hit halves speed until the fourth leaves none (Total Warfare p. 127), and a hip
+/// replaces the same leg's lesser penalties.
 #[test]
 fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
     let quad = quad();
@@ -157,7 +158,11 @@ fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
         let damaged: Mech = serde_json::from_value(encoded.clone()).unwrap();
         assert_eq!(
             damaged.mobility().maximum_speed,
-            96.75 / 2f64.powi(count as i32)
+            if count == 4 {
+                0.0
+            } else {
+                96.75 / 2f64.powi(count as i32)
+            }
         );
         assert_eq!(damaged.mobility().piloting_modifier, count as u8 * 2);
         let restored: Mech =

@@ -1,4 +1,5 @@
-//! Saved rotor material state preserves hull and crew while making new lift loss explicit.
+//! Saved rotor material state: speed loss per hit, the flight stabilizer, rotor destruction and
+//! the realtime rule that a grounded VTOL with no rotor is a wreck.
 use crate::support;
 use stompymux_rs::*;
 
@@ -11,35 +12,42 @@ fn aircraft() -> Vehicle {
 }
 
 #[test]
-fn repeated_rotor_damage_reuses_speed_loss_and_preserves_hull_and_crew() {
+fn rotor_damage_lowers_speed_one_mp_at_a_time_and_the_flight_stabilizer_hits_once() {
     let mut unit = aircraft();
     let original = unit.clone();
     let stalled = unit.apply_rotor_hit(RotorHit::Damage, true).unwrap();
     assert_eq!(stalled.speed_before, stalled.speed_after);
     assert_eq!(unit, original);
-    let tail = unit.apply_rotor_hit(RotorHit::TailRotor, false).unwrap();
-    assert!(!tail.repeated && !tail.lost_rotor);
+    let stabilizer = unit
+        .apply_rotor_hit(RotorHit::FlightStabilizer, false)
+        .unwrap();
+    assert!(!stabilizer.lost_rotor && !stabilizer.grounded);
     assert!(unit.tail_rotor_destroyed());
+    assert_eq!(unit.piloting_damage(), 3);
+    assert_eq!(unit.gunnery_damage(), 1);
     assert_eq!(unit.maximum_speed(), original.maximum_speed());
-    assert!(
-        unit.apply_rotor_hit(RotorHit::TailRotor, false)
-            .unwrap()
-            .repeated
+    let _ = unit
+        .apply_rotor_hit(RotorHit::FlightStabilizer, false)
+        .unwrap();
+    assert_eq!(
+        unit.piloting_damage(),
+        3,
+        "a second stabilizer hit adds nothing"
     );
     for step in 1..=18 {
         let before = unit.clone();
         let report = unit.apply_rotor_hit(RotorHit::Damage, false).unwrap();
         assert_eq!(report.speed_after, (18 - step) as f64 * 10.75);
-        assert_eq!(report.lost_rotor, step == 18);
-        assert_eq!(unit.rotor_destroyed(), step == 18);
+        assert!(!report.lost_rotor);
+        assert!(!unit.rotor_destroyed());
         assert!(!unit.is_destroyed());
         assert!(!unit.crew_killed());
-        assert_eq!(unit.pilot_injuries(), 0);
         for section in [
             VehicleSection::Front,
             VehicleSection::Rear,
             VehicleSection::Left,
             VehicleSection::Right,
+            VehicleSection::Rotor,
         ] {
             assert_eq!(unit.sections()[&section], original.sections()[&section]);
         }
@@ -53,9 +61,13 @@ fn repeated_rotor_damage_reuses_speed_loss_and_preserves_hull_and_crew() {
         );
         assert_eq!(replay, unit);
     }
+    // Rotors Destroyed on a landed VTOL is destruction (TW p. 197).
+    let destroyed = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
+    assert!(destroyed.lost_rotor);
+    assert!(unit.rotor_destroyed() && unit.is_destroyed());
     let wreck = unit.clone();
     let repeated = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
-    assert!(repeated.repeated && !repeated.lost_rotor);
+    assert!(!repeated.lost_rotor);
     assert_eq!(unit, wreck);
 }
 
@@ -65,7 +77,10 @@ fn direct_rotor_section_loss_uses_shared_damage_and_ground_models_reject_rotor_s
     let report = unit
         .damage_phase(VehicleSection::Rotor, u16::MAX, DamagePhase::Internal)
         .unwrap();
-    assert!(!report.unit_destroyed);
+    assert!(
+        report.unit_destroyed,
+        "a grounded VTOL without a rotor is a wreck"
+    );
     assert_eq!(report.destroyed_sections, [VehicleSection::Rotor]);
     assert!(unit.rotor_destroyed());
     assert_eq!(unit.maximum_speed(), 0.0);
@@ -78,8 +93,7 @@ fn direct_rotor_section_loss_uses_shared_damage_and_ground_models_reject_rotor_s
     motion.speed = 1.0;
     motion.desired_speed = 1.0;
     corrupt["motion"] = serde_json::to_value(motion).unwrap();
-    let error = serde_json::from_value::<Vehicle>(corrupt).unwrap_err();
-    assert!(error.to_string().contains("Rotorless aircraft"), "{error}");
+    assert!(serde_json::from_value::<Vehicle>(corrupt).is_err());
     let ground = Vehicle::new(
         VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
@@ -91,6 +105,28 @@ fn direct_rotor_section_loss_uses_shared_damage_and_ground_models_reject_rotor_s
     let mut corrupt = serde_json::to_value(&ground).unwrap();
     corrupt["tail_rotor_destroyed"] = true.into();
     assert!(serde_json::from_value::<Vehicle>(corrupt).is_err());
+}
+
+#[test]
+fn an_airborne_rotor_loss_is_a_crash_in_progress_rather_than_a_wreck() {
+    let mut saved = serde_json::to_value(aircraft()).unwrap();
+    saved["position"] = serde_json::json!({"map": 0, "x": 0, "y": 0});
+    saved["map_slot"] = 0.into();
+    saved["power"] = serde_json::to_value(Power::Running).unwrap();
+    saved["motion"] =
+        serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center())).unwrap();
+    saved["vtol_flight"] = serde_json::to_value(VtolFlight {
+        fall: None,
+        phase: VtolFlightPhase::Airborne,
+        altitude: 6.0,
+        vertical_speed: 0.0,
+    })
+    .unwrap();
+    let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
+    let report = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
+    assert!(report.lost_rotor);
+    assert!(!unit.is_destroyed());
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);
 }
 
 #[tokio::test]

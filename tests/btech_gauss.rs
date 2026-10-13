@@ -181,7 +181,6 @@ async fn gauss_explosion_cascades_case_and_restart() {
                 section: MechSection::LeftArm,
                 rear_armor: false,
                 through_armor_critical: true,
-                crew_stun: false,
             };
             let mut found = false;
             for seed in 0..=255 {

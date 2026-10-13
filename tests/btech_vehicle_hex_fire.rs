@@ -320,26 +320,46 @@ async fn character_vehicle_terrain_fire_shares_commands_replay_and_rollback() {
     }
 }
 
+/// A front-mounted rapid-fire AC/2 whose misload criticals land on the Total Warfare front
+/// hull row: a commander hit stuns the crew, and the crew-killed result evacuates the character.
+const FRONT_RAPID_AC2: &str = r#"
+name = "Demolisher"
+class = "vehicle"
+movement = "track"
+tons = 80
+walk_mp = 5
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 30
+
+[sections.right_side]
+armor = 30
+
+[sections.front_side]
+armor = 40
+slots = [
+    { at = "1", item = "IS.AC/2", modes = ["RapidFire"] },
+    { at = "2-5", item = "Ammo_IS.AC/2", rounds = 5 },
+]
+
+[sections.aft_side]
+armor = 20
+
+[sections.turret]
+armor = 40
+"#;
+
 #[tokio::test]
-async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_evacuation() {
-    let template = include_str!("../game/units/Demolisher.toml")
-        .replace("IS.AC/20", "IS.AC/2")
-        .replace("\"IS.AC/2\" }", "\"IS.AC/2\", modes = [\"RapidFire\"] }");
+async fn character_coordinate_misload_publishes_crew_criticals_and_rolls_back_failed_evacuation() {
     for fatal in [false, true] {
-        let (dir, _config, mut world, shooter, _, index) =
-            fixture_with_template(HexTargetMode::Hex, "heavy_woods", &template).await;
-        let path = dir.path().join("stompymux.toml");
-        let mut settings: toml::Value =
-            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        for (key, value) in [("vcrit", 1), ("fasaadvvhlcrit", 0)] {
-            settings["battletech"]
-                .as_table_mut()
-                .unwrap()
-                .insert(key.into(), value.into());
-        }
-        std::fs::write(path, toml::to_string(&settings).unwrap()).unwrap();
-        let config = Config::load(dir.path()).unwrap();
+        let (_dir, config, mut world, shooter, _, index) =
+            fixture_with_template(HexTargetMode::Hex, "heavy_woods", FRONT_RAPID_AC2).await;
         character_crew(&mut world, shooter);
+        // Attack roll of 2 destroys the loader; the damage-entry roll is free; the structure
+        // damage rolls once on the front column: the commander (10) or crew killed (12).
         let seed = (0_u32..100_000)
             .find_map(|number| {
                 let mut seed = [0; 32];
@@ -347,14 +367,8 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
                 let mut dice = Dice::seeded(seed);
                 let attack = dice.two_d6();
                 dice.two_d6();
-                let count = dice.two_d6();
-                let preliminary = dice.die(3).unwrap();
-                let effect = dice.d6();
-                (preliminary != 2
-                    && attack == 2
-                    && matches!(count, 8 | 9)
-                    && effect == if fatal { 4 } else { 1 })
-                .then_some(seed)
+                let effect = dice.two_d6();
+                (attack == 2 && effect == if fatal { 12 } else { 10 }).then_some(seed)
             })
             .unwrap();
         world
@@ -416,7 +430,14 @@ async fn character_coordinate_misload_publishes_injuries_and_rolls_back_failed_e
             })
         );
         if !fatal {
-            assert_ne!(
+            let committed = scripts.world().btech.clone();
+            let vehicle = &committed.vehicles()[&shooter];
+            assert_eq!(
+                (vehicle.piloting_damage(), vehicle.gunnery_damage()),
+                (1, 1)
+            );
+            assert!(vehicle.crew_stunned());
+            assert_eq!(
                 scripts.world().btech.characters()[&ObjectId(2)],
                 world.btech.characters()[&ObjectId(2)]
             );

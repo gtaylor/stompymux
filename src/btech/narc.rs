@@ -1,5 +1,5 @@
 //! Narc beacon attachment, surviving-section transfer and compatible missile controls.
-use super::{AmmunitionMode, HitArc, HitRules, Mech, MechSection, Notice, Weapon};
+use super::{AmmunitionMode, HitArc, Mech, MechSection, Notice, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -86,8 +86,6 @@ pub(super) fn attach(
     shooter: ObjectId,
     target: ObjectId,
     shot: PodShot,
-    rules: HitRules,
-    hit_arc_mode: i64,
 ) -> Result<NarcReport> {
     let PodShot {
         kind,
@@ -111,13 +109,11 @@ pub(super) fn attach(
     let arc = HitArc::from_bearing(
         range.bearing.unwrap_or(180.0),
         unit.motion().context("Target is not placed")?.heading,
-        hit_arc_mode,
     )?;
     let partial_cover = super::unit_terrain_los(world, shooter, target)?.partial_cover;
     let mut dice = unit.dice.clone();
     let roll = dice.generic_roll();
-    let hit = rules.resolve(unit, arc, roll, &mut dice)?;
-    let (location, crew_stun) = (hit.section, hit.crew_stun);
+    let location = super::resolve_hit(unit, arc, roll, &mut dice)?.section;
     // A pod aimed at legs behind partial cover sticks to the cover instead.
     let mut section = (!(partial_cover && unit.chassis().is_leg(location))).then_some(location);
     while let Some(current) = section {
@@ -130,9 +126,6 @@ pub(super) fn attach(
     unit.dice = dice;
     if let Some(section) = section {
         unit.beacons.entry(section).or_default().insert(kind);
-    }
-    if crew_stun {
-        report.notices.push(super::stun_unit(world, target)?);
     }
     if section.is_some() && kind == BeaconKind::Haywire {
         report.notices.push(Notice {

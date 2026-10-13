@@ -53,9 +53,6 @@ mod btech_operator_audit;
 #[path = "../btech_precision.rs"]
 mod btech_precision;
 
-#[path = "../btech_reactor_explosion.rs"]
-mod btech_reactor_explosion;
-
 #[path = "../btech_split.rs"]
 mod btech_split;
 

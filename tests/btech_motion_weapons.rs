@@ -6,9 +6,9 @@
 
 use crate::btech_motion_common::{
     balance_hit, balance_skill, computer_skill, configured_shot_rules, fall_rules, fixture,
-    fixture_assets, kick_fixture, kick_rules, lock_fixture, optical_aim_rules, overheat_due,
-    overheat_rules, shot_fixture, shot_rules, shot_seed, shot_skill, single_critical_seed,
-    stagger_rules, stand_fixture, water_fixture,
+    fixture_assets, fixture_source, kick_fixture, kick_rules, lock_fixture, optical_aim_rules,
+    overheat_due, overheat_rules, shot_fixture, shot_rules, shot_seed, shot_skill,
+    single_critical_seed, stagger_rules, stand_fixture, water_fixture,
 };
 use crate::support;
 use crate::support::{install, restore_database, snapshot_database};
@@ -715,7 +715,6 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
         section: MechSection::RightTorso,
         rear_armor: false,
         through_armor_critical: true,
-        crew_stun: false,
     };
     let mut found = false;
     for seed in 0..=255 {
@@ -822,7 +821,6 @@ async fn targeting_computer_environment_failure_feedback_replays() {
                 section,
                 rear_armor: flooding,
                 through_armor_critical: false,
-                crew_stun: false,
             };
             let damage = if flooding {
                 before.rear
@@ -3411,23 +3409,26 @@ async fn gatling_matrix(weapons: &[stompymux_rs::Weapon]) {
                         },
                     )
                     .unwrap();
-                    let mut rules = configured_shot_rules(&config);
-                    rules.glancing = GlancingMode::AtTarget;
                     let glanced = resolve_battle_shot(
                         &mut glancing_world,
                         id,
                         ObjectId(1),
                         target,
                         index,
-                        rules,
+                        configured_shot_rules(&config),
                     )
                     .unwrap();
                     assert!(glanced.glancing);
                     assert_eq!(glanced.expenditure, report.expenditure);
-                    assert_eq!(
-                        glanced.salvo.unwrap().into_mech().unwrap().groups[0].damage,
-                        u16::from(damage).div_ceil(2)
-                    );
+                    // A glancing burst halves its damage rounding down (Tactical Operations
+                    // p. 79); a single point glances off without a damage group.
+                    let groups = glanced.salvo.unwrap().into_mech().unwrap().groups;
+                    let halved = u16::from(damage) / 2;
+                    if halved == 0 {
+                        assert!(groups.is_empty());
+                    } else {
+                        assert_eq!(groups[0].damage, halved);
+                    }
                 }
                 let unit = &expected.btech.constructed_units()[&id];
                 assert_eq!(unit.ammunition().iter().sum::<u16>(), supply - spent);
@@ -3960,10 +3961,8 @@ fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::Mech) -> [u8; 32
                     let initial = stompymux_rs::Dice::seeded(seed);
                     let mut dice = initial.clone();
                     let roll = dice.two_d6();
-                    let hit = shot_rules()
-                        .hit
-                        .resolve(target, arc, roll, &mut dice)
-                        .unwrap();
+                    let hit =
+                        stompymux_rs::resolve_battle_hit(target, arc, roll, &mut dice).unwrap();
                     dice.two_d6(); // Material entry.
                     hit.section == stompymux_rs::MechSection::LeftTorso
                         && !hit.through_armor_critical
@@ -3978,7 +3977,9 @@ fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::Mech) -> [u8; 32
     bytes
 }
 
-/// AP uses post-hit front/rear armor and never replaces ordinary penetration criticals.
+/// Every armor-piercing hit that damages armor rolls once for a critical with the autocannon's
+/// modifier, whatever armor remains (Total Warfare p. 140); a penetrating round still makes the
+/// ordinary structure roll as well.
 fn check_armor_piercing_thresholds(
     base: &stompymux_rs::World,
     config: &stompymux_rs::Config,
@@ -3989,7 +3990,6 @@ fn check_armor_piercing_thresholds(
 ) {
     use stompymux_rs::*;
     for rear in [false, true] {
-        let _arc = if rear { HitArc::Rear } else { HitArc::Front };
         let seed = Dice::seeded(armor_piercing_seed_bytes(
             rear,
             &base.btech.constructed_units()[&target],
@@ -4003,6 +4003,13 @@ fn check_armor_piercing_thresholds(
         target_state["definition"]["sections"]["LeftTorso"]["rear"] = 100.into();
         target_state["dice"] = serde_json::to_value(&seed).unwrap();
         let armor = if rear { "rear" } else { "armor" };
+        // The seeded roll after the hit location is a 12; the AP modifier turns it into two
+        // criticals for the heavy autocannons and one for the rest.
+        let count = if matches!(weapon, Weapon::Ac10 | Weapon::Ac20) {
+            2
+        } else {
+            1
+        };
         for remaining in [50i32, 49, 0, -1] {
             let mut state = facing.clone();
             state["constructed"][target.0.to_string()]["sections"]["LeftTorso"][armor] =
@@ -4017,46 +4024,41 @@ fn check_armor_piercing_thresholds(
             let normal_report =
                 resolve_battle_shot(&mut normal, id, ObjectId(1), target, index, shot_rules())
                     .unwrap();
-            let impact = &report.salvo.as_ref().unwrap().as_mech().unwrap().groups[0].impact;
-            assert_eq!(
-                report.salvo.as_ref().unwrap().as_mech().unwrap().groups[0]
-                    .hit
-                    .section,
-                MechSection::LeftTorso
-            );
-            if remaining == 50 || remaining == -1 {
-                assert_eq!(
-                    impact,
-                    &normal_report
-                        .salvo
-                        .as_ref()
-                        .unwrap()
-                        .as_mech()
-                        .unwrap()
-                        .groups[0]
-                        .impact
+            let group = &report.salvo.as_ref().unwrap().as_mech().unwrap().groups[0];
+            assert_eq!(group.hit.section, MechSection::LeftTorso);
+            let internal_before = base.btech.constructed_units()[&target].sections()
+                [&MechSection::LeftTorso]
+                .internal;
+            let internal =
+                ap.btech.constructed_units()[&target].sections()[&MechSection::LeftTorso].internal;
+            if remaining < 0 {
+                // One point penetrates: the structure roll follows the armor-piercing roll.
+                assert!(
+                    group.impact.criticals.len() >= count,
+                    "{weapon:?}, rear={rear}, remaining={remaining}"
                 );
-                assert_eq!(
-                    ap.btech.constructed_units()[&target],
-                    normal.btech.constructed_units()[&target]
-                );
+                assert_eq!(internal, internal_before - 1);
                 continue;
             }
-            let count = if matches!(weapon, Weapon::Ac10 | Weapon::Ac20) {
-                2
-            } else {
-                1
-            };
+            // Ordinary rounds stopped by armor roll nothing; AP rounds roll once.
+            assert!(
+                normal_report
+                    .salvo
+                    .as_ref()
+                    .unwrap()
+                    .as_mech()
+                    .unwrap()
+                    .groups[0]
+                    .impact
+                    .criticals
+                    .is_empty()
+            );
             assert_eq!(
-                impact.criticals.len(),
+                group.impact.criticals.len(),
                 count,
                 "{weapon:?}, rear={rear}, remaining={remaining}"
             );
-            assert_eq!(
-                ap.btech.constructed_units()[&target].sections()[&MechSection::LeftTorso].internal,
-                base.btech.constructed_units()[&target].sections()[&MechSection::LeftTorso]
-                    .internal
-            );
+            assert_eq!(internal, internal_before);
             let mut expected_dice = seed.clone();
             expected_dice.two_d6(); // Material entry in addition to location and critical checks.
             expected_dice.two_d6();
@@ -4356,14 +4358,10 @@ fn check_incendiary_impact(
             section,
             rear_armor: false,
             through_armor_critical: true,
-            crew_stun: false,
         },
         1,
         FallRules {
             vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-            stacking: rules.stacking,
-            stagger: rules.stagger,
-            hit: rules.hit,
             extended_piloting: rules.extended_piloting,
             toughness: rules.target_toughness,
         },
@@ -4509,9 +4507,6 @@ async fn ammunition_explosion_observers_survive_damage_and_restart() {
     let rules = shot_rules();
     let rules = FallRules {
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: rules.stacking,
-        stagger: rules.stagger,
-        hit: rules.hit,
         extended_piloting: rules.extended_piloting,
         toughness: rules.target_toughness,
     };
@@ -5240,22 +5235,25 @@ async fn thermal_shutdown_observers_cover_speed_overrides_visibility_and_replay(
             .unwrap()
             .is_some()
     );
-    let seed = (0..=255)
-        .find(|seed| {
-            let mut dice = Dice::seeded([*seed; 32]);
-            for _ in 0..3 {
-                dice.d6();
-            }
-            dice.two_d6() < 9 && dice.two_d6() >= 6
-        })
-        .unwrap();
+    // The Shutdown Avoid Roll at 14 heat needs a 4 (Total Warfare p. 159); the moving unit's
+    // balance check then rolls a 2 and falls.
+    let seeded = |accept: fn(&mut Dice) -> bool| {
+        (0u32..100_000)
+            .map(|value| {
+                let mut bytes = [0; 32];
+                bytes[..4].copy_from_slice(&value.to_le_bytes());
+                Dice::seeded(bytes)
+            })
+            .find(|dice| accept(&mut dice.clone()))
+            .unwrap()
+    };
+    let failing = seeded(|dice| dice.two_d6() < 4 && dice.two_d6() == 2);
+    let passing = seeded(|dice| dice.two_d6() >= 4);
     for speed in [0.0_f64, 10.75, -10.75, 10.8, -10.8] {
         for avoid in [false, true] {
             for visible in [false, true] {
                 let mut world = base.clone();
-                if avoid {
-                    computer_skill(&mut world, 30);
-                }
+                let seed = if avoid { &passing } else { &failing };
                 let mut state = serde_json::to_value(&world.btech).unwrap();
                 let unit = &mut state["constructed"][subject.0.to_string()];
                 unit["motion"]["speed"] = speed.into();
@@ -5266,7 +5264,7 @@ async fn thermal_shutdown_observers_cover_speed_overrides_visibility_and_replay(
                 }
                 world.btech = serde_json::from_value(state).unwrap();
                 overheat_due(&mut world, subject, 14.0, false);
-                shot_seed(&mut world, subject, seed);
+                world.btech.set_unit_dice(subject, seed.clone()).unwrap();
                 let mut expected = if avoid {
                     Vec::new()
                 } else {
@@ -5629,8 +5627,9 @@ async fn movement_control_feedback_routes_cockpit_and_replays_transactionally() 
     }
 }
 
-/// Stagger severity and falling feedback distinguish configured modes and survive saved cadence replay.
-async fn stagger_observers_matrix(modes: &[stompymux_rs::StaggerMode]) {
+/// Stagger and falling feedback reach observers once per check and survive saved cadence replay.
+#[tokio::test]
+async fn stagger_observers_cover_success_failure_and_saved_replay() {
     use stompymux_rs::*;
     let (_dir, config, mut base, subject, observer) = lock_fixture().await;
     let mut state = serde_json::to_value(&base.btech).unwrap();
@@ -5642,126 +5641,62 @@ async fn stagger_observers_matrix(modes: &[stompymux_rs::StaggerMode]) {
             .unwrap()
             .is_some()
     );
-    for mode in modes.iter().copied() {
-        for level in [1, 2, 3, 5] {
-            for success in [false, true] {
-                for visible in [false, true] {
-                    let mut world = base.clone();
-                    let mut state = serde_json::to_value(&world.btech).unwrap();
-                    let history = &mut state["constructed"][subject.0.to_string()]["stagger"];
-                    if mode == StaggerMode::Traditional {
-                        history["turn_damage"] = (level * 20).into();
-                    } else {
-                        history["hits"] = serde_json::json!([{"damage":level * 20,"remaining":60,"counted":false}]);
-                    }
-                    if !visible {
-                        state["constructed"][observer.0.to_string()]["power"] =
-                            serde_json::json!({"state":"off"});
-                    }
-                    world.btech = serde_json::from_value(state).unwrap();
-                    let rules = stagger_rules(mode);
-                    if mode != StaggerMode::Traditional {
-                        for _ in 0..4 {
-                            assert!(
-                                advance_battle_stagger(&mut world, rules)
-                                    .unwrap()
-                                    .is_empty()
-                            );
-                        }
-                    }
-                    let seed = (0..=255)
-                        .find(|seed| {
-                            Dice::seeded([*seed; 32]).two_d6() == if success { 12 } else { 2 }
-                        })
-                        .unwrap();
-                    shot_seed(&mut world, subject, seed);
-                    let mut expected = Vec::new();
-                    if mode != StaggerMode::Traditional {
-                        expected.extend(battle_observer_messages(
-                            &world,
-                            subject,
-                            match level {
-                                1 => "stumbles slightly!",
-                                2 => "starts to stagger from the damage!",
-                                _ => "staggers back and forth attempting to keep its footing!",
-                            },
-                        ));
-                    }
-                    if !success {
-                        expected.extend(battle_observer_messages(
-                            &world,
-                            subject,
-                            if mode == StaggerMode::Traditional {
-                                "falls down, staggered by the damage!"
-                            } else {
-                                "tumbles over, staggered by the damage!"
-                            },
-                        ));
-                    }
-                    persistence::save(&config.database(), &world).await.unwrap();
-                    let mut restored = persistence::load(&config.database()).await.unwrap();
-                    let reports = advance_battle_stagger(&mut world, rules).unwrap();
-                    assert_eq!(
-                        advance_battle_stagger(&mut restored, rules).unwrap(),
-                        reports
-                    );
-                    assert_eq!(world.btech, restored.btech);
-                    assert_eq!(reports.len(), 1);
-                    let report = &reports[0];
-                    assert_eq!(
-                        report.level,
-                        if mode == StaggerMode::Traditional {
-                            1
-                        } else {
-                            level
-                        }
-                    );
-                    assert_eq!(report.check.success, success);
-                    assert_eq!(report.fall.is_some(), !success);
-                    let observed: Vec<_> = report
-                        .notices
-                        .iter()
-                        .filter(|notice| notice.unit == observer)
-                        .map(|notice| (notice.unit, notice.text.clone()))
-                        .collect();
-                    assert_eq!(observed, expected);
-                    assert_eq!(report.notices[0].unit, subject);
-                    if mode == StaggerMode::Traditional {
-                        assert_eq!(report.notices[0].text, "You stagger from the damage!");
-                    } else {
-                        assert!(
-                            report.notices[0]
-                                .text
-                                .starts_with("The damage causes you to stagger")
-                        );
-                    }
-                    assert!(
-                        advance_battle_stagger(&mut world, rules)
-                            .unwrap()
-                            .is_empty()
-                    );
+    // Any twenty or more points in one turn force a single check (Total Warfare p. 68).
+    for turn_damage in [20, 100] {
+        for success in [false, true] {
+            for visible in [false, true] {
+                let mut world = base.clone();
+                let mut state = serde_json::to_value(&world.btech).unwrap();
+                state["constructed"][subject.0.to_string()]["stagger"]["turn_damage"] =
+                    turn_damage.into();
+                if !visible {
+                    state["constructed"][observer.0.to_string()]["power"] =
+                        serde_json::json!({"state":"off"});
                 }
+                world.btech = serde_json::from_value(state).unwrap();
+                let rules = stagger_rules();
+                let seed = (0..=255)
+                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == if success { 12 } else { 2 })
+                    .unwrap();
+                shot_seed(&mut world, subject, seed);
+                let mut expected = Vec::new();
+                if !success {
+                    expected.extend(battle_observer_messages(
+                        &world,
+                        subject,
+                        "falls down, staggered by the damage!",
+                    ));
+                }
+                persistence::save(&config.database(), &world).await.unwrap();
+                let mut restored = persistence::load(&config.database()).await.unwrap();
+                let reports = advance_battle_stagger(&mut world, rules).unwrap();
+                assert_eq!(
+                    advance_battle_stagger(&mut restored, rules).unwrap(),
+                    reports
+                );
+                assert_eq!(world.btech, restored.btech);
+                assert_eq!(reports.len(), 1);
+                let report = &reports[0];
+                assert_eq!(report.level, 1);
+                assert_eq!(report.check.success, success);
+                assert_eq!(report.fall.is_some(), !success);
+                let observed: Vec<_> = report
+                    .notices
+                    .iter()
+                    .filter(|notice| notice.unit == observer)
+                    .map(|notice| (notice.unit, notice.text.clone()))
+                    .collect();
+                assert_eq!(observed, expected);
+                assert_eq!(report.notices[0].unit, subject);
+                assert_eq!(report.notices[0].text, "You stagger from the damage!");
+                assert!(
+                    advance_battle_stagger(&mut world, rules)
+                        .unwrap()
+                        .is_empty()
+                );
             }
         }
     }
-}
-
-#[tokio::test]
-async fn stagger_observers_cover_severity_modes_success_and_saved_replay_traditional() {
-    use stompymux_rs::StaggerMode;
-    stagger_observers_matrix(&[StaggerMode::Traditional]).await;
-}
-
-#[tokio::test]
-async fn stagger_observers_cover_severity_modes_success_and_saved_replay_retain() {
-    use stompymux_rs::StaggerMode;
-    stagger_observers_matrix(&[StaggerMode::Retain]).await;
-}
-
-#[tokio::test]
-async fn stagger_observers_cover_severity_modes_success_and_saved_replay_consume() {
-    use stompymux_rs::StaggerMode;
-    stagger_observers_matrix(&[StaggerMode::Consume]).await;
 }
 
 /// Immediate balance losses report their cause once, before fall damage changes visibility.
@@ -7219,9 +7154,7 @@ async fn coolant_modes_fuel_native_lua_and_saved_replay() {
         }
         before.btech = serde_json::from_value(state).unwrap();
         let rules = ShotRules {
-            range_damage: false,
             tsm_tow_bonus: true,
-            glancing: GlancingMode::AtTarget,
             ..shot_rules()
         };
         let mut probe = before.clone();
@@ -7295,9 +7228,7 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
         .unwrap();
     shot_seed(&mut base, target, 1);
     let rules = ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
-        glancing: GlancingMode::AtTarget,
         ..shot_rules()
     };
     let mut probe = base.clone();
@@ -7364,7 +7295,6 @@ async fn armor_warning_thresholds_preferences_and_restart() {
                 section,
                 rear_armor: rear,
                 through_armor_critical: false,
-                crew_stun: false,
             };
             let report = resolve_battle_tactical_impact(
                 &mut enabled,
@@ -7652,7 +7582,6 @@ async fn cockpit_status_native_lua_sections_damage_and_restart() {
             section,
             rear_armor: false,
             through_armor_critical: false,
-            crew_stun: false,
         },
         1,
     )
@@ -7808,7 +7737,9 @@ async fn kick_mechanics_actuators_profiles_and_rejection_preserve_state() {
                     .map(|&slot| if slot == 3 { 1 } else { 2 })
                     .sum::<u8>()
             );
-            assert_eq!(profile.target_number, 3 + i32::from(profile.actuators) - 4);
+            // The unskilled pilot kicks from eleven less two, against an immobile target.
+            assert_eq!(profile.base, 9);
+            assert_eq!(profile.target_number, 9 + i32::from(profile.actuators) - 4);
             assert_eq!(profile.hit_table, HitTable::Kick);
             assert_eq!(world.btech, before);
         }
@@ -7922,30 +7853,28 @@ async fn kick_native_lua_hit_miss_rollback_and_saved_recovery() {
     }
 }
 
-/// Explicit attack-roll boundaries distinguish misses, normal hits and both glancing policies.
+/// Explicit attack-roll boundaries distinguish misses, glancing hits and normal hits.
 async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
-    // A standing running target has no immobility discount: the fixed base target is three.
+    // A standing running target has no immobility discount.
     base.btech.set_unit_power(target, Power::Running).unwrap();
     base.validate(&config).unwrap();
+    let target_number =
+        battle_kick_profile(&base, id, ObjectId(1), target, Leg::Right, kick_rules())
+            .unwrap()
+            .target_number;
     let mut saw_critical_fall = false;
     for target_seed in target_seeds {
-        for (mode, roll, hit, glancing) in [
-            (GlancingMode::Disabled, 2, false, false),
-            (GlancingMode::Disabled, 3, true, false),
-            (GlancingMode::AtTarget, 3, true, true),
-            (GlancingMode::AtTarget, 4, true, false),
-            (GlancingMode::BelowTarget, 2, true, true),
-        ] {
+        for (offset, hit, glancing) in [(-1, false, false), (0, true, true), (1, true, false)] {
+            let roll = u8::try_from(target_number + offset).unwrap();
             let seed = (0..=255)
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
                 .unwrap();
             let mut world = base.clone();
             shot_seed(&mut world, id, seed);
             shot_seed(&mut world, target, target_seed);
-            let mut rules = kick_rules();
-            rules.glancing = mode;
+            let rules = kick_rules();
             let mut replay = world.clone();
             let report =
                 resolve_battle_kick(&mut world, id, ObjectId(1), target, Leg::Right, rules)
@@ -7955,7 +7884,7 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
                     .unwrap();
             assert_eq!(report, repeated);
             assert_eq!(world.btech, replay.btech);
-            assert_eq!(report.profile.target_number, 3);
+            assert_eq!(report.profile.target_number, target_number);
             assert_eq!(
                 (report.roll, report.hit, report.glancing),
                 (roll, hit, glancing)
@@ -7966,7 +7895,7 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
             let direct_damage = u32::from(if !hit {
                 0
             } else if glancing {
-                report.profile.damage.div_ceil(2)
+                report.profile.damage / 2
             } else {
                 report.profile.damage
             });
@@ -8121,16 +8050,15 @@ async fn punch_profiles_boundaries_and_independent_arms() {
                 profile.damage,
                 profile.target_number
             ),
-            (4, 3, 2, 3)
+            (11, 3, 2, 10)
         );
         assert_eq!(profile.hit_table, HitTable::Punch);
     }
-    for (roll, mode, hit, glance) in [
-        (2, GlancingMode::Disabled, false, false),
-        (3, GlancingMode::Disabled, true, false),
-        (3, GlancingMode::AtTarget, true, true),
-        (2, GlancingMode::BelowTarget, true, true),
-    ] {
+    let target_number = battle_punch_profile(&base, id, ObjectId(1), target, Arm::Left, rules)
+        .unwrap()
+        .target_number;
+    for (offset, hit, glance) in [(-1, false, false), (0, true, true), (1, true, false)] {
+        let roll = u8::try_from(target_number + offset).unwrap();
         let mut world = base.clone();
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
@@ -8144,10 +8072,7 @@ async fn punch_profiles_boundaries_and_independent_arms() {
             ObjectId(1),
             target,
             ArmSelection::Left,
-            PhysicalRules {
-                glancing: mode,
-                ..rules
-            },
+            rules,
         )
         .unwrap();
         let attack = &result.attacks[0];
@@ -8442,7 +8367,7 @@ async fn trip_profile_actuators_and_target_guards() {
                     profile.damage,
                     profile.target_number
                 ),
-                (3, 0, 0, -1)
+                (9, 0, 0, 5)
             );
             assert!(matches!(profile.attack, PhysicalAttack::Trip { .. }));
         }
@@ -8496,13 +8421,17 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
     base.btech.set_unit_power(target, Power::Running).unwrap();
-    for (roll, mode, hit, glancing, target_roll) in [
-        (2, GlancingMode::Disabled, false, false, 12),
-        (3, GlancingMode::Disabled, true, false, 12),
-        (3, GlancingMode::AtTarget, true, true, 12),
-        (2, GlancingMode::BelowTarget, true, true, 12),
-        (3, GlancingMode::Disabled, true, false, 2),
+    let target_number =
+        battle_trip_profile(&base, id, ObjectId(1), target, Leg::Left, kick_rules())
+            .unwrap()
+            .target_number;
+    for (offset, hit, glancing, target_roll) in [
+        (-1, false, false, 12),
+        (0, true, true, 12),
+        (1, true, false, 12),
+        (1, true, false, 2),
     ] {
+        let roll = u8::try_from(target_number + offset).unwrap();
         let attack_seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
             .unwrap();
@@ -8514,23 +8443,14 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
         shot_seed(&mut world, target, target_seed);
         let source_sections = world.btech.constructed_units()[&id].sections().clone();
         let target_sections = world.btech.constructed_units()[&target].sections().clone();
-        let report = resolve_battle_trip(
-            &mut world,
-            id,
-            ObjectId(1),
-            target,
-            Leg::Left,
-            PhysicalRules {
-                glancing: mode,
-                ..kick_rules()
-            },
-        )
-        .unwrap();
+        let report =
+            resolve_battle_trip(&mut world, id, ObjectId(1), target, Leg::Left, kick_rules())
+                .unwrap();
         assert_eq!(
             (report.roll, report.hit, report.glancing),
             (roll, hit, glancing)
         );
-        assert_eq!(report.profile.target_number, 3);
+        assert_eq!(report.profile.target_number, target_number);
         assert!(report.impact.is_none());
         assert_eq!(report.balance.is_some(), hit);
         let falls = hit && target_roll == 2;
@@ -8752,4 +8672,113 @@ async fn status_rendering_preserves_literal_fields_and_ammunition_colors() {
         );
         assert_eq!(scripts.world().btech, before);
     }
+}
+
+/// A leg hit on a 'Mech with partial cover from a building damages the building instead of
+/// the 'Mech (Total Warfare p. 102); other hits land normally.
+#[tokio::test]
+async fn partial_cover_leg_hits_damage_the_covering_building() {
+    use stompymux_rs::*;
+    let source = format!(
+        "12 12\n{}",
+        (0..12)
+            .map(|y| (0..12)
+                .map(|x| if (x, y) == (5, 4) { "@1" } else { ".0" })
+                .collect::<String>()
+                + "\n")
+            .collect::<String>()
+    );
+    let (_dir, config, mut world, id) = fixture_source(&source).await;
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    let interior = world.create(&config, "Cover shed".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        interior,
+        "interior",
+        MapAsset::from_cells("1 1\n.0\n").unwrap(),
+    )
+    .unwrap();
+    support::seed_object_dice(&mut world, interior, support::FIXTURE_DICE_SEED);
+    set_building_state(
+        &mut world,
+        interior,
+        BuildingState {
+            integrity: 40,
+            maximum_integrity: 40,
+            flags: 0,
+            regeneration: 1,
+        },
+    )
+    .unwrap();
+    set_building_entrance(
+        &mut world,
+        map,
+        0,
+        Some(BuildingEntrance {
+            coordinate: HexCoordinate { x: 5, y: 4 },
+            interior,
+            data_char: 0,
+            data_short: 0,
+            data_int: 0,
+        }),
+    )
+    .unwrap();
+    let target = world.create(&config, "Covered target".into(), Kind::Thing);
+    create_battle_unit(
+        &mut world,
+        target,
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
+    )
+    .unwrap();
+    support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
+    place_battle_unit(&mut world, target, map, 5, 3).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
+    world
+        .objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .flags
+        .insert(Flag::Connected);
+    shot_skill(&mut world, 20);
+    let mut covered_legs = false;
+    let mut struck_body = false;
+    for seed in 0..=40u8 {
+        let mut world = world.clone();
+        let roll = Dice::seeded([seed; 32]).two_d6();
+        let location = HitTable::Weapon
+            .location(MechChassis::Biped, HitArc::Rear, roll)
+            .unwrap();
+        shot_seed(&mut world, target, seed);
+        let before = world.btech.constructed_units()[&target].sections().clone();
+        let report =
+            resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).unwrap();
+        assert_eq!(report.aim.perception.unwrap().modifier, 1);
+        let salvo = report.salvo.unwrap().into_mech().unwrap();
+        assert_eq!(salvo.groups.len(), 1);
+        assert_eq!(salvo.groups[0].hit.section, location);
+        let leg = matches!(location, MechSection::LeftLeg | MechSection::RightLeg);
+        let unchanged = world.btech.constructed_units()[&target].sections() == &before;
+        assert_eq!(unchanged, leg, "seed {seed}: {location:?}");
+        let expected = if leg {
+            40 - i64::from(salvo.groups[0].damage)
+        } else {
+            40
+        };
+        assert_eq!(
+            world.btech.maps()[&interior].building.integrity,
+            expected,
+            "seed {seed}: {location:?}"
+        );
+        assert_eq!(
+            salvo.groups[0]
+                .notices
+                .iter()
+                .any(|notice| notice.unit == id && notice.text.starts_with("You hit ")),
+            leg,
+            "seed {seed}: {location:?}"
+        );
+        covered_legs |= leg;
+        struck_body |= !leg;
+    }
+    assert!(covered_legs && struck_body);
 }

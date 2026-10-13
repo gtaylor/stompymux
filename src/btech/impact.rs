@@ -11,12 +11,13 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum ImpactEffect {
     HeadInjury,
+    /// An internal explosion; CASE II does not lessen the MechWarrior's feedback.
     ExplosionInjury,
-    /// An explosion vented by CASE II injures the pilot once instead of twice.
-    VentedExplosionInjury,
-    CrewStun,
     SectionLost(MechSection),
 }
+
+/// Glancing blows roll two lower on the Determining Critical Hits Table (Tactical Operations p. 79).
+pub(super) const GLANCING_CRITICAL_PENALTY: u8 = 2;
 
 /// Weapon-specific effects carried only by the original damage path, never nested explosions.
 #[derive(Clone, Copy)]
@@ -44,8 +45,6 @@ impl WeaponEffect {
 /// Ordered material phases and critical losses from one hit, including nested explosions.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct ImpactReport {
-    /// Section-loss reactor blasts retain secondary consequences through grouped damage reports.
-    pub reactor_explosions: Vec<super::ReactorExplosion>,
     /// Newly breached sections, including any immediate secondary falls or reactor blast.
     pub exposures: Vec<super::SectionExposureReport>,
     pub phases: Vec<DamageResult>,
@@ -60,6 +59,8 @@ pub struct ImpactReport {
     pub dump_ignitions: Vec<super::DumpIgnition>,
     /// This hit destroyed the unit's searchlight.
     pub searchlight_destroyed: bool,
+    /// An ammunition explosion destroyed the center torso, killing the MechWarrior.
+    pub explosion_killed_crew: bool,
 }
 
 /// Material damage that kills conventional biped crew, distinct from ordinary unit destruction.
@@ -68,6 +69,8 @@ pub struct ImpactReport {
 pub enum CrewCasualty {
     HeadDestroyed,
     CockpitDestroyed,
+    /// The center torso was destroyed by an ammunition explosion (Total Warfare p. 128).
+    AmmunitionExplosion,
     CharacterInjury,
     VacuumExposure,
 }
@@ -92,6 +95,9 @@ impl ImpactReport {
             )
         }) {
             return Some(CrewCasualty::CockpitDestroyed);
+        }
+        if self.explosion_killed_crew {
+            return Some(CrewCasualty::AmmunitionExplosion);
         }
         if self
             .character_injuries
@@ -169,7 +175,7 @@ pub(super) fn resolve_character_impact_with_rules(
     let mut context = ImpactContext::new(world, id, rules)?;
     context.character_effects = true;
     context.character_toughness = Some(toughness);
-    resolve_packet(context, hit, damage, None)
+    resolve_packet(context, hit, damage, None, 0)
 }
 
 /// Wizard damage attributes the hit to the damaged unit while retaining ordinary injury policy.
@@ -268,7 +274,7 @@ pub(super) fn resolve_in_candidate(
     weapon_effect: Option<WeaponEffect>,
 ) -> Result<super::TacticalImpact> {
     let context = ImpactContext::new(world, id, rules)?;
-    resolve_packet(context, hit, damage, weapon_effect)
+    resolve_packet(context, hit, damage, weapon_effect, 0)
 }
 
 /// Attribution, casualty policy and weapon effects supplied by an admitted attack.
@@ -290,8 +296,22 @@ pub(super) fn resolve_attack_in_candidate(
     rules: impl Into<Option<super::FallRules>>,
     attack: AttackImpact,
 ) -> Result<super::TacticalImpact> {
+    resolve_attack_in_candidate_with_penalty(world, id, hit, damage, rules, attack, 0)
+}
+
+/// As [`resolve_attack_in_candidate`], with `critical_penalty` subtracted from every
+/// Determining Critical Hits roll of the hit, as for a glancing blow.
+pub(super) fn resolve_attack_in_candidate_with_penalty(
+    world: &mut World,
+    id: ObjectId,
+    hit: Hit,
+    damage: u16,
+    rules: impl Into<Option<super::FallRules>>,
+    attack: AttackImpact,
+    critical_penalty: u8,
+) -> Result<super::TacticalImpact> {
     let context = attack_context(world, id, rules.into(), &attack)?;
-    resolve_packet(context, hit, damage, attack.weapon_effect)
+    resolve_packet(context, hit, damage, attack.weapon_effect, critical_penalty)
 }
 
 /// Build the damage context for an attributed attack packet.
@@ -351,6 +371,7 @@ pub(super) fn resolve_penetration_in_candidate(
             transfer: true,
             rear: false,
             tac: false,
+            vented: false,
             weapon_effect: None,
             critical_penalty,
         },
@@ -366,6 +387,7 @@ fn resolve_packet(
     hit: Hit,
     damage: u16,
     weapon_effect: Option<WeaponEffect>,
+    critical_penalty: u8,
 ) -> Result<super::TacticalImpact> {
     if context.enter_damage() {
         context.report.impact.destroyed = context.unit().is_destroyed();
@@ -373,10 +395,6 @@ fn resolve_packet(
     }
     context.warn_attacker();
     if damage > 0 {
-        // Hit-table stun precedes material interception, like vehicle routing effects.
-        if hit.crew_stun {
-            context.effect(ImpactEffect::CrewStun)?;
-        }
         resolve_path(
             &mut context,
             DamagePacket {
@@ -388,8 +406,9 @@ fn resolve_packet(
                 transfer: true,
                 rear: hit.rear_armor,
                 tac: hit.through_armor_critical,
+                vented: false,
                 weapon_effect,
-                critical_penalty: 0,
+                critical_penalty,
             },
         )?;
     }
@@ -422,6 +441,7 @@ pub(super) fn resolve_internal_stress(
             transfer: true,
             rear: false,
             tac: false,
+            vented: false,
             weapon_effect: None,
             critical_penalty: 0,
         },
@@ -458,6 +478,7 @@ pub(super) fn resolve_environmental_damage(
             transfer: true,
             rear: false,
             tac: false,
+            vented: false,
             weapon_effect: None,
             critical_penalty: 0,
         },
@@ -513,6 +534,7 @@ fn resolve_misload_inner(
             transfer: false,
             rear: false,
             tac: false,
+            vented: false,
             weapon_effect: None,
             critical_penalty: 0,
         },
@@ -992,19 +1014,28 @@ impl<'a> ImpactContext<'a> {
                     );
                 }
             }
-            if inferno {
-                let missiles = u16::try_from(explosion / 4)?;
-                if missiles > 0 {
-                    let exposure = super::resolve_inferno_hit(self.world, self.id, missiles)?;
-                    self.report.notices.extend(exposure.notices);
-                }
-                if self.rules.is_some_and(|rules| rules.hit.inferno_penalty) {
-                    self.unit_mut().heat.stored += 30.0;
-                }
-                explosion /= 2;
+            if let CriticalLoss::Ammunition { index, rounds, .. } = loss
+                && inferno
+            {
+                // Total Warfare p. 141: an exploding inferno bin heats the carrying unit by two
+                // per missile, to at most 30, and explodes with the standard damage of SRM
+                // rounds.
+                let weapon = self.unit().loadout()?.ammunition[index].weapon;
+                let missiles = u32::from(rounds) * u32::from(weapon.profile().missiles.max(1));
+                self.unit_mut().heat.stored += f64::from((2 * missiles).min(30));
+                explosion = weapon
+                    .ammunition_explosion_damage_for_mode(rounds, super::AmmunitionMode::Normal);
             }
-            let vented = self.unit().has_case_ii(explosion_section);
-            if vented {
+            // Total Warfare p. 60: internal explosions count toward the twenty damage points
+            // that force a piloting check; a completed fall clears the count.
+            if self.rules.is_some() && self.unit().posture() != super::Posture::Prone {
+                self.unit_mut()
+                    .stagger
+                    .record(u16::try_from(explosion.min(u32::from(u16::MAX)))?);
+            }
+            let pilot_before = self.unit().pilot();
+            let core_before = self.unit().sections()[&MechSection::CenterTorso].internal;
+            if self.unit().has_case_ii(explosion_section) {
                 self.vent_explosion(explosion_section, u16::try_from(explosion)?)?;
             } else {
                 resolve_path(
@@ -1018,10 +1049,14 @@ impl<'a> ImpactContext<'a> {
                         transfer: true,
                         rear: false,
                         tac: false,
+                        vented: false,
                         weapon_effect: None,
                         critical_penalty: 0,
                     },
                 )?;
+            }
+            if core_before > 0 && self.unit().sections()[&MechSection::CenterTorso].internal == 0 {
+                self.kill_crew(pilot_before.is_some(), true)?;
             }
             let hotload = if let CriticalLoss::Weapon { index, .. } = loss {
                 self.unit().loadout()?.weapons[index]
@@ -1037,19 +1072,43 @@ impl<'a> ImpactContext<'a> {
                 });
             }
             if !hotload {
-                self.effect(if vented {
-                    ImpactEffect::VentedExplosionInjury
-                } else {
-                    ImpactEffect::ExplosionInjury
-                })?;
+                self.effect(ImpactEffect::ExplosionInjury)?;
             }
         }
         Ok(())
     }
 
-    /// CASE II: the section takes one internal point, with its normal critical roll, and the
-    /// rest of the blast is vented through its armor (rear armor on torsos). Damage beyond that
-    /// armor is lost and never transfers to another section.
+    /// Total Warfare p. 128: the MechWarrior dies when the head is destroyed or an ammunition
+    /// explosion destroys the center torso. The destruction has already released the cockpit,
+    /// so a tactical crew is injured terminally; an in-character pilot is marked killed for
+    /// the host's casualty handling.
+    fn kill_crew(&mut self, had_pilot: bool, explosion: bool) -> Result<()> {
+        if explosion {
+            self.report.impact.explosion_killed_crew = true;
+        }
+        if self.world.objects[&self.id]
+            .flags
+            .contains(Flag::InCharacter)
+        {
+            if !had_pilot {
+                return Ok(());
+            }
+            let unit = self.unit_mut();
+            let mut status = unit.character_pilot.unwrap_or_default();
+            status.killed = true;
+            unit.character_pilot = Some(status);
+            return Ok(());
+        }
+        let injury = super::pilot_injury::injure_terminal_crew(self.world, self.id, 6)?;
+        self.record_injury(super::pilot_injury::PilotInjury::Tactical(injury));
+        Ok(())
+    }
+
+    /// CASE II (Tactical Operations: Advanced Units & Equipment p. 111): the section takes one
+    /// internal point, with its normal critical roll, and the rest of the blast is vented
+    /// through its armor: the rear armor of a torso, and on a limb no more than its remaining
+    /// armor or half its original armor, whichever is less. Damage beyond that is lost and
+    /// never transfers to another section.
     fn vent_explosion(&mut self, section: MechSection, damage: u16) -> Result<()> {
         resolve_path(
             self,
@@ -1062,6 +1121,7 @@ impl<'a> ImpactContext<'a> {
                 transfer: false,
                 rear: false,
                 tac: false,
+                vented: true,
                 weapon_effect: None,
                 critical_penalty: 0,
             },
@@ -1070,11 +1130,27 @@ impl<'a> ImpactContext<'a> {
         if vented == 0 || self.unit().sections()[&section].internal == 0 {
             return Ok(());
         }
-        let vented = self
+        let points = self
             .unit()
             .hardened_hit(section, true, vented)
             .map_or(vented, |(removed, _)| removed);
-        let armor = self.damage_phase(section, vented, DamagePhase::Armor { rear: true })?;
+        let points = if matches!(
+            section,
+            MechSection::LeftArm
+                | MechSection::RightArm
+                | MechSection::LeftLeg
+                | MechSection::RightLeg
+        ) {
+            let state = &self.unit().sections()[&section];
+            let original = self.unit().definition().sections[&section].armor;
+            points.min(state.armor).min(original / 2)
+        } else {
+            points
+        };
+        if points == 0 {
+            return Ok(());
+        }
+        let armor = self.damage_phase(section, points, DamagePhase::Armor { rear: true })?;
         self.record_phase(armor)?;
         if self.rules.is_some() {
             self.report.notices.push(super::Notice {
@@ -1092,8 +1168,6 @@ impl<'a> ImpactContext<'a> {
         damage: u16,
         phase: DamagePhase,
     ) -> Result<DamageResult> {
-        let power_before = self.unit().power();
-        let engine_hits_before = self.unit().system_hits(super::System::Engine);
         let assisted = self.unit().targeting_computer_operational()?;
         let was_destroyed = self.unit().is_destroyed();
         let result = self.unit_mut().damage_phase(section, damage, phase);
@@ -1105,25 +1179,6 @@ impl<'a> ImpactContext<'a> {
             was_destroyed,
             destroyed,
         )?;
-        if !result.destroyed_sections.is_empty()
-            && let Some(rules) = self.rules
-            && let Some(blast) = super::reactor_instability::section_loss(
-                self.world,
-                self.id,
-                power_before,
-                engine_hits_before,
-                rules,
-            )?
-        {
-            super::piloting::append_feedback(
-                &mut self.report.pilot_notices,
-                blast.pilot_notices.iter().cloned(),
-                self.report.notices.len(),
-            );
-            self.report.notices.extend(blast.notices.iter().cloned());
-            self.report.impact.reactor_explosions.push(blast);
-        }
-
         if assisted && !self.unit().targeting_computer_operational()? && self.rules.is_some() {
             self.report.notices.push(super::Notice {
                 unit: self.id,
@@ -1171,20 +1226,10 @@ impl<'a> ImpactContext<'a> {
 
     /// Tactical crew consequences occur at their damage event, before subsequent criticals.
     fn effect(&mut self, effect: ImpactEffect) -> Result<()> {
-        if effect == ImpactEffect::CrewStun
-            && (self.character_toughness.is_some() || self.rules.is_some())
-        {
-            self.report
-                .notices
-                .push(super::stun_unit(self.world, self.id)?);
-            return Ok(());
-        }
         if let Some(toughness) = self.character_toughness
             && matches!(
                 effect,
-                ImpactEffect::HeadInjury
-                    | ImpactEffect::ExplosionInjury
-                    | ImpactEffect::VentedExplosionInjury
+                ImpactEffect::HeadInjury | ImpactEffect::ExplosionInjury
             )
             && !self.unit().is_destroyed()
             && self.unit().pilot().is_some()
@@ -1220,14 +1265,10 @@ impl<'a> ImpactContext<'a> {
                     .is_some_and(|values| super::advantages::enabled(values, "Pain_Resistance"));
                 Some(if resistant { 1 } else { 2 })
             }
-            ImpactEffect::VentedExplosionInjury => Some(1),
             _ => None,
         };
         if let Some(hits) = hits.filter(|_| !self.unit().is_destroyed()) {
-            if matches!(
-                effect,
-                ImpactEffect::ExplosionInjury | ImpactEffect::VentedExplosionInjury
-            ) {
+            if effect == ImpactEffect::ExplosionInjury {
                 self.report.notices.push(super::Notice {
                     unit: self.id,
                     text: "You take personal injury from the ammunition explosion!".to_owned(),
@@ -1322,7 +1363,6 @@ impl<'a> ImpactContext<'a> {
                             self.world,
                             self.id,
                             input,
-                            rules.stacking,
                             rules,
                             &mut effects,
                             (&mut self.report.pilot_notices, offset),
@@ -1338,7 +1378,6 @@ impl<'a> ImpactContext<'a> {
                             self.world,
                             self.id,
                             input,
-                            rules.stacking,
                             rules,
                             &mut self.report.pilot_notices,
                             offset,
@@ -1459,7 +1498,10 @@ struct DamagePacket {
     internal_only: bool,
     transfer: bool,
     rear: bool,
+    /// A hit location roll of 2: one extra Determining Critical Hits roll on the location struck.
     tac: bool,
+    /// An explosion vented by CASE II, whose criticals are disregarded on a second roll of 8+.
+    vented: bool,
     weapon_effect: Option<WeaponEffect>,
     /// Subtracted from this packet's critical-hit rolls, as for a glancing blow.
     critical_penalty: u8,
@@ -1475,13 +1517,17 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         internal_only,
         transfer,
         rear,
-        tac,
+        mut tac,
+        vented,
         weapon_effect,
         critical_penalty,
     } = packet;
     let damage_class =
         weapon_effect.map_or(super::DamageClass::Ordinary, WeaponEffect::damage_class);
     let mut initial_packet = true;
+    // The first location that takes the damage; the hit location critical and armor-piercing
+    // checks belong to it alone (Total Warfare p. 124 and 140).
+    let mut original = true;
     let mut plasma_returns = 0;
     let mut ignition_section = None;
     while damage > 0 {
@@ -1528,10 +1574,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 .report
                 .notices
                 .extend(super::hiding::damage(context.world, context.id));
-            if let Some(rules) = context
-                .rules
-                .filter(|_| context.unit().posture() != super::Posture::Prone)
-            {
+            if context.rules.is_some() && context.unit().posture() != super::Posture::Prone {
                 // Errata: each hardened armor point lost counts as one damage toward the
                 // twenty-damage piloting check; damage beyond the armor counts in full.
                 // Reflective armor counts the same way.
@@ -1539,7 +1582,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                     .unit()
                     .armor_hit(section, rear, damage, damage_class)
                     .map_or(damage, |(removed, overflow)| removed + overflow);
-                context.unit_mut().stagger.record(counted, rules.stagger)?;
+                context.unit_mut().stagger.record(counted);
             }
         }
         plasma_returns += 1;
@@ -1556,7 +1599,6 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         if section == MechSection::Head {
             context.effect(ImpactEffect::HeadInjury)?;
         }
-        let mut tac_criticals = 0;
         if !internal_only {
             context.strike_searchlight(section, rear);
             let previous_warning =
@@ -1573,37 +1615,42 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             )?;
             let warning = super::combat_warnings::armor_level(context.unit(), section, rear);
             damage = special.map_or(armor.remaining, |(_, overflow)| overflow);
-            // Hardened armor negates armor-piercing critical chances.
-            let ap = match weapon_effect {
-                Some(WeaponEffect::ArmorPiercing(weapon)) if !context.unit().hardened_armor() => {
-                    Some(weapon)
-                }
-                _ => None,
-            }
-            .filter(|_| {
-                if tac || damage > 0 {
-                    return false;
-                }
-                let state = &context.unit().sections()[&section];
-                let original = &context.unit().definition().sections[&section];
-                let (remaining, original) = if rear
-                    && matches!(
-                        section,
-                        MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
-                    ) {
-                    (state.rear, original.rear)
-                } else {
-                    (state.armor, original.armor)
-                };
-                u32::from(remaining) * 2 < u32::from(original)
-            });
+            let armor_damaged = armor.absorbed > 0;
             context.record_phase(armor)?;
-            if tac || ap.is_some() {
-                let roll = context.unit_mut().dice.generic_roll();
-                let adjusted =
-                    roll.saturating_sub(ap.map_or(0, super::Weapon::armor_piercing_penalty));
-                tac_criticals = critical_count(adjusted);
-                resolve_criticals(context, section, tac_criticals)?;
+            // Total Warfare p. 124: a hit location roll of 2 adds one Determining Critical Hits
+            // roll on the location struck, besides any roll for damaging its structure. It
+            // follows the damage to the next location only when this one was already gone.
+            // Hardened armor lowers it by two (Tactical Operations: AUE p. 93).
+            if tac {
+                tac = false;
+                let hardened = if context.unit().hardened_armor() {
+                    super::Technology::HARDENED_CRITICAL_PENALTY
+                } else {
+                    0
+                };
+                let roll = context
+                    .unit_mut()
+                    .dice
+                    .generic_roll()
+                    .saturating_sub(critical_penalty.saturating_add(hardened));
+                if resolve_determining_roll(context, section, roll, false)? {
+                    break;
+                }
+            }
+            // Total Warfare p. 140: every armor-piercing hit that damages armor rolls once for
+            // a critical with the autocannon's modifier, on the location struck only. Hardened
+            // armor negates the round's effect (Tactical Operations: AUE p. 93).
+            if original
+                && armor_damaged
+                && let Some(WeaponEffect::ArmorPiercing(weapon)) = weapon_effect
+                && !context.unit().hardened_armor()
+            {
+                let roll = context.unit_mut().dice.generic_roll().saturating_sub(
+                    critical_penalty.saturating_add(weapon.armor_piercing_penalty()),
+                );
+                if resolve_determining_roll(context, section, roll, false)? {
+                    break;
+                }
             }
             if warning > previous_warning
                 && context.rules.is_some()
@@ -1616,51 +1663,33 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             }
         }
         let penetrating = !internal_only && damage > 0;
-        if damage > 0 {
-            // The reference consumes this roll even when a TAC already supplied criticals.
-            // Damage that penetrated hardened armor rolls two lower.
-            let penalty = if !internal_only && context.unit().hardened_armor() {
-                super::Technology::HARDENED_CRITICAL_PENALTY
-            } else {
-                0
-            };
+        // Total Warfare p. 123: each hit that damages internal structure makes one Determining
+        // Critical Hits roll, independently of the hit location roll. A location that an
+        // explosion from those criticals has just destroyed passes the damage on instead.
+        if damage > 0 && context.unit().sections()[&section].internal > 0 {
             let roll = context
                 .unit_mut()
                 .dice
                 .generic_roll()
-                .saturating_sub(critical_penalty.saturating_add(penalty));
-            if tac_criticals == 0 {
-                if roll == 12
-                    && matches!(
-                        section,
-                        MechSection::LeftArm
-                            | MechSection::RightArm
-                            | MechSection::LeftLeg
-                            | MechSection::RightLeg
-                            | MechSection::Head
-                    )
-                {
-                    let remaining = context.unit().sections()[&section].internal;
-                    let phase = context.damage_phase(section, remaining, DamagePhase::Internal)?;
-                    context.record_phase(phase)?;
-                    break;
-                }
-                resolve_criticals(context, section, critical_count(roll))?;
-            }
-            if section == MechSection::CenterTorso
-                && damage > 0
-                && context.unit().sections()[&section].internal
-                    == context.unit().definition().sections[&section].internal
-            {
-                context.unit_mut().reactor_instability_remaining = Some(31);
+                .saturating_sub(critical_penalty);
+            if resolve_determining_roll(context, section, roll, vented)? {
+                break;
             }
             // Reinforced structure halves and composite structure doubles internal damage,
             // including any overflow that transfers onward.
             let structural = context.unit().structure_damage(damage);
+            let head_pilot =
+                (section == MechSection::Head).then(|| context.unit().pilot().is_some());
             let phase = context.damage_phase(section, structural, DamagePhase::Internal)?;
             damage = phase.remaining;
             context.record_phase(phase)?;
+            if let Some(had_pilot) = head_pilot
+                && context.unit().sections()[&MechSection::Head].internal == 0
+            {
+                context.kill_crew(had_pilot, false)?;
+            }
         }
+        original = false;
         if internal_only {
             if context.unit().sections()[&section].internal > 0 {
                 context.check_vacuum(section, false)?;
@@ -1683,8 +1712,10 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
     }
     if matches!(weapon_effect, Some(WeaponEffect::Plasma)) {
         for _ in 0..plasma_returns {
+            // Plasma heat is an outside heat source, capped at fifteen a turn (Total Warfare
+            // p. 159).
             let heat = context.unit_mut().dice.d6();
-            context.unit_mut().heat.stored += f64::from(heat);
+            context.unit_mut().absorb_outside_heat(heat);
             context.report.impact.plasma_heat.push(heat);
         }
     }
@@ -1728,6 +1759,7 @@ fn resolve_dump_ignition(context: &mut ImpactContext<'_>, section: MechSection) 
             transfer: true,
             rear: true,
             tac: false,
+            vented: false,
             weapon_effect: None,
             critical_penalty: 0,
         },
@@ -1748,7 +1780,7 @@ fn resolve_dump_ignition(context: &mut ImpactContext<'_>, section: MechSection) 
     Ok(())
 }
 
-/// Conventional 2d6 critical multiplicities; limb/head severing is handled by the internal phase.
+/// Conventional 2d6 critical multiplicities; a 12 on an arm, leg or head blows it off instead.
 fn critical_count(roll: u8) -> u8 {
     match roll {
         8 | 9 => 1,
@@ -1758,14 +1790,62 @@ fn critical_count(roll: u8) -> u8 {
     }
 }
 
-/// Select critical outcomes from current eligible slots; linked extensions can select their primary repeatedly.
-fn resolve_criticals(
+/// Apply one Determining Critical Hits Table result (Total Warfare p. 124) to a location and
+/// report whether the location was blown off. A 12 blows an arm, leg or head off; the hit's
+/// remaining damage is then lost, a case Total Warfare does not address.
+fn resolve_determining_roll(
     context: &mut ImpactContext<'_>,
     section: MechSection,
+    roll: u8,
+    vented: bool,
+) -> Result<bool> {
+    if roll == 12
+        && matches!(
+            section,
+            MechSection::LeftArm
+                | MechSection::RightArm
+                | MechSection::LeftLeg
+                | MechSection::RightLeg
+                | MechSection::Head
+        )
+    {
+        let remaining = context.unit().sections()[&section].internal;
+        let phase = context.damage_phase(section, remaining, DamagePhase::Internal)?;
+        context.record_phase(phase)?;
+        return Ok(true);
+    }
+    resolve_criticals(context, section, critical_count(roll), vented)?;
+    Ok(false)
+}
+
+/// Apply `count` critical hits to a location. A location with no eligible slot left before
+/// this roll passes them inward along the damage-transfer chain (Total Warfare p. 125); the
+/// center torso and head never transfer, and criticals beyond a location's last eligible slot
+/// are lost. Criticals from an explosion vented by CASE II are disregarded on a second roll of
+/// 8+ (Tactical Operations: Advanced Units & Equipment p. 111).
+fn resolve_criticals(
+    context: &mut ImpactContext<'_>,
+    mut section: MechSection,
     count: u8,
+    vented: bool,
 ) -> Result<()> {
+    if count == 0
+        || context.unit().combat_safe
+        || context.unit().definition().has_special("CritProof_Tech")
+    {
+        return Ok(());
+    }
+    while context.unit().critical_candidates(section).is_empty() {
+        let Some(next) = section.damage_transfer() else {
+            return Ok(());
+        };
+        section = next;
+    }
     for _ in 0..count {
         context.spend()?;
+        if vented && context.unit_mut().dice.generic_roll() >= 8 {
+            continue;
+        }
         let Some(location) = context.unit_mut().choose_critical(section) else {
             break;
         };
@@ -1819,14 +1899,18 @@ mod tests {
 
     /// An unguided hit on the left arm, with or without armor-piercing ammunition.
     fn strike(world: &mut World, id: ObjectId, damage: u16, effect: WeaponEffect) {
+        strike_hit(world, id, damage, effect, false);
+    }
+
+    /// A left arm hit that may also be a hit location critical (a location roll of 2).
+    fn strike_hit(world: &mut World, id: ObjectId, damage: u16, effect: WeaponEffect, tac: bool) {
         resolve_attack_in_candidate(
             world,
             id,
             Hit {
                 section: MechSection::LeftArm,
                 rear_armor: false,
-                through_armor_critical: false,
-                crew_stun: false,
+                through_armor_critical: tac,
             },
             damage,
             None,
@@ -1867,30 +1951,227 @@ mod tests {
         );
     }
 
-    /// Damage that penetrates hardened armor rolls criticals two lower.
+    /// Every armor-piercing hit that damages armor rolls once for a critical with the
+    /// autocannon's modifier, whatever armor remains; a transfer never rolls again.
     #[test]
-    fn hardened_armor_lowers_penetrating_critical_rolls() {
+    fn armor_piercing_rolls_on_every_armor_hit() {
         let mut exercised = [false, false];
         for seed in 0..=63 {
             let mut dice = super::super::Dice::seeded([seed; 32]);
             dice.two_d6();
             let roll = dice.two_d6();
-            // Twelve damage strips four hardened points and puts four into the structure.
+            // One AC/2 point scratches the Jenner's full left arm armor.
+            let (mut world, id) = world(false, seed);
+            let before = world.btech.constructed_units()[&id].lost_criticals().len();
+            strike(
+                &mut world,
+                id,
+                1,
+                WeaponEffect::ArmorPiercing(super::super::Weapon::Ac2),
+            );
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&MechSection::LeftArm].armor, 3);
+            let critical = unit.lost_criticals().len() > before;
+            assert_eq!(critical, roll >= 12, "seed {seed} roll {roll}");
+            if !critical {
+                assert_eq!(unit.dice, dice, "seed {seed}");
+            }
+            exercised[usize::from(critical)] = true;
+        }
+        assert_eq!(exercised, [true, true]);
+    }
+
+    /// A hit location critical rolls once on the location struck and once more for structure
+    /// damage; hardened armor lowers only the hit location roll by two.
+    #[test]
+    fn hardened_armor_lowers_through_armor_critical_rolls() {
+        let mut exercised = [false, false];
+        for seed in 0..=63 {
+            let mut dice = super::super::Dice::seeded([seed; 32]);
+            dice.two_d6();
+            let roll = dice.two_d6();
+            // Two damage strip one hardened point and leave the structure untouched.
+            let (mut world, id) = world(true, seed);
+            let before = world.btech.constructed_units()[&id].lost_criticals().len();
+            strike_hit(&mut world, id, 2, WeaponEffect::Conventional, true);
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 6);
+            let critical = unit.lost_criticals().len() > before;
+            assert_eq!(critical, roll >= 10, "seed {seed} roll {roll}");
+            exercised[usize::from(critical)] = true;
+        }
+        assert_eq!(exercised, [true, true]);
+        // Penetrating damage rolls at full value on hardened armor: the structure roll alone
+        // decides a plain hit, and a 12 blows the arm off.
+        for seed in 0..=63 {
+            let mut dice = super::super::Dice::seeded([seed; 32]);
+            dice.two_d6();
+            let roll = dice.two_d6();
+            // Twelve damage strip four hardened points and put four into the structure.
             let (mut world, id) = world(true, seed);
             let before = world.btech.constructed_units()[&id].lost_criticals().len();
             strike(&mut world, id, 12, WeaponEffect::Conventional);
             let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 2);
+            assert_eq!(
+                unit.sections()[&MechSection::LeftArm].internal,
+                if roll == 12 { 0 } else { 2 },
+                "seed {seed} roll {roll}"
+            );
+            let critical = unit.lost_criticals().len() > before;
+            assert_eq!(critical, roll >= 8, "seed {seed} roll {roll}");
+        }
+    }
+
+    /// Criticals rolled for a location with no eligible slot left pass inward along the
+    /// damage-transfer chain; the center torso keeps what it cannot use.
+    #[test]
+    fn criticals_transfer_inward_from_an_emptied_location() {
+        let mut exercised = false;
+        for seed in 0..=63 {
+            let mut dice = super::super::Dice::seeded([seed; 32]);
+            dice.two_d6();
+            let roll = dice.two_d6();
+            // Below 8 nothing happens; a 12 blows the arm off instead of rolling slots.
+            if !(8..=11).contains(&roll) {
+                continue;
+            }
+            let (mut world, id) = world(false, seed);
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
+            for location in unit.critical_candidates(MechSection::LeftArm) {
+                unit.destroy_critical(location).unwrap();
+            }
+            let torso_before = unit.critical_candidates(MechSection::LeftTorso).len();
+            // Five damage breach the arm's four armor points and roll for its structure.
+            strike(&mut world, id, 5, WeaponEffect::Conventional);
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 5);
+            let lost = torso_before - unit.critical_candidates(MechSection::LeftTorso).len();
+            assert!(lost >= 1, "seed {seed} roll {roll}");
+            assert!(
+                unit.lost_criticals()
+                    .iter()
+                    .any(|location| location.section == MechSection::LeftTorso),
+                "seed {seed}"
+            );
+            exercised = true;
+        }
+        assert!(exercised);
+    }
+
+    /// A glancing blow's penalty lowers the structure critical roll by two.
+    #[test]
+    fn glancing_penalty_lowers_structure_critical_rolls() {
+        let mut exercised = [false, false];
+        for seed in 0..=63 {
+            let mut dice = super::super::Dice::seeded([seed; 32]);
+            dice.two_d6();
+            let roll = dice.two_d6();
+            let (mut world, id) = world(false, seed);
+            let before = world.btech.constructed_units()[&id].lost_criticals().len();
+            // Five damage breach the arm's four armor points and put one into the structure.
+            resolve_attack_in_candidate_with_penalty(
+                &mut world,
+                id,
+                Hit {
+                    section: MechSection::LeftArm,
+                    rear_armor: false,
+                    through_armor_critical: false,
+                },
+                5,
+                None,
+                AttackImpact {
+                    attacker: None,
+                    weapon_effect: Some(WeaponEffect::Conventional),
+                    character: false,
+                    followup: false,
+                },
+                GLANCING_CRITICAL_PENALTY,
+            )
+            .unwrap();
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 5);
             let critical = unit.lost_criticals().len() > before;
             assert_eq!(critical, roll >= 10, "seed {seed} roll {roll}");
-            if (8..10).contains(&roll) {
-                exercised[0] = true;
-            }
-            if roll >= 10 {
-                exercised[1] = true;
-            }
+            exercised[usize::from(critical)] = true;
         }
         assert_eq!(exercised, [true, true]);
+    }
+
+    /// CASE II in a limb: one internal point, then vented armor loss capped at half the limb's
+    /// original armor, and nothing transfers inward.
+    #[test]
+    fn case_ii_caps_vented_limb_armor_loss() {
+        let mut template = super::super::MechTemplate::parse(
+            "JR7-D",
+            &include_str!("../../tests/fixtures/btech/units/JR7-D.toml").replace(
+                "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n",
+                "",
+            ),
+        )
+        .unwrap();
+        let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
+        for (slot, equipment) in [(4, "Ammo_IS.SRM-4"), (5, "CASE-II")] {
+            arm.criticals.insert(
+                slot,
+                super::super::CriticalDefinition {
+                    equipment: equipment.into(),
+                    data: if slot == 4 { "25".into() } else { "-".into() },
+                    modes: Vec::new(),
+                },
+            );
+        }
+        let pristine = Mech::from_template(template).unwrap();
+        assert!(pristine.has_case_ii(MechSection::LeftArm));
+        let mut exercised = false;
+        for seed in 0..=255 {
+            let mut unit = pristine.clone();
+            unit.dice = super::super::Dice::seeded([seed; 32]);
+            let mut world = World::default();
+            let id = ObjectId(41);
+            world.btech.constructed.insert(id, unit);
+            let report = resolve_in_candidate(
+                &mut world,
+                id,
+                Hit {
+                    section: MechSection::LeftArm,
+                    rear_armor: false,
+                    through_armor_critical: true,
+                },
+                1,
+                None,
+                Some(WeaponEffect::Conventional),
+            )
+            .unwrap();
+            if !report
+                .impact
+                .criticals
+                .iter()
+                .any(|(_, loss)| matches!(loss, CriticalLoss::Ammunition { .. }))
+            {
+                continue;
+            }
+            let unit = &world.btech.constructed_units()[&id];
+            let arm = &unit.sections()[&MechSection::LeftArm];
+            // One armor point to the shot, one internal point to the blast, then at most half
+            // of the original four armor points vented.
+            assert_eq!(arm.internal, 5, "seed {seed}");
+            assert_eq!(arm.armor, 1, "seed {seed}");
+            assert_eq!(unit.ammunition(), &[0]);
+            assert_eq!(
+                unit.sections()[&MechSection::LeftTorso],
+                pristine.sections()[&MechSection::LeftTorso],
+                "seed {seed}"
+            );
+            assert!(
+                report
+                    .impact
+                    .pending_effects
+                    .contains(&ImpactEffect::ExplosionInjury)
+            );
+            exercised = true;
+            break;
+        }
+        assert!(exercised);
     }
 
     /// Reflective armor halves energy hits, doubles area-effect hits and ignores the rest.

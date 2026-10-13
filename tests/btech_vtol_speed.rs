@@ -46,8 +46,9 @@ fn tail_rotor_limits_commands_without_erasing_momentum_or_reverse_motion() {
     motion.desired_speed = 180.0;
     saved["motion"] = serde_json::to_value(motion).unwrap();
     let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
-    let damage = unit.apply_rotor_hit(RotorHit::TailRotor, false).unwrap();
-    assert!(!damage.repeated);
+    let _ = unit
+        .apply_rotor_hit(RotorHit::FlightStabilizer, false)
+        .unwrap();
     let vertical = unit.maximum_speed() * 0.6;
     let cruise = unit.vtol_horizontal_limit(vertical).unwrap() * 2.0 / 3.0;
     assert!(unit.vtol_throttle(cruise + 0.2, vertical).is_err());

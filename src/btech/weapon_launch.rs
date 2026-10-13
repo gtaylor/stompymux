@@ -11,7 +11,6 @@ pub(super) struct WeaponLaunchRequest {
     pub distance: f64,
     pub target_number: Option<i32>,
     pub streak_confused: bool,
-    pub glancing: GlancingMode,
     pub fall: FallRules,
     pub character_shooter: bool,
 }
@@ -101,7 +100,6 @@ pub(super) fn resolve_prepared_launch(
             distance: request.distance,
             target_number,
             streak_confused,
-            glancing: request.glancing,
         },
         &mut world.btech.constructed.get_mut(&shooter).unwrap().dice,
     )?;

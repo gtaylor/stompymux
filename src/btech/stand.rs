@@ -318,16 +318,6 @@ pub(crate) fn configured_stand(
         settings.standcareful != 0,
         FallRules {
             vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
-            stacking: crate::StackingRules {
-                mode: settings.stacking,
-                damage_percent: settings.stackdamage,
-                hit_arcs: settings.hit_arcs,
-            },
-            stagger: super::StaggerMode::from_setting(settings.newstagger),
-            hit: super::HitRules {
-                inferno_penalty: settings.inferno_penalty != 0,
-                exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
-            },
             extended_piloting: settings.extended_piloting != 0,
             toughness,
         },

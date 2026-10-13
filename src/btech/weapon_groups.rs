@@ -1,12 +1,10 @@
 //! Target-independent weapon packet sizing after a successful launch and hit.
 use super::{AmmunitionMode, Dice, FireMode, FlechetteDamage, RotaryDamage, Weapon, WeaponSalvo};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Result, ensure};
 
 /// Damage inputs resolved by the enclosing unit or terrain attack.
 pub(super) struct WeaponGroupRequest {
-    pub range_damage: bool,
     /// Whether the launching mount is below the waterline.
-    pub submerged: bool,
     pub damage_penalty: u8,
     pub weapon: Weapon,
     pub ammunition: AmmunitionMode,
@@ -35,8 +33,6 @@ pub(super) fn roll_weapon_groups(
     dice: &mut Dice,
 ) -> Result<WeaponGroups> {
     let WeaponGroupRequest {
-        range_damage,
-        submerged,
         damage_penalty,
         weapon,
         ammunition: mode,
@@ -55,8 +51,7 @@ pub(super) fn roll_weapon_groups(
                 && damage_penalty <= weapon.profile().critical_slots),
         "Invalid weapon damage penalty"
     );
-    let range_energy = range_damage && weapon.gunnery_skill(true) == "Gunnery-Laser";
-    let defer_glancing = damage_penalty > 0 || range_energy;
+    let defer_glancing = damage_penalty > 0;
     let burst = fire_mode.rounds_per_cycle() > 1;
     let cluster_roll = (burst || weapon.profile().missiles > 0 || mode == AmmunitionMode::Cluster)
         .then(|| {
@@ -71,7 +66,7 @@ pub(super) fn roll_weapon_groups(
         });
     let mut damage = if let Some(damage) = gatling_damage {
         vec![if glancing {
-            u16::from(damage).div_ceil(2)
+            u16::from(damage) / 2
         } else {
             u16::from(damage)
         }]
@@ -126,40 +121,14 @@ pub(super) fn roll_weapon_groups(
     if defer_glancing {
         for packet in &mut damage {
             *packet = packet.saturating_sub(u16::from(damage_penalty));
-            if range_energy {
-                let distance = distance.context("Energy range damage requires attack distance")?;
-                let (medium, long) = if submerged {
-                    let water = weapon
-                        .water_ranges()
-                        .context("This weapon may not be fired underwater.")?;
-                    (
-                        f64::from(water.medium_range),
-                        water.long_range.map_or(-1.0, f64::from),
-                    )
-                } else {
-                    let profile = weapon.profile();
-                    (
-                        f64::from(profile.medium_range),
-                        f64::from(profile.long_range),
-                    )
-                };
-                *packet = if distance <= 1.0 {
-                    packet.saturating_add(1)
-                } else if distance > long {
-                    *packet / 2
-                } else if distance > medium {
-                    packet.saturating_sub(1)
-                } else {
-                    *packet
-                }
-                .max(1);
-            }
             if glancing {
-                *packet = packet.div_ceil(2);
+                *packet /= 2;
             }
         }
-        damage.retain(|packet| *packet > 0);
     }
+    // A glancing blow halves damage rounding down (Tactical Operations p. 79), so a one-point
+    // round lands without effect and no hit location is rolled for it.
+    damage.retain(|packet| *packet > 0);
     Ok(WeaponGroups {
         missile_damage: if mode == AmmunitionMode::Cluster {
             1
@@ -172,15 +141,16 @@ pub(super) fn roll_weapon_groups(
 }
 
 impl WeaponGroups {
-    /// A glancing unit hit reduces shell damage as well as the already-adjusted burst count.
-    /// Occupied-woods callers defer this step until after per-shell absorption instead.
+    /// A glancing unit hit halves shell damage, rounding down, as well as the already-adjusted
+    /// burst count. Occupied-woods callers defer this step until after per-shell absorption.
     pub(super) fn finish_burst_glancing(&mut self, mode: FireMode, glancing: bool) {
         if !glancing || mode.rounds_per_cycle() <= 1 {
             return;
         }
         for damage in &mut self.damage {
-            *damage = damage.div_ceil(2);
+            *damage /= 2;
         }
+        self.damage.retain(|damage| *damage > 0);
     }
 
     /// Remove cover damage in whole missiles while retaining the ordered packet boundaries.
@@ -266,8 +236,6 @@ mod tests {
         for seed in 0..=31 {
             let request =
                 |ammunition, artemis_v, target_beacon, guidance_blocked| WeaponGroupRequest {
-                    submerged: false,
-                    range_damage: false,
                     damage_penalty: 0,
                     weapon,
                     ammunition,
@@ -321,8 +289,6 @@ mod tests {
                 };
                 let groups = roll_weapon_groups(
                     WeaponGroupRequest {
-                        range_damage: false,
-                        submerged: false,
                         damage_penalty: 0,
                         weapon,
                         ammunition: AmmunitionMode::Normal,
@@ -371,8 +337,6 @@ mod tests {
                             let mut dice = Dice::seeded([seed; 32]);
                             let mut groups = roll_weapon_groups(
                                 WeaponGroupRequest {
-                                    submerged: false,
-                                    range_damage: false,
                                     damage_penalty: 0,
                                     weapon,
                                     ammunition: mode,
@@ -413,144 +377,14 @@ mod tests {
         }
     }
 
-    /// Water damage uses raw distance and applies focusing damage before range and glancing.
-    #[test]
-    fn underwater_energy_damage_uses_water_bands_and_missing_long_range() {
-        for (weapon, distance, penalty, expected) in [
-            (Weapon::Ppc, 1.0, 0, 11),
-            (Weapon::Ppc, 1.01, 0, 10),
-            (Weapon::Ppc, 7.0, 0, 10),
-            (Weapon::Ppc, 7.01, 0, 9),
-            (Weapon::Ppc, 10.0, 0, 9),
-            (Weapon::Ppc, 10.01, 0, 5),
-            (Weapon::Ppc, 10.01, 2, 4),
-            (Weapon::SmallLaser, 1.0, 0, 4),
-            (Weapon::SmallLaser, 1.01, 0, 1),
-            (Weapon::SmallLaser, 2.0, 0, 1),
-        ] {
-            for glancing in [false, true] {
-                let mut dice = Dice::seeded([3; 32]);
-                let before = dice.clone();
-                let groups = roll_weapon_groups(
-                    WeaponGroupRequest {
-                        submerged: true,
-                        range_damage: true,
-                        damage_penalty: penalty,
-                        weapon,
-                        ammunition: AmmunitionMode::Normal,
-                        fire_mode: FireMode::Normal,
-                        gatling_damage: None,
-                        distance: Some(distance),
-                        glancing,
-                        guidance_blocked: false,
-                        angel_blocked: false,
-                        target_beacon: false,
-                        artemis_v: false,
-                    },
-                    &mut dice,
-                )
-                .unwrap();
-                let expected: u16 = expected;
-                assert_eq!(
-                    groups.damage,
-                    vec![if glancing {
-                        expected.div_ceil(2)
-                    } else {
-                        expected
-                    }]
-                );
-                assert_eq!(dice, before);
-            }
-        }
-    }
-
-    /// Actual distance controls the optional bonus, penalty and extended-range halving.
-    #[test]
-    fn configured_energy_range_damage_precedes_glancing_and_preserves_dice() {
-        for (distance, expected) in [
-            (0.0, 11),
-            (1.0, 11),
-            (1.01, 10),
-            (12.0, 10),
-            (12.01, 9),
-            (18.0, 9),
-            (18.01, 5),
-        ] {
-            for enabled in [false, true] {
-                for glancing in [false, true] {
-                    let mut dice = Dice::seeded([3; 32]);
-                    let before = dice.clone();
-                    let groups = roll_weapon_groups(
-                        WeaponGroupRequest {
-                            submerged: false,
-                            range_damage: enabled,
-                            damage_penalty: 0,
-                            weapon: Weapon::Ppc,
-                            ammunition: AmmunitionMode::Normal,
-                            fire_mode: FireMode::Normal,
-                            gatling_damage: None,
-                            distance: Some(distance),
-                            glancing,
-                            guidance_blocked: false,
-                            angel_blocked: false,
-                            target_beacon: false,
-                            artemis_v: false,
-                        },
-                        &mut dice,
-                    )
-                    .unwrap();
-                    let expected: u16 = if enabled { expected } else { 10 };
-                    assert_eq!(
-                        groups.damage,
-                        vec![if glancing {
-                            expected.div_ceil(2)
-                        } else {
-                            expected
-                        }]
-                    );
-                    assert_eq!(dice, before);
-                }
-            }
-        }
-        // A ballistic weapon keeps its own range profile, and a degraded energy hit floors at one.
-        for (weapon, penalty, distance, expected) in [
-            (Weapon::HeavyGaussRifle, 0, 1.0, 25),
-            (Weapon::Ppc, 1, 19.0, 4),
-            (Weapon::SmallLaser, 1, 4.0, 1),
-        ] {
-            let groups = roll_weapon_groups(
-                WeaponGroupRequest {
-                    submerged: false,
-                    range_damage: true,
-                    damage_penalty: penalty,
-                    weapon,
-                    ammunition: AmmunitionMode::Normal,
-                    fire_mode: FireMode::Normal,
-                    gatling_damage: None,
-                    distance: Some(distance),
-                    glancing: false,
-                    guidance_blocked: false,
-                    angel_blocked: false,
-                    target_beacon: false,
-                    artemis_v: false,
-                },
-                &mut Dice::seeded([0; 32]),
-            )
-            .unwrap();
-            assert_eq!(groups.damage, vec![expected]);
-        }
-    }
-
     /// Focus loss reduces energy packets before glancing rounding, for every damage recipient.
     #[test]
     fn energy_degradation_precedes_glancing_packet_rounding() {
-        for (glancing, expected) in [(false, 9), (true, 5)] {
+        for (glancing, expected) in [(false, 9), (true, 4)] {
             let mut dice = Dice::seeded([0; 32]);
             let before = dice.clone();
             let groups = roll_weapon_groups(
                 WeaponGroupRequest {
-                    submerged: false,
-                    range_damage: false,
                     weapon: Weapon::Ppc,
                     ammunition: AmmunitionMode::Normal,
                     fire_mode: FireMode::Normal,
@@ -593,8 +427,6 @@ mod streak_lrm_tests {
                         let roll = expected_dice.two_d6();
                         let groups = roll_weapon_groups(
                             WeaponGroupRequest {
-                                submerged: false,
-                                range_damage: false,
                                 damage_penalty: 0,
                                 weapon,
                                 ammunition: AmmunitionMode::Normal,

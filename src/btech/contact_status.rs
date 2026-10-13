@@ -31,7 +31,6 @@ pub(super) fn known_status(world: &World, observer: ObjectId, target: ObjectId) 
             Power::Off => 'S',
             Power::Starting { .. } => 's',
             Power::Running if vehicle.inferno_remaining() > 0 => 'I',
-            Power::Running if !vehicle.burning_sections().is_empty() => 'B',
             Power::Running => ' ',
         };
         return Ok([' ', condition, ' ', power, ' '].into_iter().collect());
@@ -70,7 +69,6 @@ pub(super) fn known_status(world: &World, observer: ObjectId, target: ObjectId) 
         Power::Off => 'S',
         Power::Starting { .. } => 's',
         Power::Running if unit.heat().excess != 0.0 => '+',
-        Power::Running if unit.inferno_remaining() > 0 => 'I',
         Power::Running => ' ',
     };
     let electronics = unit.electronics();

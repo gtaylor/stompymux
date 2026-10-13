@@ -829,7 +829,6 @@ mod tests {
         for step in 0..5 {
             let unit = world.btech.constructed.get_mut(&observer).unwrap();
             unit.motion.as_mut().unwrap().heading = 180.0;
-            unit.inferno_remaining = if step == 1 { 10 } else { 0 };
             unit.searchlight.on = step % 2 == 0;
             unit.searchlight.destroyed = step == 2;
             unit.signature.illuminated = step == 3;

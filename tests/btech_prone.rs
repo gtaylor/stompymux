@@ -183,8 +183,7 @@ async fn prone_native_lua_and_restart() {
             let _ = flip_battle_arms(&mut world, id, ObjectId(1)).unwrap();
         }
         edit(&mut world, id, |unit| {
-            unit["stagger"]["hits"] =
-                serde_json::json!([{"damage":40,"remaining":60,"counted":false}]);
+            unit["stagger"]["turn_damage"] = 40.into();
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let error = scripts.eval_callback::<()>(&format!(
@@ -204,11 +203,12 @@ async fn prone_native_lua_and_restart() {
                 .is_none()
         );
         let expected = scripts.world().clone();
-        assert!(
+        // A deliberate drop leaves the turn's ordinary damage accounting alone.
+        assert_eq!(
             expected.btech.constructed_units()[&id]
                 .stagger()
-                .hits
-                .is_empty()
+                .turn_damage,
+            40
         );
         assert_eq!(
             expected.btech.constructed_units()[&id].facing(),
@@ -243,14 +243,13 @@ async fn prone_native_lua_and_restart() {
     }
 }
 
-/// Grounded drops flood exposed compartments, extinguish infernos and publish stepping mine callbacks atomically.
+/// Grounded drops flood exposed compartments and publish stepping mine callbacks atomically.
 #[tokio::test]
 async fn prone_water_and_mine_callback_rollback() {
     for quad in [false, true] {
         let (_dir, config, mut world, id, _map) = fixture(quad, "~1").await;
         edit(&mut world, id, |unit| {
             unit["sections"]["LeftArm"]["armor"] = 0.into();
-            unit["inferno_remaining"] = 60.into();
         });
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let report = prone_action(&scripts, &config, id, ObjectId(1)).unwrap();
@@ -259,10 +258,6 @@ async fn prone_water_and_mine_callback_rollback() {
                 .flooding
                 .iter()
                 .any(|flood| flood.section == MechSection::LeftArm)
-        );
-        assert_eq!(
-            scripts.world().btech.constructed_units()[&id].inferno_remaining(),
-            0
         );
         assert_eq!(report.mines.reason, MineTriggerReason::Step);
         let (_dir, config, mut world, id, map) = fixture(quad, ".0").await;
@@ -422,7 +417,7 @@ async fn prone_rejects_vehicle_chassis() {
     }
 }
 
-/// Restored action damage is independent of periodic history and applies before the shared drop roll.
+/// Restored action damage is independent of the turn's ordinary damage and applies before the shared drop roll.
 #[tokio::test]
 async fn restored_stagger_controls_drop_levels_and_survives_replay() {
     for quad in [false, true] {
@@ -442,9 +437,8 @@ async fn restored_stagger_controls_drop_levels_and_survives_replay() {
                         .unwrap();
                     edit(&mut world, id, |u| {
                         u["stagger"]["action_damage"] = scalar.into();
-                        // Positive ordinary damage must not itself activate action-time staggering.
-                        u["stagger"]["hits"] =
-                            serde_json::json!([{"damage":60,"remaining":60,"counted":false}]);
+                        // Ordinary turn damage must not itself activate action-time staggering.
+                        u["stagger"]["turn_damage"] = 60.into();
                         u["motion"]["speed"] = speed.into();
                         u["motion"]["desired_speed"] = speed.into();
                         u["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
@@ -522,7 +516,11 @@ async fn restored_stagger_controls_drop_levels_and_survives_replay() {
                     let after = scripts.world();
                     let state = after.btech.constructed_units()[&id].stagger();
                     assert_eq!(state.action_damage, scalar);
-                    assert!(state.hits.is_empty());
+                    // Only a completed fall ends the turn's damage accounting.
+                    assert_eq!(
+                        state.turn_damage,
+                        if report.fall.is_some() { 0 } else { 60 }
+                    );
                 }
             }
         }

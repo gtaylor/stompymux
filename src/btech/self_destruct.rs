@@ -1,4 +1,5 @@
-//! Cockpit self-destruction uses a shared durable countdown and existing blast/casualty actions.
+//! Cockpit self-destruction: a durable countdown that ends in an ammunition explosion for Mechs
+//! and immolation for vehicles, through the existing damage and casualty actions.
 use super::*;
 use crate::{
     CommandAction, CommandContext, CommandInput, CommandReport, Config, ObjectId, Scripts, World,
@@ -6,26 +7,25 @@ use crate::{
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
-/// An admitted sequence; advertised intent is separate from the event's actual detonation mode.
+/// Seconds between an admitted cockpit request and the explosion.
+pub const SELF_DESTRUCT_DELAY: u16 = 60;
+
+/// Seconds a wizard override waits before the explosion.
+const OVERRIDE_DELAY: u16 = 3;
+
+/// An admitted sequence counting down to the unit's ammunition explosion or immolation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SelfDestruct {
     pub remaining: u16,
-    /// Mech detonation mode and the shared ammunition-presence cancellation condition.
-    pub ammunition: bool,
-    /// Nonpositive configured delays display negative intermediate countdowns.
-    negative: bool,
     /// Stable order among pending sequences, including after restart.
     order: u64,
 }
 
 impl SelfDestruct {
-    /// The event expires at the next lower 256-second boundary, including nonpositive settings.
-    fn scheduled(delay: i64, order: u64) -> Self {
-        let remaining = delay.rem_euclid(256) as u16;
+    /// Schedule a countdown behind every pending sequence.
+    fn scheduled(delay: u16, order: u64) -> Self {
         Self {
-            remaining: if remaining == 0 { 256 } else { remaining },
-            ammunition: delay > 256,
-            negative: delay <= 0,
+            remaining: delay,
             order,
         }
     }
@@ -33,25 +33,20 @@ impl SelfDestruct {
     /// Reject malformed timers independently of current power and map placement.
     pub(super) fn validate(self) -> Result<()> {
         ensure!(
-            (1..=256).contains(&self.remaining),
+            (1..=SELF_DESTRUCT_DELAY).contains(&self.remaining),
             "Invalid self-destruct countdown"
-        );
-        ensure!(
-            !self.negative || !self.ammunition,
-            "Invalid self-destruct mode"
         );
         Ok(())
     }
 
-    /// Feedback reflects the signed countdown while admission bounds the actual duration.
+    /// Cockpit countdown feedback.
     fn notice(self, unit: ObjectId) -> Notice {
-        let seconds = i32::from(self.remaining) - if self.negative { 256 } else { 0 };
-        let plural = self.ammunition || (!self.negative && self.remaining > 1);
         Notice {
             unit,
             text: format!(
-                "Self-destruction in {seconds} second{}..",
-                if plural { "s" } else { "" }
+                "Self-destruction in {} second{}..",
+                self.remaining,
+                if self.remaining > 1 { "s" } else { "" }
             ),
         }
     }
@@ -160,13 +155,7 @@ fn debug(scripts: &Scripts, text: String) {
 }
 
 /// Admit controls once; the event does not require the original pilot to remain assigned.
-fn control(
-    world: &mut World,
-    config: &Config,
-    id: ObjectId,
-    pilot: ObjectId,
-    text: &str,
-) -> Result<Vec<Feedback>> {
+fn control(world: &mut World, id: ObjectId, pilot: ObjectId, text: &str) -> Result<Vec<Feedback>> {
     let vehicle = world.btech.vehicles().contains_key(&id);
     let unit = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     ensure!(!unit.destroyed, "You are destroyed!");
@@ -189,8 +178,9 @@ fn control(
     let argument = text
         .split([' ', '\t'])
         .find(|word| !word.is_empty())
-        .context("Invalid number of arguments!")?;
-    if !override_enabled {
+        .unwrap_or("ammo");
+    let stop = argument.eq_ignore_ascii_case("stop");
+    if !override_enabled && !stop {
         let recycling = if vehicle {
             !world.btech.vehicles()[&id].weapon_recycle().is_empty()
         } else {
@@ -211,11 +201,7 @@ fn control(
         }
     }
     let existing = *timer_mut(world, id);
-    if argument.eq_ignore_ascii_case("stop") {
-        ensure!(
-            override_enabled || config.battletech.explode_stop != 0,
-            "It's too late to turn back now!"
-        );
+    if stop {
         ensure!(
             existing.is_some(),
             "Your mech isn't undergoing a self-destruct sequence!"
@@ -244,35 +230,24 @@ fn control(
         existing.is_none(),
         "Your mech is already undergoing a self-destruct sequence!"
     );
-    let advertised_ammunition = argument.eq_ignore_ascii_case("ammo");
-    if advertised_ammunition {
-        ensure!(
-            override_enabled || config.battletech.explode_ammo != 0,
-            "You can't bring yourself to do it!"
-        );
-        let safe = if vehicle {
-            world.btech.vehicles()[&id].self_destruct_safe()
-        } else {
-            world.btech.constructed_units()[&id].self_destruct_safe()
-        };
-        ensure!(override_enabled || !safe, "That's not a possibility here.");
-        ensure!(
-            ammunition(world, id)?.is_some(),
-            "There is no 'damaging' ammo on your 'mech!"
-        );
-    } else if !override_enabled {
-        ensure!(
-            config.battletech.explode_reactor != 0,
-            "You can't bring yourself to do it!"
-        );
-        ensure!(!vehicle, "Only mechs can do the 'big boom' effect.");
-    }
-    let delay = if override_enabled {
-        3
-    } else if advertised_ammunition {
-        config.battletech.explode_time / 2
+    ensure!(
+        argument.eq_ignore_ascii_case("ammo") || argument.eq_ignore_ascii_case("override"),
+        "Usage: explode [ammo|stop]"
+    );
+    let safe = if vehicle {
+        world.btech.vehicles()[&id].self_destruct_safe()
     } else {
-        config.battletech.explode_time
+        world.btech.constructed_units()[&id].self_destruct_safe()
+    };
+    ensure!(override_enabled || !safe, "That's not a possibility here.");
+    ensure!(
+        ammunition(world, id)?.is_some(),
+        "There is no 'damaging' ammo on your 'mech!"
+    );
+    let delay = if override_enabled {
+        OVERRIDE_DELAY
+    } else {
+        SELF_DESTRUCT_DELAY
     };
     let order = pending(&world.btech).last().map_or(Ok(0), |(_, timer)| {
         timer
@@ -284,42 +259,21 @@ fn control(
     if let Some(assigned) = assigned {
         super::crew::release_pilot(world, id, assigned)?;
     }
-    let mut notices = super::broadcast::observer_notices(
-        world,
-        id,
-        if advertised_ammunition {
-            "starts billowing smoke!"
-        } else {
-            "loses reactions containment!"
-        },
-    );
+    let mut notices = super::broadcast::observer_notices(world, id, "starts billowing smoke!");
     notices.push(Notice {
         unit: id,
         text: "Self-destruction sequence engaged ; please stand by.".into(),
     });
     notices.push(Notice {
         unit: id,
-        text: format!(
-            "{} in {delay} seconds.",
-            if advertised_ammunition {
-                "The ammunition will explode"
-            } else {
-                "The reactor will blow up"
-            }
-        ),
+        text: format!("The ammunition will explode in {delay} seconds."),
     });
     let mut feedback: Vec<_> = notices.into_iter().map(Feedback::Notice).collect();
     feedback.insert(
         0,
         Feedback::Debug(format!(
-            "#{} in #{} initiates the {} explosion sequence.",
-            pilot.0,
-            id.0,
-            if advertised_ammunition {
-                "ammo"
-            } else {
-                "reactor"
-            }
+            "#{} in #{} initiates the ammo explosion sequence.",
+            pilot.0, id.0,
         )),
     );
     Ok(feedback)
@@ -334,7 +288,7 @@ pub fn self_destruct_action(
     text: &str,
 ) -> Result<()> {
     scripts.atomic(|_| {
-        let notices = control(&mut scripts.world.borrow_mut(), config, unit, pilot, text)?;
+        let notices = control(&mut scripts.world.borrow_mut(), unit, pilot, text)?;
         for feedback in notices {
             match feedback {
                 Feedback::Notice(notice) => super::notify_unit(scripts, notice)?,
@@ -360,9 +314,6 @@ pub enum SelfDestructOutcome {
     Countdown {
         unit: ObjectId,
         remaining: u16,
-    },
-    Reactor {
-        report: Box<ReactorExplosion>,
     },
     Ammunition {
         unit: ObjectId,
@@ -411,7 +362,7 @@ pub fn advance_battle_self_destructs_action(
                         .objects
                         .get(&id)
                         .is_none_or(|o| o.flags.contains(crate::Flag::Going))
-                    || (timer.ammunition && ammunition(&world, id)?.is_none())
+                    || ammunition(&world, id)?.is_none()
             };
             if cancel {
                 *timer_mut(&mut scripts.world.borrow_mut(), id) = None;
@@ -432,7 +383,7 @@ pub fn advance_battle_self_destructs_action(
             debug(scripts, format!("#{} explodes.", id.0));
             if scripts.world.borrow().btech.vehicles().contains_key(&id) {
                 reports.push(immolate(scripts, id)?);
-            } else if timer.ammunition {
+            } else {
                 debug(scripts, format!("#{} explodes [ammo]", id.0));
                 super::notify_unit(
                     scripts,
@@ -456,11 +407,6 @@ pub fn advance_battle_self_destructs_action(
                     )?);
                 }
                 reports.push(SelfDestructOutcome::Ammunition { unit: id, impacts });
-            } else {
-                debug(scripts, format!("#{} explodes [reactor]", id.0));
-                reports.push(SelfDestructOutcome::Reactor {
-                    report: Box::new(super::reactor_explosion_action(scripts, config, id)?),
-                });
             }
         }
         super::evacuation::publish_new_casualties(scripts, config, before)?;
@@ -552,40 +498,24 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
 mod tests {
     use super::*;
 
-    /// Observable boundary cases include zero/negative settings and mode changes above 256.
+    /// Countdown feedback pluralizes above one second and admits only the fixed delays.
     #[test]
-    fn configured_countdown_boundaries() {
-        for (delay, remaining, ammunition, negative) in [
-            (-257, 255, false, true),
-            (-256, 256, false, true),
-            (-1, 255, false, true),
-            (0, 256, false, true),
-            (1, 1, false, false),
-            (255, 255, false, false),
-            (256, 256, false, false),
-            (257, 1, true, false),
-            (512, 256, true, false),
-            (513, 1, true, false),
-            (1000, 232, true, false),
-        ] {
-            let timer = SelfDestruct::scheduled(delay, 7);
-            assert_eq!(
-                (timer.remaining, timer.ammunition, timer.negative),
-                (remaining, ammunition, negative)
-            );
-            timer.validate().unwrap();
-        }
+    fn countdown_feedback_and_bounds() {
+        let timer = SelfDestruct::scheduled(SELF_DESTRUCT_DELAY, 7);
+        timer.validate().unwrap();
         assert_eq!(
-            SelfDestruct::scheduled(-1, 0).notice(ObjectId(1)).text,
-            "Self-destruction in -1 second.."
-        );
-        assert_eq!(
-            SelfDestruct::scheduled(257, 0).notice(ObjectId(1)).text,
-            "Self-destruction in 1 seconds.."
+            timer.notice(ObjectId(1)).text,
+            "Self-destruction in 60 seconds.."
         );
         assert_eq!(
             SelfDestruct::scheduled(1, 0).notice(ObjectId(1)).text,
             "Self-destruction in 1 second.."
+        );
+        assert!(SelfDestruct::scheduled(0, 0).validate().is_err());
+        assert!(
+            SelfDestruct::scheduled(SELF_DESTRUCT_DELAY + 1, 0)
+                .validate()
+                .is_err()
         );
     }
 }

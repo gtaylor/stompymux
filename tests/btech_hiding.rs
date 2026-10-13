@@ -281,8 +281,7 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
         for amount in [0, 1] {
             let mut test = world.clone();
             let notices = if test.btech.vehicles().contains_key(&id) {
-                let mut rules = VehicleImpactRules::STANDARD.criticals;
-                rules.enabled = false;
+                let rules = VehicleImpactRules::STANDARD.criticals;
                 resolve_battle_vehicle_armor_damage(
                     &mut test,
                     id,
@@ -305,7 +304,6 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
                         section: MechSection::CenterTorso,
                         rear_armor: false,
                         through_armor_critical: false,
-                        crew_stun: false,
                     },
                     amount,
                     FallRules::configured(&config),
@@ -566,8 +564,10 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
         edit(&mut world, id, |unit| {
             unit["signature"]["hidden"] = true.into();
             unit["hide_elapsed"] = 7.into();
-            unit["motion"]["speed"] = if crossed { 100.0 } else { 0.0 }.into();
-            unit["motion"]["desired_speed"] = if crossed { 100.0 } else { 0.0 }.into();
+            // Crash damage follows the hexes being covered (TW p. 68), so even the straight
+            // drop keeps a crawl of speed to have its cover ruined by damage.
+            unit["motion"]["speed"] = if crossed { 100.0 } else { 1.0 }.into();
+            unit["motion"]["desired_speed"] = if crossed { 100.0 } else { 1.0 }.into();
             unit["vtol_flight"] = serde_json::to_value(VtolFlight {
                 phase: VtolFlightPhase::Airborne,
                 altitude: 1.5,
@@ -579,8 +579,7 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
-        let mut rules = MovementRules::STANDARD.fall;
-        rules.vehicle_impact.criticals.enabled = false;
+        let rules = MovementRules::STANDARD.fall;
         if crossed {
             let movement_rules = MovementRules {
                 fall: rules,
@@ -626,7 +625,7 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
             } if crossed => (fall, notices),
             result => panic!("Expected an aircraft crash (crossed={crossed}): {result:?}"),
         };
-        assert!(!fall.groups.is_empty());
+        assert!(fall.damage > 0 && world.btech.vehicles()[&id].is_destroyed());
         assert_eq!(
             world.btech.vehicles()[&id].position().unwrap().y,
             if crossed { 1 } else { 2 }

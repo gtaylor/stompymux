@@ -172,8 +172,6 @@ mod tests {
         ] {
             for seed in 0..=31 {
                 let request = |ammunition| WeaponGroupRequest {
-                    submerged: false,
-                    range_damage: false,
                     damage_penalty: 0,
                     weapon,
                     ammunition,
@@ -219,8 +217,6 @@ mod tests {
                             };
                             let mut groups = roll_weapon_groups(
                                 WeaponGroupRequest {
-                                    submerged: false,
-                                    range_damage: false,
                                     damage_penalty: 0,
                                     weapon,
                                     ammunition: mode,

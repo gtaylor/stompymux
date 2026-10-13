@@ -1,4 +1,4 @@
-//! Tactical vehicle catastrophes preserve containment policy and avoid unrelated battlefield damage.
+//! Fuel-tank explosions destroy internal-combustion vehicles regardless of CASE and persist.
 use crate::support;
 use stompymux_rs::*;
 
@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("test", template).unwrap(),
+        VehicleTemplate::parse("Demolisher", template).unwrap(),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -40,22 +40,23 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
         .unwrap();
 }
 
-/// Select a deterministic critical stream without consuming the live victim's dice.
-fn rules(table: VehicleCriticalTable) -> VehicleCriticalRules {
+fn rules() -> VehicleCriticalRules {
     VehicleCriticalRules {
-        rotor_damage_divisor: 0,
         extended_piloting: false,
-        vtol_table: None,
-        table,
-        enabled: true,
         combat_safe: false,
         toughness: false,
     }
 }
 
+/// A seed whose first 2d6 is twelve: Fuel Tank in the side and rear columns.
+fn twelve() -> u8 {
+    (0..=255)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
+        .unwrap()
+}
+
 #[tokio::test]
-async fn ground_powerplant_explosions_ignore_case_and_persist() {
-    use VehicleCriticalTable as T;
+async fn fuel_tank_explosions_ignore_case_and_persist() {
     for case in [false, true] {
         let text = if case {
             include_str!("../game/units/Demolisher.toml").replace(
@@ -66,26 +67,17 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
             include_str!("../game/units/Demolisher.toml").into()
         };
         let (_dir, config, mut world, id) = fixture(&text).await;
-        let value = (0..=255)
-            .find(|value| {
-                let mut dice = Dice::seeded([*value; 32]);
-                if dice.die(3).unwrap() == 2 {
-                    return false;
-                }
-                dice.d6() == 6
-            })
-            .unwrap();
-        seed(&mut world, id, value);
-        let mut dice = Dice::seeded([value; 32]);
-        dice.die(3).unwrap();
-        dice.d6();
-        let result = resolve_battle_vehicle_critical(
-            &mut world,
-            id,
-            VehicleSection::Turret,
-            rules(T::Standard),
-        )
-        .unwrap();
+        assert_eq!(
+            world.btech.vehicles()[&id].has_powerplant_containment(),
+            case
+        );
+        seed(&mut world, id, twelve());
+        let result =
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rear, rules()).unwrap();
+        assert_eq!(
+            result.selection.effect,
+            Some(VehicleCriticalEffect::FuelTank)
+        );
         let explosion = result.explosion.unwrap();
         assert!(!explosion.contained);
         assert_eq!(explosion.destroyed_sections.len(), 5);
@@ -98,6 +90,8 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
             assert_eq!(state.armor, 0);
         }
         assert_eq!(world.objects[&ObjectId(1)].location, Some(id));
+        let mut dice = Dice::seeded([twelve(); 32]);
+        dice.two_d6();
         assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), vec![dice.d6()]);
         persistence::save(&config.database(), &world).await.unwrap();
         assert_eq!(
@@ -108,12 +102,9 @@ async fn ground_powerplant_explosions_ignore_case_and_persist() {
 }
 
 #[tokio::test]
-async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
-    let text = include_str!("../game/units/Demolisher.toml").replace(
-        "[sections.aft_side]\n",
-        "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
-    );
-    let (_dir, config, mut world, id) = fixture(&text).await;
+async fn fuel_explosions_do_not_damage_nearby_units() {
+    let (_dir, config, mut world, id) =
+        fixture(include_str!("../game/units/Demolisher.toml")).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     let neighbor = world.create(&config, "Neighbor".into(), Kind::Thing);
     world.objects.get_mut(&neighbor).unwrap().home = Some(ObjectId(config.home()));
@@ -127,27 +118,11 @@ async fn fuel_explosions_ignore_case_and_do_not_damage_nearby_units() {
     support::seed_object_dice(&mut world, neighbor, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, neighbor, map, 0, 0).unwrap();
     let before = world.btech.vehicles()[&neighbor].clone();
-    let value = (0..=255)
-        .find(|value| {
-            let mut dice = Dice::seeded([*value; 32]);
-            dice.die(10).unwrap() > 5 && dice.d6() == 5
-        })
-        .unwrap();
-    seed(&mut world, id, value);
-    let result = resolve_battle_vehicle_critical(
-        &mut world,
-        id,
-        VehicleSection::Front,
-        rules(VehicleCriticalTable::Standard),
-    )
-    .unwrap();
-    assert!(!result.explosion.unwrap().contained);
-    assert!(
-        world.btech.vehicles()[&id]
-            .ammunition()
-            .iter()
-            .all(|rounds| *rounds == 0)
-    );
+    seed(&mut world, id, twelve());
+    let result =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules()).unwrap();
+    assert!(result.explosion.is_some());
+    assert!(world.btech.vehicles()[&id].is_destroyed());
     assert_eq!(world.btech.vehicles()[&neighbor], before);
 }
 
@@ -165,26 +140,15 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
     }
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/units/Demolisher.toml")).await;
-    let value = (0..=255)
-        .find(|value| {
-            let mut dice = Dice::seeded([*value; 32]);
-            dice.die(10).unwrap() > 5 && dice.d6() == 6
-        })
-        .unwrap();
-    seed(&mut world, id, value);
+    seed(&mut world, id, twelve());
     world
         .objects
         .get_mut(&id)
         .unwrap()
         .flags
         .insert(Flag::InCharacter);
-    let report = resolve_battle_vehicle_critical(
-        &mut world,
-        id,
-        VehicleSection::Front,
-        rules(VehicleCriticalTable::Standard),
-    )
-    .unwrap();
+    let report =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules()).unwrap();
     assert!(!report.explosion.unwrap().contained);
     assert!(world.btech.vehicles()[&id].crew_killed());
     assert!(
@@ -193,6 +157,23 @@ async fn case_requires_installed_equipment_and_character_explosions_record_crew_
             .values()
             .all(|state| state.internal == 0)
     );
+}
+
+#[tokio::test]
+async fn fusion_vehicles_take_an_engine_hit_instead_of_exploding() {
+    let fusion = support::templates::without_flags(
+        include_str!("../game/units/Demolisher.toml"),
+        &["ICEEngine_Tech"],
+    );
+    let (_dir, _config, mut world, id) = fixture(&fusion).await;
+    seed(&mut world, id, twelve());
+    let report =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules()).unwrap();
+    assert_eq!(report.selection.effect, Some(VehicleCriticalEffect::Engine));
+    assert!(report.explosion.is_none());
+    let vehicle = &world.btech.vehicles()[&id];
+    assert!(!vehicle.is_destroyed());
+    assert!(vehicle.engine_destroyed() && vehicle.immobilized());
 }
 
 #[tokio::test]
@@ -214,21 +195,10 @@ async fn carried_battlesuits_require_casualty_handling_before_explosion_commit()
     })
     .unwrap();
     world.btech = serde_json::from_value(state).unwrap();
-    let value = (0..=255)
-        .find(|value| {
-            let mut dice = Dice::seeded([*value; 32]);
-            dice.die(10).unwrap() > 5 && dice.d6() == 5
-        })
-        .unwrap();
-    seed(&mut world, id, value);
+    seed(&mut world, id, twelve());
     let before = world.btech.clone();
-    let error = resolve_battle_vehicle_critical(
-        &mut world,
-        id,
-        VehicleSection::Front,
-        rules(VehicleCriticalTable::Standard),
-    )
-    .unwrap_err();
+    let error =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules()).unwrap_err();
     assert!(error.to_string().contains("battlesuit"));
     assert_eq!(world.btech, before);
     assert_eq!(world.objects[&child].location, Some(id));
