@@ -164,7 +164,7 @@ async fn myomer_movement_heat_and_native_lua_controls() {
         1.0
     );
     assert_eq!(
-        base.btech.constructed_units()[&id].attacker_movement_modifier(false),
+        base.btech.constructed_units()[&id].attacker_movement_modifier(),
         1
     );
     myomer_test_heat(&mut base, id, 30.0, 8.999);
@@ -2356,12 +2356,7 @@ async fn charge_tracking_timeout_and_distance() {
     select_battle_charge(&mut world, id, ObjectId(1), ChargeSelection::Default).unwrap();
     let position = world.btech.constructed_units()[&target].position().unwrap();
     place_battle_unit(&mut world, target, position.map, 9, 9).unwrap();
-    let rules = MovementRules {
-        charge: ChargePolicy {
-            ..ChargePolicy::STANDARD
-        },
-        ..RULES
-    };
+    let rules = RULES;
     for _ in 0..65 {
         advance_battle_motion(&mut world, rules).unwrap();
     }
@@ -5800,6 +5795,19 @@ async fn character_shot_action_rolls_back_expenditure_and_replays() {
                     _config
                 };
                 shot_skill(&mut world, 0);
+                for skill in ["Gunnery-Missile", "Gunnery-Battlemech"] {
+                    set_battle_character_value(
+                        &mut world,
+                        ObjectId(1),
+                        skill,
+                        CharacterValue {
+                            value: 0,
+                            experience: 0,
+                            last_used: 0,
+                        },
+                    )
+                    .unwrap();
+                }
                 let index = world.btech.constructed_units()[&shooter]
                     .loadout()
                     .unwrap()
@@ -6048,6 +6056,19 @@ async fn character_firing_commands_match_and_rollback() {
                 };
                 let config = noisy_shot_config(_dir.path());
                 shot_skill(&mut world, 0);
+                for skill in ["Gunnery-Missile", "Gunnery-Battlemech"] {
+                    set_battle_character_value(
+                        &mut world,
+                        ObjectId(1),
+                        skill,
+                        CharacterValue {
+                            value: 0,
+                            experience: 0,
+                            last_used: 0,
+                        },
+                    )
+                    .unwrap();
+                }
                 let index = world.btech.constructed_units()[&shooter]
                     .loadout()
                     .unwrap()
@@ -6750,7 +6771,7 @@ fn noisy_shot_config(dir: &std::path::Path) -> stompymux_rs::Config {
 
 /// Train both fixture crews to finite BV modifiers while keeping the shot difficult enough for XP.
 fn train_battle_value_shot_crews(world: &mut stompymux_rs::World, target_pilot: ObjectId) {
-    for (pilot, level) in [(ObjectId(1), 6), (target_pilot, 3)] {
+    for (pilot, level) in [(ObjectId(1), 4), (target_pilot, 3)] {
         for skill in ["Gunnery-Laser", "Gunnery-Missile", "Piloting-Biped"] {
             stompymux_rs::set_battle_character_value(
                 world,

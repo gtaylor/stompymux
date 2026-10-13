@@ -225,11 +225,6 @@ async fn artillery_cluster_controls_feed_real_launches() {
 /// Deterministic conventional firing policy for shared damage checks.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }

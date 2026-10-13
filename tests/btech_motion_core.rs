@@ -964,25 +964,21 @@ async fn aim_breakdown_tracks_turning_equipment_and_heat_without_mutation() {
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
     let rules = AimRules {
-        woods_damage: false,
-        fasa_turning: true,
-        extended_movement: true,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     };
     stompymux_rs::refresh_battle_contacts(&mut world, &[shooter]).unwrap();
     let base = battle_aim_modifiers(&world, shooter, target, 0, 4, rules).unwrap();
     assert_eq!(base.distance, 2.0);
     assert_eq!(base.target_movement, -4);
-    assert_eq!(base.target_lock, 2);
-    assert_eq!(base.subtotal(), Some(2));
+    assert_eq!(base.target_lock, 0);
+    assert_eq!(base.subtotal(), Some(0));
+    // Turning in place is not movement (Total Warfare p. 117).
     set_battle_heading(&mut world, shooter, ObjectId(1), 90.0).unwrap();
     assert_eq!(
         battle_aim_modifiers(&world, shooter, target, 0, 4, rules)
             .unwrap()
             .attacker_movement,
-        1
+        0
     );
     set_battle_speed(&mut world, shooter, ObjectId(1), 10.0).unwrap();
     advance_battle_motion(&mut world, RULES).unwrap();
@@ -990,7 +986,7 @@ async fn aim_breakdown_tracks_turning_equipment_and_heat_without_mutation() {
         battle_aim_modifiers(&world, shooter, target, 0, 4, rules)
             .unwrap()
             .attacker_movement,
-        2
+        1
     );
     destroy_battle_critical(
         &mut world,
@@ -1853,12 +1849,10 @@ async fn contact_display_filters_unacquired_and_stale_targets_without_rerolls() 
     );
 }
 
-/// Target selection settles across a restart and clears once the contact is lost.
+/// Target selection survives a restart and clears once the contact is lost.
 #[tokio::test]
-async fn target_selection_settles_after_restart_and_clears_on_contact_loss() {
-    use stompymux_rs::{
-        Visibility, advance_battle_target_locks, select_battle_target, set_battle_visibility,
-    };
+async fn target_selection_survives_restart_and_clears_on_contact_loss() {
+    use stompymux_rs::{Visibility, select_battle_target, set_battle_visibility};
     let (_dir, config, mut world, id, target) = lock_fixture().await;
     let before = world.btech.clone();
     for (pilot, selected) in [
@@ -1870,30 +1864,22 @@ async fn target_selection_settles_after_restart_and_clears_on_contact_loss() {
         assert_eq!(world.btech, before);
     }
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    for _ in 0..3 {
-        assert!(advance_battle_target_locks(&mut world).is_empty());
-    }
     assert_eq!(
         world.btech.constructed_units()[&id]
             .target_lock()
             .unwrap()
-            .remaining,
-        5
+            .target,
+        target
     );
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
-    for _ in 0..4 {
-        assert!(advance_battle_target_locks(&mut world).is_empty());
-    }
-    assert_eq!(advance_battle_target_locks(&mut world).len(), 1);
     assert_eq!(
         world.btech.constructed_units()[&id]
             .target_lock()
             .unwrap()
-            .remaining,
-        0
+            .target,
+        target
     );
-    assert!(advance_battle_target_locks(&mut world).is_empty());
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     // An adjacent target is always within sight; only invisibility takes it away.
@@ -1912,15 +1898,12 @@ async fn target_selection_settles_after_restart_and_clears_on_contact_loss() {
             .unwrap()
             .is_empty()
     );
-    for _ in 0..8 {
-        assert!(advance_battle_target_locks(&mut world).is_empty());
-    }
     assert_eq!(
         world.btech.constructed_units()[&id]
             .target_lock()
             .unwrap()
-            .remaining,
-        0
+            .target,
+        target
     );
     let events = stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
     assert_eq!(events.len(), 1);
@@ -1998,13 +1981,13 @@ async fn target_selection_command_and_lua_share_guards_and_rollback() {
             .target,
         target
     );
-    let remaining: u8 = scripts
+    let selected: i64 = scripts
         .eval_callback(&format!(
-            "return btech.unit.state({}).target_lock.remaining",
+            "return btech.unit.state({}).target_lock.target",
             id.0
         ))
         .unwrap();
-    assert_eq!(remaining, 8);
+    assert_eq!(selected, target.0);
     let before = scripts.world().btech.clone();
     assert!(
         scripts
@@ -2039,38 +2022,15 @@ async fn target_selection_command_and_lua_share_guards_and_rollback() {
 }
 
 #[tokio::test]
-async fn target_lock_server_completion_retries_failed_commit() {
-    use sqlx::Connection;
-    tokio::task::LocalSet::new().run_until(async {
-        let (_dir, config, mut world, id, target) = lock_fixture().await;
-        stompymux_rs::select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
-        for _ in 0..7 { stompymux_rs::advance_battle_target_locks(&mut world); }
-        persistence::save(&config.database(), &world).await.unwrap();
-        let before = world.btech.clone();
-        let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        // The lock settling removes a timer row; refuse the commit at the snapshot stamp.
-        sqlx::query("CREATE TRIGGER deny_lock BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'lock failure'); END").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, task, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        heartbeats.attempt().await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
-        sqlx::query("DROP TRIGGER deny_lock").execute(&mut sql).await.unwrap();
-        heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].target_lock().unwrap().remaining == 0).await;
-        shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
-        task.await.unwrap().unwrap();
-    }).await;
-}
-
-#[tokio::test]
 async fn target_lock_rejects_corrupt_state_and_clears_on_destruction() {
     let (_dir, config, mut world, id, target) = lock_fixture().await;
     stompymux_rs::select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    for (selected, remaining) in [(id.0, 8), (999999, 8), (target.0, 9)] {
+    for selected in [id.0, 999999] {
         let mut corrupt = world.clone();
         corrupt
             .btech
             .rewrite_unit_record(id, |record| {
-                record["target_lock"] =
-                    serde_json::json!({"target":selected,"remaining":remaining});
+                record["target_lock"] = serde_json::json!({"target":selected});
             })
             .unwrap();
         assert!(corrupt.validate(&config).is_err());
@@ -2088,9 +2048,11 @@ async fn target_lock_rejects_corrupt_state_and_clears_on_destruction() {
     world.validate(&config).unwrap();
 }
 
+/// Total Warfare p. 108: the selected lock is the primary target; any other target is a
+/// secondary one at +1 in the forward arc or +2 elsewhere, keyed on that target's own arc.
 #[tokio::test]
-async fn aim_lock_penalty_follows_selected_target_and_committed_settling() {
-    use stompymux_rs::{advance_battle_target_locks, battle_aim_modifiers, select_battle_target};
+async fn aim_lock_penalty_follows_selected_target_and_secondary_arcs() {
+    use stompymux_rs::{battle_aim_modifiers, select_battle_target};
     let (_dir, config, mut world, id, rear) = lock_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let front = world.create(&config, "Forward target".into(), Kind::Thing);
@@ -2108,25 +2070,22 @@ async fn aim_lock_penalty_follows_selected_target_and_committed_settling() {
             .unwrap()
             .target_lock
     };
-    assert_eq!(penalty(&world, front), 2); // No selection, even though the shot is forward.
-    select_battle_target(&mut world, id, ObjectId(1), Some(rear)).unwrap();
-    assert_eq!(penalty(&world, rear), 2);
-    assert_eq!(penalty(&world, front), 2); // Arc belongs to the selected rear target.
-    for _ in 0..8 {
-        advance_battle_target_locks(&mut world);
-    }
+    assert_eq!(penalty(&world, front), 0); // No selection: the shot's target is primary.
     assert_eq!(penalty(&world, rear), 0);
-    assert_eq!(penalty(&world, front), 2);
+    select_battle_target(&mut world, id, ObjectId(1), Some(rear)).unwrap();
+    assert_eq!(penalty(&world, rear), 0);
+    assert_eq!(penalty(&world, front), 1); // Secondary target in the forward arc.
     select_battle_target(&mut world, id, ObjectId(1), Some(front)).unwrap();
-    assert_eq!(penalty(&world, front), 1);
-    assert_eq!(penalty(&world, rear), 1);
+    assert_eq!(penalty(&world, front), 0);
+    assert_eq!(penalty(&world, rear), 2); // Secondary target behind the attacker.
     stompymux_rs::rotate_battle_torso(&mut world, id, ObjectId(1), stompymux_rs::Torso::Right)
         .unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 30.0).unwrap();
     for _ in 0..30 {
         advance_battle_motion(&mut world, RULES).unwrap();
     }
-    assert_eq!(penalty(&world, front), 2); // Torso and heading together put selection to the side.
+    select_battle_target(&mut world, id, ObjectId(1), Some(rear)).unwrap();
+    assert_eq!(penalty(&world, front), 2); // Torso and heading together put the front unit to the side.
     let mut rules = optical_aim_rules();
     rules.override_weapon_arcs = true;
     assert_eq!(
@@ -2262,9 +2221,9 @@ async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
             Some(stompymux_rs::DetectionChannel::Sight)
         );
         assert_eq!(perception.modifier, expected, "{tile}");
-        // Gunnery 4 + off target -4 + no lock 2 + moonless night 3 + perception contribution.
+        // Gunnery 4 + immobile target -4 + moonless night 3 + perception contribution.
         assert_eq!(aim.light, 3);
-        assert_eq!(aim.subtotal(), Some(5 + i32::from(expected)));
+        assert_eq!(aim.subtotal(), Some(3 + i32::from(expected)));
     }
 }
 
@@ -2364,7 +2323,7 @@ async fn pilot_gunnery_uses_current_family_skills_connection_and_signed_targets(
     .unwrap();
     let aim = battle_pilot_aim_modifiers(&world, id, target, 0, true, optical_aim_rules()).unwrap();
     assert_eq!(aim.gunnery, -4);
-    assert_eq!(aim.subtotal(), Some(-6)); // -4 gunnery -4 immobile target +2 unlocked.
+    assert_eq!(aim.subtotal(), Some(-8)); // -4 gunnery -4 immobile target.
     world
         .objects
         .get_mut(&pilot)
@@ -2409,7 +2368,7 @@ async fn signed_aim_subtotal_does_not_overflow_at_supplied_skill_limits() {
         let aim =
             stompymux_rs::battle_aim_modifiers(&world, id, target, 0, gunnery, optical_aim_rules())
                 .unwrap();
-        assert_eq!(aim.subtotal(), Some(i32::from(gunnery) - 2));
+        assert_eq!(aim.subtotal(), Some(i32::from(gunnery) - 4));
     }
 }
 
@@ -2427,7 +2386,7 @@ async fn direct_shot_hit_threshold_and_expenditure_match_manual_composition() {
     shot_seed(&mut base, id, seed);
     shot_seed(&mut base, target, 17);
     // A roll one under the target hits without glancing; one over misses.
-    for (level, hit) in [(10 - roll, true), (8 - roll, false)] {
+    for (level, hit) in [(8 - roll, true), (6 - roll, false)] {
         let mut world = base.clone();
         shot_skill(&mut world, level);
         let mut expected = world.clone();
@@ -3081,7 +3040,7 @@ async fn prone_posture_changes_los_and_aim_at_adjacent_and_distant_ranges() {
     );
     let _fall = stompymux_rs::resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
     assert_eq!(
-        world.btech.constructed_units()[&id].attacker_movement_modifier(false),
+        world.btech.constructed_units()[&id].attacker_movement_modifier(),
         2
     );
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -3133,7 +3092,7 @@ async fn successful_stand_is_upright_immediately_and_finishes_after_durable_dela
         Posture::Standing
     );
     assert_eq!(
-        world.btech.constructed_units()[&id].attacker_movement_modifier(false),
+        world.btech.constructed_units()[&id].attacker_movement_modifier(),
         2
     );
     let before = world.btech.clone();
@@ -4792,23 +4751,26 @@ async fn direct_glancing_blows_resolve_exact_boundaries_and_replay_after_restart
     use stompymux_rs::resolve_battle_shot;
     let (_dir, config, mut base, id, target) = shot_fixture().await;
     let seed = (0..=255)
-        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 7)
+        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 6)
         .unwrap();
     shot_seed(&mut base, id, seed);
     // An ordinary torso location keeps the comparison independent of pilot protection rolls.
-    shot_seed(&mut base, target, seed);
+    let location_seed = (0..=255)
+        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 7)
+        .unwrap();
+    shot_seed(&mut base, target, location_seed);
     // Tactical Operations p. 79 glancing blows: a roll exactly equal to the target number hits
     // for half damage, rounded down for a single five-point shot.
     for (ordinary_target, damage, glancing) in
-        [(6, Some(5), false), (7, Some(2), true), (8, None, false)]
+        [(5, Some(5), false), (6, Some(2), true), (7, None, false)]
     {
         let mut world = base.clone();
-        shot_skill(&mut world, 9 - ordinary_target);
+        shot_skill(&mut world, 7 - ordinary_target);
         let rules = shot_rules();
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
         let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
-        assert_eq!(report.roll, 7);
+        assert_eq!(report.roll, 6);
         assert_eq!(report.target_number, Some(i32::from(ordinary_target)));
         assert_eq!(report.glancing, glancing);
         assert_eq!(
@@ -4872,13 +4834,13 @@ async fn direct_glancing_blows_resolve_exact_boundaries_and_replay_after_restart
 async fn direct_glancing_missiles_spend_full_salvo_and_apply_reduced_clusters() {
     use stompymux_rs::{Weapon, resolve_battle_shot};
     let (_dir, config, mut base, id, target) = shot_fixture().await;
-    shot_skill(&mut base, 2);
+    shot_skill(&mut base, 0);
     stompymux_rs::set_battle_character_value(
         &mut base,
         ObjectId(1),
         "Gunnery-Missile",
         stompymux_rs::CharacterValue {
-            value: 2,
+            value: 0,
             experience: 0,
             last_used: 0,
         },
@@ -4925,7 +4887,7 @@ async fn direct_glancing_missiles_spend_full_salvo_and_apply_reduced_clusters() 
 #[tokio::test]
 async fn fire_command_lists_weapons_rejects_invalid_requests_and_reports_glancing_hits() {
     let (_dir, config, mut world, id, target) = shot_fixture().await;
-    shot_skill(&mut world, 2);
+    shot_skill(&mut world, 0);
     let seed = (0..=255)
         .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 7)
         .unwrap();
@@ -5698,7 +5660,7 @@ async fn overheat_server_retries_shutdown_without_advancing_the_failed_clock_or_
 async fn lua_firing_matches_native_commands_and_returns_detached_weapon_and_shot_tables() {
     for selected in [false, true] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
-        shot_skill(&mut world, 2);
+        shot_skill(&mut world, 0);
         let seed = (0..=255)
             .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 7)
             .unwrap();
@@ -5733,7 +5695,7 @@ async fn lua_firing_matches_native_commands_and_returns_detached_weapon_and_shot
             .eval_callback(&format!("return btech.unit.fire({},1,0,{argument})", id.0))
             .unwrap();
         assert_eq!(report.get::<u8>("roll").unwrap(), 7);
-        assert_eq!(report.get::<bool>("glancing").unwrap(), !selected);
+        assert!(report.get::<bool>("glancing").unwrap());
         assert_eq!(report.get::<i64>("target").unwrap(), target.0);
         assert!(matches!(
             report.get::<mlua::Value>("dice").unwrap(),
@@ -5846,13 +5808,13 @@ async fn lua_firing_misses_and_optional_state_use_nil_without_losing_expenditure
     let (_dir, config, mut world, id, target) = shot_fixture().await;
     shot_skill(&mut world, 0);
     let seed = (0..=255)
-        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 7)
+        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 6)
         .unwrap();
     shot_seed(&mut world, id, seed);
     let before_target = world.btech.constructed_units()[&target].clone();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let result: (bool, bool, bool, u8) = scripts.eval_callback(&format!("local shot=btech.unit.fire({},1,0,{}); local state=btech.unit.state({}); return shot.salvo==nil,#shot.expenditure.ammunition==0,state.target_lock==nil and state.stand_timer==nil,shot.roll", id.0,target.0,id.0)).unwrap();
-    assert_eq!(result, (true, true, true, 7));
+    assert_eq!(result, (true, true, true, 6));
     assert_eq!(
         scripts.world().btech.constructed_units()[&target],
         before_target
@@ -6552,7 +6514,7 @@ async fn flamer_selections_preserve_order_partial_errors_and_transaction_rollbac
 async fn pulse_accuracy_changes_a_miss_to_a_glancing_hit() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = shot_fixture().await;
-    shot_skill(&mut base, 4);
+    shot_skill(&mut base, 2);
     let mut variants = Vec::new();
     for weapon in [Weapon::SmallLaser, Weapon::SmallPulseLaser] {
         let mut world = base.clone();

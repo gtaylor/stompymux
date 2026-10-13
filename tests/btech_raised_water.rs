@@ -256,11 +256,6 @@ fn shot_rules() -> ShotRules {
         tsm_tow_bonus: true,
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
         aim: AimRules {
-            woods_damage: false,
-            fasa_turning: false,
-            extended_movement: false,
-            extended_ranges: false,
-            hotload_half_minimum: false,
             override_weapon_arcs: true,
         },
         extended_gunnery: false,

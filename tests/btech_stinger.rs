@@ -72,43 +72,27 @@ fn stinger_templates_and_capacity() {
 #[test]
 fn stinger_reach_extends_only_maximum_range() {
     let weapon = Weapon::Lrm5;
-    for extended in [false, true] {
-        let maximum = if extended { 35.0 } else { 28.0 };
-        for distance in [
-            0.0, 6.0, 7.0, 14.0, 21.0, 21.001, 21.051, 28.0, 28.001, 35.0, 35.001,
-        ] {
-            let range = weapon
-                .range_modifier_for_ammunition(
-                    distance,
-                    extended,
-                    FireMode::Normal,
-                    false,
-                    AmmunitionMode::Stinger,
-                )
-                .unwrap();
-            if distance > maximum {
-                assert!(range.is_none());
-                continue;
-            }
-            if distance <= 21.0 {
-                assert_eq!(range, weapon.range_modifier(distance, extended).unwrap());
-            } else if distance < 21.05 {
-                assert_eq!(
-                    range.unwrap(),
-                    WeaponRange {
-                        bracket: RangeBracket::Long,
-                        modifier: 4
-                    }
-                );
-            } else {
-                assert_eq!(
-                    range.unwrap(),
-                    WeaponRange {
-                        bracket: RangeBracket::Extreme,
-                        modifier: 8
-                    }
-                );
-            }
+    let maximum = 28.0;
+    for distance in [
+        0.0, 6.0, 7.0, 14.0, 21.0, 21.001, 21.051, 28.0, 28.001, 35.0,
+    ] {
+        let range = weapon
+            .range_modifier_for_ammunition(distance, FireMode::Normal, AmmunitionMode::Stinger)
+            .unwrap();
+        if distance > maximum {
+            assert!(range.is_none());
+            continue;
+        }
+        if distance <= 21.0 {
+            assert_eq!(range, weapon.range_modifier(distance).unwrap());
+        } else {
+            assert_eq!(
+                range.unwrap(),
+                WeaponRange {
+                    bracket: RangeBracket::Long,
+                    modifier: 4
+                }
+            );
         }
     }
     for weapon in [
@@ -119,25 +103,13 @@ fn stinger_reach_extends_only_maximum_range() {
     ] {
         assert!(
             weapon
-                .range_modifier_for_ammunition(
-                    2.0,
-                    false,
-                    FireMode::Normal,
-                    false,
-                    AmmunitionMode::Stinger
-                )
+                .range_modifier_for_ammunition(2.0, FireMode::Normal, AmmunitionMode::Stinger)
                 .is_err()
         );
     }
     assert_eq!(
         weapon
-            .range_modifier_for_ammunition(
-                1.0,
-                false,
-                FireMode::Hotload,
-                false,
-                AmmunitionMode::Stinger
-            )
+            .range_modifier_for_ammunition(1.0, FireMode::Hotload, AmmunitionMode::Stinger)
             .unwrap()
             .unwrap()
             .modifier,

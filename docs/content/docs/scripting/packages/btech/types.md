@@ -446,7 +446,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `sensor_sweep`: `integer|nil` — This turn's 2d6 sensor sweep, once rolled.
 - `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits.
 - `aimed_section`: `AimSelection|nil` — Saved anatomy preference; independent of the current lock.
-- `target_lock`: `TargetLock|HexLock|nil` — Saved selection and settling countdown.
+- `target_lock`: `TargetLock|HexLock|nil` — Saved selection.
 - `artillery_adjustment`: `integer` — Saved correction for the selected artillery coordinate.
 - `c3_hardware`: `{masters: integer, working_masters: integer, slave_installed: boolean, slave_operational: boolean, c3i_installed: boolean, c3i_operational: boolean}` — Installed and working command-network computers; independent of power and membership.
 - `c3i_members`: `integer[]` — Eligible members in the improved command network.
@@ -830,7 +830,6 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}|nil` — Active command-network range; physical limits and firing visibility remain separate.
 - `range`: `{bracket: string, modifier: integer}|nil`
 - `attacker_movement`: `integer`
-- `woods_cover`: `integer` — Configured occupied-forest accuracy credit: zero, minus one or minus two.
 - `target_movement`: `integer` — Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
 - `bogged_down`: `integer` — Minus two against a target stuck in soft ground.
 - `orbital_drop`: `integer` — Minus two while the target has an intact cocoon; zero after a breach.
@@ -844,7 +843,6 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `aimed_section`: `integer` — Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
 - `beacon_accuracy`: `integer` — Haywire interference and iNarc homing assistance.
 - `ammunition_accuracy`: `integer` — Selected ammunition adjustment; LB-X cluster is -3 versus VTOLs, otherwise -1; Stinger is -3 versus flying VTOLs and -1 during orbital descent.
-- `targeting_mode`: `integer` — Scenario tracking-mode adjustment, separate from installed computer equipment.
 - `weapon_accuracy`: `integer` — Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 - `target_lock`: `integer`
 - `perception`: `{channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil` — Nil unless the shooter or its side holds the target as a contact; direct_fire is false behind blocking terrain.
@@ -919,8 +917,6 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 ## MechSalvoReport
 
-- `initial_woods`: `WoodsAbsorption|nil` — Nominal LBX terrain check before pellet counting and absorption.
-- `woods`: `WoodsAbsorption|nil` — Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 - `missiles_before_defense`: `integer|nil` — Cluster hits before automatic defenses.
 - `cluster_roll`: `integer|nil` — Original missile cluster roll; nil for direct non-missile hits.
 - `inferno`: `InfernoHit|nil` — Burning replaces armor damage.
@@ -1019,7 +1015,6 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `expenditure`: `WeaponUse`
 - `salvo`: `{kind: 'mech'|'vehicle'|'swarm', report: table}|nil` — Target-specific damage; nil on a miss or a heat-mode hit.
 - `heat_transfer`: `integer` — Heat already added to the target, zero unless a heat-mode shot hits.
-- `thermal_woods`: `WoodsAbsorption|nil` — Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
 - `missed_terrain`: `WoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 - `missed_building`: `StrayHit|nil` — A miss from the next hex that struck the building around a target inside one.
 - `cooling`: `number?` — Coolant reduction applied to stored heat, including temporary negative credit.
@@ -1050,7 +1045,6 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `narc`: `NarcReport|nil` — Beacon attachment or interception; vehicle sections use their own names.
 - `cooling`: `number|nil` — Coolant removed from target stored heat.
 - `heat_transfer`: `integer` — Direct flamer heat added to the target, otherwise zero.
-- `thermal_woods`: `WoodsAbsorption|nil` — Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
 - `missed_terrain`: `WoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 - `missed_building`: `StrayHit|nil` — A miss from the next hex that struck the building around a target inside one.
 - `salvo`: `{kind: 'mech'|'vehicle'|'swarm', report: table}|nil` — Target-specific ordered damage groups.
@@ -1066,8 +1060,6 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 
 ## VehicleSalvoReport
 
-- `initial_woods`: `WoodsAbsorption|nil` — Nominal LBX terrain check before pellet counting and absorption.
-- `woods`: `WoodsAbsorption|nil` — Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 - `experience`: `table[]` — Per-packet optional pre-impact XP awards.
 - `experience_messages`: `table[]` — Ordered experience diagnostics.
 - `cluster_roll`: `integer|nil`

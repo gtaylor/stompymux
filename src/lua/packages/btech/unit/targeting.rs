@@ -93,7 +93,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 crate::HexCoordinate { x, y },
                 weapon,
                 config.battletech.extended_gunnery != 0,
-                crate::AimRules::configured(&config.battletech),
             )
             .map_err(mlua::Error::external)?;
             let result = detached(lua, &report)?;

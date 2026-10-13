@@ -161,12 +161,7 @@ pub(super) fn mech_salvo_notices(
     target: ObjectId,
     private: &mut Vec<super::PilotNotice>,
 ) -> Vec<Notice> {
-    let mut notices = salvo
-        .initial_woods
-        .iter()
-        .chain(salvo.woods.iter())
-        .flat_map(|woods| woods.notices.iter().cloned())
-        .collect::<Vec<_>>();
+    let mut notices = Vec::new();
     if let Some(inferno) = &salvo.inferno {
         notices.extend(inferno.notices.iter().cloned());
     }
@@ -205,12 +200,7 @@ pub(super) fn vehicle_salvo_notices(
     target: ObjectId,
     private: &mut Vec<super::PilotNotice>,
 ) -> Vec<Notice> {
-    let mut notices = salvo
-        .initial_woods
-        .iter()
-        .chain(salvo.woods.iter())
-        .flat_map(|woods| woods.notices.iter().cloned())
-        .collect::<Vec<_>>();
+    let mut notices = Vec::new();
     for group in &salvo.groups {
         super::piloting::append_feedback(
             private,

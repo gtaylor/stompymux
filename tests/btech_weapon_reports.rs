@@ -80,9 +80,7 @@ async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
                 .iter()
                 .all(|row| row.condition == EquipmentCondition::Operational)
         );
-        let specs =
-            battle_weapon_specifications(&scripts.world(), id, config.battletech.erange != 0)
-                .unwrap();
+        let specs = battle_weapon_specifications(&scripts.world(), id).unwrap();
         let distinct = diagnostics
             .iter()
             .map(|row| row.weapon.name())
@@ -117,12 +115,7 @@ async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
             ),
             (
                 "weaponspecs",
-                battle_weapon_specification_text(
-                    &scripts.world(),
-                    id,
-                    config.battletech.erange != 0,
-                )
-                .unwrap(),
+                battle_weapon_specification_text(&scripts.world(), id).unwrap(),
             ),
         ] {
             let native = support::run_text(
@@ -151,10 +144,7 @@ async fn reports_share_chassis_state_and_preserve_empty_ammunition() {
         persistence::save(&config.database(), &saved).await.unwrap();
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(battle_weapon_diagnostics(&loaded, id).unwrap(), diagnostics);
-        assert_eq!(
-            battle_weapon_specifications(&loaded, id, config.battletech.erange != 0).unwrap(),
-            specs
-        );
+        assert_eq!(battle_weapon_specifications(&loaded, id).unwrap(), specs);
     }
 }
 
@@ -173,15 +163,11 @@ async fn report_access_and_artillery_ranges() {
         );
         let output = support::run_text(&scripts, &config, ObjectId(1), 1, "weaponspecs");
         assert!(output.contains("Weapons statistics for"));
-        for row in battle_weapon_specifications(&scripts.world(), id, true).unwrap() {
+        for row in battle_weapon_specifications(&scripts.world(), id).unwrap() {
             let profile = row.weapon.profile();
             let normal =
                 u16::from(profile.long_range) * if row.weapon.is_artillery() { 20 } else { 1 };
             assert_eq!(row.long_range, normal);
-            assert_eq!(
-                row.extended_range,
-                Some(normal.max(u16::from(profile.medium_range) * 2))
-            );
         }
     }
 }
@@ -206,7 +192,7 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
             .unwrap()
             .contains("Slot status")
     );
-    let specs = battle_weapon_specifications(&world, id, false).unwrap();
+    let specs = battle_weapon_specifications(&world, id).unwrap();
     destroy_battle_critical(&mut world, id, location).unwrap();
     world.validate(&config).unwrap();
     let destroyed = &battle_weapon_diagnostics(&world, id).unwrap()[index];
@@ -218,10 +204,7 @@ async fn damage_and_vehicle_failures_are_distinct_from_readiness() {
             .unwrap()
             .contains("Slot status: Destroyed: 1. Disabled: 0")
     );
-    assert_eq!(
-        battle_weapon_specifications(&world, id, false).unwrap(),
-        specs
-    );
+    assert_eq!(battle_weapon_specifications(&world, id).unwrap(), specs);
 
     let (_dir, _config, mut world, id) = fixture(
         "Demolisher",
@@ -266,19 +249,15 @@ async fn specification_menu_matches_reference_columns_and_preserves_state() {
     for (reference, source) in templates() {
         let (_dir, config, world, id) = fixture(reference, &source, false).await;
         let before = world.btech.clone();
-        for extended in [false, true] {
-            let report = battle_weapon_specification_text(&world, id, extended).unwrap();
+        {
+            let report = battle_weapon_specification_text(&world, id).unwrap();
             assert!(report.lines().all(|line| text::width(line) == 78));
             let plain = text::plain(&report);
             let lines: Vec<_> = plain.lines().collect();
             assert_eq!(lines[0], "-".repeat(78));
             assert_eq!(lines[3], lines[0]);
             assert_eq!(lines.last().copied().unwrap(), lines[0]);
-            let header = if extended {
-                "Weapon Name             Heat  Damage  Range: Min Short Med Long Ext VRT"
-            } else {
-                "Weapon Name             Heat  Damage  Range: Min  Short  Med  Long  VRT"
-            };
+            let header = "Weapon Name             Heat  Damage  Range: Min  Short  Med  Long  VRT";
             assert_eq!(lines[2].trim_end(), header);
             let palette = text::Palette::default();
             let spans = text::Document::Styled(report.clone())
@@ -306,11 +285,7 @@ async fn specification_menu_matches_reference_columns_and_preserves_state() {
                     .unwrap();
                 assert_eq!(
                     laser.trim_end(),
-                    if extended {
-                        "IS.MediumLaser            3      5            0   3     6    9   12 20"
-                    } else {
-                        "IS.MediumLaser            3      5            0     3      6    9   20"
-                    }
+                    "IS.MediumLaser            3      5            0     3      6    9   20"
                 );
             }
         }

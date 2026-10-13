@@ -532,7 +532,6 @@ async fn runtime_hardware_zeroes_change_gameplay_and_survive_restart_scenario(f:
         ] {
             assert_eq!(field(&report, name), Some(expected));
         }
-        assert_eq!(field(&report, "targcomp"), Some("0"));
         {
             let world = native.world();
             let (ranges, radio, channels) =
@@ -1584,7 +1583,7 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
                     .and_then(Vehicle::target_selection)
             })
             .unwrap();
-        assert_eq!(selected.remaining(), 8);
+        assert_eq!(selected, TargetSelection::Unit(TargetLock { target }));
         let before = lua.world().btech.clone();
         for (name, values) in [
             (
@@ -2364,9 +2363,9 @@ async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_e
             );
             let saved = lua.world().clone();
             let penalty = if let Some(unit) = saved.btech.constructed_units().get(&id) {
-                unit.attacker_movement_modifier(false)
+                unit.attacker_movement_modifier()
             } else {
-                saved.btech.vehicles()[&id].attacker_movement_modifier(false)
+                saved.btech.vehicles()[&id].attacker_movement_modifier()
             };
             assert_eq!(
                 penalty,

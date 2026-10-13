@@ -145,7 +145,7 @@ impl<'a> UnitRef<'a> {
         /// Accumulated trajectory correction for the currently selected target.
         pub fn artillery_adjustment(&self) -> u8;
         /// Jumping and stabilization precede ground speed and the template's walking threshold.
-        pub fn attacker_movement_modifier(&self, fasa_turning: bool) -> u8;
+        pub fn attacker_movement_modifier(&self) -> u8;
         /// Whether the pilot has opted to fall off cliffs without an avoidance check.
         pub fn auto_fall(&self) -> bool;
         /// Whether routine contact notices include targets whose reactors are not running.

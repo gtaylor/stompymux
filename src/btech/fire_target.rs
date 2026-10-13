@@ -207,7 +207,7 @@ pub(super) fn check_target_safety_for_source(
             .constructed_units()
             .get(&target)
             .is_some_and(|unit| unit.stealth().enabled)
-            || lock.is_some_and(|lock| lock.target == target && lock.remaining == 0),
+            || lock.is_some_and(|lock| lock.target == target),
         "You need a stable lock to fire on that target!"
     );
     if weapon == Weapon::CoolantGun || source.signature.team != recipient.signature.team {

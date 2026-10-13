@@ -146,13 +146,11 @@ pub(crate) enum Timer {
     PodRemoval = 37,
     /// `vtol_fuel.remaining`.
     VtolFuel = 38,
-    /// `target_lock.remaining`, for a unit or coordinate lock still settling.
-    TargetLock = 39,
 }
 
 impl Timer {
     /// Every timer, in code order.
-    pub(crate) const ALL: [Self; 34] = [
+    pub(crate) const ALL: [Self; 33] = [
         Self::Startup,
         Self::OverheatElapsed,
         Self::OverheatPhase,
@@ -186,7 +184,6 @@ impl Timer {
         Self::TurretRepair,
         Self::PodRemoval,
         Self::VtolFuel,
-        Self::TargetLock,
     ];
 
     /// The code stored in a timer row.
@@ -261,7 +258,6 @@ impl Timer {
             Self::TurretRepair => Ok(format!("/turret_repairs/{slot}")),
             Self::PodRemoval => fixed("/pod_removal"),
             Self::VtolFuel => fixed("/vtol_fuel/remaining"),
-            Self::TargetLock => fixed("/target_lock/remaining"),
         }
     }
 }

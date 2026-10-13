@@ -167,17 +167,14 @@ async fn mixed_spotters_share_native_lua_links_and_indirect_fire() {
         .unwrap();
         let shot = Scripts::new(&config, Rc::new(RefCell::new(prepared.clone()))).unwrap();
         let command = format!(
-            "local r=btech.unit.fire({},1,{index}); return r.target,r.aim.indirect.spotter,r.aim.target_lock,r.aim.indirect.target_lock,r.aim.indirect.movement",
+            "local r=btech.unit.fire({},1,{index}); return r.target,r.aim.indirect.spotter,r.aim.target_lock,r.aim.indirect.movement",
             ids[0].0
         );
-        let result: (i64, i64, i32, i32, u8) = shot.eval_callback(&command).unwrap();
-        assert_eq!(
-            result,
-            (ids[2].0, ids[1].0, 0, 2, u8::from(vehicle_observer))
-        );
+        let result: (i64, i64, i32, u8) = shot.eval_callback(&command).unwrap();
+        assert_eq!(result, (ids[2].0, ids[1].0, 0, u8::from(vehicle_observer)));
         assert_eq!(
             restored
-                .eval_callback::<(i64, i64, i32, i32, u8)>(&command)
+                .eval_callback::<(i64, i64, i32, u8)>(&command)
                 .unwrap(),
             result
         );
@@ -447,9 +444,6 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
             .unwrap();
         select_battle_hex_target(&mut world, shooter, ObjectId(1), hex, HexTargetMode::Clear)
             .unwrap();
-        for _ in 0..8 {
-            advance_battle_target_locks(&mut world);
-        }
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();

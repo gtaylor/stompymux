@@ -148,7 +148,6 @@ impl StealthRange for WeaponRange {
             self.modifier += match self.bracket {
                 RangeBracket::Medium => 1,
                 RangeBracket::Long => 2,
-                RangeBracket::Extreme => 4,
                 _ => 0,
             };
         }

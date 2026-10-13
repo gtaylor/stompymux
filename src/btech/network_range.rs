@@ -63,7 +63,7 @@ fn bracket(weapon: Weapon, physical: f64, shared: f64, submerged: bool) -> Optio
         (
             profile.short_range,
             profile.medium_range,
-            profile.effective_range(false),
+            profile.effective_range(),
         )
     } else {
         let profile = weapon.profile();

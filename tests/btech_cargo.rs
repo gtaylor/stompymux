@@ -974,7 +974,7 @@ async fn inventory_cleanup_preserves_installed_units_and_stock() {
         }
         set_battle_inventory_named(&mut world, ObjectId(1), unit, "Gold", 7).unwrap();
         set_battle_inventory_quantity(&mut world, ObjectId(1), unit, 535, 3).unwrap();
-        let installed = battle_weapon_specifications(&world, unit, true).unwrap();
+        let installed = battle_weapon_specifications(&world, unit).unwrap();
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let before = lua.world().btech.clone();
@@ -1010,7 +1010,7 @@ async fn inventory_cleanup_preserves_installed_units_and_stock() {
         );
         assert_eq!(native.world().btech, lua.world().btech);
         assert_eq!(
-            battle_weapon_specifications(&lua.world(), unit, true).unwrap(),
+            battle_weapon_specifications(&lua.world(), unit).unwrap(),
             installed
         );
         let stock = battle_inventory(&lua.world(), unit).unwrap().to_vec();

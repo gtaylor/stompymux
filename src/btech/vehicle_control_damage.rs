@@ -101,13 +101,13 @@ impl Vehicle {
     }
 
     /// Movement contribution for one weapon, doubled by damage to its section's stabilizers.
-    pub fn weapon_movement_modifier(&self, index: usize, fasa_turning: bool) -> Result<u8> {
+    pub fn weapon_movement_modifier(&self, index: usize) -> Result<u8> {
         let loadout = self.loadout()?;
         let mount = loadout
             .weapons
             .get(index)
             .context("Weapon index out of bounds")?;
-        Ok(self.attacker_movement_modifier(fasa_turning)
+        Ok(self.attacker_movement_modifier()
             * if self.lost_stabilizers.contains(&mount.criticals[0].section) {
                 2
             } else {
@@ -116,8 +116,8 @@ impl Vehicle {
     }
 
     /// Combined shooter control contribution; range, skill, target and equipment modifiers remain separate.
-    pub fn weapon_control_modifier(&self, index: usize, fasa_turning: bool) -> Result<u8> {
-        Ok(self.weapon_movement_modifier(index, fasa_turning)? + self.gunnery_damage)
+    pub fn weapon_control_modifier(&self, index: usize) -> Result<u8> {
+        Ok(self.weapon_movement_modifier(index)? + self.gunnery_damage)
     }
 
     fn add_piloting_damage(&mut self, amount: u8) {

@@ -174,11 +174,6 @@ async fn shared_sightings_admit_attacks_but_do_not_leak_hidden_changes() {
         t.submit({{unit=b_id,expected_revision=1,mode=a.submission_modes.APPEND,orders={{kind=a.orders.MOVE,destination={map=map_id,x=0,y=7}}}}})
     "#).unwrap();
     let rules = AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     };
     {

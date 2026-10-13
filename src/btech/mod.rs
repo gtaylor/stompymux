@@ -343,7 +343,7 @@ pub use scanner::{
 };
 
 mod targeting;
-pub use targeting::{TargetLock, advance_target_locks, select_target};
+pub use targeting::{TargetLock, select_target};
 
 pub(crate) mod fire_target;
 pub use fire_target::FireTarget;
@@ -478,7 +478,7 @@ pub use charge::{
 pub use charge::{MutualChargeAttempt, MutualChargeReport, resolve_mutual_charge};
 
 mod charge_tracking;
-pub use charge_tracking::{ChargePolicy, ChargeSelection, ChargeState, select_charge};
+pub use charge_tracking::{ChargeSelection, ChargeState, select_charge};
 
 mod dfa;
 pub use dfa::{DfaBalance, DfaProfile, DfaReport, dfa_profile, resolve_dfa};
@@ -653,9 +653,7 @@ mod fire_spread;
 pub use fire_spread::{advance_map_fire, map_fire_pending};
 
 mod woodland_action;
-mod woods_absorption;
 pub use woodland_action::{WoodlandAttack, WoodlandImpact, resolve_woodland_attack};
-pub use woods_absorption::WoodsAbsorption;
 
 mod weapon_groups;
 
@@ -1345,7 +1343,6 @@ pub use orbital_drop_launch::{OrbitalInsertion, initiate_action as initiate_orbi
 
 mod cockpit_links;
 mod hardware_settings;
-mod targeting_mode;
 pub(crate) mod unit_fields;
 mod unit_identity;
 pub use unit_fields::{UnitField, UnitFieldReport, set_unit_field_action, view_unit_fields_action};

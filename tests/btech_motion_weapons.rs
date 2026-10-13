@@ -4636,7 +4636,7 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
 async fn firing_observers_hide_unseen_participants_and_replay_transactionally() {
     use stompymux_rs::*;
     let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 8)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 6)
         .unwrap();
     let target_seed = (0..=255)
         .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 7)

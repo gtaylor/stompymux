@@ -209,10 +209,12 @@ reveal positions from stale observations. `contacts` takes no switches.
 
 Use `lock #unit` to select a currently visible contact from `contacts`, or `lock -`
 to clear your target. Selection requires the running unit's conscious assigned
-pilot. Sensors take eight simulation seconds to settle; selecting again restarts
-that delay. A scanner update reporting your selected contact lost clears the lock.
-Shutdown and battlefield removal clear selection. `lock` takes no
-switches. Aimed-section commands are not yet available.
+pilot and takes effect at once. Your lock is your primary target: firing at any
+other unit is a secondary attack at +1 to hit when that unit is in your forward
+arc (after any torso twist or turret rotation) or +2 elsewhere. Without a lock,
+whatever you fire at is your primary target. A scanner update reporting your
+selected contact lost clears the lock. Shutdown and battlefield removal clear
+selection. `lock` takes no switches. Aimed-section commands are not yet available.
 
 Use `lock x y` to select the unit currently occupying a coordinate. If it is empty
 when you fire, your shot goes to that coordinate. Add `I` to ignite woodland, `C`
@@ -708,17 +710,17 @@ Active armor produces ten additional heat and disrupts your own electronic
 guidance. Enemy radar and probe sweeps take +4 to +7 against you (Tactical
 Operations ECM/Stealth table), so enemies mostly rely on sight, infrared,
 magscan and seismic sensors, or a Bloodhound probe. Enemies firing at you take
-range penalties of 3 at medium range, 6 at long range and 12 at extreme range.
-Short and minimum range are unchanged.
+range penalties of 3 at medium range and 6 at long range. Short and minimum
+range are unchanged.
 Shutdown or ECM damage disables active armor. A pending switch only completes
 if the unit is running and its ECM works when the delay expires.
 
 Lua provides `btech.unit.stealth(unit, pilot)`. Unit inspection exposes `stealth`,
 including its active selection and any pending switch.
 
-Firing at an active stealth target requires a settled lock on that unit. Missing,
-settling or different-target locks reject the shot before ammunition, heat,
-recovery or attack dice change. Normal visibility and firing checks still apply.
+Firing at an active stealth target requires a lock on that unit. Missing or
+different-target locks reject the shot before ammunition, heat, recovery or
+attack dice change. Normal visibility and firing checks still apply.
 
 ### Null signature system
 
@@ -726,11 +728,11 @@ recovery or attack dice change. Normal visibility and firing checks still apply.
 requires the assigned conscious pilot, a running placed unit, and intact devices.
 A repeated request does not restart a pending switch.
 
-Active NSS adds ten heat and raises enemy range penalties to 3 at medium range,
-6 at long range and 12 at extreme range. Enemy radar and probe sweeps take the
+Active NSS adds ten heat and raises enemy range penalties to 3 at medium range
+and 6 at long range. Enemy radar and probe sweeps take the
 Tactical Operations ECM/Stealth modifier against you; infrared, magscan and
 seismic sweeps do not. It does not create ECM interference or require enemies
-to settle a firing lock. If stealth armor is also active, the
+to hold a firing lock. If stealth armor is also active, the
 range penalty applies once and the two systems' heat adds together.
 
 Shutdown or device loss disables NSS. Pending switches only take effect if power
@@ -781,7 +783,7 @@ until `spot -` clears the link. Lua uses `btech.unit.spot(unit, pilot, observer)
 
 For indirect missile fire, select a friendly spotter, clear your own target with
 `lock -`, and use `fire <weapon number>`. Your observer must have an acquired unit
-target. Its movement, sensor view, spotting skill and settling lock affect aim.
+target. Its movement, sensor view and spotting skill affect aim.
 Keeping your own unit target lock uses direct missile fire. Without that lock,
 your observer supplies the target even when you give `fire` an explicit target ID.
 
@@ -791,7 +793,7 @@ hex and indirect aim, even if you can also see that hex. Clear any unit target l
 before firing artillery. Retargeting the observer resets accumulated correction.
 
 Use `lock x y` to select coordinates, or append H (hex), B (building), I (ignite),
-or C (clear). Coordinate locks settle in eight seconds even outside visibility.
+or C (clear). Coordinate locks take effect at once, even outside visibility.
 `lock -` clears the selection. With a plain coordinate lock, `fire <weapon>`
 attacks its current unit occupant under ordinary firing rules. The lock stays at
 the coordinates when that unit moves. Artillery always fires at the selected hex
@@ -859,9 +861,8 @@ recognition is reported only to you. Scanning does not detonate or remove mines.
 
 A plain `scan` follows your current lock: building locks report construction
 factor, hex locks check buildings and mines, and unit-at-hex, ignition or clearing
-locks inspect visible occupants. Scanning does not wait for or advance lock
-settling. Observer units may scan selected coordinates beyond hardware range,
-but still require visibility and working scanners.
+locks inspect visible occupants. Observer units may scan selected coordinates
+beyond hardware range, but still require visibility and working scanners.
 
 
 ## Brief unit reports

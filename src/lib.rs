@@ -49,8 +49,8 @@ pub use btech::{
     advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
     advance_recovery as advance_battle_recovery, advance_recycle as advance_battle_recycle,
     advance_stagger as advance_battle_stagger, advance_standing as advance_battle_standing,
-    advance_stun as advance_battle_stun, advance_target_locks as advance_battle_target_locks,
-    advance_units as advance_battle_units, advance_unjamming as advance_battle_unjamming,
+    advance_stun as advance_battle_stun, advance_units as advance_battle_units,
+    advance_unjamming as advance_battle_unjamming,
     advance_unjamming_action as advance_battle_unjamming_action,
     aim_modifiers as battle_aim_modifiers, apply_damage_phase, assign_pilot as assign_battle_pilot,
     begin_stand as begin_battle_stand, begin_unjam as begin_battle_unjam,
@@ -257,9 +257,7 @@ pub use btech::{
     MutualChargeAttempt, MutualChargeReport, resolve_mutual_charge as resolve_battle_mutual_charge,
 };
 
-pub use btech::{
-    ChargePolicy, ChargeSelection, ChargeState, select_charge as select_battle_charge,
-};
+pub use btech::{ChargeSelection, ChargeState, select_charge as select_battle_charge};
 
 pub use btech::{
     DfaBalance, DfaProfile, DfaReport, dfa_profile as battle_dfa_profile,
@@ -1022,7 +1020,6 @@ pub use btech::{IceChange, MapIceReport, change_map_ice_action as change_battle_
 
 pub use btech::{MapHexChange, set_map_hex_action as set_battle_map_hex_action};
 
-pub use btech::WoodsAbsorption;
 pub use btech::add_landing_exclusion_action as add_battle_landing_exclusion_action;
 pub use btech::clear_map_units_action as clear_battle_map_units_action;
 pub use btech::emit_map_action as emit_battle_map_action;

@@ -2600,11 +2600,11 @@ async fn stealth_weapon_preview_uses_target_state() {
     assert_eq!(concealed.range.unwrap().modifier, 3);
 }
 
-/// Stealth requires a settled lock on this target; rejection must not consume attack state.
+/// Stealth requires a lock on this target; rejection must not consume attack state.
 #[tokio::test]
-async fn stealth_firing_requires_stable_target_lock() {
+async fn stealth_firing_requires_target_lock() {
     use stompymux_rs::*;
-    for case in ["missing", "settling", "different", "settled"] {
+    for case in ["missing", "different", "selected"] {
         let (_dir, _config, mut world, id, target) = shot_fixture().await;
         install_test_stealth(&mut world, target);
         shot_skill(&mut world, 30);
@@ -2616,13 +2616,12 @@ async fn stealth_firing_requires_stable_target_lock() {
         state["constructed"][id.0.to_string()]["target_lock"] = if case == "missing" {
             serde_json::Value::Null
         } else {
-            serde_json::json!({"target": if case == "different" {id.0} else {target.0},
-                "remaining": if case == "settling" {1} else {0}})
+            serde_json::json!({"target": if case == "different" {id.0} else {target.0}})
         };
         world.btech = serde_json::from_value(state).unwrap();
         let before = world.btech.clone();
         let shot = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules());
-        if case == "settled" {
+        if case == "selected" {
             assert!(shot.is_ok(), "{shot:?}");
             assert_ne!(world.btech, before);
         } else {
@@ -2821,10 +2820,7 @@ async fn nss_excludes_stealth_armor_and_allows_unlocked_fire() {
     let mut fired = world.clone();
     let result = resolve_battle_shot(&mut fired, id, ObjectId(1), target, 0, shot_rules());
     assert!(result.is_ok(), "{result:?}");
-    let range = Weapon::MediumLaser
-        .range_modifier(4.0, false)
-        .unwrap()
-        .unwrap();
+    let range = Weapon::MediumLaser.range_modifier(4.0).unwrap().unwrap();
     assert_eq!(
         range
             .against_stealth(world.btech.constructed_units()[&target].range_concealed())
@@ -3723,7 +3719,6 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     let indirect = aim.indirect.unwrap();
     assert_eq!(indirect.spotter, observer);
     assert_eq!(indirect.spotting, 8);
-    assert_eq!(indirect.target_lock, 2);
     assert_eq!(aim.target_lock, 0);
     assert!(aim.perception.is_some());
     assert!(aim.subtotal().is_some());
@@ -3731,23 +3726,13 @@ async fn indirect_spotter_aim_routing_and_rollback() {
         aim.distance,
         battle_unit_range(&world, shooter, target).unwrap().spatial
     );
-    let mut settled = world.clone();
-    settled
-        .btech
-        .rewrite_unit_record(observer, |record| {
-            record["target_lock"]["remaining"] = 0.into();
-        })
-        .unwrap();
-    let settled_aim =
-        battle_aim_modifiers(&settled, shooter, target, index, 6, shot_rules().aim).unwrap();
-    assert_eq!(aim.subtotal().unwrap() - settled_aim.subtotal().unwrap(), 2);
     // Selecting a personal target drops the observer's routing: the shot becomes direct, on the
     // shooter's own sight of a target its side has spotted (Tactical Operations p. 191).
     let mut direct = world.clone();
     direct
         .btech
         .rewrite_unit_record(shooter, |record| {
-            record["target_lock"] = serde_json::json!({"target":target.0,"remaining":0});
+            record["target_lock"] = serde_json::json!({"target":target.0});
         })
         .unwrap();
     let direct_aim =
@@ -4157,7 +4142,7 @@ async fn indirect_fire_hex_feedback_native_lua_and_rollback() {
     }
 }
 
-/// Coordinate locks replace unit targets, settle without visibility, and survive save/load mid-countdown.
+/// Coordinate locks replace unit targets, need no visibility, and survive save/load.
 #[tokio::test]
 async fn hex_target_selection_lifecycle_and_validation() {
     use stompymux_rs::*;
@@ -4177,11 +4162,7 @@ async fn hex_target_selection_lifecycle_and_validation() {
         select_battle_hex_target(&mut world, id, ObjectId(1), point, mode).unwrap();
         assert_eq!(
             world.btech.constructed_units()[&id].hex_lock(),
-            Some(HexLock {
-                hex: point,
-                mode,
-                remaining: 8
-            })
+            Some(HexLock { hex: point, mode })
         );
         assert!(world.btech.constructed_units()[&id].target_lock().is_none());
         world.validate(&config).unwrap();
@@ -4198,35 +4179,20 @@ async fn hex_target_selection_lifecycle_and_validation() {
         .is_err()
     );
     assert_eq!(world.btech, before);
-    for _ in 0..3 {
-        assert!(advance_battle_target_locks(&mut world).is_empty());
-    }
     persistence::save(&config.database(), &world).await.unwrap();
-    let mut loaded = persistence::load(&config.database()).await.unwrap();
+    let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
-    for _ in 0..4 {
-        assert!(advance_battle_target_locks(&mut loaded).is_empty());
-    }
-    let notices = advance_battle_target_locks(&mut loaded);
-    assert_eq!(notices.len(), 1);
-    assert!(notices[0].text.contains("(9,9)"));
-    assert!(advance_battle_target_locks(&mut loaded).is_empty());
     assert_eq!(
         loaded.btech.constructed_units()[&id]
             .hex_lock()
             .unwrap()
-            .remaining,
-        0
+            .hex,
+        point
     );
     loaded.validate(&config).unwrap();
     let mut ambiguous = serde_json::to_value(&world.btech).unwrap();
     ambiguous["constructed"][id.0.to_string()]["target_lock"]["target"] = target.0.into();
     assert!(serde_json::from_value::<BtechState>(ambiguous).is_err());
-    let mut invalid = serde_json::to_value(&world.btech).unwrap();
-    invalid["constructed"][id.0.to_string()]["target_lock"]["remaining"] = 9.into();
-    let mut invalid_world = world.clone();
-    invalid_world.btech = serde_json::from_value(invalid).unwrap();
-    assert!(invalid_world.validate(&config).is_err());
     let mut moved = world.clone();
     place_battle_unit(&mut moved, target, map, 7, 7).unwrap();
     assert!(moved.btech.constructed_units()[&id].hex_lock().is_some());
@@ -4348,15 +4314,6 @@ async fn hex_occupant_fire_routing_aim_and_rollback() {
     );
     let aim = battle_aim_modifiers(&world, shooter, target, 0, 6, shot_rules().aim).unwrap();
     assert_eq!(aim.target_lock, 1);
-    for _ in 0..8 {
-        advance_battle_target_locks(&mut world);
-    }
-    assert_eq!(
-        battle_aim_modifiers(&world, shooter, target, 0, 6, shot_rules().aim)
-            .unwrap()
-            .target_lock,
-        1
-    );
     let mut moved = world.clone();
     place_battle_unit(&mut moved, target, map, 7, 7).unwrap();
     assert_eq!(battle_hex_occupant(&moved, shooter, point).unwrap(), None);
@@ -4450,7 +4407,7 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     .unwrap();
     let unit = battle_aim_modifiers(&world, shooter, target, 0, 6, optical_aim_rules()).unwrap();
     let before = world.btech.clone();
-    let base = battle_hex_aim_modifiers(&world, shooter, point, 0, 6, optical_aim_rules()).unwrap();
+    let base = battle_hex_aim_modifiers(&world, shooter, point, 0, 6).unwrap();
     assert_eq!(world.btech, before);
     assert!(base.visible);
     assert_eq!(base.modifiers.range, unit.range);
@@ -4469,8 +4426,7 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
         HexTargetMode::Clear,
     ] {
         select_battle_hex_target(&mut world, shooter, ObjectId(1), point, mode).unwrap();
-        let report =
-            battle_hex_aim_modifiers(&world, shooter, point, 0, 6, optical_aim_rules()).unwrap();
+        let report = battle_hex_aim_modifiers(&world, shooter, point, 0, 6).unwrap();
         let bonus = if mode == HexTargetMode::UnitAtHex {
             0
         } else {
@@ -4485,19 +4441,11 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
         assert_eq!(report.modifiers.target_lock, 0);
         assert!(report.modifiers.perception.is_none());
         assert!(report.modifiers.indirect.is_none());
-        for _ in 0..8 {
-            advance_battle_target_locks(&mut world);
-        }
-        assert_eq!(
-            battle_hex_aim_modifiers(&world, shooter, point, 0, 6, optical_aim_rules()).unwrap(),
-            report
-        );
     }
     // A hex the shooter cannot see, here one behind a wall, keeps the same arithmetic and
     // reports only that it is out of sight.
     let far = HexCoordinate { x: 5, y: 11 };
-    let visible =
-        battle_hex_aim_modifiers(&world, shooter, far, 0, 6, optical_aim_rules()).unwrap();
+    let visible = battle_hex_aim_modifiers(&world, shooter, far, 0, 6).unwrap();
     assert!(visible.visible);
     world
         .btech
@@ -4506,7 +4454,7 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
                 serde_json::to_value(Hex::new(Terrain::Wall, 5)).unwrap();
         })
         .unwrap();
-    let hidden = battle_hex_aim_modifiers(&world, shooter, far, 0, 6, optical_aim_rules()).unwrap();
+    let hidden = battle_hex_aim_modifiers(&world, shooter, far, 0, 6).unwrap();
     assert!(!hidden.visible);
     assert_eq!(hidden.subtotal(), visible.subtotal());
     assert_eq!(hidden.modifiers, visible.modifiers);
@@ -4521,23 +4469,13 @@ async fn hex_aim_range_and_lua_inspection_are_read_only() {
     let near = HexCoordinate { x: 5, y: 4 };
     let far = HexCoordinate { x: 100, y: 5 };
     let before = world.btech.clone();
-    let report =
-        battle_hex_aim_modifiers(&world, shooter, near, 0, 6, optical_aim_rules()).unwrap();
+    let report = battle_hex_aim_modifiers(&world, shooter, near, 0, 6).unwrap();
     assert_eq!(report.modifiers.distance, 1.0);
-    let distant =
-        battle_hex_aim_modifiers(&world, shooter, far, 0, 6, optical_aim_rules()).unwrap();
+    let distant = battle_hex_aim_modifiers(&world, shooter, far, 0, 6).unwrap();
     assert!(distant.subtotal().is_none());
     assert_eq!(world.btech, before);
     assert!(
-        battle_hex_aim_modifiers(
-            &world,
-            shooter,
-            HexCoordinate { x: -1, y: 0 },
-            0,
-            6,
-            optical_aim_rules()
-        )
-        .is_err()
+        battle_hex_aim_modifiers(&world, shooter, HexCoordinate { x: -1, y: 0 }, 0, 6).is_err()
     );
     let lua = Scripts::new(
         &config,
@@ -4751,17 +4689,11 @@ async fn direct_hex_missiles_spend_ammunition_and_only_resolve_packets_on_hits()
             HexTargetMode::Clear,
         )
         .unwrap();
-        let target_number = battle_pilot_hex_aim_modifiers(
-            &world,
-            shooter,
-            coordinate,
-            index,
-            true,
-            optical_aim_rules(),
-        )
-        .unwrap()
-        .subtotal()
-        .unwrap();
+        let target_number =
+            battle_pilot_hex_aim_modifiers(&world, shooter, coordinate, index, true)
+                .unwrap()
+                .subtotal()
+                .unwrap();
         let seed = (0..=255)
             .find(|seed| (i32::from(Dice::seeded([*seed; 32]).two_d6()) >= target_number) == hit)
             .unwrap();
@@ -5161,17 +5093,11 @@ async fn hex_surface_weapon_probability_and_replay() {
             }
             let mut miss = before.clone();
             shot_skill(&mut miss, 0);
-            let target_number = battle_pilot_hex_aim_modifiers(
-                &miss,
-                shooter,
-                coordinate,
-                index,
-                true,
-                shot_rules().aim,
-            )
-            .unwrap()
-            .subtotal()
-            .unwrap();
+            let target_number =
+                battle_pilot_hex_aim_modifiers(&miss, shooter, coordinate, index, true)
+                    .unwrap()
+                    .subtotal()
+                    .unwrap();
             let miss_seed = (0..=255)
                 .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) < target_number)
                 .unwrap();
@@ -5635,17 +5561,11 @@ async fn building_fire_damage_policies_and_committed_repair() {
         assert_eq!(absent.btech.maps()[&interior].building.integrity, initial);
         let mut missed = before.clone();
         shot_skill(&mut missed, 0);
-        let target_number = battle_pilot_hex_aim_modifiers(
-            &missed,
-            shooter,
-            coordinate,
-            index,
-            true,
-            shot_rules().aim,
-        )
-        .unwrap()
-        .subtotal()
-        .unwrap();
+        let target_number =
+            battle_pilot_hex_aim_modifiers(&missed, shooter, coordinate, index, true)
+                .unwrap()
+                .subtotal()
+                .unwrap();
         let seed = (0..=255)
             .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) < target_number)
             .unwrap();
@@ -6701,17 +6621,10 @@ async fn stinger_airborne_admission_and_shot_replay() {
             .contains("airborne")
     );
     assert!(
-        battle_hex_aim_modifiers(
-            &world,
-            id,
-            HexCoordinate { x: 5, y: 4 },
-            index,
-            6,
-            optical_aim_rules()
-        )
-        .unwrap_err()
-        .to_string()
-        .contains("cannot shoot hexes")
+        battle_hex_aim_modifiers(&world, id, HexCoordinate { x: 5, y: 4 }, index, 6)
+            .unwrap_err()
+            .to_string()
+            .contains("cannot shoot hexes")
     );
     assert_eq!(world.btech, before);
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(target);

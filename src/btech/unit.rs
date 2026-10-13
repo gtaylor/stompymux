@@ -1271,9 +1271,8 @@ impl Mech {
             "Invalid prone motion or facing"
         );
         ensure!(
-            self.target_lock
-                .is_none_or(|lock| lock.remaining() <= 8 && self.power == super::Power::Running),
-            "Invalid target lock countdown or power state"
+            self.target_lock.is_none() || self.power == super::Power::Running,
+            "Invalid target lock power state"
         );
         ensure!(self.stun_remaining <= 10, "Invalid crew stun countdown");
         super::crew_recovery::validate(&self.crew_recovery, self.pilot(), self.pilot_injuries())?;

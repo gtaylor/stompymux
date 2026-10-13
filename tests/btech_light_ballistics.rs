@@ -66,27 +66,15 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
         .filter(|(_, modifier)| *modifier < 4 || ranges[1] < ranges[2])
         {
             assert_eq!(
-                weapon
-                    .range_modifier(distance, false)
-                    .unwrap()
-                    .unwrap()
-                    .modifier,
+                weapon.range_modifier(distance).unwrap().unwrap().modifier,
                 modifier
             );
         }
         assert!(
             weapon
-                .range_modifier(f64::from(ranges[2]) + 0.001, false)
+                .range_modifier(f64::from(ranges[2]) + 0.001)
                 .unwrap()
                 .is_none()
-        );
-        assert_eq!(
-            weapon
-                .range_modifier(f64::from(ranges[1]) * 2.0, true)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            8
         );
         let unit = Mech::from_template(definition(weapon)).unwrap();
         let loadout = unit.loadout().unwrap();
@@ -201,7 +189,7 @@ fn hyper_ac_construction_ranges_and_critical_supply() {
         assert!(!weapon.supports_rapid_fire());
         assert!(weapon.supports_targeting_computer());
         assert_eq!(
-            weapon.range_modifier(0.0, false).unwrap().unwrap().modifier,
+            weapon.range_modifier(0.0).unwrap().unwrap().modifier,
             if minimum > 0 { minimum + 1 } else { 0 }
         );
         for (distance, modifier) in [
@@ -210,17 +198,13 @@ fn hyper_ac_construction_ranges_and_critical_supply() {
             (f64::from(ranges[2]), 4),
         ] {
             assert_eq!(
-                weapon
-                    .range_modifier(distance, false)
-                    .unwrap()
-                    .unwrap()
-                    .modifier,
+                weapon.range_modifier(distance).unwrap().unwrap().modifier,
                 modifier
             );
         }
         assert!(
             weapon
-                .range_modifier(f64::from(ranges[2]) + 0.001, false)
+                .range_modifier(f64::from(ranges[2]) + 0.001)
                 .unwrap()
                 .is_none()
         );

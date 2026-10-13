@@ -108,7 +108,7 @@ async fn recycle_overrides_apply_across_chassis_and_preserve_existing_timers() {
         hit_seed(&mut world, shooter);
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        let specification = battle_weapon_specifications(&lua.world(), shooter, false).unwrap();
+        let specification = battle_weapon_specifications(&lua.world(), shooter).unwrap();
         assert_eq!(
             specification
                 .iter()
@@ -200,7 +200,7 @@ async fn defensive_recycle_and_battle_value_use_shared_settings() {
                 state["ams_enabled"] = true.into();
                 state["fortified"] = true.into();
             });
-            let weapons = battle_weapon_specifications(&world, target, false).unwrap();
+            let weapons = battle_weapon_specifications(&world, target).unwrap();
             let weapon = weapons
                 .iter()
                 .find(|row| row.weapon.is_ams())

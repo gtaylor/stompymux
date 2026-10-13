@@ -104,7 +104,6 @@ pub(super) fn indirect_aim(
     source: super::fire_target::TargetSource,
     target: ObjectId,
     index: usize,
-    fasa_turning: bool,
 ) -> Result<Option<IndirectAim>> {
     let Some(link) = indirect_target_for_source(world, source, index)? else {
         return Ok(None);
@@ -113,29 +112,18 @@ pub(super) fn indirect_aim(
         link.target == target,
         "Target differs from the spotter's selected target"
     );
-    observer_aim(world, link.spotter, fasa_turning).map(Some)
+    observer_aim(world, link.spotter).map(Some)
 }
 
 /// Movement, skill and lock costs are shared by unit and empty-coordinate indirect shots.
-pub(super) fn observer_aim(
-    world: &World,
-    spotter: ObjectId,
-    fasa_turning: bool,
-) -> Result<IndirectAim> {
+pub(super) fn observer_aim(world: &World, spotter: ObjectId) -> Result<IndirectAim> {
     let movement = crate::btech::with_unit!(world.btech.unit(spotter).unwrap(), |unit| {
-        unit.attacker_movement_modifier(fasa_turning)
+        unit.attacker_movement_modifier()
     });
     Ok(IndirectAim {
         spotter,
         spotting: super::skills::unit_spotting_target(world, spotter)?,
         movement,
-        target_lock: if super::targeting::selection(world, spotter)
-            .is_some_and(|lock| lock.remaining() > 0)
-        {
-            2
-        } else {
-            0
-        },
     })
 }
 

@@ -71,8 +71,6 @@ pub struct ShotReport<U, M> {
     pub salvo: Option<super::TargetSalvo>,
     /// Heat transferred to the target in place of material damage.
     pub heat_transfer: u8,
-    /// Woods feedback and terrain effects preceding an unchanged thermal transfer.
-    pub thermal_woods: Option<super::WoodsAbsorption>,
     /// Incidental terrain check from a launched non-missile miss.
     pub missed_terrain: Option<super::WoodlandImpact>,
     /// A miss from the next hex striking the building around a target inside one.
@@ -135,9 +133,6 @@ impl MechShotReport {
                 );
                 notices.extend(collapse.notices.iter().cloned());
             }
-        }
-        if let Some(woods) = &self.thermal_woods {
-            notices.extend(woods.notices.iter().cloned());
         }
         notices.extend(super::fire_feedback::glancing_notices(
             self.target,
@@ -486,7 +481,6 @@ fn resolve_shot_inner(
         narc,
         cooling,
         heat_transfer,
-        woods: thermal_woods,
         missed_terrain,
         missed_building,
     } = super::direct_effects::resolve(
@@ -501,7 +495,6 @@ fn resolve_shot_inner(
             launched,
             intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
             vehicle_impact: rules.vehicle_impact,
-            woods_damage: rules.aim.woods_damage,
             distance: aim.distance,
             gatling_damage: expenditure.gatling_damage,
             coordinate,
@@ -563,7 +556,6 @@ fn resolve_shot_inner(
             },
             rules.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
-                woods_damage: rules.aim.woods_damage,
                 incoming: None,
                 attacker: Some(shooter),
                 experience,
@@ -578,7 +570,6 @@ fn resolve_shot_inner(
                 target,
                 &expenditure,
                 super::salvo::ShotDamage {
-                    woods_damage: rules.aim.woods_damage,
                     aimed,
                     incoming: None,
                     rules: super::FallRules {
@@ -650,7 +641,6 @@ fn resolve_shot_inner(
         launch_notices,
         salvo,
         heat_transfer,
-        thermal_woods,
         missed_terrain,
         missed_building,
         cooling,

@@ -108,27 +108,16 @@ fn stealth_equipment_layout_and_accounting() {
 /// Stealth changes accuracy at the selected bracket and never extends weapon reach or changes minimum penalties.
 #[test]
 fn stealth_range_brackets_and_limits() {
-    for (distance, plain, hidden) in [
-        (0.0, 0, 0),
-        (3.0, 0, 0),
-        (3.1, 2, 3),
-        (6.1, 4, 6),
-        (9.1, 8, 12),
-    ] {
+    for (distance, plain, hidden) in [(0.0, 0, 0), (3.0, 0, 0), (3.1, 2, 3), (6.1, 4, 6)] {
         let range = Weapon::MediumLaser
-            .range_modifier(distance, true)
+            .range_modifier(distance)
             .unwrap()
             .unwrap();
         assert_eq!(range.modifier, plain);
         assert_eq!(range.against_stealth(true).modifier, hidden);
         assert_eq!(range.against_stealth(false), range);
     }
-    assert!(
-        Weapon::MediumLaser
-            .range_modifier(12.1, true)
-            .unwrap()
-            .is_none()
-    );
-    let minimum = Weapon::Ppc.range_modifier(1.0, false).unwrap().unwrap();
+    assert!(Weapon::MediumLaser.range_modifier(12.1).unwrap().is_none());
+    let minimum = Weapon::Ppc.range_modifier(1.0).unwrap().unwrap();
     assert_eq!(minimum.against_stealth(true), minimum);
 }

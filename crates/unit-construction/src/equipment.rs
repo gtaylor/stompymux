@@ -33,24 +33,15 @@ pub struct WeaponProfile {
 }
 
 impl Weapon {
-    /// Effective range in hexes, including artillery map-sheet units and optional extreme range.
-    pub fn effective_range(self, extended: bool) -> u16 {
-        self.effective_range_for_ammunition(extended, super::AmmunitionMode::Normal)
+    /// Effective range in hexes, including artillery map-sheet units.
+    pub fn effective_range(self) -> u16 {
+        self.effective_range_for_ammunition(super::AmmunitionMode::Normal)
     }
 
-    /// Maximum reach follows the selected ammunition family before extreme-range expansion.
-    pub fn effective_range_for_ammunition(
-        self,
-        extended: bool,
-        ammunition: super::AmmunitionMode,
-    ) -> u16 {
+    /// Maximum reach follows the selected ammunition family.
+    pub fn effective_range_for_ammunition(self, ammunition: super::AmmunitionMode) -> u16 {
         let profile = self.profile_for_ammunition(ammunition);
-        let normal = u16::from(profile.long_range) * if self.is_artillery() { 20 } else { 1 };
-        if extended {
-            normal.max(u16::from(profile.medium_range) * 2)
-        } else {
-            normal
-        }
+        u16::from(profile.long_range) * if self.is_artillery() { 20 } else { 1 }
     }
 
     /// Weapons whose installations may span adjacent Mech sections through explicit links.

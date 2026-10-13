@@ -443,11 +443,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                     match template {
                         crate::UnitTemplate::Mech(template) => match kind {
                             0 => crate::btech::inspect_template_status_text(&borrowed, &template),
-                            1 => crate::btech::inspect_template_weapon_text(
-                                &borrowed,
-                                &template,
-                                config.battletech.erange != 0,
-                            ),
+                            1 => crate::btech::inspect_template_weapon_text(&borrowed, &template),
                             _ => {
                                 let selected =
                                     section(value(&args, 2), &template, true, 3)?.unwrap();
@@ -461,9 +457,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                                 &borrowed, &template,
                             ),
                             1 => crate::btech::inspect_vehicle_template_weapon_text(
-                                &borrowed,
-                                &template,
-                                config.battletech.erange != 0,
+                                &borrowed, &template,
                             ),
                             _ => {
                                 if value(&args, 2).is_nil() {

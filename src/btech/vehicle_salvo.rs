@@ -54,7 +54,6 @@ pub fn resolve_vehicle_salvo(
 /// An admitted shot retains its source independently of optional experience awards.
 #[derive(Clone, Copy, Default)]
 pub(super) struct SalvoContext<'a> {
-    pub woods_damage: bool,
     pub aimed: Option<super::aimed_hit::AimedShot>,
     pub incoming: Option<u8>,
     pub attacker: Option<ObjectId>,
@@ -85,7 +84,6 @@ pub(super) fn resolve_with_context_in_candidate(
     context: SalvoContext<'_>,
 ) -> Result<VehicleSalvoReport> {
     let SalvoContext {
-        woods_damage,
         aimed,
         incoming,
         attacker,
@@ -143,14 +141,6 @@ pub(super) fn resolve_with_context_in_candidate(
     let target_beacon =
         vehicle.has_beacon(BeaconKind::Narc) || vehicle.has_beacon(BeaconKind::Homing);
     let artemis_v = attacker.is_some_and(|shooter| super::artemis::artemis_v(world, shooter));
-    let initial_woods = if woods_damage && let Some(shooter) = attacker {
-        super::woods_absorption::begin_pellets(world, shooter, target, weapon, request.ammunition)?
-    } else {
-        None
-    };
-    let shell_woods = woods_damage
-        && attacker.is_some()
-        && super::woods_absorption::direct_shells(weapon, request.ammunition);
     let mut packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
             weapon,
@@ -158,8 +148,7 @@ pub(super) fn resolve_with_context_in_candidate(
             fire_mode: request.fire_mode,
             gatling_damage: request.gatling_damage,
             distance: Some(request.distance),
-            glancing: request.glancing
-                && (!shell_woods || request.fire_mode.rounds_per_cycle() > 1),
+            glancing: request.glancing,
             guidance_blocked: request.guidance_blocked,
             angel_blocked: request.angel_blocked,
             target_beacon,
@@ -168,12 +157,10 @@ pub(super) fn resolve_with_context_in_candidate(
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;
     packets.limit_missiles(incoming);
-    packets.finish_burst_glancing(request.fire_mode, request.glancing && !shell_woods);
+    packets.finish_burst_glancing(request.fire_mode, request.glancing);
     let mut report = VehicleSalvoReport {
         building: None,
         collapse: None,
-        initial_woods,
-        woods: None,
         cluster_roll: packets.cluster_roll,
         missiles_before_defense: None,
         groups: Vec::new(),
@@ -193,31 +180,6 @@ pub(super) fn resolve_with_context_in_candidate(
             world.btech.validate_action(world)?;
             return Ok(report);
         }
-    }
-    if woods_damage
-        && (weapon.profile().missiles > 0 || request.ammunition == AmmunitionMode::Cluster)
-        && let Some(shooter) = attacker
-    {
-        report.woods = super::woods_absorption::resolve_projectiles(
-            world,
-            shooter,
-            target,
-            weapon,
-            request.ammunition,
-            &mut packets,
-        )?;
-    }
-    if shell_woods && let Some(shooter) = attacker {
-        report.woods = super::woods_absorption::resolve_shells(
-            world,
-            shooter,
-            target,
-            weapon,
-            request.ammunition,
-            &mut packets.damage,
-            request.glancing,
-        )?;
-        packets.damage.retain(|packet| *packet > 0);
     }
     report.building =
         super::building_interior::absorb(world, attacker, target, &mut packets.damage)?;

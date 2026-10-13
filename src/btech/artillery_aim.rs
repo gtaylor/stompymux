@@ -18,7 +18,6 @@ pub enum ArtilleryObserver {
 #[derive(Debug, Clone, Copy)]
 pub struct ArtilleryAimInput {
     pub distance: f64,
-    pub extended_range: bool,
     pub submerged: bool,
     pub visible: bool,
     pub gunnery: i16,
@@ -62,7 +61,7 @@ fn calculate(weapon: Weapon, input: ArtilleryAimInput) -> Result<ArtilleryAim> {
         input.distance.is_finite() && input.distance >= 0.0,
         "Invalid artillery range"
     );
-    let maximum_range = weapon.effective_range(input.extended_range);
+    let maximum_range = weapon.effective_range();
     if input.submerged {
         return Ok(ArtilleryAim {
             target_number: 5000,

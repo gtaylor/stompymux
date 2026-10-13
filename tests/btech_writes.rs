@@ -12,7 +12,7 @@ async fn data_version(db: &mut sqlx::SqliteConnection) -> i64 {
         .unwrap()
 }
 
-/// Running units standing still, one settling a target lock and one recycling a weapon,
+/// Running units standing still, one holding a target lock and one recycling a weapon,
 /// reach a steady state in which heartbeats commit without touching the database, then
 /// reload exactly. The only writes left are turn-boundary ticks, whose periodic checks
 /// can roll dice, and the periodic simulation clock save.
@@ -35,7 +35,7 @@ async fn running_units_standing_still_write_nothing_per_tick() {
         .await
         .unwrap();
         let mut harness = HeartbeatHarness::new(config.clone(), world).unwrap();
-        // The lock settles and every running count takes its clock form, including a
+        // Every running count takes its clock form, including a
         // wrap of the thirty-second overheat and turn phases.
         for second in 1..=35 {
             assert!(harness.step(second).await.committed);

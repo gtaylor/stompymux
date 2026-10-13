@@ -74,10 +74,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
     let mut target = request.target;
     while report.remaining > 0 {
         report.traveled += unit_range(world, previous, target)?.spatial;
-        if weapon
-            .range_modifier(report.traveled, request.rules.aim.extended_ranges)?
-            .is_none()
-        {
+        if weapon.range_modifier(report.traveled)?.is_none() {
             report.notices.push(Notice {
                 unit: target,
                 text: "Luckily, the missiles fall short of you!".into(),
@@ -119,7 +116,6 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                     },
                     request.rules.vehicle_impact,
                     super::vehicle_salvo::SalvoContext {
-                        woods_damage: request.rules.aim.woods_damage,
                         aimed: None,
                         incoming: Some(incoming),
                         attacker: Some(shooter),
@@ -133,7 +129,6 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                     target,
                     request.weapon,
                     super::salvo::ShotDamage {
-                        woods_damage: request.rules.aim.woods_damage,
                         aimed: None,
                         incoming: Some(incoming),
                         rules: FallRules {

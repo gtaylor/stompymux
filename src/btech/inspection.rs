@@ -1607,10 +1607,9 @@ pub fn inspect_template_status_text(
 pub fn inspect_template_weapon_text(
     world: &crate::World,
     template: &MechTemplate,
-    extended: bool,
 ) -> Result<String> {
     let (detached, id) = detached_template_world(world, template)?;
-    super::weapon_specification_text(&detached, id, extended).map(native_menu_controls)
+    super::weapon_specification_text(&detached, id).map(native_menu_controls)
 }
 
 /// Render immutable critical status through isolated contract construction.
@@ -1765,10 +1764,9 @@ pub fn inspect_vehicle_template_status_text(
 pub fn inspect_vehicle_template_weapon_text(
     world: &crate::World,
     template: &super::VehicleTemplate,
-    extended: bool,
 ) -> Result<String> {
     let (detached, id) = detached_vehicle_world(world, template)?;
-    super::weapon_specification_text(&detached, id, extended).map(native_menu_controls)
+    super::weapon_specification_text(&detached, id).map(native_menu_controls)
 }
 /// Render vehicle critical status through isolated temporary state.
 pub fn inspect_vehicle_template_critical_text(

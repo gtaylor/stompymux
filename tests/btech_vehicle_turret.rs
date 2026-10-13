@@ -346,11 +346,8 @@ async fn automatic_turret_controls_tracking_gates_and_restart() {
     advance_battle_automatic_turrets(&mut world);
     assert_eq!(world.btech.vehicles()[&id].turret_heading(), Some(180.0));
     assert_eq!(
-        world.btech.vehicles()[&id]
-            .target_selection()
-            .unwrap()
-            .remaining(),
-        8
+        world.btech.vehicles()[&id].hex_lock().unwrap().hex,
+        HexCoordinate { x: 0, y: 0 }
     );
     assert!(!automatic_turrets_pending(&world));
     set_battle_turret(&mut world, id, ObjectId(1), 90.0).unwrap();
@@ -597,9 +594,6 @@ async fn automatic_turret_runs_after_restart() {
                 HexTargetMode::Hex,
             )
             .unwrap();
-            for _ in 0..8 {
-                advance_battle_target_locks(&mut world);
-            }
             persistence::save(&config.database(), &world).await.unwrap();
             let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;

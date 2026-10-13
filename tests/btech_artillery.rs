@@ -265,10 +265,9 @@ fn artillery_aim_ranges_observers_and_corrections() {
         (Weapon::ThumperCannon, 280),
     ];
     for (weapon, maximum) in weapons {
-        for extended_range in [false, true] {
+        {
             let base = ArtilleryAimInput {
                 distance: f64::from(maximum),
-                extended_range,
                 submerged: false,
                 visible: false,
                 gunnery: 4,
@@ -337,7 +336,7 @@ fn artillery_aim_ranges_observers_and_corrections() {
             }
             assert!(Weapon::MediumLaser.artillery_aim(base).is_err());
         }
-        assert!(weapon.range_modifier(1.0, false).is_err());
+        assert!(weapon.range_modifier(1.0).is_err());
         assert!(weapon.damage_groups(None).is_err());
         assert_eq!(weapon.gunnery_skill(false), "Gunnery-Artillery");
     }

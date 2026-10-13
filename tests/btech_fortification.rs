@@ -161,7 +161,7 @@ async fn movement_stance_and_takeoff_controls_share_the_fortification_gate() {
 async fn immobile_target_bonus_and_shutdown_preservation_are_shared() {
     for source in CHASSIS {
         let (_dir, config, mut world, id) = fixture(source).await;
-        let before = battle_unit_target_movement_modifier(&world, id, 3.0, false).unwrap();
+        let before = battle_unit_target_movement_modifier(&world, id, 3.0).unwrap();
         let readiness = if let Some(unit) = world.btech.vehicles().get(&id) {
             unit.weapon_readiness(0).unwrap()
         } else {
@@ -179,13 +179,13 @@ async fn immobile_target_bonus_and_shutdown_preservation_are_shared() {
         };
         assert_eq!(readiness, fortified_readiness);
         assert_eq!(
-            battle_unit_target_movement_modifier(&world, id, 3.0, false).unwrap(),
+            battle_unit_target_movement_modifier(&world, id, 3.0).unwrap(),
             before - 4
         );
         stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
         assert!(battle_unit_fortified(&world, id).unwrap());
         assert_eq!(
-            battle_unit_target_movement_modifier(&world, id, 3.0, false).unwrap(),
+            battle_unit_target_movement_modifier(&world, id, 3.0).unwrap(),
             before - 4
         );
         world.validate(&config).unwrap();

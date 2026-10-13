@@ -160,7 +160,6 @@ fn resolve_hex_shot_inner(
         coordinate,
         weapon_index,
         super::unit_gunnery_target(world, shooter, weapon_index, rules.extended_gunnery)?,
-        rules.aim,
     )?;
     ensure!(aim.visible, "Target hex is not visible");
     if aim.mode == HexTargetMode::UnitAtHex {

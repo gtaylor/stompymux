@@ -5,11 +5,6 @@ use stompymux_rs::*;
 /// Ordinary aim policy leaves the target's air bonuses visible without range extensions.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -60,8 +55,7 @@ async fn rotorcraft_modifiers_match_preview_and_firing_for_every_shooter() {
                 assert_eq!(aim.ammunition_accuracy, expected_ammo);
                 assert_eq!(
                     aim.target_movement,
-                    battle_unit_target_movement_modifier(&world, target, aim.distance, false)
-                        .unwrap()
+                    battle_unit_target_movement_modifier(&world, target, aim.distance).unwrap()
                         + i8::from(horizontal != 0.0 || vertical != 0.0)
                 );
                 assert_eq!(world.btech, before);

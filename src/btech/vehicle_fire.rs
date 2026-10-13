@@ -205,7 +205,6 @@ fn fire_shot(
         narc,
         cooling,
         heat_transfer,
-        woods: thermal_woods,
         missed_terrain,
         missed_building,
     } = super::direct_effects::resolve(
@@ -220,7 +219,6 @@ fn fire_shot(
             launched: launch.expenditure.launched,
             intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
             vehicle_impact: rules.shot.vehicle_impact,
-            woods_damage: rules.shot.aim.woods_damage,
             distance: aim.distance,
             gatling_damage: launch.expenditure.gatling_damage,
             coordinate,
@@ -283,7 +281,6 @@ fn fire_shot(
             },
             rules.shot.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
-                woods_damage: rules.shot.aim.woods_damage,
                 incoming: None,
                 attacker: Some(shooter),
                 experience,
@@ -297,7 +294,6 @@ fn fire_shot(
             target,
             &launch.expenditure,
             super::salvo::ShotDamage {
-                woods_damage: rules.shot.aim.woods_damage,
                 aimed,
                 incoming: None,
                 rules: FallRules {
@@ -375,7 +371,6 @@ fn fire_shot(
         narc,
         cooling,
         heat_transfer,
-        thermal_woods,
         missed_terrain,
         missed_building,
         salvo,
@@ -426,9 +421,6 @@ impl VehicleShotReport {
                 );
                 notices.extend(collapse.notices.iter().cloned());
             }
-        }
-        if let Some(woods) = &self.thermal_woods {
-            notices.extend(woods.notices.iter().cloned());
         }
         notices.extend(super::fire_feedback::glancing_notices(
             self.target,

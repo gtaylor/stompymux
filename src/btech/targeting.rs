@@ -1,15 +1,15 @@
-//! A single owned unit or coordinate selection with a committed eight-second settling countdown.
+//! A single owned unit or coordinate selection: the unit's declared primary target.
 use super::{Mech, Notice, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
-/// Selected unit and settling time. Zero means settled, not necessarily currently visible.
+/// The selected unit: the primary target for the multiple-targets rule (Total Warfare p. 108).
+/// Selection does not establish current visibility.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TargetLock {
     pub target: ObjectId,
-    pub remaining: u8,
 }
 
 /// Purpose of a saved coordinate selection; ordinary coordinates address a unit occupying the hex.
@@ -50,13 +50,12 @@ impl std::str::FromStr for HexTargetMode {
     }
 }
 
-/// A coordinate on the unit's current map with a targeting purpose and settling countdown.
+/// A coordinate on the unit's current map with a targeting purpose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct HexLock {
     pub hex: super::HexCoordinate,
     pub mode: HexTargetMode,
-    pub remaining: u8,
 }
 
 /// One owned target selection; unit and coordinate locks cannot coexist.
@@ -65,24 +64,6 @@ pub struct HexLock {
 pub enum TargetSelection {
     Unit(TargetLock),
     Hex(HexLock),
-}
-
-impl TargetSelection {
-    /// Seconds remaining until the selected target settles.
-    pub fn remaining(self) -> u8 {
-        match self {
-            Self::Unit(lock) => lock.remaining,
-            Self::Hex(lock) => lock.remaining,
-        }
-    }
-
-    /// Advance an already-active countdown exactly once.
-    fn advance(&mut self) {
-        match self {
-            Self::Unit(lock) => lock.remaining -= 1,
-            Self::Hex(lock) => lock.remaining -= 1,
-        }
-    }
 }
 
 impl Mech {
@@ -184,10 +165,7 @@ pub(super) fn set_selection(world: &mut World, unit: ObjectId, selection: Option
     })
 }
 
-/// Seconds a newly selected lock takes to settle.
-const SETTLING_DELAY: u8 = 8;
-
-/// Administrative selection bypasses acquisition, but retains battlefield identity and settling.
+/// Administrative selection bypasses acquisition, but retains battlefield identity.
 /// The caller owns wizard admission and atomic validation/publication.
 pub(super) fn set_administrative_target(
     world: &mut World,
@@ -216,17 +194,12 @@ pub(super) fn set_administrative_target(
     set_selection(
         world,
         unit,
-        target.map(|target| {
-            TargetSelection::Unit(TargetLock {
-                target,
-                remaining: SETTLING_DELAY,
-            })
-        }),
+        target.map(|target| TargetSelection::Unit(TargetLock { target })),
     );
     Ok(())
 }
 
-/// Select an acquired, currently visible unit, or clear selection; reselection restarts settling.
+/// Select an acquired, currently visible unit as the primary target, or clear the selection.
 pub fn select_target(
     world: &mut World,
     unit: ObjectId,
@@ -248,17 +221,12 @@ pub fn select_target(
     set_selection(
         world,
         unit,
-        target.map(|target| {
-            TargetSelection::Unit(TargetLock {
-                target,
-                remaining: SETTLING_DELAY,
-            })
-        }),
+        target.map(|target| TargetSelection::Unit(TargetLock { target })),
     );
     let notice = Notice {
         unit,
         text: (if target.is_some() {
-            "Target set; sensors are acquiring a stable lock."
+            "Target set."
         } else {
             "All locks cleared."
         })
@@ -288,17 +256,12 @@ pub(crate) fn select_target_autopilot(
     set_selection(
         world,
         unit,
-        target.map(|target| {
-            TargetSelection::Unit(TargetLock {
-                target,
-                remaining: SETTLING_DELAY,
-            })
-        }),
+        target.map(|target| TargetSelection::Unit(TargetLock { target })),
     );
     Ok(Notice {
         unit,
         text: (if target.is_some() {
-            "Target set; sensors are acquiring a stable lock."
+            "Target set."
         } else {
             "All locks cleared."
         })
@@ -322,11 +285,7 @@ pub fn select_hex_target(
     set_selection(
         world,
         unit,
-        Some(TargetSelection::Hex(HexLock {
-            hex,
-            mode,
-            remaining: SETTLING_DELAY,
-        })),
+        Some(TargetSelection::Hex(HexLock { hex, mode })),
     );
     let purpose = match mode {
         HexTargetMode::UnitAtHex => "at",
@@ -344,59 +303,6 @@ pub fn select_hex_target(
     };
     let _ = super::autopilot::manual_takeover(world, unit);
     Ok(notice)
-}
-
-/// Settle unit locks silently when unseen; coordinate locks announce completion regardless of visibility.
-pub fn advance_target_locks(world: &mut World) -> Vec<Notice> {
-    let updates: Vec<_> = world
-        .btech
-        .constructed_units()
-        .iter()
-        .map(|(&id, unit)| (id, unit.target_selection()))
-        .chain(
-            world
-                .btech
-                .vehicles()
-                .iter()
-                .map(|(&id, unit)| (id, unit.target_selection())),
-        )
-        .collect::<std::collections::BTreeMap<_, _>>()
-        .into_iter()
-        .filter_map(|(id, lock)| {
-            let lock = lock?;
-            if lock.remaining() == 0 {
-                return None;
-            }
-            let message = if lock.remaining() != 1 {
-                None
-            } else {
-                match lock {
-                    TargetSelection::Unit(lock) => super::visible_contact(world, id, lock.target)
-                        .ok()
-                        .flatten()
-                        .map(|_| {
-                            "The sensors acquire a stable lock on your selected target.".to_owned()
-                        }),
-                    TargetSelection::Hex(lock) => Some(format!(
-                        "The sensors acquire a stable lock on ({},{}).",
-                        lock.hex.x, lock.hex.y
-                    )),
-                }
-            };
-            Some((id, lock, message))
-        })
-        .collect();
-    let mut notices = Vec::new();
-    for (id, mut lock, message) in updates {
-        lock.advance();
-        crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
-            unit.target_lock = Some(lock);
-        });
-        if let Some(text) = message {
-            notices.push(Notice { unit: id, text });
-        }
-    }
-    notices
 }
 
 /// Inspect the first other occupant in battlefield slot order, without filtering team or condition.

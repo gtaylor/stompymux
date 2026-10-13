@@ -53,11 +53,6 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 /// Ordinary conventional aim without range extensions or arc overrides.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -1788,17 +1783,8 @@ async fn mech_vehicle_fire_locks_damage_and_restart_share_existing_resolvers() {
             .set_unit_dice(shooter, Dice::seeded([value; 32]))
             .unwrap();
         select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
-        for _ in 0..3 {
-            advance_battle_target_locks(&mut world);
-        }
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        for _ in 0..5 {
-            assert_eq!(
-                advance_battle_target_locks(&mut world),
-                advance_battle_target_locks(&mut restored)
-            );
-        }
         let before = world.btech.vehicles()[&target].clone();
         let report = resolve_battle_shot(
             &mut world,
@@ -2805,7 +2791,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                         ObjectId(1),
                         skill,
                         CharacterValue {
-                            value: 2,
+                            value: 0,
                             ..Default::default()
                         },
                     )

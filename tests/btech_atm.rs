@@ -116,20 +116,10 @@ fn atm_profiles_tables_and_ammunition_markers() {
                 assert_eq!(groups.len(), usize::from(total.div_ceil(5)));
                 assert!(groups.iter().all(|damage| (1..=5).contains(damage)));
                 let long = f64::from(ranges.3);
-                for (distance, extended, reaches) in [
-                    (long, false, true),
-                    (long + 0.051, false, false),
-                    (f64::from(ranges.2) * 2.0, true, true),
-                ] {
+                for (distance, reaches) in [(long, true), (long + 0.051, false)] {
                     assert_eq!(
                         weapon
-                            .range_modifier_for_ammunition(
-                                distance,
-                                extended,
-                                FireMode::Normal,
-                                false,
-                                mode
-                            )
+                            .range_modifier_for_ammunition(distance, FireMode::Normal, mode)
                             .unwrap()
                             .is_some(),
                         reaches,

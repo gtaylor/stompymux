@@ -368,8 +368,6 @@ pub struct SalvoReport<G, I> {
     pub building: Option<super::BuildingCover>,
     /// The building's collapse once the groupings exhausted it.
     pub collapse: Option<super::SurfaceBreak>,
-    pub initial_woods: Option<super::WoodsAbsorption>,
-    pub woods: Option<super::WoodsAbsorption>,
     pub missiles_before_defense: Option<u8>,
     pub cluster_roll: Option<u8>,
     pub inferno: Option<I>,
@@ -460,7 +458,6 @@ pub fn resolve_tactical_salvo(
 
 /// Damage policy and pre-impact XP facts supplied by the enclosing direct shot.
 pub(super) struct ShotDamage<'a> {
-    pub woods_damage: bool,
     pub aimed: Option<super::aimed_hit::AimedShot>,
     pub incoming: Option<u8>,
     pub rules: super::FallRules,
@@ -503,7 +500,6 @@ pub(super) fn resolve_salvo_in_candidate(
         target,
         (weapon.weapon, weapon.ammunition_mode),
         HitGeometry::Direct {
-            woods_damage: damage.woods_damage,
             aimed: damage.aimed,
             shooter,
             fire_mode: weapon.fire_mode,
@@ -552,7 +548,6 @@ impl From<&super::VehicleWeaponUse> for SalvoWeapon {
 enum HitGeometry {
     Fixed(HitArc),
     Direct {
-        woods_damage: bool,
         aimed: Option<super::aimed_hit::AimedShot>,
         shooter: ObjectId,
         fire_mode: super::FireMode,
@@ -681,16 +676,6 @@ fn resolve_salvo_with_effects(
             )
         }
     };
-    let initial_woods = if let HitGeometry::Direct {
-        shooter,
-        woods_damage: true,
-        ..
-    } = geometry
-    {
-        super::woods_absorption::begin_pellets(world, shooter, target, weapon, mode)?
-    } else {
-        None
-    };
     let unit = world.btech.constructed.get_mut(&target).unwrap();
     let fire_mode = match geometry {
         HitGeometry::Direct { fire_mode, .. } => fire_mode,
@@ -700,13 +685,6 @@ fn resolve_salvo_with_effects(
         HitGeometry::Direct { gatling_damage, .. } => gatling_damage,
         HitGeometry::Fixed(_) => None,
     };
-    let shell_woods = matches!(
-        geometry,
-        HitGeometry::Direct {
-            woods_damage: true,
-            ..
-        }
-    ) && super::woods_absorption::direct_shells(weapon, mode);
     let mut packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
             weapon,
@@ -714,7 +692,7 @@ fn resolve_salvo_with_effects(
             fire_mode,
             gatling_damage,
             distance,
-            glancing: glancing && (!shell_woods || fire_mode.rounds_per_cycle() > 1),
+            glancing,
             guidance_blocked,
             angel_blocked,
             target_beacon: unit.has_beacon(super::BeaconKind::Narc)
@@ -723,7 +701,7 @@ fn resolve_salvo_with_effects(
         },
         &mut unit.dice,
     )?;
-    packets.finish_burst_glancing(fire_mode, glancing && !shell_woods);
+    packets.finish_burst_glancing(fire_mode, glancing);
     packets.limit_missiles(match geometry {
         HitGeometry::Direct { incoming, .. } => incoming,
         HitGeometry::Fixed(_) => None,
@@ -731,8 +709,6 @@ fn resolve_salvo_with_effects(
     let mut report = MechSalvoReport {
         building: None,
         collapse: None,
-        initial_woods,
-        woods: None,
         missiles_before_defense: None,
         cluster_roll: packets.cluster_roll,
         inferno: None,
@@ -752,34 +728,6 @@ fn resolve_salvo_with_effects(
             }
             return Ok(report);
         }
-    }
-    if (weapon.profile().missiles > 0 || mode == super::AmmunitionMode::Cluster)
-        && let HitGeometry::Direct {
-            shooter,
-            woods_damage: true,
-            ..
-        } = geometry
-    {
-        report.woods = super::woods_absorption::resolve_projectiles(
-            world,
-            shooter,
-            target,
-            weapon,
-            mode,
-            &mut packets,
-        )?;
-    }
-    if shell_woods && let HitGeometry::Direct { shooter, .. } = geometry {
-        report.woods = super::woods_absorption::resolve_shells(
-            world,
-            shooter,
-            target,
-            weapon,
-            mode,
-            &mut packets.damage,
-            glancing,
-        )?;
-        packets.damage.retain(|packet| *packet > 0);
     }
     let building = super::building_interior::absorb(
         world,
@@ -987,7 +935,7 @@ mod tests {
         // Aiming still rounds this distance into short range, while damage has already fallen.
         assert_eq!(
             W::SnubNosedPpc
-                .range_modifier(9.001, false)
+                .range_modifier(9.001)
                 .unwrap()
                 .unwrap()
                 .modifier,

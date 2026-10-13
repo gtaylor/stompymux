@@ -17,21 +17,13 @@ fn fractional_minimum_and_bracket_boundaries_follow_separate_rounding_rules() {
         (14.051, Bracket::Long, 4),
         (21.0, Bracket::Long, 4),
     ] {
-        let range = Weapon::Lrm20
-            .range_modifier(distance, false)
-            .unwrap()
-            .unwrap();
+        let range = Weapon::Lrm20.range_modifier(distance).unwrap().unwrap();
         assert_eq!((range.bracket, range.modifier), (bracket, modifier));
     }
-    assert!(
-        Weapon::Lrm20
-            .range_modifier(21.001, false)
-            .unwrap()
-            .is_none()
-    );
+    assert!(Weapon::Lrm20.range_modifier(21.001).unwrap().is_none());
     assert_eq!(
         Weapon::MediumLaser
-            .range_modifier(0.0, false)
+            .range_modifier(0.0)
             .unwrap()
             .unwrap()
             .modifier,
@@ -47,72 +39,24 @@ fn physical_maximum_is_strict_and_extended_range_uses_twice_medium_range() {
         Weapon::Srm6,
         Weapon::Ac20,
     ] {
-        assert_eq!(
-            weapon
-                .range_modifier(3.049, false)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            0
-        );
-        assert_eq!(
-            weapon
-                .range_modifier(3.051, false)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            2
-        );
-        assert_eq!(
-            weapon
-                .range_modifier(6.049, false)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            2
-        );
-        assert_eq!(
-            weapon
-                .range_modifier(6.051, false)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            4
-        );
-        assert!(weapon.range_modifier(9.001, false).unwrap().is_none());
-        assert_eq!(
-            weapon.range_modifier(9.001, true).unwrap().unwrap().bracket,
-            Bracket::Long
-        );
-        assert_eq!(
-            weapon
-                .range_modifier(9.051, true)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            8
-        );
-        assert_eq!(
-            weapon.range_modifier(12.0, true).unwrap().unwrap().bracket,
-            Bracket::Extreme
-        );
-        assert!(weapon.range_modifier(12.001, true).unwrap().is_none());
+        assert_eq!(weapon.range_modifier(3.049).unwrap().unwrap().modifier, 0);
+        assert_eq!(weapon.range_modifier(3.051).unwrap().unwrap().modifier, 2);
+        assert_eq!(weapon.range_modifier(6.049).unwrap().unwrap().modifier, 2);
+        assert_eq!(weapon.range_modifier(6.051).unwrap().unwrap().modifier, 4);
+        // Total Warfare p. 107: a weapon cannot fire beyond its long range.
+        assert!(weapon.range_modifier(9.001).unwrap().is_none());
+        assert!(weapon.range_modifier(12.0).unwrap().is_none());
     }
     assert_eq!(
         Weapon::Lrm20
-            .range_modifier(28.0, true)
+            .range_modifier(21.0)
             .unwrap()
             .unwrap()
             .modifier,
-        8
+        4
     );
-    assert!(
-        Weapon::Lrm20
-            .range_modifier(28.001, true)
-            .unwrap()
-            .is_none()
-    );
+    assert!(Weapon::Lrm20.range_modifier(21.001).unwrap().is_none());
     for distance in [-0.1, f64::NAN, f64::INFINITY] {
-        assert!(Weapon::Srm4.range_modifier(distance, false).is_err());
+        assert!(Weapon::Srm4.range_modifier(distance).is_err());
     }
 }

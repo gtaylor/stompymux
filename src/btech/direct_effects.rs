@@ -14,7 +14,6 @@ pub(super) struct DirectEffectRequest {
     pub launched: bool,
     pub intercepted: bool,
     pub vehicle_impact: VehicleImpactRules,
-    pub woods_damage: bool,
     pub distance: f64,
     pub gatling_damage: Option<u8>,
     pub coordinate: Option<HexCoordinate>,
@@ -26,7 +25,6 @@ pub(super) struct DirectEffects {
     pub narc: Option<NarcReport<UnitSection>>,
     pub cooling: Option<f64>,
     pub heat_transfer: u8,
-    pub woods: Option<WoodsAbsorption>,
     pub missed_terrain: Option<WoodlandImpact>,
     /// A miss from the next hex striking the building around a target inside one.
     pub missed_building: Option<super::StrayHit>,
@@ -118,18 +116,6 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
     let cooling = request.weapon == Weapon::CoolantGun;
     if !cooling && request.fire_mode != FireMode::Heat {
         return Ok(report);
-    }
-    if request.woods_damage {
-        let damage = terrain_damage(world, &request)?;
-        report.woods = super::woods_absorption::resolve_shells(
-            world,
-            request.shooter,
-            request.target,
-            request.weapon,
-            request.ammunition,
-            &mut [damage],
-            false,
-        )?;
     }
     let heat = stored_heat_mut(world, request.target)?;
     if cooling {

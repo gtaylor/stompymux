@@ -2121,9 +2121,8 @@ impl Vehicle {
         );
         super::weapon_power::validate(&self.powered_down_weapons, &loadout.weapons)?;
         ensure!(
-            self.target_lock
-                .is_none_or(|lock| lock.remaining() <= 8 && self.power == super::Power::Running),
-            "Invalid vehicle target lock countdown or power state"
+            self.target_lock.is_none() || self.power == super::Power::Running,
+            "Invalid vehicle target lock power state"
         );
         if let Some(selection) = self.aimed_section {
             selection.validate()?;

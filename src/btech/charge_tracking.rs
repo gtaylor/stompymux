@@ -31,28 +31,13 @@ pub enum ChargeSelection {
     Cancel,
 }
 
-/// Charge settings supplied alongside the movement/fall policy.
-#[derive(Debug, Clone, Copy)]
-pub struct ChargePolicy {
-    pub extended_movement: bool,
-}
-
-impl ChargePolicy {
-    /// Standard velocity-based charge rules without the optional recoil variant.
-    pub const STANDARD: Self = Self {
-        extended_movement: false,
-    };
-
-    /// Build collision rules from the moving unit's current accumulated distance.
-    fn collision(self, movement: MovementRules, distance: f32) -> ChargeRules {
-        ChargeRules {
-            distance,
-            physical: PhysicalRules {
-                fasa_turning: movement.fasa_turning,
-                extended_movement: self.extended_movement,
-                fall: movement.fall,
-            },
-        }
+/// Build collision rules from the moving unit's current accumulated distance.
+fn collision(movement: MovementRules, distance: f32) -> ChargeRules {
+    ChargeRules {
+        distance,
+        physical: PhysicalRules {
+            fall: movement.fall,
+        },
     }
 }
 
@@ -205,7 +190,7 @@ pub(super) fn finish_update(
     if unit_range(world, id, target)?.spatial >= 0.6 {
         return Ok(vec![]);
     }
-    let rules = movement.charge.collision(movement, charge.distance);
+    let rules = collision(movement, charge.distance);
     let mutual = world.btech.constructed_units()[&target].charge.target == Some(id);
     let profile = if reports.is_some() {
         super::charge::charge_profile_in_action

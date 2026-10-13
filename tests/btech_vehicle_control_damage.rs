@@ -81,14 +81,19 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
     assert_eq!(check.damage, 2);
     assert_eq!(check.skill, baseline.skill);
     assert_eq!(check.target, baseline.target + 2);
-    set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
+    world
+        .btech
+        .edit_unit_motion(id, |motion| {
+            motion.speed = 10.0;
+            motion.desired_speed = 10.0;
+        })
+        .unwrap();
     let vehicle = &world.btech.vehicles()[&id];
-    assert_eq!(vehicle.weapon_movement_modifier(front, true).unwrap(), 1);
-    assert_eq!(vehicle.weapon_movement_modifier(turret, true).unwrap(), 2);
-    assert_eq!(vehicle.weapon_control_modifier(front, true).unwrap(), 3);
-    assert_eq!(vehicle.weapon_control_modifier(turret, true).unwrap(), 4);
-    assert_eq!(vehicle.weapon_control_modifier(turret, false).unwrap(), 2);
-    assert!(vehicle.weapon_control_modifier(99, false).is_err());
+    assert_eq!(vehicle.weapon_movement_modifier(front).unwrap(), 1);
+    assert_eq!(vehicle.weapon_movement_modifier(turret).unwrap(), 2);
+    assert_eq!(vehicle.weapon_control_modifier(front).unwrap(), 3);
+    assert_eq!(vehicle.weapon_control_modifier(turret).unwrap(), 4);
+    assert!(vehicle.weapon_control_modifier(99).is_err());
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
@@ -114,13 +119,13 @@ async fn vehicle_control_damage_stacks_without_changing_skills_or_construction()
         .unwrap();
     assert_eq!(
         world.btech.vehicles()[&id]
-            .weapon_control_modifier(turret, true)
+            .weapon_control_modifier(turret)
             .unwrap(),
         6
     );
     assert_eq!(
         world.btech.vehicles()[&id]
-            .weapon_control_modifier(front, true)
+            .weapon_control_modifier(front)
             .unwrap(),
         4
     );

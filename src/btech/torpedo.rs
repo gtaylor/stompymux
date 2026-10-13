@@ -99,7 +99,7 @@ mod tests {
         assert!(!Weapon::Lrm20.is_torpedo());
         assert_eq!(
             Weapon::Lrt10
-                .water_range_modifier(13.0, false)
+                .water_range_modifier(13.0)
                 .unwrap()
                 .unwrap()
                 .modifier,

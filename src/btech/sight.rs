@@ -200,7 +200,6 @@ fn resolve(
                     index,
                     config.battletech.extended_gunnery != 0,
                 )?,
-                rules,
             )?;
             ensure!(aim.visible, "Target hex is not visible");
             let number = aim.subtotal();

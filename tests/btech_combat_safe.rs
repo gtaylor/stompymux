@@ -71,11 +71,6 @@ async fn fixture(
 /// Deterministic conventional firing policy for shared damage checks.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -407,8 +402,6 @@ async fn immunity_protects_physical_damage_for_bipeds_and_quads() {
             target,
             Leg::Left,
             PhysicalRules {
-                fasa_turning: false,
-                extended_movement: false,
                 fall: FallRules::configured(&config),
             },
         )

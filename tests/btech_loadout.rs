@@ -239,7 +239,7 @@ fn conventional_energy_profiles_and_ranges_match_reference_catalog() {
         ] {
             assert_eq!(
                 weapon
-                    .range_modifier(f64::from(distance), false)
+                    .range_modifier(f64::from(distance))
                     .unwrap()
                     .unwrap()
                     .bracket,
@@ -248,26 +248,18 @@ fn conventional_energy_profiles_and_ranges_match_reference_catalog() {
         }
         assert!(
             weapon
-                .range_modifier(f64::from(ranges[2]) + 0.01, false)
+                .range_modifier(f64::from(ranges[2]) + 0.01)
                 .unwrap()
                 .is_none()
         );
         assert_eq!(weapon.damage_groups(None).unwrap(), vec![u16::from(damage)]);
     }
     assert_eq!(
-        Weapon::Ppc
-            .range_modifier(0.0, false)
-            .unwrap()
-            .unwrap()
-            .modifier,
+        Weapon::Ppc.range_modifier(0.0).unwrap().unwrap().modifier,
         4
     );
     assert_eq!(
-        Weapon::Ppc
-            .range_modifier(3.0, false)
-            .unwrap()
-            .unwrap()
-            .modifier,
+        Weapon::Ppc.range_modifier(3.0).unwrap().unwrap().modifier,
         1
     );
 }
@@ -306,7 +298,7 @@ fn conventional_autocannon_profiles_bins_and_enforcer_construction() {
         ] {
             assert_eq!(
                 weapon
-                    .range_modifier(f64::from(distance), false)
+                    .range_modifier(f64::from(distance))
                     .unwrap()
                     .unwrap()
                     .bracket,
@@ -315,12 +307,12 @@ fn conventional_autocannon_profiles_bins_and_enforcer_construction() {
         }
         assert!(
             weapon
-                .range_modifier(f64::from(ranges[2]) + 0.01, false)
+                .range_modifier(f64::from(ranges[2]) + 0.01)
                 .unwrap()
                 .is_none()
         );
         assert_eq!(
-            weapon.range_modifier(0.0, false).unwrap().unwrap().modifier,
+            weapon.range_modifier(0.0).unwrap().unwrap().modifier,
             if minimum == 0 { 0 } else { minimum + 1 }
         );
         assert_eq!(weapon.damage_groups(None).unwrap(), vec![u16::from(damage)]);
@@ -667,7 +659,7 @@ fn advanced_energy_catalog_and_range_boundaries() {
         assert_eq!(weapon.gunnery_skill(true), "Gunnery-Laser");
         assert_eq!(profile.minimum_range, minimum);
         assert_eq!(
-            weapon.range_modifier(0.0, false).unwrap().unwrap().modifier,
+            weapon.range_modifier(0.0).unwrap().unwrap().modifier,
             if minimum == 0 { 0 } else { minimum + 1 }
         );
         for (distance, bracket, modifier) in [
@@ -675,15 +667,12 @@ fn advanced_energy_catalog_and_range_boundaries() {
             (ranges[1], Bracket::Medium, 2),
             (ranges[2], Bracket::Long, 4),
         ] {
-            let actual = weapon
-                .range_modifier(f64::from(distance), false)
-                .unwrap()
-                .unwrap();
+            let actual = weapon.range_modifier(f64::from(distance)).unwrap().unwrap();
             assert_eq!((actual.bracket, actual.modifier), (bracket, modifier));
         }
         assert!(
             weapon
-                .range_modifier(f64::from(ranges[2]) + 0.01, false)
+                .range_modifier(f64::from(ranges[2]) + 0.01)
                 .unwrap()
                 .is_none()
         );
@@ -912,31 +901,10 @@ async fn mrm_catalog_and_existing_quickdraw() {
             u16::from(profile.damage) * u16::from(missiles) * u16::from(ammo),
             240
         );
-        assert_eq!(
-            weapon
-                .range_modifier(3.049, false)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            0
-        );
-        assert_eq!(
-            weapon
-                .range_modifier(3.051, false)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            2
-        );
-        assert_eq!(
-            weapon
-                .range_modifier(8.051, false)
-                .unwrap()
-                .unwrap()
-                .modifier,
-            4
-        );
-        assert!(weapon.range_modifier(15.001, false).unwrap().is_none());
+        assert_eq!(weapon.range_modifier(3.049).unwrap().unwrap().modifier, 0);
+        assert_eq!(weapon.range_modifier(3.051).unwrap().unwrap().modifier, 2);
+        assert_eq!(weapon.range_modifier(8.051).unwrap().unwrap().modifier, 4);
+        assert!(weapon.range_modifier(15.001).unwrap().is_none());
     }
     assert_eq!(Weapon::Mrm40.damage_groups(Some(2)).unwrap(), [5, 5, 2]);
     assert_eq!(
@@ -1002,20 +970,11 @@ fn elrm_catalog_and_ranges() {
             (38.0, 4),
         ] {
             assert_eq!(
-                weapon
-                    .range_modifier(distance, false)
-                    .unwrap()
-                    .unwrap()
-                    .modifier,
+                weapon.range_modifier(distance).unwrap().unwrap().modifier,
                 modifier
             );
         }
-        assert!(weapon.range_modifier(38.001, false).unwrap().is_none());
-        assert_eq!(
-            weapon.range_modifier(44.0, true).unwrap().unwrap().modifier,
-            8
-        );
-        assert!(weapon.range_modifier(44.001, true).unwrap().is_none());
+        assert!(weapon.range_modifier(38.001).unwrap().is_none());
     }
 }
 
@@ -1059,12 +1018,12 @@ fn dead_fire_catalog_bins_and_individual_packets() {
             (minimum, ranges[0], ranges[1], ranges[2])
         );
         assert_eq!(
-            weapon.range_modifier(0.0, false).unwrap().unwrap().modifier,
+            weapon.range_modifier(0.0).unwrap().unwrap().modifier,
             if minimum == 0 { 0 } else { minimum + 1 }
         );
         assert!(
             weapon
-                .range_modifier(f64::from(ranges[2]) + 0.001, false)
+                .range_modifier(f64::from(ranges[2]) + 0.001)
                 .unwrap()
                 .is_none()
         );

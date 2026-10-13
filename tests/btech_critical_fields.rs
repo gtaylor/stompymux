@@ -357,8 +357,7 @@ async fn main_status_projects_matrix(index: usize, source: &str) {
     ] {
         let mut candidate = world.clone();
         firing::edit(&mut candidate, id, |unit| {
-            unit["target_lock"] =
-                serde_json::json!({"hex":{"x":0,"y":10},"mode":mode,"remaining":8})
+            unit["target_lock"] = serde_json::json!({"hex":{"x":0,"y":10},"mode":mode})
         });
         fields
             .verify(candidate, id, "status", &format!("{prefix}{letter}"))

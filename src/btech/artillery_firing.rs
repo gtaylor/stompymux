@@ -339,7 +339,6 @@ pub(super) fn prepare(
     };
     let aim = weapon.artillery_aim(ArtilleryAimInput {
         distance,
-        extended_range: rules.aim.extended_ranges,
         submerged,
         visible,
         gunnery: unit_artillery_gunnery_target(world, shooter)?,

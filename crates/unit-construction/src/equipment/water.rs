@@ -14,10 +14,9 @@ pub struct WaterRanges {
 }
 
 impl WaterRanges {
-    /// Missing long range falls back to medium, without enabling extreme range.
-    pub fn effective_range(self, extended: bool) -> u16 {
+    /// Missing long range falls back to medium.
+    pub fn effective_range(self) -> u16 {
         match self.long_range {
-            Some(long) if extended => u16::from(long).max(u16::from(self.medium_range) * 2),
             Some(long) => u16::from(long),
             None => u16::from(self.medium_range),
         }
@@ -75,11 +74,7 @@ impl Weapon {
 
     /// Underwater accuracy uses rounded distance even at the maximum and minimum boundaries.
     /// Unsupported weapons are errors; a permitted weapon beyond its reach returns `None`.
-    pub fn water_range_modifier(
-        self,
-        distance: f64,
-        extended: bool,
-    ) -> Result<Option<WeaponRange>> {
+    pub fn water_range_modifier(self, distance: f64) -> Result<Option<WeaponRange>> {
         ensure!(
             distance.is_finite() && distance >= 0.0,
             "Invalid weapon range"
@@ -88,13 +83,11 @@ impl Weapon {
             .water_ranges()
             .context("This weapon may not be fired underwater.")?;
         let range = (distance + 0.95).floor();
-        if range > f64::from(profile.effective_range(extended)) {
+        if range > f64::from(profile.effective_range()) {
             return Ok(None);
         }
         let range = range as u8;
-        let (bracket, modifier) = if u16::from(range) > profile.effective_range(false) {
-            (RangeBracket::Extreme, 8)
-        } else if range > profile.medium_range {
+        let (bracket, modifier) = if range > profile.medium_range {
             (RangeBracket::Long, 4)
         } else if range > profile.short_range {
             (RangeBracket::Medium, 2)
@@ -138,10 +131,7 @@ mod tests {
         ] {
             assert!(weapon.water_ranges().is_none());
             assert_eq!(
-                weapon
-                    .water_range_modifier(0.0, true)
-                    .unwrap_err()
-                    .to_string(),
+                weapon.water_range_modifier(0.0).unwrap_err().to_string(),
                 "This weapon may not be fired underwater."
             );
         }
@@ -149,38 +139,28 @@ mod tests {
             Weapon::ClanPlasmaRifle
                 .water_ranges()
                 .unwrap()
-                .effective_range(true),
-            20
+                .effective_range(),
+            16
         );
     }
 
-    /// An absent long band caps small lasers at medium even with extended ranges enabled.
+    /// An absent long band caps small lasers at medium.
     #[test]
-    fn missing_long_band_does_not_create_extreme_range() {
+    fn missing_long_band_caps_at_medium() {
         for weapon in [
             Weapon::SmallLaser,
             Weapon::SmallPulseLaser,
             Weapon::ClanHeavySmallLaser,
         ] {
-            for extended in [false, true] {
-                let range = weapon
-                    .water_range_modifier(2.04, extended)
-                    .unwrap()
-                    .unwrap();
-                assert_eq!(
-                    range,
-                    WeaponRange {
-                        bracket: RangeBracket::Medium,
-                        modifier: 2
-                    }
-                );
-                assert!(
-                    weapon
-                        .water_range_modifier(2.06, extended)
-                        .unwrap()
-                        .is_none()
-                );
-            }
+            let range = weapon.water_range_modifier(2.04).unwrap().unwrap();
+            assert_eq!(
+                range,
+                WeaponRange {
+                    bracket: RangeBracket::Medium,
+                    modifier: 2
+                }
+            );
+            assert!(weapon.water_range_modifier(2.06).unwrap().is_none());
         }
     }
 
@@ -197,28 +177,16 @@ mod tests {
             (4.06, RangeBracket::Medium, 2),
             (7.06, RangeBracket::Long, 4),
             (10.04, RangeBracket::Long, 4),
-            (10.06, RangeBracket::Extreme, 8),
         ] {
             assert_eq!(
-                Weapon::Ppc.water_range_modifier(distance, true).unwrap(),
+                Weapon::Ppc.water_range_modifier(distance).unwrap(),
                 Some(WeaponRange { bracket, modifier })
             );
         }
-        assert!(
-            Weapon::Ppc
-                .water_range_modifier(10.06, false)
-                .unwrap()
-                .is_none()
-        );
-        assert!(
-            Weapon::Ppc
-                .water_range_modifier(14.06, true)
-                .unwrap()
-                .is_none()
-        );
+        assert!(Weapon::Ppc.water_range_modifier(10.06).unwrap().is_none());
         assert_eq!(
             Weapon::MediumLaser
-                .water_range_modifier(0.0, false)
+                .water_range_modifier(0.0)
                 .unwrap()
                 .unwrap()
                 .modifier,
@@ -230,15 +198,11 @@ mod tests {
     #[test]
     fn invalid_distances_are_rejected_and_large_distances_miss() {
         for distance in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.01] {
-            assert!(
-                Weapon::MediumLaser
-                    .water_range_modifier(distance, true)
-                    .is_err()
-            );
+            assert!(Weapon::MediumLaser.water_range_modifier(distance).is_err());
         }
         assert!(
             Weapon::MediumLaser
-                .water_range_modifier(f64::MAX, true)
+                .water_range_modifier(f64::MAX)
                 .unwrap()
                 .is_none()
         );

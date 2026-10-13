@@ -374,11 +374,6 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
                 serde_json::to_value(AmmunitionMode::SemiGuided).unwrap();
         });
         let rules = AimRules {
-            woods_damage: false,
-            fasa_turning: false,
-            extended_movement: false,
-            extended_ranges: false,
-            hotload_half_minimum: false,
             override_weapon_arcs: false,
         };
         let unaided = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();

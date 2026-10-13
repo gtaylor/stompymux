@@ -5,11 +5,6 @@ use stompymux_rs::*;
 /// Conventional preview rules preserve the water term without weapon arc overrides.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -132,29 +127,22 @@ async fn deep_water_ranges_are_shared_across_chassis_and_coordinate_aim() {
         }
         let submerged = battle_unit_elevation(&world, shooter).unwrap().unwrap() < -1;
         let before = world.btech.clone();
-        for extended in [false, true] {
-            let mut rules = rules();
-            rules.extended_ranges = extended;
+        {
+            let rules = rules();
             let direct =
                 battle_pilot_aim_modifiers(&world, shooter, target, index, false, rules).unwrap();
-            let coordinate = battle_hex_aim_modifiers(
-                &world,
-                shooter,
-                HexCoordinate { x: 0, y: 0 },
-                index,
-                4,
-                rules,
-            )
-            .unwrap();
+            let coordinate =
+                battle_hex_aim_modifiers(&world, shooter, HexCoordinate { x: 0, y: 0 }, index, 4)
+                    .unwrap();
             for aim in [&direct, &coordinate.modifiers] {
                 let expected = if submerged {
-                    Weapon::MediumLaser.water_range_modifier(aim.distance, extended)
+                    Weapon::MediumLaser.water_range_modifier(aim.distance)
                 } else {
-                    Weapon::MediumLaser.range_modifier(aim.distance, extended)
+                    Weapon::MediumLaser.range_modifier(aim.distance)
                 }
                 .unwrap();
                 assert_eq!(aim.range, expected, "{source}: submerged={submerged}");
-                if submerged && !extended {
+                if submerged {
                     assert!(aim.range.is_none());
                 }
             }

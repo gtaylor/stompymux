@@ -81,7 +81,6 @@ const FIELDS: &[&str] = &[
     "x",
     "y",
     "z",
-    "targcomp",
     "lrsrange",
     "radiorange",
     "scanrange",
@@ -293,7 +292,6 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             let slot = usize::from(field.as_bytes()[6] - b'0');
             integer(super::cockpit_links::links(world, id).0[slot].0)
         }
-        "targcomp" => integer(i64::from(super::targeting_mode::mode(world, id))),
         "lrsrange" | "scanrange" | "tacrange" => {
             let ranges = mech.map_or_else(|| vehicle.unwrap().sensor_ranges(), Mech::sensor_ranges);
             integer(i64::from(match field {
@@ -669,7 +667,7 @@ pub fn set_unit_field_action(
                 };
                 super::unit_identity::set(&mut scripts.world_mut(), id, identity, value)?;
             }
-            "targcomp" | "tacrange" | "lrsrange" | "scanrange" | "radiorange" | "radiotype" => {
+            "tacrange" | "lrsrange" | "scanrange" | "radiorange" | "radiotype" => {
                 let sensor_hits = before
                     .btech
                     .constructed_units()

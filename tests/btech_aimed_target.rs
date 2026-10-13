@@ -183,6 +183,42 @@ async fn head_aim_penalty_and_sight_feedback_share_all_chassis() {
 }
 
 /// Find a target or attack stream by its next roll, without depending on incidental seed values.
+/// Give the pilot a gunnery target of eight so that a roll of 2 misses even an immobile target.
+fn poor_gunnery(world: &mut World) {
+    world
+        .objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .flags
+        .insert(Flag::Connected);
+    set_battle_character(
+        world,
+        ObjectId(1),
+        Character {
+            build: 5,
+            reflexes: 4,
+            intuition: 3,
+            learn: 2,
+            charisma: 1,
+            bruise: 0,
+            lethal: 0,
+        },
+    )
+    .unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
+    set_battle_character_value(
+        world,
+        ObjectId(1),
+        "Gunnery-Missile",
+        CharacterValue {
+            value: 3,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
+}
+
 fn seed_for(predicate: impl Fn(u8) -> bool) -> [u8; 32] {
     for byte in 0..=255 {
         let seed = [byte; 32];
@@ -690,6 +726,7 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
             );
             for miss in [false, true] {
                 let mut world = base.clone();
+                poor_gunnery(&mut world);
                 edit(&mut world, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
@@ -788,6 +825,7 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                     false,
                     Some(flag),
                 );
+                poor_gunnery(&mut base);
                 edit(&mut base, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();

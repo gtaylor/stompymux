@@ -60,11 +60,6 @@ async fn rolls_command_reports_live_checks_and_resets_on_restart() {
             index,
             false,
             AimRules {
-                woods_damage: false,
-                fasa_turning: false,
-                extended_movement: false,
-                extended_ranges: false,
-                hotload_half_minimum: false,
                 override_weapon_arcs: false,
             },
         )

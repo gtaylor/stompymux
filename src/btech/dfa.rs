@@ -142,17 +142,13 @@ fn dfa_profile_inner(
         attacker,
         rules.fall.extended_piloting,
     )?);
-    let movement = i32::from(source.attacker_movement_modifier(rules.fasa_turning));
+    let movement = i32::from(source.attacker_movement_modifier());
     let attacker_movement = if specialist {
         movement.min(0) - 1
     } else {
         movement
     };
-    let target_movement = i32::from(super::aim::ground_physical_target_modifier(
-        world,
-        victim,
-        rules.extended_movement,
-    ));
+    let target_movement = i32::from(super::aim::ground_physical_target_modifier(world, victim));
     let light = i32::from(super::light_aim::modifier(world, target, true)?);
     // The better pilot has the edge: the difference in Piloting Skill Ratings modifies the
     // attack, and terrain never does (Total Warfare p. 144).

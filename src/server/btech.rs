@@ -203,9 +203,6 @@ impl Server {
             crate::MovementRules {
                 free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
-                charge: crate::ChargePolicy {
-                    extended_movement: self.config.battletech.extendedmovemod != 0,
-                },
                 fasa_turning: self.config.battletech.fasaturn != 0,
                 slowdown: self.config.battletech.slowdown,
                 roll_on_backwalk: self.config.battletech.roll_on_backwalk != 0,
@@ -360,9 +357,6 @@ impl Server {
                     ),
                     extended_piloting: self.config.battletech.extended_piloting != 0,
                     toughness: false,
-                },
-                charge: crate::ChargePolicy {
-                    extended_movement: self.config.battletech.extendedmovemod != 0,
                 },
                 fasa_turning: self.config.battletech.fasaturn != 0,
                 ..crate::MovementRules::STANDARD
@@ -587,9 +581,6 @@ impl Server {
                 return false;
             }
         }
-        notices.extend(crate::advance_battle_target_locks(
-            &mut self.scripts.world.borrow_mut(),
-        ));
         let autopilot_result = match metrics.as_deref_mut() {
             Some(metrics) => crate::btech::autopilot::runtime::advance_combat_with_metrics(
                 &mut self.scripts.world.borrow_mut(),

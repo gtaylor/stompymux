@@ -30,8 +30,8 @@ along their existing facing.
 the mode with the reactor off, provided you are the conscious assigned pilot,
 the vehicle is on a map and its turret survives.
 
-While running, tracking updates once per second without waiting for the target
-lock to settle. Hull turns and target movement change the required facing.
+While running, tracking updates once per second. Hull turns and target movement
+change the required facing.
 Unconsciousness, turret jams and turret locks pause rotation. Crew stun still
 permits turning. The mode survives shutdown and restart. A manual `turret` setting is replaced on the next tracking update while
 the mode is enabled. `status` shows whether automatic tracking is on.

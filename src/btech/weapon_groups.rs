@@ -124,7 +124,7 @@ pub(super) fn roll_weapon_groups(
 
 impl WeaponGroups {
     /// A glancing unit hit halves shell damage, rounding down, as well as the already-adjusted
-    /// burst count. Occupied-woods callers defer this step until after per-shell absorption.
+    /// burst count.
     pub(super) fn finish_burst_glancing(&mut self, mode: FireMode, glancing: bool) {
         if !glancing || mode.rounds_per_cycle() <= 1 {
             return;
@@ -133,21 +133,6 @@ impl WeaponGroups {
             *damage /= 2;
         }
         self.damage.retain(|damage| *damage > 0);
-    }
-
-    /// Remove cover damage in whole missiles while retaining the ordered packet boundaries.
-    /// The returned totals precede and follow absorption, after any interception or flight cap.
-    pub(super) fn absorb_missiles(&mut self, reduction: u16) -> (u16, u16) {
-        let damage = u16::from(self.missile_damage);
-        let before = self.damage.iter().sum::<u16>();
-        let surviving = before.saturating_sub(reduction) / damage;
-        self.limit_missiles(Some(u8::try_from(surviving).expect("bounded missile rack")));
-        (before, surviving * damage)
-    }
-
-    /// Per-missile payload includes the launcher's selected ammunition family.
-    pub(super) fn missile_payload(&self) -> u16 {
-        u16::from(self.missile_damage)
     }
 
     /// A retargeted cluster cannot contain more missiles than remain in the flight.
@@ -292,65 +277,6 @@ mod tests {
                         dice.generic_roll_statistics().counts()[usize::from(roll.unwrap() - 2)],
                         1
                     );
-                }
-            }
-        }
-    }
-
-    /// Cover follows defensive interception and removes whole projectiles for every payload size.
-    #[test]
-    fn missile_cover_preserves_payload_grouping_and_consumes_no_dice() {
-        for (weapon, mode) in [
-            (Weapon::Lrm5, AmmunitionMode::Normal),
-            (Weapon::Lrm20, AmmunitionMode::Normal),
-            (Weapon::Srm2, AmmunitionMode::Normal),
-            (Weapon::Srm6, AmmunitionMode::Normal),
-            (Weapon::StreakSrm6, AmmunitionMode::Normal),
-            (Weapon::Thunderbolt20, AmmunitionMode::Normal),
-            (Weapon::Mml5, AmmunitionMode::Normal),
-            (Weapon::Mml5, AmmunitionMode::MmlLrm),
-        ] {
-            for seed in 0..=255 {
-                for glancing in [false, true] {
-                    for intercepted in [0, 1, 255] {
-                        for reduction in [2, 4] {
-                            let mut dice = Dice::seeded([seed; 32]);
-                            let mut groups = roll_weapon_groups(
-                                WeaponGroupRequest {
-                                    weapon,
-                                    ammunition: mode,
-                                    fire_mode: FireMode::Normal,
-                                    gatling_damage: None,
-                                    distance: Some(7.0),
-                                    glancing,
-                                    guidance_blocked: false,
-                                    angel_blocked: false,
-                                    target_beacon: false,
-                                    artemis_v: false,
-                                },
-                                &mut dice,
-                            )
-                            .unwrap();
-                            let before_dice = dice.clone();
-                            let (_, survivors) = groups.intercept(weapon, intercepted).unwrap();
-                            let payload = groups.missile_payload();
-                            let expected_before = survivors * payload;
-                            let expected_after =
-                                expected_before.saturating_sub(reduction) / payload * payload;
-                            assert_eq!(
-                                groups.absorb_missiles(reduction),
-                                (expected_before, expected_after)
-                            );
-                            assert_eq!(groups.damage.iter().sum::<u16>(), expected_after);
-                            assert!(
-                                groups
-                                    .damage
-                                    .iter()
-                                    .all(|damage| *damage > 0 && damage % payload == 0)
-                            );
-                            assert_eq!(dice, before_dice);
-                        }
-                    }
                 }
             }
         }

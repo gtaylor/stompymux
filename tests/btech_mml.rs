@@ -38,20 +38,12 @@ fn mml_profiles_and_cluster_tables() {
             for range in [
                 0.0, 1.0, 3.0, 4.0, 6.0, 7.0, 9.0, 10.0, 14.0, 15.0, 21.0, 22.0, 28.0, 29.0,
             ] {
-                for extended in [false, true] {
-                    assert_eq!(
-                        weapon
-                            .range_modifier_for_ammunition(
-                                range,
-                                extended,
-                                FireMode::Normal,
-                                false,
-                                mode
-                            )
-                            .unwrap(),
-                        conventional.range_modifier(range, extended).unwrap()
-                    );
-                }
+                assert_eq!(
+                    weapon
+                        .range_modifier_for_ammunition(range, FireMode::Normal, mode)
+                        .unwrap(),
+                    conventional.range_modifier(range).unwrap()
+                );
             }
             for (roll, count) in (2..=12).zip(hits) {
                 assert_eq!(weapon.missile_hits(roll).unwrap(), count);
@@ -106,7 +98,7 @@ async fn mml_modes_firing_and_restart_across_chassis() {
                     state["motion"]["point"] =
                         serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();
                 });
-                let specifications = battle_weapon_specifications(&world, shooter, true).unwrap();
+                let specifications = battle_weapon_specifications(&world, shooter).unwrap();
                 let mml: Vec<_> = specifications
                     .iter()
                     .filter(|row| row.weapon == weapon)
@@ -115,7 +107,7 @@ async fn mml_modes_firing_and_restart_across_chassis() {
                 assert_eq!((mml[0].damage, mml[0].long_range), (2, 9));
                 assert_eq!((mml[1].damage, mml[1].long_range), (1, 21));
                 assert_eq!(mml[1].ammunition, AmmunitionMode::MmlLrm);
-                let display = battle_weapon_specification_text(&world, shooter, true).unwrap();
+                let display = battle_weapon_specification_text(&world, shooter).unwrap();
                 assert!(display.contains("(SRM)"));
                 assert!(display.contains("(LRM)"));
                 let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();

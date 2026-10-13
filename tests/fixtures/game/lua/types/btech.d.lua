@@ -464,7 +464,7 @@ function btech_unit.inspect(dbref) end
 ---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
 ---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits.
 ---@field aimed_section AimSelection|nil Saved anatomy preference; independent of the current lock.
----@field target_lock TargetLock|HexLock|nil Saved selection and settling countdown.
+---@field target_lock TargetLock|HexLock|nil Saved selection.
 ---@field artillery_adjustment integer Saved correction for the selected artillery coordinate.
 ---@field c3_hardware {masters: integer, working_masters: integer, slave_installed: boolean, slave_operational: boolean, c3i_installed: boolean, c3i_operational: boolean} Installed and working command-network computers; independent of power and membership.
 ---@field c3i_members integer[] Eligible members in the improved command network.
@@ -1404,7 +1404,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range; physical limits and firing visibility remain separate.
 ---@field range {bracket: string, modifier: integer}|nil
 ---@field attacker_movement integer
----@field woods_cover integer Configured occupied-forest accuracy credit: zero, minus one or minus two.
 ---@field target_movement integer Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
 ---@field bogged_down integer Minus two against a target stuck in soft ground.
 ---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
@@ -1418,7 +1417,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field aimed_section integer Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
 ---@field beacon_accuracy integer Haywire interference and iNarc homing assistance.
 ---@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -3 versus VTOLs, otherwise -1; Stinger is -3 versus flying VTOLs and -1 during orbital descent.
----@field targeting_mode integer Scenario tracking-mode adjustment, separate from installed computer equipment.
 ---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 ---@field target_lock integer
 ---@field perception {channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil Nil unless the shooter or its side holds the target as a contact; direct_fire is false behind blocking terrain.
@@ -1482,8 +1480,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field notices Notice[] Ordered absorption and terrain feedback.
 
 ---@class MechSalvoReport
----@field initial_woods WoodsAbsorption|nil Nominal LBX terrain check before pellet counting and absorption.
----@field woods WoodsAbsorption|nil Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 ---@field missiles_before_defense integer|nil Cluster hits before automatic defenses.
 ---@field cluster_roll integer|nil Original missile cluster roll; nil for direct non-missile hits.
 ---@field inferno InfernoHit|nil Burning replaces armor damage.
@@ -1571,7 +1567,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field expenditure WeaponUse
 ---@field salvo {kind: 'mech'|'vehicle'|'swarm', report: table}|nil Target-specific damage; nil on a miss or a heat-mode hit.
 ---@field heat_transfer integer Heat already added to the target, zero unless a heat-mode shot hits.
----@field thermal_woods WoodsAbsorption|nil Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
 ---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 ---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
 ---@field cooling number? Coolant reduction applied to stored heat, including temporary negative credit.
@@ -1601,7 +1596,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field narc NarcReport|nil Beacon attachment or interception; vehicle sections use their own names.
 ---@field cooling number|nil Coolant removed from target stored heat.
 ---@field heat_transfer integer Direct flamer heat added to the target, otherwise zero.
----@field thermal_woods WoodsAbsorption|nil Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
 ---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 ---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
 ---@field salvo {kind: 'mech'|'vehicle'|'swarm', report: table}|nil Target-specific ordered damage groups.
@@ -1615,8 +1609,6 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field broadcasts Notice[] Raw damage broadcasts handled by firing.
 
 ---@class VehicleSalvoReport
----@field initial_woods WoodsAbsorption|nil Nominal LBX terrain check before pellet counting and absorption.
----@field woods WoodsAbsorption|nil Occupied-woods consequences for direct shells (including bursts) or missile/pellet armor damage, after missile interception.
 ---@field experience table[] Per-packet optional pre-impact XP awards.
 ---@field experience_messages table[] Ordered experience diagnostics.
 ---@field cluster_roll integer|nil

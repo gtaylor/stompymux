@@ -121,8 +121,6 @@ allow_cargo_commands = true
 # Overall repair-time multiplier, from 0.0 through 10.0. Zero makes newly
 # started repairs complete on the event scheduler's next one-second tick.
 techtime_multiplier = 1.0
-# Enable extended weapon ranges, up to twice a weapon's medium range.
-erange = 0
 # Enable MechWarrior embark/disembark behavior and experience loss.
 ic = 0
 # Speed-reduction rules while turning: 0 disables them, 1 is legacy, 2 is facing-based.

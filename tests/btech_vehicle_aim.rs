@@ -68,21 +68,11 @@ async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
             motion(&mut world, id, speed, turning);
             let checkpoint = world.btech.clone();
             let vehicle = &world.btech.vehicles()[&id];
-            assert_eq!(vehicle.attacker_movement_modifier(false), attack);
+            assert_eq!(vehicle.attacker_movement_modifier(), attack);
             assert_eq!(
-                vehicle.attacker_movement_modifier(true),
-                if attack == 2 {
-                    2
-                } else {
-                    attack + u8::from(turning)
-                }
+                battle_unit_target_movement_modifier(&world, id, 1.0).unwrap(),
+                target
             );
-            for extended in [false, true] {
-                assert_eq!(
-                    battle_unit_target_movement_modifier(&world, id, 1.0, extended).unwrap(),
-                    target
-                );
-            }
             assert_eq!(world.btech, checkpoint);
         }
     }
@@ -95,15 +85,12 @@ async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
     .unwrap();
     // Damage lowers the throttle limit, while the firing threshold remains construction-based.
     assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 53.75);
-    assert_eq!(
-        world.btech.vehicles()[&id].attacker_movement_modifier(false),
-        1
-    );
+    assert_eq!(world.btech.vehicles()[&id].attacker_movement_modifier(), 1);
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
     assert_eq!(
-        battle_unit_target_movement_modifier(&loaded, id, 5.0, true).unwrap(),
+        battle_unit_target_movement_modifier(&loaded, id, 5.0).unwrap(),
         2
     );
 }
@@ -113,7 +100,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/units/Flatbed_Truck.toml")).await;
     assert_eq!(
-        battle_unit_target_movement_modifier(&world, id, 0.0, false).unwrap(),
+        battle_unit_target_movement_modifier(&world, id, 0.0).unwrap(),
         0
     );
     motion(&mut world, id, 43.0, false);
@@ -125,13 +112,13 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
     });
     world.btech = serde_json::from_value(state).unwrap();
     assert_eq!(
-        battle_unit_target_movement_modifier(&world, id, 10.0, false).unwrap(),
+        battle_unit_target_movement_modifier(&world, id, 10.0).unwrap(),
         -3
     );
     world = moving.clone();
     damage_battle_vehicle_motive(&mut world, id, VehicleMotiveHit::Immobilize).unwrap();
     assert_eq!(
-        battle_unit_target_movement_modifier(&world, id, 10.0, false).unwrap(),
+        battle_unit_target_movement_modifier(&world, id, 10.0).unwrap(),
         -4
     );
     world = moving.clone();
@@ -144,27 +131,27 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
     )
     .unwrap();
     assert_eq!(
-        battle_unit_target_movement_modifier(&world, id, 10.0, false).unwrap(),
+        battle_unit_target_movement_modifier(&world, id, 10.0).unwrap(),
         0
     );
     world = moving;
     stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
     assert_eq!(
-        battle_unit_target_movement_modifier(&world, id, 10.0, false).unwrap(),
+        battle_unit_target_movement_modifier(&world, id, 10.0).unwrap(),
         -4
     );
     let checkpoint = world.btech.clone();
     for distance in [-1.0, f64::NAN, f64::INFINITY] {
-        assert!(battle_unit_target_movement_modifier(&world, id, distance, false).is_err());
+        assert!(battle_unit_target_movement_modifier(&world, id, distance).is_err());
     }
-    assert!(battle_unit_target_movement_modifier(&world, ObjectId(-1), 1.0, false).is_err());
+    assert!(battle_unit_target_movement_modifier(&world, ObjectId(-1), 1.0).is_err());
     world
         .objects
         .get_mut(&id)
         .unwrap()
         .flags
         .insert(Flag::Going);
-    assert!(battle_unit_target_movement_modifier(&world, id, 1.0, false).is_err());
+    assert!(battle_unit_target_movement_modifier(&world, id, 1.0).is_err());
     assert_eq!(world.btech, checkpoint);
 }
 
@@ -174,13 +161,10 @@ async fn stationary_construction_and_turret_rotation_use_distinct_modifiers() {
         fixture(include_str!("../game/units/RadioTower.toml")).await;
     assert_eq!(world.btech.vehicles()[&id].power(), Power::Running);
     assert_eq!(
-        battle_unit_target_movement_modifier(&world, id, 2.0, false).unwrap(),
+        battle_unit_target_movement_modifier(&world, id, 2.0).unwrap(),
         -4
     );
-    assert_eq!(
-        world.btech.vehicles()[&id].attacker_movement_modifier(true),
-        0
-    );
+    assert_eq!(world.btech.vehicles()[&id].attacker_movement_modifier(), 0);
     let checkpoint = world.btech.clone();
     assert!(set_battle_speed(&mut world, id, ObjectId(1), 1.0).is_err());
     assert!(set_battle_heading(&mut world, id, ObjectId(1), 90.0).is_err());
@@ -207,13 +191,7 @@ async fn stationary_construction_and_turret_rotation_use_distinct_modifiers() {
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/units/Demolisher.toml")).await;
     set_battle_turret(&mut world, id, ObjectId(1), 90.0).unwrap();
-    assert_eq!(
-        world.btech.vehicles()[&id].attacker_movement_modifier(true),
-        0
-    );
+    assert_eq!(world.btech.vehicles()[&id].attacker_movement_modifier(), 0);
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
-    assert_eq!(
-        world.btech.vehicles()[&id].attacker_movement_modifier(true),
-        1
-    );
+    assert_eq!(world.btech.vehicles()[&id].attacker_movement_modifier(), 0);
 }
