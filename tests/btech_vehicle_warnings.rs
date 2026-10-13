@@ -7,11 +7,7 @@ use stompymux_rs::*;
 /// Suppress critical side effects while retaining ordinary armor admission and warning ordering.
 fn rules() -> VehicleCriticalRules {
     VehicleCriticalRules {
-        rotor_damage_divisor: 0,
         extended_piloting: false,
-        vtol_table: None,
-        table: VehicleCriticalTable::Standard,
-        enabled: false,
         combat_safe: false,
         toughness: false,
     }

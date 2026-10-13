@@ -1604,10 +1604,6 @@ async fn tcp_help_reload_navigation_and_compressed_chunks() {
         .unwrap()
         .flags
         .insert(stompymux_rs::Flag::Ansi);
-    // Settle startup simulation before checking that help leaves persistent game state unchanged.
-    for _ in 0..31 {
-        stompymux_rs::advance_battle_reactor_windows(&mut w);
-    }
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
     let mut wizard = Client::connect(&running).await;

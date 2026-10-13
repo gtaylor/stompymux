@@ -9,6 +9,8 @@ use serde::Serialize;
 pub struct TacticalPilotInjury {
     pub injuries: u8,
     pub killed: bool,
+    /// The check that decided the warrior's state: the first failed Consciousness Roll, or the
+    /// last one passed. `None` when no roll was made (no damage, already unconscious, killed).
     pub consciousness: Option<ConsciousnessCheck>,
 }
 
@@ -92,6 +94,8 @@ pub(super) fn injure_terminal_crew(
 }
 
 /// Share injury accumulation, consciousness dice and saved recovery for live and terminal crews.
+/// Every point of damage taken calls for its own Consciousness Roll against the number for the
+/// warrior's new total (Total Warfare p. 41); the Toughness advantage rolls the best two of 3d6.
 fn injure_tactical_crew(
     world: &mut World,
     id: ObjectId,
@@ -143,17 +147,36 @@ fn injure_tactical_crew(
             unit.reconcile_damage();
         }
     }
-    if let Some(pilot) = pilot {
-        if report.killed {
-            if let Some(recovery) = world.btech.recoveries.get_mut(&pilot) {
-                recovery.remaining = 0;
-            }
-        } else {
-            report.consciousness =
-                super::recovery::check_tactical_consciousness(world, pilot, injuries, toughness)?;
+    if report.killed {
+        if let Some(recovery) = pilot.and_then(|pilot| world.btech.recoveries.get_mut(&pilot)) {
+            recovery.remaining = 0;
         }
-    } else if !report.killed {
-        report.consciousness = super::crew_recovery::check(world, id, injuries, toughness)?;
+        world.btech.validate_action(world)?;
+        return Ok(report);
+    }
+    // The crew of a wreck is counted but makes no Consciousness Rolls: nothing it could wake
+    // up to do remains, and its recovery clock stops.
+    if destroyed {
+        if let Some(recovery) = pilot.and_then(|pilot| world.btech.recoveries.get_mut(&pilot)) {
+            recovery.remaining = 0;
+        }
+        if pilot.is_none() {
+            super::crew_recovery::clear(world, id);
+        }
+        world.btech.validate_action(world)?;
+        return Ok(report);
+    }
+    for point in 1..=hits {
+        let total = super::pilot_health::bounded(u16::from(old_injuries) + u16::from(point));
+        let check = match pilot {
+            Some(pilot) => {
+                super::recovery::check_tactical_consciousness(world, pilot, total, toughness)?
+            }
+            None => super::crew_recovery::check(world, id, total, toughness)?,
+        };
+        if check.is_some() {
+            report.consciousness = check;
+        }
     }
     world.btech.validate_action(world)?;
     Ok(report)

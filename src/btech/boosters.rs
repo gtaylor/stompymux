@@ -130,10 +130,6 @@ mod tests {
                     unit.critical_destroyed(super::super::CriticalLocation { section, slot: 0 })
                 );
             }
-            if chassis == "Quad" {
-                assert!(unit.mobility().maximum_speed > 0.0);
-                assert!(!unit.airborne_support_lost());
-            }
             unit.masc.failed = true;
             assert_eq!(unit.mobility().maximum_speed, 0.0);
             assert!(unit.airborne_support_lost());

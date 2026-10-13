@@ -49,10 +49,7 @@ async fn fixture(
 
 /// Keep packet tests independent of random critical cascades.
 fn rules() -> FallRules {
-    let mut rules = MovementRules::STANDARD.fall;
-    rules.vehicle_impact.criticals.enabled = false;
-    rules.vehicle_impact.hit.critical_mode = 0;
-    rules
+    MovementRules::STANDARD.fall
 }
 
 /// Stop just before arrival so persisted replay includes the map's pattern dice.
@@ -98,7 +95,7 @@ async fn mixed_artillery_packets_use_vehicle_tables_and_replay_arrival() {
                     .iter()
                     .map(|hit| hit.impacts.len())
                     .collect::<Vec<_>>(),
-                [4, 4, 2]
+                [5, 5, 3]
             );
         }
         assert!(!report.hits.is_empty());
@@ -137,51 +134,10 @@ async fn mixed_artillery_packets_use_vehicle_tables_and_replay_arrival() {
             }
             if hit.unit != ids[1] {
                 assert!(hit.vehicle_heat.is_some());
-                assert_eq!(hit.vehicle_heat.as_ref().unwrap().explosion_roll, None);
             }
         }
         world.validate(&config).unwrap();
     }
-}
-
-#[tokio::test]
-async fn artillery_zero_heat_uses_mobile_explosions_after_all_packets() {
-    let (_dir, config, mut world, map, ids) = fixture(VehicleMovement::Tracked).await;
-    let initial = (0u32..100000)
-        .find_map(|number| {
-            let mut bytes = [0; 32];
-            bytes[..4].copy_from_slice(&number.to_le_bytes());
-            let initial = Dice::seeded(bytes);
-            let mut dice = initial.clone();
-            for _ in 0..4 {
-                dice.two_d6();
-                dice.two_d6();
-            }
-            (dice.two_d6() == 9).then_some(initial)
-        })
-        .unwrap();
-    world
-        .btech
-        .rewrite_unit_record(ids[0], |record| {
-            record["dice"] = serde_json::to_value(initial).unwrap();
-        })
-        .unwrap();
-    let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
-    let report = advance_artillery_flight(&mut world, map, &mut flight, rules())
-        .unwrap()
-        .unwrap();
-    let hit = &report.hits[0];
-    assert_eq!(hit.impacts.len(), 4);
-    let heat = hit.vehicle_heat.as_ref().unwrap();
-    assert_eq!(heat.explosion_roll, Some(9));
-    assert!(heat.explosion.is_some());
-    assert!(
-        world.btech.vehicles()[&ids[0]]
-            .sections()
-            .values()
-            .all(|section| section.internal == 0)
-    );
-    world.validate(&config).unwrap();
 }
 
 #[tokio::test]
@@ -232,7 +188,8 @@ async fn vehicle_observers_receive_visible_artillery_arrival_notices() {
     world.validate(&config).unwrap();
 }
 
-/// Artillery's below-surface cutoff is exclusive and measured from the water surface.
+/// Artillery loses ten points per level below the impact surface (TO:AR p. 183), so a hull on a
+/// Depth 3 bed is beyond a Sniper's reach while a hovercraft on the surface is not.
 #[tokio::test]
 async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
     for depth in [3, 4] {
@@ -263,191 +220,8 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
             .unwrap()
             .unwrap();
         let targets: Vec<_> = report.hits.iter().map(|hit| hit.unit).collect();
-        assert_eq!(
-            targets,
-            if depth == 3 {
-                vec![ids[0], hover]
-            } else {
-                vec![hover]
-            }
-        );
-        if depth == 4 {
-            assert_eq!(world.btech.vehicles()[&ids[0]], original);
-        }
+        assert_eq!(targets, vec![hover]);
+        assert_eq!(world.btech.vehicles()[&ids[0]], original);
         world.validate(&config).unwrap();
     }
-}
-
-/// Rear selection persists across a front-facing Mech to a later vehicle in the same blast cell.
-#[tokio::test]
-async fn blast_rear_selection_redirects_later_vehicle_faces_and_preserves_dice() {
-    let (_dir, config, base, map, ids) = fixture(VehicleMovement::Stationary).await;
-    for artillery in [false, true] {
-        for salvage in [false, true] {
-            for table in [
-                VehicleCriticalTable::Standard,
-                VehicleCriticalTable::Advanced,
-            ] {
-                let mut world = base.clone();
-                place_battle_unit(&mut world, ids[2], map, 1, 1).unwrap();
-                let packets = if artillery { 4 } else { 1 };
-                let (initial, mut expected) = (0u32..100000)
-                    .find_map(|number| {
-                        let mut bytes = [0; 32];
-                        bytes[..4].copy_from_slice(&number.to_le_bytes());
-                        let initial = Dice::seeded(bytes);
-                        let mut dice = initial.clone();
-                        for _ in 0..packets {
-                            if table != VehicleCriticalTable::Standard {
-                                dice.two_d6();
-                            }
-                            if dice.two_d6() != 7 {
-                                return None;
-                            }
-                            dice.two_d6();
-                            if !salvage {
-                                dice.two_d6();
-                            }
-                        }
-                        Some((initial, dice))
-                    })
-                    .unwrap();
-                let mut saved = serde_json::to_value(&world.btech).unwrap();
-                saved["vehicles"][ids[0].0.to_string()]["motion"]["heading"] = 0.0.into();
-                saved["vehicles"][ids[0].0.to_string()]["motion"]["desired_heading"] = 0.0.into();
-                saved["constructed"][ids[1].0.to_string()]["motion"]["heading"] = 180.0.into();
-                saved["vehicles"][ids[2].0.to_string()]["motion"]["heading"] = 180.0.into();
-                saved["vehicles"][ids[2].0.to_string()]["motion"]["desired_heading"] = 180.0.into();
-                saved["vehicles"][ids[2].0.to_string()]["dice"] =
-                    serde_json::to_value(initial).unwrap();
-                if salvage {
-                    saved["vehicles"][ids[2].0.to_string()]["definition"]["attributes"]["specials"] =
-                        "SalvageTech".into();
-                }
-                world.btech = serde_json::from_value(saved).unwrap();
-                let original = world.btech.vehicles()[&ids[2]].clone();
-                let mut policy = rules();
-                policy.vehicle_impact.criticals.table = table;
-                let impacts = if artillery {
-                    let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
-                    let report = advance_artillery_flight(&mut world, map, &mut flight, policy)
-                        .unwrap()
-                        .unwrap();
-                    assert_eq!(
-                        report.hits.iter().map(|hit| hit.unit).collect::<Vec<_>>(),
-                        ids
-                    );
-                    report.hits[2].impacts.clone()
-                } else {
-                    set_minefield(
-                        &mut world,
-                        map,
-                        0,
-                        Some(Minefield {
-                            coordinate: HexCoordinate { x: 1, y: 1 },
-                            kind: MineKind::Standard,
-                            strength: 1,
-                            extra: 0,
-                            owner: ObjectId(1),
-                        }),
-                    )
-                    .unwrap();
-                    resolve_mine_blast(&mut world, map, 0, policy).unwrap().hits[2]
-                        .impacts
-                        .clone()
-                };
-                assert_eq!(impacts.len(), packets);
-                for impact in impacts {
-                    let BlastImpact::Vehicle(impact) = impact else {
-                        panic!("Vehicle packet expected")
-                    };
-                    assert_eq!(impact.hit.unwrap().section, VehicleSection::Front);
-                    let damage = impact.damage.unwrap();
-                    assert_eq!(damage.section, VehicleSection::Rear);
-                    assert_eq!(damage.rolls.len(), if salvage { 1 } else { 2 });
-                }
-                let unit = &world.btech.vehicles()[&ids[2]];
-                assert_eq!(
-                    unit.sections()[&VehicleSection::Front],
-                    original.sections()[&VehicleSection::Front]
-                );
-                assert_eq!(
-                    original.sections()[&VehicleSection::Rear].armor
-                        - unit.sections()[&VehicleSection::Rear].armor,
-                    if artillery { 20 } else { 1 }
-                );
-                persistence::save(&config.database(), &world).await.unwrap();
-                let mut restored = persistence::load(&config.database()).await.unwrap();
-                let next = expected.d6();
-                assert_eq!(roll_unit_dice(&mut world, ids[2], 1).unwrap(), [next]);
-                assert_eq!(roll_unit_dice(&mut restored, ids[2], 1).unwrap(), [next]);
-                assert_eq!(world.btech, restored.btech);
-                world.validate(&config).unwrap();
-            }
-        }
-    }
-}
-
-#[tokio::test]
-async fn character_artillery_heat_evacuates_atomically_with_the_flight_cursor() {
-    use std::{cell::RefCell, rc::Rc};
-    let (_dir, config, mut world, map, ids) = fixture(VehicleMovement::Tracked).await;
-    let id = ids[0];
-    let seed = (0u32..100_000)
-        .find_map(|value| {
-            let mut seed = [0; 32];
-            seed[..4].copy_from_slice(&value.to_le_bytes());
-            let mut dice = Dice::seeded(seed);
-            for _ in 0..4 {
-                dice.two_d6();
-                dice.two_d6();
-            }
-            (dice.two_d6() == 9).then_some(seed)
-        })
-        .unwrap();
-    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
-    let mut flight = approaching(&mut world, map, ArtilleryMode::Standard);
-    world
-        .objects
-        .get_mut(&id)
-        .unwrap()
-        .flags
-        .insert(Flag::InCharacter);
-    world
-        .objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .flags
-        .remove(Flag::Wizard);
-    world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let before = scripts.world().clone();
-    let cursor = flight.clone();
-    let afterlife = ObjectId(config.battletech.afterlife_dbref);
-    scripts.world_mut().objects.remove(&afterlife);
-    assert!(advance_artillery_flight_action(&scripts, &config, map, &mut flight, rules()).is_err());
-    assert_eq!(flight, cursor);
-    assert_eq!(scripts.world().btech, before.btech);
-    *scripts.world_mut() = before;
-    let report = advance_artillery_flight_action(&scripts, &config, map, &mut flight, rules())
-        .unwrap()
-        .unwrap();
-    assert_eq!(report.hits[0].impacts.len(), 4);
-    assert_eq!(
-        report.hits[0].vehicle_heat.as_ref().unwrap().explosion_roll,
-        Some(9)
-    );
-    assert!(scripts.world().btech.vehicles()[&id].crew_killed());
-    assert_eq!(
-        scripts.world().objects[&ObjectId(2)].location,
-        Some(afterlife)
-    );
-    let result = scripts.world().clone();
-    persistence::save(&config.database(), &result)
-        .await
-        .unwrap();
-    assert_eq!(
-        persistence::load(&config.database()).await.unwrap().btech,
-        result.btech
-    );
 }

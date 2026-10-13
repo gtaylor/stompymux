@@ -321,10 +321,11 @@ fn install_test_handweapons(
 async fn handweapon_profiles_parts_mass_and_myomer() {
     use stompymux_rs::*;
     let (_dir, config, original, id, target) = kick_fixture().await;
-    for (kind, damage, fixed_base, slots, slot_mass) in [
-        (ArmAttack::Axe, 7, 4, 3, 1024),
-        (ArmAttack::Mace, 9, 4, 4, 1024),
-        (ArmAttack::Sword, 5, 3, 3, 682),
+    // The base target is the unskilled pilot's Piloting target of eleven less the weapon bonus.
+    for (kind, damage, base_target, slots, slot_mass) in [
+        (ArmAttack::Axe, 7, 10, 3, 1024),
+        (ArmAttack::Mace, 9, 10, 4, 1024),
+        (ArmAttack::Sword, 5, 9, 3, 682),
     ] {
         let mut base = original.clone();
         install_test_handweapons(&mut base, id, kind);
@@ -388,15 +389,20 @@ async fn handweapon_profiles_parts_mass_and_myomer() {
                     kick_rules(),
                 )
                 .unwrap();
-                assert_eq!(profile.base, fixed_base);
+                assert_eq!(profile.base, base_target);
                 let weapon_modifier = if kind == ArmAttack::Mace { 2 } else { 0 };
                 assert_eq!(profile.weapon_modifier, weapon_modifier);
                 assert_eq!(
                     profile.target_number,
-                    i32::from(fixed_base) + i32::from(count * 2) + i32::from(weapon_modifier) - 4
+                    i32::from(base_target) + i32::from(count * 2) + i32::from(weapon_modifier) - 4
                 );
                 assert_eq!(profile.actuators, count * 2);
-                assert_eq!(profile.damage, if hot { damage * 2 } else { damage });
+                // Each damaged arm actuator halves the blow, rounding down (Total Warfare
+                // p. 146).
+                assert_eq!(
+                    profile.damage,
+                    ((if hot { damage * 2 } else { damage }) >> count).max(1)
+                );
                 assert_eq!(profile.hit_table, HitTable::Weapon);
                 if count < 2 {
                     destroy_battle_critical(
@@ -435,35 +441,30 @@ async fn handweapon_profiles_parts_mass_and_myomer() {
             assert_eq!(world.btech, before);
             world.validate(&config).unwrap();
         }
-        for mode in [GlancingMode::AtTarget, GlancingMode::BelowTarget] {
-            let mut world = base.clone();
-            let rules = PhysicalRules {
-                use_pilot_skill: true,
-                glancing: mode,
-                ..kick_rules()
-            };
-            let profile =
-                battle_arm_attack_profile(&world, id, ObjectId(1), target, Arm::Right, kind, rules)
-                    .unwrap();
-            let threshold = profile.target_number - i32::from(mode == GlancingMode::BelowTarget);
-            let seed = (0..=255)
-                .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) == threshold)
+        // A roll exactly equal to the target number lands as a glancing blow for half damage.
+        let mut world = base.clone();
+        let rules = kick_rules();
+        let profile =
+            battle_arm_attack_profile(&world, id, ObjectId(1), target, Arm::Right, kind, rules)
                 .unwrap();
-            shot_seed(&mut world, id, seed);
-            let report = resolve_battle_arm_attack(
-                &mut world,
-                id,
-                ObjectId(1),
-                target,
-                ArmSelection::Right,
-                kind,
-                rules,
-            )
+        let threshold = profile.target_number;
+        let seed = (0..=255)
+            .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) == threshold)
             .unwrap();
-            assert!(report.attacks[0].glancing);
-            let phase = &report.attacks[0].impact.as_ref().unwrap().impact.phases[0];
-            assert_eq!(phase.absorbed + phase.remaining, damage.div_ceil(2));
-        }
+        shot_seed(&mut world, id, seed);
+        let report = resolve_battle_arm_attack(
+            &mut world,
+            id,
+            ObjectId(1),
+            target,
+            ArmSelection::Right,
+            kind,
+            rules,
+        )
+        .unwrap();
+        assert!(report.attacks[0].glancing);
+        let phase = &report.attacks[0].impact.as_ref().unwrap().impact.phases[0];
+        assert_eq!(phase.absorbed + phase.remaining, damage / 2);
         let mut world = base.clone();
         let location = CriticalLocation {
             section: MechSection::RightArm,
@@ -792,16 +793,17 @@ fn install_right_arm_weapon(
 async fn added_handweapon_profiles_slots_hands_and_heat() {
     use stompymux_rs::*;
     let (_dir, config, original, id, target) = kick_fixture().await;
-    // (weapon, slots, damage, fixed base, weapon modifier, myomer doubles, heat)
-    for (kind, slots, damage, fixed_base, modifier, doubles, heat) in [
-        (ArmAttack::RetractableBlade, 3, 4, 3, 0, true, 0.0),
-        (ArmAttack::Lance, 2, 7, 4, 2, true, 0.0),
-        (ArmAttack::Flail, 4, 9, 4, 1, false, 0.0),
-        (ArmAttack::WreckingBall, 5, 8, 4, 2, false, 0.0),
-        (ArmAttack::ChainWhip, 2, 3, 3, 0, false, 0.0),
-        (ArmAttack::SmallVibroblade, 1, 7, 3, 0, false, 3.0),
-        (ArmAttack::MediumVibroblade, 2, 10, 3, 0, false, 5.0),
-        (ArmAttack::LargeVibroblade, 4, 14, 3, 0, false, 7.0),
+    // (weapon, slots, damage, base from the unskilled Piloting target of eleven, weapon
+    // modifier, myomer doubles, heat)
+    for (kind, slots, damage, base_target, modifier, doubles, heat) in [
+        (ArmAttack::RetractableBlade, 3, 4, 9, 0, true, 0.0),
+        (ArmAttack::Lance, 2, 7, 10, 2, true, 0.0),
+        (ArmAttack::Flail, 4, 9, 10, 1, false, 0.0),
+        (ArmAttack::WreckingBall, 5, 8, 10, 2, false, 0.0),
+        (ArmAttack::ChainWhip, 2, 3, 9, 0, false, 0.0),
+        (ArmAttack::SmallVibroblade, 1, 7, 9, 0, false, 3.0),
+        (ArmAttack::MediumVibroblade, 2, 10, 9, 0, false, 5.0),
+        (ArmAttack::LargeVibroblade, 4, 14, 9, 0, false, 7.0),
     ] {
         let profile = |world: &World| {
             battle_arm_attack_profile(
@@ -830,11 +832,11 @@ async fn added_handweapon_profiles_slots_hands_and_heat() {
                 weapon: kind
             }
         );
-        assert_eq!(armed.base, fixed_base, "{kind:?}");
+        assert_eq!(armed.base, base_target, "{kind:?}");
         assert_eq!(armed.weapon_modifier, modifier, "{kind:?}");
         assert_eq!(armed.damage, damage, "{kind:?}");
         assert_eq!(armed.hit_table, HitTable::Weapon);
-        assert_eq!(armed.fixed_location, None);
+        assert!(!armed.vehicle_target);
 
         let mut hot = base.clone();
         install_test_myomer(&mut hot, id);
@@ -1227,10 +1229,7 @@ async fn mace_miss_balance_success_and_failure() {
     )
     .unwrap();
     base.btech.set_unit_power(target, Power::Running).unwrap();
-    let rules = PhysicalRules {
-        use_pilot_skill: true,
-        ..kick_rules()
-    };
+    let rules = PhysicalRules { ..kick_rules() };
     for succeeds in [false, true] {
         let mut world = base.clone();
         let seed = (0..=255)
@@ -1369,35 +1368,36 @@ async fn saw_parts_damage_and_fixed_location() {
             .unwrap();
         }
         let inspected = profile(&world).unwrap();
+        // The saw's seven points do not shrink with a damaged arm; the aim does suffer.
         assert_eq!(inspected.damage, 7);
         assert_eq!(inspected.actuators, 4);
         assert_eq!(inspected.weapon_modifier, 1);
-        assert_eq!(inspected.target_number, 5);
-        assert_eq!(inspected.fixed_location, Some(MechSection::LeftArm));
-        for mode in [
-            GlancingMode::Disabled,
-            GlancingMode::AtTarget,
-            GlancingMode::BelowTarget,
-        ] {
+        assert_eq!(inspected.target_number, 11);
+        assert_eq!(inspected.hit_table, HitTable::Weapon);
+        // Meeting the target number of eleven exactly glances for half of the seven damage,
+        // rounded down; the location comes from the Hit Location Table.
+        for (roll, damage) in [(12, 7), (11, 3)] {
             let mut attempt = world.clone();
-            let roll = if mode == GlancingMode::Disabled {
-                12
-            } else {
-                5 - u8::from(mode == GlancingMode::BelowTarget)
-            };
             let seed = (0..=255)
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
                 .unwrap();
             shot_seed(&mut attempt, id, seed);
             let mut expected = attempt.clone();
-            resolve_battle_tactical_impact(
-                &mut expected,
-                target,
-                balance_hit(MechSection::LeftArm, false),
-                if mode == GlancingMode::Disabled { 7 } else { 4 },
-                rules.fall,
+            let mut dice: Dice = serde_json::from_value(
+                serde_json::to_value(&expected.btech.constructed_units()[&target]).unwrap()["dice"]
+                    .clone(),
             )
             .unwrap();
+            let location = resolve_battle_hit(
+                &expected.btech.constructed_units()[&target],
+                inspected.hit_arc,
+                dice.generic_roll(),
+                &mut dice,
+            )
+            .unwrap();
+            expected.btech.set_unit_dice(target, dice).unwrap();
+            resolve_battle_tactical_impact(&mut expected, target, location, damage, rules.fall)
+                .unwrap();
             let target_dice = serde_json::to_value(&expected.btech.constructed_units()[&target])
                 .unwrap()["dice"]
                 .clone();
@@ -1408,21 +1408,15 @@ async fn saw_parts_damage_and_fixed_location() {
                 target,
                 ArmSelection::Left,
                 ArmAttack::Saw,
-                PhysicalRules {
-                    glancing: mode,
-                    ..rules
-                },
+                rules,
             )
             .unwrap();
             let attack = &report.attacks[0];
             assert!(attack.hit);
             assert!(attack.balance.is_none());
             let phase = &attack.impact.as_ref().unwrap().impact.phases[0];
-            assert_eq!(phase.section, MechSection::LeftArm);
-            assert_eq!(
-                phase.absorbed + phase.remaining,
-                if mode == GlancingMode::Disabled { 7 } else { 4 }
-            );
+            assert_eq!(phase.section, location.section);
+            assert_eq!(phase.absorbed + phase.remaining, damage);
             assert_eq!(
                 serde_json::to_value(&attempt.btech.constructed_units()[&target]).unwrap()["dice"],
                 target_dice
@@ -1468,12 +1462,25 @@ async fn saw_parts_damage_and_fixed_location() {
     );
 }
 
-/// Claws keep tonnage damage despite actuator loss, share two-arm recovery, and apply fixed left-arm damage.
+/// Claws lose damage to actuator loss like a punch, share two-arm recovery, and strike on the
+/// Punch Location Table.
 #[tokio::test]
 async fn claw_parts_actuators_damage_and_dice() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
     install_test_handweapons(&mut base, id, ArmAttack::Claw);
+    // Piloting five keeps a normal hit distinct from a glancing twelve.
+    set_battle_character_value(
+        &mut base,
+        ObjectId(1),
+        "Piloting-Biped",
+        CharacterValue {
+            value: 5,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
     let profile = |world: &World, rules| {
         battle_arm_attack_profile(
             world,
@@ -1511,18 +1518,7 @@ async fn claw_parts_actuators_damage_and_dice() {
         6 * 1024
     );
     assert!(profile(&bare, kick_rules()).is_err());
-    assert_eq!(
-        profile(
-            &base,
-            PhysicalRules {
-                use_pilot_skill: true,
-                ..kick_rules()
-            }
-        )
-        .unwrap()
-        .base,
-        11
-    );
+    assert_eq!(profile(&base, kick_rules()).unwrap().base, 6);
     for hot in [false, true] {
         let mut world = base.clone();
         if hot {
@@ -1541,41 +1537,45 @@ async fn claw_parts_actuators_damage_and_dice() {
             .unwrap();
         }
         let inspected = profile(&world, kick_rules()).unwrap();
-        assert_eq!(inspected.base, 4);
+        assert_eq!(inspected.base, 6);
         assert_eq!(inspected.weapon_modifier, 1);
         assert_eq!(inspected.actuators, 4);
-        assert_eq!(inspected.target_number, 5);
-        assert_eq!(inspected.damage, if hot { 10 } else { 5 });
-        assert_eq!(inspected.fixed_location, Some(MechSection::LeftArm));
-        for mode in [
-            GlancingMode::Disabled,
-            GlancingMode::AtTarget,
-            GlancingMode::BelowTarget,
-        ] {
+        assert_eq!(inspected.target_number, 7);
+        // Both arm actuators are gone: five (ten with hot myomer) quartered, rounded down.
+        assert_eq!(inspected.damage, if hot { 2 } else { 1 });
+        assert_eq!(inspected.hit_table, HitTable::Punch);
+        for glancing in [false, true] {
             let mut attempt = world.clone();
-            let roll = if mode == GlancingMode::Disabled {
-                12
-            } else {
-                5 - u8::from(mode == GlancingMode::BelowTarget)
-            };
+            let roll = if glancing { 7 } else { 12 };
             let seed = (0..=255)
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
                 .unwrap();
             shot_seed(&mut attempt, id, seed);
-            let damage = if mode == GlancingMode::Disabled {
-                inspected.damage
+            let damage = if glancing {
+                inspected.damage / 2
             } else {
-                inspected.damage.div_ceil(2)
+                inspected.damage
             };
             let mut expected = attempt.clone();
-            resolve_battle_tactical_impact(
-                &mut expected,
-                target,
-                balance_hit(MechSection::LeftArm, false),
-                damage,
-                fall_rules(),
+            let mut dice: Dice = serde_json::from_value(
+                serde_json::to_value(&expected.btech.constructed_units()[&target]).unwrap()["dice"]
+                    .clone(),
             )
             .unwrap();
+            let section = HitTable::Punch
+                .location(MechChassis::Biped, inspected.hit_arc, dice.d6())
+                .unwrap();
+            expected.btech.set_unit_dice(target, dice).unwrap();
+            if damage > 0 {
+                resolve_battle_tactical_impact(
+                    &mut expected,
+                    target,
+                    balance_hit(section, false),
+                    damage,
+                    fall_rules(),
+                )
+                .unwrap();
+            }
             let report = resolve_battle_arm_attack(
                 &mut attempt,
                 id,
@@ -1583,22 +1583,23 @@ async fn claw_parts_actuators_damage_and_dice() {
                 target,
                 ArmSelection::Left,
                 ArmAttack::Claw,
-                PhysicalRules {
-                    glancing: mode,
-                    ..kick_rules()
-                },
+                kick_rules(),
             )
             .unwrap();
             let attack = &report.attacks[0];
             assert!(attack.hit);
             assert!(attack.balance.is_none());
-            let phase = &attack.impact.as_ref().unwrap().impact.phases[0];
-            assert_eq!(phase.section, MechSection::LeftArm);
-            assert_eq!(phase.absorbed + phase.remaining, damage);
-            assert_eq!(
-                attempt.btech.constructed_units()[&target],
-                expected.btech.constructed_units()[&target]
-            );
+            let phases = &attack.impact.as_ref().unwrap().impact.phases;
+            if damage == 0 {
+                assert!(phases.is_empty());
+            } else {
+                assert_eq!(phases[0].section, section);
+                assert_eq!(phases[0].absorbed + phases[0].remaining, damage);
+                assert_eq!(
+                    attempt.btech.constructed_units()[&target],
+                    expected.btech.constructed_units()[&target]
+                );
+            }
             attempt.validate(&config).unwrap();
         }
     }
@@ -1786,10 +1787,7 @@ async fn club_attacks_damage_breakage_and_recovery() {
             id,
             ObjectId(1),
             target,
-            PhysicalRules {
-                use_pilot_skill: true,
-                ..kick_rules()
-            },
+            PhysicalRules { ..kick_rules() },
         )
         .unwrap();
         assert_eq!(report.hit, roll == 12);
@@ -1871,7 +1869,7 @@ async fn club_native_lua_rollback_and_saved_carry() {
     }
 }
 
-/// Charge policy selects velocity or accumulated travel and current mass, without spending dice on rejection.
+/// Charge profiles use accumulated travel and current mass, without spending dice on rejection.
 #[tokio::test]
 async fn charge_collision_profiles_and_rejection() {
     use stompymux_rs::*;
@@ -1883,32 +1881,22 @@ async fn charge_collision_profiles_and_rejection() {
         .unwrap()
         .total
         / 1024;
-    for new_rules in [false, true] {
-        for technology_level_three in [false, true] {
-            let rules = ChargeRules {
-                distance: 4.0,
-                new_rules,
-                technology_level_three,
-                physical: kick_rules(),
-            };
-            let profile = battle_charge_profile(&base, id, target, rules).unwrap();
-            let mp = if new_rules { 4 } else { 2 };
-            assert_eq!(profile.inflicted_damage, (mp * (mass + 5) / 10 + 1) as u16);
-            assert_eq!(
-                profile.received_damage,
-                if new_rules && technology_level_three {
-                    (mp * (target_mass + 5) / 20) as u16
-                } else {
-                    ((target_mass + 5) / 10) as u16
-                }
-            );
-            assert_eq!(profile.target_number, 2);
-        }
-    }
+    let rules = ChargeRules {
+        distance: 4.0,
+        physical: kick_rules(),
+    };
+    let profile = battle_charge_profile(&base, id, target, rules).unwrap();
+    // Four hexes of travel: tonnage over ten per hex, rounded up; the charger takes the target's
+    // tonnage over ten (Total Warfare p. 148).
+    assert_eq!(profile.inflicted_damage, (4 * mass).div_ceil(10) as u16);
+    assert_eq!(profile.received_damage, target_mass.div_ceil(10) as u16);
+    assert_eq!(profile.skill, 0);
+    assert_eq!(profile.terrain, 0);
+    // The unskilled Piloting target of six, plus one for running, less four against the
+    // shut-down target.
+    assert_eq!(profile.target_number, 3);
     let rules = ChargeRules {
         distance: 2.0,
-        new_rules: false,
-        technology_level_three: false,
         physical: kick_rules(),
     };
     for invalid in [f32::NAN, f32::INFINITY, -1.0] {
@@ -1961,8 +1949,6 @@ async fn charge_collision_hit_miss_and_saved_recovery() {
         let before = world.btech.constructed_units()[&target].clone();
         let rules = ChargeRules {
             distance: 2.0,
-            new_rules: false,
-            technology_level_three: false,
             physical: kick_rules(),
         };
         let report = resolve_battle_charge(&mut world, id, target, rules).unwrap();
@@ -2021,76 +2007,6 @@ async fn charge_collision_hit_miss_and_saved_recovery() {
     }
 }
 
-/// Target damage can stop its motion before level-three charge recoil is calculated.
-#[tokio::test]
-async fn charge_recoil_samples_motion_after_target_damage() {
-    use stompymux_rs::*;
-    let (_dir, config, mut world, id, target) = kick_fixture().await;
-    prepare_test_charge(&mut world, id);
-    world
-        .btech
-        .rewrite_unit_record(target, |record| {
-            let victim = record;
-            victim["power"] = serde_json::to_value(Power::Running).unwrap();
-            victim["motion"]["speed"] = 21.5.into();
-            victim["motion"]["desired_speed"] = 21.5.into();
-            victim["sections"]["RightLeg"]["armor"] = 0.into();
-            victim["sections"]["RightLeg"]["internal"] = 1.into();
-        })
-        .unwrap();
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
-        .unwrap();
-    shot_seed(&mut world, id, seed);
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 5)
-        .unwrap();
-    shot_seed(&mut world, target, seed);
-    let mass = world.btech.constructed_units()[&target]
-        .mass()
-        .unwrap()
-        .total
-        / 1024;
-    let rules = ChargeRules {
-        distance: 4.0,
-        new_rules: true,
-        technology_level_three: true,
-        physical: kick_rules(),
-    };
-    let forecast = battle_charge_profile(&world, id, target, rules).unwrap();
-    let report = resolve_battle_charge(&mut world, id, target, rules).unwrap();
-    assert!(report.hit);
-    assert_eq!(report.profile, forecast);
-    assert_eq!(
-        report.target_impacts[0].impact.phases[0].section,
-        MechSection::RightLeg
-    );
-    assert_eq!(
-        world.btech.constructed_units()[&target].sections()[&MechSection::RightLeg].internal,
-        0
-    );
-    assert_eq!(
-        world.btech.constructed_units()[&target]
-            .motion()
-            .unwrap()
-            .speed,
-        0.0
-    );
-    assert!(report.received_damage > forecast.received_damage);
-    assert_eq!(report.received_damage, (4 * (mass + 5) / 20) as u16);
-    let applied = report
-        .attacker_impacts
-        .iter()
-        .map(|impact| {
-            let phase = &impact.impact.phases[0];
-            phase.absorbed + phase.remaining
-        })
-        .sum::<u16>();
-    assert_eq!(applied, report.received_damage);
-    assert!(report.recoil_arc.is_some());
-    world.validate(&config).unwrap();
-}
-
 /// Opposing biped charges preserve pre-rolled attempts, asymmetric damage and shared recovery.
 #[tokio::test]
 async fn mutual_charge_rolls_damage_and_saved_recovery() {
@@ -2109,8 +2025,6 @@ async fn mutual_charge_rolls_damage_and_saved_recovery() {
         .unwrap();
     let rules = ChargeRules {
         distance: 2.0,
-        new_rules: false,
-        technology_level_three: false,
         physical: kick_rules(),
     };
     for roll in [2, 12] {
@@ -2205,8 +2119,6 @@ async fn mutual_charge_rejections_and_torso_merge() {
     base.btech = serde_json::from_value(state).unwrap();
     let rules = ChargeRules {
         distance: 2.0,
-        new_rules: false,
-        technology_level_three: false,
         physical: kick_rules(),
     };
     let mut world = base.clone();
@@ -2308,8 +2220,6 @@ async fn mutual_charge_second_attack_survives_first_knockdown() {
     shot_seed(&mut world, second, seed);
     let rules = ChargeRules {
         distance: 2.0,
-        new_rules: false,
-        technology_level_three: false,
         physical: kick_rules(),
     };
     let report = resolve_battle_mutual_charge(&mut world, first, second, rules, 2.0).unwrap();
@@ -2336,7 +2246,7 @@ async fn mutual_charge_second_attack_survives_first_knockdown() {
     world.validate(&config).unwrap();
 }
 
-/// The second mutual recoil uses inflicted damage for its remainder, including level-three rules.
+/// The second mutual recoil keeps whole fives of its own recoil and takes the inflicted remainder.
 #[tokio::test]
 async fn mutual_charge_second_recoil_remainder() {
     use stompymux_rs::*;
@@ -2361,22 +2271,15 @@ async fn mutual_charge_second_recoil_remainder() {
     }
     let rules = ChargeRules {
         distance: 2.0,
-        new_rules: true,
-        technology_level_three: true,
         physical: kick_rules(),
     };
     let report = resolve_battle_mutual_charge(&mut world, first, second, rules, 8.0).unwrap();
     assert!(!report.attempts[0].collision.as_ref().unwrap().hit);
     let second_hit = report.attempts[1].collision.as_ref().unwrap();
     assert!(second_hit.hit);
-    assert!(second_hit.received_damage >= 5);
     assert_eq!(
-        second_hit.received_damage % 5,
-        second_hit.profile.inflicted_damage % 5
-    );
-    assert_ne!(
         second_hit.received_damage,
-        second_hit.profile.received_damage
+        second_hit.profile.received_damage / 5 * 5 + second_hit.profile.inflicted_damage % 5
     );
 }
 
@@ -2443,7 +2346,7 @@ async fn charge_tracking_commands_and_saved_intent() {
     }
 }
 
-/// New-rule timeout counts moving updates, expires on update 61, and pauses at rest.
+/// The charge timeout counts moving updates, expires on update 61, and pauses at rest.
 #[tokio::test]
 async fn charge_tracking_timeout_and_distance() {
     use stompymux_rs::*;
@@ -2454,7 +2357,6 @@ async fn charge_tracking_timeout_and_distance() {
     place_battle_unit(&mut world, target, position.map, 9, 9).unwrap();
     let rules = MovementRules {
         charge: ChargePolicy {
-            new_rules: true,
             ..ChargePolicy::STANDARD
         },
         ..RULES
@@ -2582,33 +2484,24 @@ async fn charge_tracking_mutual_dispatch() {
     world.validate(&config).unwrap();
 }
 
-/// Turning without travel ages new-rule intent without attempting a zero-speed collision.
+/// Turning without travel ages charge intent without attempting a zero-speed collision.
 #[tokio::test]
-async fn charge_tracking_turning_and_old_rules() {
+async fn charge_tracking_turning_ages_intent_without_colliding() {
     use stompymux_rs::*;
     let (_dir, _config, mut base, id, target) = kick_fixture().await;
     select_battle_charge(&mut base, id, ObjectId(1), ChargeSelection::Target(target)).unwrap();
     set_battle_heading(&mut base, id, ObjectId(1), 90.0).unwrap();
-    for new_rules in [false, true] {
-        let mut world = base.clone();
-        let rules = MovementRules {
-            charge: ChargePolicy {
-                new_rules,
-                ..ChargePolicy::STANDARD
-            },
-            ..RULES
-        };
-        assert!(advance_battle_motion(&mut world, rules).unwrap().is_empty());
-        let charge = world.btech.constructed_units()[&id].charge();
-        assert_eq!(charge.target, Some(target));
-        assert_eq!(charge.elapsed, u8::from(new_rules));
-        assert_eq!(charge.distance, 0.0);
-        assert!(
-            world.btech.constructed_units()[&id]
-                .limb_recycle()
-                .is_empty()
-        );
-    }
+    let mut world = base.clone();
+    assert!(advance_battle_motion(&mut world, RULES).unwrap().is_empty());
+    let charge = world.btech.constructed_units()[&id].charge();
+    assert_eq!(charge.target, Some(target));
+    assert_eq!(charge.elapsed, 1);
+    assert_eq!(charge.distance, 0.0);
+    assert!(
+        world.btech.constructed_units()[&id]
+            .limb_recycle()
+            .is_empty()
+    );
 }
 
 /// DFA forecasts use airborne aim, immobility and posture, with no mutation or random draws.
@@ -2616,6 +2509,18 @@ async fn charge_tracking_turning_and_old_rules() {
 async fn dfa_profile_movement_posture_and_specialist() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = kick_fixture().await;
+    // Piloting six gives the DFA its base target of five.
+    set_battle_character_value(
+        &mut world,
+        ObjectId(1),
+        "Piloting-Biped",
+        CharacterValue {
+            value: 6,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     let before = world.btech.clone();
     let profile = battle_dfa_profile(&world, id, target, kick_rules()).unwrap();
@@ -2623,7 +2528,9 @@ async fn dfa_profile_movement_posture_and_specialist() {
     assert_eq!(profile.base, 5);
     assert_eq!(profile.attacker_movement, 3);
     assert_eq!(profile.target_movement, -4);
-    assert_eq!(profile.target_number, 4);
+    // The target's unassigned cockpit pilots one better, so the skill comparison costs one.
+    assert_eq!(profile.skill, -1);
+    assert_eq!(profile.target_number, 3);
     assert_eq!(profile.received_damage, 7);
     assert_eq!(profile.initial_hit_table, HitTable::Punch);
     world
@@ -2633,7 +2540,7 @@ async fn dfa_profile_movement_posture_and_specialist() {
         })
         .unwrap();
     let prone = battle_dfa_profile(&world, id, target, kick_rules()).unwrap();
-    assert_eq!(prone.target_number, 2);
+    assert_eq!(prone.target_number, 1);
     assert_eq!(prone.initial_hit_table, HitTable::Weapon);
     set_battle_character_value(
         &mut world,
@@ -2720,41 +2627,39 @@ async fn dfa_profile_recovery_and_moved_target() {
     world.validate(&config).unwrap();
 }
 
-/// Pilot-based DFA aim can decline an attack that the fixed-base policy still permits.
+/// DFA aim starts from the pilot's Piloting skill and declines attacks that need more than twelve.
 #[tokio::test]
-async fn dfa_profile_configured_piloting_and_unreachable_aim() {
+async fn dfa_profile_piloting_skill_and_unreachable_aim() {
     use stompymux_rs::*;
     let (_dir, _config, mut world, id, target) = kick_fixture().await;
-    set_battle_character_value(
-        &mut world,
-        ObjectId(1),
-        "Piloting-Biped",
-        CharacterValue {
-            value: 5,
-            experience: 0,
-            last_used: 0,
-        },
-    )
-    .unwrap();
+    let piloting = |world: &mut World, level| {
+        set_battle_character_value(
+            world,
+            ObjectId(1),
+            "Piloting-Biped",
+            CharacterValue {
+                value: level,
+                experience: 0,
+                last_used: 0,
+            },
+        )
+        .unwrap();
+    };
+    piloting(&mut world, 6);
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     let victim = &mut state["constructed"][target.0.to_string()];
     victim["power"] = serde_json::json!({"state":"running"});
     victim["motion"]["speed"] = 100.0.into();
     world.btech = serde_json::from_value(state).unwrap();
-    let fixed = battle_dfa_profile(&world, id, target, kick_rules()).unwrap();
-    assert_eq!(fixed.target_number, 12);
+    let reachable = battle_dfa_profile(&world, id, target, kick_rules()).unwrap();
+    assert_eq!(reachable.base, 5);
+    assert_eq!(reachable.skill, -1);
+    assert_eq!(reachable.target_number, 11);
+    // A worse pilot aims from a higher base and compares worse against the target's.
+    piloting(&mut world, 5);
     let before = world.btech.clone();
-    let error = battle_dfa_profile(
-        &world,
-        id,
-        target,
-        PhysicalRules {
-            use_pilot_skill: true,
-            ..kick_rules()
-        },
-    )
-    .unwrap_err();
+    let error = battle_dfa_profile(&world, id, target, kick_rules()).unwrap_err();
     assert!(error.to_string().contains("BTH 13"), "{error:#}");
     assert_eq!(world.btech, before);
 }
@@ -2767,12 +2672,11 @@ async fn charge_immobility_changes_one_way_and_mutual_outcomes() {
     prepare_test_charge(&mut base, id);
     let rules = ChargeRules {
         distance: 2.0,
-        new_rules: false,
-        technology_level_three: false,
         physical: kick_rules(),
     };
+    // A three hits the shut-down target at three and misses the running one at seven.
     let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 3)
         .unwrap();
     shot_seed(&mut base, id, seed);
     for running in [false, true] {
@@ -2783,11 +2687,12 @@ async fn charge_immobility_changes_one_way_and_mutual_outcomes() {
             .unwrap();
         let before = world.btech.clone();
         let profile = battle_charge_profile(&world, id, target, rules).unwrap();
-        assert_eq!(profile.target_number, if running { 6 } else { 2 });
+        assert_eq!(profile.target_number, if running { 7 } else { 3 });
+        assert_eq!(profile.skill, 0);
         assert_eq!(world.btech, before);
         let mut mutual = world.clone();
         let report = resolve_battle_charge(&mut world, id, target, rules).unwrap();
-        assert_eq!(report.roll, 2);
+        assert_eq!(report.roll, 3);
         assert_eq!(report.hit, !running);
         let report = resolve_battle_mutual_charge(&mut mutual, id, target, rules, 0.0).unwrap();
         assert_eq!(report.attempts[0].collision.as_ref().unwrap().hit, !running);
@@ -2815,8 +2720,6 @@ async fn charge_immobility_includes_unconscious_pilots() {
     world.btech = serde_json::from_value(state).unwrap();
     let rules = ChargeRules {
         distance: 2.0,
-        new_rules: false,
-        technology_level_three: false,
         physical: kick_rules(),
     };
     let awake = battle_charge_profile(&world, id, target, rules).unwrap();
@@ -2830,21 +2733,82 @@ async fn charge_immobility_includes_unconscious_pilots() {
     world.validate(&config).unwrap();
 }
 
+/// Piloting five aims a DFA at five against an immobile target: a two misses and a twelve hits.
+fn dfa_piloting(world: &mut stompymux_rs::World) {
+    stompymux_rs::set_battle_character_value(
+        world,
+        ObjectId(1),
+        "Piloting-Biped",
+        stompymux_rs::CharacterValue {
+            value: 5,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
+}
+
+/// Attacker dice whose resolved DFA satisfies `accept`, which inspects the report and the world
+/// it left behind. Sixteen seed bits keep rare combinations of attack, landing and injury rolls
+/// reachable.
+fn dfa_dice(
+    world: &stompymux_rs::World,
+    id: ObjectId,
+    target: ObjectId,
+    accept: impl Fn(&stompymux_rs::DfaReport, &stompymux_rs::World) -> bool,
+) -> stompymux_rs::Dice {
+    (0..=u16::MAX)
+        .map(|value| {
+            let mut seed = [0; 32];
+            seed[..2].copy_from_slice(&value.to_le_bytes());
+            stompymux_rs::Dice::seeded(seed)
+        })
+        .find(|dice| {
+            let mut probe = world.clone();
+            probe.btech.set_unit_dice(id, dice.clone()).unwrap();
+            let report =
+                stompymux_rs::resolve_battle_dfa(&mut probe, id, target, kick_rules()).unwrap();
+            accept(&report, &probe)
+        })
+        .expect("dice that resolve the requested DFA outcome")
+}
+
+/// Dice for a DFA at the requested attack roll whose attacker landing and injury checks all pass,
+/// so the attack is not followed by the attacker falling or a hurt pilot.
+fn clean_dfa_dice(
+    world: &stompymux_rs::World,
+    id: ObjectId,
+    target: ObjectId,
+    roll: u8,
+) -> stompymux_rs::Dice {
+    dfa_dice(world, id, target, |report, after| {
+        report.roll == roll
+            && report.pilot_injury.is_none()
+            && report
+                .balance
+                .iter()
+                .filter(|balance| balance.unit == id)
+                .all(|balance| balance.fall.is_none())
+            && (!report.hit
+                || after.btech.constructed_units()[&id].posture()
+                    == stompymux_rs::Posture::Standing)
+    })
+}
+
 /// DFA hits use target packets then leg recoil; misses apply rear damage without an extra ordinary fall.
 #[tokio::test]
 async fn dfa_damage_hit_miss_and_saved_recovery() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
-    balance_skill(&mut base);
+    // Piloting five aims at five against the immobile target, so a two misses and a twelve hits.
+    dfa_piloting(&mut base);
     // Target hit locations must be reproducible and leave the target alive for its balance check.
     shot_seed(&mut base, target, 0);
     launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
     for roll in [2, 12] {
         let mut world = base.clone();
-        let seed = (0..=255)
-            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
-            .unwrap();
-        shot_seed(&mut world, id, seed);
+        let dice = clean_dfa_dice(&world, id, target, roll);
+        world.btech.set_unit_dice(id, dice).unwrap();
         let before = world.btech.constructed_units()[&target].clone();
         let report = resolve_battle_dfa(&mut world, id, target, kick_rules()).unwrap();
         assert_eq!(report.roll, roll);
@@ -2861,8 +2825,8 @@ async fn dfa_damage_hit_miss_and_saved_recovery() {
                 })
                 .sum::<u16>()
         };
-        assert_eq!(sum(&report.attacker_impacts), 7);
         if report.hit {
+            assert_eq!(sum(&report.attacker_impacts), 7);
             assert_eq!(sum(&report.target_impacts), report.profile.inflicted_damage);
             assert!(report.attacker_impacts.iter().all(|impact| matches!(
                 impact.impact.phases[0].section,
@@ -2877,14 +2841,19 @@ async fn dfa_damage_hit_miss_and_saved_recovery() {
                 vec![(id, 4), (target, 2)]
             );
         } else {
+            // A miss is a two-level fall onto the back: three times tonnage over ten.
             assert!(report.target_impacts.is_empty());
+            assert!(report.attacker_impacts.is_empty());
             assert_eq!(world.btech.constructed_units()[&target], before);
             assert_eq!(
                 world.btech.constructed_units()[&id].posture(),
                 Posture::Prone
             );
-            assert_eq!(report.balance.len(), 1);
-            assert!(report.balance[0].fall.is_none());
+            assert!(report.balance.is_empty());
+            let fall = report.miss_fall.as_ref().unwrap();
+            assert_eq!(fall.damage, 12);
+            assert_eq!(fall.arc, HitArc::Rear);
+            assert_eq!(fall.avoidance.unwrap().situational, 1);
             assert!(report.pilot_injury.is_none());
         }
         persistence::save(&config.database(), &world).await.unwrap();
@@ -2910,22 +2879,19 @@ async fn dfa_damage_hit_miss_and_saved_recovery() {
 async fn dfa_damage_miss_pilot_injury_and_rejection() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = kick_fixture().await;
+    dfa_piloting(&mut world);
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
-        .unwrap();
-    shot_seed(&mut world, id, seed);
+    let dice = dfa_dice(&world, id, target, |report, _| {
+        !report.hit && report.pilot_injury.is_some()
+    });
+    world.btech.set_unit_dice(id, dice).unwrap();
     let base = world.clone();
     let report = resolve_battle_dfa(&mut world, id, target, kick_rules()).unwrap();
     assert!(!report.hit);
-    assert!(!report.balance[0].check.success);
+    let fall = report.miss_fall.as_ref().unwrap();
+    assert!(!fall.avoidance.unwrap().success);
     assert!(report.pilot_injury.is_some());
-    assert!(
-        report
-            .notices
-            .iter()
-            .any(|notice| notice.text.contains("personal injury"))
-    );
+    assert_eq!(report.pilot_injury, fall.pilot_injury);
     world.validate(&config).unwrap();
     let before = world.btech.clone();
     assert!(resolve_battle_dfa(&mut world, id, target, kick_rules()).is_err());
@@ -3066,8 +3032,6 @@ async fn landing_collision_packets_continue_after_destruction() {
                 target,
                 ChargeRules {
                     distance: 2.0,
-                    new_rules: false,
-                    technology_level_three: false,
                     physical: kick_rules(),
                 },
             )
@@ -3098,7 +3062,7 @@ async fn landing_collision_packets_continue_after_destruction() {
 async fn dfa_damage_miss_ice_settles_below_surface() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = kick_fixture().await;
-    balance_skill(&mut world);
+    dfa_piloting(&mut world);
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     let position = world.btech.constructed_units()[&id].position().unwrap();
     let index = usize::from(position.y) * world.btech.maps()[&position.map].width as usize
@@ -3115,18 +3079,24 @@ async fn dfa_damage_miss_ice_settles_below_surface() {
     shot_seed(&mut world, id, seed);
     let report = resolve_battle_dfa(&mut world, id, target, kick_rules()).unwrap();
     assert!(!report.hit);
+    // The crash is an ordinary fall onto the ice, which breaks under it on a one.
+    let fall = report.miss_fall.as_ref().unwrap();
+    let broke = fall.ice_break.is_some();
+    // Either way the 'Mech rests on the hex's surface: the ice, or the bottom once it breaks.
     assert_eq!(
         serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["ground_elevation"],
-        -1.0
+        serde_json::Value::Null
     );
     assert_eq!(
         world.btech.constructed_units()[&id].posture(),
         Posture::Prone
     );
-    assert!(
-        !world.btech.constructed_units()[&id]
-            .flooded_sections()
-            .is_empty()
+    assert_eq!(
+        world.btech.maps()[&position.map]
+            .base_hex(i64::from(position.x), i64::from(position.y))
+            .unwrap()
+            .is_ice(),
+        !broke
     );
     world.validate(&config).unwrap();
 }
@@ -3655,6 +3625,18 @@ async fn character_arm_sequence_orders_casualties_and_replays() {
         )
         .unwrap();
         support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
+        // Piloting five punches at four against the immobile target, so eights hit.
+        set_battle_character_value(
+            &mut world,
+            ObjectId(1),
+            "Piloting-Biped",
+            CharacterValue {
+                value: 6,
+                experience: 0,
+                last_used: 0,
+            },
+        )
+        .unwrap();
         let attack_seed = (0..=255)
             .find(|seed| {
                 let mut dice = Dice::seeded([*seed; 32]);
@@ -4013,9 +3995,6 @@ async fn physical_experience_eligibility_and_damage_awards() {
             } else {
                 12
             };
-            if mode == "glancing" {
-                rules.glancing = GlancingMode::AtTarget;
-            }
             let seed = (0..=255)
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
                 .unwrap();
@@ -4087,7 +4066,7 @@ async fn physical_experience_eligibility_and_damage_awards() {
             if let Some(award) = report.experience {
                 assert!(award.accepted);
                 let damage = if report.glancing {
-                    profile.damage.div_ceil(2)
+                    profile.damage / 2
                 } else {
                     profile.damage
                 };
@@ -4277,8 +4256,6 @@ async fn character_charge_action_packets_xp_and_casualty_rollback() {
             physical.fall.extended_piloting = extended;
             let rules = ChargeRules {
                 distance: 2.0,
-                new_rules: false,
-                technology_level_three: false,
                 physical,
             };
             let baseline = world.clone();
@@ -4471,6 +4448,22 @@ async fn character_mutual_charge_keeps_accepted_second_attack() {
     let mut signature = world.btech.constructed_units()[&second].signature();
     signature.team = 1;
     set_battle_unit_signature(&mut world, second, signature).unwrap();
+    // Matched Piloting keeps both charges in reach without a skill comparison modifier.
+    for player in [ObjectId(1), pilot] {
+        for name in ["Piloting-Biped", "Piloting-Battlemech"] {
+            set_battle_character_value(
+                &mut world,
+                player,
+                name,
+                CharacterValue {
+                    value: 5,
+                    experience: 0,
+                    last_used: 0,
+                },
+            )
+            .unwrap();
+        }
+    }
     let second_dice = (0..=u16::MAX)
         .find_map(|seed| {
             let mut bytes = [0; 32];
@@ -4498,8 +4491,6 @@ async fn character_mutual_charge_keeps_accepted_second_attack() {
         .unwrap();
     let rules = ChargeRules {
         distance: 2.0,
-        new_rules: false,
-        technology_level_three: false,
         physical: kick_rules(),
     };
     let baseline = world.clone();
@@ -4518,7 +4509,7 @@ async fn character_mutual_charge_keeps_accepted_second_attack() {
     let report =
         resolve_battle_mutual_charge_action(&scripts, &config, first, second, rules, 2.0).unwrap();
     for attempt in &report.attempts {
-        assert!(attempt.rejection.is_none());
+        assert!(attempt.rejection.is_none(), "{:?}", attempt.rejection);
         assert_eq!(attempt.roll, Some(12));
         let collision = attempt.collision.as_ref().unwrap();
         assert!(collision.hit);
@@ -4807,25 +4798,39 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
             )
             .unwrap();
             support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
-            if !hit {
-                for name in ["Piloting-Biped", "Piloting-Battlemech"] {
-                    set_battle_character_value(
-                        &mut world,
-                        pilot,
-                        name,
-                        CharacterValue {
-                            value: 0,
-                            experience: 0,
-                            last_used: 0,
-                        },
-                    )
-                    .unwrap();
-                }
-            }
-            let seed = (0..=255)
-                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == if hit { 12 } else { 2 })
+            // The clumsy missing pilot's Piloting twelve aims at five against the unpiloted
+            // target and leaves its crash check at seven; the hitting pilot's six keeps the
+            // comparison against the piloted target in reach.
+            for name in ["Piloting-Biped", "Piloting-Battlemech"] {
+                set_battle_character_value(
+                    &mut world,
+                    ObjectId(1),
+                    name,
+                    CharacterValue {
+                        value: if hit { 6 } else { 12 },
+                        experience: 0,
+                        last_used: 0,
+                    },
+                )
                 .unwrap();
-            shot_seed(&mut world, attacker, seed);
+            }
+            // A miss also needs the crash's fall check to fail on the next roll.
+            let dice = (0..=u16::MAX)
+                .map(|value| {
+                    let mut seed = [0; 32];
+                    seed[..2].copy_from_slice(&value.to_le_bytes());
+                    Dice::seeded(seed)
+                })
+                .find(|dice| {
+                    let mut probe = dice.clone();
+                    if hit {
+                        probe.two_d6() == 12
+                    } else {
+                        probe.two_d6() == 2 && probe.two_d6() <= 3
+                    }
+                })
+                .unwrap();
+            world.btech.set_unit_dice(attacker, dice).unwrap();
             if hit {
                 let seed = (0..=255)
                     .find(|seed| Dice::seeded([*seed; 32]).d6() == 6)
@@ -4899,20 +4904,49 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
             }
             let candidate = scripts.world().clone();
             let traces = support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience);
-            assert_eq!(traces.len(), report.experience_messages.len());
+            // A missed landing's crash publishes its own control-check XP with the fall.
+            // Critical hits from the landing damage can force extra control checks, whose XP the
+            // host publishes with each impact.
+            let messages: Vec<_> = report
+                .experience_messages
+                .iter()
+                .chain(
+                    report
+                        .miss_fall
+                        .iter()
+                        .flat_map(|fall| fall.experience_messages.iter()),
+                )
+                .chain(
+                    report
+                        .target_impacts
+                        .iter()
+                        .chain(&report.attacker_impacts)
+                        .flat_map(|impact| &impact.balance)
+                        .flat_map(|balance| balance.experience_messages.iter()),
+                )
+                .chain(
+                    report
+                        .balance
+                        .iter()
+                        .flat_map(|balance| &balance.fall)
+                        .flat_map(|fall| fall.experience_messages.iter()),
+                )
+                .collect();
+            assert_eq!(traces.len(), messages.len(), "{traces:?} {messages:?}");
             assert_eq!(
                 traces,
                 support::drain_traces(&replay, logging::TraceTopic::PilotingExperience)
             );
+            // Damage XP awards and their diagnostics correspond one to one.
             assert_eq!(
-                traces.len(),
+                report.experience_messages.len(),
                 report
                     .experience
                     .iter()
                     .filter(|award| award.accepted)
                     .count()
             );
-            for message in &report.experience_messages {
+            for message in &messages {
                 assert_eq!(message.topic, TraceTopic::PilotingExperience);
                 assert_eq!(
                     message.text,
@@ -4934,9 +4968,26 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
                 } else {
                     "Piloting-Battlemech"
                 };
+                // The landing control check, or the fall it causes, can add its own XP after
+                // the damage award; the skill ends at the latest accepted award.
+                let final_award = report
+                    .balance
+                    .iter()
+                    .filter(|balance| balance.unit == attacker)
+                    .flat_map(|balance| {
+                        balance.check.experience.into_iter().chain(
+                            balance.fall.iter().filter_map(|fall| {
+                                fall.avoidance.and_then(|check| check.experience)
+                            }),
+                        )
+                    })
+                    .chain(report.experience.iter().copied())
+                    .filter(|award| award.accepted)
+                    .max_by_key(|award| award.after.experience)
+                    .unwrap();
                 assert_eq!(
                     candidate.btech.character_values()[&ObjectId(1)][skill],
-                    report.experience[0].after
+                    final_award.after
                 );
             } else {
                 assert!(report.experience.is_empty());
@@ -5086,166 +5137,155 @@ async fn character_stand_commands_injuries_and_atomic_casualties() {
     }
 }
 
-/// Timed character stagger resolves every history mode with private injuries and atomic evacuation.
+/// Timed character stagger resolves with private injuries and atomic evacuation.
 #[tokio::test]
 async fn character_stagger_ticks_replay_and_roll_back_casualties() {
     use stompymux_rs::*;
-    for mode in [
-        StaggerMode::Traditional,
-        StaggerMode::Consume,
-        StaggerMode::Retain,
-    ] {
-        for fatal in [false, true] {
-            let (_dir, config, mut world, id) = stagger_fixture().await;
-            stagger_hit(&mut world, id, MechSection::LeftTorso, 20, mode);
-            let pilot = ObjectId(2);
-            world.objects.get_mut(&pilot).unwrap().location = Some(id);
-            world
-                .objects
-                .get_mut(&pilot)
-                .unwrap()
-                .flags
-                .remove(Flag::Wizard);
-            world
-                .objects
-                .get_mut(&pilot)
-                .unwrap()
-                .flags
-                .insert(Flag::Connected);
-            release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
-            assign_battle_pilot(&mut world, id, pilot).unwrap();
-            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
-            world
-                .objects
-                .get_mut(&id)
-                .unwrap()
-                .flags
-                .insert(Flag::InCharacter);
-            set_battle_character(
-                &mut world,
-                pilot,
-                Character {
-                    build: 5,
-                    reflexes: 0,
-                    intuition: 0,
-                    learn: 5,
-                    charisma: 5,
-                    bruise: if fatal { 50 } else { 0 },
-                    lethal: if fatal { 40 } else { 0 },
-                },
-            )
+    for fatal in [false, true] {
+        let (_dir, config, mut world, id) = stagger_fixture().await;
+        stagger_hit(&mut world, id, MechSection::LeftTorso, 20);
+        let pilot = ObjectId(2);
+        world.objects.get_mut(&pilot).unwrap().location = Some(id);
+        world
+            .objects
+            .get_mut(&pilot)
+            .unwrap()
+            .flags
+            .remove(Flag::Wizard);
+        world
+            .objects
+            .get_mut(&pilot)
+            .unwrap()
+            .flags
+            .insert(Flag::Connected);
+        release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        assign_battle_pilot(&mut world, id, pilot).unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
+        world
+            .objects
+            .get_mut(&id)
+            .unwrap()
+            .flags
+            .insert(Flag::InCharacter);
+        set_battle_character(
+            &mut world,
+            pilot,
+            Character {
+                build: 5,
+                reflexes: 0,
+                intuition: 0,
+                learn: 5,
+                charisma: 5,
+                bruise: if fatal { 50 } else { 0 },
+                lethal: if fatal { 40 } else { 0 },
+            },
+        )
+        .unwrap();
+        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
+        let rules = stagger_rules();
+        let baseline = world.clone();
+        let scripts =
+            Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+        let afterlife = ObjectId(config.battletech.afterlife_dbref);
+        if fatal {
+            scripts.world_mut().objects.remove(&afterlife);
+            assert!(advance_battle_stagger_action(&scripts, &config, rules).is_err());
+            assert_eq!(scripts.world().btech, baseline.btech);
+            assert_eq!(scripts.world().objects[&pilot].location, Some(id));
+            assert!(scripts.drain_outbox().is_empty());
+        }
+        persistence::save(&config.database(), &baseline)
+            .await
             .unwrap();
-            support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
-            let rules = StaggerRules {
-                interval: 1,
-                ..stagger_rules(mode)
-            };
-            let baseline = world.clone();
-            let scripts =
-                Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-            let afterlife = ObjectId(config.battletech.afterlife_dbref);
-            if fatal {
-                scripts.world_mut().objects.remove(&afterlife);
-                assert!(advance_battle_stagger_action(&scripts, &config, rules).is_err());
-                assert_eq!(scripts.world().btech, baseline.btech);
-                assert_eq!(scripts.world().objects[&pilot].location, Some(id));
-                assert!(scripts.drain_outbox().is_empty());
-            }
-            persistence::save(&config.database(), &baseline)
-                .await
-                .unwrap();
-            let mut restored = persistence::load(&config.database()).await.unwrap();
-            for player in [ObjectId(1), pilot] {
-                restored.objects.get_mut(&player).unwrap().flags =
-                    baseline.objects[&player].flags.clone();
-            }
-            let replay =
-                Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
-            *scripts.world_mut() = baseline;
-            let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
+        let mut restored = persistence::load(&config.database()).await.unwrap();
+        for player in [ObjectId(1), pilot] {
+            restored.objects.get_mut(&player).unwrap().flags =
+                baseline.objects[&player].flags.clone();
+        }
+        let replay =
+            Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
+        *scripts.world_mut() = baseline;
+        let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
+        assert_eq!(
+            reports,
+            advance_battle_stagger_action(&replay, &config, rules).unwrap()
+        );
+        assert_eq!(reports.len(), 1);
+        let output = scripts.drain_outbox();
+        let pilot_output: Vec<_> = output
+            .iter()
+            .filter(|(who, _)| *who == pilot)
+            .map(|(_, text)| text.source())
+            .collect();
+        let check = reports[0].check;
+        let roll_index = pilot_output
+            .iter()
+            .position(|text| *text == "You make a piloting skill roll!");
+        assert_eq!(roll_index.is_some(), check.roll.is_some());
+        if let Some(index) = roll_index {
+            assert_eq!(pilot_output[index - 1], "You stagger from the damage!");
             assert_eq!(
-                reports,
-                advance_battle_stagger_action(&replay, &config, rules).unwrap()
+                pilot_output[index + 1],
+                format!(
+                    "Modified Pilot Skill: BTH {}\tRoll: {}",
+                    check.target,
+                    check.roll.unwrap()
+                )
             );
-            assert_eq!(reports.len(), 1);
-            let output = scripts.drain_outbox();
-            let pilot_output: Vec<_> = output
-                .iter()
-                .filter(|(who, _)| *who == pilot)
-                .map(|(_, text)| text.source())
-                .collect();
-            let check = reports[0].check;
-            let roll_index = pilot_output
-                .iter()
-                .position(|text| *text == "You make a piloting skill roll!");
-            assert_eq!(roll_index.is_some(), check.roll.is_some());
-            if let Some(index) = roll_index {
-                assert_eq!(pilot_output[index - 1], "You stagger from the damage!");
+            if !check.success {
                 assert_eq!(
-                    pilot_output[index + 1],
-                    format!(
-                        "Modified Pilot Skill: BTH {}\tRoll: {}",
-                        check.target,
-                        check.roll.unwrap()
-                    )
+                    pilot_output[index + 2],
+                    "You fall over from all the damage!"
                 );
-                if !check.success {
-                    assert_eq!(
-                        pilot_output[index + 2],
-                        "You fall over from all the damage!"
-                    );
-                }
             }
-            assert!(!output.iter().any(|(who, text)| *who != pilot
-                && (text.source().starts_with("You make a piloting")
-                    || text.source().starts_with("Modified Pilot Skill:"))));
+        }
+        assert!(!output.iter().any(|(who, text)| *who != pilot
+            && (text.source().starts_with("You make a piloting")
+                || text.source().starts_with("Modified Pilot Skill:"))));
 
-            assert!(!reports[0].check.success);
-            assert!(reports[0].fall.as_ref().unwrap().character_injury.is_some());
-            assert_eq!(scripts.world().btech, replay.world().btech);
-            let messages = |scripts: &Scripts| {
-                scripts
-                    .drain_outbox()
-                    .into_iter()
-                    .map(|(id, message)| (id, message.source().to_owned()))
-                    .collect::<Vec<_>>()
-            };
-            let notices: Vec<_> = output
+        assert!(!reports[0].check.success);
+        assert!(reports[0].fall.as_ref().unwrap().character_injury.is_some());
+        assert_eq!(scripts.world().btech, replay.world().btech);
+        let messages = |scripts: &Scripts| {
+            scripts
+                .drain_outbox()
                 .into_iter()
                 .map(|(id, message)| (id, message.source().to_owned()))
-                .collect();
-            assert_eq!(notices, messages(&replay));
-            assert_eq!(
-                notices
-                    .iter()
-                    .filter(
-                        |(to, message)| *to == pilot && message == "You stagger from the damage!"
-                    )
-                    .count(),
-                1
-            );
-            let candidate = scripts.world().clone();
-            assert_eq!(
-                candidate.objects[&pilot].location,
-                Some(if fatal { afterlife } else { id })
-            );
-            assert_eq!(
-                candidate.btech.constructed_units()[&id].is_destroyed(),
-                fatal
-            );
-            assert_eq!(
-                candidate.btech.constructed_units()[&id].posture(),
-                Posture::Prone
-            );
-            candidate.validate(&config).unwrap();
-            persistence::save(&config.database(), &candidate)
-                .await
-                .unwrap();
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                candidate.btech
-            );
-        }
+                .collect::<Vec<_>>()
+        };
+        let notices: Vec<_> = output
+            .into_iter()
+            .map(|(id, message)| (id, message.source().to_owned()))
+            .collect();
+        assert_eq!(notices, messages(&replay));
+        assert_eq!(
+            notices
+                .iter()
+                .filter(|(to, message)| *to == pilot && message == "You stagger from the damage!")
+                .count(),
+            1
+        );
+        let candidate = scripts.world().clone();
+        assert_eq!(
+            candidate.objects[&pilot].location,
+            Some(if fatal { afterlife } else { id })
+        );
+        assert_eq!(
+            candidate.btech.constructed_units()[&id].is_destroyed(),
+            fatal
+        );
+        assert_eq!(
+            candidate.btech.constructed_units()[&id].posture(),
+            Posture::Prone
+        );
+        candidate.validate(&config).unwrap();
+        persistence::save(&config.database(), &candidate)
+            .await
+            .unwrap();
+        assert_eq!(
+            persistence::load(&config.database()).await.unwrap().btech,
+            candidate.btech
+        );
     }
 }
 
@@ -5455,6 +5495,12 @@ async fn character_thermal_action_orders_casualties_and_shutdown_falls() {
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
                 .unwrap();
             shot_seed(&mut world, id, seed);
+        } else if !fatal {
+            // The Shutdown Avoid Roll at 14 heat needs a 4; a 2 or 3 shuts the reactor down.
+            let seed = (0..=255)
+                .find(|seed| Dice::seeded([*seed; 32]).two_d6() <= 3)
+                .unwrap();
+            shot_seed(&mut world, id, seed);
         }
         overheat_due(
             &mut world,
@@ -5490,8 +5536,6 @@ async fn character_thermal_action_orders_casualties_and_shutdown_falls() {
         assert!(report.injury.is_none());
         if cause == "heat" {
             assert!(report.character_injury.is_some());
-            assert!(report.ammunition_check.is_none());
-            assert!(report.shutdown_check.is_none());
         } else if cause == "ammunition" {
             assert_eq!(
                 report
@@ -5503,7 +5547,6 @@ async fn character_thermal_action_orders_casualties_and_shutdown_falls() {
                     .len(),
                 1
             );
-            assert!(report.shutdown_check.is_none());
         } else {
             assert!(report.shutdown);
             let fall = report.fall.as_ref().unwrap();
@@ -5566,7 +5609,6 @@ async fn character_thermal_server_retries_fatal_heat_commit() {
         phase_state["turn_clock"] = 1.into();
         phase_state["simulation_seconds"] = 1.into();
         expected.btech = serde_json::from_value(phase_state).unwrap();
-        advance_battle_reactor_windows(&mut expected);
         advance_battle_heat(&mut expected);
         let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(expected))).unwrap();
         let reports = advance_battle_overheat_action(&scripts, &config, overheat_rules()).unwrap();
@@ -6302,7 +6344,6 @@ async fn character_heavy_gauss_recoil_uses_shooter_health_and_toughness() {
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         let afterlife = ObjectId(config.battletech.afterlife_dbref);
         let rules = ShotRules {
-            range_damage: false,
             tsm_tow_bonus: true,
             target_toughness: true,
             ..shot_rules()
@@ -7682,8 +7723,10 @@ async fn dfa_control_experience_hit_and_miss() {
             &mut world,
             ObjectId(1),
             "Piloting-Biped",
+            // Piloting two aims at five against the unpiloted target: a two misses, a twelve
+            // hits.
             CharacterValue {
-                value: 5,
+                value: 2,
                 experience: 0,
                 last_used: 0,
             },
@@ -7703,23 +7746,45 @@ async fn dfa_control_experience_hit_and_miss() {
         let mut rules = kick_rules();
         rules.fall.extended_piloting = true;
         let mut verified = false;
-        for seed in 0..=255 {
-            if Dice::seeded([seed; 32]).two_d6() != if hit { 12 } else { 2 } {
+        for value in 0..=u16::MAX {
+            let mut seed = [0; 32];
+            seed[..2].copy_from_slice(&value.to_le_bytes());
+            let dice = Dice::seeded(seed);
+            if dice.clone().two_d6() != if hit { 12 } else { 2 } {
                 continue;
             }
             *scripts.world_mut() = before.clone();
             scripts.drain_traces_for_inspection();
-            shot_seed(&mut scripts.world_mut(), attacker, seed);
+            scripts
+                .world_mut()
+                .btech
+                .set_unit_dice(attacker, dice)
+                .unwrap();
             let report =
                 resolve_battle_dfa_action(&scripts, &config, attacker, target, rules).unwrap();
             assert_eq!(report.hit, hit);
             assert!(report.experience.is_empty()); // The target is tactical.
-            let Some(check) = report
-                .balance
+            // A critical hit from the landing damage would add its own control check and XP.
+            if report
+                .target_impacts
                 .iter()
-                .find(|balance| balance.unit == attacker)
-                .map(|balance| balance.check)
-            else {
+                .chain(&report.attacker_impacts)
+                .any(|impact| !impact.balance.is_empty())
+            {
+                scripts.drain_outbox();
+                continue;
+            }
+            // A hit's landing check is a balance entry; a miss rolls the crash's fall check.
+            let check = if hit {
+                report
+                    .balance
+                    .iter()
+                    .find(|balance| balance.unit == attacker)
+                    .map(|balance| balance.check)
+            } else {
+                report.miss_fall.as_ref().and_then(|fall| fall.avoidance)
+            };
+            let Some(check) = check else {
                 continue;
             };
             let Some(award) = check.experience else {
@@ -7727,15 +7792,25 @@ async fn dfa_control_experience_hit_and_miss() {
                 continue;
             };
             assert!(award.accepted);
-            assert_eq!(award.after.experience_balance(), 1);
-            assert_eq!(report.experience_messages.len(), 1);
-            assert_eq!(
-                report.experience_messages[0].text,
-                "GOD gained 1 Piloting-Biped XP"
+            // A successful control check earns its target number minus seven, within the
+            // check's difficulty, and at least one point.
+            let amount = (i64::from(check.target) - 7).clamp(
+                1,
+                (1 + i64::from(check.situational) + i64::from(check.environment)).max(2),
             );
+            assert_eq!(i64::from(award.after.experience_balance()), amount);
+            // A miss records its XP on the crash's fall report, which the host publishes.
+            let messages = if hit {
+                &report.experience_messages
+            } else {
+                &report.miss_fall.as_ref().unwrap().experience_messages
+            };
+            let expected = format!("GOD gained {amount} Piloting-Biped XP");
+            assert_eq!(messages.len(), 1, "{messages:?}");
+            assert_eq!(messages[0].text, expected);
             assert_eq!(
                 support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
-                ["GOD gained 1 Piloting-Biped XP"]
+                [expected.as_str()]
             );
             let candidate = scripts.world().clone();
             let output = scripts.drain_outbox();
@@ -7907,7 +7982,7 @@ async fn fall_protection_experience_policy_and_restart() {
                 }
             );
             if case == "success" {
-                assert_eq!(report.avoidance.unwrap().target, 10);
+                assert_eq!(report.avoidance.unwrap().target, 9);
                 assert!(report.character_injury.is_none());
                 assert_eq!(
                     report.experience_messages[0].text,
@@ -8017,7 +8092,7 @@ async fn nested_trip_fall_protection_experience_traced_once() {
     assert!(report.experience_messages.is_empty());
     let fall = report.fall.unwrap();
     assert_eq!(fall.avoidance.unwrap().roll, Some(12));
-    assert_eq!(fall.avoidance.unwrap().target, 10);
+    assert_eq!(fall.avoidance.unwrap().target, 9);
     assert!(fall.avoidance.unwrap().experience.unwrap().accepted);
     assert_eq!(fall.experience_messages.len(), 1);
     assert_eq!(
@@ -8203,167 +8278,156 @@ async fn damage_balance_experience_award_and_restart() {
     }
 }
 
-/// Each stagger history mode awards successful-control XP once and replays identically after a restart.
+/// Stagger awards successful-control XP once and replays identically after a restart.
 #[tokio::test]
-async fn stagger_control_experience_modes_and_restart() {
+async fn stagger_control_experience_and_restart() {
     use stompymux_rs::*;
     for extended in [false, true] {
-        for mode in [
-            StaggerMode::Traditional,
-            StaggerMode::Consume,
-            StaggerMode::Retain,
-        ] {
-            let (_dir, config, mut world, id) = stagger_fixture().await;
-            stagger_hit(&mut world, id, MechSection::LeftTorso, 20, mode);
-            world
-                .objects
-                .get_mut(&id)
-                .unwrap()
-                .flags
-                .insert(Flag::InCharacter);
-            world
-                .objects
-                .get_mut(&ObjectId(1))
-                .unwrap()
-                .flags
-                .insert(Flag::Connected);
-            set_battle_character(
-                &mut world,
-                ObjectId(1),
-                Character {
-                    build: 5,
-                    reflexes: 4,
-                    intuition: 5,
-                    learn: 5,
-                    charisma: 5,
-                    bruise: 0,
-                    lethal: 0,
-                },
-            )
+        let (_dir, config, mut world, id) = stagger_fixture().await;
+        stagger_hit(&mut world, id, MechSection::LeftTorso, 20);
+        world
+            .objects
+            .get_mut(&id)
+            .unwrap()
+            .flags
+            .insert(Flag::InCharacter);
+        world
+            .objects
+            .get_mut(&ObjectId(1))
+            .unwrap()
+            .flags
+            .insert(Flag::Connected);
+        set_battle_character(
+            &mut world,
+            ObjectId(1),
+            Character {
+                build: 5,
+                reflexes: 4,
+                intuition: 5,
+                learn: 5,
+                charisma: 5,
+                bruise: 0,
+                lethal: 0,
+            },
+        )
+        .unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
+        let skill = if extended {
+            "Piloting-Biped"
+        } else {
+            "Piloting-Battlemech"
+        };
+        set_battle_character_value(&mut world, ObjectId(1), skill, CharacterValue::default())
             .unwrap();
-            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-            let skill = if extended {
-                "Piloting-Biped"
-            } else {
-                "Piloting-Battlemech"
-            };
-            set_battle_character_value(&mut world, ObjectId(1), skill, CharacterValue::default())
-                .unwrap();
-            let seed = (0..=255)
-                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
-                .unwrap();
-            shot_seed(&mut world, id, seed);
-            let before = world.clone();
-            let scripts =
-                Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-            let rules = StaggerRules {
-                extended_piloting: extended,
-                interval: 1,
-                ..stagger_rules(mode)
-            };
-            let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
-            assert_eq!(reports.len(), 1);
-            let report = &reports[0];
-            let output = scripts.drain_outbox();
-            let pilot_output: Vec<_> = output
-                .iter()
-                .filter(|(who, _)| *who == ObjectId(1))
-                .map(|(_, text)| text.source())
-                .collect();
-            let check = reports[0].check;
-            let roll_index = pilot_output
-                .iter()
-                .position(|text| *text == "You make a piloting skill roll!");
-            assert_eq!(roll_index.is_some(), check.roll.is_some());
-            if let Some(index) = roll_index {
-                assert_eq!(pilot_output[index - 1], "You stagger from the damage!");
+        let seed = (0..=255)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
+            .unwrap();
+        shot_seed(&mut world, id, seed);
+        let before = world.clone();
+        let scripts =
+            Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+        let rules = StaggerRules {
+            extended_piloting: extended,
+            ..stagger_rules()
+        };
+        let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
+        assert_eq!(reports.len(), 1);
+        let report = &reports[0];
+        let output = scripts.drain_outbox();
+        let pilot_output: Vec<_> = output
+            .iter()
+            .filter(|(who, _)| *who == ObjectId(1))
+            .map(|(_, text)| text.source())
+            .collect();
+        let check = reports[0].check;
+        let roll_index = pilot_output
+            .iter()
+            .position(|text| *text == "You make a piloting skill roll!");
+        assert_eq!(roll_index.is_some(), check.roll.is_some());
+        if let Some(index) = roll_index {
+            assert_eq!(pilot_output[index - 1], "You stagger from the damage!");
+            assert_eq!(
+                pilot_output[index + 1],
+                format!(
+                    "Modified Pilot Skill: BTH {}\tRoll: {}",
+                    check.target,
+                    check.roll.unwrap()
+                )
+            );
+            if !check.success {
                 assert_eq!(
-                    pilot_output[index + 1],
-                    format!(
-                        "Modified Pilot Skill: BTH {}\tRoll: {}",
-                        check.target,
-                        check.roll.unwrap()
-                    )
+                    pilot_output[index + 2],
+                    "You fall over from all the damage!"
                 );
-                if !check.success {
-                    assert_eq!(
-                        pilot_output[index + 2],
-                        "You fall over from all the damage!"
-                    );
-                }
             }
-            assert!(!output.iter().any(|(who, text)| *who != ObjectId(1)
-                && (text.source().starts_with("You make a piloting")
-                    || text.source().starts_with("Modified Pilot Skill:"))));
-
-            assert!(report.check.success);
-            assert!(report.fall.is_none());
-            let amount = if mode == StaggerMode::Traditional {
-                2
-            } else {
-                1
-            };
-            assert_eq!(
-                report.check.experience.unwrap().after.experience_balance(),
-                amount
-            );
-            assert_eq!(report.experience_messages.len(), 1);
-            assert_eq!(
-                report.experience_messages[0].text,
-                format!("GOD gained {amount} {skill} XP")
-            );
-            let expected = [format!("GOD gained {amount} {skill} XP")];
-            assert_eq!(
-                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
-                expected
-            );
-            let candidate = scripts.world().clone();
-            assert!(
-                advance_battle_stagger_action(&scripts, &config, rules)
-                    .unwrap()
-                    .is_empty()
-            );
-            assert!(
-                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
-            );
-            persistence::save(&config.database(), &before)
-                .await
-                .unwrap();
-            let mut restored = persistence::load(&config.database()).await.unwrap();
-            restored
-                .objects
-                .get_mut(&ObjectId(1))
-                .unwrap()
-                .flags
-                .insert(Flag::Connected);
-            *scripts.world_mut() = restored;
-            let replay = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
-            assert_eq!(
-                without_xp_timestamps(&reports),
-                without_xp_timestamps(&replay)
-            );
-            assert_eq!(
-                without_xp_timestamps(&candidate.btech),
-                without_xp_timestamps(&scripts.world().btech)
-            );
-            assert_eq!(
-                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
-                expected
-            );
-            *scripts.world_mut() = before;
-            scripts
-                .world_mut()
-                .objects
-                .get_mut(&ObjectId(1))
-                .unwrap()
-                .flags
-                .remove(Flag::Connected);
-            let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
-            assert!(reports[0].check.experience.is_none());
-            assert!(
-                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
-            );
         }
+        assert!(!output.iter().any(|(who, text)| *who != ObjectId(1)
+            && (text.source().starts_with("You make a piloting")
+                || text.source().starts_with("Modified Pilot Skill:"))));
+
+        assert!(report.check.success);
+        assert!(report.fall.is_none());
+        let amount = 2;
+        assert_eq!(
+            report.check.experience.unwrap().after.experience_balance(),
+            amount
+        );
+        assert_eq!(report.experience_messages.len(), 1);
+        assert_eq!(
+            report.experience_messages[0].text,
+            format!("GOD gained {amount} {skill} XP")
+        );
+        let expected = [format!("GOD gained {amount} {skill} XP")];
+        assert_eq!(
+            support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+            expected
+        );
+        let candidate = scripts.world().clone();
+        assert!(
+            advance_battle_stagger_action(&scripts, &config, rules)
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
+        );
+        persistence::save(&config.database(), &before)
+            .await
+            .unwrap();
+        let mut restored = persistence::load(&config.database()).await.unwrap();
+        restored
+            .objects
+            .get_mut(&ObjectId(1))
+            .unwrap()
+            .flags
+            .insert(Flag::Connected);
+        *scripts.world_mut() = restored;
+        let replay = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
+        assert_eq!(
+            without_xp_timestamps(&reports),
+            without_xp_timestamps(&replay)
+        );
+        assert_eq!(
+            without_xp_timestamps(&candidate.btech),
+            without_xp_timestamps(&scripts.world().btech)
+        );
+        assert_eq!(
+            support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
+            expected
+        );
+        *scripts.world_mut() = before;
+        scripts
+            .world_mut()
+            .objects
+            .get_mut(&ObjectId(1))
+            .unwrap()
+            .flags
+            .remove(Flag::Connected);
+        let reports = advance_battle_stagger_action(&scripts, &config, rules).unwrap();
+        assert!(reports[0].check.experience.is_none());
+        assert!(
+            support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
+        );
     }
 }
 
@@ -8412,10 +8476,7 @@ async fn shutdown_balance_experience_precedes_power_down() {
             .find(|seed| {
                 let mut dice = Dice::seeded([*seed; 32]);
                 let ammunition = dice.two_d6();
-                // An untrained Computer attempt uses the lowest two of three dice.
-                for _ in 0..3 {
-                    dice.d6();
-                }
+                // Shutdown at 30 heat rolls nothing; the balance check follows the ammunition roll.
                 ammunition >= 8 && dice.two_d6() == 12
             })
             .unwrap();
@@ -8451,11 +8512,6 @@ async fn shutdown_balance_experience_precedes_power_down() {
             .position(|text| *text == "You make a piloting skill roll!")
             .unwrap();
         assert_eq!(pilot[roll + 1], "Modified Pilot Skill: BTH 12\tRoll: 12");
-        assert!(
-            pilot[..roll]
-                .iter()
-                .any(|text| text.starts_with("You make a computer skill roll!"))
-        );
         assert!(
             !output.iter().any(|(who, text)| *who != ObjectId(1)
                 && text.source().starts_with("Modified Pilot Skill:"))
@@ -8766,7 +8822,6 @@ async fn heavy_gauss_recoil_experience_policy() {
             let scripts =
                 Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
             let rules = ShotRules {
-                range_damage: false,
                 tsm_tow_bonus: true,
                 extended_piloting: extended,
                 ..shot_rules()

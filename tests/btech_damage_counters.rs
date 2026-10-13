@@ -40,10 +40,19 @@ async fn direct_damage_attribution_replays_and_rolls_back_for_mixed_chassis() {
         );
         assert!(serde_json::to_value(&scripts.world().btech).unwrap() == before);
         assert!(scripts.drain_outbox().is_empty());
-        let glancing: bool = scripts
-            .eval_callback(&format!("local r={command}; return r.glancing"))
+        let (glancing, section): (bool, Option<String>) = scripts
+            .eval_callback(&format!(
+                "local r={command}; local s=r.salvo and r.salvo.kind=='vehicle' and r.salvo.report.groups[1]; return r.glancing, (s and s.impact.hit and s.impact.hit.section) or nil"
+            ))
             .unwrap();
-        let damage = if glancing { 3 } else { 5 };
+        // A glancing blow halves damage rounding down (Tactical Operations p. 79), and a VTOL's
+        // rotors take one point per ten (Total Warfare p. 197).
+        let damage = if glancing { 2 } else { 5 };
+        let damage = if section.as_deref() == Some("rotor") {
+            1
+        } else {
+            damage
+        };
         assert_eq!(
             counters(&scripts.world(), id),
             serde_json::json!({"taken":0,"inflicted":damage})
@@ -121,9 +130,7 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
         };
         let (_dir, _, mut world, id, _, _) =
             firing::fixture_with_target(&source, None, &source).await;
-        let mut rules = VehicleImpactRules::STANDARD.criticals;
-        rules.enabled = false;
-        rules.rotor_damage_divisor = 3;
+        let rules = VehicleImpactRules::STANDARD.criticals;
         let report = resolve_battle_vehicle_armor_damage(
             &mut world,
             id,
@@ -134,19 +141,20 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
                 } else {
                     VehicleSection::Front
                 },
-                amount: 9,
+                // Nine points gut a Kestrel's rotor and wreck it; two leave it flying.
+                amount: if rotor { 2 } else { 9 },
                 through_armor_critical: false,
                 armor_piercing: None,
             },
             rules,
         )
         .unwrap();
-        let incoming = if rotor { 3 } else { 9 };
+        let incoming = if rotor { 2 } else { 9 };
         assert_eq!(
             counters(&world, id),
             serde_json::json!({"taken":incoming,"inflicted":0})
         );
-        assert_eq!(report.armor_damage, if rotor { 3 } else { 5 });
+        assert_eq!(report.armor_damage, if rotor { 2 } else { 5 });
         let internal =
             resolve_battle_vehicle_internal_damage(&mut world, id, VehicleSection::Rear, 5, rules)
                 .unwrap();

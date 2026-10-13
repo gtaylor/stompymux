@@ -379,12 +379,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     let stats_world = world.clone();
     let stats = lua.create_function(move |lua, actor: i64| {
         crate::lua::transactions::require(lua)?;
-        let report = crate::battle_runtime_stats(
-            &stats_world.borrow(),
-            &crate::lua::configuration(lua),
-            ObjectId(actor),
-        )
-        .map_err(mlua::Error::external)?;
+        let report = crate::battle_runtime_stats(&stats_world.borrow(), ObjectId(actor))
+            .map_err(mlua::Error::external)?;
         detached(lua, &report)
     })?;
     native.set(

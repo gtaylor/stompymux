@@ -4,14 +4,13 @@ use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// Activate the persisted server settings without changing unrelated fixture policy.
-fn configured(dir: &tempfile::TempDir, enabled: bool, glancing: bool) -> Config {
+/// Activate the persisted woods-damage setting without changing unrelated fixture policy.
+fn configured(dir: &tempfile::TempDir, enabled: bool) -> Config {
     let path = dir.path().join("stompymux.toml");
     let mut settings: toml::Value =
         toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     let table = settings["battletech"].as_table_mut().unwrap();
     table.insert("moddamagewithwoods".into(), i64::from(enabled).into());
-    table.insert("glancing_blows".into(), i64::from(glancing).into());
     std::fs::write(path, toml::to_string(&settings).unwrap()).unwrap();
     Config::load(dir.path()).unwrap()
 }
@@ -154,7 +153,7 @@ fn boot_pairs(configs: &[Config], base: &World) -> (Vec<Pair>, World) {
 #[tokio::test]
 async fn missile_woods_absorption_matches_native_lua_and_restart() {
     let (dir, fixture_config, base) = support::isolated_world().await;
-    let configs = [false, true].map(|enabled| configured(&dir, enabled, false));
+    let configs = [false, true].map(|enabled| configured(&dir, enabled));
     let (pairs, booted) = boot_pairs(&configs, &base);
     let mut sequence = 0;
     for source in firing::templates() {
@@ -227,7 +226,7 @@ async fn missile_woods_absorption_matches_native_lua_and_restart() {
 #[tokio::test]
 async fn completely_absorbed_missiles_skip_damage_and_roll_back_with_the_callback() {
     let (dir, fixture_config, base) = support::isolated_world().await;
-    let config = configured(&dir, true, false);
+    let config = configured(&dir, true);
     let scripts = boot(&config, base);
     let booted = scripts.world().clone();
     for recipient in firing::templates() {
@@ -281,7 +280,7 @@ async fn completely_absorbed_missiles_skip_damage_and_roll_back_with_the_callbac
 #[tokio::test]
 async fn missile_ammunition_controls_woods_payload_and_inferno_bypass() {
     let (dir, fixture_config, base) = support::isolated_world().await;
-    let configs = [false, true].map(|enabled| configured(&dir, enabled, false));
+    let configs = [false, true].map(|enabled| configured(&dir, enabled));
     let (pairs, booted) = boot_pairs(&configs, &base);
     for recipient in [
         include_str!("../game/units/AS7-D.toml"),
@@ -361,7 +360,7 @@ async fn missile_woods_absorption_follows_live_ams_interception() {
     let mut fully_intercepted = false;
     let mut partially_intercepted = false;
     let (dir, fixture_config, base) = support::isolated_world().await;
-    let config = configured(&dir, true, false);
+    let config = configured(&dir, true);
     let scripts = boot(&config, base);
     let booted = scripts.world().clone();
     for source in [
@@ -422,7 +421,7 @@ async fn missile_woods_absorption_follows_live_ams_interception() {
 #[tokio::test]
 async fn single_hit_woods_absorption_matches_native_lua_and_restart() {
     let (dir, fixture_config, base) = support::isolated_world().await;
-    let configs = [false, true].map(|enabled| configured(&dir, enabled, false));
+    let configs = [false, true].map(|enabled| configured(&dir, enabled));
     let (pairs, booted) = boot_pairs(&configs, &base);
     let mut sequence = 0;
     for source in firing::templates() {
@@ -488,7 +487,7 @@ async fn single_hit_woods_absorption_matches_native_lua_and_restart() {
 #[tokio::test]
 async fn single_hit_woods_damage_floor_and_glancing_order() {
     let (dir, fixture_config, base) = support::isolated_world().await;
-    let config = configured(&dir, true, true);
+    let config = configured(&dir, true);
     let scripts = boot(&config, base);
     let booted = scripts.world().clone();
     for recipient in [
@@ -528,11 +527,14 @@ async fn single_hit_woods_damage_floor_and_glancing_order() {
                 let report = fire(&scripts, shooter, index, target);
                 assert_eq!(report["glancing"], true, "{report}");
                 let reduced = base_damage.saturating_sub(absorption).max(1);
-                assert_eq!(
-                    report["salvo"]["report"]["groups"][0]["damage"],
-                    reduced.div_ceil(2),
-                    "{report}"
-                );
+                // A glancing blow halves the absorbed damage rounding down; a shell reduced
+                // to nothing rolls no hit location.
+                let groups = report["salvo"]["report"]["groups"].as_array().unwrap();
+                if reduced / 2 == 0 {
+                    assert!(groups.is_empty(), "{report}");
+                } else {
+                    assert_eq!(groups[0]["damage"], reduced / 2, "{report}");
+                }
                 if absorption > 0 {
                     assert_eq!(
                         report["salvo"]["report"]["woods"]["damage_before"],
@@ -554,7 +556,7 @@ async fn woods_impact_callback_failure_restores_damage_terrain_dice_and_notices(
         include_str!("../game/units/AS7-D.toml"),
     )
     .await;
-    let config = configured(&dir, true, false);
+    let config = configured(&dir, true);
     prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -579,7 +581,7 @@ async fn woodland_clearing_uses_damage_before_absorption() {
         include_str!("../game/units/AS7-D.toml"),
     )
     .await;
-    let config = configured(&dir, true, false);
+    let config = configured(&dir, true);
     prepare(&mut world, shooter, target, Terrain::HeavyWoods, 12);
     wear_woods(&mut world, target, 10);
     let seed = (0..=255)
@@ -608,13 +610,14 @@ async fn woodland_clearing_uses_damage_before_absorption() {
 }
 
 /// Bursts reduce each shell once, publish one terrain effect and retain glancing
-/// cluster counts; sharded one weapon per test over the full chassis matrix.
+/// cluster counts; sharded one weapon per test over the full chassis matrix. The second
+/// toggle selects an attack roll exactly at the target number, which always glances.
 async fn burst_matrix(weapon: Weapon) {
     let (dir, fixture_config, base) = support::isolated_world().await;
     let toggles = [(true, false), (true, true), (false, false), (false, true)];
     let configs: Vec<_> = toggles
         .iter()
-        .map(|&(enabled, glancing)| configured(&dir, enabled, glancing))
+        .map(|&(enabled, _)| configured(&dir, enabled))
         .collect();
     let (pairs, booted) = boot_pairs(&configs, &base);
     let mut sequence = 0;
@@ -694,21 +697,21 @@ async fn burst_matrix(weapon: Weapon) {
                             .unwrap_or_else(|| panic!("{report}"));
                         let roll = salvo["cluster_roll"].as_u64().unwrap() as u8;
                         let adjusted = roll.saturating_sub(if glancing { 4 } else { 0 });
-                        let count = if weapon != Weapon::RotaryAc5 {
-                            if adjusted >= 8 { 2 } else { 1 }
-                        } else if adjusted < 2 {
-                            1
-                        } else {
-                            usize::from(Weapon::Srm6.missile_hits(adjusted).unwrap())
-                        };
-                        assert_eq!(groups.len(), count, "{report}");
                         let base_damage = u64::from(weapon.profile().damage);
                         let damage = base_damage.saturating_sub(reduction).max(1);
+                        // A glancing blow halves shell damage rounding down (Tactical
+                        // Operations p. 79); shells reduced to nothing roll no location.
+                        let halved = damage / 2;
+                        let count = if glancing && halved == 0 {
+                            0
+                        } else if weapon != Weapon::RotaryAc5 {
+                            if adjusted >= 8 { 2 } else { 1 }
+                        } else {
+                            usize::from(Weapon::Srm6.missile_hits(adjusted.max(2)).unwrap())
+                        };
+                        assert_eq!(groups.len(), count, "{report}");
                         for group in groups {
-                            assert_eq!(
-                                group["damage"],
-                                if glancing { damage.div_ceil(2) } else { damage }
-                            );
+                            assert_eq!(group["damage"], if glancing { halved } else { damage });
                         }
                         if reduction > 0 {
                             assert_eq!(salvo["woods"]["damage_before"], base_damage);
@@ -769,7 +772,7 @@ async fn thermal_woods_share_heat_terrain_feedback_and_rollback() {
     let toggles = [(false, false), (false, true), (true, false), (true, true)];
     let configs: Vec<_> = toggles
         .iter()
-        .map(|&(enabled, glancing)| configured(&dir, enabled, glancing))
+        .map(|&(enabled, _)| configured(&dir, enabled))
         .collect();
     let (pairs, booted) = boot_pairs(&configs, &base);
     let mut sequence = 0;
@@ -908,7 +911,7 @@ async fn pellet_matrix(
     let mut thinned = false;
     let mut absorbed_all = false;
     let (dir, fixture_config, base) = support::isolated_world().await;
-    let configs = [false, true].map(|enabled| configured(&dir, enabled, false));
+    let configs = [false, true].map(|enabled| configured(&dir, enabled));
     let (pairs, booted) = boot_pairs(&configs, &base);
     let seeds: Vec<u8> = (0..=255)
         .filter(|&seed| Dice::seeded([seed; 32]).two_d6() == 12)
@@ -1205,7 +1208,7 @@ async fn missed_direct_shots_share_incidental_terrain_and_preserve_targets() {
     let mut quiet = false;
     let mut ignited = false;
     let (dir, fixture_config, base) = support::isolated_world().await;
-    let configs = [false, true].map(|enabled| configured(&dir, enabled, false));
+    let configs = [false, true].map(|enabled| configured(&dir, enabled));
     let (pairs, booted) = boot_pairs(&configs, &base);
     let mut sequence = 0;
     for source in [

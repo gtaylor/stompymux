@@ -17,10 +17,6 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
     )
     .unwrap();
     support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
-    let rules = HitRules {
-        inferno_penalty: false,
-        exile_stun_mode: 0,
-    };
     for (transfer, fatal, expected_rolls) in [(false, false, 1), (true, false, 3), (false, true, 0)]
     {
         let mut scenario = base.clone();
@@ -54,8 +50,7 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
                     .unwrap();
                 let mut ordinary = before.clone();
                 let report =
-                    resolve_battle_salvo(&mut ordinary, id, Weapon::Ac10, HitArc::Front, rules)
-                        .ok()?;
+                    resolve_battle_salvo(&mut ordinary, id, Weapon::Ac10, HitArc::Front).ok()?;
                 let group = &report.groups[0];
                 (group.hit.section == section
                     && group.impact.criticals.is_empty()
@@ -76,17 +71,14 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
         let mut restored = persistence::load(&config.database()).await.unwrap();
         let mut clan = before.clone();
         let clan_report =
-            resolve_battle_salvo(&mut clan, id, Weapon::ClanPlasmaRifle, HitArc::Front, rules)
-                .unwrap();
+            resolve_battle_salvo(&mut clan, id, Weapon::ClanPlasmaRifle, HitArc::Front).unwrap();
         assert_eq!(clan_report, ordinary_report);
         assert_eq!(clan.btech, ordinary.btech);
         let mut plasma = before.clone();
         let report =
-            resolve_battle_salvo(&mut plasma, id, Weapon::PlasmaRifle, HitArc::Front, rules)
-                .unwrap();
+            resolve_battle_salvo(&mut plasma, id, Weapon::PlasmaRifle, HitArc::Front).unwrap();
         let replay =
-            resolve_battle_salvo(&mut restored, id, Weapon::PlasmaRifle, HitArc::Front, rules)
-                .unwrap();
+            resolve_battle_salvo(&mut restored, id, Weapon::PlasmaRifle, HitArc::Front).unwrap();
         assert_eq!(report, replay);
         assert_eq!(plasma.btech, restored.btech);
         let mut expected = serde_json::to_value(&ordinary.btech).unwrap();
@@ -94,7 +86,10 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
         let mut dice: Dice = serde_json::from_value(unit["dice"].clone()).unwrap();
         let rolls: Vec<_> = (0..expected_rolls).map(|_| dice.d6()).collect();
         unit["dice"] = serde_json::to_value(dice).unwrap();
-        unit["heat"]["stored"] = rolls.iter().map(|&v| f64::from(v)).sum::<f64>().into();
+        // Weapon heat counts as outside heat, capped at fifteen points per turn (TW p. 159).
+        let applied = rolls.iter().map(|&v| u32::from(v)).sum::<u32>().min(15);
+        unit["heat"]["stored"] = f64::from(applied).into();
+        unit["overheat_clock"]["outside_heat"] = applied.into();
         assert_eq!(report.groups[0].impact.plasma_heat, rolls);
         assert_eq!(
             report.groups[0].impact.phases,

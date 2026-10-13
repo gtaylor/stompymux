@@ -43,11 +43,7 @@ fn seed(world: &mut World, id: ObjectId, value: u8) {
 /// Isolated internal damage with criticals disabled still consumes its two diagnostic rolls.
 fn rules() -> VehicleCriticalRules {
     VehicleCriticalRules {
-        rotor_damage_divisor: 0,
         extended_piloting: false,
-        vtol_table: None,
-        table: VehicleCriticalTable::Advanced,
-        enabled: false,
         combat_safe: false,
         toughness: false,
     }
@@ -175,7 +171,8 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
             }
         );
         if overflow > 0 {
-            assert_eq!(report.internal.as_ref().unwrap().rolls, [dice.two_d6()]);
+            assert!(report.internal.as_ref().unwrap().rolls.is_empty());
+            dice.two_d6();
             assert_eq!(
                 report.internal.as_ref().unwrap().structural_damage,
                 u32::from(internal_damage)
@@ -193,79 +190,101 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
 }
 
 #[tokio::test]
-async fn through_armor_criticals_suppress_only_additional_internal_dispatch() {
+async fn through_armor_and_internal_damage_each_roll_once_on_the_critical_table() {
     let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
-    for dispatched in [true, false] {
-        let stream = matching_seed(|dice| {
-            dice.two_d6();
-            let armor = dice.two_d6();
-            if dispatched {
-                matches!(armor, 8 | 9) && dice.two_d6() == 7 && dice.two_d6() == 12
-            } else {
-                armor < 8 && matches!(dice.two_d6(), 8 | 9) && dice.two_d6() == 6
-            }
-        });
-        let mut world = base.clone();
-        set_seed(&mut world, id, stream);
-        let mut rules = rules();
-        rules.enabled = true;
-        let mut request = hit(41);
-        request.through_armor_critical = true;
-        let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules).unwrap();
-        let internal = report.internal.unwrap();
-        assert_eq!(report.criticals.len(), usize::from(dispatched));
-        assert_eq!(internal.criticals.len(), usize::from(!dispatched));
-        assert_eq!(
-            world.btech.vehicles()[&id].piloting_damage(),
-            if dispatched { 0 } else { 2 }
-        );
-        assert_eq!(
-            world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
-            7
-        );
-        let mut dice = Dice::seeded(stream);
+    // Entry roll, the through-armor table roll (6: Driver Hit), then the internal damage
+    // table roll (9: Sensors).
+    let stream = matching_seed(|dice| {
         dice.two_d6();
+        dice.two_d6() == 6 && dice.two_d6() == 9
+    });
+    let mut world = base.clone();
+    set_seed(&mut world, id, stream);
+    let mut request = hit(41);
+    request.through_armor_critical = true;
+    let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
+    assert_eq!(
+        report.rolls.len(),
+        1,
+        "critical rolls live in their reports"
+    );
+    assert_eq!(report.criticals.len(), 1);
+    assert_eq!(
+        report.criticals[0].selection.effect,
+        Some(VehicleCriticalEffect::Driver)
+    );
+    let internal = report.internal.unwrap();
+    assert_eq!(internal.criticals.len(), 1);
+    assert_eq!(
+        internal.criticals[0].selection.effect,
+        Some(VehicleCriticalEffect::Sensors)
+    );
+    let vehicle = &world.btech.vehicles()[&id];
+    assert_eq!(vehicle.piloting_damage(), 2);
+    assert_eq!(vehicle.gunnery_damage(), 1);
+    assert_eq!(vehicle.sections()[&VehicleSection::Front].internal, 7);
+    let mut dice = Dice::seeded(stream);
+    for _ in 0..3 {
         dice.two_d6();
-        dice.two_d6();
-        dice.two_d6();
-        assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
     }
+    assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
+    // A hit that only scratches armor rolls no critical at all.
+    let mut world = base.clone();
+    set_seed(&mut world, id, stream);
+    let report = resolve_battle_vehicle_armor_damage(&mut world, id, hit(1), rules()).unwrap();
+    assert!(report.criticals.is_empty() && report.internal.is_none());
+    let mut dice = Dice::seeded(stream);
+    dice.two_d6();
+    assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
 }
 
 #[tokio::test]
-async fn armor_piercing_uses_remaining_armor_threshold_and_weapon_penalty() {
+async fn armor_piercing_rolls_on_every_armor_hit_with_the_autocannon_penalty() {
     let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
+    // Entry roll, then a table roll of 12: AC/20 −1 is Weapon Destroyed (moving down to Crew
+    // Killed on a weaponless front), AC/10 −2 is Commander Hit, AC/5 −3 is Sensors, AC/2 −4 is
+    // Stabilizer.
     let stream = matching_seed(|dice| {
         dice.two_d6();
         dice.two_d6() == 12
     });
-    for amount in [20, 21, 41] {
-        for weapon in [Weapon::Ac2, Weapon::Ac5, Weapon::Ac10, Weapon::Ac20] {
+    for (weapon, penalty, effect) in [
+        (Weapon::Ac20, -1, VehicleCriticalEffect::CrewKilled),
+        (Weapon::Ac10, -2, VehicleCriticalEffect::Commander),
+        (Weapon::Ac5, -3, VehicleCriticalEffect::Sensors),
+        (Weapon::Ac2, -4, VehicleCriticalEffect::Stabilizer),
+    ] {
+        for amount in [1, 20] {
             let mut world = base.clone();
             set_seed(&mut world, id, stream);
             let mut request = hit(amount);
             request.armor_piercing = Some(weapon);
             let report =
                 resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
-            assert_eq!(report.rolls.len(), if amount == 21 { 2 } else { 1 });
-            assert_eq!(
-                report.criticals.len(),
-                if amount != 21 {
-                    0
-                } else if matches!(weapon, Weapon::Ac2 | Weapon::Ac5) {
-                    1
-                } else {
-                    2
-                }
-            );
-            assert!(
-                report
-                    .criticals
-                    .iter()
-                    .all(|critical| critical.selection.effect.is_none())
-            );
+            assert_eq!(report.criticals.len(), 1, "{weapon:?}/{amount}");
+            assert_eq!(report.criticals[0].selection.modifier, penalty);
+            assert_eq!(report.criticals[0].selection.effect, Some(effect));
         }
+        // Armor-piercing adds nothing once the hit damages the structure.
+        let mut world = base.clone();
+        set_seed(&mut world, id, stream);
+        let mut request = hit(41);
+        request.armor_piercing = Some(weapon);
+        let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
+        assert!(report.criticals.is_empty());
+        assert_eq!(report.internal.unwrap().criticals.len(), 1);
     }
+    // Hardened armor stops the armor-piercing roll.
+    let hardened = support::templates::with_flags(
+        include_str!("../game/units/Demolisher.toml"),
+        &["HardenedArmor_Tech"],
+    );
+    let (_dir, _config, mut world, id) = fixture(&hardened).await;
+    set_seed(&mut world, id, stream);
+    let mut request = hit(2);
+    request.armor_piercing = Some(Weapon::Ac20);
+    let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
+    assert!(report.criticals.is_empty());
     let mut world = base.clone();
     let before = world.btech.clone();
     let mut request = hit(1);
@@ -292,12 +311,11 @@ async fn armor_destruction_preserves_occupants_and_safe_hits_only_advance_entry_
     world.btech = before;
     let stream = matching_seed(|dice| {
         dice.two_d6();
-        matches!(dice.two_d6(), 8 | 9) && dice.two_d6() == 12
+        dice.two_d6() == 12
     });
     set_seed(&mut world, id, stream);
     let before = world.btech.clone();
-    let mut critical_rules = rules();
-    critical_rules.enabled = true;
+    let critical_rules = rules();
     let mut critical_hit = hit(1);
     critical_hit.through_armor_critical = true;
     let report =
@@ -333,10 +351,9 @@ async fn armor_destruction_preserves_occupants_and_safe_hits_only_advance_entry_
     let mut request = hit(100);
     request.section = VehicleSection::Turret;
     let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
-    assert!(!report.unit_destroyed);
-    assert_eq!(report.internal.unwrap().discarded, 52);
-    let report = resolve_battle_vehicle_armor_damage(&mut world, id, hit(48), rules()).unwrap();
+    // A turret with no structure left wrecks the vehicle (TW p. 128).
     assert!(report.unit_destroyed);
+    assert_eq!(report.internal.unwrap().discarded, 52);
     assert_eq!(world.btech.vehicles()[&id].pilot(), None);
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
@@ -420,7 +437,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
         assert_eq!(report.rolls.len(), 1);
         assert_eq!(
             report.internal.unwrap().rolls.len(),
-            1,
+            0,
             "penetration adds no breach roll"
         );
         let vehicle = &world.btech.vehicles()[&id];
@@ -527,7 +544,7 @@ async fn vacuum_internal_damage_and_safety_preserve_check_boundaries() {
             rules(),
         )
         .unwrap();
-        assert_eq!(report.rolls.len(), if amount == 1 { 3 } else { 2 });
+        assert_eq!(report.rolls.len(), if amount == 1 { 2 } else { 1 });
         assert_eq!(
             world.btech.vehicles()[&id]
                 .breached_sections()
@@ -658,67 +675,6 @@ async fn vacuum_disabled_ams_preserves_whole_unit_capability() {
         slot: 0
     }));
     world.validate(&config).unwrap();
-}
-
-/// Scaling is applied once to external rotor hits, before material modifiers, without extra rolls.
-#[tokio::test]
-async fn rotor_divisor_preserves_minimum_internal_damage_and_restart() {
-    let template =
-        include_str!("../game/units/Kestrel.toml").replace("armor = 2\n", "armor = 40\n");
-    let (_dir, config, base, id) = fixture(&template).await;
-    for (divisor, amount, expected) in [
-        (0, 7, 7),
-        (1, 7, 7),
-        (3, 7, 2),
-        (10, 7, 1),
-        (10, 0, 0),
-        (u32::MAX, 7, 1),
-    ] {
-        let mut world = base.clone();
-        let rules = VehicleCriticalRules {
-            rotor_damage_divisor: divisor,
-            ..rules()
-        };
-        let report = resolve_battle_vehicle_armor_damage(
-            &mut world,
-            id,
-            VehicleArmorHit {
-                damage_class: DamageClass::Ordinary,
-                section: VehicleSection::Rotor,
-                amount,
-                through_armor_critical: false,
-                armor_piercing: None,
-            },
-            rules,
-        )
-        .unwrap();
-        assert_eq!(report.incoming, amount);
-        assert_eq!(report.armor_damage, expected);
-        assert_eq!(u32::from(report.absorbed), expected);
-        assert_eq!(
-            world.btech.vehicles()[&id].sections()[&VehicleSection::Rotor].armor,
-            40 - expected as u16
-        );
-        persistence::save(&config.database(), &world).await.unwrap();
-        let restored = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(restored.btech, world.btech);
-        let mut hull = base.clone();
-        let report = resolve_battle_vehicle_armor_damage(&mut hull, id, hit(2), rules).unwrap();
-        assert_eq!(report.armor_damage, 2);
-        let mut internal = base.clone();
-        let _report = resolve_battle_vehicle_internal_damage(
-            &mut internal,
-            id,
-            VehicleSection::Rotor,
-            2,
-            rules,
-        )
-        .unwrap();
-        assert_eq!(
-            internal.btech.vehicles()[&id].sections()[&VehicleSection::Rotor].internal,
-            1
-        );
-    }
 }
 
 /// Hardened armor leaves vehicle speed alone and adds one to driving rolls.

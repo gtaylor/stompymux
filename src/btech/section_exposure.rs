@@ -1,4 +1,4 @@
-//! Shared equipment, reactor and support consequences of Mech section exposure.
+//! Shared equipment and support consequences of Mech section exposure.
 use super::{CriticalLocation, FallRules, Mech, MechFallReport, MechSection, Notice, Posture};
 use crate::{Flag, ObjectId, World};
 use anyhow::Result;
@@ -16,8 +16,6 @@ pub enum SectionExposure {
 /// Environmental equipment loss and its immediate consequences; structure remains intact.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SectionExposureReport {
-    /// Bulk engine loss may detonate the reactor before other exposure consequences.
-    pub reactor_explosion: Option<Box<super::ReactorExplosion>>,
     pub section: MechSection,
     pub cause: SectionExposure,
     pub fall: Option<MechFallReport>,
@@ -66,8 +64,6 @@ pub(super) fn disable_section(
     let unit = &world.btech.constructed_units()[&id];
     let was_destroyed = unit.is_destroyed();
     let leg = unit.chassis().is_leg(section);
-    let power_before = unit.power();
-    let engine_hits_before = unit.system_hits(super::System::Engine);
     let bins: Vec<_> = unit
         .loadout()?
         .ammunition
@@ -117,7 +113,6 @@ pub(super) fn disable_section(
         return Ok(SectionExposureReport {
             cause,
             section,
-            reactor_explosion: None,
             fall: None,
             pilot_notices,
             notices,
@@ -128,24 +123,6 @@ pub(super) fn disable_section(
         unit.hull_down = Default::default();
         unit.posture = Posture::Prone;
         unit.facing = Default::default();
-        if rules.stagger != super::StaggerMode::Traditional {
-            unit.stagger.clear_damage();
-        }
-    }
-    let reactor_explosion = super::reactor_instability::section_loss(
-        world,
-        id,
-        power_before,
-        engine_hits_before,
-        rules,
-    )?;
-    if let Some(blast) = &reactor_explosion {
-        super::piloting::append_feedback(
-            &mut pilot_notices,
-            blast.pilot_notices.iter().cloned(),
-            notices.len(),
-        );
-        notices.extend(blast.notices.iter().cloned());
     }
     let unit = &world.btech.constructed_units()[&id];
     let fall =
@@ -166,7 +143,6 @@ pub(super) fn disable_section(
         };
     Ok(SectionExposureReport {
         cause,
-        reactor_explosion: reactor_explosion.map(Box::new),
         section,
         fall,
         pilot_notices,

@@ -87,6 +87,24 @@ async fn cascade_ignores_lost_bins_and_rejects_invalid_victims_without_mutation(
     let (_dir, _config, mut world, id) = fixture(&template()).await;
     let plasma = world.btech.vehicles()[&id].loadout().unwrap().ammunition[1].location;
     destroy_battle_vehicle_critical(&mut world, id, plasma).unwrap();
+    let turret_bins: Vec<_> = world.btech.vehicles()[&id]
+        .loadout()
+        .unwrap()
+        .ammunition
+        .iter()
+        .filter(|bin| bin.location.section == VehicleSection::Turret)
+        .map(|bin| bin.location)
+        .collect();
+    for location in turret_bins {
+        destroy_battle_vehicle_critical(&mut world, id, location).unwrap();
+    }
+    assert_eq!(
+        world.btech.vehicles()[&id]
+            .ammunition_cascade(VehicleSection::Front)
+            .unwrap()
+            .damage,
+        58
+    );
     damage_battle_vehicle_phase(
         &mut world,
         id,
@@ -95,13 +113,6 @@ async fn cascade_ignores_lost_bins_and_rejects_invalid_victims_without_mutation(
         DamagePhase::Internal,
     )
     .unwrap();
-    assert_eq!(
-        world.btech.vehicles()[&id]
-            .ammunition_cascade(VehicleSection::Front)
-            .unwrap()
-            .damage,
-        58
-    );
     let before = world.btech.clone();
     assert!(
         discharge_battle_vehicle_ammunition_cascade(&mut world, id, VehicleSection::Turret)

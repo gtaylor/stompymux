@@ -259,7 +259,6 @@ fn resolve(
                 section,
                 rear_armor: false,
                 through_armor_critical: false,
-                crew_stun: false,
             };
             let impact = if world.objects[&id].flags.contains(Flag::InCharacter) {
                 super::impact::resolve_character_impact_with_rules(

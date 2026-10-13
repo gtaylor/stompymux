@@ -1,10 +1,11 @@
-//! Terrain illumination from active battlefield fires, inferno burns and forward searchlight beams.
+//! Terrain illumination from active battlefield fires, burning stationary units and forward
+//! searchlight beams.
 use super::{DecorationKind, HexCoordinate};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// Inspect whether a checked battlefield hex is lit, without identifying any emitting unit.
-/// Fires and infernos light their own hex and six neighbors. Searchlights project
+/// Fires and burning units light their own hex and six neighbors. Searchlights project
 /// within their forward arc to terrain up to thirty hexes away (Tactical Operations p. 55).
 pub fn hex_illuminated(world: &World, map: ObjectId, target: HexCoordinate) -> Result<bool> {
     ensure!(
@@ -27,16 +28,9 @@ pub fn hex_illuminated(world: &World, map: ObjectId, target: HexCoordinate) -> R
     }
     let jelly = world
         .btech
-        .constructed_units()
+        .vehicles()
         .iter()
-        .map(|(&id, unit)| (id, unit.position(), unit.inferno_remaining()))
-        .chain(
-            world
-                .btech
-                .vehicles()
-                .iter()
-                .map(|(&id, unit)| (id, unit.position(), unit.inferno_remaining())),
-        );
+        .map(|(&id, unit)| (id, unit.position(), unit.inferno_remaining()));
     for (id, position, remaining) in jelly {
         if remaining == 0
             || world

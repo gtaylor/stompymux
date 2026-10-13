@@ -249,216 +249,6 @@ async fn fast_corridor(rate: i64) -> (tempfile::TempDir, Config, World, ObjectId
     (dir, config, world, id, map)
 }
 
-/// A saved high-speed straight segment crosses several burning cells in one movement update.
-async fn burning_corridor() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
-    let (dir, config, mut world, id, map) = fast_corridor(10000).await;
-    let point = world.btech.vehicles()[&id].motion().unwrap().point;
-    for x in 0..20 {
-        for y in 0..3 {
-            let hex = HexCoordinate { x, y };
-            if hex != point.containing_hex().unwrap() {
-                set_map_decoration(
-                    &mut world,
-                    map,
-                    hex,
-                    Some(Decoration::new(DecorationKind::Fire, 120, Some(30))),
-                )
-                .unwrap();
-            }
-        }
-    }
-    (dir, config, world, id, map)
-}
-
-/// Put a prescribed fire/motive pair first in the driver's private stream.
-fn terrain_seed(world: &mut World, id: ObjectId, fire: u8, motive: u8) -> Dice {
-    let seed = (0u32..100000)
-        .find_map(|number| {
-            let mut seed = [0; 32];
-            seed[..4].copy_from_slice(&number.to_le_bytes());
-            let mut dice = Dice::seeded(seed);
-            (dice.two_d6() == fire && dice.two_d6() == motive).then_some(seed)
-        })
-        .unwrap();
-    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
-    Dice::seeded(seed)
-}
-
-#[tokio::test]
-async fn terrain_fire_is_configured_and_stops_at_the_first_disabling_crossing() {
-    let (_dir, config, mut base, id, _map) = burning_corridor().await;
-    let mut dice = terrain_seed(&mut base, id, 6, 10); // Wheeled: fire 8, motive 12.
-    let original = base.btech.vehicles()[&id].motion().unwrap();
-    let mut safe = base.clone();
-    advance_battle_motion(&mut safe, MovementRules::STANDARD).unwrap();
-    assert!(safe.btech.vehicles()[&id].motion().unwrap().point.x > original.point.x + 1.0);
-    assert_eq!(
-        roll_unit_dice(&mut safe, id, 1).unwrap(),
-        [dice.clone().d6()]
-    );
-    let rules = MovementRules {
-        fall: FallRules {
-            vehicle_impact: VehicleImpactRules {
-                advanced_fire: true,
-                ..VehicleImpactRules::STANDARD
-            },
-            ..MovementRules::STANDARD.fall
-        },
-        ..MovementRules::STANDARD
-    };
-    persistence::save(&config.database(), &base).await.unwrap();
-    let mut restored = persistence::load(&config.database()).await.unwrap();
-    let notices = advance_battle_motion(&mut base, rules).unwrap();
-    assert_eq!(
-        notices,
-        advance_battle_motion(&mut restored, rules).unwrap()
-    );
-    assert_eq!(base.btech, restored.btech);
-    let unit = &base.btech.vehicles()[&id];
-    assert!(unit.immobilized());
-    assert_eq!(unit.motion().unwrap().speed, 0.0);
-    assert_ne!(
-        unit.position().unwrap(),
-        safe.btech.vehicles()[&id].position().unwrap()
-    );
-    assert!(unit.motion().unwrap().point.x > original.point.x);
-    assert_eq!(unit.motion().unwrap().point.y, original.point.y);
-    assert!(
-        notices
-            .iter()
-            .any(|notice| notice.text.contains("motive system is destroyed"))
-    );
-    dice.two_d6();
-    dice.two_d6();
-    assert_eq!(roll_unit_dice(&mut base, id, 1).unwrap(), [dice.d6()]);
-    base.validate(&config).unwrap();
-}
-
-#[tokio::test]
-async fn fire_exposure_requires_entry_and_hull_loss_preserves_occupants() {
-    let (_dir, config, mut world, id, map) = burning_corridor().await;
-    let rules = MovementRules {
-        fall: FallRules {
-            vehicle_impact: VehicleImpactRules {
-                advanced_fire: true,
-                ..VehicleImpactRules::STANDARD
-            },
-            ..MovementRules::STANDARD.fall
-        },
-        ..MovementRules::STANDARD
-    };
-    let mut quiet = world.clone();
-    let mut saved = serde_json::to_value(&quiet.btech).unwrap();
-    saved["vehicles"][id.0.to_string()]["motion"]["speed"] = 1.0.into();
-    saved["vehicles"][id.0.to_string()]["motion"]["desired_speed"] = 1.0.into();
-    saved["maps"][map.0.to_string()]["movement_modifier"] = 100.into();
-    quiet.btech = serde_json::from_value(saved).unwrap();
-    let hex = quiet.btech.vehicles()[&id]
-        .motion()
-        .unwrap()
-        .point
-        .containing_hex()
-        .unwrap();
-    set_map_decoration(
-        &mut quiet,
-        map,
-        hex,
-        Some(Decoration::new(DecorationKind::Fire, 120, Some(30))),
-    )
-    .unwrap();
-    let before = serde_json::to_value(&quiet.btech.vehicles()[&id]).unwrap();
-    assert!(advance_battle_motion(&mut quiet, rules).unwrap().is_empty());
-    assert_eq!(
-        serde_json::to_value(&quiet.btech.vehicles()[&id]).unwrap()["dice"],
-        before["dice"]
-    );
-    assert_eq!(
-        quiet.btech.vehicles()[&id].position().unwrap().x,
-        hex.x as u16
-    );
-    terrain_seed(&mut world, id, 8, 7); // Wheeled fire 10, sweep on fragile truck.
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            for section in record["sections"].as_object_mut().unwrap().values_mut() {
-                section["armor"] = 0.into();
-            }
-        })
-        .unwrap();
-    world
-        .objects
-        .get_mut(&id)
-        .unwrap()
-        .flags
-        .insert(Flag::InCharacter);
-    let occupants: Vec<_> = world
-        .objects
-        .iter()
-        .filter(|(_, object)| object.location == Some(id))
-        .map(|(&id, _)| id)
-        .collect();
-    advance_battle_motion(&mut world, rules).unwrap();
-    assert!(world.btech.vehicles()[&id].is_destroyed());
-    assert!(!world.btech.vehicles()[&id].crew_killed());
-    for occupant in occupants {
-        assert_eq!(world.objects[&occupant].location, Some(id));
-    }
-    world.validate(&config).unwrap();
-    quiet.validate(&config).unwrap();
-}
-
-#[tokio::test]
-async fn every_crossed_fire_hex_checks_once_without_adding_stationary_exposure() {
-    let (_dir, config, mut world, id, map) = burning_corridor().await;
-    world
-        .btech
-        .rewrite_map_record(map, |record| {
-            record["movement_modifier"] = 2000.into();
-        })
-        .unwrap();
-    let start = world.btech.vehicles()[&id].motion().unwrap().point;
-    let mut ordinary = world.clone();
-    advance_battle_motion(&mut ordinary, MovementRules::STANDARD).unwrap();
-    let end = ordinary.btech.vehicles()[&id].motion().unwrap().point;
-    let crossings = start.trace(end).unwrap().len() - 1;
-    assert!(crossings >= 2);
-    let seed = (0u32..100000)
-        .find_map(|number| {
-            let mut seed = [0; 32];
-            seed[..4].copy_from_slice(&number.to_le_bytes());
-            let mut dice = Dice::seeded(seed);
-            (0..crossings).all(|_| dice.two_d6() <= 5).then_some(seed)
-        })
-        .unwrap();
-    world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
-    let rules = MovementRules {
-        fall: FallRules {
-            vehicle_impact: VehicleImpactRules {
-                advanced_fire: true,
-                ..VehicleImpactRules::STANDARD
-            },
-            ..MovementRules::STANDARD.fall
-        },
-        ..MovementRules::STANDARD
-    };
-    let notices = advance_battle_motion(&mut world, rules).unwrap();
-    assert!(notices.is_empty());
-    assert_eq!(
-        world.btech.vehicles()[&id].motion(),
-        ordinary.btech.vehicles()[&id].motion()
-    );
-    assert_eq!(
-        world.btech.vehicles()[&id].sections(),
-        ordinary.btech.vehicles()[&id].sections()
-    );
-    let mut dice = Dice::seeded(seed);
-    for _ in 0..crossings {
-        dice.two_d6();
-    }
-    assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
-    world.validate(&config).unwrap();
-}
-
 /// Candidate travel supplies a fixture route; mine assertions independently track packet expenditure.
 fn corridor_entries(world: &World, id: ObjectId) -> Vec<HexCoordinate> {
     let origin = world.btech.vehicles()[&id].motion().unwrap().point;
@@ -470,35 +260,54 @@ fn corridor_entries(world: &World, id: ObjectId) -> Vec<HexCoordinate> {
 
 /// Prevent incidental critical cascades from obscuring the per-crossing mine packet checks.
 fn mine_movement_rules() -> MovementRules {
-    let mut rules = MovementRules::STANDARD;
-    rules.fall.vehicle_impact.criticals.enabled = false;
-    rules.fall.vehicle_impact.hit.critical_mode = 0;
-    rules
+    MovementRules::STANDARD
 }
 
+/// A conventional field of fewer than five points: it needs a 9 or more to go off
+/// (Tactical Operations p. 176) and is cleared, with everything colocated, after one blast.
+const DISPOSABLE_MINE_TARGET: u8 = 9;
+
+/// Search the numbered seeds for a stream whose opening draws satisfy `accept`.
+fn search_dice(accept: impl Fn(&mut Dice) -> bool) -> Dice {
+    (0u32..100000)
+        .find_map(|number| {
+            let mut bytes = [0; 32];
+            bytes[..4].copy_from_slice(&number.to_le_bytes());
+            let initial = Dice::seeded(bytes);
+            accept(&mut initial.clone()).then_some(initial)
+        })
+        .unwrap()
+}
+
+/// Pin the truck's dice so its first 2d6 sets off a field below the five-point minimum.
+fn seed_detonation(world: &mut World, id: ObjectId) {
+    let dice = search_dice(|dice| dice.two_d6() >= DISPOSABLE_MINE_TARGET);
+    world.btech.set_unit_dice(id, dice).unwrap();
+}
+
+/// Unit dice one disposable mine crossing consumes: the detonation roll, the hit location and
+/// the armor stage's roll.
+const CROSSING_ROLLS: usize = 3;
+
 /// Place a scripted trigger before each disposable mine, so field removal retains its queued callback.
+/// Every crossing's detonation roll succeeds and its one-point blast lands on a front row with
+/// neither a motive roll nor a through-armor critical, so the truck keeps its speed.
 fn seed_corridor_mines(
     world: &mut World,
     id: ObjectId,
     map: ObjectId,
     entries: &[HexCoordinate],
 ) -> Dice {
-    let seed = (0u32..100000)
-        .find_map(|number| {
-            let mut bytes = [0; 32];
-            bytes[..4].copy_from_slice(&number.to_le_bytes());
-            let initial = Dice::seeded(bytes);
-            let mut dice = initial.clone();
-            entries
-                .iter()
-                .all(|_| {
-                    dice.two_d6();
-                    dice.two_d6();
-                    dice.two_d6() <= 8
-                })
-                .then_some(initial)
+    let seed = search_dice(|dice| {
+        entries.iter().all(|_| {
+            if dice.two_d6() < DISPOSABLE_MINE_TARGET {
+                return false;
+            }
+            let plain = matches!(dice.two_d6(), 6..=8 | 10 | 11);
+            dice.two_d6();
+            plain
         })
-        .unwrap();
+    });
     world.btech.set_unit_dice(id, seed.clone()).unwrap();
     for (index, &coordinate) in entries.iter().enumerate() {
         for (offset, kind, strength) in [(0, MineKind::Trigger, 0), (1, MineKind::Standard, 1)] {
@@ -569,9 +378,7 @@ async fn vehicle_movement_checks_each_mined_crossing_and_replays_expenditure() {
         .sum();
     assert_eq!(400 - armor, entries.len() as u16);
     let mut dice = seed;
-    for _ in &entries {
-        dice.two_d6();
-        dice.two_d6();
+    for _ in 0..entries.len() * CROSSING_ROLLS {
         dice.two_d6();
     }
     assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
@@ -701,88 +508,13 @@ async fn unrelated_mines_and_motion_inside_one_hex_do_not_trigger_or_stop_vehicl
 }
 
 #[tokio::test]
-async fn disabling_mine_heat_precedes_terrain_fire_and_stops_at_entry() {
-    let (_dir, config, mut world, id, map) = fast_corridor(2000).await;
-    let entries = corridor_entries(&world, id);
-    let first = entries[0];
-    set_minefield(
-        &mut world,
-        map,
-        0,
-        Some(Minefield {
-            coordinate: first,
-            kind: MineKind::Inferno,
-            strength: 2,
-            extra: 0,
-            owner: ObjectId(1),
-        }),
-    )
-    .unwrap();
-    set_map_decoration(
-        &mut world,
-        map,
-        first,
-        Some(Decoration::new(DecorationKind::Fire, 120, Some(30))),
-    )
-    .unwrap();
-    let mut dice = (0u32..100000)
-        .find_map(|number| {
-            let mut bytes = [0; 32];
-            bytes[..4].copy_from_slice(&number.to_le_bytes());
-            let initial = Dice::seeded(bytes);
-            let mut dice = initial.clone();
-            (dice.two_d6() == 6 && dice.two_d6() == 10 && dice.two_d6() <= 5).then_some(initial)
-        })
-        .unwrap();
-    world.btech.set_unit_dice(id, dice.clone()).unwrap();
-    let before = world.clone();
-    let mut rules = mine_movement_rules();
-    rules.fall.vehicle_impact.advanced_fire = true;
-    let notices = advance_battle_motion(&mut world, rules).unwrap();
-    let unit = &world.btech.vehicles()[&id];
-    assert!(unit.immobilized());
-    assert!(!unit.is_destroyed());
-    assert_eq!(
-        unit.motion().unwrap().point.containing_hex().unwrap(),
-        first
-    );
-    assert_eq!(unit.motion().unwrap().speed, 0.0);
-    assert!(
-        notices
-            .iter()
-            .any(|notice| notice.unit == id && notice.text.contains("you trigger a mine"))
-    );
-    assert!(world.btech.maps()[&map].minefields().is_empty());
-    assert!(unit.burning_sections().is_empty());
-    dice.two_d6();
-    dice.two_d6();
-    dice.two_d6();
-    assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
-    // Unsupported character damage must restore entry position, field removal and every draw.
-    let mut character = before;
-    character
-        .objects
-        .get_mut(&id)
-        .unwrap()
-        .flags
-        .insert(Flag::InCharacter);
-    let checkpoint = character.btech.clone();
-    assert!(advance_battle_motion(&mut character, rules).is_err());
-    assert_eq!(character.btech, checkpoint);
-    world.validate(&config).unwrap();
-}
-
-#[tokio::test]
 async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
     let (_dir, config, mut world, id, map) = fast_corridor(2000).await;
+    seed_detonation(&mut world, id);
     let entries = corridor_entries(&world, id);
     let first = entries[0];
-    let neighbor = first
-        .neighbors()
-        .unwrap()
-        .into_iter()
-        .find(|hex| hex.y != first.y && hex.x >= 0 && hex.y >= 0 && hex.y < 3 && hex.x < 20)
-        .unwrap();
+    // Only a command-detonated field reaches the neighbouring hexes, so the second truck
+    // waits in the mined hex itself.
     let other = world.create(&config, "Second truck".into(), Kind::Thing);
     world.objects.get_mut(&other).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -800,8 +532,8 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
         &mut world,
         other,
         map,
-        i64::from(neighbor.x),
-        i64::from(neighbor.y),
+        i64::from(first.x),
+        i64::from(first.y),
     )
     .unwrap();
     world
@@ -819,8 +551,8 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
         0,
         Some(Minefield {
             coordinate: first,
-            kind: MineKind::Vibra,
-            strength: 8,
+            kind: MineKind::Standard,
+            strength: 4,
             extra: 0,
             owner: ObjectId(1),
         }),
@@ -855,60 +587,16 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
     world.validate(&config).unwrap();
 }
 
-/// A map edge farther down the traced route cannot suppress a mine crossed before it.
-#[tokio::test]
-async fn later_boundary_does_not_bypass_an_earlier_mine() {
-    let (_dir, config, mut world, id, map) = fast_corridor(50000).await;
-    let origin = world.btech.vehicles()[&id].motion().unwrap().point;
-    let first = origin.trace(origin.project(90.0, 2.0).unwrap()).unwrap()[1];
-    set_minefield(
-        &mut world,
-        map,
-        0,
-        Some(Minefield {
-            coordinate: first,
-            kind: MineKind::Inferno,
-            strength: 2,
-            extra: 0,
-            owner: ObjectId(1),
-        }),
-    )
-    .unwrap();
-    let mut dice = terrain_seed(&mut world, id, 6, 10);
-    let mut rules = mine_movement_rules();
-    rules.fall.vehicle_impact.advanced_fire = true;
-    let notices = advance_battle_motion(&mut world, rules).unwrap();
-    assert!(world.btech.vehicles()[&id].immobilized());
-    assert_eq!(
-        world.btech.vehicles()[&id]
-            .motion()
-            .unwrap()
-            .point
-            .containing_hex()
-            .unwrap(),
-        first
-    );
-    assert!(
-        !notices
-            .iter()
-            .any(|notice| notice.text.contains("Map edge"))
-    );
-    assert!(world.btech.maps()[&map].minefields().is_empty());
-    dice.two_d6();
-    dice.two_d6();
-    assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
-    world.validate(&config).unwrap();
-}
-
 /// Failed mine deletion rolls back the vehicle's movement and damage before the heartbeat retries.
 #[tokio::test]
 async fn vehicle_mine_movement_retries_a_failed_server_save() {
     tokio::task::LocalSet::new().run_until(async {
         use sqlx::Connection;
         let (_dir, config, mut world, id, map) = fast_corridor(2000).await;
+        seed_detonation(&mut world, id);
         let first = corridor_entries(&world, id)[0];
         set_minefield(&mut world, map, 0, Some(Minefield {
-            coordinate: first, kind: MineKind::Vibra, strength: 8, extra: 0, owner: ObjectId(1),
+            coordinate: first, kind: MineKind::Standard, strength: 4, extra: 0, owner: ObjectId(1),
         })).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -927,80 +615,6 @@ async fn vehicle_mine_movement_retries_a_failed_server_save() {
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         server.await.unwrap().unwrap();
     }).await;
-}
-
-/// Fatal mine heat does not skip the entered terrain's independent fire check.
-#[tokio::test]
-async fn fatal_mine_heat_still_checks_terrain_fire_before_stopping() {
-    let (_dir, config, mut world, id, map) = burning_corridor().await;
-    reinforce_truck(&mut world, id);
-    let first = corridor_entries(&world, id)[0];
-    set_minefield(
-        &mut world,
-        map,
-        0,
-        Some(Minefield {
-            coordinate: first,
-            kind: MineKind::Inferno,
-            strength: 2,
-            extra: 0,
-            owner: ObjectId(1),
-        }),
-    )
-    .unwrap();
-    let (initial, mut expected) = (0u32..100000)
-        .find_map(|number| {
-            let mut bytes = [0; 32];
-            bytes[..4].copy_from_slice(&number.to_le_bytes());
-            let initial = Dice::seeded(bytes);
-            let mut dice = initial.clone();
-            if dice.two_d6() != 8 {
-                return None;
-            }
-            dice.d6();
-            dice.two_d6();
-            if dice.two_d6() > 7 {
-                return None;
-            }
-            for _ in 0..3 {
-                dice.d6();
-                dice.two_d6();
-            }
-            for _ in 0..4 {
-                dice.d6();
-            }
-            if dice.two_d6() > 5 {
-                return None;
-            }
-            Some((initial, dice))
-        })
-        .unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(initial).unwrap();
-            record["sections"]["left"]["armor"] = 0.into();
-            record["sections"]["left"]["internal"] = 1.into();
-        })
-        .unwrap();
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut restored = persistence::load(&config.database()).await.unwrap();
-    let mut rules = mine_movement_rules();
-    rules.fall.vehicle_impact.advanced_fire = true;
-    assert_eq!(
-        advance_battle_motion(&mut world, rules).unwrap(),
-        advance_battle_motion(&mut restored, rules).unwrap()
-    );
-    assert_eq!(world.btech, restored.btech);
-    let unit = &world.btech.vehicles()[&id];
-    assert!(unit.is_destroyed());
-    assert_eq!(
-        unit.motion().unwrap().point.containing_hex().unwrap(),
-        first
-    );
-    assert_eq!(unit.motion().unwrap().speed, 0.0);
-    assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [expected.d6()]);
-    world.validate(&config).unwrap();
 }
 
 #[tokio::test]
@@ -1442,75 +1056,6 @@ async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
         break;
     }
     assert!(entered);
-}
-
-#[tokio::test]
-async fn terrain_fire_crew_death_evacuates_in_the_movement_checkpoint() {
-    use std::{cell::RefCell, rc::Rc};
-    let (_dir, config, mut world, id, _map) = burning_corridor().await;
-    let seed = (0u32..100_000)
-        .find_map(|value| {
-            let mut seed = [0; 32];
-            seed[..4].copy_from_slice(&value.to_le_bytes());
-            let mut dice = Dice::seeded(seed);
-            if dice.two_d6() != 8 {
-                return None;
-            }
-            dice.d6();
-            dice.two_d6();
-            if !matches!(dice.two_d6(), 8 | 9) || dice.die(10).unwrap() <= 5 || dice.d6() != 4 {
-                return None;
-            }
-            Some(seed)
-        })
-        .unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap();
-            for section in record["sections"].as_object_mut().unwrap().values_mut() {
-                section["armor"] = 0.into();
-            }
-        })
-        .unwrap();
-    world
-        .objects
-        .get_mut(&id)
-        .unwrap()
-        .flags
-        .insert(Flag::InCharacter);
-    let mut rules = MovementRules::STANDARD;
-    rules.fall.vehicle_impact.advanced_fire = true;
-    rules.fall.vehicle_impact.criticals.table = VehicleCriticalTable::Standard;
-    world
-        .objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .flags
-        .remove(Flag::Wizard);
-    world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
-    let before = world.clone();
-    assert!(advance_battle_motion(&mut world, rules).is_err());
-    assert_eq!(world.btech, before.btech);
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let afterlife = ObjectId(config.battletech.afterlife_dbref);
-    scripts.world_mut().objects.remove(&afterlife);
-    assert!(advance_battle_motion_action(&scripts, &config, rules).is_err());
-    assert_eq!(scripts.world().btech, before.btech);
-    assert_eq!(scripts.world().objects[&ObjectId(2)].location, Some(id));
-    *scripts.world_mut() = before;
-    advance_battle_motion_action(&scripts, &config, rules).unwrap();
-    let result = scripts.world().clone();
-    assert!(result.btech.vehicles()[&id].crew_killed());
-    assert_eq!(result.objects[&ObjectId(2)].location, Some(afterlife));
-    assert!(!result.btech.vehicles()[&id].motion().unwrap().active());
-    persistence::save(&config.database(), &result)
-        .await
-        .unwrap();
-    assert_eq!(
-        persistence::load(&config.database()).await.unwrap().btech,
-        result.btech
-    );
 }
 
 #[tokio::test]

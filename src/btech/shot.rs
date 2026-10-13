@@ -1,50 +1,17 @@
 //! Atomic direct tactical shots, glancing hits and immediate damage consequences.
-use super::{AimModifiers, AimRules, BeaconLaunch, HitRules, WeaponUse};
+use super::{AimModifiers, AimRules, BeaconLaunch, WeaponUse};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
-/// How the configured glancing rule treats the boundary of a successful shot.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GlancingMode {
-    Disabled,
-    /// Meeting the ordinary target number produces reduced damage.
-    AtTarget,
-    /// One below the ordinary target number glances; meeting it hits normally.
-    BelowTarget,
-}
-
-impl GlancingMode {
-    /// The game treats every nonzero setting except two as the ordinary glancing rule.
-    pub fn from_setting(setting: i64) -> Self {
-        match setting {
-            0 => Self::Disabled,
-            2 => Self::BelowTarget,
-            _ => Self::AtTarget,
-        }
-    }
-
-    /// Effective minimum roll without changing the displayed aim calculation.
-    pub(super) fn threshold(self, target: i32) -> i32 {
-        target - i32::from(self == Self::BelowTarget)
-    }
-}
-
 /// Supported conventional shot rules, supplied explicitly by the enclosing game action.
 #[derive(Debug, Clone, Copy)]
 pub struct ShotRules {
-    /// Apply configured energy damage changes at actual attack range.
-    pub range_damage: bool,
     /// Shared load configuration used by pre-impact experience calculations.
     pub tsm_tow_bonus: bool,
-    pub stacking: super::StackingRules,
-    pub stagger: super::StaggerMode,
-    pub glancing: GlancingMode,
     pub aim: AimRules,
-    pub hit: HitRules,
     /// Vehicle target hit-table and critical policy, independent of the shooter anatomy.
     pub vehicle_impact: super::VehicleImpactRules,
-    pub hit_arc_mode: i64,
     pub extended_gunnery: bool,
     pub extended_piloting: bool,
     pub target_toughness: bool,
@@ -437,11 +404,7 @@ fn resolve_shot_inner(
     if !self_cooling {
         super::aim::ensure_perceived(&aim)?;
     }
-    super::hit_direction::HitDirection::Direct {
-        shooter,
-        mode: rules.hit_arc_mode,
-    }
-    .current(world, target)?;
+    super::hit_direction::HitDirection::Direct { shooter }.current(world, target)?;
     drop(loadouts);
     drop(admission);
     let mut candidate = super::shot_transaction::ShotCandidate::new(world);
@@ -459,9 +422,6 @@ fn resolve_shot_inner(
             || super::electronic_field(world, target)?.angel_protected);
     let launch_fall = super::FallRules {
         vehicle_impact: rules.vehicle_impact,
-        stacking: rules.stacking,
-        stagger: rules.stagger,
-        hit: rules.hit,
         extended_piloting: rules.extended_piloting,
         toughness: shooter_toughness,
     };
@@ -486,7 +446,6 @@ fn resolve_shot_inner(
             distance: aim.distance,
             target_number,
             streak_confused,
-            glancing: rules.glancing,
             fall: launch_fall,
             character_shooter,
         },
@@ -513,7 +472,6 @@ fn resolve_shot_inner(
         expenditure.ammunition_mode,
         roll,
         target_number,
-        rules.glancing,
         streak_confused,
     );
     let mut ams = if resolved.hit
@@ -534,7 +492,6 @@ fn resolve_shot_inner(
     } = super::direct_effects::resolve(
         &mut candidate,
         super::direct_effects::DirectEffectRequest {
-            submerged,
             shooter,
             target,
             weapon,
@@ -544,10 +501,7 @@ fn resolve_shot_inner(
             launched,
             intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
             vehicle_impact: rules.vehicle_impact,
-            hit_rules: rules.hit,
-            hit_arc_mode: rules.hit_arc_mode,
             woods_damage: rules.aim.woods_damage,
-            range_damage: rules.range_damage,
             damage_penalty: expenditure.damage_penalty,
             distance: aim.distance,
             gatling_damage: expenditure.gatling_damage,
@@ -598,7 +552,6 @@ fn resolve_shot_inner(
             shooter,
             target,
             super::VehicleSalvoRequest {
-                range_damage: rules.range_damage,
                 damage_penalty: expenditure.damage_penalty,
                 weapon,
                 ammunition: expenditure.ammunition_mode,
@@ -610,10 +563,8 @@ fn resolve_shot_inner(
                 angel_blocked: false,
                 intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
             },
-            rules.hit_arc_mode,
             rules.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
-                submerged,
                 woods_damage: rules.aim.woods_damage,
                 incoming: None,
                 attacker: Some(shooter),
@@ -629,20 +580,14 @@ fn resolve_shot_inner(
                 target,
                 &expenditure,
                 super::salvo::ShotDamage {
-                    submerged,
                     woods_damage: rules.aim.woods_damage,
-                    range_damage: rules.range_damage,
                     aimed,
                     incoming: None,
                     rules: super::FallRules {
                         vehicle_impact: rules.vehicle_impact,
-                        stacking: rules.stacking,
-                        stagger: rules.stagger,
-                        hit: rules.hit,
                         extended_piloting: rules.extended_piloting,
                         toughness: rules.target_toughness,
                     },
-                    hit_arc_mode: rules.hit_arc_mode,
                     glancing: resolved.glancing,
                     character,
                     intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
@@ -675,7 +620,7 @@ fn resolve_shot_inner(
         shooter,
         launched,
         coordinate.is_some(),
-        super::shot_counters::hit(roll, target_number, rules.glancing),
+        super::shot_counters::hit(roll, target_number),
     )?;
     #[cfg(test)]
     super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Damage)?;
@@ -722,22 +667,9 @@ impl ShotRules {
     /// Translate server configuration once for unit and coordinate firing adapters.
     pub(super) fn configured(config: &crate::config::BattleTechConfig, toughness: bool) -> Self {
         Self {
-            range_damage: config.moddamagewithrange != 0,
             tsm_tow_bonus: config.tsm_tow_bonus != 0,
-            stacking: crate::StackingRules {
-                mode: config.stacking,
-                damage_percent: config.stackdamage,
-                hit_arcs: config.hit_arcs,
-            },
-            stagger: super::StaggerMode::from_setting(config.newstagger),
-            glancing: super::GlancingMode::from_setting(config.glancing_blows),
             aim: super::AimRules::configured(config),
-            hit: super::HitRules {
-                inferno_penalty: config.inferno_penalty != 0,
-                exile_stun_mode: config.exile_stun_code.clamp(0, 2) as u8,
-            },
             vehicle_impact: super::VehicleImpactRules::configured(config, toughness),
-            hit_arc_mode: config.hit_arcs,
             extended_gunnery: config.extended_gunnery != 0,
             extended_piloting: config.extended_piloting != 0,
             target_toughness: toughness,

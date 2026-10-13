@@ -54,7 +54,6 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 fn rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
         extended_ranges: false,
@@ -66,18 +65,9 @@ fn rules() -> AimRules {
 /// Tactical conventional shot configuration shared by admission cases.
 fn shot_rules() -> ShotRules {
     ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
         aim: rules(),
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
         extended_gunnery: false,
         extended_piloting: false,
         target_toughness: false,
@@ -150,26 +140,14 @@ fn install_test_ams_at(
 /// Explicit shooter and victim critical policies for tactical firing tests.
 fn fire_rules() -> VehicleShotRules {
     let criticals = VehicleCriticalRules {
-        rotor_damage_divisor: 0,
         extended_piloting: false,
-        vtol_table: None,
-        table: VehicleCriticalTable::Standard,
-        enabled: false,
         combat_safe: false,
         toughness: false,
     };
     VehicleShotRules {
         shot: ShotRules {
-            range_damage: false,
             tsm_tow_bonus: true,
-            vehicle_impact: VehicleImpactRules {
-                advanced_fire: false,
-                criticals,
-                hit: VehicleHitRules {
-                    critical_mode: 1,
-                    critical_level: 40,
-                },
-            },
+            vehicle_impact: VehicleImpactRules { criticals },
             ..shot_rules()
         },
         shooter_criticals: criticals,
@@ -232,21 +210,7 @@ async fn vehicle_shots_commit_hits_misses_and_restart_replay_for_both_target_cla
             );
             let attacker = &world.btech.vehicles()[&shooter];
             let readiness = attacker.weapon_readiness(0).unwrap();
-            if attacker.is_destroyed() || !readiness.intact {
-                assert!(!readiness.ready);
-                let Some(TargetSalvo::Mech(salvo)) = &report.salvo else {
-                    panic!("The return blast must come from the Mech target");
-                };
-                assert!(
-                    salvo
-                        .groups
-                        .iter()
-                        .flat_map(|group| &group.impact.reactor_explosions)
-                        .any(|blast| blast.hits.iter().any(|hit| hit.unit == shooter))
-                );
-            } else {
-                assert!(readiness.recycle_remaining > 0);
-            }
+            assert!(readiness.recycle_remaining > 0);
             if target == mech {
                 assert_eq!(
                     world.btech.constructed_units()[&target] == before.constructed_units()[&target],
@@ -1451,7 +1415,6 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
     seed(&mut world, target, value);
     let mut blocked = world.clone();
     let request = VehicleSalvoRequest {
-        range_damage: false,
         damage_penalty: 0,
         weapon: Weapon::Lrm20,
         ammunition: AmmunitionMode::Narc,
@@ -1476,7 +1439,6 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
         target,
         HitArc::Front,
         VehicleSalvoRequest {
-            range_damage: false,
             damage_penalty: 0,
             guidance_blocked: true,
             ..request
@@ -2206,12 +2168,7 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
             weapon_engagement(vehicle, Weapon::PlasmaRifle).await;
         for damage in [0u32, 5, 10] {
             let mut world = base.clone();
-            let mut rules = fire_rules();
-            rules.shot.glancing = if damage == 5 {
-                GlancingMode::AtTarget
-            } else {
-                GlancingMode::Disabled
-            };
+            let rules = fire_rules();
             let threshold =
                 battle_pilot_aim_modifiers(&world, shooter, target, index, false, rules.shot.aim)
                     .unwrap()
@@ -2235,12 +2192,8 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
             if damage > 0 {
                 let direction = battle_unit_range(&expected, target, shooter).unwrap();
                 let heading = expected.btech.vehicles()[&target].motion().unwrap().heading;
-                let arc = HitArc::from_bearing(
-                    direction.bearing.unwrap_or(180.0),
-                    heading,
-                    rules.shot.hit_arc_mode,
-                )
-                .unwrap();
+                let arc =
+                    HitArc::from_bearing(direction.bearing.unwrap_or(180.0), heading).unwrap();
                 let impact = resolve_battle_vehicle_impact(
                     &mut expected,
                     target,
@@ -2557,18 +2510,9 @@ async fn vehicle_self_cooling_shares_host_selection_and_atomic_expenditure() {
 #[tokio::test]
 async fn inferno_shots_share_vehicle_burning_defenses_and_host_rollback() {
     for carrier in [false, true] {
-        for advanced_fire in [false, true] {
-            let (dir, _config, mut base, shooter, target, index) =
+        {
+            let (_dir, config, mut base, shooter, target, index) =
                 weapon_engagement(carrier, Weapon::Srm6).await;
-            let path = dir.path().join("stompymux.toml");
-            let mut settings: toml::Value =
-                toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-            settings["battletech"]
-                .as_table_mut()
-                .unwrap()
-                .insert("fasaadvvhlfire".into(), i64::from(advanced_fire).into());
-            std::fs::write(path, toml::to_string(&settings).unwrap()).unwrap();
-            let config = Config::load(dir.path()).unwrap();
             let class = if carrier { "vehicles" } else { "constructed" };
             base.btech
                 .rewrite_unit_record(shooter, |record| {
@@ -2653,8 +2597,7 @@ async fn inferno_shots_share_vehicle_burning_defenses_and_host_rollback() {
                     );
                     assert_eq!(lua.world().btech, world.btech);
                     assert!(lua.drain_outbox().is_empty());
-                    let mut rules = fire_rules();
-                    rules.shot.vehicle_impact.advanced_fire = advanced_fire;
+                    let rules = fire_rules();
                     let report = tactical_shot(&mut world, shooter, target, index, rules);
                     assert_eq!(
                         report,
@@ -2669,23 +2612,7 @@ async fn inferno_shots_share_vehicle_burning_defenses_and_host_rollback() {
                         let remaining = hits - intercepted;
                         if remaining > 0 {
                             assert_eq!(salvo["inferno"]["missiles"], remaining);
-                            if advanced_fire {
-                                assert_eq!(
-                                    world.btech.vehicles()[&target].burning_sections().len(),
-                                    5
-                                );
-                                assert_eq!(
-                                    visible_battle_contact(&world, shooter, target)
-                                        .unwrap()
-                                        .unwrap()
-                                        .status
-                                        .chars()
-                                        .nth(3),
-                                    Some('B')
-                                );
-                            } else {
-                                assert!(salvo["inferno"]["explosion_roll"].as_u64().is_some());
-                            }
+                            assert!(salvo["inferno"]["criticals"].as_array().is_some());
                         } else {
                             assert!(salvo["inferno"].is_null());
                         }
@@ -2790,6 +2717,11 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                     {
                         section["armor"] = 1.into();
                     }
+                    // Face the shooter: the front hull row is the only Total Warfare
+                    // ground-vehicle critical row with a crew-killed result.
+                    saved["vehicles"][target.0.to_string()]["motion"]["heading"] = 180.0.into();
+                    saved["vehicles"][target.0.to_string()]["motion"]["desired_heading"] =
+                        180.0.into();
                 }
                 if !vehicle_target {
                     let head_seed = (0..=255)
@@ -2807,35 +2739,34 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                 }
                 world.btech = serde_json::from_value(saved).unwrap();
                 if vehicle_target {
-                    let mut impact_rules = VehicleImpactRules::STANDARD;
-                    impact_rules.criticals.table =
-                        VehicleCriticalTable::from_settings(config.battletech.fasaadvvhlcrit != 0);
-                    impact_rules.hit.critical_mode = config.battletech.vcrit;
-                    impact_rules.hit.critical_level = config.battletech.critlevel;
-                    let seed = (0..=255)
-                        .find(|seed| {
+                    let impact_rules = FallRules::configured(&config).vehicle_impact;
+                    let seed = (0_u32..100_000)
+                        .find_map(|number| {
+                            let mut seed = [0; 32];
+                            seed[..4].copy_from_slice(&number.to_le_bytes());
                             let mut probe = world.clone();
                             probe
                                 .btech
-                                .set_unit_dice(target, Dice::seeded([*seed; 32]))
+                                .set_unit_dice(target, Dice::seeded(seed))
                                 .unwrap();
                             let _ = resolve_battle_vehicle_impact(
                                 &mut probe,
                                 target,
-                                HitArc::Rear,
+                                HitArc::Front,
                                 if vehicle_shooter { 20 } else { 5 },
                                 None,
                                 impact_rules,
                             )
                             .unwrap();
+                            // The front row's crew-killed result is the only lethal outcome.
                             probe.btech.vehicles()[&target]
-                                .character_pilot_status()
-                                .is_some_and(|status| status.killed)
+                                .crew_killed()
+                                .then_some(seed)
                         })
-                        .unwrap();
+                        .expect("a front-row crew-killed critical seed");
                     world
                         .btech
-                        .set_unit_dice(target, Dice::seeded([seed; 32]))
+                        .set_unit_dice(target, Dice::seeded(seed))
                         .unwrap();
                 }
                 refresh_battle_contacts(&mut world, &[shooter]).unwrap();
@@ -3185,16 +3116,15 @@ async fn weapons_hold_vehicle_critical_cascades_keep_incoming_attacker() {
         .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
         .unwrap();
     seed(&mut base, shooter, high);
+    // Fifteen armor lets a twenty-point hit reach the structure without wrecking the section.
     base.btech
         .rewrite_unit_record(target, |record| {
             for section in record["sections"].as_object_mut().unwrap().values_mut() {
-                section["armor"] = 0.into();
+                section["armor"] = 15.into();
             }
         })
         .unwrap();
-    let mut rules = fire_rules();
-    rules.shot.vehicle_impact.criticals.enabled = true;
-    rules.shot.vehicle_impact.criticals.table = VehicleCriticalTable::Advanced;
+    let rules = fire_rules();
     let mut seen = [false; 2];
     for value in 0..=255 {
         let mut ordinary = base.clone();
@@ -3252,76 +3182,6 @@ async fn weapons_hold_vehicle_critical_cascades_keep_incoming_attacker() {
         seen, [true; 2],
         "Exercise both penetration alone and an ammunition cascade"
     );
-}
-
-/// Host configuration reaches every shooter/target pairing through native and Lua firing.
-#[tokio::test]
-async fn configured_energy_range_damage_is_shared_by_all_unit_pairings() {
-    let (dir, _config, base, map, ids) = fixture(
-        ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/units/Savannah_Master.toml"),
-    )
-    .await;
-
-    let attack_seed = (0..=255)
-        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
-        .unwrap();
-    for shooter in [ids[0], ids[2]] {
-        for target in [ids[1], ids[3]] {
-            for enabled in [false, true] {
-                let path = dir.path().join("stompymux.toml");
-                let mut source: toml::Value =
-                    toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-                let table = source
-                    .as_table_mut()
-                    .unwrap()
-                    .entry("battletech")
-                    .or_insert_with(|| toml::Value::Table(Default::default()))
-                    .as_table_mut()
-                    .unwrap();
-                table.insert(
-                    "moddamagewithrange".into(),
-                    toml::Value::Integer(i64::from(enabled)),
-                );
-                table.insert("glancing_blows".into(), toml::Value::Integer(0));
-                std::fs::write(path, toml::to_string(&source).unwrap()).unwrap();
-                let config = Config::load(dir.path()).unwrap();
-                let mut world = base.clone();
-                place_battle_unit(&mut world, shooter, map, 0, 1).unwrap();
-                power(&mut world, &ids, Power::Running);
-                world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
-                assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
-                support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-                refresh_battle_contacts(&mut world, &[shooter]).unwrap();
-                world
-                    .btech
-                    .set_unit_dice(shooter, Dice::seeded([attack_seed; 32]))
-                    .unwrap();
-                let native = Scripts::new(
-                    &config,
-                    std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-                )
-                .unwrap();
-                let lua = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world)))
-                    .unwrap();
-                let damage: u16 = lua.eval_callback(&format!("local r=btech.unit.fire({},1,0,{}); return r.salvo.report.groups[1].damage",shooter.0,target.0)).unwrap();
-                assert_eq!(
-                    damage,
-                    if enabled { 6 } else { 5 },
-                    "shooter={shooter:?} target={target:?}"
-                );
-                let output = support::run_text(
-                    &native,
-                    &config,
-                    ObjectId(1),
-                    1,
-                    &format!("fire 0 #{}", target.0),
-                );
-                assert!(output.contains("Hit."), "{output}");
-                assert_eq!(native.world().btech, lua.world().btech);
-            }
-        }
-    }
 }
 
 /// Both shooter families preserve a struck aircraft's private emergency check through firing.

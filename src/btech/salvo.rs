@@ -1,5 +1,5 @@
 //! Conventional missile-cluster tables and atomic grouped weapon-hit resolution.
-use super::{FlechetteDamage, Hit, HitArc, HitRules, ImpactReport, Weapon};
+use super::{FlechetteDamage, Hit, HitArc, ImpactReport, Weapon};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
@@ -32,7 +32,8 @@ pub trait WeaponSalvo {
     /// Group a hit using its actual spatial range, before any aim-bracket rounding.
     fn damage_groups_at_range(self, cluster_roll: Option<u8>, distance: f64) -> Result<Vec<u16>>;
 
-    /// Glancing direct hits round damage up; missiles instead shift the cluster roll down four.
+    /// Glancing direct hits halve damage rounding down; missiles instead shift the cluster
+    /// roll down four (Tactical Operations p. 79).
     fn damage_groups_for_hit(
         self,
         cluster_roll: Option<u8>,
@@ -245,7 +246,16 @@ impl WeaponSalvo for Weapon {
                 u16::from(self.profile().damage)
             };
             let damage = mode.armored_damage(damage);
-            return Ok(vec![if glancing { damage.div_ceil(2) } else { damage }]);
+            if !glancing {
+                return Ok(vec![damage]);
+            }
+            // A one-point round glances off without effect.
+            let damage = damage / 2;
+            return Ok(if damage == 0 {
+                Vec::new()
+            } else {
+                vec![damage]
+            });
         }
         let roll = cluster_roll.context("Missile launcher requires a cluster roll")?;
         ensure!((2..=12).contains(&roll), "Invalid missile cluster roll");
@@ -259,11 +269,10 @@ impl WeaponSalvo for Weapon {
         } else {
             0
         };
+        // The glancing modifier never takes the cluster roll below 2 (Tactical Operations p. 79).
         let adjusted = i16::from(roll) + artemis_bonus + atm_bonus - if glancing { 4 } else { 0 };
         let mut hits = if self.is_streak() {
             self.profile().missiles
-        } else if glancing && adjusted < 2 {
-            1
         } else {
             self.missile_hits(adjusted.clamp(2, 12) as u8)?
         };
@@ -397,7 +406,6 @@ pub(super) fn resolve_salvo_in_action(
             target,
             (weapon, super::AmmunitionMode::Normal),
             HitGeometry::Fixed(arc),
-            rules.hit,
             SalvoEffects::Character {
                 rules,
                 experience: None,
@@ -416,7 +424,6 @@ pub fn resolve_salvo(
     target: ObjectId,
     weapon: Weapon,
     arc: HitArc,
-    rules: HitRules,
 ) -> Result<MechSalvoReport> {
     world.attempt(|world| {
         resolve_salvo_with_effects(
@@ -424,7 +431,6 @@ pub fn resolve_salvo(
             target,
             (weapon, super::AmmunitionMode::Normal),
             HitGeometry::Fixed(arc),
-            rules,
             SalvoEffects::Material,
             false,
         )
@@ -446,7 +452,6 @@ pub fn resolve_tactical_salvo(
             target,
             (weapon, super::AmmunitionMode::Normal),
             HitGeometry::Fixed(arc),
-            rules.hit,
             SalvoEffects::Tactical(rules),
             false,
         )
@@ -456,12 +461,9 @@ pub fn resolve_tactical_salvo(
 /// Damage policy and pre-impact XP facts supplied by the enclosing direct shot.
 pub(super) struct ShotDamage<'a> {
     pub woods_damage: bool,
-    pub range_damage: bool,
-    pub submerged: bool,
     pub aimed: Option<super::aimed_hit::AimedShot>,
     pub incoming: Option<u8>,
     pub rules: super::FallRules,
-    pub hit_arc_mode: i64,
     pub glancing: bool,
     pub character: bool,
     pub intercepted: u8,
@@ -501,19 +503,15 @@ pub(super) fn resolve_salvo_in_candidate(
         target,
         (weapon.weapon, weapon.ammunition_mode),
         HitGeometry::Direct {
-            range_damage: damage.range_damage,
-            submerged: damage.submerged,
             woods_damage: damage.woods_damage,
             aimed: damage.aimed,
             damage_penalty: weapon.damage_penalty,
             shooter,
-            hit_arc_mode: damage.hit_arc_mode,
             fire_mode: weapon.fire_mode,
             gatling_damage: weapon.gatling_damage,
             intercepted: damage.intercepted,
             incoming: damage.incoming,
         },
-        damage.rules.hit,
         effects,
         damage.glancing,
     )
@@ -558,13 +556,10 @@ impl From<&super::VehicleWeaponUse> for SalvoWeapon {
 enum HitGeometry {
     Fixed(HitArc),
     Direct {
-        range_damage: bool,
-        submerged: bool,
         woods_damage: bool,
         aimed: Option<super::aimed_hit::AimedShot>,
         shooter: ObjectId,
         damage_penalty: u8,
-        hit_arc_mode: i64,
         fire_mode: super::FireMode,
         gatling_damage: Option<u8>,
         intercepted: u8,
@@ -575,24 +570,51 @@ enum HitGeometry {
 impl HitGeometry {
     /// Falls rotate the target and remove standing partial cover before later groups land.
     fn current(self, world: &World, target: ObjectId) -> Result<(HitArc, bool)> {
-        let (shooter, hit_arc_mode) = match self {
+        let shooter = match self {
             Self::Fixed(arc) => return Ok((arc, false)),
-            Self::Direct {
-                shooter,
-                hit_arc_mode,
-                ..
-            } => (shooter, hit_arc_mode),
+            Self::Direct { shooter, .. } => shooter,
         };
-        let arc = super::hit_direction::HitDirection::Direct {
-            shooter,
-            mode: hit_arc_mode,
-        }
-        .current(world, target)?;
+        let arc = super::hit_direction::HitDirection::Direct { shooter }.current(world, target)?;
         Ok((
             arc,
             super::unit_terrain_los(world, shooter, target)?.partial_cover,
         ))
     }
+}
+
+/// The building hex that gives a standing target partial cover from this shooter: the hex
+/// next to the target along the line of sight (Total Warfare p. 102). Cover from a hill, water
+/// or the building the target stands inside is terrain and takes no damage.
+fn cover_building(
+    world: &World,
+    shooter: ObjectId,
+    target: ObjectId,
+) -> Result<Option<super::HexCoordinate>> {
+    let Some(from) = super::scanner::scanner_unit(world, shooter).and_then(|unit| unit.position)
+    else {
+        return Ok(None);
+    };
+    let Some(to) = world.btech.constructed_units()[&target].position() else {
+        return Ok(None);
+    };
+    if from.map != to.map {
+        return Ok(None);
+    }
+    let hex = |position: super::Position| super::HexCoordinate {
+        x: i32::from(position.x),
+        y: i32::from(position.y),
+    };
+    let cells = super::los_trace::center_trace(hex(from), hex(to))?;
+    let Some(&cover) = cells
+        .len()
+        .checked_sub(2)
+        .and_then(|index| cells.get(index))
+    else {
+        return Ok(None);
+    };
+    let map = &world.btech.maps()[&to.map];
+    let tile = map.base_hex(i64::from(cover.x), i64::from(cover.y))?;
+    Ok(tile.has_building().then_some(cover))
 }
 
 /// Shared cluster and hit-location traversal prevents divergence between damage compositions.
@@ -601,7 +623,6 @@ fn resolve_salvo_with_effects(
     target: ObjectId,
     weapon: (Weapon, super::AmmunitionMode),
     geometry: HitGeometry,
-    rules: HitRules,
     effects: SalvoEffects<'_>,
     glancing: bool,
 ) -> Result<MechSalvoReport> {
@@ -693,17 +714,6 @@ fn resolve_salvo_with_effects(
     ) && super::woods_absorption::direct_shells(weapon, mode);
     let mut packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
-            submerged: matches!(
-                geometry,
-                HitGeometry::Direct {
-                    submerged: true,
-                    ..
-                }
-            ),
-            range_damage: match geometry {
-                HitGeometry::Direct { range_damage, .. } => range_damage,
-                HitGeometry::Fixed(_) => false,
-            },
             damage_penalty: match geometry {
                 HitGeometry::Direct { damage_penalty, .. } => damage_penalty,
                 HitGeometry::Fixed(_) => 0,
@@ -778,6 +788,7 @@ fn resolve_salvo_with_effects(
             &mut packets.damage,
             glancing,
         )?;
+        packets.damage.retain(|packet| *packet > 0);
     }
     let building = super::building_interior::absorb(
         world,
@@ -823,17 +834,27 @@ fn resolve_salvo_with_effects(
                             | super::MechSection::CenterTorso
                     ),
                 through_armor_critical: false,
-                crew_stun: false,
             }
         } else {
             let roll = dice.generic_roll();
-            rules.resolve(unit, arc, roll, &mut dice)?
+            super::resolve_hit(unit, arc, roll, &mut dice)?
         };
         let covered_legs = partial_cover && unit.chassis().is_leg(hit.section);
         world.btech.constructed.get_mut(&target).unwrap().dice = dice;
         if covered_legs {
-            // Partial cover: a hit on the legs strikes the terrain in front of them instead
-            // (Total Warfare p. 107).
+            // Partial cover: a leg hit strikes the cover instead (Total Warfare p. 102). A
+            // building takes the damage; a hill, water or other terrain simply absorbs it.
+            let mut notices = vec![super::Notice {
+                unit: target,
+                text: "The shot strikes the cover in front of your legs!".into(),
+            }];
+            if let HitGeometry::Direct { shooter, .. } = geometry
+                && let Some(coordinate) = cover_building(world, shooter, target)?
+                && let Some(building) =
+                    super::building_damage::resolve(world, shooter, coordinate, damage)?
+            {
+                notices.extend(building.notices);
+            }
             report.experience.push(None);
             report.groups.push(SalvoGroup {
                 damage,
@@ -841,10 +862,7 @@ fn resolve_salvo_with_effects(
                 impact: super::impact::ImpactReport::default(),
                 pilot_injuries: Vec::new(),
                 pilot_notices: Vec::new(),
-                notices: vec![super::Notice {
-                    unit: target,
-                    text: "The shot strikes the cover in front of your legs!".into(),
-                }],
+                notices,
                 balance: Vec::new(),
                 flooding: Vec::new(),
             });
@@ -874,7 +892,7 @@ fn resolve_salvo_with_effects(
                     HitGeometry::Direct { shooter, .. } => Some(shooter),
                     HitGeometry::Fixed(_) => None,
                 };
-                let result = super::impact::resolve_attack_in_candidate(
+                let result = super::impact::resolve_attack_in_candidate_with_penalty(
                     world,
                     target,
                     hit,
@@ -885,6 +903,11 @@ fn resolve_salvo_with_effects(
                         weapon_effect,
                         character,
                         followup: false,
+                    },
+                    if glancing {
+                        super::impact::GLANCING_CRITICAL_PENALTY
+                    } else {
+                        0
                     },
                 )?;
                 (
@@ -945,9 +968,9 @@ mod tests {
             (9.0, 10, 5),
             (9.001, 8, 4),
             (13.0, 8, 4),
-            (13.001, 5, 3),
-            (15.0, 5, 3),
-            (26.0, 5, 3),
+            (13.001, 5, 2),
+            (15.0, 5, 2),
+            (26.0, 5, 2),
         ] {
             assert_eq!(
                 W::SnubNosedPpc
@@ -981,14 +1004,15 @@ mod tests {
         );
     }
 
-    /// Glancing LB-X rounds reduce pellet count while retaining one damage per pellet.
+    /// Glancing LB-X rounds shift the cluster roll down four, never below row 2, while
+    /// retaining one damage per pellet.
     #[test]
     fn lbx_glancing_cluster_tables() {
         for (weapon, counts) in [
             (W::Lbx2, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]),
             (W::Lbx5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::Lbx10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
-            (W::Lbx20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
+            (W::Lbx10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Lbx20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
         ] {
             for roll in 2..=12 {
                 let groups = weapon
@@ -1009,8 +1033,8 @@ mod tests {
     #[test]
     fn heavy_gauss_damage_range_and_glancing_boundaries() {
         for (distance, damage, glance) in [
-            (0.0, 25, 13),
-            (6.0, 25, 13),
+            (0.0, 25, 12),
+            (6.0, 25, 12),
             (6.001, 20, 10),
             (13.0, 20, 10),
             (13.001, 10, 5),
@@ -1035,8 +1059,8 @@ mod tests {
     #[test]
     fn clan_lrm_glancing_uses_its_own_shifted_cluster_table() {
         for (weapon, counts) in [
-            (W::ClanLrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
-            (W::ClanLrm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
+            (W::ClanLrm10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
+            (W::ClanLrm15, [5, 5, 5, 5, 5, 5, 6, 9, 9, 9, 9]),
         ] {
             for (i, count) in counts.into_iter().enumerate() {
                 let groups = weapon
@@ -1094,19 +1118,21 @@ mod tests {
         }
     }
 
+    /// Glancing direct hits halve damage rounding down (Tactical Operations p. 79); missiles
+    /// shift the cluster roll down four, never below row 2, without halving damage.
     #[test]
-    fn glancing_damage_rounds_up_and_missiles_shift_clusters_without_halving_damage() {
+    fn glancing_damage_rounds_down_and_missiles_shift_clusters_without_halving_damage() {
         assert_eq!(
             W::MediumLaser
                 .damage_groups_for_hit(None, true, None)
                 .unwrap(),
-            [3]
+            [2]
         );
         assert_eq!(
             W::Ac20.damage_groups_for_hit(None, true, None).unwrap(),
             [10]
         );
-        for (weapon, expected) in [(W::LightAc2, 1), (W::LightAc5, 3), (W::HeavyMachineGun, 2)] {
+        for (weapon, expected) in [(W::LightAc2, 1), (W::LightAc5, 2), (W::HeavyMachineGun, 1)] {
             assert_eq!(
                 weapon.damage_groups_for_hit(None, true, None).unwrap(),
                 [expected]
@@ -1115,33 +1141,33 @@ mod tests {
         for (weapon, expected) in [
             (W::Srm2, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]),
             (W::Lrm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::Rocket10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
-            (W::Rocket15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
-            (W::Rocket20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
-            (W::Lrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
-            (W::Lrm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
+            (W::Rocket10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Rocket15, [5, 5, 5, 5, 5, 5, 6, 9, 9, 9, 9]),
+            (W::Rocket20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
+            (W::Lrm10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Lrm15, [5, 5, 5, 5, 5, 5, 6, 9, 9, 9, 9]),
             (W::Srm4, [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3]),
-            (W::Srm6, [1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 4]),
-            (W::Lrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
-            (W::Mrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
-            (W::Mrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
-            (W::Mrm30, [1, 1, 1, 1, 10, 10, 12, 18, 18, 18, 18]),
-            (W::Mrm40, [1, 1, 1, 1, 12, 12, 18, 24, 24, 24, 24]),
+            (W::Srm6, [2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4]),
+            (W::Lrm20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
+            (W::Mrm10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Mrm20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
+            (W::Mrm30, [10, 10, 10, 10, 10, 10, 12, 18, 18, 18, 18]),
+            (W::Mrm40, [12, 12, 12, 12, 12, 12, 18, 24, 24, 24, 24]),
             (W::Nlrm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::Nlrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
-            (W::Nlrm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
-            (W::Nlrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
+            (W::Nlrm10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Nlrm15, [5, 5, 5, 5, 5, 5, 6, 9, 9, 9, 9]),
+            (W::Nlrm20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
             (W::Elrm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::Elrm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
-            (W::Elrm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
-            (W::Elrm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
+            (W::Elrm10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
+            (W::Elrm15, [5, 5, 5, 5, 5, 5, 6, 9, 9, 9, 9]),
+            (W::Elrm20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
             (W::LrDfm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::LrDfm10, [1, 1, 1, 1, 3, 3, 4, 6, 6, 6, 6]),
-            (W::LrDfm15, [1, 1, 1, 1, 5, 5, 6, 9, 9, 9, 9]),
-            (W::LrDfm20, [1, 1, 1, 1, 6, 6, 9, 12, 12, 12, 12]),
+            (W::LrDfm10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
+            (W::LrDfm15, [5, 5, 5, 5, 5, 5, 6, 9, 9, 9, 9]),
+            (W::LrDfm20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
             (W::SrDfm2, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]),
             (W::SrDfm4, [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3]),
-            (W::SrDfm6, [1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 4]),
+            (W::SrDfm6, [2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4]),
         ] {
             for roll in 2..=12 {
                 let groups = weapon
@@ -1175,7 +1201,7 @@ mod artemis_tests {
     use super::super::{AmmunitionMode, Weapon};
     use crate::btech::WeaponSalvo;
 
-    /// Combine both modifiers before the below-table one-missile fallback and upper cap.
+    /// Combine both modifiers before clamping the roll to the table's rows.
     #[test]
     fn artemis_glancing_table_boundaries() {
         for weapon in [Weapon::Srm6, Weapon::Lrm20, Weapon::Mrm40] {
@@ -1188,11 +1214,7 @@ mod artemis_tests {
                         Some(8.0),
                     )
                     .unwrap();
-                let hits = if roll < 4 {
-                    1
-                } else {
-                    weapon.missile_hits(roll - 2).unwrap()
-                };
+                let hits = weapon.missile_hits((roll - 2).max(2)).unwrap();
                 assert_eq!(
                     actual.iter().sum::<u16>(),
                     u16::from(hits) * u16::from(weapon.profile().damage)
@@ -1213,18 +1235,24 @@ mod artemis_tests {
 #[cfg(test)]
 mod flechette_tests {
     use super::*;
-    /// Odd shell damage is rounded down before a normal glancing hit rounds its half up.
+    /// Odd shell damage is rounded down before a glancing hit halves it again, rounding down;
+    /// a one-point flechette round glances off entirely.
     #[test]
     fn flechette_armored_damage_precedes_glancing() {
         for (weapon, normal, glancing) in [
-            (Weapon::Ac2, 1, 1),
+            (Weapon::Ac2, 1, 0),
             (Weapon::Ac5, 2, 1),
-            (Weapon::Ac10, 5, 3),
+            (Weapon::Ac10, 5, 2),
             (Weapon::Ac20, 10, 5),
-            (Weapon::LightAc2, 1, 1),
+            (Weapon::LightAc2, 1, 0),
             (Weapon::LightAc5, 2, 1),
         ] {
             for (glance, damage) in [(false, normal), (true, glancing)] {
+                let expected = if damage == 0 {
+                    Vec::new()
+                } else {
+                    vec![damage]
+                };
                 assert_eq!(
                     weapon
                         .damage_groups_for_ammunition_hit(
@@ -1234,7 +1262,7 @@ mod flechette_tests {
                             Some(1.0)
                         )
                         .unwrap(),
-                    vec![damage]
+                    expected
                 );
             }
         }

@@ -277,11 +277,34 @@ impl ArmAttack {
         }
     }
 
-    /// Whether the arm's hand actuator must work to swing this weapon.
+    /// Whether the arm's hand actuator must work to swing this weapon. A retractable blade
+    /// extends from the arm itself, so the hand does not matter (Total Warfare p. 146).
     pub fn needs_hand(self) -> bool {
         !matches!(
             self,
-            Self::Saw | Self::Claw | Self::Lance | Self::Flail | Self::WreckingBall
+            Self::Saw
+                | Self::Claw
+                | Self::RetractableBlade
+                | Self::Lance
+                | Self::Flail
+                | Self::WreckingBall
+        )
+    }
+
+    /// Whether damaged or missing arm actuators halve this weapon's damage as they halve a
+    /// punch (Total Warfare p. 146 Physical Weapon Attacks Table; TO:AUE pp. 100–103). Weapons
+    /// with a fixed damage value, such as industrial saws, flails and active vibroblades, are
+    /// harder to aim with a damaged arm but hit just as hard.
+    pub fn actuators_reduce_damage(self) -> bool {
+        matches!(
+            self,
+            Self::Punch
+                | Self::Axe
+                | Self::Sword
+                | Self::Mace
+                | Self::Claw
+                | Self::RetractableBlade
+                | Self::Lance
         )
     }
 
@@ -343,9 +366,9 @@ impl ArmAttack {
         )
     }
 
-    /// Mechanical weapons that always strike the section their arm faces.
-    fn fixed_location(self) -> bool {
-        matches!(self, Self::Saw | Self::Claw)
+    /// Claws strike as a punch does, on the Punch Location Table (TO:AUE p. 101).
+    fn strikes_as_punch(self) -> bool {
+        matches!(self, Self::Punch | Self::Claw)
     }
 
     /// Heat added to the attacker each time the weapon is swung.
@@ -427,11 +450,8 @@ pub fn arm_attack_profile(
 /// Policy shared by physical inspection and attack resolution.
 #[derive(Debug, Clone, Copy)]
 pub struct PhysicalRules {
-    pub use_pilot_skill: bool,
     pub fasa_turning: bool,
     pub extended_movement: bool,
-    pub hit_arc_mode: i64,
-    pub glancing: GlancingMode,
     pub fall: FallRules,
 }
 
@@ -444,6 +464,8 @@ pub struct PhysicalProfile {
     pub actuators: u8,
     /// Aim penalty inherent to the selected physical weapon.
     pub weapon_modifier: u8,
+    /// One for a four-legged 'Mech kicking into its rear arc (Total Warfare p. 147).
+    pub rear_kick: u8,
     pub attacker_movement: i16,
     pub target_movement: i8,
     pub terrain: u8,
@@ -451,10 +473,11 @@ pub struct PhysicalProfile {
     pub light: i16,
     /// Direct material damage; trips always have zero.
     pub damage: u16,
-    /// Location table for direct impacts; unused by trips and fixed-location attacks.
+    /// Location table for direct impacts; unused by trips and against vehicles, which take the
+    /// blow on a randomly determined side (Total Warfare p. 147).
     pub hit_table: HitTable,
-    /// Direct location used instead of a table roll by claws and saws.
-    pub fixed_location: Option<MechSection>,
+    /// The target is a combat vehicle rather than a 'Mech.
+    pub vehicle_target: bool,
     pub hit_arc: HitArc,
 }
 
@@ -467,7 +490,10 @@ pub struct PhysicalReport {
     pub roll: u8,
     pub hit: bool,
     pub glancing: bool,
+    /// Damage to a 'Mech target.
     pub impact: Option<TacticalImpact>,
+    /// Damage to a vehicle target, on a randomly determined side.
+    pub vehicle_impact: Option<VehicleImpact>,
     /// Lance armor-penetration check, made when armor remains where the lance struck.
     pub penetration: Option<LancePenetration>,
     /// Damage a flail or wrecking ball dealt its own wielder on a natural 2.
@@ -591,6 +617,71 @@ fn attack_profile(
     )
 }
 
+/// What a physical attack reads from its target before the geometry checks, whichever chassis
+/// the target is. Vehicles never lie prone, rise or twist.
+struct TargetFacts {
+    vehicle: bool,
+    position: Position,
+    heading: f64,
+    team: i32,
+    airborne: bool,
+    prone: bool,
+    rising: bool,
+    movement: i8,
+}
+
+/// Sample the target's live facts; vehicles use the shared immobility test and their speed.
+fn target_facts(world: &World, target: ObjectId, extended_movement: bool) -> Result<TargetFacts> {
+    if let Some(vehicle) = world.btech.vehicles().get(&target) {
+        vehicle.validate()?;
+        ensure!(!vehicle.is_destroyed(), "Unit is destroyed");
+        let motion = vehicle.motion();
+        let immobile = super::aimed_target::immobile(world, target)?;
+        return Ok(TargetFacts {
+            vehicle: true,
+            position: vehicle
+                .position()
+                .context("Target is not on a battlefield")?,
+            heading: motion.map_or(0.0, |motion| motion.heading),
+            team: vehicle.signature().team,
+            airborne: vehicle.vtol_flight().is_some() || vehicle.free_fall().is_some(),
+            prone: false,
+            rising: false,
+            movement: super::aim::target_motion(
+                motion.map_or(0.0, |motion| motion.speed),
+                extended_movement,
+            ) - if immobile { 4 } else { 0 },
+        });
+    }
+    let victim = world
+        .btech
+        .constructed_units()
+        .get(&target)
+        .context("Unit construction state is unavailable")?;
+    victim.validate()?;
+    ensure!(!victim.is_destroyed(), "Unit is destroyed");
+    Ok(TargetFacts {
+        vehicle: false,
+        position: victim
+            .position()
+            .context("Target is not on a battlefield")?,
+        heading: victim.motion().map_or(0.0, |motion| motion.heading),
+        team: victim.signature().team,
+        airborne: victim.airborne() || victim.free_fall().is_some(),
+        prone: victim.posture() == Posture::Prone,
+        rising: matches!(victim.stand_timer(), Some(StandTimer::Rising { .. })),
+        movement: super::aim::ground_physical_target_modifier(world, victim, extended_movement),
+    })
+}
+
+/// Whether the unit's cockpit is running, whichever chassis it is.
+pub(super) fn unit_running(world: &World, id: ObjectId) -> bool {
+    world
+        .btech
+        .unit(id)
+        .is_some_and(|unit| super::with_unit!(unit, |unit| unit.power() == Power::Running))
+}
+
 /// Shared targeting and equipment checks for either casualty publication mode.
 fn attack_profile_inner(
     world: &World,
@@ -611,17 +702,16 @@ fn attack_profile_inner(
             context.character || !object.flags.contains(Flag::InCharacter),
             "Physical attacks require non-character units"
         );
-        let unit = world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .context("Unit construction state is unavailable")?;
-        unit.validate()?;
-        ensure!(!unit.is_destroyed(), "Unit is destroyed");
     }
+    let source = world
+        .btech
+        .constructed_units()
+        .get(&attacker)
+        .context("Unit construction state is unavailable")?;
+    source.validate()?;
+    ensure!(!source.is_destroyed(), "Unit is destroyed");
+    let victim = target_facts(world, target, rules.extended_movement)?;
     super::building_interior::check_physical(world, attacker, target)?;
-    let source = &world.btech.constructed_units()[&attacker];
-    let victim = &world.btech.constructed_units()[&target];
     attack.validate_chassis_support(source)?;
     ensure!(source.power() == Power::Running, "Start the unit first");
     ensure!(
@@ -714,20 +804,18 @@ fn attack_profile_inner(
         "You have weapons recycling on your selected limb."
     );
     ensure!(
-        !victim.airborne() && victim.free_fall().is_none(),
-        "You can't perform physical attacks on airborne mechs!"
+        !victim.airborne,
+        "You can't perform physical attacks on airborne units!"
     );
     if attack.is_trip() {
+        ensure!(!victim.vehicle, "You cannot trip a vehicle!");
         ensure!(
-            victim.posture() != Posture::Prone
-                && !matches!(victim.stand_timer(), Some(StandTimer::Rising { .. })),
+            !victim.prone && !victim.rising,
             "Your target is already down!"
         );
     }
     let position = source.position().context("Unit is not on a battlefield")?;
-    let target_position = victim
-        .position()
-        .context("Target is not on a battlefield")?;
+    let target_position = victim.position;
     ensure!(
         position.map == target_position.map,
         "Target is on another battlefield"
@@ -737,7 +825,7 @@ fn attack_profile_inner(
         !map.has_flag(super::MapFlag::NoPhysicalAttacks),
         "You cannot perform physical attacks here!"
     );
-    if source.signature().team == victim.signature().team {
+    if source.signature().team == victim.team {
         ensure!(
             !source.friendly_fire_safety(),
             "You can't attack a teammate with FFSafeties on!"
@@ -765,7 +853,10 @@ fn attack_profile_inner(
     }
     let target_tile = map.base_hex(i64::from(target_position.x), i64::from(target_position.y))?;
     let elevation = source.elevation_level(tile);
-    let target_elevation = victim.elevation_level(target_tile);
+    let target_elevation = super::with_unit!(
+        world.btech.unit(target).context("Unit is unavailable")?,
+        |unit| unit.elevation_level(target_tile)
+    );
     ensure!(
         (elevation - target_elevation).abs() <= 1,
         "You can't attack, the elevation difference is too large."
@@ -774,22 +865,37 @@ fn attack_profile_inner(
     // happens underwater, as a kick does (Total Warfare p. 145).
     ensure!(
         attack.uses_leg()
-            || !(tile.immerses(elevation) && submerged(victim, target_tile, target_elevation)),
+            || !(tile.immerses(elevation)
+                && submerged_at(victim.prone, target_tile, target_elevation)),
         "You cannot reach a target under the water from where you stand."
     );
-    if attack.uses_leg() {
+    if victim.vehicle {
+        // A 'Mech kicks a vehicle on its own level, and punches, clubs or swings a weapon at
+        // one only from a level below it (Total Warfare pp. 147 and 150).
+        if attack.uses_leg() {
+            ensure!(
+                elevation == target_elevation,
+                "You can only kick a vehicle on your own level."
+            );
+        } else {
+            ensure!(
+                target_elevation == elevation + 1,
+                "The vehicle is too low for this arm attack."
+            );
+        }
+    } else if attack.uses_leg() {
         ensure!(
             elevation >= target_elevation,
             "The target is too high in elevation for you to kick at."
         );
         ensure!(
-            elevation == target_elevation || victim.posture() != Posture::Prone,
+            elevation == target_elevation || !victim.prone,
             "The target is too low in elevation for you to kick."
         );
     } else {
         ensure!(
             (!matches!(attack, PhysicalAttack::Punch { .. }) || elevation <= target_elevation)
-                && (elevation < target_elevation || victim.posture() != Posture::Prone),
+                && (elevation < target_elevation || !victim.prone),
             "The target is too low for this arm attack."
         );
     }
@@ -806,8 +912,12 @@ fn attack_profile_inner(
         Some(Arm::Right) => angle > 60.0 && angle <= 120.0,
         None => false,
     };
+    // A four-legged 'Mech can also kick behind itself, at +1 (Total Warfare p. 147).
+    let rear_kick = matches!(attack, PhysicalAttack::Kick { .. })
+        && source.chassis() == MechChassis::Quad
+        && (120.0..=240.0).contains(&angle);
     ensure!(
-        forward || side,
+        forward || side || rear_kick,
         "Target is outside the attacking limb's arc!"
     );
     let upper = actuator(
@@ -864,22 +974,16 @@ fn attack_profile_inner(
         PhysicalAttack::Punch { .. } => 0,
         PhysicalAttack::Weapon { weapon, .. } => weapon.skill_bonus(),
     };
-    let base = if rules.use_pilot_skill {
-        unit_piloting_target(world, attacker, rules.fall.extended_piloting)? - skill_bonus
-    } else if skill_bonus == 2 {
-        3
-    } else {
-        4
-    };
+    let base = unit_piloting_target(world, attacker, rules.fall.extended_piloting)? - skill_bonus;
     let weapon_modifier = attack.hand_weapon().map_or(0, ArmAttack::weapon_modifier);
+    let rear_kick = u8::from(rear_kick);
     let movement = i16::from(source.attacker_movement_modifier(rules.fasa_turning));
     let attacker_movement = if specialist {
         (movement - 1).min(0)
     } else {
         movement
     };
-    let target_movement =
-        super::aim::ground_physical_target_modifier(world, victim, rules.extended_movement);
+    let target_movement = victim.movement;
     // Woods and smoke over the target's hex obscure it, light counting one and heavy two.
     let obscured = map.hex(i64::from(target_position.x), i64::from(target_position.y))?;
     let terrain = obscured.woods_density() + obscured.smoke_density();
@@ -894,26 +998,36 @@ fn attack_profile_inner(
         damage *= 2;
     }
     damage += u16::from(specialist);
-    if !lower && attack.hand_weapon().is_none() && !club {
-        damage /= 2;
+    // Each damaged or missing arm or leg actuator halves the blow, rounding down, to a minimum
+    // of one point (Total Warfare pp. 145–147).
+    let reduced = !club
+        && attack
+            .hand_weapon()
+            .unwrap_or(ArmAttack::Punch)
+            .actuators_reduce_damage();
+    if reduced && !lower {
+        damage = (damage / 2).max(1);
     }
-    if !upper && attack.hand_weapon().is_none() && !club {
-        damage /= 2;
+    if reduced && !upper {
+        damage = (damage / 2).max(1);
     }
     if attack.is_trip() {
         damage = 0;
     }
     let direction = unit_range(world, target, attacker)?;
-    let hit_arc = HitArc::from_bearing(
-        direction.bearing.unwrap_or(180.0),
-        victim.motion().map_or(0.0, |m| m.heading),
-        rules.hit_arc_mode,
-    )?;
+    let hit_arc = HitArc::from_bearing(direction.bearing.unwrap_or(180.0), victim.heading)?;
+    let punches = attack
+        .hand_weapon()
+        .unwrap_or(ArmAttack::Punch)
+        .strikes_as_punch()
+        && !club
+        && !attack.uses_leg();
     Ok(PhysicalProfile {
         attack,
         target_number: i32::from(base)
             + i32::from(actuators)
             + i32::from(weapon_modifier)
+            + i32::from(rear_kick)
             + i32::from(attacker_movement)
             + i32::from(target_movement)
             + i32::from(terrain)
@@ -921,26 +1035,22 @@ fn attack_profile_inner(
         base,
         actuators,
         weapon_modifier,
+        rear_kick,
         attacker_movement,
         target_movement,
         terrain,
         light,
         damage,
-        hit_table: if victim.posture() == Posture::Prone {
+        hit_table: if victim.prone || victim.vehicle {
             HitTable::Weapon
-        } else if elevation > target_elevation
-            || (matches!(attack, PhysicalAttack::Punch { .. }) && elevation == target_elevation)
-        {
+        } else if elevation > target_elevation || (punches && elevation == target_elevation) {
             HitTable::Punch
         } else if (attack.hand_weapon().is_some() || club) && elevation == target_elevation {
             HitTable::Weapon
         } else {
             HitTable::Kick
         },
-        fixed_location: attack
-            .hand_weapon()
-            .is_some_and(ArmAttack::fixed_location)
-            .then_some(MechSection::LeftArm),
+        vehicle_target: victim.vehicle,
         hit_arc,
     })
 }
@@ -948,11 +1058,12 @@ fn attack_profile_inner(
 /// Whether a 'Mech at `elevation` in `tile` is under the water: standing in water two or more
 /// levels deep, or lying in water at all.
 pub(super) fn submerged(unit: &Mech, tile: Hex, elevation: i32) -> bool {
-    let reach = if unit.posture() == Posture::Prone {
-        0
-    } else {
-        1
-    };
+    submerged_at(unit.posture() == Posture::Prone, tile, elevation)
+}
+
+/// Whether a unit standing (or lying, when `prone`) at `elevation` in `tile` is under the water.
+fn submerged_at(prone: bool, tile: Hex, elevation: i32) -> bool {
+    let reach = if prone { 0 } else { 1 };
     tile.holds_water() && elevation + reach < i32::from(tile.water_line())
 }
 
@@ -1056,6 +1167,16 @@ pub(super) fn resolve_attack_in_action(
     )
 }
 
+/// The side a vehicle takes a physical blow on, chosen by one die (Total Warfare p. 147).
+fn vehicle_side(roll: u16) -> HitArc {
+    match roll {
+        1 => HitArc::Front,
+        2 => HitArc::Left,
+        3 => HitArc::Right,
+        _ => HitArc::Rear,
+    }
+}
+
 /// Apply the shared hit, damage and balance sequence with explicit publication capability.
 fn resolve_attack_inner(
     world: &mut World,
@@ -1077,15 +1198,14 @@ fn resolve_attack_inner(
         }
         let weapon = attack.hand_weapon();
         unit.heat.stored += f64::from(weapon.map_or(0, ArmAttack::heat));
-        let threshold =
-            profile.target_number - i32::from(rules.glancing == GlancingMode::BelowTarget);
+        let threshold = profile.target_number;
         // A natural 2 swings flails and wrecking balls back into their wielder.
         let fumble = weapon
             .and_then(ArmAttack::fumble_damage)
             .filter(|_| roll == 2);
         let hit = fumble.is_none() && i32::from(roll) >= threshold;
-        let glancing =
-            hit && rules.glancing != GlancingMode::Disabled && i32::from(roll) == threshold;
+        // Tactical Operations glancing blows: meeting the target number exactly halves damage.
+        let glancing = hit && i32::from(roll) == threshold;
         let mut pilot_notices = Vec::new();
         let mut notices = vec![Notice {
             unit: attacker,
@@ -1097,7 +1217,7 @@ fn resolve_attack_inner(
                 roll
             ),
         }];
-        if world.btech.constructed_units()[&target].power() == Power::Running {
+        if unit_running(world, target) {
             notices.push(Notice {
                 unit: target,
                 text: format!("#{} tries to {} you!", attacker.0, attack.verb()),
@@ -1114,6 +1234,7 @@ fn resolve_attack_inner(
             },
         ));
         let mut impact = None;
+        let mut vehicle_impact = None;
         let mut penetration = None;
         let mut experience = None;
         let mut experience_messages = Vec::new();
@@ -1143,36 +1264,9 @@ fn resolve_attack_inner(
             }
         }
         if hit && !attack.is_trip() {
-            let victim = &world.btech.constructed_units()[&target];
-            let mut dice = victim.dice.clone();
-            let location = if let Some(section) = profile.fixed_location {
-                Hit {
-                    section,
-                    rear_armor: false,
-                    through_armor_critical: false,
-                    crew_stun: false,
-                }
-            } else if profile.hit_table == HitTable::Weapon {
-                let roll = dice.generic_roll();
-                rules
-                    .fall
-                    .hit
-                    .resolve(victim, profile.hit_arc, roll, &mut dice)?
-            } else {
-                Hit {
-                    section: profile.hit_table.location(
-                        victim.chassis(),
-                        profile.hit_arc,
-                        dice.d6(),
-                    )?,
-                    rear_armor: profile.hit_arc == HitArc::Rear,
-                    through_armor_critical: false,
-                    crew_stun: false,
-                }
-            };
-            world.btech.constructed.get_mut(&target).unwrap().dice = dice;
+            // A glancing blow does half damage, rounded down (Tactical Operations p. 78).
             let damage = if glancing {
-                profile.damage.div_ceil(2)
+                profile.damage / 2
             } else {
                 profile.damage
             };
@@ -1191,37 +1285,89 @@ fn resolve_attack_inner(
                 experience_messages.extend(award.message);
             }
             let fall_rules = participant_fall_rules(world, target, rules.fall);
-            let result = super::impact::resolve_attack_in_candidate(
-                world,
-                target,
-                location,
-                damage,
-                fall_rules,
-                super::impact::AttackImpact {
-                    attacker: Some(attacker),
-                    weapon_effect: None,
-                    character,
-                    followup: false,
-                },
-            )?;
-            super::piloting::append_feedback(
-                &mut pilot_notices,
-                result.pilot_notices.clone(),
-                notices.len(),
-            );
-            notices.extend(result.notices.iter().cloned());
-            impact = Some(result);
-            if weapon == Some(ArmAttack::Lance) {
-                penetration = lance_penetration(
+            if profile.vehicle_target {
+                let side = world
+                    .btech
+                    .vehicles
+                    .get_mut(&target)
+                    .context("Vehicle target is unavailable")?
+                    .dice
+                    .die(4)?;
+                let (result, result_notices) = super::blast_damage::resolve_packet(
                     world,
-                    attacker,
+                    target,
+                    super::blast_damage::MaterialPacket {
+                        amount: damage,
+                        table: HitTable::Weapon,
+                        arc: vehicle_side(side),
+                        character,
+                        attacker: Some(attacker),
+                        class: DamageClass::Ordinary,
+                    },
+                    false,
+                    fall_rules,
+                )?;
+                result.append_feedback(&mut pilot_notices, notices.len());
+                notices.extend(result_notices);
+                if let super::blast_damage::BlastImpact::Vehicle(result) = result {
+                    vehicle_impact = Some(result);
+                }
+            } else {
+                let victim = &world.btech.constructed_units()[&target];
+                let mut dice = victim.dice.clone();
+                let location = if profile.hit_table == HitTable::Weapon {
+                    let roll = dice.generic_roll();
+                    super::resolve_hit(victim, profile.hit_arc, roll, &mut dice)?
+                } else {
+                    Hit {
+                        section: profile.hit_table.location(
+                            victim.chassis(),
+                            profile.hit_arc,
+                            dice.d6(),
+                        )?,
+                        rear_armor: profile.hit_arc == HitArc::Rear,
+                        through_armor_critical: false,
+                    }
+                };
+                world.btech.constructed.get_mut(&target).unwrap().dice = dice;
+                // A glancing blow is also less likely to find a critical (TO:AR p. 78).
+                let result = super::impact::resolve_attack_in_candidate_with_penalty(
+                    world,
                     target,
                     location,
-                    rules,
-                    character,
-                    &mut notices,
-                    &mut pilot_notices,
+                    damage,
+                    fall_rules,
+                    super::impact::AttackImpact {
+                        attacker: Some(attacker),
+                        weapon_effect: None,
+                        character,
+                        followup: false,
+                    },
+                    if glancing {
+                        super::impact::GLANCING_CRITICAL_PENALTY
+                    } else {
+                        0
+                    },
                 )?;
+                super::piloting::append_feedback(
+                    &mut pilot_notices,
+                    result.pilot_notices.clone(),
+                    notices.len(),
+                );
+                notices.extend(result.notices.iter().cloned());
+                impact = Some(result);
+                if weapon == Some(ArmAttack::Lance) {
+                    penetration = lance_penetration(
+                        world,
+                        attacker,
+                        target,
+                        location,
+                        rules,
+                        character,
+                        &mut notices,
+                        &mut pilot_notices,
+                    )?;
+                }
             }
         }
         let mut fumble_impact = None;
@@ -1239,10 +1385,7 @@ fn resolve_attack_inner(
             let source = &world.btech.constructed_units()[&attacker];
             let mut dice = source.dice.clone();
             let roll = dice.generic_roll();
-            let location = rules
-                .fall
-                .hit
-                .resolve(source, HitArc::Front, roll, &mut dice)?;
+            let location = super::resolve_hit(source, HitArc::Front, roll, &mut dice)?;
             world.btech.constructed.get_mut(&attacker).unwrap().dice = dice;
             let fall_rules = participant_fall_rules(world, attacker, rules.fall);
             let result = super::impact::resolve_attack_in_candidate(
@@ -1266,15 +1409,16 @@ fn resolve_attack_inner(
             notices.extend(result.notices.iter().cloned());
             fumble_impact = Some(result);
         }
-        // Unit making a balance check after this attack, and the check's modifier.
+        // Unit making a balance check after this attack, and the check's modifier. Vehicles
+        // never make one: only 'Mechs fall.
+        let mech_target = !profile.vehicle_target;
         let balance_check = match weapon {
             _ if fumble.is_some() => Some((attacker, 0)),
             Some(ArmAttack::Mace) if !hit => Some((attacker, 2)),
             // A wrecking ball hit unbalances its target as a charge does.
-            Some(ArmAttack::WreckingBall) if hit => Some((target, 2)),
-            _ if matches!(attack, PhysicalAttack::Kick { .. }) => {
-                Some((if hit { target } else { attacker }, 0))
-            }
+            Some(ArmAttack::WreckingBall) if hit && mech_target => Some((target, 2)),
+            _ if matches!(attack, PhysicalAttack::Kick { .. }) && !hit => Some((attacker, 0)),
+            _ if matches!(attack, PhysicalAttack::Kick { .. }) && mech_target => Some((target, 0)),
             _ if attack.is_trip() && hit => Some((target, 0)),
             _ => None,
         };
@@ -1312,9 +1456,7 @@ fn resolve_attack_inner(
                         text: format!("You trip #{}!", target.0),
                     });
                 }
-                if !attack.is_trip()
-                    || world.btech.constructed_units()[&target].power() == Power::Running
-                {
+                if !attack.is_trip() || unit_running(world, target) {
                     notices.push(Notice {
                         unit: balancing,
                         text: if attack.is_trip() {
@@ -1370,6 +1512,7 @@ fn resolve_attack_inner(
             hit,
             glancing,
             impact,
+            vehicle_impact,
             penetration,
             fumble: fumble_impact,
             experience,
@@ -1769,23 +1912,10 @@ fn selected_leg(value: Option<&str>) -> Result<Leg> {
 pub(crate) fn configured_rules(config: &crate::Config) -> PhysicalRules {
     let settings = &config.battletech;
     PhysicalRules {
-        use_pilot_skill: settings.phys_use_pskill != 0,
         fasa_turning: settings.fasaturn != 0,
         extended_movement: settings.extendedmovemod != 0,
-        hit_arc_mode: settings.hit_arcs,
-        glancing: GlancingMode::from_setting(settings.glancing_blows),
         fall: FallRules {
             vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
-            stacking: StackingRules {
-                mode: settings.stacking,
-                damage_percent: settings.stackdamage,
-                hit_arcs: settings.hit_arcs,
-            },
-            stagger: StaggerMode::from_setting(settings.newstagger),
-            hit: HitRules {
-                inferno_penalty: settings.inferno_penalty != 0,
-                exile_stun_mode: settings.exile_stun_code.clamp(0, 2) as u8,
-            },
             extended_piloting: settings.extended_piloting != 0,
             toughness: false,
         },

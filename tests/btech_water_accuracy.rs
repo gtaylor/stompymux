@@ -6,7 +6,6 @@ use stompymux_rs::*;
 fn rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
         extended_ranges: false,

@@ -1,4 +1,4 @@
-//! Self-destruct commands: safety flag, initiation, and reactor explosion.
+//! Self-destruct commands: safety flag and initiation.
 
 use super::super::*;
 
@@ -34,20 +34,6 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     native.set(
         "unit_explode",
         error::wrap(lua, explode, "btech.operation.failed")?,
-    )?;
-    let reactor_explode = lua.create_function(move |lua, unit: i64| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        let config = crate::lua::configuration(lua);
-        crate::lua::transactions::run(lua, &scripts.world, || {
-            let report = crate::reactor_explosion_action(&scripts, &config, ObjectId(unit))
-                .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
-            detached(lua, &report)
-        })
-    })?;
-    native.set(
-        "unit_reactor_explode",
-        error::wrap(lua, reactor_explode, "btech.operation.failed")?,
     )?;
     Ok(())
 }

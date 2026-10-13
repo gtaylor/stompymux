@@ -36,9 +36,10 @@ fn hardened_gyro_mass_and_damage_thresholds() {
             damaged.destroy_critical(slot).unwrap();
             assert_eq!(damaged.system_hits(System::Gyro), count as u8);
             assert_eq!(damaged.gyro_damage(), (count - 1) as u8);
+            // Total Warfare p. 126: +1 after the protected hit, +3 once damaged, +6 destroyed.
             assert_eq!(
                 damaged.mobility().piloting_modifier,
-                if count == 1 { 0 } else { 3 }
+                [1, 3, 6, 6][count - 1]
             );
             assert_eq!(
                 damaged.mobility().maximum_speed,
@@ -116,7 +117,11 @@ fn xl_and_compact_gyro_construction_damage_and_restore() {
                     .destroy_critical(slots[(offset + hit - 1) % count])
                     .unwrap();
                 assert_eq!(damaged.gyro_damage(), hit as u8);
-                assert_eq!(damaged.mobility().piloting_modifier, 3);
+                // Total Warfare p. 126: compact and XL gyros take criticals like a standard gyro.
+                assert_eq!(
+                    damaged.mobility().piloting_modifier,
+                    if hit < 2 { 3 } else { 6 }
+                );
                 assert_eq!(
                     damaged.mobility().maximum_speed,
                     if hit < 2 {
@@ -153,9 +158,10 @@ fn xl_and_compact_gyro_construction_damage_and_restore() {
     }
 }
 
-/// Recalculation between protected and impairing hits changes the saved gyro contribution.
+/// Gyro and leg modifiers add up in any order: a standard gyro gives +3 hit and +6 destroyed,
+/// a heavy-duty gyro +1 for its protected first hit.
 #[test]
-fn hardened_gyro_piloting_preserves_damage_and_recalculation_order() {
+fn gyro_piloting_modifiers_add_to_leg_damage_in_any_order() {
     for source in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/GOL-1H.toml"),
@@ -188,12 +194,12 @@ fn hardened_gyro_piloting_preserves_damage_and_recalculation_order() {
             unit.destroy_critical(gyro[0]).unwrap();
             assert_eq!(
                 unit.mobility().piloting_modifier,
-                if hardened { 0 } else { 3 }
+                if hardened { 1 } else { 3 }
             );
             unit.destroy_critical(first_leg).unwrap();
             assert_eq!(
                 unit.mobility().piloting_modifier,
-                if hardened { 3 } else { 4 }
+                if hardened { 2 } else { 4 }
             );
             let checkpoint = unit.clone();
             assert!(unit.destroy_critical(gyro[0]).unwrap().is_none());
@@ -201,27 +207,33 @@ fn hardened_gyro_piloting_preserves_damage_and_recalculation_order() {
             unit.destroy_critical(gyro[1]).unwrap();
             assert_eq!(
                 unit.mobility().piloting_modifier,
-                if hardened { 6 } else { 4 }
+                if hardened { 4 } else { 7 }
             );
             let saved: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
             assert_eq!(saved.mobility(), unit.mobility());
             assert_eq!(saved.gyro_damage(), unit.gyro_damage());
             unit.destroy_critical(second_leg).unwrap();
-            assert_eq!(unit.mobility().piloting_modifier, 5);
+            assert_eq!(
+                unit.mobility().piloting_modifier,
+                if hardened { 5 } else { 8 }
+            );
             unit.destroy_critical(gyro[2]).unwrap();
-            assert_eq!(unit.mobility().piloting_modifier, 5);
+            assert_eq!(unit.mobility().piloting_modifier, 8);
             let mut reordered = base;
             reordered.destroy_critical(first_leg).unwrap();
             reordered.destroy_critical(gyro[0]).unwrap();
             reordered.destroy_critical(gyro[1]).unwrap();
-            assert_eq!(reordered.mobility().piloting_modifier, 4);
+            assert_eq!(
+                reordered.mobility().piloting_modifier,
+                if hardened { 4 } else { 7 }
+            );
         }
     }
 }
 
-/// Torso loss also recalculates the gyro contribution; a biped arm alone does not.
+/// Section loss leaves the gyro modifier alone: it is derived from gyro damage, not events.
 #[test]
-fn hardened_gyro_recalculation_follows_section_loss_anatomy() {
+fn gyro_modifier_survives_section_loss_recalculation() {
     for source in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/GOL-1H.toml"),
@@ -247,10 +259,9 @@ fn hardened_gyro_recalculation_follows_section_loss_anatomy() {
             let mut unit = base.clone();
             unit.destroy_critical(gyro).unwrap();
             unit.damage_phase(section, u16::MAX, DamagePhase::Internal);
-            let recalculated = base.chassis().is_leg(section) || section == MechSection::LeftTorso;
             assert_eq!(
                 unit.mobility().piloting_modifier,
-                control.mobility().piloting_modifier + if recalculated { 2 } else { 0 }
+                control.mobility().piloting_modifier + 1
             );
         }
     }

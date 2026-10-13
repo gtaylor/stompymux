@@ -68,12 +68,6 @@ async fn fixture_asset(
 fn rules() -> FallRules {
     FallRules {
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
         extended_piloting: true,
         toughness: false,
     }
@@ -239,10 +233,7 @@ async fn jump_onto_ice_uses_surface_height_and_commits_seeded_landing_after_rest
             advance_battle_jumps(
                 &mut world,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 },
             )
@@ -253,10 +244,7 @@ async fn jump_onto_ice_uses_surface_height_and_commits_seeded_landing_after_rest
         let notices = advance_battle_jumps(
             &mut world,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             },
         )
@@ -266,10 +254,7 @@ async fn jump_onto_ice_uses_surface_height_and_commits_seeded_landing_after_rest
             advance_battle_jumps(
                 &mut restarted,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 }
             )
@@ -346,10 +331,7 @@ async fn destination_fracture_during_flight_preserves_the_saved_launch_path() {
         advance_battle_jumps(
             &mut world,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             },
         )
@@ -375,10 +357,7 @@ async fn destination_fracture_during_flight_preserves_the_saved_launch_path() {
         advance_battle_jumps(
             &mut loaded,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             },
         )
@@ -400,10 +379,7 @@ async fn early_ice_landing_native_lua_parity_and_callback_rollback_include_the_m
         advance_battle_jumps(
             &mut world,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             },
         )
@@ -591,10 +567,7 @@ async fn retained_altitude_over_water_drives_range_launch_and_placement_after_re
         advance_battle_jumps(
             &mut loaded,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             },
         )
@@ -661,10 +634,7 @@ async fn ice_surface_contacts_and_fire_match_native_lua_after_restart() {
                 advance_battle_jumps(
                     &mut world,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     },
                 )
@@ -1050,10 +1020,7 @@ async fn elevation_inspection_tracks_surface_collapse_flight_and_unplaced_state(
                 advance_battle_jumps(
                     &mut world,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     },
                 )
@@ -1073,10 +1040,7 @@ async fn elevation_inspection_tracks_surface_collapse_flight_and_unplaced_state(
                 advance_battle_jumps(
                     &mut world,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     },
                 )
@@ -1298,7 +1262,6 @@ async fn below_bridge_cooling_and_fresh_breaches_use_actual_depth() {
             section,
             rear_armor: false,
             through_armor_critical: false,
-            crew_stun: false,
         },
         1,
         rules(),
@@ -1344,10 +1307,7 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
             advance_battle_jumps(
                 &mut world,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 },
             )
@@ -1360,10 +1320,7 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
             let expected = advance_battle_jumps(
                 &mut world,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 },
             )
@@ -1372,10 +1329,7 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
                 advance_battle_jumps(
                     &mut loaded,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
@@ -1478,10 +1432,7 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
                 advance_battle_jumps(
                     &mut resumed,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     },
                 )
@@ -1515,10 +1466,7 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
             advance_battle_jumps(
                 &mut resumed,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 },
             )
@@ -1554,10 +1502,7 @@ async fn bridge_jump_vertical_collision_inside_the_starting_hex_uses_the_deck() 
             advance_battle_jumps(
                 &mut world,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 },
             )
@@ -1604,10 +1549,7 @@ async fn lost_jump_thrust_beneath_bridge_preserves_altitude_for_the_fall() {
         advance_battle_jumps(
             &mut world,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             }
         )
@@ -1615,10 +1557,7 @@ async fn lost_jump_thrust_beneath_bridge_preserves_altitude_for_the_fall() {
         advance_battle_jumps(
             &mut loaded,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             }
         )
@@ -1667,10 +1606,7 @@ async fn bridge_deck_jumps_and_early_landings_share_native_lua_state() {
                 advance_battle_jumps(
                     &mut current,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     },
                 )
@@ -1715,10 +1651,7 @@ async fn bridge_deck_jumps_and_early_landings_share_native_lua_state() {
                         advance_battle_jumps(
                             &mut current,
                             stompymux_rs::MovementRules {
-                                fall: stompymux_rs::FallRules {
-                                    stacking: stompymux_rs::StackingRules::STANDARD,
-                                    ..rules()
-                                },
+                                fall: rules(),
                                 ..stompymux_rs::MovementRules::STANDARD
                             }
                         )
@@ -1726,10 +1659,7 @@ async fn bridge_deck_jumps_and_early_landings_share_native_lua_state() {
                         advance_battle_jumps(
                             &mut loaded,
                             stompymux_rs::MovementRules {
-                                fall: stompymux_rs::FallRules {
-                                    stacking: stompymux_rs::StackingRules::STANDARD,
-                                    ..rules()
-                                },
+                                fall: rules(),
                                 ..stompymux_rs::MovementRules::STANDARD
                             }
                         )
@@ -2974,8 +2904,6 @@ async fn ground_ice_entry_fractures_neighbors_and_replays_without_repeated_check
             for reverse in [false, true] {
                 let (_dir, config, mut world, map, units) =
                     fixture_field(Terrain::Ice, depth, 5).await;
-                // Isolate ordinary fracture from the separately tested reactor-blast aftermath.
-                configure_battle_reactor_policy(&mut world, false, false);
                 let id = units[0];
                 prepare_reverse_step(&mut world, id, 12);
                 let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2996,7 +2924,6 @@ async fn ground_ice_entry_fractures_neighbors_and_replays_without_repeated_check
                 let before = world.clone();
                 persistence::save(&config.database(), &world).await.unwrap();
                 let mut loaded = persistence::load(&config.database()).await.unwrap();
-                configure_battle_reactor_policy(&mut loaded, false, false);
                 let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
                 assert_eq!(
                     notices,
@@ -3052,8 +2979,7 @@ async fn ground_ice_entry_fractures_neighbors_and_replays_without_repeated_check
                 }
                 world.validate(&config).unwrap();
                 persistence::save(&config.database(), &world).await.unwrap();
-                let mut saved = persistence::load(&config.database()).await.unwrap();
-                configure_battle_reactor_policy(&mut saved, false, false);
+                let saved = persistence::load(&config.database()).await.unwrap();
                 assert_eq!(saved.btech, world.btech);
             }
         }
@@ -3272,10 +3198,7 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
             advance_battle_jumps(
                 &mut world,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 }
             )
@@ -3300,10 +3223,7 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
         advance_battle_jumps(
             &mut rejected,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             }
         )
@@ -3315,10 +3235,7 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
     let notices = advance_battle_jumps(
         &mut world,
         stompymux_rs::MovementRules {
-            fall: stompymux_rs::FallRules {
-                stacking: stompymux_rs::StackingRules::STANDARD,
-                ..rules()
-            },
+            fall: rules(),
             ..stompymux_rs::MovementRules::STANDARD
         },
     )
@@ -3328,10 +3245,7 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
         advance_battle_jumps(
             &mut loaded,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             }
         )
@@ -3383,10 +3297,7 @@ async fn ascending_saved_flight_breaks_ice_without_falling_or_spending_its_dice(
     let notices = advance_battle_jumps(
         &mut world,
         stompymux_rs::MovementRules {
-            fall: stompymux_rs::FallRules {
-                stacking: stompymux_rs::StackingRules::STANDARD,
-                ..rules()
-            },
+            fall: rules(),
             ..stompymux_rs::MovementRules::STANDARD
         },
     )
@@ -3396,10 +3307,7 @@ async fn ascending_saved_flight_breaks_ice_without_falling_or_spending_its_dice(
         advance_battle_jumps(
             &mut loaded,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             }
         )
@@ -3458,10 +3366,7 @@ async fn airborne_under_ice_fixture() -> (tempfile::TempDir, Config, World, Obje
     advance_battle_jumps(
         &mut world,
         stompymux_rs::MovementRules {
-            fall: stompymux_rs::FallRules {
-                stacking: stompymux_rs::StackingRules::STANDARD,
-                ..rules()
-            },
+            fall: rules(),
             ..stompymux_rs::MovementRules::STANDARD
         },
     )
@@ -3495,8 +3400,7 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
             })
             .unwrap();
         ice_landing_seed(&mut world, id, fracture);
-        // Keep the neighbor's fall reproducible: a random reactor breach can add steam
-        // and change the jumper's landing damage, independently of ice-break ordering.
+        // Keep the neighbor's fall reproducible independently of ice-break ordering.
         world
             .btech
             .rewrite_unit_record(units[1], |record| {
@@ -3509,10 +3413,7 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
         let notices = advance_battle_jumps(
             &mut world,
             stompymux_rs::MovementRules {
-                fall: stompymux_rs::FallRules {
-                    stacking: stompymux_rs::StackingRules::STANDARD,
-                    ..rules()
-                },
+                fall: rules(),
                 ..stompymux_rs::MovementRules::STANDARD
             },
         )
@@ -3522,10 +3423,7 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
             advance_battle_jumps(
                 &mut loaded,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 }
             )
@@ -3666,10 +3564,7 @@ async fn mapped_surface_jump_routes_land_at_height_and_replay() {
                 advance_battle_jumps(
                     &mut world,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
@@ -3682,10 +3577,7 @@ async fn mapped_surface_jump_routes_land_at_height_and_replay() {
                 advance_battle_jumps(
                     &mut world,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
@@ -3693,10 +3585,7 @@ async fn mapped_surface_jump_routes_land_at_height_and_replay() {
                 advance_battle_jumps(
                     &mut loaded,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     }
                 )
@@ -3754,10 +3643,7 @@ async fn structure_jump_controls_land_and_collide_with_saved_replay() {
                 let tick = advance_battle_jumps(
                     &mut world,
                     stompymux_rs::MovementRules {
-                        fall: stompymux_rs::FallRules {
-                            stacking: stompymux_rs::StackingRules::STANDARD,
-                            ..rules()
-                        },
+                        fall: rules(),
                         ..stompymux_rs::MovementRules::STANDARD
                     },
                 )
@@ -3767,10 +3653,7 @@ async fn structure_jump_controls_land_and_collide_with_saved_replay() {
                     advance_battle_jumps(
                         &mut loaded,
                         stompymux_rs::MovementRules {
-                            fall: stompymux_rs::FallRules {
-                                stacking: stompymux_rs::StackingRules::STANDARD,
-                                ..rules()
-                            },
+                            fall: rules(),
                             ..stompymux_rs::MovementRules::STANDARD
                         }
                     )
@@ -4512,10 +4395,7 @@ async fn character_interrupted_jump_finishes_water_entry_atomically() {
             advance_battle_jumps(
                 &mut world,
                 stompymux_rs::MovementRules {
-                    fall: stompymux_rs::FallRules {
-                        stacking: stompymux_rs::StackingRules::STANDARD,
-                        ..rules()
-                    },
+                    fall: rules(),
                     ..stompymux_rs::MovementRules::STANDARD
                 }
             )
@@ -5870,6 +5750,24 @@ async fn mine_activation_queries_preserve_state_and_saved_order() {
     assert!(mine_activations(&world, ObjectId(-1), MineTriggerReason::Step).is_err());
 }
 
+/// Dice for `id` under which `accept` holds for the action it runs on a copy of the world; a
+/// conventional field goes off only on a high enough roll (Tactical Operations p. 176), so a
+/// scenario that needs the explosion searches for it.
+fn dice_for(world: &World, id: ObjectId, accept: impl Fn(&mut World) -> bool) -> Dice {
+    (0..=u16::MAX)
+        .map(|value| {
+            let mut seed = [0; 32];
+            seed[..2].copy_from_slice(&value.to_le_bytes());
+            Dice::seeded(seed)
+        })
+        .find(|dice| {
+            let mut probe = world.clone();
+            probe.btech.set_unit_dice(id, dice.clone()).unwrap();
+            accept(&mut probe)
+        })
+        .expect("dice that produce the requested outcome")
+}
+
 #[tokio::test]
 async fn conventional_mine_blasts_packets_neighbors_removal_and_restart() {
     for (kind, strength) in [
@@ -5914,7 +5812,10 @@ async fn conventional_mine_blasts_packets_neighbors_removal_and_restart() {
             report.hits[0].impacts.len(),
             (strength as usize).div_ceil(5)
         );
-        let area = kind != MineKind::Standard;
+        // Only a command-detonated field reaches the neighbouring hexes (Tactical Operations
+        // p. 177); every unit takes the blast on its front.
+        let area = kind == MineKind::Command;
+        assert!(report.hits.iter().all(|hit| hit.arc == HitArc::Front));
         assert_eq!(report.hits.len(), if area { 2 } else { 1 });
         if area {
             assert_eq!((report.hits[1].unit, report.hits[1].damage), (units[1], 3));
@@ -5925,16 +5826,30 @@ async fn conventional_mine_blasts_packets_neighbors_removal_and_restart() {
             );
         }
         assert_eq!(report.ignited.len(), if area { 6 } else { 0 });
+        // A conventional field thins on a density roll and never below five points; the
+        // others drop a step and are spent once that would leave less than five.
+        let conventional = kind == MineKind::Standard;
         assert_eq!(
             report.removed,
-            if area || strength < 5 {
+            if !conventional || strength < 5 {
                 vec![0, 1]
             } else {
                 vec![]
             }
         );
-        if !area && strength >= 5 {
-            assert_eq!(world.btech.maps()[&map].minefields()[&0], mine);
+        if conventional && strength >= 5 {
+            let roll = report.depletion_roll.unwrap();
+            let remaining = if roll >= 9 { 5 } else { strength };
+            assert_eq!(report.remaining_strength, Some(remaining));
+            assert_eq!(
+                world.btech.maps()[&map].minefields()[&0],
+                Minefield {
+                    strength: remaining,
+                    ..mine
+                }
+            );
+        } else {
+            assert_eq!(report.depletion_roll, None);
         }
         let mut replay = before.clone();
         assert_eq!(
@@ -6043,61 +5958,9 @@ async fn mine_activation_water_uses_bottom_depth_and_blast_height_bounds() {
 }
 
 #[tokio::test]
-async fn inferno_duration_cooling_extension_and_saved_expiry() {
-    let (_dir, config, mut world, _map, units) = fixture_field(Terrain::Clear, 0, 3).await;
-    let id = units[0];
-    world
-        .btech
-        .rewrite_unit_record(units[1], |record| {
-            record["position"]["y"] = 0.into();
-            record["motion"]["point"] =
-                serde_json::to_value(HexCoordinate { x: 1, y: 0 }.center()).unwrap();
-        })
-        .unwrap();
-    let baseline = world.btech.constructed_units()[&id].heat_rates(&world);
-    let heat = world.btech.constructed_units()[&id].heat();
-    apply_inferno_burn(&mut world, id, 2).unwrap();
-    assert!(battle_unit_illuminated(&world, id));
-    assert!(battle_unit_illuminated(&world, units[1]));
-    let rates = world.btech.constructed_units()[&id].heat_rates(&world);
-    assert_eq!(rates.production, baseline.production);
-    assert_eq!(rates.dissipation, (baseline.dissipation - 6.0).max(0.0));
-    assert_eq!(world.btech.constructed_units()[&id].heat(), heat);
-    assert!(advance_inferno_burns(&mut world).is_empty());
-    apply_inferno_burn(&mut world, id, 2).unwrap();
-    assert_eq!(world.btech.constructed_units()[&id].inferno_remaining(), 3);
-    let checkpoint = world.clone();
-    assert!(apply_inferno_burn(&mut world, id, 0).is_err());
-    assert!(apply_inferno_burn(&mut world, id, u32::MAX).is_err());
-    assert_eq!(world.btech, checkpoint.btech);
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut replay = persistence::load(&config.database()).await.unwrap();
-    for second in 1..=3 {
-        let notices = advance_inferno_burns(&mut world);
-        assert_eq!(notices, advance_inferno_burns(&mut replay));
-        assert_eq!(notices.len(), usize::from(second == 3));
-        assert_eq!(world.btech, replay.btech);
-    }
-    assert_eq!(
-        world.btech.constructed_units()[&id].heat_rates(&world),
-        baseline
-    );
-    assert!(advance_inferno_burns(&mut world).is_empty());
-    assert!(!battle_unit_illuminated(&world, id));
-    assert!(!battle_unit_illuminated(&world, units[1]));
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["inferno_remaining"] = u32::MAX.into();
-        })
-        .unwrap();
-    assert!(world.validate(&config).is_err());
-}
-
-#[tokio::test]
 async fn inferno_mines_split_damage_and_burn_duration_atomically() {
     for strength in [1, 4, 6] {
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
+        let (_dir, config, mut world, map, _units) = fixture_field(Terrain::Clear, 0, 3).await;
         set_minefield(
             &mut world,
             map,
@@ -6116,11 +5979,10 @@ async fn inferno_mines_split_damage_and_burn_duration_atomically() {
         assert_eq!(report.hits.len(), 2);
         for hit in &report.hits {
             assert_eq!(hit.damage, strength as u16 / 3);
-            assert_eq!(hit.burn_seconds, i64::from(strength) * 6);
-            assert_eq!(
-                world.btech.constructed_units()[&hit.unit].inferno_remaining(),
-                hit.burn_seconds as u32
-            );
+            // A 'Mech is hit by 1d6 infernos: two heat points each and no burn (Tactical
+            // Operations p. 42, Total Warfare p. 159).
+            assert_eq!(hit.burn_seconds, 0);
+            assert!((2..=12).contains(&hit.heat), "{}", hit.heat);
             assert_eq!(hit.impacts.len(), usize::from(strength >= 3));
         }
         assert_eq!(report.removed, if strength < 5 { vec![0] } else { vec![] });
@@ -6141,82 +6003,21 @@ async fn inferno_mines_split_damage_and_burn_duration_atomically() {
             persistence::load(&config.database()).await.unwrap().btech,
             world.btech
         );
-        let mut overflow = before;
-        apply_inferno_burn(&mut overflow, units[1], i32::MAX as u32).unwrap();
-        let checkpoint = overflow.clone();
-        assert!(resolve_mine_blast(&mut overflow, map, 0, rules()).is_err());
-        assert_eq!(overflow.btech, checkpoint.btech);
     }
 }
 
 #[tokio::test]
-async fn inferno_water_extinction_and_fall_publish_saved_steam() {
-    for depth in [1, 2] {
-        let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, depth, 3).await;
-        let id = units[0];
-        apply_inferno_burn(&mut world, id, 60).unwrap();
-        let before = world.clone();
-        let notices = extinguish_inferno_in_water(&mut world, id).unwrap();
-        if depth == 1 {
-            assert!(notices.is_empty());
-            assert_eq!(world.btech, before.btech);
-            let report = resolve_battle_fall(&mut world, id, 1, rules()).unwrap();
-            assert!(
-                report
-                    .notices(id)
-                    .iter()
-                    .any(|notice| notice.text.contains("roar of steam"))
-            );
-        } else {
-            assert!(
-                notices
-                    .iter()
-                    .any(|notice| notice.text.contains("roar of steam"))
-            );
-        }
-        assert_eq!(world.btech.constructed_units()[&id].inferno_remaining(), 0);
-        assert_eq!(
-            world.btech.maps()[&map]
-                .decoration(HexCoordinate { x: 1, y: 1 })
-                .unwrap()
-                .unwrap()
-                .remaining,
-            120
-        );
-        assert_eq!(
-            world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
-            Terrain::Smoke
-        );
-        assert_eq!(
-            world.btech.maps()[&map].base_hex(1, 1).unwrap().terrain(),
-            Terrain::Water
-        );
-        assert!(advance_inferno_burns(&mut world).is_empty());
-        assert!(
-            extinguish_inferno_in_water(&mut world, id)
-                .unwrap()
-                .is_empty()
-        );
-        persistence::save(&config.database(), &world).await.unwrap();
-        assert_eq!(
-            persistence::load(&config.database()).await.unwrap().btech,
-            world.btech
-        );
-    }
-}
-
-#[tokio::test]
-async fn inferno_missile_exposure_rounds_pairs_and_replays_without_damage_or_dice() {
+async fn inferno_missile_exposure_adds_two_heat_per_missile_within_the_turn_cap() {
     let (_dir, config, mut base, _map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     let target = units[0];
     update_battle_contact(&mut base, units[1], target).unwrap();
-    for (missiles, seconds) in [(1, 180), (2, 180), (3, 360), (6, 540), (65535, 5_898_240)] {
+    // Total Warfare p. 141 and p. 159: two heat per missile, at most fifteen outside heat a turn.
+    for (missiles, heat) in [(1, 2), (2, 4), (3, 6), (6, 12), (8, 15), (65535, 15)] {
         let mut world = base.clone();
         let report = resolve_inferno_hit(&mut world, target, missiles).unwrap();
         assert_eq!(report.target, target);
         assert_eq!(report.missiles, missiles);
-        assert_eq!(report.burn_seconds, seconds);
-        assert!(!report.extinguished);
+        assert_eq!(report.heat, heat);
         assert!(
             report
                 .notices
@@ -6227,98 +6028,26 @@ async fn inferno_missile_exposure_rounds_pairs_and_replays_without_damage_or_dic
             report
                 .notices
                 .iter()
-                .any(|n| n.unit == units[1] && n.text.contains("bursts into flames"))
+                .any(|n| n.unit == units[1] && n.text.contains("splashed"))
         );
         let mut expected = serde_json::to_value(&base.btech).unwrap();
-        expected["constructed"][target.0.to_string()]["inferno_remaining"] = seconds.into();
+        let unit = &mut expected["constructed"][target.0.to_string()];
+        unit["heat"]["stored"] =
+            (unit["heat"]["stored"].as_f64().unwrap() + f64::from(heat)).into();
+        unit["overheat_clock"]["outside_heat"] = heat.into();
         assert_eq!(serde_json::to_value(&world.btech).unwrap(), expected);
-        let checkpoint = world.clone();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
         let more = resolve_inferno_hit(&mut world, target, 1).unwrap();
         assert_eq!(resolve_inferno_hit(&mut replay, target, 1).unwrap(), more);
         assert_eq!(world.btech, replay.btech);
+        assert_eq!(more.heat, 2.min(15 - heat));
         assert_eq!(
-            world.btech.constructed_units()[&target].inferno_remaining(),
-            seconds + 180
+            world.btech.constructed_units()[&target]
+                .overheat_clock()
+                .outside_heat,
+            heat + more.heat
         );
-        assert!(
-            more.notices
-                .iter()
-                .any(|n| n.unit == target && n.text.contains("More burning jelly"))
-        );
-        assert!(
-            more.notices
-                .iter()
-                .any(|n| n.unit == units[1] && n.text.contains("more brightly"))
-        );
-        assert_eq!(
-            world.btech.constructed_units()[&target].heat(),
-            checkpoint.btech.constructed_units()[&target].heat()
-        );
-    }
-}
-
-#[tokio::test]
-async fn inferno_missile_immersion_extinguishes_after_ignition_and_rolls_back_late_failure() {
-    for (terrain, depth, prone, extinguished) in [
-        (Terrain::Clear, 0, false, false),
-        (Terrain::Water, 1, false, false),
-        (Terrain::Water, 1, true, true),
-        (Terrain::Water, 2, false, true),
-        (Terrain::Ice, 2, false, false),
-    ] {
-        let (_dir, config, mut world, map, units) = fixture_field(terrain, depth, 3).await;
-        let target = units[0];
-        if prone {
-            let _ = resolve_battle_fall(&mut world, target, 1, rules()).unwrap();
-        }
-        let before = world.clone();
-        let report = resolve_inferno_hit(&mut world, target, 2).unwrap();
-        assert_eq!(report.extinguished, extinguished);
-        assert_eq!(report.burn_seconds, 180);
-        assert_eq!(
-            world.btech.constructed_units()[&target].inferno_remaining(),
-            if extinguished { 0 } else { 180 }
-        );
-        assert_eq!(
-            world.btech.constructed_units()[&target].heat(),
-            before.btech.constructed_units()[&target].heat()
-        );
-        let cockpit: Vec<_> = report.notices.iter().filter(|n| n.unit == target).collect();
-        assert!(cockpit[0].text.contains("sprayed"));
-        if extinguished {
-            assert!(cockpit[1].text.contains("roar of steam"));
-            assert_eq!(
-                world.btech.maps()[&map]
-                    .decoration(HexCoordinate { x: 1, y: 1 })
-                    .unwrap()
-                    .unwrap()
-                    .remaining,
-                120
-            );
-            assert!(advance_inferno_burns(&mut world).is_empty());
-        }
-        persistence::save(&config.database(), &world).await.unwrap();
-        assert_eq!(
-            persistence::load(&config.database()).await.unwrap().btech,
-            world.btech
-        );
-        // Corrupt a different unit so validation fails after this target ignites and makes steam.
-        // Per-operation validation runs only in debug builds; release relies on the commit check.
-        if !cfg!(debug_assertions) {
-            continue;
-        }
-        let mut invalid = before;
-        invalid
-            .btech
-            .rewrite_unit_record(units[1], |record| {
-                record["inferno_remaining"] = u32::MAX.into();
-            })
-            .unwrap();
-        let checkpoint = invalid.clone();
-        assert!(resolve_inferno_hit(&mut invalid, target, 2).is_err());
-        assert_eq!(invalid.btech, checkpoint.btech);
     }
 }
 
@@ -6338,66 +6067,54 @@ async fn inferno_missile_rejects_invalid_exposures_without_mutation() {
         .insert(Flag::Going);
     assert!(resolve_inferno_hit(&mut world, target, 1).is_err());
     assert_eq!(world.btech, checkpoint.btech);
-    world
-        .objects
-        .get_mut(&target)
-        .unwrap()
-        .flags
-        .remove(Flag::Going);
-    apply_inferno_burn(&mut world, target, i32::MAX as u32 - 179).unwrap();
-    let checkpoint = world.clone();
-    assert!(resolve_inferno_hit(&mut world, target, 1).is_err());
-    assert_eq!(world.btech, checkpoint.btech);
 }
 
 #[tokio::test]
-async fn inferno_ammunition_explosion_halves_damage_and_applies_configured_heat() {
+async fn inferno_ammunition_explosion_deals_full_damage_and_adds_heat() {
     for (terrain, depth) in [(Terrain::Clear, 0), (Terrain::Water, 2)] {
-        for penalty in [false, true] {
-            let (_dir, config, mut world, _map, units) = fixture_field(terrain, depth, 3).await;
-            let id = units[0];
-            world
-                .btech
-                .rewrite_unit_record(id, |record| {
-                    record["definition"]["sections"]["RightTorso"]["criticals"]["0"]["modes"] =
-                        serde_json::json!(["Inferno"]);
-                    record["ammunition"][0] = 1.into();
-                })
-                .unwrap();
-            let mut rules = rules();
-            rules.hit.inferno_penalty = penalty;
-            let before = world.clone();
-            let report = explode_battle_ammunition(&mut world, id, 0, rules).unwrap();
-            assert_eq!(
-                report.impact.phases.iter().map(|p| p.absorbed).sum::<u16>(),
-                4
-            );
-            assert_eq!(world.btech.constructed_units()[&id].ammunition()[0], 0);
-            assert_eq!(
-                world.btech.constructed_units()[&id].heat().stored,
-                before.btech.constructed_units()[&id].heat().stored
-                    + if penalty { 30.0 } else { 0.0 }
-            );
-            assert_eq!(
-                world.btech.constructed_units()[&id].inferno_remaining(),
-                if depth == 2 { 0 } else { 180 }
-            );
-            assert!(report.notices.iter().any(|n| n.text.contains("sprayed")));
-            assert_eq!(
-                world.btech.constructed_units()[&id].pilot_injuries(),
-                before.btech.constructed_units()[&id].pilot_injuries() + 2
-            );
-            persistence::save(&config.database(), &world).await.unwrap();
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                world.btech
-            );
-            let mut overflow = before;
-            apply_inferno_burn(&mut overflow, id, i32::MAX as u32).unwrap();
-            let checkpoint = overflow.clone();
-            assert!(explode_battle_ammunition(&mut overflow, id, 0, rules).is_err());
-            assert_eq!(overflow.btech, checkpoint.btech);
-        }
+        let (_dir, config, mut world, _map, units) = fixture_field(terrain, depth, 3).await;
+        let id = units[0];
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["definition"]["sections"]["RightTorso"]["criticals"]["0"]["modes"] =
+                    serde_json::json!(["Inferno"]);
+                record["ammunition"][0] = 1.into();
+            })
+            .unwrap();
+        let rules = rules();
+        let before = world.clone();
+        let report = explode_battle_ammunition(&mut world, id, 0, rules).unwrap();
+        // Total Warfare p. 141: the inferno bin explodes for its full damage and heats the
+        // carrying unit by two per missile in the bin.
+        let missiles = u16::from(
+            world.btech.constructed_units()[&id]
+                .loadout()
+                .unwrap()
+                .ammunition[0]
+                .weapon
+                .profile()
+                .missiles,
+        )
+        .max(1);
+        assert_eq!(
+            report.impact.phases.iter().map(|p| p.absorbed).sum::<u16>(),
+            8
+        );
+        assert_eq!(world.btech.constructed_units()[&id].ammunition()[0], 0);
+        assert_eq!(
+            world.btech.constructed_units()[&id].heat().stored,
+            before.btech.constructed_units()[&id].heat().stored + f64::from((2 * missiles).min(30))
+        );
+        assert_eq!(
+            world.btech.constructed_units()[&id].pilot_injuries(),
+            before.btech.constructed_units()[&id].pilot_injuries() + 2
+        );
+        persistence::save(&config.database(), &world).await.unwrap();
+        assert_eq!(
+            persistence::load(&config.database()).await.unwrap().btech,
+            world.btech
+        );
     }
 }
 
@@ -6420,6 +6137,15 @@ async fn mine_event_ground_entry_spotting_burning_removal_and_restart() {
             }),
         )
         .unwrap();
+        if kind != MineKind::Command {
+            let dice = dice_for(&world, id, |probe| {
+                advance_battle_motion(probe, MovementRules::STANDARD)
+                    .unwrap()
+                    .iter()
+                    .any(|n| n.text.contains("trigger a mine"))
+            });
+            world.btech.set_unit_dice(id, dice).unwrap();
+        }
         let before = world.clone();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
@@ -6451,10 +6177,6 @@ async fn mine_event_ground_entry_spotting_burning_removal_and_restart() {
                 before.btech.constructed_units()[&id].sections()
             );
             assert!(world.btech.maps()[&map].minefields().is_empty());
-            assert_eq!(
-                world.btech.constructed_units()[&id].inferno_remaining(),
-                if kind == MineKind::Inferno { 24 } else { 0 }
-            );
         }
         let later = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         assert!(!later.iter().any(|n| n.text.contains("trigger a mine")));
@@ -6488,16 +6210,27 @@ async fn mine_event_fall_and_jump_landing_activate_at_surface_once() {
             }),
         )
         .unwrap();
-        if jump {
-            launch_battle_jump(&mut world, id, ObjectId(1), 180, 1.0).unwrap();
+        // A landing sets the field off on a nine or better, a fall only on a twelve
+        // (Tactical Operations pp. 176–177); the dice are chosen so that it does.
+        let land = |world: &mut World| {
             let mut notices = Vec::new();
             for _ in 0..60 {
-                notices.extend(advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap());
+                notices.extend(advance_battle_jumps(world, MovementRules::STANDARD).unwrap());
                 if !world.btech.constructed_units()[&id].airborne() {
                     break;
                 }
-                assert_eq!(world.btech.constructed_units()[&id].inferno_remaining(), 0);
             }
+            notices
+        };
+        if jump {
+            launch_battle_jump(&mut world, id, ObjectId(1), 180, 1.0).unwrap();
+            let dice = dice_for(&world, id, |probe| {
+                land(probe)
+                    .iter()
+                    .any(|n| n.unit == id && n.text == "You trigger a mine!")
+            });
+            world.btech.set_unit_dice(id, dice).unwrap();
+            let notices = land(&mut world);
             assert!(!world.btech.constructed_units()[&id].airborne());
             assert_eq!(
                 notices
@@ -6507,6 +6240,15 @@ async fn mine_event_fall_and_jump_landing_activate_at_surface_once() {
                 1
             );
         } else {
+            let dice = dice_for(&world, id, |probe| {
+                resolve_battle_fall(probe, id, 1, rules())
+                    .unwrap()
+                    .mines
+                    .blasts
+                    .len()
+                    == 1
+            });
+            world.btech.set_unit_dice(id, dice).unwrap();
             let report = resolve_battle_fall(&mut world, id, 1, rules()).unwrap();
             assert_eq!(report.mines.reason, MineTriggerReason::Fall);
             assert_eq!(report.mines.blasts.len(), 1);
@@ -6517,7 +6259,6 @@ async fn mine_event_fall_and_jump_landing_activate_at_surface_once() {
                     .any(|n| n.text == "You trigger a mine!")
             );
         }
-        assert_eq!(world.btech.constructed_units()[&id].inferno_remaining(), 24);
         assert!(world.btech.maps()[&map].minefields().is_empty());
         persistence::save(&config.database(), &world).await.unwrap();
         assert_eq!(
@@ -6590,10 +6331,6 @@ async fn mine_event_scripted_entry_and_late_callback_failure_are_atomic() {
         .unwrap();
     advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD).unwrap();
     assert_eq!(
-        scripts.world().btech.constructed_units()[&id].inferno_remaining(),
-        36
-    );
-    assert_eq!(
         scripts
             .eval_callback::<i64>(&format!(
                 "return mux.world.object({}):state('mine'):get('count')",
@@ -6629,6 +6366,14 @@ async fn mine_event_nested_support_falls_and_deleted_definitions_are_ordered() {
         owner: ObjectId(1),
     };
     set_minefield(&mut world, map, 0, Some(mine)).unwrap();
+    let dice = dice_for(&world, units[0], |probe| {
+        activate_mines(probe, units[0], MineTriggerReason::Step, rules())
+            .unwrap()
+            .blasts
+            .len()
+            == 1
+    });
+    world.btech.set_unit_dice(units[0], dice).unwrap();
     let before = world.clone();
     let report = activate_mines(&mut world, units[0], MineTriggerReason::Step, rules()).unwrap();
     assert_eq!(report.blasts.len(), 1);
@@ -6708,13 +6453,17 @@ async fn mine_event_late_blast_failure_restores_the_whole_ground_step() {
     )
     .unwrap();
     support::fail_mine_ignition(&mut world, map, 2);
+    let dice = dice_for(&world, id, |probe| {
+        advance_battle_motion(probe, MovementRules::STANDARD).is_err()
+    });
+    world.btech.set_unit_dice(id, dice).unwrap();
     let before = world.clone();
     assert!(advance_battle_motion(&mut world, MovementRules::STANDARD).is_err());
     assert_eq!(world.btech, before.btech);
 }
 
 #[tokio::test]
-async fn mine_event_remote_vibra_reports_visible_explosion_and_neighbor_damage() {
+async fn mine_event_remote_vibra_reports_visible_explosion_without_neighbor_damage() {
     let (_dir, _config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
     set_minefield(
         &mut world,
@@ -6730,9 +6479,10 @@ async fn mine_event_remote_vibra_reports_visible_explosion_and_neighbor_damage()
     )
     .unwrap();
     let event = activate_mines(&mut world, units[0], MineTriggerReason::Step, rules()).unwrap();
+    // A vibrabomb set off from a hex away damages only its own, empty hex (Tactical
+    // Operations p. 177).
     assert_eq!(event.blasts.len(), 1);
-    assert_eq!(event.blasts[0].hits.len(), 2);
-    assert!(event.blasts[0].hits.iter().all(|h| h.damage == 3));
+    assert!(event.blasts[0].hits.is_empty());
     assert!(
         event
             .notices
@@ -7045,7 +6795,8 @@ async fn artillery_world_damage_and_restart() {
             .iter()
             .map(|hit| (hit.unit, hit.impacts.len()))
             .collect::<Vec<_>>(),
-        [(units[0], 4), (units[1], 2)]
+        // A Long Tom's 25 in the target hex and 15 in the ring around it.
+        [(units[0], 5), (units[1], 3)]
     );
     assert_eq!(report.hits[0].coordinate, center);
     assert_eq!(report.hits[1].coordinate, neighbor);
@@ -7126,7 +6877,7 @@ async fn artillery_world_smoke_and_mines() {
             let mut field = world.btech.maps()[&map].minefields()[&0];
             if field.kind == MineKind::Standard {
                 assert_eq!(report.mines, [0]);
-                assert_eq!(field.strength, 20);
+                assert_eq!(field.strength, 25);
                 field.kind = MineKind::Inferno;
                 field.strength = 7;
                 set_minefield(&mut world, map, 0, Some(field)).unwrap();
@@ -7218,19 +6969,14 @@ async fn artillery_character_arrival_is_atomic() {
     );
 }
 
-/// Artillery reaches three levels underwater but excludes four; its upper height limit is ten levels.
+/// In its own hex a shell's damage climbs and sinks ten points a level (Tactical Operations
+/// p. 183): a Long Tom's 25 still reaches two levels away and nothing three levels away.
 #[tokio::test]
 async fn artillery_blast_height_limits() {
-    for (terrain, depth, first, second) in [(Terrain::Water, 4, -3, -4), (Terrain::Clear, 0, 9, 10)]
+    for (terrain, depth, first, second) in [(Terrain::Water, 4, -2, -3), (Terrain::Clear, 0, 2, 10)]
     {
         let (_dir, config, mut world, map, units) = fixture_field(terrain, depth, 3).await;
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
-        // Isolate the primary blast's height boundary from secondary reactor
-        // explosions, which have their own reach and are covered separately.
-        for unit in &units {
-            encoded["constructed"][unit.0.to_string()]["power"] =
-                serde_json::to_value(Power::Off).unwrap();
-        }
         encoded["constructed"][units[0].0.to_string()]["ground_elevation"] = first.into();
         if second == 10 {
             encoded["constructed"][units[1].0.to_string()]["free_fall"] =
@@ -7244,7 +6990,7 @@ async fn artillery_blast_height_limits() {
         let mut flight = ArtilleryFlight::new(
             center,
             center,
-            Weapon::Thumper,
+            Weapon::LongTom,
             ArtilleryMode::Standard,
             true,
         )
@@ -7253,15 +6999,13 @@ async fn artillery_blast_height_limits() {
         for _ in 0..10 {
             report = advance_artillery_flight(&mut world, map, &mut flight, rules()).unwrap();
         }
+        let report = report.unwrap();
         assert_eq!(
-            report
-                .unwrap()
-                .hits
-                .iter()
-                .map(|hit| hit.unit)
-                .collect::<Vec<_>>(),
+            report.hits.iter().map(|hit| hit.unit).collect::<Vec<_>>(),
             [units[0]]
         );
+        // Two levels from the burst: five points left of the twenty-five.
+        assert_eq!(report.hits[0].impacts.len(), 1);
         assert_eq!(world.btech.constructed_units()[&units[1]], untouched);
         world.validate(&config).unwrap();
     }
@@ -7634,136 +7378,4 @@ async fn artillery_gunnery_uses_dedicated_skill_without_mutation() {
     assert_eq!(world.btech, before);
     world.objects.get_mut(&pilot).unwrap().location = None;
     assert_eq!(unit_artillery_gunnery_target(&world, units[0]).unwrap(), 8);
-}
-
-/// A surface collapse finishes admitted falls after another occupant's reactor blast.
-async fn fracture_cascade_matrix(vehicle: bool, trigger_last: bool) {
-    let (_dir, config, mut world, map, units) = fixture(2).await;
-    let aircraft = vehicle.then(|| {
-        let id = world.create(&config, "Surface aircraft".into(), Kind::Thing);
-        world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_vehicle(
-            &mut world,
-            id,
-            VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
-        )
-        .unwrap();
-        support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
-        place_battle_unit(&mut world, id, map, 1, 1).unwrap();
-        assert!(!world.btech.vehicles()[&id].is_destroyed());
-        id
-    });
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    for id in units {
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(Dice::seeded([14; 32])).unwrap();
-    }
-    if let Some(id) = aircraft {
-        state["vehicles"][id.0.to_string()]["vtol_flight"] =
-            serde_json::to_value(VtolFlight::default()).unwrap();
-        state["vehicles"][id.0.to_string()]["dice"] =
-            serde_json::to_value(Dice::seeded([14; 32])).unwrap();
-    }
-    world.btech = serde_json::from_value(state).unwrap();
-    // Select a collapse whose first fall detonates a reactor and interrupts the next fall.
-    let trigger = trigger_last.then_some(units[0]);
-    let coordinate = HexCoordinate { x: 1, y: 1 };
-    let template = serde_json::to_value(&world.btech).unwrap();
-    let seeded = |state: &mut serde_json::Value, bytes: [u8; 32]| {
-        for id in units {
-            state["constructed"][id.0.to_string()]["dice"] =
-                serde_json::to_value(Dice::seeded(bytes)).unwrap();
-        }
-    };
-    let selected = (0u32..10_000)
-        .find_map(|seed| {
-            let mut bytes = [0; 32];
-            bytes[..4].copy_from_slice(&seed.to_le_bytes());
-            let mut state = template.clone();
-            seeded(&mut state, bytes);
-            let mut candidate = world.clone();
-            candidate.btech = serde_json::from_value(state).unwrap();
-            let report =
-                break_battle_ice(&mut candidate, map, coordinate, trigger, rules()).unwrap();
-            let blast = report
-                .falls
-                .first()?
-                .1
-                .groups
-                .iter()
-                .flat_map(|group| &group.flooding)
-                .find_map(|flood| flood.reactor_explosion.as_ref())?;
-            (report.falls.len() == 2
-                && blast.hits.iter().any(|hit| hit.unit == report.falls[1].0)
-                && report.falls[1].1.groups.is_empty())
-            .then_some(seed)
-        })
-        .expect("collapse with an interrupted pending fall");
-    let mut state = template.clone();
-    let mut bytes = [0; 32];
-    bytes[..4].copy_from_slice(&selected.to_le_bytes());
-    seeded(&mut state, bytes);
-    let mut selected = world.clone();
-    selected.btech = serde_json::from_value(state).unwrap();
-    world = selected;
-    world.validate(&config).unwrap();
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut restarted = persistence::load(&config.database()).await.unwrap();
-    let report = break_battle_ice(&mut world, map, coordinate, trigger, rules()).unwrap();
-    assert_eq!(
-        report,
-        break_battle_ice(&mut restarted, map, coordinate, trigger, rules()).unwrap()
-    );
-    assert_eq!(world.btech, restarted.btech);
-    assert_eq!(report.falls.len(), 2);
-    let blast = report.falls[0]
-        .1
-        .groups
-        .iter()
-        .flat_map(|group| &group.flooding)
-        .find_map(|flood| flood.reactor_explosion.as_ref())
-        .unwrap();
-    assert!(blast.hits.iter().any(|hit| hit.unit == report.falls[1].0));
-    assert!(report.falls[1].1.groups.is_empty());
-    for id in units {
-        let unit = &world.btech.constructed_units()[&id];
-        assert!(unit.is_destroyed());
-        assert_eq!(unit.posture(), Posture::Prone);
-    }
-    if let Some(id) = aircraft {
-        assert!(world.btech.vehicles()[&id].is_destroyed());
-        assert_eq!(report.vehicle_falls.len(), 1);
-        assert_eq!(report.vehicle_falls[0].0, id);
-        assert!(!report.flooded_vehicles.contains(&id));
-        assert!(resolve_battle_vehicle_fall(&mut world, id, 1, rules()).is_err());
-    }
-    world.validate(&config).unwrap();
-    persistence::save(&config.database(), &world).await.unwrap();
-    assert_eq!(
-        persistence::load(&config.database()).await.unwrap().btech,
-        world.btech
-    );
-    let before = world.btech.clone();
-    assert!(resolve_battle_fall(&mut world, units[0], 1, rules()).is_err());
-    assert_eq!(world.btech, before);
-}
-
-#[tokio::test]
-async fn fracture_cascade_finishes_pending_wreck_falls_and_replays_mech_first() {
-    fracture_cascade_matrix(false, false).await;
-}
-
-#[tokio::test]
-async fn fracture_cascade_finishes_pending_wreck_falls_and_replays_mech_last() {
-    fracture_cascade_matrix(false, true).await;
-}
-
-#[tokio::test]
-async fn fracture_cascade_finishes_pending_wreck_falls_and_replays_vtol_first() {
-    fracture_cascade_matrix(true, false).await;
-}
-
-#[tokio::test]
-async fn fracture_cascade_finishes_pending_wreck_falls_and_replays_vtol_last() {
-    fracture_cascade_matrix(true, true).await;
 }

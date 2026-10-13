@@ -1,4 +1,9 @@
-//! Crowded-hex biped collisions share occupancy, dice and damage in one transaction.
+//! Crowded-hex biped collisions share occupancy, dice and damage in one transaction. A 'Mech
+//! landing or falling into a crowded hex makes an accidental fall from above (Total Warfare
+//! p. 152): a to-hit roll of 7 modified for the target's movement and terrain, tonnage over ten
+//! per level fallen on the Punch Location Table, and its own fall onto its back. A 'Mech walking
+//! into a crowded hex bumps the unit it displaces; the engine has no displacement, so the bump
+//! stands in for the domino effect with its own velocity-based damage.
 use super::{FallRules, Hit, HitArc, HitTable, Notice, Posture, Power};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -11,25 +16,8 @@ pub(super) struct StackingEffects {
     pub falls: Vec<super::MechFallReport>,
 }
 
-/// Collision policy and damage scaling from the battlefield configuration.
-#[derive(Debug, Clone, Copy)]
-pub struct StackingRules {
-    /// Zero disables stacking, two deals damage, and other values require avoidance.
-    pub mode: i64,
-    pub damage_percent: i64,
-    pub hit_arcs: i64,
-}
-
-impl StackingRules {
-    /// Conventional collision damage, with ordinary biped hit arcs.
-    pub const STANDARD: Self = Self {
-        mode: 2,
-        damage_percent: 100,
-        hit_arcs: 0,
-    };
-}
-
-/// Ground motion uses relative velocity; jump and fall entries use surviving jump capacity.
+/// Ground motion bumps with relative velocity; jump and fall entries are accidental falls from
+/// above.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StackingEntry {
     Ground,
@@ -43,11 +31,20 @@ pub enum StackingEntry {
 pub struct StackingInput {
     pub entry: StackingEntry,
     pub mass: u32,
+    /// Surviving jump capacity in movement points under the map's gravity; an airborne
+    /// shutdown scales its fall by it.
     pub jump_movement_points: u16,
 }
 
+/// Levels fallen at the point of impact of a landing or fall into a crowded hex (Total
+/// Warfare p. 152): a 'Mech comes down from two levels up onto a two-level 'Mech, one level
+/// at impact.
+const IMPACT_LEVELS: u8 = 1;
+
+/// Base to-hit number of an accidental fall from above (Total Warfare p. 152).
+const ACCIDENTAL_FALL_TARGET: i32 = 7;
+
 /// Capture current physical inputs before an action changes equipment or posture.
-/// Collision thrust remains a physical fact even when a wreck cannot launch a jump.
 pub(super) fn physical_input(
     world: &World,
     id: ObjectId,
@@ -82,11 +79,10 @@ pub fn resolve_stacking(
     world: &mut World,
     id: ObjectId,
     input: StackingInput,
-    rules: StackingRules,
     fall: FallRules,
 ) -> Result<Vec<Notice>> {
     world.attempt(|world| {
-        let notices = resolve_in_candidate(world, id, input, rules, fall, None, &mut Vec::new())?;
+        let notices = resolve_in_candidate(world, id, input, fall, None, &mut Vec::new())?;
         world.btech.validate_action(world)?;
         Ok(notices)
     })
@@ -97,13 +93,12 @@ pub(super) fn resolve_in_action(
     world: &mut World,
     id: ObjectId,
     input: StackingInput,
-    rules: StackingRules,
     fall: FallRules,
     effects: &mut StackingEffects,
     feedback: (&mut Vec<super::PilotNotice>, usize),
 ) -> Result<Vec<Notice>> {
     let mut private = Vec::new();
-    let notices = resolve_in_candidate(world, id, input, rules, fall, Some(effects), &mut private)?;
+    let notices = resolve_in_candidate(world, id, input, fall, Some(effects), &mut private)?;
     super::piloting::append_feedback(feedback.0, private, feedback.1);
     Ok(notices)
 }
@@ -113,13 +108,12 @@ pub(super) fn resolve_pure_with_feedback(
     world: &mut World,
     id: ObjectId,
     input: StackingInput,
-    rules: StackingRules,
     fall: FallRules,
     private: &mut Vec<super::PilotNotice>,
     offset: usize,
 ) -> Result<Vec<Notice>> {
     let mut feedback = Vec::new();
-    let notices = resolve_in_candidate(world, id, input, rules, fall, None, &mut feedback)?;
+    let notices = resolve_in_candidate(world, id, input, fall, None, &mut feedback)?;
     super::piloting::append_feedback(private, feedback, offset);
     Ok(notices)
 }
@@ -130,18 +124,10 @@ fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
     input: StackingInput,
-    rules: StackingRules,
     fall: FallRules,
     mut effects: Option<&mut StackingEffects>,
     private: &mut Vec<super::PilotNotice>,
 ) -> Result<Vec<Notice>> {
-    if rules.mode == 0 {
-        return Ok(Vec::new());
-    }
-    ensure!(
-        (0..=2).contains(&rules.hit_arcs),
-        "Unsupported hit arc mode"
-    );
     ensure!(input.mass > 0, "Collision mass must be positive");
     let unit = world
         .btech
@@ -209,8 +195,9 @@ fn resolve_in_candidate(
     };
     let mover = &world.btech.constructed_units()[&id];
     let other = &world.btech.constructed_units()[&target];
-    let jump_mp = input.jump_movement_points;
-    let entry = input.entry;
+    if input.entry != StackingEntry::Ground {
+        return accidental_fall(world, id, target, input, fall, effects, private);
+    }
     let motion = mover.motion().context("Collision requires motion")?;
     let target_motion = other.motion().context("Collision target requires motion")?;
     let damage = collision_damage(
@@ -228,132 +215,148 @@ fn resolve_in_candidate(
         return Ok(Vec::new());
     }
     world.btech.constructed.get_mut(&id).unwrap().charge = Default::default();
-    let ground = entry == StackingEntry::Ground;
     let mut notices = vec![
         Notice {
             unit: id,
-            text: (match (ground, rules.mode == 2) {
-                (true, true) => "You bump into another unit!",
-                (true, false) => "You nearly bump into another unit!",
-                (false, true) => "You land on another unit!",
-                (false, false) => "You nearly land on another unit!",
-            })
-            .to_owned(),
+            text: "You bump into another unit!".to_owned(),
         },
         Notice {
             unit: target,
-            text: (match (ground, rules.mode == 2) {
-                (true, true) => "Another unit bumps into you!",
-                (true, false) => "Another unit nearly bumps into you!",
-                (false, true) => "Another unit lands on you!",
-                (false, false) => "Another unit nearly lands on you!",
-            })
-            .to_owned(),
+            text: "Another unit bumps into you!".to_owned(),
         },
     ];
-    let action = match (ground, rules.mode == 2) {
-        (true, true) => "bumps into",
-        (true, false) => "nearly bumps into",
-        (false, true) => "lands on",
-        (false, false) => "nearly lands on",
-    };
     notices.extend(super::broadcast::interaction_notices(
-        world, id, target, action,
+        world,
+        id,
+        target,
+        "bumps into",
     ));
-    if rules.mode == 2 {
-        let scaled = damage.saturating_mul(rules.damage_percent);
-        apply_collision(
+    apply_collision(
+        world,
+        id,
+        target,
+        damage.max(1),
+        HitTable::Weapon,
+        fall,
+        &mut notices,
+        private,
+        effects.as_deref_mut(),
+    )?;
+    apply_collision(
+        world,
+        id,
+        id,
+        (damage / 5).max(1),
+        HitTable::Weapon,
+        fall,
+        &mut notices,
+        private,
+        effects,
+    )?;
+    Ok(notices)
+}
+
+/// A 'Mech coming down into a crowded hex (Total Warfare p. 152): roll 7 or better, modified
+/// for the target's movement and the woods over it, to strike the chosen unit for tonnage over
+/// ten per level fallen on the Punch Location Table; the faller then takes an ordinary fall on
+/// its back. A miss leaves everyone standing where they are: the engine has no displacement to
+/// set the faller down in a neighbouring hex.
+fn accidental_fall(
+    world: &mut World,
+    id: ObjectId,
+    target: ObjectId,
+    input: StackingInput,
+    fall: FallRules,
+    mut effects: Option<&mut StackingEffects>,
+    private: &mut Vec<super::PilotNotice>,
+) -> Result<Vec<Notice>> {
+    let other = &world.btech.constructed_units()[&target];
+    let position = other
+        .position()
+        .context("Collision target requires placement")?;
+    let obscured =
+        world.btech.maps()[&position.map].hex(i64::from(position.x), i64::from(position.y))?;
+    let target_number = ACCIDENTAL_FALL_TARGET
+        + i32::from(super::aim::ground_physical_target_modifier(
+            world, other, false,
+        ))
+        + i32::from(obscured.woods_density() + obscured.smoke_density());
+    let mover = world.btech.constructed.get_mut(&id).unwrap();
+    mover.charge = Default::default();
+    let roll = mover.dice.generic_roll();
+    if i32::from(roll) < target_number {
+        let mut notices = vec![
+            Notice {
+                unit: id,
+                text: format!(
+                    "You come down beside another unit!  BTH:  {target_number},\tRoll:  {roll}"
+                ),
+            },
+            Notice {
+                unit: target,
+                text: "Another unit comes down beside you!".to_owned(),
+            },
+        ];
+        notices.extend(super::broadcast::interaction_notices(
             world,
             id,
             target,
-            (scaled / 100).max(1),
-            if ground {
-                HitTable::Weapon
-            } else {
-                HitTable::Punch
-            },
-            rules.hit_arcs,
-            fall,
-            &mut notices,
-            private,
-            effects.as_deref_mut(),
-        )?;
-        apply_collision(
-            world,
-            id,
-            id,
-            (scaled / 500).max(1),
-            if ground {
-                HitTable::Weapon
-            } else {
-                HitTable::Kick
-            },
-            rules.hit_arcs,
-            fall,
-            &mut notices,
-            private,
-            effects.as_deref_mut(),
-        )?;
+            "lands beside",
+        ));
         return Ok(notices);
     }
-    let modifier = i32::from(count) + if ground { 0 } else { i32::from(jump_mp) / 2 };
-    let fall = with_toughness(world, id, fall);
-    let mut check = super::roll_piloting(
+    let mut notices = vec![
+        Notice {
+            unit: id,
+            text: format!("You land on another unit!  BTH:  {target_number},\tRoll:  {roll}"),
+        },
+        Notice {
+            unit: target,
+            text: "Another unit lands on you!".to_owned(),
+        },
+    ];
+    notices.extend(super::broadcast::interaction_notices(
+        world, id, target, "lands on",
+    ));
+    let damage = accidental_fall_damage(input.mass, IMPACT_LEVELS);
+    apply_collision(
         world,
         id,
-        modifier.min(i32::from(i16::MAX)) as i16,
-        fall.extended_piloting,
-    )?;
-    super::piloting::capture_feedback(
-        id,
-        world.btech.constructed_units()[&id].pilot(),
-        &check,
+        target,
+        i64::from(damage),
+        HitTable::Punch,
+        fall,
         &mut notices,
         private,
-    );
-    if let Some(effects) = effects.as_deref_mut() {
-        effects
-            .experience_messages
-            .extend(super::piloting::award_control_check(
-                world,
-                id,
-                &mut check,
-                fall.extended_piloting,
-            )?);
-    }
-    if !check.success {
-        if !ground && jump_mp / 2 != 0 {
-            notices.extend(super::broadcast::observer_notices(world, id, "falls down!"));
-        }
-        let report =
-            if effects.is_some() && world.objects[&id].flags.contains(crate::Flag::InCharacter) {
-                super::fall::resolve_character_fall(world, id, 1, fall)?
-            } else {
-                super::resolve_fall(world, id, 1, fall)?
-            };
+        effects.as_deref_mut(),
+    )?;
+    // A landing unit takes its own fall onto its back; a unit that fell has already fallen.
+    if input.entry == StackingEntry::Jump
+        && !world.btech.constructed_units()[&id].is_destroyed()
+        && world.btech.constructed_units()[&id].posture() != Posture::Prone
+    {
+        let character =
+            effects.is_some() && world.objects[&id].flags.contains(crate::Flag::InCharacter);
+        let rules = with_toughness(world, id, fall);
+        let report = super::fall::resolve_rear_fall(world, id, 1, rules, character)?;
         report.append_notices(id, &mut notices, private);
         if let Some(effects) = effects {
             effects.falls.push(report);
         }
     }
-    if ground {
-        let unit = world.btech.constructed.get_mut(&id).unwrap();
-        if let Some(motion) = &mut unit.motion {
-            motion.speed = 0.0;
-            motion.desired_speed = 0.0;
-        }
-    }
     Ok(notices)
 }
 
-/// Relative velocity governs ground impact; airborne impact truncates mass to whole tons.
+/// Tonnage over ten, rounded up, for every level fallen (Total Warfare p. 152).
+fn accidental_fall_damage(mass: u32, levels: u8) -> u16 {
+    let tons = mass.div_ceil(1024);
+    u16::try_from(tons.div_ceil(10) * u32::from(levels.max(1))).unwrap_or(u16::MAX)
+}
+
+/// Relative velocity governs the ground bump's damage; high-energy impacts are compressed.
 fn collision_damage(input: StackingInput, speed: f64, other_speed: f64, heading_delta: f64) -> i64 {
-    let raw = if input.entry == StackingEntry::Ground {
-        let relative = speed - other_speed * heading_delta.to_radians().cos();
-        (relative.abs() / 10.75 * (f64::from(input.mass) / 1024.0 + 5.0) / 15.0) as i64
-    } else {
-        i64::from(input.jump_movement_points) * (i64::from(input.mass / 1024) + 5) / 10
-    };
+    let relative = speed - other_speed * heading_delta.to_radians().cos();
+    let raw = (relative.abs() / 10.75 * (f64::from(input.mass) / 1024.0 + 5.0) / 15.0) as i64;
     if raw > 10 { 10 + (raw - 10) / 3 } else { raw }
 }
 
@@ -365,7 +368,6 @@ fn apply_collision(
     target: ObjectId,
     damage: i64,
     mut table: HitTable,
-    arcs: i64,
     fall: FallRules,
     notices: &mut Vec<Notice>,
     private: &mut Vec<super::PilotNotice>,
@@ -388,7 +390,6 @@ fn apply_collision(
         HitArc::from_bearing(
             point.point.bearing(origin.point)?.unwrap_or(0.0),
             point.heading,
-            arcs,
         )?
     };
     let mut remaining =
@@ -398,14 +399,12 @@ fn apply_collision(
         let unit = &world.btech.constructed_units()[&target];
         let mut dice = unit.dice.clone();
         let hit = if table == HitTable::Weapon {
-            fall.hit
-                .resolve(unit, arc, dice.generic_roll(), &mut dice)?
+            super::resolve_hit(unit, arc, dice.generic_roll(), &mut dice)?
         } else {
             Hit {
                 section: table.location(unit.chassis(), arc, dice.d6())?,
                 rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
-                crew_stun: false,
             }
         };
         world.btech.constructed.get_mut(&target).unwrap().dice = dice;
@@ -447,27 +446,27 @@ fn with_toughness(world: &World, id: ObjectId, mut rules: FallRules) -> FallRule
 mod tests {
     use super::*;
 
-    /// Damage uses relative motion, fractional ground mass and compressed high-energy impacts.
+    /// Ground bumps use relative motion, fractional mass and compressed high-energy impacts.
     #[test]
-    fn relative_velocity_and_current_mass_determine_collision_damage() {
-        let mut input = StackingInput {
+    fn relative_velocity_and_current_mass_determine_bump_damage() {
+        let input = StackingInput {
             entry: StackingEntry::Ground,
             mass: 35 * 1024,
-            jump_movement_points: 5,
+            jump_movement_points: 0,
         };
         assert_eq!(collision_damage(input, 21.5, 21.5, 0.0), 0);
         assert_eq!(collision_damage(input, 21.5, 21.5, 180.0), 10);
         assert_eq!(collision_damage(input, -21.5, 21.5, 0.0), 10);
         assert_eq!(collision_damage(input, 21.5, 21.5, 90.0), 5);
         assert_eq!(collision_damage(input, 118.25, 0.0, 0.0), 16);
-        input.mass = 34 * 1024 + 512;
-        input.entry = StackingEntry::Jump;
-        assert_eq!(collision_damage(input, 0.0, 0.0, 0.0), 13);
-        input.jump_movement_points = 4;
-        assert_eq!(collision_damage(input, 0.0, 0.0, 0.0), 11);
-        input.mass = 20 * 1024;
-        assert_eq!(collision_damage(input, 0.0, 0.0, 0.0), 10);
-        input.jump_movement_points = 0;
-        assert_eq!(collision_damage(input, 118.25, 0.0, 0.0), 0);
+    }
+
+    /// An accidental fall deals tonnage over ten, rounded up, per level fallen.
+    #[test]
+    fn accidental_fall_damage_follows_tonnage_and_levels() {
+        assert_eq!(accidental_fall_damage(35 * 1024, 1), 4);
+        assert_eq!(accidental_fall_damage(34 * 1024 + 512, 2), 8);
+        assert_eq!(accidental_fall_damage(20 * 1024, 0), 2);
+        assert_eq!(accidental_fall_damage(100 * 1024, 3), 30);
     }
 }

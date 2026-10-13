@@ -1,4 +1,4 @@
-//! Onboard special equipment commands: ECM suites, anti-pod gear, beacons, extinguishers, and concealment toggles.
+//! Onboard special equipment commands: ECM suites, anti-pod gear, beacons, and concealment toggles.
 
 use super::super::*;
 
@@ -54,23 +54,6 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     native.set(
         "unit_pods",
         error::wrap(lua, pods, "btech.operation.failed")?,
-    )?;
-    let extinguish = lua.create_function(|lua, (unit, pilot): (i64, i64)| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        crate::lua::transactions::run(lua, &scripts.world, || {
-            crate::begin_battle_vehicle_extinguishing_action(
-                &scripts,
-                ObjectId(unit),
-                ObjectId(pilot),
-            )
-            .map_err(mlua::Error::external)?;
-            Ok(true)
-        })
-    })?;
-    native.set(
-        "unit_extinguish",
-        error::wrap(lua, extinguish, "btech.operation.failed")?,
     )?;
     let remove_all = lua.create_function(|lua, (unit, pilot): (i64, i64)| {
         crate::lua::transactions::require(lua)?;

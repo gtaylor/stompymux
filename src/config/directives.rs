@@ -50,26 +50,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::DISABLED,
     },
     Directive {
-        name: "btech_explode_reactor",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_explode_time",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_explode_ammo",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_explode_stop",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_parts",
         parser: "cf_int",
         permission: P::GOD,
@@ -85,42 +65,12 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_vcrit",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_slowdown",
         parser: "cf_int",
         permission: P::GOD,
     },
     Directive {
         name: "btech_fasaturn",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_fasaadvvtolcrit",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_fasaadvvhlcrit",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_fasaadvvhlfire",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_divrotordamage",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_moddamagewithrange",
         parser: "cf_int",
         permission: P::GOD,
     },
@@ -140,37 +90,7 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_newcharge",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_tl3_charge",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_xploss",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_critlevel",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_newstagger",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_newstaggertons",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_newstaggertime",
         parser: "cf_int",
         permission: P::GOD,
     },
@@ -230,22 +150,7 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_stacking",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_stackdamage",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_mw_losmap",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_exile_stun_code",
         parser: "cf_int",
         permission: P::GOD,
     },
@@ -330,16 +235,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_glancing_blows",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_inferno_penalty",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_blzmapmode",
         parser: "cf_int",
         permission: P::GOD,
@@ -385,22 +280,7 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_stackpole",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_phys_use_pskill",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_erange",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_hit_arcs",
         parser: "cf_int",
         permission: P::GOD,
     },

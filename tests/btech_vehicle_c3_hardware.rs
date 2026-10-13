@@ -96,13 +96,9 @@ fn section_loss_and_wrecks_disable_computers_without_erasing_installation() {
     vehicle
         .damage_phase(VehicleSection::Turret, u16::MAX, DamagePhase::Internal)
         .unwrap();
-    assert!(!vehicle.is_destroyed());
-    assert_eq!(vehicle.c3_hardware().unwrap().working_masters, 0);
-    assert!(vehicle.c3_hardware().unwrap().c3i_operational);
-    vehicle
-        .damage_phase(VehicleSection::Left, u16::MAX, DamagePhase::Internal)
-        .unwrap();
+    // Losing any location's structure, the turret included, wrecks the vehicle (TW p. 128).
     assert!(vehicle.is_destroyed());
+    assert_eq!(vehicle.c3_hardware().unwrap().working_masters, 0);
     let hardware = vehicle.c3_hardware().unwrap();
     assert_eq!(hardware.masters, 2);
     assert!(hardware.slave_installed && hardware.c3i_installed);

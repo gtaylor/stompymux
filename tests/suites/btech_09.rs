@@ -32,9 +32,6 @@ mod btech_preferred_identity;
 #[path = "../btech_radio.rs"]
 mod btech_radio;
 
-#[path = "../btech_reactor_instability.rs"]
-mod btech_reactor_instability;
-
 #[path = "../btech_self_destruct.rs"]
 mod btech_self_destruct;
 
@@ -58,9 +55,6 @@ mod btech_vehicle_bursts;
 
 #[path = "../btech_vehicle_c3_hardware.rs"]
 mod btech_vehicle_c3_hardware;
-
-#[path = "../btech_vehicle_main_jam.rs"]
-mod btech_vehicle_main_jam;
 
 #[path = "../btech_vehicle_network.rs"]
 mod btech_vehicle_network;

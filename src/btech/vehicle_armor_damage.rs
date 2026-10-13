@@ -25,7 +25,7 @@ pub struct VehicleArmorDamage {
     pub armor_damage: u32,
     pub absorbed: u16,
     pub overflow: u32,
-    /// Damage-entry roll, optional rear-hit diagnostic, then any through-armor critical roll.
+    /// Damage-entry roll, then an optional rear-hit diagnostic; critical rolls live in `criticals`.
     pub rolls: Vec<u8>,
     pub criticals: Vec<VehicleCriticalResolution>,
     pub internal: Option<VehicleInternalDamage>,
@@ -126,13 +126,6 @@ pub(super) fn resolve_rear_followup_in_candidate(
         .get(&hit.section)
         .map_or(0, |section| section.armor);
     let incoming = hit.amount;
-    if hit.amount > 0
-        && hit.section == VehicleSection::Rotor
-        && vehicle.definition().is_vtol()
-        && rules.rotor_damage_divisor > 0
-    {
-        hit.amount = (hit.amount / rules.rotor_damage_divisor).max(1);
-    }
     let hardened = vehicle
         .definition()
         .has_technology(super::Technology::HardenedArmor);
@@ -246,39 +239,38 @@ pub(super) fn resolve_rear_followup_in_candidate(
     result.overflow = hardened_overflow.unwrap_or(amount - u32::from(result.absorbed));
     let remaining = vehicle.sections()[&hit.section].armor;
     let warning = super::combat_warnings::armor_severity(original, remaining);
-    // Hardened armor negates armor-piercing critical chances.
-    let ap = !hit.through_armor_critical
-        && !hardened
-        && result.overflow == 0
-        && hit.armor_piercing.is_some()
-        && (original == 0 || u32::from(remaining) * 100 / u32::from(original) < 50);
-    let mut count = 0;
-    if hit.through_armor_critical || ap {
-        let roll = vehicle.dice.generic_roll();
-        result.rolls.push(roll);
-        let adjusted = roll.saturating_sub(if ap {
-            hit.armor_piercing.unwrap().armor_piercing_penalty()
+    // A hit-location critical result rolls once on the critical hits table (TW p. 193), two
+    // lower through hardened armor (TO:AUE p. 93), and every armor-piercing hit that damages
+    // armor without reaching the structure rolls once more with the autocannon's modifier
+    // (TW pp. 140 and 192); hardened armor stops the latter. Glancing blows lower every roll.
+    let mut table_rolls = Vec::new();
+    if hit.through_armor_critical {
+        let penalty = if hardened {
+            i8::try_from(super::Technology::HARDENED_CRITICAL_PENALTY).unwrap_or(i8::MAX)
         } else {
             0
-        });
-        count = match adjusted {
-            8 | 9 => 1,
-            10 | 11 => 2,
-            12 => 3,
-            _ => 0,
         };
+        table_rolls.push(context.critical_modifier.saturating_sub(penalty));
     }
-    for _ in 0..count {
+    if let Some(weapon) = hit.armor_piercing
+        && !hardened
+        && result.overflow == 0
+    {
+        let penalty = i8::try_from(weapon.armor_piercing_penalty()).unwrap_or(i8::MAX);
+        table_rolls.push(context.critical_modifier.saturating_sub(penalty));
+    }
+    for modifier in table_rolls {
         let vehicle = &world.btech.vehicles()[&id];
         if vehicle.is_destroyed() || vehicle.sections()[&hit.section].internal == 0 {
             break;
         }
-        let critical = super::vehicle_critical_resolution::resolve_in_candidate(
+        let critical = super::vehicle_critical_resolution::resolve_modified_in_candidate(
             world,
             id,
             hit.section,
             rules,
             context,
+            modifier,
         )?;
         super::piloting::append_feedback(
             &mut result.pilot_notices,
@@ -303,7 +295,6 @@ pub(super) fn resolve_rear_followup_in_candidate(
             hit.section,
             result.overflow,
             rules,
-            count > 0,
             context,
         )?;
         super::piloting::append_feedback(

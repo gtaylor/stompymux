@@ -207,25 +207,6 @@ async fn fire_heats_only_mechs_in_the_flames() {
     }
 }
 
-/// The steam of an inferno quenched in water does not put out a fire burning on that water.
-#[tokio::test]
-async fn steam_leaves_a_fire_burning() {
-    let (_dir, config, mut world, map) = field("1 1\n~2\n", |hex| hex).await;
-    let id = mech(&mut world, &config, map, 0, 0);
-    ignite(&mut world, map, 0, 0, 30);
-    apply_inferno_burn(&mut world, id, 30).unwrap();
-    assert!(
-        !extinguish_inferno_in_water(&mut world, id)
-            .unwrap()
-            .is_empty()
-    );
-    assert_eq!(world.btech.constructed_units()[&id].inferno_remaining(), 0);
-    assert_eq!(
-        overlay(&world, map, 0, 0).map(|effect| effect.kind),
-        Some(DecorationKind::Fire)
-    );
-}
-
 /// A piloted Jenner standing in smoky heavy woods beside a burning bridge, with ANSI colours.
 async fn smoky_crossing() -> (tempfile::TempDir, World, ObjectId) {
     let (dir, config, mut world, map) = field("3 3\n\"0/2.0\n.0.0.0\n.0.0.0\n", |hex| hex).await;

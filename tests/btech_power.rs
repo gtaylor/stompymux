@@ -347,27 +347,6 @@ async fn idle_building_repair_retries_failed_world_save() {
     }).await;
 }
 
-#[tokio::test]
-async fn shutdown_inferno_expiry_retries_failed_save() {
-    use stompymux_rs::apply_inferno_burn;
-    tokio::task::LocalSet::new().run_until(async {
-        let (_dir,config,mut world,id) = fixture().await;
-        assert_eq!(world.btech.constructed_units()[&id].power(),Power::Off);
-        apply_inferno_burn(&mut world,id,1).unwrap();
-        persistence::save(&config.database(),&world).await.unwrap();
-        let expected = world.btech.clone();
-        let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        sqlx::query("CREATE TRIGGER deny_inferno BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'inferno failure'); END").execute(&mut sql).await.unwrap();
-        let (_addr,shutdown,task,_lua,mut heartbeats) = support::start(&config,std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        heartbeats.attempt().await; heartbeats.attempt().await;
-        assert_eq!(persistence::load(&config.database()).await.unwrap().btech,expected);
-        sqlx::query("DROP TRIGGER deny_inferno").execute(&mut sql).await.unwrap();
-        heartbeats.until_saved(&config,20,|loaded| loaded.btech.constructed_units()[&id].inferno_remaining()==0).await;
-        shutdown.send(ShutdownRequest::Sigterm).unwrap();
-        task.await.unwrap().unwrap();
-    }).await;
-}
-
 /// A shutdown radio keeps the server tick active until its saved XP gate expires.
 #[tokio::test]
 async fn shutdown_radio_xp_gate_retries_failed_save() {

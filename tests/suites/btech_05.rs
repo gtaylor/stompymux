@@ -38,9 +38,6 @@ mod btech_orbital_drop_state;
 #[path = "../btech_periodic_piloting.rs"]
 mod btech_periodic_piloting;
 
-#[path = "../btech_reactor_attribution.rs"]
-mod btech_reactor_attribution;
-
 #[path = "../btech_savedb.rs"]
 mod btech_savedb;
 

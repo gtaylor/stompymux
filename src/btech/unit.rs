@@ -55,9 +55,6 @@ pub struct Mech {
     pub(super) last_jump: super::jumping::LastJump,
     #[serde(default)]
     pub(super) hardware: super::hardware_settings::HardwareSettings,
-    /// Remaining eligibility after the first pristine center-torso internal hit.
-    #[serde(default)]
-    pub(super) reactor_instability_remaining: Option<u8>,
     #[serde(default)]
     pub(super) self_destruct_safe: bool,
     #[serde(default)]
@@ -253,9 +250,6 @@ pub struct Mech {
     /// Total cooling adopted at the last material reconstruction, before physical sink losses.
     #[serde(default)]
     pub(super) reconstructed_cooling: Option<u16>,
-    /// Saved seconds of inferno burning, independent of reactor power.
-    #[serde(default)]
-    pub(super) inferno_remaining: u32,
     #[serde(default)]
     pub(super) overheat_clock: super::OverheatClock,
     #[serde(default)]
@@ -420,10 +414,8 @@ super::saved_parts::saved_parts!(Mech {
         heat,
         heat_sample,
         overheat_clock,
-        inferno_remaining,
         target_lock,
         aimed_section,
-        stagger,
         stand_timer,
         weapon_recycle,
         limb_recycle,
@@ -431,7 +423,6 @@ super::saved_parts::saved_parts!(Mech {
         shot_counters,
         damage_counters,
         last_startup,
-        reactor_instability_remaining,
         stun_remaining,
         flight,
         free_fall,
@@ -447,7 +438,9 @@ super::saved_parts::saved_parts!(Mech {
         unjam,
         spotter_events,
     ],
-    live_always: [dice, ammunition,],
+    // The stagger phase wraps every second on a running unit and is stored as a timer; the
+    // object stays in the live part so its blanked text never flips between present and absent.
+    live_always: [dice, ammunition, stagger],
 });
 
 impl Mech {
@@ -971,9 +964,7 @@ impl Mech {
             reconstructed_cooling: None,
             hide_elapsed: None,
             self_destruct: None,
-            reactor_instability_remaining: None,
             self_destruct_safe: false,
-            inferno_remaining: 0,
             overheat_clock: Default::default(),
             ammunition_sections: BTreeMap::new(),
             fire_modes: loadout
@@ -1129,11 +1120,6 @@ impl Mech {
         if let Some(selection) = self.aimed_section {
             selection.validate()?;
         }
-        ensure!(
-            self.reactor_instability_remaining
-                .is_none_or(|remaining| remaining <= 31),
-            "Invalid reactor instability window"
-        );
         if let Some(entry) = self.building_entry {
             entry.validate()?;
         }
@@ -1201,10 +1187,6 @@ impl Mech {
         ensure!(
             self.radio_experience_remaining <= 61,
             "Invalid radio experience countdown"
-        );
-        ensure!(
-            self.inferno_remaining <= i32::MAX as u32,
-            "Invalid inferno duration"
         );
         self.charge.validate()?;
         ensure!(

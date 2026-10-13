@@ -372,7 +372,7 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
         .await;
 }
 
-/// Rejected controls preserve the wreck while heat and reactor windows continue advancing.
+/// Rejected controls preserve the wreck while heat continues advancing.
 fn assert_wreck_unchanged(after: &Mech, before: &Mech) {
     assert!(after.heat().stored <= before.heat().stored);
     // Excess is sampled on the heartbeat; a post-shot sample may rise even
@@ -388,14 +388,6 @@ fn assert_wreck_unchanged(after: &Mech, before: &Mech) {
     let mut expected = serde_json::to_value(before).unwrap();
     expected["heat"] = actual["heat"].clone();
     expected["heat_sample"] = actual["heat_sample"].clone();
-    match (
-        after.reactor_instability_remaining(),
-        before.reactor_instability_remaining(),
-    ) {
-        (Some(after), Some(before)) => assert!(after <= before),
-        (after, before) => assert_eq!(after, before),
-    }
-    expected["reactor_instability_remaining"] = actual["reactor_instability_remaining"].clone();
     assert!(!after.fired_recently() || before.fired_recently());
     expected["fired_recently"] = actual["fired_recently"].clone();
     assert_eq!(actual, expected);

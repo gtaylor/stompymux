@@ -11,6 +11,8 @@ pub struct DfaProfile {
     pub base: i32,
     pub attacker_movement: i32,
     pub target_movement: i32,
+    /// The attacker's Piloting Skill less the target's (Total Warfare p. 144).
+    pub skill: i32,
     /// Darkness on the target's map, less what searchlights offset.
     pub light: i32,
     pub inflicted_damage: u16,
@@ -18,6 +20,9 @@ pub struct DfaProfile {
     pub target_arc: HitArc,
     pub initial_hit_table: HitTable,
 }
+
+/// A missed landing is a two-level fall: damage multiplier three (Total Warfare p. 150).
+const MISS_FALL_MULTIPLIER: u8 = 3;
 
 /// Recovery-sensitive weapon sections; torso physical recovery does not itself prevent a landing attack.
 pub(super) const SECTIONS: [MechSection; 6] = [
@@ -29,15 +34,10 @@ pub(super) const SECTIONS: [MechSection; 6] = [
     MechSection::RightTorso,
 ];
 
-/// Preserve actual-mass impact and nominal-tonnage rounding/recoil as distinct quantities.
-fn damage(actual_tons: u32, nominal_tons: u16, specialist: bool) -> Result<(u16, u16)> {
-    let inflicted = (3 * actual_tons) / 10
-        + u32::from(!nominal_tons.is_multiple_of(10))
-        + u32::from(specialist);
-    Ok((
-        u16::try_from(inflicted).context("DFA damage exceeds supported range")?,
-        nominal_tons / 5,
-    ))
+/// Damage a landing attack deals its target and its own legs (Total Warfare p. 150): three
+/// times the attacker's tonnage over ten, rounded up, and tonnage over five.
+fn damage(tons: u16, specialist: bool) -> (u16, u16) {
+    ((3 * tons).div_ceil(10) + u16::from(specialist), tons / 5)
 }
 
 /// Inspect a biped landing attack without spending dice, changing flight or applying recovery.
@@ -137,15 +137,11 @@ fn dfa_profile_inner(
         .pilot()
         .and_then(|pilot| world.btech.character_values().get(&pilot))
         .is_some_and(|values| super::advantages::enabled(values, "Melee_Specialist"));
-    let base = if rules.use_pilot_skill {
-        i32::from(unit_piloting_target(
-            world,
-            attacker,
-            rules.fall.extended_piloting,
-        )?)
-    } else {
-        5
-    };
+    let base = i32::from(unit_piloting_target(
+        world,
+        attacker,
+        rules.fall.extended_piloting,
+    )?);
     let movement = i32::from(source.attacker_movement_modifier(rules.fasa_turning));
     let attacker_movement = if specialist {
         movement.min(0) - 1
@@ -158,29 +154,33 @@ fn dfa_profile_inner(
         rules.extended_movement,
     ));
     let light = i32::from(super::light_aim::modifier(world, target, true)?);
-    let target_number = base + attacker_movement + target_movement + light;
+    // The better pilot has the edge: the difference in Piloting Skill Ratings modifies the
+    // attack, and terrain never does (Total Warfare p. 144).
+    let skill = base
+        - i32::from(unit_piloting_target(
+            world,
+            target,
+            rules.fall.extended_piloting,
+        )?);
+    let target_number = base + skill + attacker_movement + target_movement + light;
     ensure!(
         target_number <= 12,
         "DFA: BTH {target_number}\tYou choose not to attack and land from your jump."
     );
-    let (inflicted_damage, received_damage) = damage(
-        source.effective_mass()? / 1024,
-        source.definition().tons,
-        specialist,
-    )?;
+    let (inflicted_damage, received_damage) = damage(source.definition().tons, specialist);
     let reverse = unit_range(world, target, attacker)?;
     Ok(DfaProfile {
         target_number,
         base,
         attacker_movement,
         target_movement,
+        skill,
         light,
         inflicted_damage,
         received_damage,
         target_arc: HitArc::from_bearing(
             reverse.bearing.unwrap_or(180.0),
             victim.motion().unwrap().heading,
-            rules.hit_arc_mode,
         )?,
         initial_hit_table: if victim.posture() == Posture::Prone {
             HitTable::Weapon
@@ -209,6 +209,9 @@ pub struct DfaReport {
     pub target_impacts: Vec<TacticalImpact>,
     pub attacker_impacts: Vec<TacticalImpact>,
     pub balance: Vec<DfaBalance>,
+    /// The attacker's crash after a miss: a two-level fall onto its back (Total Warfare p. 150).
+    pub miss_fall: Option<MechFallReport>,
+    /// The pilot injury from the missed landing's fall check.
     pub pilot_injury: Option<TacticalPilotInjury>,
     pub character_injury: Option<CharacterPilotInjury>,
     pub experience: Vec<ExperienceAward>,
@@ -226,7 +229,6 @@ pub struct DfaReport {
 enum DamagePhase {
     Target,
     Legs,
-    Miss,
 }
 
 /// Damage groups and their pre-impact piloting awards.
@@ -252,26 +254,26 @@ fn packets(
     let mut experience_messages = Vec::new();
     while damage > 0 {
         let unit = &world.btech.constructed_units()[&id];
-        let table = match phase {
-            DamagePhase::Target if unit.posture() != Posture::Prone => HitTable::Punch,
-            DamagePhase::Legs => HitTable::Kick,
-            _ => HitTable::Weapon,
+        // A prone target takes the landing on the Rear column of the Hit Location Table
+        // whatever the attack direction (Total Warfare p. 151).
+        let (table, arc) = match phase {
+            DamagePhase::Target if unit.posture() == Posture::Prone => {
+                (HitTable::Weapon, HitArc::Rear)
+            }
+            DamagePhase::Target => (HitTable::Punch, arc),
+            DamagePhase::Legs => (HitTable::Kick, arc),
         };
         let mut dice = unit.dice.clone();
-        let mut hit = if table == HitTable::Weapon {
+        let hit = if table == HitTable::Weapon {
             let roll = dice.generic_roll();
-            rules.hit.resolve(unit, arc, roll, &mut dice)?
+            super::resolve_hit(unit, arc, roll, &mut dice)?
         } else {
             Hit {
                 section: table.location(unit.chassis(), arc, dice.d6())?,
                 rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
-                crew_stun: false,
             }
         };
-        if matches!(phase, DamagePhase::Miss) {
-            hit.rear_armor = true;
-        }
         world.btech.constructed.get_mut(&id).unwrap().dice = dice;
         let amount = damage.min(5);
         if character
@@ -361,6 +363,7 @@ fn resolve_dfa_inner(
             target_impacts: vec![],
             attacker_impacts: vec![],
             balance: vec![],
+            miss_fall: None,
             pilot_injury: None,
             character_injury: None,
             experience: Vec::new(),
@@ -409,27 +412,15 @@ fn resolve_dfa_inner(
             )?
             .impacts;
         } else {
-            if world.btech.constructed_units()[&attacker].posture() != Posture::Prone {
-                report.notices.push(Notice {
-                    unit: attacker,
-                    text: "You miss your DFA attack and fall on your back!!".into(),
-                });
-                report.notices.extend(super::broadcast::observer_notices(
-                    world,
-                    attacker,
-                    "misses DFA and falls down!",
-                ));
-            }
-            report.attacker_impacts = packets(
+            report.notices.push(Notice {
+                unit: attacker,
+                text: "You miss your DFA attack and fall on your back!!".into(),
+            });
+            report.notices.extend(super::broadcast::observer_notices(
                 world,
                 attacker,
-                report.profile.received_damage,
-                HitArc::Rear,
-                DamagePhase::Miss,
-                attacker_rules,
-                (attacker, character),
-            )?
-            .impacts;
+                "misses DFA and falls down!",
+            ));
         }
         for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
             super::piloting::append_feedback(
@@ -493,89 +484,23 @@ fn resolve_dfa_inner(
             }
         }
         if !hit {
-            if !world.btech.constructed_units()[&attacker].is_destroyed() {
-                let mut check = roll_piloting(world, attacker, 2, rules.fall.extended_piloting)?;
-                super::piloting::capture_feedback(
-                    attacker,
-                    world.btech.constructed_units()[&attacker].pilot(),
-                    &check,
-                    &mut report.notices,
-                    &mut report.pilot_notices,
-                );
-                if character {
-                    report
-                        .experience_messages
-                        .extend(super::piloting::award_control_check(
-                            world,
-                            attacker,
-                            &mut check,
-                            rules.fall.extended_piloting,
-                        )?);
-                }
-                if !check.success && world.btech.constructed_units()[&attacker].pilot().is_some() {
-                    report.notices.push(Notice {
-                        unit: attacker,
-                        text: "You take personal injury from the fall!".into(),
-                    });
-                    if character && world.objects[&attacker].flags.contains(Flag::InCharacter) {
-                        report.character_injury = Some(super::injure_character_pilot(
-                            world,
-                            attacker,
-                            1,
-                            attacker_rules.toughness,
-                        )?);
-                    } else {
-                        let injury = super::pilot_injury::injure_tactical_pilot_in_candidate(
-                            world,
-                            attacker,
-                            1,
-                            attacker_rules.toughness,
-                        )?;
-                        report.notices.extend(injury.notice(attacker));
-                        report.pilot_injury = Some(injury);
-                    }
-                }
-                report.balance.push(DfaBalance {
-                    unit: attacker,
-                    check,
-                    fall: None,
-                });
-            }
-            let position = world.btech.constructed_units()[&attacker]
-                .position()
-                .context("DFA attacker is not placed")?;
-            let tile = world.btech.maps()[&position.map]
-                .base_hex(i64::from(position.x), i64::from(position.y))?;
-            let ground =
-                (tile.surface_height() != tile.standing_height()).then_some(tile.surface_height());
-            let source = world.btech.constructed.get_mut(&attacker).unwrap();
-            source.hull_down = Default::default();
-            source.posture = Posture::Prone;
-            source.facing = Default::default();
-            source.stand_timer = None;
-            if rules.fall.stagger != StaggerMode::Traditional {
-                source.stagger.clear_damage();
-            }
-            source.ground_elevation = ground.map(f64::from);
-            if let Some(motion) = &mut source.motion {
-                motion.speed = 0.0;
-                motion.desired_speed = 0.0;
-            }
-            if !source.is_destroyed() {
-                report.flooding = if character {
-                    super::flooding::flood_unit_in_action(world, attacker, attacker_rules)?
-                } else {
-                    flood_unit(world, attacker, attacker_rules)?
-                };
-                for flooding in &report.flooding {
-                    super::piloting::append_feedback(
-                        &mut report.pilot_notices,
-                        flooding.pilot_notices.iter().cloned(),
-                        report.notices.len(),
-                    );
-                    report.notices.extend(flooding.notices.iter().cloned());
-                }
-            }
+            // The jumping 'Mech crashes as if it had fallen two levels, rolling for its facing
+            // but taking every hit on the rear (Total Warfare p. 150).
+            let character_fall =
+                character && world.objects[&attacker].flags.contains(Flag::InCharacter);
+            let fall = super::fall::resolve_rear_fall(
+                world,
+                attacker,
+                MISS_FALL_MULTIPLIER,
+                attacker_rules,
+                character_fall,
+            )?;
+            fall.append_notices(attacker, &mut report.notices, &mut report.pilot_notices);
+            // The fall report keeps its own XP diagnostics; hosts publish them with the fall.
+            report.pilot_injury = fall.pilot_injury.clone();
+            report.character_injury = fall.character_injury.clone();
+            report.flooding = fall.feedback.flooding.clone();
+            report.miss_fall = Some(fall);
         }
         let source = world.btech.constructed.get_mut(&attacker).unwrap();
         for section in SECTIONS {
@@ -590,13 +515,12 @@ fn resolve_dfa_inner(
 mod tests {
     use super::*;
 
-    /// Nominal remainder adds one even when actual mass is a multiple of ten, and recoil ignores actual mass.
+    /// Three times tonnage over ten, rounded up, against the target; tonnage over five on the legs.
     #[test]
-    fn impact_mass_and_nominal_rounding_are_independent() {
-        assert_eq!(damage(30, 35, false).unwrap(), (10, 7));
-        assert_eq!(damage(35, 40, false).unwrap(), (10, 8));
-        assert_eq!(damage(35, 35, false).unwrap(), (11, 7));
-        assert_eq!(damage(35, 35, true).unwrap(), (12, 7));
-        assert_eq!(damage(0, 35, false).unwrap(), (1, 7));
+    fn landing_damage_follows_tonnage() {
+        assert_eq!(damage(35, false), (11, 7));
+        assert_eq!(damage(40, false), (12, 8));
+        assert_eq!(damage(35, true), (12, 7));
+        assert_eq!(damage(20, false), (6, 4));
     }
 }

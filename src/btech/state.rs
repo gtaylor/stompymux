@@ -413,8 +413,6 @@ pub struct BtechState {
     /// Seconds until a fully destroyed native unit retires from the battlefield.
     #[serde(default)]
     pub(crate) wrecks: Arc<BTreeMap<ObjectId, u8>>,
-    #[serde(default)]
-    pub(crate) reactor: super::reactor_instability::ReactorState,
     /// External towing is one chassis-independent carrier-to-target relationship.
     #[serde(default)]
     pub(crate) tows: Arc<BTreeMap<ObjectId, ObjectId>>,
@@ -612,7 +610,6 @@ impl BtechState {
         self.weapon_settings.validate()?;
         super::inventory::validate(world)?;
         super::self_destruct::validate(self)?;
-        self.reactor.validate()?;
         super::wreck_cleanup::validate(self)?;
         super::towing::validate(world)?;
         let tow_targets: BTreeSet<_> = self.tows.values().copied().collect();

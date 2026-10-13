@@ -1,6 +1,6 @@
 //! Eligibility and piloting experience for direct biped physical damage packets.
 use crate::{Flag, ObjectId, World};
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 /// Skill mutation and the accepted award's pre-impact diagnostic snapshot.
 pub(super) struct PhysicalExperience {
@@ -29,9 +29,12 @@ pub(super) fn award(
         }
     }
     let source = &world.btech.constructed_units()[&attacker];
-    let victim = &world.btech.constructed_units()[&target];
-    if victim.is_destroyed()
-        || source.signature().team == victim.signature().team
+    let (victim_destroyed, victim_team) = super::with_unit!(
+        world.btech.unit(target).context("Target is unavailable")?,
+        |victim| (victim.is_destroyed(), victim.signature().team)
+    );
+    if victim_destroyed
+        || source.signature().team == victim_team
         || source.pilot() != Some(pilot)
         || world.objects.get(&pilot).is_none_or(|object| {
             object.location != Some(attacker)

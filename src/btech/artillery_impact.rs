@@ -76,6 +76,7 @@ pub(super) fn advance(
         cursor.mode(),
         pattern.impact,
     )?;
+    let origin = cursor.origin();
     let mut report = ArtilleryImpactReport {
         map,
         pattern,
@@ -108,6 +109,7 @@ pub(super) fn advance(
                     &mut candidate,
                     &mut report,
                     &cell,
+                    origin,
                     (total, packet_size, table),
                     rules,
                     character,
@@ -150,11 +152,20 @@ fn deposit_mine(
     Ok(Some(ordinal))
 }
 
-/// Freeze each occupant's blast arc before ordered packets; height limits are exclusive.
+/// Damage lost for every level above or below the shell's burst in its own hex (Tactical
+/// Operations p. 183).
+const VERTICAL_FALLOFF: u16 = 10;
+
+/// Freeze each occupant's blast arc before ordered packets. The shell bursts on the ground of
+/// its hex and strikes from the direction of the gun (Tactical Operations p. 183); in the
+/// impact hex alone the blast also climbs and sinks, losing ten points a level, while the
+/// outer rings reach only units standing on the ground.
+#[allow(clippy::too_many_arguments)]
 fn hit_cell(
     world: &mut World,
     report: &mut ArtilleryImpactReport,
     cell: &ArtilleryCell,
+    origin: HexCoordinate,
     (damage, packet_size, table): (u16, u8, HitTable),
     rules: FallRules,
     character: bool,
@@ -163,12 +174,19 @@ fn hit_cell(
     let tile = world.btech.maps()[&report.map]
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     let ground = i32::from(tile.top_height());
+    // The outer rings reach units on the ground or just above it, as a mine blast does.
+    let (lower, upper) = if cell.direct {
+        let reach = i32::from(damage.div_ceil(VERTICAL_FALLOFF));
+        (ground - reach, ground + reach)
+    } else {
+        (ground - 2, ground + 2)
+    };
     let blast = super::blast_damage::BlastCell {
         coordinate,
-        origin: coordinate.center(),
+        origin: origin.center(),
         tile,
-        lower: ground - 4,
-        upper: ground + 10,
+        lower,
+        upper,
     };
     let mut rear = false;
     for id in super::map_slots::all_unit_order(world, report.map)? {
@@ -180,6 +198,16 @@ fn hit_cell(
             character || !is_character,
             "Artillery impact requires character consequence publication"
         );
+        let damage = if cell.direct {
+            let levels =
+                u16::try_from((target.elevation - ground).unsigned_abs()).unwrap_or(u16::MAX);
+            damage.saturating_sub(levels.saturating_mul(VERTICAL_FALLOFF))
+        } else {
+            damage
+        };
+        if damage == 0 {
+            continue;
+        }
         let arc = target.arc;
         rear |= arc == HitArc::Rear;
         let rules = target.rules;

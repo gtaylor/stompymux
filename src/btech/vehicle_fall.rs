@@ -1,4 +1,5 @@
-//! Vehicle falls reuse pilot checks, shared fall arithmetic, packet impacts and mine activation.
+//! Vehicle falls reuse pilot checks, shared fall arithmetic, packet impacts and mine activation;
+//! VTOL crashes share the same transaction with the Total Warfare p. 68 crash damage.
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -83,6 +84,37 @@ pub(super) fn resolve_material_signed_with_tonnage(
     character: bool,
     tonnage: Option<u32>,
 ) -> Result<VehicleFallReport> {
+    resolve_material_profile(
+        world,
+        id,
+        levels,
+        rules,
+        character,
+        tonnage,
+        ImpactProfile::Fall,
+    )
+}
+
+/// How a vehicle's impact damage is sized and aimed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ImpactProfile {
+    /// A fall: tons/10 per level, a d6 facing change and a crew injury check.
+    Fall,
+    /// A VTOL crash (TW p. 68): hexes moved times tons/10 (round up) on the side that struck
+    /// the ground, with no facing change and no crew check.
+    VtolCrash { hexes: u32 },
+}
+
+/// Shared fall and crash transaction; the profile chooses damage, facing and crew checks.
+pub(super) fn resolve_material_profile(
+    world: &mut World,
+    id: ObjectId,
+    levels: i32,
+    rules: FallRules,
+    character: bool,
+    tonnage: Option<u32>,
+    profile: ImpactProfile,
+) -> Result<VehicleFallReport> {
     let object = world.objects.get(&id).context("Vehicle is unavailable")?;
     ensure!(
         !object.flags.contains(Flag::Going)
@@ -112,10 +144,12 @@ pub(super) fn resolve_material_signed_with_tonnage(
     let pilot = unit.pilot();
     let has_pilot = pilot.is_some();
     let safe = rules.vehicle_impact.criticals.combat_safe || unit.combat_safe;
+    let crash = matches!(profile, ImpactProfile::VtolCrash { .. });
+    let reversing = unit.motion().is_some_and(|motion| motion.speed < 0.0);
     world.attempt(|world| {
         let mut notices = Vec::new();
         let mut pilot_notices = Vec::new();
-        let mut avoidance = if safe {
+        let mut avoidance = if safe || crash {
             None
         } else {
             notices.push(Notice {
@@ -197,14 +231,30 @@ pub(super) fn resolve_material_signed_with_tonnage(
             .transpose()?;
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         let wet = tile.is_some_and(|tile| tile.immerses(unit.elevation_level(tile)));
-        let damage = super::fall_profile::damage(tons, levels, wet, gravity)?;
-        let direction_roll = unit.dice.d6();
-        let (arc, offset) = super::fall_profile::direction(direction_roll)?;
-        unit.detached_heading = (unit.heading() + f64::from(offset)).rem_euclid(360.0);
-        if let Some(motion) = unit.motion.as_mut() {
-            motion.heading = unit.detached_heading;
-            motion.desired_heading = motion.heading;
-        }
+        let (damage, direction_roll, arc) = match profile {
+            ImpactProfile::Fall => {
+                let damage = super::fall_profile::damage(tons, levels, wet, gravity)?;
+                let direction_roll = unit.dice.d6();
+                let (arc, offset) = super::fall_profile::direction(direction_roll)?;
+                unit.detached_heading = (unit.heading() + f64::from(offset)).rem_euclid(360.0);
+                if let Some(motion) = unit.motion.as_mut() {
+                    motion.heading = unit.detached_heading;
+                    motion.desired_heading = motion.heading;
+                }
+                (damage, direction_roll, arc)
+            }
+            ImpactProfile::VtolCrash { hexes } => {
+                let damage = hexes
+                    .checked_mul(tons.div_ceil(10))
+                    .context("Crash damage exceeds supported range")?;
+                let arc = if reversing {
+                    HitArc::Rear
+                } else {
+                    HitArc::Front
+                };
+                (damage, 0, arc)
+            }
+        };
         let mut impacts = Vec::new();
         let mut remaining = if safe { 0 } else { damage };
         while remaining > 0 {

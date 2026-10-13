@@ -779,7 +779,6 @@ async fn tactical_head_impact_applies_armor_and_pilot_injury_together() {
         section: stompymux_rs::MechSection::Head,
         rear_armor: false,
         through_armor_critical: false,
-        crew_stun: true,
     };
     let before = world.btech.clone();
     world
@@ -808,13 +807,8 @@ async fn tactical_head_impact_applies_armor_and_pilot_injury_together() {
     );
     assert_eq!(world.btech.constructed_units()[&id].pilot_injuries(), 1);
     assert!(report.impact.pending_effects.is_empty());
-    assert_eq!(world.btech.constructed_units()[&id].stun_remaining(), 10);
-    assert!(
-        report
-            .notices
-            .iter()
-            .any(|notice| notice.text.contains("momentarily stunned"))
-    );
+    // Head hits injure the pilot without stunning the crew.
+    assert_eq!(world.btech.constructed_units()[&id].stun_remaining(), 0);
 }
 
 #[tokio::test]
@@ -912,7 +906,7 @@ async fn stationary_stun_recovery_uses_server_commit_and_retries_failed_saves() 
 }
 
 #[tokio::test]
-async fn stun_throttle_change_precedes_a_simultaneous_hip_critical() {
+async fn hip_critical_clamps_desired_speed_to_the_new_maximum() {
     let (_dir, _config, mut world, id) = fixture('.').await;
     balance_skill(&mut world);
     set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
@@ -929,7 +923,6 @@ async fn stun_throttle_change_precedes_a_simultaneous_hip_critical() {
             section: stompymux_rs::MechSection::LeftLeg,
             rear_armor: false,
             through_armor_critical: true,
-            crew_stun: true,
         };
         let report =
             stompymux_rs::resolve_battle_tactical_impact(&mut trial, id, hit, 1, fall_rules())
@@ -944,7 +937,7 @@ async fn stun_throttle_change_precedes_a_simultaneous_hip_critical() {
         let unit = &trial.btech.constructed_units()[&id];
         assert_eq!(unit.mobility().maximum_speed, 59.125);
         assert_eq!(unit.motion().unwrap().desired_speed, 59.125);
-        assert_eq!(unit.stun_remaining(), 10);
+        assert_eq!(unit.stun_remaining(), 0);
         return;
     }
     panic!("No deterministic seed exercised the hip critical");
@@ -972,7 +965,6 @@ async fn aim_breakdown_tracks_turning_equipment_and_heat_without_mutation() {
     place_battle_unit(&mut world, target, map, 5, 7).unwrap();
     let rules = AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         fasa_turning: true,
         extended_movement: true,
         extended_ranges: false,
@@ -2434,7 +2426,8 @@ async fn direct_shot_hit_threshold_and_expenditure_match_manual_composition() {
         .unwrap();
     shot_seed(&mut base, id, seed);
     shot_seed(&mut base, target, 17);
-    for (level, hit) in [(9 - roll, true), (8 - roll, false)] {
+    // A roll one under the target hits without glancing; one over misses.
+    for (level, hit) in [(10 - roll, true), (8 - roll, false)] {
         let mut world = base.clone();
         shot_skill(&mut world, level);
         let mut expected = world.clone();
@@ -2461,7 +2454,7 @@ async fn direct_shot_hit_threshold_and_expenditure_match_manual_composition() {
         assert_eq!(report.roll, roll);
         assert_eq!(
             report.target_number,
-            Some(i32::from(roll) + i32::from(!hit))
+            Some(i32::from(roll) + if hit { -1 } else { 1 })
         );
         assert_eq!(report.expenditure, expenditure);
         assert_eq!(report.salvo, salvo.map(stompymux_rs::TargetSalvo::Mech));
@@ -2508,10 +2501,6 @@ async fn direct_shot_rejections_preserve_both_dice_streams_and_all_expenditure()
         assert!(resolve_battle_shot(&mut world, id, pilot, selected, index, shot_rules()).is_err());
         assert_eq!(world.btech, before);
     }
-    let mut rules = shot_rules();
-    rules.hit_arc_mode = 3;
-    assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).is_err());
-    assert_eq!(world.btech, before);
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     // With nothing perceiving the target, the saved contact is stale and the shot is refused.
     stompymux_rs::set_battle_visibility(
@@ -2540,7 +2529,7 @@ async fn direct_shot_rejections_preserve_both_dice_streams_and_all_expenditure()
     let before = world.btech.clone();
     assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).is_err());
     assert_eq!(world.btech, before);
-    rules = shot_rules();
+    let mut rules = shot_rules();
     rules.aim.override_weapon_arcs = true;
     let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
     assert!(report.salvo.is_none()); // Connected, no character: target 14 with override.
@@ -2585,12 +2574,12 @@ async fn direct_shot_partial_cover_uses_one_upper_body_die_per_group() {
     let mut struck_body = false;
     for seed in 0..=40u8 {
         let mut world = world.clone();
-        let mut dice = stompymux_rs::Dice::seeded([seed; 32]);
+        let roll = stompymux_rs::Dice::seeded([seed; 32]).two_d6();
         let location = stompymux_rs::HitTable::Weapon
             .location(
                 stompymux_rs::MechChassis::Biped,
                 stompymux_rs::HitArc::Rear,
-                dice.two_d6(),
+                roll,
             )
             .unwrap();
         shot_seed(&mut world, target, seed);
@@ -2602,8 +2591,8 @@ async fn direct_shot_partial_cover_uses_one_upper_body_die_per_group() {
         let salvo = report.salvo.unwrap().into_mech().unwrap();
         assert_eq!(salvo.groups.len(), 1);
         assert_eq!(salvo.groups[0].hit.section, location);
-        assert!(!salvo.groups[0].hit.through_armor_critical);
-        assert!(!salvo.groups[0].hit.crew_stun);
+        // A location roll of two is always a through-armor critical (Total Warfare p. 124).
+        assert_eq!(salvo.groups[0].hit.through_armor_critical, roll == 2);
         let leg = matches!(
             location,
             stompymux_rs::MechSection::LeftLeg | stompymux_rs::MechSection::RightLeg
@@ -2710,7 +2699,6 @@ async fn direct_out_of_range_shot_still_rolls_and_spends_without_target_damage()
     let target_before = world.btech.constructed_units()[&target].clone();
     let mut rules = shot_rules();
     rules.aim.override_weapon_arcs = true;
-    rules.glancing = stompymux_rs::GlancingMode::BelowTarget;
     let report =
         stompymux_rs::resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
     assert!(report.target_number.is_none());
@@ -3107,7 +3095,7 @@ async fn prone_posture_changes_los_and_aim_at_adjacent_and_distant_ranges() {
 async fn fall_gravity_only_reduces_damage() {
     let (_dir, _config, base, id) = fixture('.').await;
     let map = base.btech.constructed_units()[&id].position().unwrap().map;
-    for (gravity, expected) in [(100, 4), (50, 2), (200, 4)] {
+    for (gravity, expected) in [(100, 4), (50, 2), (200, 8)] {
         let mut world = base.clone();
         world
             .btech
@@ -3801,7 +3789,7 @@ async fn damage_balance_direct_salvo_uses_fallen_facing_and_replays_after_failed
             .unwrap()
             .bearing
             .unwrap();
-        let arc = HitArc::from_bearing(bearing, heading, 0).unwrap();
+        let arc = HitArc::from_bearing(bearing, heading).unwrap();
         if arc == HitArc::Rear {
             continue;
         }
@@ -3813,14 +3801,9 @@ async fn damage_balance_direct_salvo_uses_fallen_facing_and_replays_after_failed
         let mut dice: Dice =
             serde_json::from_value(serde_json::to_value(unit).unwrap()["dice"].clone()).unwrap();
         let mut stale_dice = dice.clone();
-        let expected = shot_rules()
-            .hit
-            .resolve(unit, arc, roll, &mut dice)
-            .unwrap();
-        let stale = shot_rules()
-            .hit
-            .resolve(unit, HitArc::Rear, roll, &mut stale_dice)
-            .unwrap();
+        let expected = stompymux_rs::resolve_battle_hit(unit, arc, roll, &mut dice).unwrap();
+        let stale =
+            stompymux_rs::resolve_battle_hit(unit, HitArc::Rear, roll, &mut stale_dice).unwrap();
         if expected == stale {
             continue;
         }
@@ -4287,89 +4270,16 @@ async fn prone_fire_cannot_cross_the_waterline_before_expenditure() {
 }
 
 #[tokio::test]
-async fn stagger_rolling_modes_consume_whole_groups_and_retain_prior_difficulty() {
-    use stompymux_rs::{MechSection as S, StaggerMode as M, advance_battle_stagger};
-    let (_dir, config, base, id) = stagger_fixture().await;
-    for mode in [M::Retain, M::Consume] {
-        let mut world = base.clone();
-        let rules = stagger_rules(mode);
-        stagger_hit(&mut world, id, S::LeftTorso, 13, mode);
-        stagger_hit(&mut world, id, S::RightTorso, 14, mode);
-        for _ in 0..3 {
-            assert!(
-                advance_battle_stagger(&mut world, rules)
-                    .unwrap()
-                    .is_empty()
-            );
-        }
-        persistence::save(&config.database(), &world).await.unwrap();
-        world = persistence::load(&config.database()).await.unwrap();
-        world
-            .objects
-            .get_mut(&ObjectId(1))
-            .unwrap()
-            .flags
-            .insert(stompymux_rs::Flag::Connected);
-        assert!(
-            advance_battle_stagger(&mut world, rules)
-                .unwrap()
-                .is_empty()
-        );
-        let report = advance_battle_stagger(&mut world, rules).unwrap();
-        assert_eq!(report.len(), 1);
-        assert_eq!(report[0].level, 1);
-        assert_eq!(report[0].check.situational, -2); // Assault tonnage at level one.
-        assert!(report[0].check.success);
-        let hits = &world.btech.constructed_units()[&id].stagger().hits;
-        if mode == M::Consume {
-            assert!(hits.is_empty());
-        } else {
-            assert_eq!(hits.len(), 2);
-            assert!(hits.iter().all(|hit| hit.counted)); // Entire 27 points, not a split 20/7.
-        }
-        stagger_hit(&mut world, id, S::CenterTorso, 20, mode);
-        for _ in 0..4 {
-            assert!(
-                advance_battle_stagger(&mut world, rules)
-                    .unwrap()
-                    .is_empty()
-            );
-        }
-        let report = advance_battle_stagger(&mut world, rules).unwrap();
-        assert_eq!(report[0].level, if mode == M::Retain { 2 } else { 1 });
-        let dice =
-            serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"].clone();
-        for _ in 0..60 {
-            assert!(
-                advance_battle_stagger(&mut world, rules)
-                    .unwrap()
-                    .is_empty()
-            );
-        }
-        assert!(
-            world.btech.constructed_units()[&id]
-                .stagger()
-                .hits
-                .is_empty()
-        );
-        assert_eq!(
-            serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
-            dice
-        );
-        world.validate(&config).unwrap();
-    }
-}
-
-#[tokio::test]
-async fn stagger_traditional_checks_once_per_turn_and_persists_its_phase() {
-    use stompymux_rs::{MechSection as S, StaggerMode as M, advance_battle_stagger};
+async fn stagger_checks_once_per_turn_and_persists_its_phase() {
+    use stompymux_rs::{MechSection as S, advance_battle_stagger};
     let (_dir, config, mut world, id) = stagger_fixture().await;
-    let rules = stagger_rules(M::Traditional);
-    stagger_hit(&mut world, id, S::LeftTorso, 20, M::Traditional);
+    let rules = stagger_rules();
+    stagger_hit(&mut world, id, S::LeftTorso, 20);
     let first = advance_battle_stagger(&mut world, rules).unwrap();
     assert_eq!(first.len(), 1);
+    assert_eq!(first[0].level, 1);
     assert_eq!(first[0].check.situational, 1);
-    stagger_hit(&mut world, id, S::RightTorso, 20, M::Traditional);
+    stagger_hit(&mut world, id, S::RightTorso, 20);
     for _ in 0..29 {
         assert!(
             advance_battle_stagger(&mut world, rules)
@@ -4402,7 +4312,7 @@ async fn stagger_traditional_checks_once_per_turn_and_persists_its_phase() {
             .checked_phase
             .is_none()
     );
-    stagger_hit(&mut world, id, S::CenterTorso, 19, M::Traditional);
+    stagger_hit(&mut world, id, S::CenterTorso, 19);
     for _ in 0..30 {
         assert!(
             advance_battle_stagger(&mut world, rules)
@@ -4417,8 +4327,8 @@ async fn stagger_traditional_checks_once_per_turn_and_persists_its_phase() {
 }
 
 #[tokio::test]
-async fn stagger_failed_checks_fall_and_clear_history_on_ground_and_bridge_decks() {
-    use stompymux_rs::{MechSection as S, Posture, StaggerMode as M, advance_battle_stagger};
+async fn stagger_failed_checks_fall_and_clear_turn_damage_on_ground_and_bridge_decks() {
+    use stompymux_rs::{MechSection as S, Posture, advance_battle_stagger};
     for terrain in ['.', '/'] {
         let source = format!(
             "12 12\n{}",
@@ -4429,52 +4339,45 @@ async fn stagger_failed_checks_fall_and_clear_history_on_ground_and_bridge_decks
             MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap(),
         )
         .await;
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            stompymux_rs::MovementRules::STANDARD.fall,
-        )
-        .unwrap();
-        stagger_hit(&mut world, id, S::LeftTorso, 20, M::Retain);
-        let rules = stagger_rules(M::Retain);
-        for _ in 0..4 {
-            assert!(
-                advance_battle_stagger(&mut world, rules)
+        stagger_hit(&mut world, id, S::LeftTorso, 20);
+        let seed = (0..=255)
+            .find(|seed| {
+                let mut probe = world.clone();
+                shot_seed(&mut probe, id, *seed);
+                advance_battle_stagger(&mut probe, stagger_rules())
                     .unwrap()
-                    .is_empty()
-            );
-        }
-        let result = advance_battle_stagger(&mut world, rules);
-        {
-            let reports = result.unwrap();
-            assert_eq!(reports[0].check.roll, None);
-            assert_eq!(reports[0].check.situational, 999);
-            assert!(reports[0].fall.is_some());
-            assert_eq!(
-                world.btech.constructed_units()[&id].posture(),
-                Posture::Prone
-            );
-            assert!(
-                world.btech.constructed_units()[&id]
-                    .stagger()
-                    .hits
-                    .is_empty()
-            );
-            assert!(
-                reports[0]
-                    .notices
-                    .iter()
-                    .any(|notice| notice.text.contains("fall over"))
-            );
-            world.validate(&config).unwrap();
-        }
+                    .first()
+                    .is_some_and(|report| report.fall.is_some())
+            })
+            .expect("a seed that fails the stagger check");
+        shot_seed(&mut world, id, seed);
+        let reports = advance_battle_stagger(&mut world, stagger_rules()).unwrap();
+        assert_eq!(reports.len(), 1);
+        assert!(reports[0].check.roll.is_some());
+        assert!(!reports[0].check.success);
+        assert_eq!(reports[0].check.situational, 1);
+        assert!(reports[0].fall.is_some());
+        assert_eq!(
+            world.btech.constructed_units()[&id].posture(),
+            Posture::Prone
+        );
+        assert_eq!(
+            world.btech.constructed_units()[&id].stagger().turn_damage,
+            0
+        );
+        assert!(
+            reports[0]
+                .notices
+                .iter()
+                .any(|notice| notice.text.contains("fall over"))
+        );
+        world.validate(&config).unwrap();
     }
 }
 
 #[tokio::test]
 async fn stagger_counts_original_hit_once_and_excludes_prone_damage() {
-    use stompymux_rs::{MechSection as S, StaggerMode as M};
+    use stompymux_rs::MechSection as S;
     let (_dir, config, mut world, id) = stagger_fixture().await;
     let seed = (0..=255)
         .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() < 8)
@@ -4495,9 +4398,8 @@ async fn stagger_counts_original_hit_once_and_excludes_prone_damage() {
             .iter()
             .any(|phase| phase.section == S::LeftTorso)
     );
-    assert_eq!(world.btech.constructed_units()[&id].stagger().hits.len(), 1);
     assert_eq!(
-        world.btech.constructed_units()[&id].stagger().hits[0].damage,
+        world.btech.constructed_units()[&id].stagger().turn_damage,
         60
     );
     let seed = (0..=255)
@@ -4510,88 +4412,67 @@ async fn stagger_counts_original_hit_once_and_excludes_prone_damage() {
         .unwrap();
     shot_seed(&mut world, id, seed);
     let _fall = stompymux_rs::resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
-    assert!(
-        world.btech.constructed_units()[&id]
-            .stagger()
-            .hits
-            .is_empty()
+    assert_eq!(
+        world.btech.constructed_units()[&id].stagger().turn_damage,
+        0
     );
-    stagger_hit(&mut world, id, S::RightArm, 1, M::Retain);
-    assert!(
-        world.btech.constructed_units()[&id]
-            .stagger()
-            .hits
-            .is_empty()
+    stagger_hit(&mut world, id, S::RightArm, 1);
+    assert_eq!(
+        world.btech.constructed_units()[&id].stagger().turn_damage,
+        0
     );
     world.validate(&config).unwrap();
 }
 
 #[tokio::test]
-async fn stagger_invalid_windows_and_overflow_hits_are_atomic() {
-    use stompymux_rs::{MechSection as S, StaggerHit};
+async fn stagger_invalid_turn_phases_are_rejected() {
     let (_dir, config, world, id) = stagger_fixture().await;
-    for (damage, remaining) in [(0, 60), (1, 0), (1, 61)] {
+    for (phase, checked_phase) in [(30, None), (0, Some(30)), (255, Some(255))] {
         let mut invalid = world.clone();
         invalid
             .btech
             .rewrite_unit_record(id, |record| {
-                record["stagger"]["hits"] = serde_json::json!([StaggerHit {
-                    damage,
-                    remaining,
-                    counted: false
-                }]);
+                record["stagger"]["phase"] = phase.into();
+                record["stagger"]["checked_phase"] = serde_json::json!(checked_phase);
             })
             .unwrap();
-        assert!(invalid.validate(&config).is_err());
+        assert!(
+            invalid.validate(&config).is_err(),
+            "{phase} {checked_phase:?}"
+        );
     }
-    let mut world = world;
-    world
+    let mut valid = world.clone();
+    valid
         .btech
         .rewrite_unit_record(id, |record| {
-            record["stagger"]["hits"] = serde_json::to_value(vec![
-                StaggerHit {
-                    damage: 1,
-                    remaining: 60,
-                    counted: false
-                };
-                4096
-            ])
-            .unwrap();
+            record["stagger"]["phase"] = 29.into();
+            record["stagger"]["checked_phase"] = serde_json::json!(Some(29));
         })
         .unwrap();
-    world.validate(&config).unwrap();
-    let before = world.btech.clone();
-    assert!(
-        stompymux_rs::resolve_battle_tactical_impact(
-            &mut world,
-            id,
-            balance_hit(S::LeftTorso, false),
-            1,
-            fall_rules()
-        )
-        .is_err()
-    );
-    assert_eq!(world.btech, before);
+    valid.validate(&config).unwrap();
 }
 
 #[tokio::test]
 async fn stagger_server_water_fall_retries_failed_save_without_losing_history() {
     use sqlx::Connection;
     use std::{cell::Cell, rc::Rc};
-    use stompymux_rs::{MechSection as S, Posture, StaggerMode as M, advance_battle_stagger};
+    use stompymux_rs::{MechSection as S, Posture, advance_battle_stagger};
     tokio::task::LocalSet::new().run_until(async {
         let source = format!("12 12\n{}", format!("{}\n", "~1".repeat(12)).repeat(12));
         let (_dir, config, mut world, id) = fixture_assets(&source, MechTemplate::parse("AS7-D",include_str!("fixtures/btech/units/AS7-D.toml")).unwrap()).await;
-        shot_seed(&mut world, id, water_fall_seed(false));
-        stop_battle_unit(&mut world, id, ObjectId(1), stompymux_rs::MovementRules::STANDARD.fall).unwrap();
-        stagger_hit(&mut world, id, S::LeftTorso, 20, M::Retain);
-        for _ in 0..4 { assert!(advance_battle_stagger(&mut world, stagger_rules(M::Retain)).unwrap().is_empty()); }
+        stagger_hit(&mut world, id, S::LeftTorso, 20);
+        let seed = (0..=255).find(|seed| {
+            let mut probe = world.clone();
+            shot_seed(&mut probe, id, *seed);
+            advance_battle_stagger(&mut probe, stagger_rules()).unwrap().first().is_some_and(|report| report.fall.is_some())
+        }).expect("a seed that fails the stagger check");
+        shot_seed(&mut world, id, seed);
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
-        stompymux_rs::advance_battle_reactor_windows(&mut world);
-        let mut expected_rules = stagger_rules(M::Retain);
-        expected_rules.hit = stompymux_rs::FallRules::configured(&config).hit;
-        let _expected = advance_battle_stagger(&mut world, expected_rules).unwrap();
+        // The heartbeat also advances heat accounting for the running unit before the check.
+        stompymux_rs::advance_battle_heat(&mut world);
+        let _thermal = stompymux_rs::advance_battle_overheat(&mut world, overheat_rules()).unwrap();
+        let _expected = advance_battle_stagger(&mut world, stagger_rules()).unwrap();
         // The successful retry commits exactly one global turn phase; rejected ticks remain at zero.
         let mut phase_state = serde_json::to_value(&world.btech).unwrap();
         phase_state["turn_clock"] = 1.into();
@@ -4609,77 +4490,6 @@ async fn stagger_server_water_fall_retries_failed_save_without_losing_history() 
         shutdown.send(stompymux_rs::ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
-}
-
-#[tokio::test]
-async fn stagger_exact_expiry_threshold_and_optional_tonnage_are_observable() {
-    use stompymux_rs::{MechSection as S, StaggerMode as M, advance_battle_stagger};
-    for heavy in [false, true] {
-        let (_dir, config, mut base, id) = if heavy {
-            stagger_fixture().await
-        } else {
-            fixture('.').await
-        };
-        balance_skill(&mut base);
-        let mut rules = stagger_rules(M::Retain);
-        rules.interval = 1;
-        let mut world = base.clone();
-        for (section, damage) in [(S::LeftTorso, 8), (S::RightTorso, 8), (S::CenterTorso, 3)] {
-            stagger_hit(&mut world, id, section, damage, M::Retain);
-        }
-        let dice =
-            serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"].clone();
-        for _ in 0..59 {
-            assert!(
-                advance_battle_stagger(&mut world, rules)
-                    .unwrap()
-                    .is_empty()
-            );
-        }
-        assert!(
-            world.btech.constructed_units()[&id]
-                .stagger()
-                .hits
-                .iter()
-                .all(|hit| hit.remaining == 1)
-        );
-        assert!(
-            advance_battle_stagger(&mut world, rules)
-                .unwrap()
-                .is_empty()
-        );
-        assert!(
-            world.btech.constructed_units()[&id]
-                .stagger()
-                .hits
-                .is_empty()
-        );
-        assert_eq!(
-            serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
-            dice
-        );
-        for tonnage in [true, false] {
-            let mut world = base.clone();
-            for (section, damage) in [(S::LeftTorso, 8), (S::RightTorso, 8), (S::CenterTorso, 4)] {
-                stagger_hit(&mut world, id, section, damage, M::Retain);
-            }
-            rules.tonnage = tonnage;
-            let reports = advance_battle_stagger(&mut world, rules).unwrap();
-            assert_eq!(reports.len(), 1);
-            assert_eq!(reports[0].level, 1);
-            assert_eq!(
-                reports[0].check.situational,
-                if !tonnage {
-                    0
-                } else if heavy {
-                    -2
-                } else {
-                    1
-                }
-            );
-            world.validate(&config).unwrap();
-        }
-    }
 }
 
 #[tokio::test]
@@ -4969,8 +4779,7 @@ async fn water_initial_flooding_precedes_fall_damage_and_disables_external_sinks
     let fall = resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
     assert_eq!(fall.feedback.flooding[0].section, S::CenterTorso);
     assert!(fall.groups.is_empty()); // Engine flooding already destroyed the unit.
-    assert!(fall.feedback.flooding[0].reactor_explosion.is_none());
-    assert_eq!(fall.direction_roll, 4); // The eligible flooding check consumes dice before fall direction.
+    assert_eq!(fall.direction_roll, 1); // Engine flooding destroys the unit without further dice before the direction roll.
     assert_eq!(
         world.btech.constructed_units()[&id].sections()[&S::CenterTorso].internal,
         11
@@ -4979,8 +4788,8 @@ async fn water_initial_flooding_precedes_fall_damage_and_disables_external_sinks
 }
 
 #[tokio::test]
-async fn direct_glancing_modes_resolve_exact_boundaries_and_replay_after_restart() {
-    use stompymux_rs::{GlancingMode as G, resolve_battle_shot};
+async fn direct_glancing_blows_resolve_exact_boundaries_and_replay_after_restart() {
+    use stompymux_rs::resolve_battle_shot;
     let (_dir, config, mut base, id, target) = shot_fixture().await;
     let seed = (0..=255)
         .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 7)
@@ -4988,20 +4797,14 @@ async fn direct_glancing_modes_resolve_exact_boundaries_and_replay_after_restart
     shot_seed(&mut base, id, seed);
     // An ordinary torso location keeps the comparison independent of pilot protection rolls.
     shot_seed(&mut base, target, seed);
-    for (mode, ordinary_target, damage, glancing) in [
-        (G::Disabled, 7, Some(5), false),
-        (G::Disabled, 8, None, false),
-        (G::AtTarget, 6, Some(5), false),
-        (G::AtTarget, 7, Some(3), true),
-        (G::AtTarget, 8, None, false),
-        (G::BelowTarget, 7, Some(5), false),
-        (G::BelowTarget, 8, Some(3), true),
-        (G::BelowTarget, 9, None, false),
-    ] {
+    // Tactical Operations p. 79 glancing blows: a roll exactly equal to the target number hits
+    // for half damage, rounded down for a single five-point shot.
+    for (ordinary_target, damage, glancing) in
+        [(6, Some(5), false), (7, Some(2), true), (8, None, false)]
+    {
         let mut world = base.clone();
         shot_skill(&mut world, 9 - ordinary_target);
-        let mut rules = shot_rules();
-        rules.glancing = mode;
+        let rules = shot_rules();
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
         let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
@@ -5063,20 +4866,11 @@ async fn direct_glancing_modes_resolve_exact_boundaries_and_replay_after_restart
         assert_eq!(world.btech, replay.btech);
         world.validate(&config).unwrap();
     }
-    for (setting, expected) in [
-        (0, G::Disabled),
-        (1, G::AtTarget),
-        (2, G::BelowTarget),
-        (-1, G::AtTarget),
-        (3, G::AtTarget),
-    ] {
-        assert_eq!(G::from_setting(setting), expected);
-    }
 }
 
 #[tokio::test]
 async fn direct_glancing_missiles_spend_full_salvo_and_apply_reduced_clusters() {
-    use stompymux_rs::{GlancingMode, Weapon, resolve_battle_shot};
+    use stompymux_rs::{Weapon, resolve_battle_shot};
     let (_dir, config, mut base, id, target) = shot_fixture().await;
     shot_skill(&mut base, 2);
     stompymux_rs::set_battle_character_value(
@@ -5111,10 +4905,8 @@ async fn direct_glancing_missiles_spend_full_salvo_and_apply_reduced_clusters() 
         let mut world = base.clone();
         shot_seed(&mut world, target, target_seed);
         let before = world.btech.constructed_units()[&id].clone();
-        let mut rules = shot_rules();
-        rules.glancing = GlancingMode::AtTarget;
         let report =
-            resolve_battle_shot(&mut world, id, ObjectId(1), target, index, rules).unwrap();
+            resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules()).unwrap();
         assert_eq!(report.target_number, Some(7));
         assert!(report.glancing);
         let salvo = report.salvo.unwrap().into_mech().unwrap();
@@ -5131,7 +4923,7 @@ async fn direct_glancing_missiles_spend_full_salvo_and_apply_reduced_clusters() 
 }
 
 #[tokio::test]
-async fn fire_command_lists_weapons_rejects_invalid_requests_and_uses_configured_glancing() {
+async fn fire_command_lists_weapons_rejects_invalid_requests_and_reports_glancing_hits() {
     let (_dir, config, mut world, id, target) = shot_fixture().await;
     shot_skill(&mut world, 2);
     let seed = (0..=255)
@@ -5402,11 +5194,11 @@ async fn ammunition_detonation_bypasses_armor_replays_and_honors_pain_resistance
                 .iter()
                 .any(|notice| notice.text == "Ammunition explosion!")
         );
-        assert!(
-            world.btech.constructed_units()[&id]
-                .stagger()
-                .hits
-                .is_empty()
+        // Total Warfare p. 60: the explosion's eight points count toward the twenty that force
+        // a piloting check.
+        assert_eq!(
+            world.btech.constructed_units()[&id].stagger().turn_damage,
+            8
         );
         let mut replay = persistence::load(&config.database()).await.unwrap();
         assert_eq!(
@@ -5458,11 +5250,9 @@ async fn ammunition_detonation_leg_falls_on_ground_and_bridge_decks() {
             world.btech.constructed_units()[&id].posture(),
             stompymux_rs::Posture::Prone
         );
-        assert!(
-            world.btech.constructed_units()[&id]
-                .stagger()
-                .hits
-                .is_empty()
+        assert_eq!(
+            world.btech.constructed_units()[&id].stagger().turn_damage,
+            0
         );
         world.validate(&config).unwrap();
     }
@@ -5480,7 +5270,6 @@ async fn flooded_ammunition_cannot_be_selected_or_detonated_as_a_heat_hazard() {
         section: MechSection::RightTorso,
         rear_armor: true,
         through_armor_critical: false,
-        crew_stun: false,
     };
     let _report =
         stompymux_rs::resolve_battle_tactical_impact(&mut world, id, hit, 4, fall_rules()).unwrap();
@@ -5503,7 +5292,6 @@ async fn overheat_clock_restarts_mid_turn_and_each_sample_is_consumed_once() {
     let (_dir, config, mut world, id) = fixture('.').await;
     assert!(!world.btech.constructed_units()[&id].heat_active(&world));
     assert!(world.btech.constructed_units()[&id].overheat_active());
-    computer_skill(&mut world, 30);
     // Constant fourteen-point excess, supplying the heat lost between samples.
     for step in 1..=15 {
         world
@@ -5525,6 +5313,10 @@ async fn overheat_clock_restarts_mid_turn_and_each_sample_is_consumed_once() {
             step
         );
     }
+    let seed = (0..=255)
+        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() >= 4)
+        .unwrap();
+    shot_seed(&mut world, id, seed);
     persistence::save(&config.database(), &world).await.unwrap();
     let mut replay = persistence::load(&config.database()).await.unwrap();
     for step in 16..=30 {
@@ -5545,14 +5337,10 @@ async fn overheat_clock_restarts_mid_turn_and_each_sample_is_consumed_once() {
             assert!(outputs[0].is_empty());
         } else {
             let check = outputs[0][0].shutdown_check.unwrap();
-            assert!(check.success && check.computer);
-            assert_eq!(check.target, -17);
-            assert!(
-                outputs[0][0]
-                    .messages()
-                    .iter()
-                    .any(|(_, text)| text.contains("Modified skill BTH: -17 Roll:"))
-            );
+            assert!(check.success);
+            assert_eq!(check.target, 4);
+            assert!(check.roll.is_some_and(|roll| roll >= 4));
+            assert!(outputs[0][0].messages().is_empty());
             assert_eq!(
                 world.btech.constructed_units()[&id]
                     .overheat_clock()
@@ -5571,84 +5359,113 @@ async fn overheat_clock_restarts_mid_turn_and_each_sample_is_consumed_once() {
     world.validate(&config).unwrap();
 }
 
+/// Total Warfare p. 159-160: shutdown Avoid Numbers 4/6/8/10 at 14/18/22/26 and no roll at 30,
+/// ammunition Avoid Numbers 4/6/8 at 19/23/28, for a virtual crew and a player pilot alike;
+/// below 14 heat nothing is checked. Computer skill plays no part.
 #[tokio::test]
-async fn overheat_unpiloted_thresholds_and_computer_dice_match_heat_bands() {
+async fn overheat_avoid_rolls_match_heat_bands_for_every_pilot() {
     use stompymux_rs::advance_battle_overheat;
     let (_dir, config, mut base, id) = fixture('.').await;
     // Empty bins retain their slots; a failed ammunition check still consumes its roll.
     base.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
-    for (heat, ammo_target, reactor_target) in [
-        (10.0, None, 13),
-        (13.99, None, 13),
-        (14.0, None, 4),
-        (18.0, None, 6),
-        (19.0, Some(4), 6),
-        (22.0, Some(4), 8),
-        (23.0, Some(6), 8),
-        (26.0, Some(6), 10),
-        (28.0, Some(8), 10),
-        (30.0, Some(8), 13),
-    ] {
-        let mut world = base.clone();
-        stompymux_rs::release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
-        overheat_due(&mut world, id, heat, false);
-        shot_seed(&mut world, id, 32);
-        let mut dice = stompymux_rs::Dice::seeded([32; 32]);
-        let ammo_roll = ammo_target.map(|_| dice.two_d6());
-        let shutdown_roll = (reactor_target != 13).then(|| dice.two_d6());
-        let reports = advance_battle_overheat(&mut world, overheat_rules()).unwrap();
-        let report = &reports[0];
-        assert_eq!(
-            report.ammunition_check.map(|check| check.target),
-            ammo_target
-        );
-        assert_eq!(
-            report.ammunition_check.and_then(|check| check.roll),
-            ammo_roll
-        );
-        let check = report.shutdown_check.unwrap();
-        assert_eq!(check.target, reactor_target);
-        assert_eq!(check.roll, shutdown_roll);
-        assert_eq!(report.shutdown, !check.success);
-        assert_eq!(
-            serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
-            serde_json::to_value(dice).unwrap()
-        );
-        world.validate(&config).unwrap();
+    computer_skill(&mut base, 30);
+    for piloted in [false, true] {
+        for (heat, ammo_target, reactor_target) in [
+            (10.0, None, None),
+            (13.99, None, None),
+            (14.0, None, Some(4)),
+            (18.0, None, Some(6)),
+            (19.0, Some(4), Some(6)),
+            (22.0, Some(4), Some(8)),
+            (23.0, Some(6), Some(8)),
+            (26.0, Some(6), Some(10)),
+            (28.0, Some(8), Some(10)),
+            (30.0, Some(8), Some(13)),
+        ] {
+            let mut world = base.clone();
+            if !piloted {
+                stompymux_rs::release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+            }
+            overheat_due(&mut world, id, heat, false);
+            shot_seed(&mut world, id, 32);
+            let mut dice = stompymux_rs::Dice::seeded([32; 32]);
+            let ammo_roll = ammo_target.map(|_| dice.two_d6());
+            let shutdown_roll = reactor_target
+                .filter(|target| *target != 13)
+                .map(|_| dice.two_d6());
+            let reports = advance_battle_overheat(&mut world, overheat_rules()).unwrap();
+            if ammo_target.is_none() && reactor_target.is_none() {
+                assert!(reports.is_empty(), "{heat}");
+                assert_eq!(world.btech.constructed_units()[&id].power(), Power::Running);
+                continue;
+            }
+            let report = &reports[0];
+            assert_eq!(
+                report.ammunition_check.map(|check| check.target),
+                ammo_target
+            );
+            assert_eq!(
+                report.ammunition_check.and_then(|check| check.roll),
+                ammo_roll
+            );
+            assert!(report.inferno_check.is_none());
+            let check = report.shutdown_check.unwrap();
+            assert_eq!(check.target, reactor_target.unwrap());
+            assert_eq!(check.roll, shutdown_roll);
+            assert_eq!(
+                check.success,
+                shutdown_roll.is_some_and(|roll| i16::from(roll) >= check.target)
+            );
+            assert_eq!(report.shutdown, !check.success);
+            assert_eq!(
+                serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
+                serde_json::to_value(dice).unwrap()
+            );
+            world.validate(&config).unwrap();
+        }
     }
-    for (skill, target) in [(0, 21), (4, 17), (30, -9)] {
-        let mut world = base.clone();
-        computer_skill(&mut world, skill);
-        overheat_due(&mut world, id, 30.0, false);
-        shot_seed(&mut world, id, 32);
-        let mut dice = stompymux_rs::Dice::seeded([32; 32]);
-        dice.two_d6(); // Ammunition avoidance comes first.
-        let roll = if skill == 0 {
-            let rolls = [dice.d6(), dice.d6(), dice.d6()];
-            rolls.iter().sum::<u8>() - rolls.iter().max().unwrap()
-        } else {
-            dice.two_d6()
-        };
-        let report = advance_battle_overheat(&mut world, overheat_rules())
-            .unwrap()
-            .remove(0);
-        let check = report.shutdown_check.unwrap();
-        assert!(check.computer);
-        assert_eq!(check.target, target);
-        assert_eq!(check.roll, Some(roll));
-        assert_eq!(report.shutdown, i16::from(roll) < target);
-        assert_eq!(
-            serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
-            serde_json::to_value(dice).unwrap()
-        );
-    }
+}
+
+/// Only a conscious MechWarrior can override the safety shutdown (Total Warfare p. 160).
+#[tokio::test]
+async fn overheat_unconscious_pilot_cannot_avoid_shutdown() {
+    use stompymux_rs::{Dice, advance_battle_overheat, injure_battle_tactical_pilot};
+    let (_dir, config, mut world, id) = fixture('.').await;
+    world.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
+    let seed = (0..=255)
+        .map(|byte| [byte; 32])
+        .find(|seed| Dice::seeded(*seed).two_d6() == 2)
+        .unwrap();
+    let mut encoded = serde_json::to_value(&world.btech).unwrap();
+    encoded["recoveries"]["1"] = serde_json::json!({
+        "mode":{"kind":"tactical","injuries":0}, "remaining":0,
+        "pain_resistance":false,"toughness":false,"dice":Dice::seeded(seed)
+    });
+    world.btech = serde_json::from_value(encoded).unwrap();
+    let report = injure_battle_tactical_pilot(&mut world, id, 1, false).unwrap();
+    assert!(!report.consciousness.unwrap().conscious);
+    assert!(world.btech.unconscious(ObjectId(1)));
+    overheat_due(&mut world, id, 14.0, false);
+    shot_seed(&mut world, id, 32);
+    let report = advance_battle_overheat(&mut world, overheat_rules())
+        .unwrap()
+        .remove(0);
+    let check = report.shutdown_check.unwrap();
+    assert_eq!((check.target, check.roll, check.success), (4, None, false));
+    assert!(report.shutdown);
+    assert_eq!(world.btech.constructed_units()[&id].power(), Power::Off);
+    // No dice were consumed: the shutdown was automatic.
+    assert_eq!(
+        serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
+        serde_json::to_value(Dice::seeded([32; 32])).unwrap()
+    );
+    world.validate(&config).unwrap();
 }
 
 #[tokio::test]
 async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown() {
     use stompymux_rs::{MechSection as S, advance_battle_overheat};
     let (_dir, config, mut world, id) = fixture('.').await;
-    computer_skill(&mut world, 30);
     stompymux_rs::destroy_battle_critical(
         &mut world,
         id,
@@ -5659,11 +5476,42 @@ async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown
     )
     .unwrap();
     world.btech.set_unit_ammunition_bin(id, 0, 1).unwrap();
-    let seed = (0..=255)
-        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() < 6)
-        .unwrap();
-    shot_seed(&mut world, id, seed);
     overheat_due(&mut world, id, 26.0, true);
+    // The pilot's four Consciousness Rolls (against 3, 5, 7 and 10) all pass, so the
+    // Shutdown Avoid Roll is still the pilot's to make.
+    let conscious = (0..=255u8)
+        .find(|seed| {
+            let mut dice = stompymux_rs::Dice::seeded([*seed; 32]);
+            [3, 5, 7, 10].iter().all(|target| dice.two_d6() >= *target)
+        })
+        .unwrap();
+    let mut encoded = serde_json::to_value(&world.btech).unwrap();
+    encoded["recoveries"]["1"] = serde_json::json!({
+        "mode":{"kind":"tactical","injuries":0}, "remaining":0,
+        "pain_resistance":false,"toughness":false,
+        "dice":stompymux_rs::Dice::seeded([conscious; 32])
+    });
+    world.btech = serde_json::from_value(encoded).unwrap();
+    // A failed ammunition roll (under 6) followed by a passed shutdown roll (10 or more).
+    let seed = (0..=4095u16)
+        .map(|value| {
+            let mut bytes = [0; 32];
+            bytes[..2].copy_from_slice(&value.to_le_bytes());
+            stompymux_rs::Dice::seeded(bytes)
+        })
+        .find(|dice| {
+            let mut probe = world.clone();
+            probe.btech.set_unit_dice(id, dice.clone()).unwrap();
+            advance_battle_overheat(&mut probe, overheat_rules())
+                .unwrap()
+                .first()
+                .is_some_and(|report| {
+                    report.explosion.is_some()
+                        && report.shutdown_check.is_some_and(|check| check.success)
+                })
+        })
+        .expect("a seed that explodes ammunition and avoids shutdown");
+    world.btech.set_unit_dice(id, seed).unwrap();
     let report = advance_battle_overheat(&mut world, overheat_rules())
         .unwrap()
         .remove(0);
@@ -5679,8 +5527,12 @@ async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown
             .injuries,
         4
     );
-    assert!(!report.ammunition_check.unwrap().success);
-    assert!(report.shutdown_check.unwrap().success);
+    let ammunition = report.ammunition_check.unwrap();
+    assert_eq!(ammunition.target, 6);
+    assert!(!ammunition.success);
+    let shutdown = report.shutdown_check.unwrap();
+    assert_eq!(shutdown.target, 10);
+    assert!(shutdown.success);
     assert!(!report.shutdown);
     assert_eq!(
         report.notices[0].text,
@@ -5693,15 +5545,27 @@ async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown
 #[tokio::test]
 async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() {
     use stompymux_rs::advance_battle_overheat;
-    let seed = (0..=255)
-        .find(|seed| {
-            let mut dice = stompymux_rs::Dice::seeded([*seed; 32]);
-            for _ in 0..3 {
-                dice.d6();
-            }
-            dice.two_d6() < 9 && dice.two_d6() >= 6
-        })
-        .unwrap();
+    let seed = {
+        let (_dir, _config, mut probe, id) = fixture('.').await;
+        probe
+            .btech
+            .edit_unit_motion(id, |motion| {
+                motion.speed = 10.8;
+                motion.desired_speed = 10.8;
+            })
+            .unwrap();
+        overheat_due(&mut probe, id, 14.0, false);
+        (0..=255)
+            .find(|seed| {
+                let mut probe = probe.clone();
+                shot_seed(&mut probe, id, *seed);
+                advance_battle_overheat(&mut probe, overheat_rules())
+                    .unwrap()
+                    .first()
+                    .is_some_and(|report| report.shutdown && report.fall.is_some())
+            })
+            .expect("a seed that fails the shutdown and balance rolls")
+    };
     for (terrain, speed) in [
         ('.', 10.75_f64),
         ('.', -10.75),
@@ -5738,32 +5602,30 @@ async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() 
     }
 }
 
+/// Intact life support never injures the MechWarrior, and at 30 heat the reactor shuts down
+/// without an Avoid Roll (Total Warfare p. 160).
 #[tokio::test]
-async fn overheat_intact_life_support_uses_one_coin_roll_above_thirty_heat() {
+async fn overheat_intact_life_support_never_injures_and_thirty_heat_shuts_down_unrolled() {
     use stompymux_rs::advance_battle_overheat;
     let (_dir, config, mut base, id) = fixture('.').await;
-    computer_skill(&mut base, 30);
     base.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
-    for coin in [1, 2] {
-        let seed = (0..=255)
-            .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).die(2).unwrap() == coin)
-            .unwrap();
+    for seed in [7, 32] {
         let mut world = base.clone();
         overheat_due(&mut world, id, 30.01, true);
         shot_seed(&mut world, id, seed);
         let mut dice = stompymux_rs::Dice::seeded([seed; 32]);
-        dice.die(2).unwrap();
         let ammunition_roll = dice.two_d6();
-        let shutdown_roll = dice.two_d6();
         let report = advance_battle_overheat(&mut world, overheat_rules())
             .unwrap()
             .remove(0);
-        assert_eq!(
-            report.injury.map(|injury| injury.injuries),
-            (coin == 1).then_some(1)
-        );
+        assert!(report.injury.is_none());
         assert_eq!(report.ammunition_check.unwrap().roll, Some(ammunition_roll));
-        assert_eq!(report.shutdown_check.unwrap().roll, Some(shutdown_roll));
+        let shutdown = report.shutdown_check.unwrap();
+        assert_eq!(
+            (shutdown.target, shutdown.roll, shutdown.success),
+            (13, None, false)
+        );
+        assert!(report.shutdown);
         assert_eq!(
             serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
             serde_json::to_value(dice).unwrap()
@@ -5774,6 +5636,7 @@ async fn overheat_intact_life_support_uses_one_coin_roll_above_thirty_heat() {
         serde_json::json!({"elapsed":31,"phase":0,"injury_due":false}),
         serde_json::json!({"elapsed":0,"phase":30,"injury_due":false}),
         serde_json::json!({"elapsed":0,"phase":1,"injury_due":true}),
+        serde_json::json!({"elapsed":0,"phase":1,"injury_due":false,"outside_heat":16}),
     ] {
         let mut invalid = base.clone();
         invalid
@@ -5803,10 +5666,12 @@ async fn overheat_server_retries_shutdown_without_advancing_the_failed_clock_or_
         record["overheat_clock"] = serde_json::json!({"elapsed":29,"phase":29,"injury_due":false});
         })
             .unwrap();
-        shot_seed(&mut world, id, 32);
+        let seed = (0..=255)
+            .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() < 4)
+            .unwrap();
+        shot_seed(&mut world, id, seed);
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
-        stompymux_rs::advance_battle_reactor_windows(&mut world);
         stompymux_rs::advance_battle_heat(&mut world);
         let reports = stompymux_rs::advance_battle_overheat(&mut world, overheat_rules()).unwrap();
         assert!(reports[0].shutdown);
@@ -6536,9 +6401,7 @@ async fn flamer_heat_hits_glances_and_misses_do_not_roll_target_damage() {
             .unwrap();
         toggle_battle_flamer_heat(&mut base, id, ObjectId(1), 0).unwrap();
         let rules = ShotRules {
-            range_damage: false,
             tsm_tow_bonus: true,
-            glancing: GlancingMode::AtTarget,
             ..shot_rules()
         };
         let mut probe = base.clone();
@@ -6717,9 +6580,7 @@ async fn pulse_accuracy_changes_a_miss_to_a_glancing_hit() {
         ordinary.subtotal().map(|target| target - 2)
     );
     let rules = ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
-        glancing: GlancingMode::AtTarget,
         ..shot_rules()
     };
     let mut probe = variants[1].clone();
@@ -6743,7 +6604,8 @@ async fn pulse_accuracy_changes_a_miss_to_a_glancing_hit() {
         assert_eq!(report.aim.weapon_accuracy, -2);
         let salvo = report.salvo.unwrap().into_mech().unwrap();
         assert_eq!(salvo.groups.len(), 1);
-        assert_eq!(salvo.groups[0].damage, 2);
+        // Three points glance for one (Tactical Operations p. 79 rounds down).
+        assert_eq!(salvo.groups[0].damage, 1);
     }
 }
 
@@ -7177,7 +7039,6 @@ async fn case_contains_ammunition_but_not_weapon_damage_or_xl_loss() {
             section: MechSection::RightTorso,
             rear_armor: false,
             through_armor_critical: false,
-            crew_stun: false,
         },
         40,
         fall_rules(),
@@ -7341,59 +7202,41 @@ async fn streak_lock_failure_launch_boundaries_and_saved_recycle() {
             .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) == roll)
             .unwrap()
     };
-    for glancing in [
-        GlancingMode::Disabled,
-        GlancingMode::AtTarget,
-        GlancingMode::BelowTarget,
-    ] {
-        for roll in [threshold - 1, threshold] {
-            let mut world = base.clone();
-            shot_seed(&mut world, id, seed_for(roll));
-            let report = resolve_battle_shot(
-                &mut world,
-                id,
-                ObjectId(1),
-                target,
-                index,
-                ShotRules {
-                    range_damage: false,
-                    tsm_tow_bonus: true,
-                    glancing,
-                    ..shot_rules()
-                },
-            )
-            .unwrap();
-            assert_eq!(report.launched, roll == threshold);
+    for roll in [threshold - 1, threshold] {
+        let mut world = base.clone();
+        shot_seed(&mut world, id, seed_for(roll));
+        let report =
+            resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules()).unwrap();
+        assert_eq!(report.launched, roll == threshold);
+        assert_eq!(
+            world.btech.constructed_units()[&id].fired_recently(),
+            report.launched
+        );
+        assert!(!report.glancing);
+        assert_eq!(
+            world.btech.constructed_units()[&id].weapon_recycle()[&index],
+            15
+        );
+        if roll < threshold {
+            assert_eq!(report.expenditure.heat, 0);
+            assert!(report.expenditure.ammunition.is_empty());
+            assert!(report.salvo.is_none());
             assert_eq!(
-                world.btech.constructed_units()[&id].fired_recently(),
-                report.launched
+                world.btech.constructed_units()[&target],
+                base.btech.constructed_units()[&target]
             );
-            assert!(!report.glancing);
+            assert_eq!(world.btech.constructed_units()[&id].ammunition(), &[25]);
             assert_eq!(
-                world.btech.constructed_units()[&id].weapon_recycle()[&index],
-                15
+                world.btech.constructed_units()[&id].heat(),
+                base.btech.constructed_units()[&id].heat()
             );
-            if roll < threshold {
-                assert_eq!(report.expenditure.heat, 0);
-                assert!(report.expenditure.ammunition.is_empty());
-                assert!(report.salvo.is_none());
-                assert_eq!(
-                    world.btech.constructed_units()[&target],
-                    base.btech.constructed_units()[&target]
-                );
-                assert_eq!(world.btech.constructed_units()[&id].ammunition(), &[25]);
-                assert_eq!(
-                    world.btech.constructed_units()[&id].heat(),
-                    base.btech.constructed_units()[&id].heat()
-                );
-                continue;
-            }
-            let salvo = report.salvo.unwrap().into_mech().unwrap();
-            assert_eq!(salvo.groups.len(), 4);
-            assert!(salvo.groups.iter().all(|group| group.damage == 2));
-            assert_eq!(report.expenditure.heat, 3);
-            assert_eq!(world.btech.constructed_units()[&id].ammunition(), &[24]);
+            continue;
         }
+        let salvo = report.salvo.unwrap().into_mech().unwrap();
+        assert_eq!(salvo.groups.len(), 4);
+        assert!(salvo.groups.iter().all(|group| group.damage == 2));
+        assert_eq!(report.expenditure.heat, 3);
+        assert_eq!(world.btech.constructed_units()[&id].ammunition(), &[24]);
     }
     shot_seed(&mut base, id, seed_for(threshold - 1));
     let native = Scripts::new(

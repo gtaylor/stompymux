@@ -134,7 +134,7 @@ async fn vehicle_critical_fields_distinguish_all_six_flags() {
         if index < 2 {
             continue;
         }
-        let mut cases = vec![("crew_stun_remaining", serde_json::json!(60), "e")];
+        let mut cases = vec![("crew_stun_remaining", serde_json::json!(30), "e")];
         if world.btech.vehicles()[&id].turret_heading().is_some() {
             cases.push(("turret_locked", serde_json::json!(true), "a"));
             cases.push(("turret_jammed", serde_json::json!(true), "b"));
@@ -557,11 +557,10 @@ async fn primary_critical_fields_project_shared_conditions_and_mech_damage() {
             unit["signature"]["hidden"] = true.into();
             unit["towable"] = true.into();
             unit["illumination_observed"] = true.into();
-            unit["inferno_remaining"] = 30.into();
             unit["visibility"] = serde_json::json!({"invisible":true,"clairvoyant":true});
             unit["observer"] = true.into();
         });
-        fields.verify(world, id, "critstatus", "dlqwzAC").await;
+        fields.verify(world, id, "critstatus", "dlqzAC").await;
         if index >= 2 {
             continue;
         }
@@ -754,7 +753,7 @@ async fn secondary_critical_edits_preserve_material_and_follow_later_hits() {
     }
 }
 
-/// Ordered gyro contributions survive world validation and restart, and reject corrupt values.
+/// Gyro contributions survive world validation and restart, and corrupt conditions are rejected.
 #[tokio::test]
 async fn hardened_gyro_piloting_contribution_survives_restart() {
     for source in [
@@ -785,11 +784,12 @@ async fn hardened_gyro_piloting_contribution_survives_restart() {
         destroy_battle_critical(&mut world, id, gyros[0]).unwrap();
         destroy_battle_critical(&mut world, id, leg).unwrap();
         destroy_battle_critical(&mut world, id, gyros[1]).unwrap();
+        // A damaged heavy-duty gyro adds +3 (Total Warfare p. 126) and the leg actuator +1.
         assert_eq!(
             world.btech.constructed_units()[&id]
                 .mobility()
                 .piloting_modifier,
-            6
+            4
         );
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
@@ -799,13 +799,18 @@ async fn hardened_gyro_piloting_contribution_survives_restart() {
             loaded.btech.constructed_units()[&id]
                 .mobility()
                 .piloting_modifier,
-            6
+            4
         );
-        firing::edit(&mut loaded, id, |unit| {
-            unit["critical_conditions"]["gyro_piloting"] = 7.into()
-        });
+        firing::edit(
+            &mut loaded,
+            id,
+            |unit| {
+                unit["critical_conditions"]["gyro"] =
+                    serde_json::json!({"losses": 0, "damage": 9, "hardened_hit_used": false})
+            },
+        );
         let error = loaded.validate(&config).unwrap_err();
-        assert!(format!("{error:#}").contains("Invalid hardened gyro piloting contribution"));
+        assert!(format!("{error:#}").contains("Invalid gyro condition"));
     }
 }
 

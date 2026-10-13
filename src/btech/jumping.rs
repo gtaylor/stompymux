@@ -615,11 +615,7 @@ fn advance_jumps_inner(
             }
             continue;
         };
-        notices.extend(super::charge_tracking::begin_update(
-            &mut candidate,
-            id,
-            movement.charge,
-        ));
+        notices.extend(super::charge_tracking::begin_update(&mut candidate, id));
         let unit = &candidate.btech.constructed_units()[&id];
         let mut rules = rules;
         rules.toughness = unit
@@ -1080,6 +1076,7 @@ fn advance_jumps_inner(
         falls,
         stacking: collisions,
         charges,
+        surface_breaks: Vec::new(),
     };
     if !character {
         report.extend(super::orbital_drop_movement::advance_all(
@@ -1467,11 +1464,9 @@ fn finish_landing_inner(
     if !dfa && !unit.is_destroyed() {
         unit.jump_stabilization = 12;
     }
-    // Only completed traditional landing stops the separate action-time stagger check.
+    // Only a completed landing stops the separate action-time stagger check.
     // The early stagger-failure return above deliberately retains its scalar.
-    if rules.stagger == super::StaggerMode::Traditional {
-        unit.stagger.action_damage = 0;
-    }
+    unit.stagger.action_damage = 0;
     Ok(LandingOutcome {
         vehicle_falls,
         mines,
@@ -1491,17 +1486,9 @@ fn resolve_airborne_stacking(
     feedback: (&mut Vec<super::PilotNotice>, usize),
 ) -> Result<Vec<Notice>> {
     if let Some(effects) = effects {
-        return super::stacking::resolve_in_action(
-            world,
-            id,
-            input,
-            rules.stacking,
-            rules,
-            effects,
-            feedback,
-        );
+        return super::stacking::resolve_in_action(world, id, input, rules, effects, feedback);
     }
-    super::resolve_stacking(world, id, input, rules.stacking, rules)
+    super::resolve_stacking(world, id, input, rules)
 }
 
 /// Apply immersion and preserve support-loss falls for private injury publication.
@@ -1524,7 +1511,6 @@ fn flood_after_jump(
             falls.push(fall);
         }
     }
-    notices.extend(super::extinguish_inferno_in_water(world, id)?);
     Ok(notices)
 }
 

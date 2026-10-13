@@ -320,7 +320,6 @@ fn c_catalog_defaults() {
                 | "pods"
                 | "removepod"
                 | "removepods"
-                | "extinguish"
                 | "inarc"
                 | "narc"
                 | "explosive"

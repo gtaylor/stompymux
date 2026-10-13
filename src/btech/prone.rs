@@ -190,16 +190,6 @@ fn resolve(
         );
         notices.extend(flood.notices.clone());
     }
-    notices.extend(super::extinguish_inferno_in_water(world, id)?);
-    if rules.stagger != super::StaggerMode::Traditional {
-        world
-            .btech
-            .constructed
-            .get_mut(&id)
-            .unwrap()
-            .stagger
-            .clear_damage();
-    }
     let mines = super::mine_event::resolve(world, id, super::MineTriggerReason::Step, rules, true)?;
     super::piloting::append_feedback(
         &mut pilot_notices,

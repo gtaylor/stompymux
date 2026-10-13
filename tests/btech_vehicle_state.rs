@@ -50,7 +50,10 @@ fn vehicle_turret_loss_clears_bins_without_destroying_hull() {
     );
     assert_eq!((result.absorbed, result.remaining), (3, 7));
     assert_eq!(result.destroyed_sections, vec![VehicleSection::Turret]);
-    assert!(!result.unit_destroyed);
+    assert!(
+        result.unit_destroyed,
+        "a lost turret wrecks the vehicle (TW p. 128)"
+    );
     assert_eq!(vehicle.ammunition(), &[0, 0, 0, 0]);
     assert_eq!(restored, vehicle);
     let again = vehicle
@@ -98,7 +101,7 @@ fn vehicle_snapshot_rejects_inconsistent_material_state() {
     assert!(serde_json::from_value::<Vehicle>(snapshot.clone()).is_err());
     snapshot["ammunition"] = serde_json::json!([0, 0, 0, 0]);
     assert!(
-        !serde_json::from_value::<Vehicle>(snapshot)
+        serde_json::from_value::<Vehicle>(snapshot)
             .unwrap()
             .is_destroyed()
     );

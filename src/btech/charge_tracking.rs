@@ -34,33 +34,22 @@ pub enum ChargeSelection {
 /// Charge settings supplied alongside the movement/fall policy.
 #[derive(Debug, Clone, Copy)]
 pub struct ChargePolicy {
-    pub new_rules: bool,
-    pub technology_level_three: bool,
     pub extended_movement: bool,
-    pub hit_arc_mode: i64,
 }
 
 impl ChargePolicy {
     /// Standard velocity-based charge rules without the optional recoil variant.
     pub const STANDARD: Self = Self {
-        new_rules: false,
-        technology_level_three: false,
         extended_movement: false,
-        hit_arc_mode: 0,
     };
 
     /// Build collision rules from the moving unit's current accumulated distance.
     fn collision(self, movement: MovementRules, distance: f32) -> ChargeRules {
         ChargeRules {
             distance,
-            new_rules: self.new_rules,
-            technology_level_three: self.technology_level_three,
             physical: PhysicalRules {
-                use_pilot_skill: true,
                 fasa_turning: movement.fasa_turning,
                 extended_movement: self.extended_movement,
-                hit_arc_mode: self.hit_arc_mode,
-                glancing: GlancingMode::Disabled,
                 fall: movement.fall,
             },
         }
@@ -144,9 +133,9 @@ pub fn select_charge(
 }
 
 /// Age a selection at the start of a movement update, reproducing the post-increment timeout.
-pub(super) fn begin_update(world: &mut World, id: ObjectId, policy: ChargePolicy) -> Vec<Notice> {
+pub(super) fn begin_update(world: &mut World, id: ObjectId) -> Vec<Notice> {
     let unit = world.btech.constructed.get_mut(&id).unwrap();
-    if !policy.new_rules || unit.charge.target.is_none() {
+    if unit.charge.target.is_none() {
         return vec![];
     }
     if unit.charge.elapsed == 60 {
@@ -161,15 +150,9 @@ pub(super) fn begin_update(world: &mut World, id: ObjectId, policy: ChargePolicy
 }
 
 /// Record the integrated segment before terrain/boundary consequences can alter its endpoint.
-pub(super) fn record_distance(
-    world: &mut World,
-    id: ObjectId,
-    from: Point,
-    to: Point,
-    policy: ChargePolicy,
-) {
+pub(super) fn record_distance(world: &mut World, id: ObjectId, from: Point, to: Point) {
     let unit = world.btech.constructed.get_mut(&id).unwrap();
-    if !policy.new_rules || unit.charge.target.is_none() {
+    if unit.charge.target.is_none() {
         return;
     }
     let dx = ((to.x - from.x) * 322.5) as f32;

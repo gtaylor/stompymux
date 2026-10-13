@@ -577,45 +577,6 @@ pub(super) fn advance(
             );
             report.notices.extend(event.notices.iter().cloned());
             report.mines.push(event);
-            // Mines can ignite terrain; inspect the current overlay before its fire check.
-            let burning = world.btech.maps()[&position.map]
-                .hex(i64::from(hex.x), i64::from(hex.y))?
-                .is_burning();
-            if burning && rules.fall.vehicle_impact.advanced_fire {
-                let before = world.clone();
-                let mut criticals = rules.fall.vehicle_impact.criticals;
-                criticals.toughness |= world.btech.vehicles()[&id]
-                    .pilot()
-                    .and_then(|pilot| world.btech.character_values().get(&pilot))
-                    .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
-                let fire = super::resolve_vehicle_fire_exposure(world, id, criticals)?;
-                let previous = &before.btech.vehicles()[&id];
-                let current = &world.btech.vehicles()[&id];
-                ensure!(
-                    character
-                        || !world.objects[&id].flags.contains(crate::Flag::InCharacter)
-                        || (previous.crew_killed() == current.crew_killed()
-                            && previous.character_pilot_status()
-                                == current.character_pilot_status()),
-                    "Character fire consequences require the movement action"
-                );
-                for damage in &fire.effects.damage {
-                    super::vehicle_injuries::collect_armor(damage, &mut report.character_injuries);
-                }
-                super::piloting::append_feedback(
-                    &mut report.pilot_notices,
-                    fire.effects.pilot_notices.iter().cloned(),
-                    report.notices.len(),
-                );
-                report.notices.extend(fire.effects.notices);
-                for broadcast in fire.effects.broadcasts {
-                    report.notices.extend(super::broadcast::observer_notices(
-                        &before,
-                        broadcast.unit,
-                        &broadcast.text,
-                    ));
-                }
-            }
             report.notices.extend(super::magma::crack_crust(
                 world,
                 id,

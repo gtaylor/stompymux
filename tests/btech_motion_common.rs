@@ -113,7 +113,6 @@ pub(crate) async fn lock_fixture() -> (
 pub(crate) fn optical_aim_rules() -> stompymux_rs::AimRules {
     stompymux_rs::AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
         extended_ranges: false,
@@ -125,30 +124,19 @@ pub(crate) fn optical_aim_rules() -> stompymux_rs::AimRules {
 /// Current conventional direct-shot rules, excluding unsupported game variants.
 pub(crate) fn shot_rules() -> stompymux_rs::ShotRules {
     stompymux_rs::ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::StackingRules::STANDARD,
-        glancing: stompymux_rs::GlancingMode::Disabled,
-        stagger: stompymux_rs::StaggerMode::Retain,
         aim: optical_aim_rules(),
-        hit: stompymux_rs::HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
         extended_gunnery: true,
         extended_piloting: true,
         target_toughness: false,
     }
 }
 
-/// Match host-selected hit routing when comparing direct predictions with native/Lua actions.
-pub(crate) fn configured_shot_rules(config: &stompymux_rs::Config) -> stompymux_rs::ShotRules {
-    let mut rules = shot_rules();
-    rules.range_damage = config.battletech.moddamagewithrange != 0;
-    rules.hit = stompymux_rs::FallRules::configured(config).hit;
-    rules
+/// Direct-shot rules matching the host when comparing direct predictions with native/Lua
+/// actions. Hit routing is no longer configurable, so these are the conventional rules.
+pub(crate) fn configured_shot_rules(_config: &stompymux_rs::Config) -> stompymux_rs::ShotRules {
+    shot_rules()
 }
 
 /// Put an acquired target ahead of a connected pilot, ready for ordinary direct fire.
@@ -213,9 +201,6 @@ pub(crate) fn shot_skill(world: &mut stompymux_rs::World, level: u8) {
 pub(crate) fn fall_rules() -> stompymux_rs::FallRules {
     stompymux_rs::FallRules {
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::StackingRules::STANDARD,
-        stagger: stompymux_rs::StaggerMode::Retain,
-        hit: shot_rules().hit,
         extended_piloting: true,
         toughness: false,
     }
@@ -294,7 +279,6 @@ pub(crate) fn balance_hit(section: stompymux_rs::MechSection, tac: bool) -> stom
         section,
         rear_armor: false,
         through_armor_critical: tac,
-        crew_stun: false,
     }
 }
 
@@ -316,13 +300,9 @@ pub(crate) async fn stagger_fixture() -> (
 }
 
 /// Explicit native stagger configuration used by boundary tests.
-pub(crate) fn stagger_rules(mode: stompymux_rs::StaggerMode) -> stompymux_rs::StaggerRules {
+pub(crate) fn stagger_rules() -> stompymux_rs::StaggerRules {
     stompymux_rs::StaggerRules {
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        mode,
-        interval: 5,
-        tonnage: true,
-        hit: fall_rules().hit,
         extended_piloting: true,
     }
 }
@@ -333,17 +313,13 @@ pub(crate) fn stagger_hit(
     id: ObjectId,
     section: stompymux_rs::MechSection,
     damage: u16,
-    mode: stompymux_rs::StaggerMode,
 ) {
     let _impact = stompymux_rs::resolve_battle_tactical_impact(
         world,
         id,
         balance_hit(section, false),
         damage,
-        stompymux_rs::FallRules {
-            stagger: mode,
-            ..fall_rules()
-        },
+        fall_rules(),
     )
     .unwrap();
 }
@@ -386,10 +362,7 @@ pub(crate) fn overheat_rules() -> stompymux_rs::OverheatRules {
     let rules = fall_rules();
     stompymux_rs::OverheatRules {
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: stompymux_rs::StackingRules::STANDARD,
-        hit: rules.hit,
         extended_piloting: rules.extended_piloting,
-        stagger: rules.stagger,
     }
 }
 
@@ -440,11 +413,8 @@ pub(crate) async fn kick_fixture() -> (
 /// Explicit physical rules keep direct tests independent of local configuration defaults.
 pub(crate) fn kick_rules() -> stompymux_rs::PhysicalRules {
     stompymux_rs::PhysicalRules {
-        use_pilot_skill: false,
         fasa_turning: false,
         extended_movement: false,
-        hit_arc_mode: 0,
-        glancing: stompymux_rs::GlancingMode::Disabled,
         fall: fall_rules(),
     }
 }

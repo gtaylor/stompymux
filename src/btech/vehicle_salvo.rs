@@ -8,7 +8,6 @@ use serde::Serialize;
 #[derive(Debug, Clone, Copy)]
 pub struct VehicleSalvoRequest {
     /// Apply the configured energy range rule before glancing damage.
-    pub range_damage: bool,
     /// Damage lost to the launching weapon’s focusing components.
     pub damage_penalty: u8,
     pub weapon: Weapon,
@@ -59,7 +58,6 @@ pub fn resolve_vehicle_salvo(
 #[derive(Clone, Copy, Default)]
 pub(super) struct SalvoContext<'a> {
     pub woods_damage: bool,
-    pub submerged: bool,
     pub aimed: Option<super::aimed_hit::AimedShot>,
     pub incoming: Option<u8>,
     pub attacker: Option<ObjectId>,
@@ -91,7 +89,6 @@ pub(super) fn resolve_with_context_in_candidate(
 ) -> Result<VehicleSalvoReport> {
     let SalvoContext {
         woods_damage,
-        submerged,
         aimed,
         incoming,
         attacker,
@@ -159,8 +156,6 @@ pub(super) fn resolve_with_context_in_candidate(
         && super::woods_absorption::direct_shells(weapon, request.ammunition);
     let mut packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
-            submerged,
-            range_damage: request.range_damage,
             damage_penalty: request.damage_penalty,
             weapon,
             ammunition: request.ammunition,
@@ -194,8 +189,9 @@ pub(super) fn resolve_with_context_in_candidate(
         report.missiles_before_defense = Some(hits as u8);
         if request.ammunition == AmmunitionMode::Inferno {
             if surviving > 0 {
+                let arc = direction.current(world, target)?;
                 report.inferno = Some(super::vehicle_burning::resolve_inferno_from(
-                    world, target, surviving, rules, attacker,
+                    world, target, arc, surviving, rules, attacker,
                 )?);
             }
             world.btech.validate_action(world)?;
@@ -225,6 +221,7 @@ pub(super) fn resolve_with_context_in_candidate(
             &mut packets.damage,
             request.glancing,
         )?;
+        packets.damage.retain(|packet| *packet > 0);
     }
     report.building =
         super::building_interior::absorb(world, attacker, target, &mut packets.damage)?;
@@ -250,8 +247,6 @@ pub(super) fn resolve_with_context_in_candidate(
                 section,
                 through_armor_critical: false,
                 motive: None,
-                motive_roll: None,
-                piloting_penalty: 0,
             }),
             _ => None,
         };
@@ -268,6 +263,7 @@ pub(super) fn resolve_with_context_in_candidate(
                 class: DamageClass::of_weapon(weapon),
             },
             rules,
+            request.glancing,
             forced,
         )?;
         report.groups.push(VehicleSalvoGroup { damage, impact });

@@ -28,30 +28,30 @@ pub use btech::{
     CharacterValue, ConsciousnessCheck, Contact, ContactEvent, ContactTransition, ContactUpdate,
     ContactView, CriticalDefinition, CriticalLocation, CriticalLoss, DamagePhase, DamageResult,
     Dice, ElectronicField, ElectronicMode, ElectronicSource, ElectronicSuite, Electronics, Engine,
-    Facing, FallRules, FireMode, FreeFall, FreeFallStep, GlancingMode, Gyro, Heat, HeatCheck,
-    HeatRates, Hex, HexCoordinate, Hit, HitArc, HitRules, HitTable, ImpactEffect, ImpactReport,
-    IndirectAim, JumpCapacity, JumpFlight, JumpOutcome, JumpPath, JumpSample, JumpStep,
-    LIT_TARGET_SIGHT, Light, MAX_SIGHT, MapAsset, MapPointOfInterest, MapRegion, Mass, Mech,
-    MechFallReport, MechLoadout, MechSalvoReport, MechSection, MechShotReport, MechTemplate,
-    MessageTarget, Mobility, Motion, MovementRules, NarcReport, Notice, OverheatClock,
-    OverheatReport, OverheatRules, PerceptionAim, PersonalEquipment, PersonalLoadout, PilotNotice,
-    PilotingCheck, PlayerConfiguration, PodRemoval, PodRow, Point, Position, Posture, Power, Range,
-    RangeBracket, RawMovement, RawSectionCode, RawTemplate, RawUnitClass, RecoilReport, Recovery,
-    RecoveryMode, ResolvedLoadout, SEARCHLIGHT_SIGHT, SalvoGroup, SalvoReport, SectionDefinition,
+    Facing, FallRules, FireMode, FreeFall, FreeFallStep, Gyro, Heat, HeatCheck, HeatRates, Hex,
+    HexCoordinate, Hit, HitArc, HitTable, ImpactEffect, ImpactReport, IndirectAim, JumpCapacity,
+    JumpFlight, JumpOutcome, JumpPath, JumpSample, JumpStep, LIT_TARGET_SIGHT, Light, MAX_SIGHT,
+    MapAsset, MapPointOfInterest, MapRegion, Mass, Mech, MechFallReport, MechLoadout,
+    MechSalvoReport, MechSection, MechShotReport, MechTemplate, MessageTarget, Mobility, Motion,
+    MovementRules, NarcReport, Notice, OverheatClock, OverheatReport, OverheatRules, PerceptionAim,
+    PersonalEquipment, PersonalLoadout, PilotNotice, PilotingCheck, PlayerConfiguration,
+    PodRemoval, PodRow, Point, Position, Posture, Power, Range, RangeBracket, RawMovement,
+    RawSectionCode, RawTemplate, RawUnitClass, RecoilReport, Recovery, RecoveryMode,
+    ResolvedLoadout, SEARCHLIGHT_SIGHT, SalvoGroup, SalvoReport, SectionDefinition,
     SectionExposure, SectionExposureReport, SectionState, ShotReport, ShotRules, SkillCategory,
-    StackingEntry, StackingInput, StackingRules, Stagger, StaggerHit, StaggerMode, StaggerReport,
-    StaggerRules, StandAttempt, StandMode, StandTimer, StoredBattleUnit, StoredMap, StrayHit,
-    Surface, SurfaceBreak, System, SystemCritical, TacticalImpact, TacticalPilotInjury, TargetLock,
-    TemplateCheck, Terrain, TerrainLos, Torso, UnitConfiguration, UnitDefinition, UnitEdit,
-    UnitMut, UnitRef, UnitSignature, Unjam, VehicleHit, VehicleHitRules, VehicleMotiveHit,
-    WaterRanges, Weapon, WeaponDamage, WeaponDamageEffects, WeaponDamageKind, WeaponMount,
-    WeaponProfile, WeaponRange, WeaponReadiness, WeaponUse, Weather,
-    advance_heat as advance_battle_heat, advance_jumps as advance_battle_jumps,
-    advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
-    advance_recovery as advance_battle_recovery, advance_recycle as advance_battle_recycle,
-    advance_stagger as advance_battle_stagger, advance_standing as advance_battle_standing,
-    advance_stun as advance_battle_stun, advance_target_locks as advance_battle_target_locks,
-    advance_units as advance_battle_units, advance_unjamming as advance_battle_unjamming,
+    StackingEntry, StackingInput, Stagger, StaggerReport, StaggerRules, StandAttempt, StandMode,
+    StandTimer, StoredBattleUnit, StoredMap, StrayHit, Surface, SurfaceBreak, System,
+    SystemCritical, TacticalImpact, TacticalPilotInjury, TargetLock, TemplateCheck, Terrain,
+    TerrainLos, Torso, UnitConfiguration, UnitDefinition, UnitEdit, UnitMut, UnitRef,
+    UnitSignature, Unjam, VehicleHit, VehicleMotiveHit, WaterRanges, Weapon, WeaponDamage,
+    WeaponDamageEffects, WeaponDamageKind, WeaponMount, WeaponProfile, WeaponRange,
+    WeaponReadiness, WeaponUse, Weather, advance_heat as advance_battle_heat,
+    advance_jumps as advance_battle_jumps, advance_motion as advance_battle_motion,
+    advance_overheat as advance_battle_overheat, advance_recovery as advance_battle_recovery,
+    advance_recycle as advance_battle_recycle, advance_stagger as advance_battle_stagger,
+    advance_standing as advance_battle_standing, advance_stun as advance_battle_stun,
+    advance_target_locks as advance_battle_target_locks, advance_units as advance_battle_units,
+    advance_unjamming as advance_battle_unjamming,
     advance_unjamming_action as advance_battle_unjamming_action,
     aim_modifiers as battle_aim_modifiers, apply_damage_phase, assign_pilot as assign_battle_pilot,
     begin_stand as begin_battle_stand, begin_unjam as begin_battle_unjam,
@@ -78,9 +78,9 @@ pub use btech::{
     release_pilot as release_battle_pilot, reload_map as reload_battle_map,
     remove_pod as remove_battle_pod, remove_pod_action as remove_battle_pod_action,
     remove_unit as remove_battle_unit, resolve_electronic_field as resolve_battle_electronic_field,
-    resolve_fall as resolve_battle_fall, resolve_impact as resolve_battle_impact,
-    resolve_salvo as resolve_battle_salvo, resolve_shot as resolve_battle_shot,
-    resolve_stacking as resolve_battle_stacking,
+    resolve_fall as resolve_battle_fall, resolve_hit as resolve_battle_hit,
+    resolve_impact as resolve_battle_impact, resolve_salvo as resolve_battle_salvo,
+    resolve_shot as resolve_battle_shot, resolve_stacking as resolve_battle_stacking,
     resolve_tactical_impact as resolve_battle_tactical_impact,
     resolve_tactical_salvo as resolve_battle_tactical_salvo, roll_piloting as roll_battle_piloting,
     roll_unit_dice, rotate_torso as rotate_battle_torso, select_target as select_battle_target,
@@ -462,9 +462,6 @@ pub use btech::{
     BlastImpact, MineBlastHit, MineBlastReport, resolve_mine_blast, resolve_mine_blast_action,
 };
 
-/// Persisted inferno application and committed duration advancement.
-pub use btech::{advance_inferno_burns, apply_inferno_burn, extinguish_inferno_in_water};
-
 /// Atomic inferno missile exposure and immediate immersion effects.
 pub use btech::{InfernoHit, resolve_inferno_hit};
 
@@ -680,7 +677,7 @@ pub use btech::damage_vehicle_phase as damage_battle_vehicle_phase;
 /// Explicit Mech/ground-vehicle construction asset dispatch.
 pub use btech::{
     ArtilleryAiming, MountArcs, StealthRange, TerrainIgnition, VehicleMountArcs,
-    VehicleTemplateMotion, VtolHitLocation, WeaponSalvo,
+    VehicleTemplateMotion, WeaponSalvo,
 };
 pub use btech::{UnitTemplate, UnitTemplateExt, read_unit_template as read_battle_unit_template};
 
@@ -713,12 +710,16 @@ pub use btech::select_vehicle_weapon_critical as select_battle_vehicle_weapon_cr
 
 /// Ground-vehicle critical table selection and unapplied consequence reports.
 pub use btech::{
-    VehicleCriticalEffect, VehicleCriticalReport, VehicleCriticalRules, VehicleCriticalTable,
+    VehicleCriticalEffect, VehicleCriticalReport, VehicleCriticalRules,
     roll_vehicle_critical as roll_battle_vehicle_critical,
+    roll_vehicle_critical_modified as roll_battle_vehicle_critical_modified,
 };
 
 /// Vehicle driver, sensor and stabilizer damage with saved control penalties.
-pub use btech::{VehicleControlHit, damage_vehicle_controls as damage_battle_vehicle_controls};
+pub use btech::{
+    VehicleControlHit, VehicleControlOutcome,
+    damage_vehicle_controls as damage_battle_vehicle_controls,
+};
 
 pub use btech::{
     EquipmentFailure, VehicleWeaponJam, jam_vehicle_weapon as jam_battle_vehicle_weapon,
@@ -732,8 +733,6 @@ pub use btech::{
 pub use btech::{
     VehicleCriticalResolution, resolve_vehicle_critical as resolve_battle_vehicle_critical,
 };
-
-pub use btech::{VehicleMainWeaponJam, jam_vehicle_main_weapon as jam_battle_vehicle_main_weapon};
 
 pub use btech::{
     VehicleAmmunitionCascade,
@@ -753,7 +752,8 @@ pub use btech::{
 };
 
 pub use btech::{
-    VehicleImpact, VehicleImpactRules, resolve_vehicle_impact as resolve_battle_vehicle_impact,
+    GLANCING_CRITICAL_MODIFIER, MotiveSystemDamage, ROTOR_DAMAGE_DIVISOR, VehicleImpact,
+    VehicleImpactRules, resolve_vehicle_impact as resolve_battle_vehicle_impact,
 };
 
 pub use btech::check_vehicle_shot as check_battle_vehicle_shot;
@@ -781,21 +781,13 @@ pub use btech::{
 };
 
 pub use btech::{
-    VehicleFireTick, VehicleHeatExposure, VehicleInfernoHit,
-    advance_vehicle_fires as advance_battle_vehicle_fires,
+    INFERNO_CRITICAL_MODIFIER, VehicleFireTick, VehicleHeatExposure, VehicleInfernoCritical,
+    VehicleInfernoHit, advance_vehicle_fires as advance_battle_vehicle_fires,
     advance_vehicle_fires_action as advance_battle_vehicle_fires_action,
-    begin_vehicle_extinguishing as begin_battle_vehicle_extinguishing,
-    begin_vehicle_extinguishing_action as begin_battle_vehicle_extinguishing_action,
-    resolve_vehicle_fire_exposure_action as resolve_battle_vehicle_fire_exposure_action,
     resolve_vehicle_heat_exposure as resolve_battle_vehicle_heat_exposure,
     resolve_vehicle_heat_exposure_action as resolve_battle_vehicle_heat_exposure_action,
     resolve_vehicle_inferno_hit as resolve_battle_vehicle_inferno_hit,
     resolve_vehicle_inferno_hit_action as resolve_battle_vehicle_inferno_hit_action,
-};
-
-pub use btech::{
-    VehicleFireEffects, VehicleFireExposure,
-    resolve_vehicle_fire_exposure as resolve_battle_vehicle_fire_exposure,
 };
 
 pub use btech::advance_vtol_environment as advance_battle_vtol_environment;
@@ -927,18 +919,12 @@ pub use btech::{
     advance_battle_automatic_turrets, automatic_turrets_pending, toggle_battle_automatic_turret,
 };
 
-pub use btech::{ReactorBlastHit, ReactorExplosion, reactor_explosion_action};
-
 pub use btech::{
-    SelfDestruct, SelfDestructOutcome, advance_battle_self_destructs_action, self_destruct_action,
-    self_destructs_pending,
+    SELF_DESTRUCT_DELAY, SelfDestruct, SelfDestructOutcome, advance_battle_self_destructs_action,
+    self_destruct_action, self_destructs_pending,
 };
 
 pub use btech::set_battle_self_destruct_safe;
-
-pub use btech::{
-    advance_battle_reactor_windows, configure_battle_reactor_policy, reactor_windows_pending,
-};
 
 pub use btech::{advance_battle_wrecks_action, wrecks_pending};
 

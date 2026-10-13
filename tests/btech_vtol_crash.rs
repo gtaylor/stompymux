@@ -33,11 +33,11 @@ fn aircraft(world: &mut World, id: ObjectId, map: ObjectId, falling: bool) {
 }
 
 #[tokio::test]
-async fn crashes_share_packets_water_reduction_and_saved_replay() {
+async fn crashes_use_speed_based_damage_and_saved_replay() {
     let (_dir, config, mut base) = support::isolated_world().await;
     let map = base.create(&config, "Crash field".into(), Kind::Room);
     let id = base.create(&config, "Crash aircraft".into(), Kind::Thing);
-    for (terrain, height, divisor) in [(".3", 3.0, 10), ("~3", -3.0, 20)] {
+    for (terrain, height) in [(".3", 3.0), ("~3", -3.0)] {
         let mut base = base.clone();
         create_battle_map(
             &mut base,
@@ -48,22 +48,31 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
         .unwrap();
         support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
         for falling in [false, true] {
-            for levels in [0, 1, 3, 300] {
+            for (speed, hexes) in [(0.0, 0u32), (86.0, 8), (10.0, 1)] {
                 let mut world = base.clone();
                 aircraft(&mut world, id, map, falling);
+                // An unpowered falling aircraft keeps no horizontal motion.
+                let hexes = if falling { 0 } else { hexes };
+                if !falling {
+                    world
+                        .btech
+                        .rewrite_unit_record(id, |record| {
+                            record["motion"]["speed"] = speed.into();
+                            record["motion"]["desired_speed"] = speed.into();
+                        })
+                        .unwrap();
+                }
                 let tons = world.btech.vehicles()[&id].definition().tons;
                 let mut replay = world.clone();
-                let mut rules = MovementRules::STANDARD.fall;
-                rules.vehicle_impact.criticals.enabled = false;
-                let report = resolve_battle_vtol_crash(&mut world, id, levels, rules).unwrap();
-                assert_eq!(report.damage, levels * (u32::from(tons) + 5) / divisor);
+                let rules = MovementRules::STANDARD.fall;
+                let report = resolve_battle_vtol_crash(&mut world, id, 3, rules).unwrap();
+                // TW p. 68: hexes moved times tonnage divided by ten, rounding up; no crew roll.
+                assert_eq!(report.damage, hexes * u32::from(tons).div_ceil(10));
                 assert_eq!(report.groups.len(), (report.damage as usize).div_ceil(5));
+                assert!(report.avoidance.is_none());
+                assert_eq!(report.arc, HitArc::Front);
                 assert_eq!(
-                    report.avoidance.as_ref().unwrap().situational,
-                    levels as i32
-                );
-                assert_eq!(
-                    resolve_battle_vtol_crash(&mut replay, id, levels, rules).unwrap(),
+                    resolve_battle_vtol_crash(&mut replay, id, 3, rules).unwrap(),
                     report
                 );
                 assert_eq!(world.btech, replay.btech);
@@ -79,12 +88,14 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
                 );
                 assert!(unit.immobilized());
                 assert_eq!(unit.maximum_speed(), 0.0);
+                // Every crash wrecks the rotor and so destroys the VTOL.
+                assert!(unit.rotor_destroyed() && unit.is_destroyed());
                 assert_eq!(
                     serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
                     *unit
                 );
                 let before = world.btech.clone();
-                assert!(resolve_battle_vtol_crash(&mut world, id, levels, rules).is_err());
+                assert!(resolve_battle_vtol_crash(&mut world, id, 3, rules).is_err());
                 assert_eq!(world.btech, before);
             }
         }
@@ -117,11 +128,9 @@ async fn safe_crash_stops_descent_without_damage_and_invalid_crashes_are_atomic(
     assert!(!unit.immobilized());
     assert_eq!(unit.sections(), original.vehicles()[&id].sections());
     assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
-    let mut dice = Dice::seeded([17; 32]);
-    dice.d6();
     assert_eq!(
         serde_json::to_value(unit).unwrap()["dice"],
-        serde_json::to_value(dice).unwrap()
+        serde_json::to_value(Dice::seeded([17; 32])).unwrap()
     );
     // The material adapter must not weaken the whole-world placement checks.
     assert!(
@@ -165,8 +174,7 @@ async fn nested_mine_admission_failure_rolls_back_crash_damage_and_dice() {
     let id = world.create(&config, "Mined aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, true);
     let before = world.btech.clone();
-    let mut rules = MovementRules::STANDARD.fall;
-    rules.vehicle_impact.criticals.enabled = false;
+    let rules = MovementRules::STANDARD.fall;
     let error = resolve_battle_vtol_crash(&mut world, id, 1, rules).unwrap_err();
     assert!(
         error
@@ -210,8 +218,7 @@ async fn descent_commits_crashes_at_shared_clock_boundaries_and_survives_reload(
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         aircraft(&mut world, id, map, true);
         let mut clock = FreeFall::new(5);
-        let mut rules = MovementRules::STANDARD.fall;
-        rules.vehicle_impact.criticals.enabled = false;
+        let rules = MovementRules::STANDARD.fall;
         let mut landed = false;
         for _ in 0..20 {
             let before = world.btech.clone();
@@ -299,8 +306,7 @@ async fn movement_dispatch_advances_falls_and_powered_flight_exactly_once() {
     state["vehicles"][flying.0.to_string()]["motion"]["desired_speed"] = 20.into();
     world.btech = serde_json::from_value(state).unwrap();
     let airborne = world.btech.vehicles()[&flying].clone();
-    let mut rules = MovementRules::STANDARD;
-    rules.fall.vehicle_impact.criticals.enabled = false;
+    let rules = MovementRules::STANDARD;
     for tick in 1..=6 {
         let mut expected = world.clone();
         let event = advance_battle_vtol_fall(&mut expected, falling, rules.fall).unwrap();
@@ -416,8 +422,7 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
             .unwrap();
         let before = world.btech.clone();
         let mut replay = world.clone();
-        let mut rules = MovementRules::STANDARD.fall;
-        rules.vehicle_impact.criticals.enabled = false;
+        let rules = MovementRules::STANDARD.fall;
         let result = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
         assert_eq!(
             advance_battle_vtol_environment(&mut replay, id, false, rules).unwrap(),
@@ -449,10 +454,9 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
                 },
             ) => {
                 assert_eq!(contact, VtolSurfaceContact::Ground { fall_levels: 13 });
-                assert_eq!(fall.avoidance.unwrap().situational, 13);
-                assert!(!fall.groups.is_empty());
+                assert!(fall.avoidance.is_none());
                 assert_eq!(unit.vtol_flight().unwrap().altitude, 1.0);
-                assert!(unit.immobilized());
+                assert!(unit.immobilized() && unit.is_destroyed());
             }
             ("water", VtolEnvironment::Flooded { newly: true, .. }) => {
                 assert!(unit.flooded() && unit.is_destroyed());
@@ -517,8 +521,7 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
         })
         .unwrap();
     let before = world.btech.clone();
-    let mut rules = MovementRules::STANDARD.fall;
-    rules.vehicle_impact.criticals.enabled = false;
+    let rules = MovementRules::STANDARD.fall;
     for _ in 0..2 {
         let error = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap_err();
         assert!(
@@ -850,8 +853,7 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
     })
     .unwrap();
     world.btech = serde_json::from_value(state).unwrap();
-    let mut rules = MovementRules::STANDARD.fall;
-    rules.vehicle_impact.criticals.enabled = false;
+    let rules = MovementRules::STANDARD.fall;
     let result = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
     assert!(matches!(
         result,
@@ -954,8 +956,7 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved["vehicles"][id.0.to_string()] = serde_json::to_value(unit).unwrap();
         world.btech = serde_json::from_value(saved).unwrap();
-        let mut rules = MovementRules::STANDARD;
-        rules.fall.vehicle_impact.criticals.enabled = false;
+        let rules = MovementRules::STANDARD;
         let mut impacted = false;
         for _ in 0..30 {
             let mut replay = world.clone();
@@ -971,11 +972,12 @@ async fn destroyed_aircraft_descend_and_settle_with_replay_and_no_second_pilot_l
             assert_eq!(world.btech, replay.btech);
             assert_eq!(world.btech, dispatched.btech);
             if let VehicleDescentEvent::Impact { fall, .. } = event {
-                assert!(!fall.groups.is_empty());
+                // A wreck falling straight down covers no hexes and takes no crash damage.
+                assert!(fall.groups.is_empty());
+                assert_eq!(fall.damage, 0);
                 assert!(fall.pilot_injury.is_none());
                 assert!(fall.character_injury.is_none());
-                let avoidance = fall.avoidance.unwrap();
-                assert!(!avoidance.success && avoidance.roll.is_none());
+                assert!(fall.avoidance.is_none());
                 impacted = true;
                 break;
             }

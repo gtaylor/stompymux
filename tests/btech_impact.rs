@@ -42,7 +42,6 @@ fn hit(section: Section, tac: bool) -> Hit {
         section,
         rear_armor: false,
         through_armor_critical: tac,
-        crew_stun: false,
     }
 }
 
@@ -120,6 +119,13 @@ async fn ammunition_cascade_bypasses_torso_armor_and_consumes_bin_once() {
             continue;
         }
         assert!(report.destroyed);
+        // Total Warfare p. 128: an ammunition explosion that destroys the center torso kills
+        // the MechWarrior.
+        assert!(report.explosion_killed_crew);
+        assert_eq!(
+            report.crew_casualty(),
+            Some(stompymux_rs::CrewCasualty::AmmunitionExplosion)
+        );
         assert_eq!(world.btech.constructed_units()[&id].ammunition(), &[0]);
         let center = report
             .phases
@@ -318,86 +324,9 @@ async fn character_explosion_injuries_are_applied_once() {
     }
 }
 
-/// Character actions consume stun once, publish its notice, and roll it back with failed casualties.
-#[tokio::test]
-async fn character_stun_actions_publish_and_roll_back() {
-    use stompymux_rs::*;
-    let (_dir, config, mut world, id) = fixture().await;
-    world
-        .objects
-        .get_mut(&id)
-        .unwrap()
-        .flags
-        .insert(Flag::InCharacter);
-    for player in [ObjectId(1), ObjectId(2)] {
-        let object = world.objects.get_mut(&player).unwrap();
-        object.location = Some(id);
-        object.flags.insert(Flag::Connected);
-    }
-    world
-        .objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .flags
-        .remove(Flag::Wizard);
-    let scripts = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let stunned = |section| Hit {
-        section,
-        crew_stun: true,
-        ..hit(section, false)
-    };
-    let report =
-        resolve_battle_impact_action(&scripts, &config, id, stunned(Section::LeftArm), 0).unwrap();
-    assert!(report.phases.is_empty());
-    roll_unit_dice(&mut world, id, 2).unwrap();
-    assert_eq!(scripts.world().btech, world.btech);
-    assert!(scripts.drain_outbox().is_empty());
-    scripts
-        .world_mut()
-        .objects
-        .remove(&ObjectId(config.battletech.afterlife_dbref));
-    assert!(
-        resolve_battle_impact_action(&scripts, &config, id, stunned(Section::Head), 100).is_err()
-    );
-    assert_eq!(scripts.world().btech, world.btech);
-    assert_eq!(scripts.world().objects[&ObjectId(2)].location, Some(id));
-    assert!(scripts.drain_outbox().is_empty());
-    *scripts.world_mut() = world;
-    let report =
-        resolve_battle_impact_action(&scripts, &config, id, stunned(Section::LeftArm), 1).unwrap();
-    assert!(!report.pending_effects.contains(&Effect::CrewStun));
-    assert_eq!(
-        scripts.world().btech.constructed_units()[&id].stun_remaining(),
-        10
-    );
-    let messages = scripts.drain_outbox();
-    assert_eq!(
-        messages
-            .iter()
-            .filter(|(to, message)| *to == ObjectId(1)
-                && message.source().contains("momentarily stunned"))
-            .count(),
-        1
-    );
-    world = scripts.world().clone();
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut loaded = persistence::load(&config.database()).await.unwrap();
-    for _ in 0..10 {
-        assert_eq!(
-            advance_battle_stun(&mut world),
-            advance_battle_stun(&mut loaded)
-        );
-    }
-    assert_eq!(world.btech, loaded.btech);
-    assert_eq!(world.btech.constructed_units()[&id].stun_remaining(), 0);
-}
-
 /// CASE II takes one internal point, vents the rest through the torso's rear armor and loses
-/// any excess, so the center torso survives and the pilot is injured once instead of twice.
+/// any excess, so the center torso survives; the MechWarrior still takes the full feedback
+/// (Tactical Operations: Advanced Units & Equipment p. 111).
 #[tokio::test]
 async fn case_ii_vents_ammunition_explosion_through_local_armor() {
     let (dir, config, mut baseline) = support::isolated_world().await;
@@ -436,14 +365,11 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
         seed(&mut world, id, value);
         let report =
             resolve_battle_impact(&mut world, id, hit(Section::RightTorso, true), 1).unwrap();
-        if !report
-            .pending_effects
-            .contains(&Effect::VentedExplosionInjury)
-        {
+        if !report.pending_effects.contains(&Effect::ExplosionInjury) {
             continue;
         }
         assert!(!report.destroyed);
-        assert!(!report.pending_effects.contains(&Effect::ExplosionInjury));
+        assert!(!report.explosion_killed_crew);
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.ammunition(), &[0]);
         let torso = &unit.sections()[&Section::RightTorso];

@@ -140,7 +140,7 @@ fn assert_obstacle_feedback(
 #[tokio::test]
 async fn elevation_collision_rolls_back_and_preserves_signed_crash_severity() {
     // Previous terrain, rolled sum, assigned pilot, safe landing, signed crash severity.
-    for (tile, roll, assigned, safe, levels) in [
+    for (tile, roll, assigned, safe, _levels) in [
         (".0", 12, true, true, 1),
         (".0", 2, true, false, 1),
         (".1", 2, true, false, 0),
@@ -242,10 +242,8 @@ async fn elevation_collision_rolls_back_and_preserves_signed_crash_severity() {
             }
         } else {
             let fall = fall.unwrap();
-            assert_eq!(fall.avoidance.unwrap().situational, levels, "{tile}");
-            if levels <= 0 {
-                assert_eq!(fall.damage, 0);
-            }
+            assert!(fall.avoidance.is_none(), "{tile}");
+            assert!(unit.is_destroyed());
             assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
             assert!(
                 notices
@@ -376,17 +374,19 @@ async fn forest_entry_replays_pilot_avoidance_and_one_level_crashes() {
                     .iter()
                     .any(|notice| notice.text == "Eww.. You've a bad feeling about this.")
             );
+            // Crash damage is the hexes covered times tonnage/10 (TW p. 68): 129 kph is 12 MP.
             assert_eq!(
                 fall.as_ref().unwrap().damage,
-                u32::from((unit.definition().tons + 5) / 10)
+                12 * u32::from(unit.definition().tons).div_ceil(10)
             );
+            assert!(fall.as_ref().unwrap().avoidance.is_none());
             assert_eq!(unit.position().unwrap().y, 1);
             assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
-            assert!(unit.immobilized());
+            assert!(unit.immobilized() && unit.rotor_destroyed() && unit.is_destroyed());
             assert!(
                 notices
                     .iter()
-                    .any(|notice| notice.text == "Your rotor has been destroyed!")
+                    .any(|notice| notice.text == "[fg=red bold]The VTOL is wrecked.[reset]")
             );
         }
         world.validate(&config).unwrap();
@@ -827,7 +827,7 @@ async fn live_validation_rejects_impossible_flight_lifecycle_combinations() {
 }
 
 #[tokio::test]
-async fn live_character_crash_publishes_shared_crew_injury() {
+async fn live_character_crash_wrecks_the_vtol_without_crew_injury() {
     let (_dir, config, mut world, id) = fixture().await;
     world
         .objects
@@ -866,8 +866,7 @@ async fn live_character_crash_publishes_shared_crew_injury() {
     saved["vehicles"][id.0.to_string()] = unit;
     scripts.world_mut().btech = serde_json::from_value(saved).unwrap();
     scripts.world().validate(&config).unwrap();
-    let mut rules = MovementRules::STANDARD;
-    rules.fall.vehicle_impact.criticals.enabled = false;
+    let rules = MovementRules::STANDARD;
     for _ in 0..15 {
         advance_battle_motion_action(&scripts, &config, rules).unwrap();
         scripts.world().validate(&config).unwrap();
@@ -875,11 +874,13 @@ async fn live_character_crash_publishes_shared_crew_injury() {
     let world = scripts.world();
     let unit = &world.btech.vehicles()[&id];
     assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
-    assert_eq!(
-        u16::from(unit.pilot_injuries()),
-        unit.character_pilot_status().unwrap().injuries
+    // Total Warfare gives vehicle crews no injury roll for a crash; the wreck is the outcome.
+    assert!(unit.is_destroyed());
+    assert_eq!(unit.pilot_injuries(), 0);
+    assert!(
+        unit.character_pilot_status()
+            .is_none_or(|status| status.injuries == 0)
     );
-    assert!(unit.character_pilot_status().unwrap().injuries > 0);
 }
 
 #[tokio::test]

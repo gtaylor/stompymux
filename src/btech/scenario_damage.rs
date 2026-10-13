@@ -79,7 +79,6 @@ pub fn damage_section_action(
                 section,
                 rear_armor: rear,
                 through_armor_critical: critical,
-                crew_stun: false,
             },
             damage as u16,
         )

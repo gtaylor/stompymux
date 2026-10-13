@@ -155,7 +155,7 @@ pub(super) fn render(
             String::new()
         };
         lines.push(format!("LOC: {x:3},{y:3},{:3}  HD: {heading:3}/{desired:3}  SP: {speed:3.1}/{wanted:3.1} {specific} ST:{}",f.z,short_flags(world,id)?));
-        targeting(&mut lines, world, source, rules.new_charge)?;
+        targeting(&mut lines, world, source)?;
         return Ok(lines.join("\r\n"));
     }
     if !selected.heat || selected.armor || selected.info || selected.weapons {
@@ -212,7 +212,7 @@ pub(super) fn render(
     }
     if selected.info {
         lines.push("  ".into());
-        targeting(&mut lines, world, source, rules.new_charge)?;
+        targeting(&mut lines, world, source)?;
         if let Some(target) = world.btech.tows().get(&id) {
             lines.push(format!("Towing {}.", display_id(world, *target)));
         }
@@ -325,12 +325,7 @@ fn display_id(world: &World, id: ObjectId) -> String {
 }
 
 /// Show the source's selected target and its visibility.
-fn targeting(
-    lines: &mut Vec<String>,
-    world: &World,
-    source: TargetSource,
-    new_charge: bool,
-) -> Result<()> {
+fn targeting(lines: &mut Vec<String>, world: &World, source: TargetSource) -> Result<()> {
     match source.selection(world) {
         Some(TargetSelection::Unit(lock)) => {
             if !btech::visibility::unit_unblocked(world, source.unit, lock.target)? {
@@ -414,8 +409,7 @@ fn targeting(
     if !safety {
         lines.push("Weapon Safeties are [fg=red bold]OFF[reset].".into());
     }
-    if new_charge
-        && let Some(unit) = world.btech.constructed_units().get(&source.unit)
+    if let Some(unit) = world.btech.constructed_units().get(&source.unit)
         && let Some(target) = unit.charge().target
         && btech::scanner::scanner_unit(world, target).is_some()
     {
@@ -563,14 +557,10 @@ fn condition_lines(
         flags.push(("HIDDEN", "green bold"));
     }
     let (lamp, electronics, inferno) = if let Some(u) = world.btech.constructed_units().get(&id) {
-        (u.searchlight(), u.electronics(), u.inferno_remaining() > 0)
+        (u.searchlight(), u.electronics(), false)
     } else {
         let u = &world.btech.vehicles()[&id];
-        (
-            u.searchlight(),
-            u.electronics(),
-            u.inferno_remaining() > 0 || !u.burning_sections().is_empty(),
-        )
+        (u.searchlight(), u.electronics(), u.inferno_remaining() > 0)
     };
     for (enabled, label, color) in [
         (lamp.destroyed, "SEARCHLIGHT DESTROYED", "red bold"),
@@ -685,7 +675,7 @@ fn short_flags(world: &World, id: ObjectId) -> Result<String> {
         if u.heat().excess != 0.0 {
             flags.push('+');
         }
-        (u.searchlight(), u.electronics(), u.inferno_remaining() > 0)
+        (u.searchlight(), u.electronics(), false)
     } else {
         let u = &world.btech.vehicles()[&id];
         if u.immobilized() {
@@ -695,9 +685,6 @@ fn short_flags(world: &World, id: ObjectId) -> Result<String> {
             flags.push('T');
         } else if world.btech.tows().contains_key(&id) {
             flags.push('t');
-        }
-        if !u.burning_sections().is_empty() {
-            flags.push('B');
         }
         (u.searchlight(), u.electronics(), u.inferno_remaining() > 0)
     };

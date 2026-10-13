@@ -143,34 +143,6 @@
     "default": "StompyMUX"
   },
   {
-    "path": "battletech.explode_reactor",
-    "legacy_name": "btech_explode_reactor",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
-    "path": "battletech.explode_time",
-    "legacy_name": "btech_explode_time",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 120
-  },
-  {
-    "path": "battletech.explode_ammo",
-    "legacy_name": "btech_explode_ammo",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
-    "path": "battletech.explode_stop",
-    "legacy_name": "btech_explode_stop",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
     "path": "battletech.parts",
     "legacy_name": "btech_parts",
     "registry_type": "cf_int",
@@ -192,13 +164,6 @@
     "default": 5
   },
   {
-    "path": "battletech.vcrit",
-    "legacy_name": "btech_vcrit",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 2
-  },
-  {
     "path": "battletech.slowdown",
     "legacy_name": "btech_slowdown",
     "registry_type": "cf_int",
@@ -211,41 +176,6 @@
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 1
-  },
-  {
-    "path": "battletech.fasaadvvtolcrit",
-    "legacy_name": "btech_fasaadvvtolcrit",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
-    "path": "battletech.fasaadvvhlcrit",
-    "legacy_name": "btech_fasaadvvhlcrit",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
-    "path": "battletech.fasaadvvhlfire",
-    "legacy_name": "btech_fasaadvvhlfire",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
-    "path": "battletech.divrotordamage",
-    "legacy_name": "btech_divrotordamage",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
-    "path": "battletech.moddamagewithrange",
-    "legacy_name": "btech_moddamagewithrange",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
   },
   {
     "path": "battletech.moddamagewithwoods",
@@ -269,53 +199,11 @@
     "default": 0
   },
   {
-    "path": "battletech.newcharge",
-    "legacy_name": "btech_newcharge",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
-    "path": "battletech.tl3_charge",
-    "legacy_name": "btech_tl3_charge",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
     "path": "battletech.xploss",
     "legacy_name": "btech_xploss",
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 666
-  },
-  {
-    "path": "battletech.critlevel",
-    "legacy_name": "btech_critlevel",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 100
-  },
-  {
-    "path": "battletech.newstagger",
-    "legacy_name": "btech_newstagger",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
-    "path": "battletech.newstaggertons",
-    "legacy_name": "btech_newstaggertons",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
-    "path": "battletech.newstaggertime",
-    "legacy_name": "btech_newstaggertime",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 5
   },
   {
     "path": "battletech.extendedmovemod",
@@ -325,32 +213,11 @@
     "default": 1
   },
   {
-    "path": "battletech.stacking",
-    "legacy_name": "btech_stacking",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 2
-  },
-  {
-    "path": "battletech.stackdamage",
-    "legacy_name": "btech_stackdamage",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 100
-  },
-  {
     "path": "battletech.mw_losmap",
     "legacy_name": "btech_mw_losmap",
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 1
-  },
-  {
-    "path": "battletech.exile_stun_code",
-    "legacy_name": "btech_exile_stun_code",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
   },
   {
     "path": "battletech.roll_on_backwalk",
@@ -444,20 +311,6 @@
     "default": 1
   },
   {
-    "path": "battletech.glancing_blows",
-    "legacy_name": "btech_glancing_blows",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
-    "path": "battletech.inferno_penalty",
-    "legacy_name": "btech_inferno_penalty",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
     "path": "battletech.blzmapmode",
     "legacy_name": "btech_blzmapmode",
     "registry_type": "cf_int",
@@ -521,32 +374,11 @@
     "default": 0
   },
   {
-    "path": "battletech.stackpole",
-    "legacy_name": "btech_stackpole",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
-    "path": "battletech.phys_use_pskill",
-    "legacy_name": "btech_phys_use_pskill",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
     "path": "battletech.erange",
     "legacy_name": "btech_erange",
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 1
-  },
-  {
-    "path": "battletech.hit_arcs",
-    "legacy_name": "btech_hit_arcs",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
   },
   {
     "path": "battletech.xp.bthmod",

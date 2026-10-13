@@ -49,249 +49,49 @@ fn set_seed(world: &mut World, id: ObjectId, seed: [u8; 32]) {
     world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
 }
 
-/// Explicit policy for the hit table and critical consequences.
-fn rules(table: VehicleCriticalTable) -> VehicleImpactRules {
-    VehicleImpactRules {
-        advanced_fire: false,
-        criticals: VehicleCriticalRules {
-            rotor_damage_divisor: 0,
-            extended_piloting: false,
-            vtol_table: None,
-            table,
-            enabled: false,
-            combat_safe: false,
-            toughness: false,
-        },
-        hit: VehicleHitRules {
-            critical_mode: 1,
-            critical_level: 40,
-        },
-    }
-}
-
-#[test]
-fn advanced_locations_cover_all_arcs_and_turretless_fallbacks() {
-    use VehicleSection as S;
-    let intact = Vehicle::new(
-        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-            .unwrap(),
-    )
-    .unwrap();
-    let mut lost = intact.clone();
-    lost.damage_phase(S::Turret, 8, DamagePhase::Internal)
-        .unwrap();
-    for (arc, row) in [
-        (
-            HitArc::Front,
-            [
-                S::Front,
-                S::Front,
-                S::Front,
-                S::Right,
-                S::Front,
-                S::Front,
-                S::Front,
-                S::Left,
-                S::Left,
-                S::Left,
-                S::Left,
-            ],
-        ),
-        (
-            HitArc::Rear,
-            [
-                S::Rear,
-                S::Rear,
-                S::Rear,
-                S::Left,
-                S::Rear,
-                S::Rear,
-                S::Rear,
-                S::Right,
-                S::Right,
-                S::Right,
-                S::Right,
-            ],
-        ),
-        (
-            HitArc::Left,
-            [
-                S::Left,
-                S::Left,
-                S::Left,
-                S::Front,
-                S::Left,
-                S::Left,
-                S::Left,
-                S::Rear,
-                S::Left,
-                S::Left,
-                S::Left,
-            ],
-        ),
-        (
-            HitArc::Right,
-            [
-                S::Right,
-                S::Right,
-                S::Right,
-                S::Front,
-                S::Right,
-                S::Right,
-                S::Right,
-                S::Rear,
-                S::Right,
-                S::Right,
-                S::Right,
-            ],
-        ),
-    ] {
-        for roll in 2..=12 {
-            for turret in [false, true] {
-                let vehicle = if turret { &intact } else { &lost };
-                let mut dice = Dice::seeded([9; 32]);
-                let hit = vehicle.advanced_hit(arc, roll, 1, 40, &mut dice).unwrap();
-                assert_eq!(
-                    hit.section,
-                    if turret && roll >= 10 {
-                        S::Turret
-                    } else {
-                        row[usize::from(roll - 2)]
-                    }
-                );
-                assert_eq!(
-                    hit.through_armor_critical,
-                    matches!(roll, 2 | 12)
-                        || (roll == 8 && matches!(arc, HitArc::Left | HitArc::Right))
-                );
-                assert_eq!(hit.motive_roll, None);
-                assert_eq!(dice.d6(), Dice::seeded([9; 32]).d6());
-            }
-        }
-        assert_eq!(intact.critical_proof_hit(arc, 12).unwrap().section, row[0]);
-    }
-    assert!(
-        intact
-            .advanced_hit(HitArc::Front, 1, 1, 40, &mut Dice::seeded([0; 32]))
-            .is_err()
-    );
-}
-
-#[test]
-fn advanced_motive_rolls_apply_class_modifiers_and_critical_immunity() {
-    for (movement, modifier) in [("track", 0), ("wheel", 2), ("hover", 4)] {
-        let text = include_str!("../game/units/Demolisher.toml")
-            .replace(
-                "movement = \"track\"",
-                &format!("movement = \"{movement}\""),
-            )
-            .replace("armor = 40", "armor = 0")
-            .replace("walk_mp = 5", "walk_mp = 8");
-        let vehicle = Vehicle::new(VehicleTemplate::parse("test", &text).unwrap()).unwrap();
-        for roll in 2..=12 {
-            let stream = matching_seed(|dice| dice.two_d6() == roll);
-            let mut dice = Dice::seeded(stream);
-            let hit = vehicle
-                .advanced_hit(HitArc::Front, 3, 1, 40, &mut dice)
-                .unwrap();
-            assert_eq!(hit.motive_roll, Some(roll));
-            let adjusted = roll + modifier;
-            assert_eq!(
-                hit.piloting_penalty,
-                match adjusted {
-                    8 | 9 => 1,
-                    10 | 11 => 2,
-                    _ => 0,
-                }
-            );
-            assert_eq!(
-                hit.motive,
-                match adjusted {
-                    10 | 11 => Some(VehicleMotiveHit::SpeedLoss { movement_points: 1 }),
-                    12.. => Some(VehicleMotiveHit::Immobilize),
-                    _ => None,
-                }
-            );
-            let mut expected = Dice::seeded(stream);
-            expected.two_d6();
-            assert_eq!(dice.d6(), expected.d6());
-        }
-        let text = support::templates::with_flags(&text, &["CritProof_Tech"]);
-        let immune = Vehicle::new(VehicleTemplate::parse("test", &text).unwrap()).unwrap();
-        let mut dice = Dice::seeded([9; 32]);
-        assert_eq!(
-            immune
-                .advanced_hit(HitArc::Front, 3, 2, 100, &mut dice)
-                .unwrap()
-                .motive_roll,
-            None
-        );
-        assert_eq!(dice.d6(), Dice::seeded([9; 32]).d6());
-    }
+fn rules() -> VehicleImpactRules {
+    VehicleImpactRules::STANDARD
 }
 
 #[tokio::test]
 async fn complete_impacts_apply_hit_effects_and_damage_with_saved_replay() {
-    use VehicleCriticalTable as T;
-    for (table, arc, roll, section, loss, locked) in [
-        (
-            T::Standard,
-            HitArc::Left,
-            7,
-            VehicleSection::Left,
-            0.0,
-            false,
-        ),
-        (
-            T::Advanced,
-            HitArc::Front,
-            5,
-            VehicleSection::Right,
-            0.0,
-            false,
-        ),
+    for (arc, roll, section, motive) in [
+        (HitArc::Left, 7, VehicleSection::Left, false),
+        (HitArc::Front, 5, VehicleSection::Right, true),
     ] {
         let (_dir, config, mut world, id) =
             fixture(include_str!("../game/units/Demolisher.toml")).await;
-        let stream = matching_seed(|dice| {
-            let first = dice.two_d6();
-            let selected = if table == T::Standard {
-                first
-            } else {
-                dice.two_d6()
-            };
-            selected == roll
-        });
+        // Location roll, then a motive roll too low to matter on a dagger row.
+        let stream = matching_seed(|dice| dice.two_d6() == roll && (!motive || dice.two_d6() <= 5));
         set_seed(&mut world, id, stream);
         let before = world.btech.vehicles()[&id].clone();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        let report =
-            resolve_battle_vehicle_impact(&mut world, id, arc, 1, None, rules(table)).unwrap();
+        let report = resolve_battle_vehicle_impact(&mut world, id, arc, 1, None, rules()).unwrap();
         assert_eq!(
             report,
-            resolve_battle_vehicle_impact(&mut restored, id, arc, 1, None, rules(table)).unwrap()
+            resolve_battle_vehicle_impact(&mut restored, id, arc, 1, None, rules()).unwrap()
         );
         assert_eq!(world.btech, restored.btech);
-        assert_eq!(report.hit.unwrap().section, section);
+        assert_eq!(report.rolls, vec![roll]);
+        let hit = report.hit.unwrap();
+        assert_eq!(hit.section, section);
+        assert_eq!(hit.motive.is_some(), motive);
         assert_eq!(
             world.btech.vehicles()[&id].sections()[&section].armor,
             before.sections()[&section].armor - 1
         );
         assert_eq!(
             world.btech.vehicles()[&id].maximum_speed(),
-            before.maximum_speed() - loss
+            before.maximum_speed()
         );
-        assert_eq!(world.btech.vehicles()[&id].turret_locked(), locked);
+        assert!(!world.btech.vehicles()[&id].turret_locked());
         let mut dice = Dice::seeded(stream);
         dice.two_d6();
-        if table != T::Standard {
+        if motive {
             dice.two_d6();
         }
         dice.two_d6();
-        if locked {
-            dice.two_d6();
-        }
         assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
         persistence::save(&config.database(), &world).await.unwrap();
         assert_eq!(
@@ -305,7 +105,7 @@ async fn complete_impacts_apply_hit_effects_and_damage_with_saved_replay() {
 async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() {
     let (_dir, _config, mut world, id) =
         fixture(include_str!("../game/units/Demolisher.toml")).await;
-    let stream = matching_seed(|dice| dice.two_d6() == 3);
+    let stream = matching_seed(|dice| dice.two_d6() == 7);
     set_seed(&mut world, id, stream);
     world
         .objects
@@ -314,33 +114,16 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
         .flags
         .insert(Flag::InCharacter);
     let before = world.btech.clone();
-    let report = resolve_battle_vehicle_impact(
-        &mut world,
-        id,
-        HitArc::Left,
-        40,
-        None,
-        rules(VehicleCriticalTable::Standard),
-    )
-    .unwrap();
+    let report =
+        resolve_battle_vehicle_impact(&mut world, id, HitArc::Left, 40, None, rules()).unwrap();
     assert!(report.damage.unwrap().unit_destroyed);
     assert!(!world.btech.vehicles()[&id].crew_killed());
     assert_eq!(world.objects[&ObjectId(1)].location, Some(id));
     world.btech = before.clone();
-    assert!(
-        resolve_battle_vehicle_impact(
-            &mut world,
-            id,
-            HitArc::Left,
-            0,
-            None,
-            rules(VehicleCriticalTable::Standard)
-        )
-        .is_err()
-    );
+    assert!(resolve_battle_vehicle_impact(&mut world, id, HitArc::Left, 0, None, rules()).is_err());
     assert_eq!(world.btech, before);
     let sections = world.btech.vehicles()[&id].sections().clone();
-    let mut policy = rules(VehicleCriticalTable::Standard);
+    let mut policy = rules();
     policy.criticals.combat_safe = true;
     let report =
         resolve_battle_vehicle_impact(&mut world, id, HitArc::Left, 40, None, policy).unwrap();
@@ -356,16 +139,16 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
 }
 
 #[tokio::test]
-async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together() {
+async fn motive_impacts_commit_steering_speed_and_penetration_together() {
     let text = include_str!("../game/units/Demolisher.toml").replace("armor = 40", "armor = 0");
     let (_dir, config, mut world, id) = fixture(&text).await;
+    // Location 3 (front, motive roll), motive 8 (tracked: −1 MP and +2 driving), entry roll,
+    // then a critical roll below six for the point of internal damage.
     let stream = matching_seed(|dice| {
-        dice.two_d6();
-        if dice.two_d6() != 3 || dice.two_d6() != 11 {
-            return false;
+        dice.two_d6() == 3 && dice.two_d6() == 8 && {
+            dice.two_d6();
+            dice.two_d6() < 6
         }
-        dice.two_d6();
-        dice.two_d6() < 8
     });
     set_seed(&mut world, id, stream);
     world
@@ -377,15 +160,21 @@ async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together(
         .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
-    let policy = rules(VehicleCriticalTable::Advanced);
     let report =
-        resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, policy).unwrap();
+        resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, rules()).unwrap();
     assert_eq!(
         report,
-        resolve_battle_vehicle_impact(&mut restored, id, HitArc::Front, 1, None, policy).unwrap()
+        resolve_battle_vehicle_impact(&mut restored, id, HitArc::Front, 1, None, rules()).unwrap()
     );
     assert_eq!(world.btech, restored.btech);
-    assert_eq!(report.hit.unwrap().motive_roll, Some(11));
+    let motive = report.hit.unwrap().motive.unwrap();
+    assert_eq!(motive.roll, 8);
+    assert_eq!(motive.modifier, 0);
+    assert_eq!(
+        motive.hit,
+        Some(VehicleMotiveHit::SpeedLoss { movement_points: 1 })
+    );
+    assert_eq!(motive.driving_penalty, 2);
     assert_eq!(world.btech.vehicles()[&id].piloting_damage(), 2);
     assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 43.0);
     assert_eq!(
@@ -399,7 +188,7 @@ async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together(
             .any(|notice| notice.text == "wobbles violently.")
     );
     let mut dice = Dice::seeded(stream);
-    for _ in 0..5 {
+    for _ in 0..4 {
         dice.two_d6();
     }
     assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
@@ -407,5 +196,68 @@ async fn advanced_motive_impacts_commit_steering_speed_and_penetration_together(
     assert_eq!(
         world.btech,
         persistence::load(&config.database()).await.unwrap().btech
+    );
+}
+
+#[tokio::test]
+async fn driving_penalties_apply_once_per_tier_and_an_immobilized_hovercraft_sinks() {
+    let text = include_str!("../game/units/Demolisher.toml")
+        .replace("movement = \"track\"", "movement = \"hover\"");
+    let (_dir, config, mut world, id) = fixture(&text).await;
+    // Hover +3 from the front: a motive roll of 3 is a 6 (+1 driving) each time.
+    for expected in [1, 1] {
+        set_seed(
+            &mut world,
+            id,
+            matching_seed(|dice| dice.two_d6() == 3 && dice.two_d6() == 3),
+        );
+        let _ =
+            resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, rules()).unwrap();
+        assert_eq!(world.btech.vehicles()[&id].piloting_damage(), expected);
+    }
+    // The −1 MP tier still stacks its movement loss while its +2 applies only once.
+    for (expected_penalty, expected_speed) in [(3, 43.0), (3, 32.25)] {
+        set_seed(
+            &mut world,
+            id,
+            matching_seed(|dice| dice.two_d6() == 3 && dice.two_d6() == 5),
+        );
+        let _ =
+            resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, rules()).unwrap();
+        assert_eq!(
+            world.btech.vehicles()[&id].piloting_damage(),
+            expected_penalty
+        );
+        assert_eq!(world.btech.vehicles()[&id].maximum_speed(), expected_speed);
+    }
+    // Immobilized over deep water, the hovercraft sinks (TW p. 193).
+    let deep = world.create(&config, "Deep water".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        deep,
+        "deep",
+        MapAsset::from_cells("1 1\n~1\n").unwrap(),
+    )
+    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    place_battle_unit(&mut world, id, deep, 0, 0).unwrap();
+    set_seed(
+        &mut world,
+        id,
+        matching_seed(|dice| dice.two_d6() == 3 && dice.two_d6() == 9),
+    );
+    let report =
+        resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, rules()).unwrap();
+    assert_eq!(
+        report.hit.unwrap().motive.unwrap().hit,
+        Some(VehicleMotiveHit::Immobilize)
+    );
+    let vehicle = &world.btech.vehicles()[&id];
+    assert!(vehicle.immobilized() && vehicle.flooded() && vehicle.is_destroyed());
+    assert!(
+        report
+            .notices
+            .iter()
+            .any(|notice| notice.text.contains("sinks"))
     );
 }

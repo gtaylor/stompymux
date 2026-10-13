@@ -1,9 +1,11 @@
-//! Skidding on pavement and ice, and hovercraft sideslips (Total Warfare pp. 62 and 67,
+//! Skidding on pavement and ice, and hovercraft sideslips (Total Warfare pp. 62–63 and 67,
 //! Tactical Operations p. 48). A 'Mech or ground vehicle that changes facing on a slick surface
 //! and then moves on rolls to keep its footing; when it fails it drops and slides along its old
-//! course, taking half a fall's damage for every hex it slides. A hovercraft that fails instead
-//! sideslips: it drifts along its old course for as many hexes as it missed the roll by, without
-//! damage unless it drifts into something.
+//! course, taking half a fall's damage for every hex it slides. The slide ends in water a level
+//! deep, drops it over any edge steeper than it could step down, crashes it into higher ground
+//! or a building, and throws a sliding 'Mech into another 'Mech as an unintentional charge. A
+//! hovercraft that fails instead sideslips: it drifts along its old course for as many hexes as
+//! it missed the roll by, without damage unless it drifts into something.
 use super::{
     FallRules, GroundMovement, Hex, HexCoordinate, HitArc, HitTable, MechFallReport, Notice,
     PilotNotice, Point, SalvoGroup, VehicleMovement,
@@ -109,14 +111,20 @@ pub(super) struct SkidReport {
     pub falls: Vec<MechFallReport>,
     pub vehicle_falls: Vec<super::VehicleFallReport>,
     pub character_injuries: Vec<super::CharacterPilotInjury>,
+    /// Unintentional charges the sliding 'Mech made into units in its path.
+    pub charges: Vec<super::ChargeReport>,
+    /// Buildings the slide brought down.
+    pub collapses: Vec<super::SurfaceBreak>,
     /// Whether the unit lost control and its movement is over.
     pub skidded: bool,
 }
 
-/// What stops a sliding unit.
+/// What a sliding unit meets in the next hex.
 enum Obstacle {
-    /// Higher ground, another unit or the map edge: the slide ends before the hex.
-    Stop,
+    /// Another unit stands there: a sliding 'Mech charges it, anything else stops short.
+    Unit(ObjectId),
+    /// A building the unit slides into for a tenth of its construction factor.
+    Building,
     /// Higher ground the unit crashes into for a point of damage per twenty tons.
     Collision,
     /// Terrain the unit could never enter: a point of damage per five tons, then it halts.
@@ -131,15 +139,20 @@ fn path(point: Point, heading: f64, hexes: u8) -> Result<Vec<(HexCoordinate, Poi
     Ok(cells)
 }
 
-/// Whether any other unit stands in `hex`.
-fn occupied(world: &World, id: ObjectId, map: ObjectId, hex: HexCoordinate) -> Result<bool> {
+/// The first other unit standing in `hex`, in map-slot order.
+fn occupant(
+    world: &World,
+    id: ObjectId,
+    map: ObjectId,
+    hex: HexCoordinate,
+) -> Result<Option<ObjectId>> {
     Ok(super::map_slots::hex_occupants(world, map, hex)?
         .into_iter()
-        .any(|other| {
-            other != id
+        .find(|other| {
+            *other != id
                 && world
                     .objects
-                    .get(&other)
+                    .get(other)
                     .is_some_and(|object| !object.flags.contains(Flag::Going))
         }))
 }
@@ -154,14 +167,17 @@ fn obstacle(
     height: i32,
     movement: GroundMovement,
 ) -> Result<Option<Obstacle>> {
-    if occupied(world, id, map, hex)? {
-        return Ok(Some(Obstacle::Stop));
+    if let Some(other) = occupant(world, id, map, hex)? {
+        return Ok(Some(Obstacle::Unit(other)));
     }
     let surface = if movement == GroundMovement::Hover && tile.is_water_surface() {
         i32::from(tile.water_line())
     } else {
         i32::from(tile.standing_height())
     };
+    if surface > height && tile.has_standing_structure() {
+        return Ok(Some(Obstacle::Building));
+    }
     if surface > height {
         return Ok(Some(Obstacle::Collision));
     }
@@ -230,6 +246,8 @@ pub(super) fn resolve_mech(
     fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
     let per_hex = fall.damage.div_ceil(2);
     let tons = u32::from(world.btech.constructed_units()[&id].definition().tons);
+    // Collisions use only the hexes moved before the skid, never the hexes slid.
+    let hexes_moved = (speed.abs() / 10.75) as u32;
     let point = world.btech.constructed_units()[&id]
         .motion()
         .context("Skidding unit has no motion")?
@@ -257,7 +275,48 @@ pub(super) fn resolve_mech(
             height,
             GroundMovement::Legged,
         )? {
-            Some(Obstacle::Stop) => break,
+            Some(Obstacle::Unit(other)) => {
+                // An unintentional charge; a hit ends the skid with one more hex of damage,
+                // a miss slides on through the hex (Total Warfare p. 63).
+                let Some(charge) = super::charge::resolve_skid_charge(
+                    world,
+                    id,
+                    other,
+                    hexes_moved,
+                    rules,
+                    character,
+                )?
+                else {
+                    break;
+                };
+                super::piloting::append_feedback(
+                    &mut report.pilot_notices,
+                    charge.pilot_notices.iter().cloned(),
+                    report.notices.len(),
+                );
+                report.notices.extend(charge.notices.iter().cloned());
+                let hit = charge.hit;
+                report.charges.push(charge);
+                if hit {
+                    slide_damage(world, id, per_hex, &mut fall, rules, character)?;
+                    break;
+                }
+            }
+            Some(Obstacle::Building) => {
+                building_collision(
+                    world,
+                    id,
+                    hex,
+                    next,
+                    height,
+                    (per_hex, tons, hexes_moved),
+                    &mut fall,
+                    rules,
+                    character,
+                    &mut report,
+                )?;
+                break;
+            }
             Some(Obstacle::Collision) => {
                 report.notices.push(Notice {
                     unit: id,
@@ -280,19 +339,20 @@ pub(super) fn resolve_mech(
             }
             None => {}
         }
+        let drop = height - i32::from(next.standing_height());
         move_mech(world, id, hex, next);
         report.notices.push(Notice {
             unit: id,
             text: format!("You skid into {},{}.", hex.x, hex.y),
         });
-        slide_damage(world, id, per_hex, &mut fall, rules, character)?;
-        let drop = height - i32::from(next.standing_height());
         if drop > 2 {
+            // Too steep to step down: no skid damage for the hex, but a fall of that many
+            // levels into it, and the skid ends there (Total Warfare p. 62).
             report.notices.push(Notice {
                 unit: id,
                 text: "You skid over the edge and tumble down!".into(),
             });
-            let levels = u8::try_from(drop).unwrap_or(u8::MAX);
+            let levels = u8::try_from(drop + 1).unwrap_or(u8::MAX);
             let tumble = if character && world.objects[&id].flags.contains(Flag::InCharacter) {
                 super::fall::resolve_character_fall(world, id, levels, rules)?
             } else {
@@ -302,6 +362,7 @@ pub(super) fn resolve_mech(
             report.falls.push(tumble);
             break;
         }
+        slide_damage(world, id, per_hex, &mut fall, rules, character)?;
         let flooding = if character {
             super::flooding::flood_unit_in_action(world, id, rules)?
         } else {
@@ -309,6 +370,13 @@ pub(super) fn resolve_mech(
         };
         for exposure in flooding {
             report.notices.extend(exposure.notices);
+        }
+        if next.water_depth() >= 1 {
+            report.notices.push(Notice {
+                unit: id,
+                text: "The water brings your skid to an end.".into(),
+            });
+            break;
         }
     }
     report.falls.insert(0, fall);
@@ -324,6 +392,78 @@ pub(super) fn resolve_mech(
         motion.desired_heading = motion.heading;
     }
     Ok(report)
+}
+
+/// A sliding 'Mech crashes into a building hex (Total Warfare p. 63): it slides in and takes
+/// its skid damage for the hex, then a tenth of the construction factor, while the building
+/// takes the charge damage of the hexes moved before the skid. The skid ends in the hex, inside
+/// the building or on its rubble when that brings it down.
+#[allow(clippy::too_many_arguments)]
+fn building_collision(
+    world: &mut World,
+    id: ObjectId,
+    hex: HexCoordinate,
+    tile: Hex,
+    height: i32,
+    (per_hex, tons, hexes_moved): (u32, u32, u32),
+    fall: &mut MechFallReport,
+    rules: FallRules,
+    character: bool,
+    report: &mut SkidReport,
+) -> Result<()> {
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    let level = super::building_interior::entry_level(tile, height);
+    move_mech(world, id, hex, tile);
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
+    unit.ground_elevation =
+        super::building_interior::inside(tile, level).then_some(f64::from(level));
+    report.notices.push(Notice {
+        unit: id,
+        text: format!("You skid into the building at {},{}!", hex.x, hex.y),
+    });
+    slide_damage(world, id, per_hex, fall, rules, character)?;
+    let cf = tile.structure().map_or(0, |structure| structure.cf);
+    slide_damage(
+        world,
+        id,
+        u32::from(super::building_interior::absorption(cf)),
+        fall,
+        rules,
+        character,
+    )?;
+    if world.btech.maps()[&map].has_flag(super::MapFlag::IndestructibleStructures) {
+        return Ok(());
+    }
+    let charge =
+        super::charge::charge_damage(u16::try_from(tons).unwrap_or(u16::MAX), hexes_moved)?;
+    if charge >= cf {
+        report.notices.push(Notice {
+            unit: id,
+            text: "The building comes down around you!".into(),
+        });
+        let collapse = super::collapse_structure(world, map, hex, rules)?;
+        super::piloting::append_feedback(
+            &mut report.pilot_notices,
+            collapse.pilot_notices.iter().cloned(),
+            report.notices.len(),
+        );
+        report.notices.extend(collapse.notices.iter().cloned());
+        report.collapses.push(collapse);
+        return Ok(());
+    }
+    world.btech.maps.get_mut(&map).unwrap().write_hex(
+        i64::from(hex.x),
+        i64::from(hex.y),
+        tile.with_structure_damage(charge),
+    )?;
+    report.notices.push(Notice {
+        unit: id,
+        text: format!(
+            "The building shudders, losing {charge} points; it stands at {}.",
+            cf - charge
+        ),
+    });
+    Ok(())
 }
 
 /// Put a prone, sliding 'Mech in `hex`, resting on its surface.
@@ -364,7 +504,7 @@ fn slide_damage(
         let group = group as u16;
         let mut dice = unit.dice.clone();
         let roll = dice.generic_roll();
-        let hit = rules.hit.resolve(unit, fall.arc, roll, &mut dice)?;
+        let hit = super::resolve_hit(unit, fall.arc, roll, &mut dice)?;
         world.btech.constructed.get_mut(&id).unwrap().dice = dice;
         let outcome = if character && world.objects[&id].flags.contains(Flag::InCharacter) {
             super::impact::resolve_character_impact_with_rules(world, id, hit, group, Some(rules))?
@@ -485,7 +625,29 @@ pub(super) fn resolve_vehicle(
             world.btech.maps()[&position.map].base_hex(i64::from(here.x), i64::from(here.y))?;
         let height = vehicle.elevation_level(current);
         match obstacle(world, id, position.map, hex, next, height, ground)? {
-            Some(Obstacle::Stop) => break,
+            Some(Obstacle::Unit(_)) => break,
+            Some(Obstacle::Building) => {
+                // A vehicle sliding into a building takes a tenth of its construction factor
+                // and stops there (Total Warfare p. 63).
+                let cf = next.structure().map_or(0, |structure| structure.cf);
+                move_vehicle(world, id, hex, next);
+                report.notices.push(Notice {
+                    unit: id,
+                    text: format!("You skid into the building at {},{}!", hex.x, hex.y),
+                });
+                if per_hex > 0 {
+                    vehicle_damage(world, id, per_hex, rules, character, &mut report)?;
+                }
+                vehicle_damage(
+                    world,
+                    id,
+                    u32::from(super::building_interior::absorption(cf)),
+                    rules,
+                    character,
+                    &mut report,
+                )?;
+                break;
+            }
             Some(Obstacle::Collision) => {
                 report.notices.push(Notice {
                     unit: id,
@@ -532,6 +694,13 @@ pub(super) fn resolve_vehicle(
         if per_hex > 0 {
             vehicle_damage(world, id, per_hex, rules, character, &mut report)?;
         }
+        if !hover && next.water_depth() >= 1 {
+            report.notices.push(Notice {
+                unit: id,
+                text: "The water brings your skid to an end.".into(),
+            });
+            break;
+        }
         let drop = height - i32::from(next.standing_height());
         if !hover && drop > 1 {
             report.notices.push(Notice {
@@ -553,7 +722,7 @@ pub(super) fn resolve_vehicle(
     }
     if !hover && !flooded && !world.btech.vehicles()[&id].is_destroyed() {
         // A skidding vehicle also rolls once for motive system damage.
-        let (motive_notices, broadcasts) = motive_roll(world, id);
+        let (motive_notices, broadcasts) = motive_roll(world, id)?;
         report.notices.extend(motive_notices);
         for text in broadcasts {
             report
@@ -605,7 +774,7 @@ pub(super) fn vehicle_entry_check(
         id,
         "slews to a halt on the ice!",
     ));
-    let (motive_notices, broadcasts) = motive_roll(world, id);
+    let (motive_notices, broadcasts) = motive_roll(world, id)?;
     report.notices.extend(motive_notices);
     for text in broadcasts {
         report
@@ -676,16 +845,19 @@ fn vehicle_damage(
     Ok(())
 }
 
-/// One motive system damage roll for a skidding ground vehicle.
-fn motive_roll(world: &mut World, id: ObjectId) -> (Vec<Notice>, Vec<Notice>) {
+/// One Motive System Damage Table roll for a skidding ground vehicle (Total Warfare p. 63);
+/// an immobilized hovercraft over water then sinks (p. 193).
+fn motive_roll(world: &mut World, id: ObjectId) -> Result<(Vec<Notice>, Vec<Notice>)> {
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     let movement = vehicle.definition().movement;
-    let roll = vehicle
-        .dice
-        .generic_roll()
-        .saturating_add(super::vehicle_motive_effects::modifier(movement));
+    let roll = vehicle.dice.generic_roll();
     let (motive, penalty) = super::vehicle_motive_effects::outcome(movement, roll);
-    super::vehicle_motive_effects::apply(vehicle, id, motive, penalty, Some(roll))
+    let (mut notices, mut broadcasts) =
+        super::vehicle_motive_effects::apply(vehicle, id, motive, penalty, Some(roll));
+    let (sank, observed) = super::vehicle_motive_effects::sink_immobilized_hovercraft(world, id)?;
+    notices.extend(sank);
+    broadcasts.extend(observed);
+    Ok((notices, broadcasts))
 }
 
 /// How the slick surface under a unit is named in its notices.

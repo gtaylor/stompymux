@@ -155,18 +155,13 @@ pub(super) fn beam(world: &World, id: ObjectId) -> Option<(super::Position, supe
     ))
 }
 
-/// Inferno lifetime is shared across unit and terrain lighting.
+/// Burning jelly lifetime of a stationary unit; Mechs take inferno hits as heat and never burn.
 fn inferno(world: &World, id: ObjectId) -> u32 {
-    world.btech.constructed_units().get(&id).map_or_else(
-        || {
-            world
-                .btech
-                .vehicles()
-                .get(&id)
-                .map_or(0, |u| u.inferno_remaining())
-        },
-        |u| u.inferno_remaining(),
-    )
+    world
+        .btech
+        .vehicles()
+        .get(&id)
+        .map_or(0, |u| u.inferno_remaining())
 }
 
 /// Request a guarded toggle; repeated requests preserve the existing transition.
@@ -527,9 +522,7 @@ fn illumination_sources(world: &World) -> impl Iterator<Item = (ObjectId, bool)>
         .constructed_units()
         .iter()
         .filter_map(|(&id, unit)| {
-            let burning = unit.inferno_remaining() > 0;
-            (burning || (unit.searchlight.on && !unit.searchlight.destroyed))
-                .then_some((id, burning))
+            (unit.searchlight.on && !unit.searchlight.destroyed).then_some((id, false))
         })
         .chain(world.btech.vehicles().iter().filter_map(|(&id, unit)| {
             let burning = unit.inferno_remaining() > 0;

@@ -27,14 +27,12 @@ pub(super) fn turret_line(turret: f64, heading: f64, stationary: bool) -> String
 #[derive(Clone, Copy)]
 pub(crate) struct StatusRules {
     pub speed: super::SpeedPolicy,
-    pub new_charge: bool,
 }
 
 impl Default for StatusRules {
     fn default() -> Self {
         Self {
             speed: super::SpeedPolicy::STANDARD,
-            new_charge: false,
         }
     }
 }
@@ -44,7 +42,6 @@ impl StatusRules {
     pub(crate) fn configured(config: &crate::Config) -> Self {
         Self {
             speed: super::SpeedPolicy::configured(config),
-            new_charge: config.battletech.newcharge != 0,
         }
     }
 }

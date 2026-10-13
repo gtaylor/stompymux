@@ -25,11 +25,9 @@ fn storage(world: &mut World, id: ObjectId) -> Result<&mut ShotCounters> {
     )
 }
 
-/// Broadcast classification includes the configured near-miss band even for beacon weapons.
-pub(super) fn hit(roll: u8, target: Option<i32>, mode: super::GlancingMode) -> bool {
-    target.is_some_and(|number| {
-        i64::from(roll) >= i64::from(number) - i64::from(mode == super::GlancingMode::BelowTarget)
-    })
+/// Broadcast classification: a roll at or above the target number is a hit.
+pub(super) fn hit(roll: u8, target: Option<i32>) -> bool {
+    target.is_some_and(|number| i64::from(roll) >= i64::from(number))
 }
 
 /// Count a launched direct-unit attack once, before missile grouping or interception.
@@ -79,15 +77,12 @@ pub(super) fn set(world: &mut World, id: ObjectId, field: &str, value: &str) -> 
 mod tests {
     use super::*;
 
-    /// The broadcast's hit band is independent of the missile/beacon damage admission band.
+    /// The broadcast's hit band is the ordinary target number.
     #[test]
-    fn broadcast_result_keeps_near_misses_and_range_separate() {
-        use super::super::GlancingMode::{AtTarget, BelowTarget, Disabled};
-        for mode in [Disabled, AtTarget, BelowTarget] {
-            assert!(!hit(12, None, mode));
-            assert!(!hit(5, Some(7), mode));
-            assert_eq!(hit(6, Some(7), mode), mode == BelowTarget);
-            assert!(hit(7, Some(7), mode));
-        }
+    fn broadcast_result_uses_the_target_number() {
+        assert!(!hit(12, None));
+        assert!(!hit(5, Some(7)));
+        assert!(!hit(6, Some(7)));
+        assert!(hit(7, Some(7)));
     }
 }

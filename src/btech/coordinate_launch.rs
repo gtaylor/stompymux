@@ -59,7 +59,6 @@ pub(super) fn resolve(
             distance: request.distance,
             target_number: request.target_number,
             streak_confused: request.streak_confused,
-            glancing: request.glancing,
             critical_rules: VehicleCriticalRules {
                 toughness: request.fall.toughness,
                 ..request.fall.vehicle_impact.criticals

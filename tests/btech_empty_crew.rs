@@ -37,8 +37,10 @@ async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, 
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     let value = (0..=255)
         .find(|value| {
+            // Three hits roll against 3, 5 and 7 in turn; the third fails. The recovery
+            // roll against 10 (four hits) then succeeds.
             let mut dice = Dice::seeded([*value; 32]);
-            dice.two_d6() < 7 && dice.two_d6() >= 10
+            dice.two_d6() >= 3 && dice.two_d6() >= 5 && dice.two_d6() < 7 && dice.two_d6() >= 10
         })
         .unwrap();
     let mut saved = serde_json::to_value(&world.btech).unwrap();
@@ -69,7 +71,10 @@ async fn empty_crew_injury_recovery_and_restart_share_player_rules() {
         let injury = injure_battle_tactical_pilot(&mut world, id, 3, false).unwrap();
         let check = injury.consciousness.unwrap();
         assert_eq!(check.target, 7);
-        assert_eq!(check.roll, Dice::seeded([value; 32]).two_d6());
+        let mut rolls = Dice::seeded([value; 32]);
+        rolls.two_d6();
+        rolls.two_d6();
+        assert_eq!(check.roll, rolls.two_d6());
         assert!(!check.conscious);
         assert_eq!(recovery(&world, id).remaining, 30);
         assert_eq!(

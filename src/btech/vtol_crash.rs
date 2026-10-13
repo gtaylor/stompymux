@@ -1,4 +1,6 @@
-//! Shared vehicle descent composes the forced-descent clock and vehicle fall transaction.
+//! Shared vehicle descent composes the forced-descent clock with the vehicle fall transaction
+//! and the Total Warfare VTOL crash: speed-based crash damage (p. 68), an explosion when the
+//! crash reaches internal structure (p. 198), and a wrecked rotor that destroys the VTOL.
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -129,7 +131,12 @@ pub(super) fn resolve_in_candidate(
     resolve_signed_in_candidate(world, id, levels, rules, character)
 }
 
-/// Horizontal terrain rollback may yield signed fall severity; retain it for the crew check.
+/// Resolve the crash itself. Crash damage follows TW p. 68: the hexes the VTOL was covering
+/// in a turn (its speed in MP) times its tonnage divided by ten, in five-point groups on the
+/// VTOL hit location table. Height does not add damage; a VTOL hovering when it lost lift
+/// takes none, but every crash wrecks the rotor and so destroys the VTOL (rotor loss is a
+/// crash in this realtime engine), and any crash damage that reaches internal structure
+/// explodes the wreck (TW p. 198).
 pub(super) fn resolve_signed_in_candidate(
     world: &mut World,
     id: ObjectId,
@@ -158,8 +165,12 @@ pub(super) fn resolve_signed_in_candidate(
         .context("Aircraft crash map is unavailable")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
     let height = super::fall_profile::surface(tile, unit.elevation_level(tile));
+    let hexes = unit
+        .motion()
+        .map_or(0, |motion| (motion.speed.abs() / 10.75).ceil() as u32);
     world.attempt(|world| {
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
+        let was_destroyed = unit.is_destroyed();
         // Clear descent before impact criticals can remove lift again.
         unit.vtol_flight = Some(VtolFlight {
             phase: VtolFlightPhase::Landed,
@@ -167,25 +178,59 @@ pub(super) fn resolve_signed_in_candidate(
             vertical_speed: 0.0,
             fall: None,
         });
-        let mut report = super::vehicle_fall::resolve_material_signed(
+        if !was_destroyed && unit.is_destroyed() {
+            unit.finish_destruction();
+        }
+        let mut report = super::vehicle_fall::resolve_material_profile(
             world,
             id,
             i32::from(levels),
             rules,
             character,
+            None,
+            super::vehicle_fall::ImpactProfile::VtolCrash { hexes },
         )?;
-        if !rules.vehicle_impact.criticals.combat_safe && !super::combat_safe(world, id)? {
-            world
-                .btech
-                .vehicles
-                .get_mut(&id)
-                .unwrap()
-                .apply_motive_hit(VehicleMotiveHit::Immobilize);
+        if rules.vehicle_impact.criticals.combat_safe || super::combat_safe(world, id)? {
+            return Ok(report);
+        }
+        let reached_structure = report.groups.iter().any(|group| {
+            group
+                .damage
+                .as_ref()
+                .is_some_and(|damage| damage.overflow > 0)
+        });
+        if reached_structure && !world.btech.vehicles()[&id].is_destroyed() {
             report.feedback.notices.push(Notice {
                 unit: id,
-                text: "Your rotor has been destroyed!".into(),
+                text: "[fg=red bold]The crash tears the VTOL's frame apart and it explodes![reset]"
+                    .into(),
+            });
+            report
+                .feedback
+                .notices
+                .extend(super::broadcast::observer_notices(
+                    world,
+                    id,
+                    "explodes on impact!",
+                ));
+            let explosion =
+                super::vehicle_explosion::explode_followup_in_candidate(world, id, false)?;
+            report.feedback.notices.extend(explosion.notices);
+        }
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
+        let rotor_lost = !unit.rotor_destroyed();
+        unit.damage_phase(VehicleSection::Rotor, u16::MAX, DamagePhase::Internal)?;
+        unit.apply_motive_hit(VehicleMotiveHit::Immobilize);
+        if rotor_lost {
+            report.feedback.notices.push(Notice {
+                unit: id,
+                text: "Your rotor is smashed to pieces on impact!".into(),
             });
         }
+        report.feedback.notices.push(Notice {
+            unit: id,
+            text: "[fg=red bold]The VTOL is wrecked.[reset]".into(),
+        });
         Ok(report)
     })
 }

@@ -1,4 +1,6 @@
-//! Atomic conventional mine blasts, with ordered kick packets, neighboring fire and field removal.
+//! Atomic mine blasts (Tactical Operations pp. 176–177): ordered kick packets against the
+//! front of every unit in the hex, half damage to the neighbours of a command-detonated field,
+//! and the field's depletion afterwards.
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -9,8 +11,10 @@ use serde::Serialize;
 pub struct MineBlastHit {
     pub unit: ObjectId,
     pub damage: u16,
-    /// Signed adjustment to the burn timer, after material packets.
+    /// Signed adjustment to a vehicle's burn timer, after material packets.
     pub burn_seconds: i64,
+    /// Heat an inferno mine's 1d6 missiles put on a 'Mech (Tactical Operations p. 42).
+    pub heat: u8,
     pub arc: HitArc,
     pub impacts: Vec<BlastImpact>,
     pub vehicle_heat: Option<VehicleHeatExposure>,
@@ -25,6 +29,10 @@ pub struct MineBlastReport {
     pub hits: Vec<MineBlastHit>,
     pub ignited: Vec<HexCoordinate>,
     pub removed: Vec<u32>,
+    /// The conventional field's depletion roll, when it had density to lose.
+    pub depletion_roll: Option<u8>,
+    /// The field's density after the blast, when it stayed on the map.
+    pub remaining_strength: Option<i16>,
     pub notices: Vec<Notice>,
     /// Pilot-only messages indexed into the enclosing notice stream.
     pub pilot_notices: Vec<PilotNotice>,
@@ -82,7 +90,8 @@ fn resolve(
         ),
         "Trigger mines require their script handler"
     );
-    let neighbors = matches!(mine.kind, MineKind::Command | MineKind::Vibra);
+    // Only a command-detonated field reaches the adjacent hexes; a vibrabomb does not (p. 177).
+    let neighbors = mine.kind == MineKind::Command;
     let damage = if mine.kind == MineKind::Inferno {
         mine.strength.max(0) as u16 / 3
     } else {
@@ -110,6 +119,8 @@ fn resolve(
             hits: Vec::new(),
             ignited: Vec::new(),
             removed: Vec::new(),
+            depletion_roll: None,
+            remaining_strength: None,
             notices: Vec::new(),
             pilot_notices: Vec::new(),
         };
@@ -122,18 +133,66 @@ fn resolve(
                 report.ignited.push(coordinate);
             }
         }
-        if neighbors || mine.strength < 5 {
-            report.removed = world.btech.maps()[&map]
-                .ordered_minefields()
-                .filter_map(|(&id, field)| (field.coordinate == mine.coordinate).then_some(id))
-                .collect();
-            for &ordinal in &report.removed {
-                super::set_minefield(world, map, ordinal, None)?;
-            }
-        }
+        deplete(world, &mut report, ordinal)?;
         world.btech.validate_action(world)?;
         Ok(report)
     })
+}
+
+/// Lowest density a conventional field keeps while it stays on the map.
+const MINIMUM_DENSITY: i16 = 5;
+
+/// One density step lost to an explosion.
+const DENSITY_STEP: i16 = 5;
+
+/// Thin the field after it goes off (Tactical Operations p. 176). A conventional field rolls
+/// against its density target and drops a step on success, never below five points; a
+/// command-detonated, vibrabomb or active field drops a step automatically and is spent once a
+/// five-point field explodes. A field with no density left is cleared with everything
+/// colocated with it.
+fn deplete(world: &mut World, report: &mut MineBlastReport, ordinal: u32) -> Result<()> {
+    let map = report.map;
+    let mine = report.mine;
+    let conventional = matches!(mine.kind, MineKind::Standard | MineKind::Inferno);
+    let remaining = if mine.strength < MINIMUM_DENSITY {
+        None
+    } else if conventional {
+        let roll = world
+            .btech
+            .maps
+            .get_mut(&map)
+            .unwrap()
+            .fire_dice
+            .as_mut()
+            .context("Map random stream is unavailable")?
+            .two_d6();
+        report.depletion_roll = Some(roll);
+        let reduced = roll >= super::mine_activation::density_target(mine.strength);
+        Some(if reduced {
+            (mine.strength - DENSITY_STEP).max(MINIMUM_DENSITY)
+        } else {
+            mine.strength
+        })
+    } else if mine.strength - DENSITY_STEP < MINIMUM_DENSITY {
+        None
+    } else {
+        Some(mine.strength - DENSITY_STEP)
+    };
+    let Some(strength) = remaining else {
+        report.removed = world.btech.maps()[&map]
+            .ordered_minefields()
+            .filter_map(|(&id, field)| (field.coordinate == mine.coordinate).then_some(id))
+            .collect();
+        for &ordinal in &report.removed {
+            super::set_minefield(world, map, ordinal, None)?;
+        }
+        return Ok(());
+    };
+    report.remaining_strength = Some(strength);
+    if strength != mine.strength {
+        super::set_minefield(world, map, ordinal, Some(Minefield { strength, ..mine }))?;
+    }
+    Ok(())
 }
 
 /// Resolve a blast cell in map-slot order, freezing each occupant's arc before its packets.
@@ -150,7 +209,6 @@ fn hit_hex(
     let ground = i32::from(tile.surface_height());
     let neighbor = coordinate != report.mine.coordinate;
     let inferno = report.mine.kind == MineKind::Inferno;
-    // Rear armor remains selected after a rear-facing occupant within this blast cell.
     let blast = super::blast_damage::BlastCell {
         coordinate,
         origin: report.mine.coordinate.center(),
@@ -158,6 +216,9 @@ fn hit_hex(
         lower: ground - 1,
         upper: ground + 2,
     };
+    // Mines strike from below: every unit takes the blast on its front (Tactical Operations
+    // p. 176).
+    let arc = HitArc::Front;
     let mut rear = false;
     for id in super::map_slots::all_unit_order(world, report.map)? {
         let Some(target) = blast.target(world, id, rules)? else {
@@ -168,8 +229,6 @@ fn hit_hex(
             character || !is_character,
             "Mine blast requires character consequence publication"
         );
-        let arc = target.arc;
-        rear |= arc == HitArc::Rear;
         let rules = target.rules;
         report.notices.extend(super::broadcast::observer_notices(
             world,
@@ -197,9 +256,23 @@ fn hit_hex(
             unit: id,
             damage,
             burn_seconds: 0,
+            heat: 0,
             arc,
             impacts: Vec::new(),
             vehicle_heat: None,
+        };
+        // A 'Mech in an inferno field is hit by 1d6 infernos (Tactical Operations p. 42); a
+        // vehicle's fire check reads the field's strength.
+        let heat = if !inferno {
+            0
+        } else if world.btech.constructed_units().contains_key(&id) {
+            if report.mine.strength > 0 {
+                i32::from(super::dice::unit_dice_mut(world, id)?.d6())
+            } else {
+                0
+            }
+        } else {
+            i32::from(report.mine.strength)
         };
         let effects = super::blast_damage::resolve(
             world,
@@ -210,11 +283,7 @@ fn hit_hex(
                 class: DamageClass::Ordinary,
                 table: HitTable::Kick,
                 arc,
-                heat: if inferno {
-                    i32::from(report.mine.strength)
-                } else {
-                    0
-                },
+                heat,
                 character: is_character,
             },
             &mut rear,
@@ -223,6 +292,7 @@ fn hit_hex(
         hit.impacts = effects.impacts;
         hit.vehicle_heat = effects.vehicle_heat;
         hit.burn_seconds = effects.burn_seconds;
+        hit.heat = effects.mech_heat;
         super::piloting::append_feedback(
             &mut report.pilot_notices,
             effects.pilot_notices.iter().cloned(),

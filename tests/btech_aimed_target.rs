@@ -308,9 +308,11 @@ async fn directed_hits_share_material_resolution_and_exact_dice() {
 async fn computer_directed_fire_and_accuracy_share_chassis() {
     let targets = templates();
     let attack_seed = seed_for(|roll| roll == 12);
+    // A targeting computer strikes its chosen location on a 2d6 result of 6, 7 or 8 (Total
+    // Warfare p. 143).
     let target_seed = (0..=255)
         .map(|byte| [byte; 32])
-        .find(|seed| Dice::seeded(*seed).d6() >= 3)
+        .find(|seed| (6..=8).contains(&Dice::seeded(*seed).two_d6()))
         .unwrap();
     for source in templates() {
         for target_source in [&targets[0], &targets[1], &targets[2], &targets[6]] {
@@ -366,7 +368,7 @@ async fn computer_directed_fire_and_accuracy_share_chassis() {
             let report = serde_json::to_value(report).unwrap();
             let group = &report["salvo"]["report"]["groups"][0];
             let mut dice = Dice::seeded(target_seed);
-            assert!(dice.d6() >= 3);
+            assert!((6..=8).contains(&dice.two_d6()));
             if vehicle {
                 assert_eq!(
                     group["impact"]["hit"]["section"],
@@ -761,20 +763,12 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
     }
 }
 
-/// The near-miss option changes launch feedback, but missiles reach defenses and damage only at base BTH.
+/// A roll exactly at the base target number glances; missiles reach defenses and damage only
+/// at or above it, and a near miss leaves the target untouched.
 #[tokio::test]
 async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
     let defenders = defense_support::templates();
-    let (_dir, mut config, base_world) = support::isolated_world().await;
-    let path = config.root.join("stompymux.toml");
-    let mut settings: toml::Value =
-        toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    settings["battletech"]
-        .as_table_mut()
-        .unwrap()
-        .insert("glancing_blows".into(), 2.into());
-    std::fs::write(&path, toml::to_string(&settings).unwrap()).unwrap();
-    config = Config::load(&config.root).unwrap();
+    let (_dir, config, base_world) = support::isolated_world().await;
     let probe = scripts(&config, &base_world);
     let lua = scripts(&config, &base_world);
     let native = scripts(&config, &base_world);

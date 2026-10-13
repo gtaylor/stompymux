@@ -74,8 +74,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
                 unit["motion"]["desired_speed"] = 4.into();
                 if key == "constructed" {
                     unit["stagger"] = serde_json::json!({
-                        "hits": [{"damage": 12, "remaining": 45, "counted": false}],
-                        "elapsed": 15, "turn_damage": 0, "phase": 5, "checked_phase": null
+                        "turn_damage": 12, "phase": 5, "checked_phase": null
                     });
                 }
             })
@@ -181,11 +180,9 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
                 })
                 .unwrap();
             place_battle_unit(&mut administrative, id, exterior, 0, 0).unwrap();
-            assert!(
-                administrative.btech.constructed_units()[&id]
-                    .stagger()
-                    .hits
-                    .is_empty()
+            assert_eq!(
+                administrative.btech.constructed_units()[&id].stagger(),
+                &Stagger::default()
             );
         }
         for field in ["heading", "desired_heading", "speed", "desired_speed"] {

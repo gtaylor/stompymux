@@ -17,9 +17,6 @@ mod btech_c3i;
 #[path = "../btech_cargo_space.rs"]
 mod btech_cargo_space;
 
-#[path = "../btech_computer_experience.rs"]
-mod btech_computer_experience;
-
 #[path = "../btech_critical_report.rs"]
 mod btech_critical_report;
 

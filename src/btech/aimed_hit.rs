@@ -38,7 +38,7 @@ pub(super) fn prepare(world: &mut World, request: AimedLaunch) -> Result<Option<
         return Ok(None);
     };
     let immobile_hit = if super::aimed_target::immobile(world, request.target)? {
-        (6..=8).contains(&super::dice::unit_dice_mut(world, request.target)?.generic_roll())
+        aimed_location_struck(super::dice::unit_dice_mut(world, request.target)?)
     } else {
         false
     };
@@ -54,6 +54,12 @@ pub(super) fn prepare(world: &mut World, request: AimedLaunch) -> Result<Option<
             && request.ammunition != AmmunitionMode::Cluster,
         computer,
     }))
+}
+
+/// Whether an aimed shot strikes its chosen location: a 2d6 result of 6, 7 or 8, for both an
+/// immobile target (Total Warfare p. 110) and a targeting computer (p. 143).
+fn aimed_location_struck(dice: &mut Dice) -> bool {
+    (6..=8).contains(&dice.generic_roll())
 }
 
 /// Resolve hardware with the same mount/controller predicate used by ordinary aiming.
@@ -97,7 +103,8 @@ impl AimedShot {
         partial_cover: bool,
     ) -> Result<Option<UnitSection>> {
         if !self.immobile_hit
-            && (!self.computer || super::dice::unit_dice_mut(world, target)?.d6() < 3)
+            && (!self.computer
+                || !aimed_location_struck(super::dice::unit_dice_mut(world, target)?))
         {
             return Ok(None);
         }
@@ -195,7 +202,7 @@ mod tests {
                         );
                         assert_eq!(
                             world.btech, before,
-                            "Immobile success must not roll a computer die"
+                            "Immobile success must not roll for the computer"
                         );
                     }
                 }
@@ -232,7 +239,7 @@ mod tests {
         }
     }
 
-    /// Computer failures, hidden sections and mobile heads consume one die before ordinary routing.
+    /// Computer failures, hidden sections and mobile heads consume one 2d6 roll before ordinary routing.
     #[test]
     fn computer_roll_precedes_exposure_and_head_admission() {
         for running in [false, true] {
@@ -251,7 +258,7 @@ mod tests {
                     );
                     let mut dice = Dice::seeded([byte; 32]);
                     world.btech.constructed.get_mut(&ObjectId(42)).unwrap().dice = dice.clone();
-                    let success = dice.d6() >= 3
+                    let success = (6..=8).contains(&dice.two_d6())
                         && (section == MechSection::CenterTorso
                             || (section == MechSection::Head && !running));
                     let policy = AimedShot {

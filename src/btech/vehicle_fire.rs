@@ -147,7 +147,6 @@ fn fire_shot(
     let source_field = electronic_field(world, shooter)?;
     let target_field = electronic_field(world, target)?;
     let angel_blocked = source_field.angel_disturbed || target_field.angel_protected;
-    let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
     drop(loadouts);
     drop(admission);
     let mut candidate = super::shot_transaction::ShotCandidate::new(world);
@@ -167,7 +166,6 @@ fn fire_shot(
             distance: aim.distance,
             target_number: aim.subtotal(),
             streak_confused: angel_blocked,
-            glancing: rules.shot.glancing,
             critical_rules: rules.shooter_criticals,
         },
         prepared,
@@ -195,7 +193,6 @@ fn fire_shot(
         ammunition,
         launch.roll,
         aim.subtotal(),
-        rules.shot.glancing,
         angel_blocked,
     );
     launch.glancing = resolved.glancing;
@@ -214,7 +211,6 @@ fn fire_shot(
     } = super::direct_effects::resolve(
         &mut candidate,
         super::direct_effects::DirectEffectRequest {
-            submerged,
             shooter,
             target,
             weapon,
@@ -224,10 +220,7 @@ fn fire_shot(
             launched: launch.expenditure.launched,
             intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
             vehicle_impact: rules.shot.vehicle_impact,
-            hit_rules: rules.shot.hit,
-            hit_arc_mode: rules.shot.hit_arc_mode,
             woods_damage: rules.shot.aim.woods_damage,
-            range_damage: rules.shot.range_damage,
             damage_penalty: 0,
             distance: aim.distance,
             gatling_damage: launch.expenditure.gatling_damage,
@@ -278,7 +271,6 @@ fn fire_shot(
             shooter,
             target,
             VehicleSalvoRequest {
-                range_damage: rules.shot.range_damage,
                 damage_penalty: 0,
                 weapon,
                 ammunition,
@@ -291,10 +283,8 @@ fn fire_shot(
                 angel_blocked,
                 intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
             },
-            rules.shot.hit_arc_mode,
             rules.shot.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
-                submerged,
                 woods_damage: rules.shot.aim.woods_damage,
                 incoming: None,
                 attacker: Some(shooter),
@@ -309,20 +299,14 @@ fn fire_shot(
             target,
             &launch.expenditure,
             super::salvo::ShotDamage {
-                submerged,
                 woods_damage: rules.shot.aim.woods_damage,
-                range_damage: rules.shot.range_damage,
                 aimed,
                 incoming: None,
                 rules: FallRules {
                     vehicle_impact: rules.shot.vehicle_impact,
-                    stacking: rules.shot.stacking,
-                    stagger: rules.shot.stagger,
-                    hit: rules.shot.hit,
                     extended_piloting: rules.shot.extended_piloting,
                     toughness: rules.shot.target_toughness,
                 },
-                hit_arc_mode: rules.shot.hit_arc_mode,
                 glancing: resolved.glancing,
                 character,
                 intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
@@ -346,7 +330,7 @@ fn fire_shot(
         shooter,
         launch.expenditure.launched,
         coordinate.is_some(),
-        super::shot_counters::hit(launch.roll, aim.subtotal(), rules.shot.glancing),
+        super::shot_counters::hit(launch.roll, aim.subtotal()),
     )?;
     #[cfg(test)]
     super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Damage)?;

@@ -7,18 +7,9 @@ use stompymux_rs::*;
 /// Empty and active worlds expose measured counts without changing simulation state or dice.
 #[tokio::test]
 async fn runtime_statistics_match_live_state_native_lua_and_restart() {
-    let (_dir, config, mut world) = support::isolated_world().await;
-    let empty = battle_runtime_stats(&world, &config, ObjectId(1)).unwrap();
-    assert!(empty.simulation_pending);
-    assert_eq!(empty.reactor_startup_remaining, 31);
-    for _ in 0..31 {
-        advance_battle_reactor_windows(&mut world);
-    }
-    assert!(
-        !battle_runtime_stats(&world, &config, ObjectId(1))
-            .unwrap()
-            .simulation_pending
-    );
+    let (_dir, _config, world) = support::isolated_world().await;
+    let empty = battle_runtime_stats(&world, ObjectId(1)).unwrap();
+    assert!(!empty.simulation_pending);
     assert_eq!((empty.mechs, empty.vehicles, empty.maps), (0, 0, 0));
     for template in firing::templates() {
         let (_dir, config, mut world, parent, target, _) =
@@ -28,7 +19,7 @@ async fn runtime_statistics_match_live_state_native_lua_and_restart() {
         select_battle_target(&mut scripts.world_mut(), parent, ObjectId(1), Some(target)).unwrap();
         scripts.drain_outbox();
         let before = scripts.world().btech.clone();
-        let stats = battle_runtime_stats(&scripts.world(), &config, ObjectId(1)).unwrap();
+        let stats = battle_runtime_stats(&scripts.world(), ObjectId(1)).unwrap();
         assert!(stats.simulation_pending);
         assert_eq!(stats.mechs + stats.vehicles, 2);
         assert_eq!(stats.artillery_shots, 0);
@@ -58,7 +49,7 @@ async fn runtime_statistics_match_live_state_native_lua_and_restart() {
             assert!(memory.contains(&format!("{kind}: {count} registrations")));
         }
         assert!(memory.contains("Allocator totals: unavailable"));
-        assert!(battle_runtime_stats(&scripts.world(), &config, player).is_err());
+        assert!(battle_runtime_stats(&scripts.world(), player).is_err());
         assert!(
             scripts
                 .eval_callback::<mlua::Table>(&format!("return btech.runtime.stats({})", player.0))
@@ -69,9 +60,6 @@ async fn runtime_statistics_match_live_state_native_lua_and_restart() {
         let saved = scripts.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(
-            battle_runtime_stats(&restored, &config, ObjectId(1)).unwrap(),
-            stats
-        );
+        assert_eq!(battle_runtime_stats(&restored, ObjectId(1)).unwrap(), stats);
     }
 }

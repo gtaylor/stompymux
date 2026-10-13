@@ -8,9 +8,6 @@ use serde::{Deserialize, Serialize};
 pub(super) struct CriticalConditions {
     pub(super) light_probe_failure: Option<bool>,
     gyro: Option<GyroCondition>,
-    /// Hardened gyro contribution after ordered critical and actuator recalculation events.
-    #[serde(default)]
-    gyro_piloting: Option<u8>,
 }
 
 /// Gyro state at an edit; subsequent material hits advance the same protection sequence.
@@ -41,11 +38,6 @@ impl CriticalConditions {
 
     /// Vehicles have no gyro condition, and Mech corrections cannot predate removed losses.
     pub(super) fn validate(self, gyro_losses: Option<u8>) -> Result<()> {
-        ensure!(
-            self.gyro_piloting
-                .is_none_or(|modifier| gyro_losses.is_some() && matches!(modifier, 0 | 2 | 3 | 5)),
-            "Invalid hardened gyro piloting contribution"
-        );
         if let Some(gyro) = self.gyro {
             ensure!(
                 gyro_losses.is_some_and(|losses| gyro.losses <= losses) && gyro.damage <= 4,
@@ -60,7 +52,6 @@ impl Mech {
     /// Rebuild impairment from replacement material, retaining the independent protection flag.
     pub(super) fn reconstruct_gyro(&mut self, protection_used: bool) {
         self.critical_conditions.gyro = None;
-        self.critical_conditions.gyro_piloting = None;
         self.recalculate_actuators();
         if self.gyro() == Gyro::Hardened {
             self.critical_conditions.gyro = Some(GyroCondition {
@@ -71,26 +62,15 @@ impl Mech {
         }
     }
 
-    /// Current gyro contribution preserves the order of hardened protection and recalculation.
+    /// Piloting Skill Roll modifier from gyro damage (Total Warfare p. 60 and 126): a hit gyro
+    /// adds +3, and a destroyed gyro adds +6 to the check against MechWarrior damage in the
+    /// automatic fall. A heavy-duty gyro's first critical hit only adds +1 (p. 126).
     pub(super) fn gyro_piloting_modifier(&self) -> u8 {
-        let derived = u8::from(self.gyro_damage() > 0) * 3;
-        if self.gyro() == Gyro::Hardened {
-            return self.critical_conditions.gyro_piloting.unwrap_or(derived);
-        }
-        derived
-    }
-
-    /// A first impairing hit adds three to the current contribution; protection and later hits do not.
-    pub(super) fn record_gyro_critical(&mut self, previous_damage: u8, previous_modifier: u8) {
-        if self.gyro() == Gyro::Hardened {
-            self.critical_conditions.gyro_piloting = Some(
-                previous_modifier
-                    + if previous_damage == 0 && self.gyro_damage() > 0 {
-                        3
-                    } else {
-                        0
-                    },
-            );
+        let (damage, protection_used) = self.gyro_condition();
+        match damage {
+            0 => u8::from(protection_used),
+            1 => 3,
+            _ => 6,
         }
     }
 
@@ -106,19 +86,9 @@ impl Mech {
         }
     }
 
-    /// Rebuild actuator speed and gyro piloting together at the shared damage reset points.
+    /// Rebuild actuator speed at the shared damage reset points.
     pub(super) fn recalculate_actuators(&mut self) {
         self.propulsion.recalculate(self.template_speed());
-        if self.gyro() == Gyro::Hardened {
-            let (damage, protection_used) = self.gyro_condition();
-            self.critical_conditions.gyro_piloting = Some(if !protection_used {
-                0
-            } else if damage > 0 {
-                3
-            } else {
-                2
-            });
-        }
     }
 
     /// Current impairment and consumed hardened protection, including hits since an edit.
@@ -165,5 +135,48 @@ impl Mech {
             });
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{CriticalLocation, Mech, MechTemplate, System};
+
+    /// The test Jenner, optionally with a heavy-duty gyro.
+    fn jenner(hardened: bool) -> Mech {
+        let mut template = MechTemplate::parse(
+            "JR7-D",
+            include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
+        )
+        .unwrap();
+        if hardened {
+            template
+                .attributes
+                .entry("specials".into())
+                .or_default()
+                .push_str(" HDGYRO");
+        }
+        Mech::from_template(template).unwrap()
+    }
+
+    /// Standard gyro: +3 after one hit, +6 once destroyed. Heavy-duty gyro: +1, then +3, then +6.
+    #[test]
+    fn gyro_piloting_modifiers_follow_total_warfare() {
+        for (hardened, expected) in [(false, [3, 6, 6]), (true, [1, 3, 6])] {
+            let mut unit = jenner(hardened);
+            let gyro: Vec<CriticalLocation> = unit
+                .loadout()
+                .unwrap()
+                .systems
+                .iter()
+                .filter(|part| part.system == System::Gyro)
+                .map(|part| part.location)
+                .collect();
+            assert_eq!(unit.gyro_piloting_modifier(), 0);
+            for (slot, modifier) in gyro.iter().zip(expected) {
+                unit.destroy_critical(*slot).unwrap();
+                assert_eq!(unit.gyro_piloting_modifier(), modifier, "{hardened}");
+            }
+        }
     }
 }

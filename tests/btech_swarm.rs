@@ -76,7 +76,6 @@ async fn fixture(
 fn rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
         extended_ranges: false,
@@ -88,18 +87,9 @@ fn rules() -> AimRules {
 /// Tactical conventional shot configuration shared by admission cases.
 fn shot_rules() -> ShotRules {
     ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
         aim: rules(),
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
         extended_gunnery: false,
         extended_piloting: false,
         target_toughness: false,
@@ -529,14 +519,15 @@ fn gunnery(world: &mut World, target: u8) {
     support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
 }
 
-/// A maximum first roll followed by ten misses preserves missiles through the visited-slot boundary.
+/// A maximum first roll followed by ten misses against a target number of eleven preserves
+/// missiles through the visited-slot boundary without a glancing first hit.
 fn long_flight_seed() -> [u8; 32] {
     (0u32..65536)
         .find_map(|n| {
             let mut seed = [0; 32];
             seed[..4].copy_from_slice(&n.to_le_bytes());
             let mut dice = Dice::seeded(seed);
-            (dice.two_d6() == 12 && (0..10).all(|_| dice.two_d6() < 12)).then_some(seed)
+            (dice.two_d6() == 12 && (0..10).all(|_| dice.two_d6() < 11)).then_some(seed)
         })
         .unwrap()
 }
@@ -569,7 +560,7 @@ async fn swarm_visited_boundary_allows_exactly_eleven_attacks() {
             .unwrap();
         }
         acquire(&mut world, shooter, target);
-        gunnery(&mut world, 10);
+        gunnery(&mut world, 9);
         let seed = long_flight_seed();
         edit(&mut world, shooter, |unit| {
             unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
@@ -634,7 +625,7 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
         .unwrap();
     }
     acquire(&mut world, shooter, target);
-    gunnery(&mut world, 6);
+    gunnery(&mut world, 5);
     edit(&mut world, shooter, |unit| {
         unit["dice"] = serde_json::to_value(Dice::seeded(long_flight_seed())).unwrap()
     });
@@ -795,9 +786,9 @@ fn swarm_template_modes_cover_compatible_catalogue() {
     }
 }
 
-/// Dice seeds for the swarm flight shapes; pure rolls, shared across shards.
-fn aimed_swarm_seeds() -> ([u8; 32], [u8; 32], [u8; 32]) {
-    static SEEDS: std::sync::OnceLock<([u8; 32], [u8; 32], [u8; 32])> = std::sync::OnceLock::new();
+/// Dice seeds for the swarm attack and target preparation; pure rolls, shared across shards.
+fn aimed_swarm_seeds() -> ([u8; 32], [u8; 32]) {
+    static SEEDS: std::sync::OnceLock<([u8; 32], [u8; 32])> = std::sync::OnceLock::new();
     *SEEDS.get_or_init(|| {
         let seed_for = |predicate: &dyn Fn(&mut Dice) -> bool| {
             (0u32..65536)
@@ -810,7 +801,6 @@ fn aimed_swarm_seeds() -> ([u8; 32], [u8; 32], [u8; 32]) {
         };
         (
             seed_for(&|dice| dice.two_d6() == 12 && dice.two_d6() >= 8 && dice.two_d6() >= 8),
-            seed_for(&|dice| dice.two_d6() == 12 && dice.two_d6() == 2 && dice.two_d6() >= 8),
             seed_for(&|dice| (6..=8).contains(&dice.two_d6()) && dice.two_d6() == 2),
         )
     })
@@ -818,9 +808,9 @@ fn aimed_swarm_seeds() -> ([u8; 32], [u8; 32], [u8; 32]) {
 
 /// Aimed Swarm flights prepare only their first target and bypass active defenses on every hop.
 async fn aimed_swarm_matrix(source: &str) {
-    let (attack, near_attack, preparation) = aimed_swarm_seeds();
+    let (attack, preparation) = aimed_swarm_seeds();
     let defenders = defense_support::templates();
-    let mut probed_fidelity = [false; 4];
+    let mut probed_fidelity = [false; 2];
     for (index, recipient) in defenders.iter().enumerate() {
         let (_dir, config, mut base, shooter, target) = fixture(source, recipient, false).await;
         let second = candidate(
@@ -857,19 +847,13 @@ async fn aimed_swarm_matrix(source: &str) {
         }
         acquire(&mut base, shooter, target);
         select_battle_target(&mut base, shooter, ObjectId(1), Some(target)).unwrap();
-        for (shape, (smart, near_miss)) in
-            [(false, false), (true, false), (false, true), (true, true)]
-                .into_iter()
-                .enumerate()
-        {
+        for (shape, smart) in [false, true].into_iter().enumerate() {
             let mut world = base.clone();
             if smart {
                 toggle_battle_swarm(&mut world, shooter, ObjectId(1), 0, true).unwrap();
             }
             edit(&mut world, shooter, |state| {
-                state["dice"] =
-                    serde_json::to_value(Dice::seeded(if near_miss { near_attack } else { attack }))
-                        .unwrap()
+                state["dice"] = serde_json::to_value(Dice::seeded(attack)).unwrap()
             });
             edit(&mut world, target, |state| {
                 state["dice"] = serde_json::to_value(Dice::seeded(preparation)).unwrap()
@@ -884,18 +868,9 @@ async fn aimed_swarm_matrix(source: &str) {
                 "h"
             };
             set_battle_aimed_section(&mut world, shooter, ObjectId(1), Some(section)).unwrap();
-            let mut rules = shot_rules();
-            if near_miss {
-                rules.glancing = GlancingMode::BelowTarget;
-            }
+            let rules = shot_rules();
             let report = fire_with_rules(&mut world, shooter, target, rules).unwrap();
             let baseline = fire_with_rules(&mut ordinary, shooter, target, rules).unwrap();
-            if near_miss {
-                assert!(report.hops[1].salvo.is_none());
-                assert_eq!(report.hops[1].roll, 2);
-                assert_eq!(report.hops[1].remaining, 14);
-                assert_eq!(report.hops[2].incoming, 14);
-            }
             assert_eq!(report, baseline);
             assert_eq!(
                 report.hops.iter().map(|hop| hop.target).collect::<Vec<_>>(),

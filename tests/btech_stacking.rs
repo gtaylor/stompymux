@@ -81,40 +81,17 @@ fn fall() -> FallRules {
 }
 
 #[tokio::test]
-async fn crowding_thresholds_and_disabled_mode_do_not_consume_dice() {
+async fn crowding_thresholds_do_not_consume_dice() {
     for teams in [vec![0, 0], vec![0, 0, 1], vec![0, 0, 1, 1, 1, 1]] {
         let (_dir, _, mut world, ids) = fixture(&teams).await;
         let before = world.btech.clone();
         assert!(
-            resolve_battle_stacking(
-                &mut world,
-                ids[0],
-                input(StackingEntry::Jump),
-                StackingRules::STANDARD,
-                fall()
-            )
-            .unwrap()
-            .is_empty()
+            resolve_battle_stacking(&mut world, ids[0], input(StackingEntry::Jump), fall())
+                .unwrap()
+                .is_empty()
         );
         assert_eq!(world.btech, before);
     }
-    let (_dir, _, mut world, ids) = fixture(&[0, 0, 0]).await;
-    let before = world.btech.clone();
-    assert!(
-        resolve_battle_stacking(
-            &mut world,
-            ids[0],
-            input(StackingEntry::Jump),
-            StackingRules {
-                mode: 0,
-                ..StackingRules::STANDARD
-            },
-            fall()
-        )
-        .unwrap()
-        .is_empty()
-    );
-    assert_eq!(world.btech, before);
 }
 
 #[tokio::test]
@@ -129,15 +106,9 @@ async fn no_stacking_maps_never_collide() {
         seed(&mut world, ids[0], 3, 1, None);
         let before = world.btech.clone();
         assert!(
-            resolve_battle_stacking(
-                &mut world,
-                ids[0],
-                input(entry),
-                StackingRules::STANDARD,
-                fall()
-            )
-            .unwrap()
-            .is_empty()
+            resolve_battle_stacking(&mut world, ids[0], input(entry), fall())
+                .unwrap()
+                .is_empty()
         );
         assert_eq!(world.btech, before);
     }
@@ -150,15 +121,11 @@ async fn crowding_selection_obeys_team_priority_and_stopped_target_gaps() {
         (vec![0, 1, 1, 1, 1, 1, 1, 1], 7, 1),
     ] {
         let (_dir, config, mut world, ids) = fixture(&teams).await;
-        seed(&mut world, ids[0], count, 1, None);
-        let events = resolve_battle_stacking(
-            &mut world,
-            ids[0],
-            input(StackingEntry::Jump),
-            StackingRules::STANDARD,
-            fall(),
-        )
-        .unwrap();
+        // The selection die, then the accidental fall's to-hit roll of seven or better.
+        seed(&mut world, ids[0], count, 1, Some(12));
+        let events =
+            resolve_battle_stacking(&mut world, ids[0], input(StackingEntry::Jump), fall())
+                .unwrap();
         assert_eq!(events[0].unit, ids[0]);
         assert_eq!(events[1].unit, ids[target]);
         world.validate(&config).unwrap();
@@ -175,92 +142,17 @@ async fn crowding_selection_obeys_team_priority_and_stopped_target_gaps() {
     seed(&mut world, ids[1], 3, 3, None);
     let before = world.btech.clone();
     assert!(
-        resolve_battle_stacking(
-            &mut world,
-            ids[1],
-            input(StackingEntry::Fall),
-            StackingRules::STANDARD,
-            fall()
-        )
-        .unwrap()
-        .is_empty()
+        resolve_battle_stacking(&mut world, ids[1], input(StackingEntry::Fall), fall())
+            .unwrap()
+            .is_empty()
     );
     assert_ne!(world.btech, before); // Selection still consumes one die.
 }
 
 #[tokio::test]
-async fn crowding_avoidance_falls_and_success_replay_without_target_damage() {
-    for entry in [
-        StackingEntry::Ground,
-        StackingEntry::Jump,
-        StackingEntry::Fall,
-    ] {
-        for success in [false, true] {
-            let (_dir, config, mut world, ids) = fixture(if entry == StackingEntry::Jump {
-                &[0, 0, 0, 0]
-            } else {
-                &[0, 0, 0]
-            })
-            .await;
-            let id = ids[0];
-            world
-                .btech
-                .edit_unit_motion(id, |motion| {
-                    motion.speed = 21.5;
-                    motion.desired_speed = 21.5;
-                })
-                .unwrap();
-            let target = if entry == StackingEntry::Ground {
-                9
-            } else {
-                11
-            };
-            seed(&mut world, id, 3, 1, Some(target - u8::from(!success)));
-            let other = world.btech.constructed_units()[&ids[1]].clone();
-            persistence::save(&config.database(), &world).await.unwrap();
-            let mut loaded = persistence::load(&config.database()).await.unwrap();
-            let rules = StackingRules {
-                mode: 1,
-                ..StackingRules::STANDARD
-            };
-            let events =
-                resolve_battle_stacking(&mut world, id, input(entry), rules, fall()).unwrap();
-            assert_eq!(
-                events,
-                resolve_battle_stacking(&mut loaded, id, input(entry), rules, fall()).unwrap()
-            );
-            assert_eq!(world.btech, loaded.btech);
-            assert_eq!(world.btech.constructed_units()[&ids[1]], other);
-            let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(
-                unit.posture(),
-                if success {
-                    Posture::Standing
-                } else {
-                    Posture::Prone
-                }
-            );
-            assert_eq!(
-                unit.motion().unwrap().speed,
-                if success && entry != StackingEntry::Ground {
-                    21.5
-                } else {
-                    0.0
-                }
-            );
-            persistence::save(&config.database(), &world).await.unwrap();
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                world.btech
-            );
-        }
-    }
-}
-
-#[tokio::test]
 async fn collision_damage_and_second_unit_failure_commit_together() {
     let (_dir, config, mut world, ids) = fixture(&[0, 0, 0, 0]).await;
-    seed(&mut world, ids[0], 3, 1, None);
+    seed(&mut world, ids[0], 3, 1, Some(12));
     let mut rejected = world.clone();
     rejected
         .objects
@@ -270,37 +162,17 @@ async fn collision_damage_and_second_unit_failure_commit_together() {
         .insert(Flag::InCharacter);
     let before = rejected.btech.clone();
     assert!(
-        resolve_battle_stacking(
-            &mut rejected,
-            ids[0],
-            input(StackingEntry::Jump),
-            StackingRules::STANDARD,
-            fall()
-        )
-        .is_err()
+        resolve_battle_stacking(&mut rejected, ids[0], input(StackingEntry::Jump), fall()).is_err()
     );
     assert_eq!(rejected.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let before = world.btech.clone();
-    let events = resolve_battle_stacking(
-        &mut world,
-        ids[0],
-        input(StackingEntry::Jump),
-        StackingRules::STANDARD,
-        fall(),
-    )
-    .unwrap();
+    let events =
+        resolve_battle_stacking(&mut world, ids[0], input(StackingEntry::Jump), fall()).unwrap();
     assert_eq!(
         events,
-        resolve_battle_stacking(
-            &mut loaded,
-            ids[0],
-            input(StackingEntry::Jump),
-            StackingRules::STANDARD,
-            fall()
-        )
-        .unwrap()
+        resolve_battle_stacking(&mut loaded, ids[0], input(StackingEntry::Jump), fall()).unwrap()
     );
     assert_eq!(world.btech, loaded.btech);
     for id in &ids[..2] {
@@ -330,7 +202,7 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
                 &[0, 0, 0]
             })
             .await;
-            seed(&mut world, ids[0], 3, 1, None);
+            seed(&mut world, ids[0], 3, 1, Some(12));
             let target_seed = (0..=255)
                 .find(|value| {
                     let mut dice = Dice::seeded([*value; 32]);
@@ -359,21 +231,19 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
                 },
                 jump_movement_points: 2,
             };
-            let events = resolve_battle_stacking(
-                &mut world,
-                ids[0],
-                physical,
-                StackingRules::STANDARD,
-                fall(),
-            )
-            .unwrap();
+            let events = resolve_battle_stacking(&mut world, ids[0], physical, fall()).unwrap();
             let location = if prone || entry == StackingEntry::Ground {
                 MechSection::LeftTorso
             } else {
                 MechSection::CenterTorso
             };
-            let warning = before[&location].armor - 5 < before[&location].armor / 2;
-            assert_eq!(events.len(), 2 + usize::from(warning));
+            // A ground bump of five points; an accidental fall of a 20-ton 'Mech from one
+            // level: two (Total Warfare p. 152).
+            let damage = if entry == StackingEntry::Ground { 5 } else { 2 };
+            let warning = before[&location].armor - damage < before[&location].armor / 2;
+            if entry == StackingEntry::Ground {
+                assert_eq!(events.len(), 2 + usize::from(warning));
+            }
             if warning {
                 assert_eq!(events[2].unit, ids[1]);
                 assert!(events[2].text.contains("WARNING:"));
@@ -383,7 +253,7 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
             for (&section, original) in &before {
                 assert_eq!(
                     after[&section].armor,
-                    original.armor - if section == location { 5 } else { 0 }
+                    original.armor - if section == location { damage } else { 0 }
                 );
                 assert_eq!(after[&section].internal, original.internal);
                 assert_eq!(after[&section].rear, original.rear);
@@ -395,7 +265,7 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
 
 #[tokio::test]
 async fn ground_entry_collisions_use_current_mass_and_replay_the_whole_tick() {
-    for mode in [0, 1, 2] {
+    {
         let (_dir, config, mut world, ids) = fixture(&[0, 0, 0]).await;
         let id = ids[0];
         seed(&mut world, id, 3, 1, Some(9));
@@ -416,28 +286,17 @@ async fn ground_entry_collisions_use_current_mass_and_replay_the_whole_tick() {
             })
             .unwrap();
         world.validate(&config).unwrap();
-        let movement = MovementRules {
-            fall: FallRules {
-                stacking: StackingRules {
-                    mode,
-                    ..StackingRules::STANDARD
-                },
-                ..fall()
-            },
-            ..MovementRules::STANDARD
-        };
-        if mode == 2 {
-            let mut rejected = world.clone();
-            rejected
-                .objects
-                .get_mut(&id)
-                .unwrap()
-                .flags
-                .insert(Flag::InCharacter);
-            let before = rejected.btech.clone();
-            assert!(advance_battle_motion(&mut rejected, movement).is_err());
-            assert_eq!(rejected.btech, before);
-        }
+        let movement = MovementRules::STANDARD;
+        let mut rejected = world.clone();
+        rejected
+            .objects
+            .get_mut(&id)
+            .unwrap()
+            .flags
+            .insert(Flag::InCharacter);
+        let before = rejected.btech.clone();
+        assert!(advance_battle_motion(&mut rejected, movement).is_err());
+        assert_eq!(rejected.btech, before);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         let notices = advance_battle_motion(&mut world, movement).unwrap();
@@ -446,17 +305,14 @@ async fn ground_entry_collisions_use_current_mass_and_replay_the_whole_tick() {
             advance_battle_motion(&mut loaded, movement).unwrap()
         );
         assert_eq!(world.btech, loaded.btech);
-        assert_eq!(
-            notices.iter().any(|notice| notice.text.contains("bump")),
-            mode != 0
-        );
+        assert!(notices.iter().any(|notice| notice.text.contains("bump")));
         assert_eq!(
             world.btech.constructed_units()[&id].position().unwrap().y,
             1
         );
         assert_eq!(
             world.btech.constructed_units()[&id].motion().unwrap().speed,
-            if mode == 1 { 0.0 } else { 21.5 }
+            21.5
         );
         let scripts = Scripts::new(
             &config,
@@ -501,17 +357,7 @@ async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World,
     }
     world.btech = serde_json::from_value(state).unwrap();
     launch_battle_jump(&mut world, ids[0], ObjectId(1), 180, 1.0).unwrap();
-    advance_battle_jumps(
-        &mut world,
-        stompymux_rs::MovementRules {
-            fall: FallRules {
-                stacking: StackingRules::STANDARD,
-                ..fall()
-            },
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
+    advance_battle_jumps(&mut world, stompymux_rs::MovementRules::STANDARD).unwrap();
     assert!(world.btech.constructed_units()[&ids[0]].flight().is_some());
     world.validate(&config).unwrap();
     (dir, config, world, ids)
@@ -520,7 +366,7 @@ async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World,
 #[tokio::test]
 async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
     for neighbors in [2, 3] {
-        for (mode, success) in [(0, true), (1, true), (1, false), (2, true)] {
+        {
             let (_dir, config, mut world, ids) = landing_fixture(neighbors).await;
             let id = ids[0];
             refresh_battle_contacts(&mut world, &[ids[1]]).unwrap();
@@ -529,16 +375,10 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
                     .unwrap()
                     .is_some()
             );
-            seed(&mut world, id, 3, 1, Some(if success { 11 } else { 10 }));
+            seed(&mut world, id, 3, 1, Some(12));
             let before = world.btech.clone();
-            let rules = FallRules {
-                stacking: StackingRules {
-                    mode,
-                    ..StackingRules::STANDARD
-                },
-                ..fall()
-            };
-            if mode == 2 && neighbors == 3 {
+            let rules = fall();
+            if neighbors == 3 {
                 let mut rejected = world.clone();
                 rejected
                     .objects
@@ -581,7 +421,7 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
                 .unwrap()
             );
             assert_eq!(world.btech, loaded.btech);
-            let collides = neighbors == 3 && mode != 0;
+            let collides = neighbors == 3;
             assert_eq!(
                 events
                     .iter()
@@ -599,24 +439,14 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
             let unit = &world.btech.constructed_units()[&id];
             assert!(unit.flight().is_none());
             assert_eq!(unit.jump_stabilization(), 12);
-            if mode != 2 {
-                assert_eq!(
-                    unit.posture(),
-                    if collides && !success {
-                        Posture::Prone
-                    } else {
-                        Posture::Standing
-                    }
-                );
-            }
             if !collides {
                 assert_eq!(
                     serde_json::to_value(unit).unwrap()["dice"],
                     serde_json::to_value(&before.constructed_units()[&id]).unwrap()["dice"]
                 );
             }
-            for target in &ids[1..] {
-                if mode != 2 || !collides {
+            if !collides {
+                for target in &ids[1..] {
                     assert_eq!(
                         world.btech.constructed_units()[target],
                         before.constructed_units()[target]
@@ -633,27 +463,14 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
 }
 
 #[tokio::test]
-async fn early_landing_uses_configured_crowding_in_native_and_lua_transactions() {
-    for mode in [0, 1, 2] {
-        let (dir, _config, mut world, ids) = landing_fixture(3).await;
-        let path = dir.path().join("stompymux.toml");
-        let mut document: toml::Value =
-            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        document["battletech"]
-            .as_table_mut()
-            .unwrap()
-            .insert("stacking".into(), mode.into());
-        document["battletech"]
-            .as_table_mut()
-            .unwrap()
-            .insert("stackdamage".into(), 50.into());
-        std::fs::write(&path, toml::to_string(&document).unwrap()).unwrap();
-        let config = Config::load(dir.path()).unwrap();
+async fn early_landing_resolves_crowding_in_native_and_lua_transactions() {
+    {
+        let (_dir, config, mut world, ids) = landing_fixture(3).await;
         let id = ids[0];
         let chosen = (0..=255)
             .find(|value| {
                 let mut dice = Dice::seeded([*value; 32]);
-                dice.two_d6() >= 6 && dice.die(3).unwrap() == 1
+                dice.two_d6() >= 6 && dice.die(3).unwrap() == 1 && dice.two_d6() >= 7
             })
             .unwrap();
         world
@@ -715,12 +532,7 @@ async fn early_landing_uses_configured_crowding_in_native_and_lua_transactions()
             .filter(|(recipient, _)| *recipient == witness)
             .map(|(_, text)| text.as_str())
             .collect();
-        let action = match mode {
-            0 => "lands gracefully.".to_owned(),
-            1 => format!("nearly lands on #{} Jenner!", ids[1].0),
-            _ => format!("lands on #{} Jenner!", ids[1].0),
-        };
-        let expected = format!("#{} Jenner {action}", id.0);
+        let expected = format!("#{} Jenner lands on #{} Jenner!", id.0, ids[1].0);
         assert_eq!(observed.iter().filter(|text| **text == expected).count(), 1);
         assert_eq!(native.world().btech, lua.world().btech);
         assert!(
@@ -737,7 +549,7 @@ async fn early_landing_uses_configured_crowding_in_native_and_lua_transactions()
     }
 }
 
-/// Collision thrust scales with the map's gravity.
+/// An accidental fall's damage is tonnage over ten per level fallen whatever the gravity.
 #[tokio::test]
 async fn landing_collision_thrust_uses_map_gravity() {
     for gravity in [100, 200] {
@@ -747,46 +559,32 @@ async fn landing_collision_thrust_uses_map_gravity() {
         let mover_seed = (0..=255)
             .find(|value| {
                 let mut dice = Dice::seeded([*value; 32]);
-                dice.two_d6() >= 6 && dice.die(3).unwrap() == 1
-            })
-            .unwrap();
-        let target_seed = (0..=255)
-            .find(|value| {
-                let mut dice = Dice::seeded([*value; 32]);
-                let first = dice.d6();
-                dice.two_d6(); // First damage packet enters material resolution.
-                first == 3 && dice.d6() == 3
+                dice.two_d6() >= 6 && dice.die(3).unwrap() == 1 && dice.two_d6() >= 7
             })
             .unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["maps"][map.0.to_string()]["gravity"] = gravity.into();
-        for (unit, value) in [(id, mover_seed), (ids[1], target_seed)] {
-            state["constructed"][unit.0.to_string()]["dice"] =
-                serde_json::to_value(Dice::seeded([value; 32])).unwrap();
-        }
+        state["constructed"][id.0.to_string()]["dice"] =
+            serde_json::to_value(Dice::seeded([mover_seed; 32])).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
-        let before =
-            world.btech.constructed_units()[&ids[1]].sections()[&MechSection::CenterTorso].armor;
-        let rules = FallRules {
-            stacking: StackingRules {
-                damage_percent: 50,
-                ..StackingRules::STANDARD
-            },
-            ..fall()
+        // Every Jenner section keeps more than five points, so no five-point packet transfers.
+        let protection = |world: &World| {
+            world.btech.constructed_units()[&ids[1]]
+                .sections()
+                .values()
+                .map(|section| u32::from(section.armor) + u32::from(section.internal))
+                .sum::<u32>()
         };
+        let before = protection(&world);
         land_battle_jump(
             &mut world,
             id,
             ObjectId(1),
-            stompymux_rs::MovementRules {
-                fall: rules,
-                ..stompymux_rs::MovementRules::STANDARD
-            },
+            stompymux_rs::MovementRules::STANDARD,
         )
         .unwrap();
-        let after =
-            world.btech.constructed_units()[&ids[1]].sections()[&MechSection::CenterTorso].armor;
-        assert_eq!(before - after, if gravity == 200 { 4 } else { 6 });
+        // A 35-ton Jenner coming down one level: four points (Total Warfare p. 152).
+        assert_eq!(before - protection(&world), 4);
         world.validate(&config).unwrap();
     }
 }
@@ -801,7 +599,7 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
             let mut dice = Dice::seeded([*value; 32]);
             let safe = dice.two_d6() >= 7;
             dice.d6();
-            safe && dice.two_d6() == 7 && dice.die(3).unwrap() == 1
+            safe && dice.two_d6() == 7 && dice.die(3).unwrap() == 1 && dice.two_d6() >= 7
         })
         .unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -819,10 +617,7 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
         serde_json::to_value(Dice::seeded([chosen; 32])).unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
-    let rules = FallRules {
-        stacking: StackingRules::STANDARD,
-        ..fall()
-    };
+    let rules = fall();
     let mut rejected = world.clone();
     rejected
         .objects
@@ -842,32 +637,6 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
         .is_err()
     );
     assert_eq!(rejected.btech, before);
-    let mut expected = world.clone();
-    let mut expected_notices = advance_battle_jumps(
-        &mut expected,
-        stompymux_rs::MovementRules {
-            fall: FallRules {
-                stacking: StackingRules {
-                    mode: 0,
-                    ..rules.stacking
-                },
-                ..rules
-            },
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
-    let physical = StackingInput {
-        entry: StackingEntry::Fall,
-        mass: expected.btech.constructed_units()[&id]
-            .mass()
-            .unwrap()
-            .total,
-        jump_movement_points: 5,
-    };
-    expected_notices.extend(
-        resolve_battle_stacking(&mut expected, id, physical, rules.stacking, fall()).unwrap(),
-    );
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let events = advance_battle_jumps(
@@ -878,8 +647,16 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
         },
     )
     .unwrap();
-    assert_eq!(events, expected_notices);
-    assert_eq!(world.btech, expected.btech);
+    // The obstacle fall's damage precedes the crowding collision it causes.
+    let crash = events
+        .iter()
+        .position(|notice| notice.text.contains("crash into the obstacle"))
+        .expect("obstacle fall notice");
+    let collision = events
+        .iter()
+        .position(|notice| notice.text.contains("land on another"))
+        .expect("collision notice");
+    assert!(crash < collision);
     assert_eq!(
         events,
         advance_battle_jumps(
@@ -900,8 +677,9 @@ async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
     world.validate(&config).unwrap();
 }
 
-/// Avoid unrelated pilot injuries and distribute a five-level fall over four intact sections.
-fn thermal_fall_dice() -> Dice {
+/// Avoid unrelated pilot injuries and distribute a five-level fall over four intact sections;
+/// `accept` then checks the whole action, so the landing's accidental-fall roll also passes.
+fn thermal_fall_dice(accept: impl Fn(&Dice) -> bool) -> Dice {
     (0u32..100_000)
         .find_map(|value| {
             let mut bytes = [0; 32];
@@ -921,49 +699,54 @@ fn thermal_fall_dice() -> Dice {
                 dice.two_d6(); // Each fall packet enters material resolution.
             }
             locations.sort();
-            (locations == [5, 6, 8, 9] && dice.die(3).unwrap() == 1).then_some(original)
+            (locations == [5, 6, 8, 9] && dice.die(3).unwrap() == 1 && accept(&original))
+                .then_some(original)
         })
         .unwrap()
 }
 
 #[tokio::test]
 async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() {
-    for mode in [0, 2] {
+    {
         let (_dir, config, mut world, ids) = landing_fixture(2).await;
         let id = ids[0];
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                let unit = record;
-                unit["dice"] = serde_json::to_value(thermal_fall_dice()).unwrap();
-                unit["heat"] = serde_json::json!({"stored":24.0,"excess":14.0});
-                unit["overheat_clock"] =
-                    serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
-            })
-            .unwrap();
         let rules = OverheatRules {
             vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-            hit: fall().hit,
             extended_piloting: true,
-            stagger: StaggerMode::Retain,
-            stacking: StackingRules {
-                mode,
-                damage_percent: 50,
-                ..StackingRules::STANDARD
-            },
         };
-        if mode == 2 {
-            let mut rejected = world.clone();
-            rejected
-                .objects
-                .get_mut(&ids[1])
-                .unwrap()
-                .flags
-                .insert(Flag::InCharacter);
-            let before = rejected.btech.clone();
-            assert!(advance_battle_overheat(&mut rejected, rules).is_err());
-            assert_eq!(rejected.btech, before);
-        }
+        let prepare = |world: &mut World, dice: &Dice| {
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    let unit = record;
+                    unit["dice"] = serde_json::to_value(dice).unwrap();
+                    unit["heat"] = serde_json::json!({"stored":24.0,"excess":14.0});
+                    unit["overheat_clock"] =
+                        serde_json::json!({"elapsed":30,"phase":0,"injury_due":false});
+                })
+                .unwrap();
+        };
+        let dice = thermal_fall_dice(|dice| {
+            let mut probe = world.clone();
+            prepare(&mut probe, dice);
+            advance_battle_overheat(&mut probe, rules).is_ok_and(|reports| {
+                reports[0]
+                    .notices
+                    .iter()
+                    .any(|notice| notice.text.contains("land on another"))
+            })
+        });
+        prepare(&mut world, &dice);
+        let mut rejected = world.clone();
+        rejected
+            .objects
+            .get_mut(&ids[1])
+            .unwrap()
+            .flags
+            .insert(Flag::InCharacter);
+        let before = rejected.btech.clone();
+        assert!(advance_battle_overheat(&mut rejected, rules).is_err());
+        assert_eq!(rejected.btech, before);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         let reports = advance_battle_overheat(&mut world, rules).unwrap();
@@ -973,12 +756,11 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
         );
         assert_eq!(world.btech, loaded.btech);
         assert_eq!(reports[0].fall.as_ref().unwrap().damage, 20);
-        assert_eq!(
+        assert!(
             reports[0]
                 .notices
                 .iter()
-                .any(|notice| notice.text.contains("land on another")),
-            mode == 2
+                .any(|notice| notice.text.contains("land on another"))
         );
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.power(), Power::Off);
@@ -994,9 +776,9 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
 }
 
 #[tokio::test]
-async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact() {
+async fn airborne_critical_falls_apply_collisions_inside_the_impact() {
     for jet in [false, true] {
-        for mode in [0, 2] {
+        {
             let (_dir, config, mut world, ids) = landing_fixture(2).await;
             let id = ids[0];
             let location = if jet {
@@ -1025,33 +807,39 @@ async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact()
                 .position(|&slot| slot == location)
                 .unwrap() as u16
                 + 1;
+            let hit = Hit {
+                section: location.section,
+                rear_armor: false,
+                through_armor_critical: true,
+            };
+            let rules = fall();
+            // The fall into the crowded hex must also pass its accidental-fall roll.
             let chosen = (0..=255)
-                .find(|value| {
+                .filter(|value| {
                     let mut dice = Dice::seeded([*value; 32]);
                     dice.two_d6(); // Material entry precedes the selected critical.
                     matches!(dice.two_d6(), 8 | 9)
                         && dice.die(candidates.len() as u16).unwrap() == selected
                         && (jet || dice.two_d6() < 9)
                 })
+                .find(|value| {
+                    let mut probe = world.clone();
+                    probe
+                        .btech
+                        .set_unit_dice(id, Dice::seeded([*value; 32]))
+                        .unwrap();
+                    jet || resolve_battle_tactical_impact(&mut probe, id, hit, 1, rules)
+                        .unwrap()
+                        .notices
+                        .iter()
+                        .any(|notice| notice.text.contains("land on another"))
+                })
                 .unwrap();
             world
                 .btech
                 .set_unit_dice(id, Dice::seeded([chosen; 32]))
                 .unwrap();
-            let hit = Hit {
-                section: location.section,
-                rear_armor: false,
-                through_armor_critical: true,
-                crew_stun: false,
-            };
-            let rules = FallRules {
-                stacking: StackingRules {
-                    mode,
-                    ..StackingRules::STANDARD
-                },
-                ..fall()
-            };
-            if !jet && mode == 2 {
+            if !jet {
                 let mut rejected = world.clone();
                 for target in &ids[1..] {
                     rejected
@@ -1084,9 +872,9 @@ async fn airborne_critical_falls_apply_configured_collisions_inside_the_impact()
                     .notices
                     .iter()
                     .any(|notice| notice.text.contains("land on another")),
-                !jet && mode == 2
+                !jet
             );
-            if jet || mode == 0 {
+            if jet {
                 for (target, old) in ids[1..].iter().zip(neighbors) {
                     assert_eq!(world.btech.constructed_units()[target], old);
                 }
@@ -1212,27 +1000,28 @@ async fn moving_shutdown_neighbor_failure_rolls_back_power_fall_and_facing() {
     let before = world.btech.clone();
     assert!(stop_battle_unit(&mut world, id, ObjectId(1), fall()).is_err());
     assert_eq!(world.btech, before);
-    let disabled = FallRules {
-        stacking: StackingRules {
-            mode: 0,
-            ..StackingRules::STANDARD
-        },
-        ..fall()
-    };
-    stop_battle_unit(&mut world, id, ObjectId(1), disabled).unwrap();
-    assert_eq!(world.btech.constructed_units()[&id].power(), Power::Off);
+    // Without character neighbors the same moving shutdown falls and collides in one commit.
     for target in &ids[1..] {
-        assert_eq!(
-            world.btech.constructed_units()[target],
-            before.constructed_units()[target]
-        );
+        world
+            .objects
+            .get_mut(target)
+            .unwrap()
+            .flags
+            .remove(Flag::InCharacter);
     }
+    stop_battle_unit(&mut world, id, ObjectId(1), fall()).unwrap();
+    let unit = &world.btech.constructed_units()[&id];
+    assert_eq!(unit.power(), Power::Off);
+    assert_eq!(unit.posture(), Posture::Prone);
+    assert!(ids[1..].iter().any(
+        |target| world.btech.constructed_units()[target] != before.constructed_units()[target]
+    ));
     world.validate(&config).unwrap();
 }
 
-/// Collision observers independently identify participants and replay damage/avoidance feedback.
+/// Collision observers independently identify participants and replay damage feedback.
 #[tokio::test]
-async fn collision_observers_filter_each_participant_and_replay_all_entry_modes() {
+async fn collision_observers_filter_each_participant_and_replay_all_entries() {
     let (_dir, config, mut base, ids) = fixture(&[0, 0, 0, 0, 1]).await;
     let actor = ids[0];
     let target = ids[1];
@@ -1285,7 +1074,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
         StackingEntry::Jump,
         StackingEntry::Fall,
     ] {
-        for (mode, success) in [(1, false), (1, true), (2, true)] {
+        {
             for visible in 0..4 {
                 for powered in [false, true] {
                     let mut world = base.clone();
@@ -1307,18 +1096,8 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
                     }
                     world.btech = serde_json::from_value(state).unwrap();
                     let count = if entry == StackingEntry::Jump { 3 } else { 4 };
-                    seed(
-                        &mut world,
-                        actor,
-                        count,
-                        1,
-                        Some(if success { 12 } else { 2 }),
-                    );
+                    seed(&mut world, actor, count, 1, Some(12));
                     let observer_before = world.btech.constructed_units()[&observer].clone();
-                    let rules = StackingRules {
-                        mode,
-                        ..StackingRules::STANDARD
-                    };
                     let original = world.btech.clone();
                     let mut rejected = world.clone();
                     rejected
@@ -1327,26 +1106,17 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
                         .unwrap()
                         .flags
                         .insert(Flag::InCharacter);
-                    if mode == 2 {
-                        assert!(
-                            resolve_battle_stacking(
-                                &mut rejected,
-                                actor,
-                                input(entry),
-                                rules,
-                                fall()
-                            )
+                    assert!(
+                        resolve_battle_stacking(&mut rejected, actor, input(entry), fall())
                             .is_err()
-                        );
-                        assert_eq!(rejected.btech, original);
-                    }
+                    );
+                    assert_eq!(rejected.btech, original);
                     persistence::save(&config.database(), &world).await.unwrap();
                     let mut restored = persistence::load(&config.database()).await.unwrap();
                     let notices =
-                        resolve_battle_stacking(&mut world, actor, input(entry), rules, fall())
-                            .unwrap();
+                        resolve_battle_stacking(&mut world, actor, input(entry), fall()).unwrap();
                     assert_eq!(
-                        resolve_battle_stacking(&mut restored, actor, input(entry), rules, fall())
+                        resolve_battle_stacking(&mut restored, actor, input(entry), fall())
                             .unwrap(),
                         notices
                     );
@@ -1372,24 +1142,16 @@ async fn collision_observers_filter_each_participant_and_replay_all_entry_modes(
                         } else {
                             "someone".to_owned()
                         };
-                        let action = match (entry == StackingEntry::Ground, mode) {
-                            (true, 2) => "bumps into",
-                            (true, _) => "nearly bumps into",
-                            (false, 2) => "lands on",
-                            (false, _) => "nearly lands on",
+                        let action = if entry == StackingEntry::Ground {
+                            "bumps into"
+                        } else {
+                            "lands on"
                         };
                         expected.push(format!("{actor_name} {action} {target_name}!"));
-                        if mode == 1
-                            && !success
-                            && entry != StackingEntry::Ground
-                            && visible & 1 != 0
-                        {
-                            expected.push(format!("{} falls down!", identity(actor.0)));
-                        }
                     }
                     assert_eq!(
                         observed, expected,
-                        "{entry:?}, mode {mode}, success {success}, mask {visible}, powered {powered}"
+                        "{entry:?}, mask {visible}, powered {powered}"
                     );
                 }
             }
@@ -1404,7 +1166,7 @@ async fn character_collision_action_replays_injury_and_evacuation() {
         let (_dir, config, mut world, ids) = fixture(&[0, 0, 0, 0]).await;
         let target = ids[1];
         let pilot = ObjectId(2);
-        seed(&mut world, ids[0], 3, 1, None);
+        seed(&mut world, ids[0], 3, 1, Some(12));
         world
             .objects
             .get_mut(&target)
@@ -1435,27 +1197,26 @@ async fn character_collision_action_replays_injury_and_evacuation() {
         )
         .unwrap();
         support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
+        // The first five-point packet strikes the head; the later packets (each entering material
+        // resolution with a 2d6 draw) must spare it so the cockpit survives with one injury.
         let chosen = (0..=255)
-            .find(|byte| Dice::seeded([*byte; 32]).d6() == 6)
+            .find(|byte| {
+                let mut dice = Dice::seeded([*byte; 32]);
+                let head = dice.d6() == 6;
+                dice.two_d6();
+                let second = dice.d6() != 6;
+                dice.two_d6();
+                head && second && dice.d6() != 6
+            })
             .unwrap();
         world
             .btech
             .set_unit_dice(target, Dice::seeded([chosen; 32]))
             .unwrap();
-        let rules = StackingRules {
-            damage_percent: 1,
-            ..StackingRules::STANDARD
-        };
         let baseline = world.clone();
         assert!(
-            resolve_battle_stacking(
-                &mut world,
-                ids[0],
-                input(StackingEntry::Jump),
-                rules,
-                fall()
-            )
-            .is_err()
+            resolve_battle_stacking(&mut world, ids[0], input(StackingEntry::Jump), fall())
+                .is_err()
         );
         assert_eq!(world.btech, baseline.btech);
         let scripts =
@@ -1469,7 +1230,6 @@ async fn character_collision_action_replays_injury_and_evacuation() {
                     &config,
                     ids[0],
                     input(StackingEntry::Jump),
-                    rules,
                     fall()
                 )
                 .is_err()
@@ -1494,7 +1254,6 @@ async fn character_collision_action_replays_injury_and_evacuation() {
             &config,
             ids[0],
             input(StackingEntry::Jump),
-            rules,
             fall(),
         )
         .unwrap();
@@ -1505,7 +1264,6 @@ async fn character_collision_action_replays_injury_and_evacuation() {
                 &config,
                 ids[0],
                 input(StackingEntry::Jump),
-                rules,
                 fall()
             )
             .unwrap()
@@ -1540,281 +1298,21 @@ async fn character_collision_action_replays_injury_and_evacuation() {
     }
 }
 
-/// Avoidance collisions pass character falls through the same casualty publication boundary.
-#[tokio::test]
-async fn character_collision_avoidance_falls_and_replays() {
-    let (_dir, config, mut world, ids) = fixture(&[0, 0, 0, 0]).await;
-    let mover = ids[0];
-    world
-        .objects
-        .get_mut(&mover)
-        .unwrap()
-        .flags
-        .insert(Flag::InCharacter);
-    set_battle_character(
-        &mut world,
-        ObjectId(1),
-        Character {
-            build: 5,
-            reflexes: 5,
-            intuition: 5,
-            learn: 5,
-            charisma: 5,
-            bruise: 0,
-            lethal: 0,
-        },
-    )
-    .unwrap();
-    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-    seed(&mut world, mover, 3, 1, Some(2));
-    let rules = StackingRules {
-        mode: 1,
-        ..StackingRules::STANDARD
-    };
-    let baseline = world.clone();
-    assert!(
-        resolve_battle_stacking(&mut world, mover, input(StackingEntry::Jump), rules, fall())
-            .is_err()
-    );
-    assert_eq!(world.btech, baseline.btech);
-    persistence::save(&config.database(), &baseline)
-        .await
-        .unwrap();
-    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    let replay = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(
-            persistence::load(&config.database()).await.unwrap(),
-        )),
-    )
-    .unwrap();
-    let notices = resolve_battle_stacking_action(
-        &scripts,
-        &config,
-        mover,
-        input(StackingEntry::Jump),
-        rules,
-        fall(),
-    )
-    .unwrap();
-    assert_eq!(
-        notices,
-        resolve_battle_stacking_action(
-            &replay,
-            &config,
-            mover,
-            input(StackingEntry::Jump),
-            rules,
-            fall()
-        )
-        .unwrap()
-    );
-    assert_eq!(scripts.world().btech, replay.world().btech);
-    assert_eq!(
-        scripts.world().btech.constructed_units()[&mover].posture(),
-        Posture::Prone
-    );
-    assert_ne!(
-        scripts.world().btech.constructed_units()[&mover].sections(),
-        baseline.btech.constructed_units()[&mover].sections()
-    );
-    scripts.world().validate(&config).unwrap();
-}
-
-/// Avoidance XP applies to ground, jump and fall crowding and rolls back alongside motion and dice.
-#[tokio::test]
-async fn character_crowding_experience_and_delivery_rollback() {
-    for extended in [false, true] {
-        for entry in [
-            StackingEntry::Ground,
-            StackingEntry::Jump,
-            StackingEntry::Fall,
-        ] {
-            let (_dir, config, mut world, ids) = fixture(if entry == StackingEntry::Jump {
-                &[0, 0, 0, 0]
-            } else {
-                &[0, 0, 0]
-            })
-            .await;
-            let id = ids[0];
-            world
-                .objects
-                .get_mut(&id)
-                .unwrap()
-                .flags
-                .insert(Flag::InCharacter);
-            world
-                .objects
-                .get_mut(&ObjectId(1))
-                .unwrap()
-                .flags
-                .insert(Flag::Connected);
-            set_battle_character(
-                &mut world,
-                ObjectId(1),
-                Character {
-                    build: 5,
-                    reflexes: 5,
-                    intuition: 5,
-                    learn: 5,
-                    charisma: 5,
-                    bruise: 0,
-                    lethal: 0,
-                },
-            )
-            .unwrap();
-            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-            let skill = if extended {
-                "Piloting-Biped"
-            } else {
-                "Piloting-Battlemech"
-            };
-            set_battle_character_value(
-                &mut world,
-                ObjectId(1),
-                skill,
-                CharacterValue {
-                    value: 3,
-                    experience: 0,
-                    last_used: 0,
-                },
-            )
-            .unwrap();
-            world
-                .btech
-                .edit_unit_motion(id, |motion| {
-                    motion.speed = 21.5;
-                    motion.desired_speed = 21.5;
-                })
-                .unwrap();
-            seed(&mut world, id, 3, 1, Some(12));
-            // A connected passenger hears the collision warning, but not the pilot's roll.
-            world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
-            world
-                .objects
-                .get_mut(&ObjectId(2))
-                .unwrap()
-                .flags
-                .insert(Flag::Connected);
-            let before = world.clone();
-            let scripts =
-                Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-            let rules = StackingRules {
-                mode: 1,
-                ..StackingRules::STANDARD
-            };
-            let fall = FallRules {
-                extended_piloting: extended,
-                ..fall()
-            };
-            let _ =
-                resolve_battle_stacking_action(&scripts, &config, id, input(entry), rules, fall)
-                    .unwrap();
-            let output = scripts.drain_outbox();
-            let pilot: Vec<_> = output
-                .iter()
-                .filter(|(recipient, _)| *recipient == ObjectId(1))
-                .map(|(_, message)| message.source())
-                .collect();
-            let roll_index = pilot
-                .iter()
-                .position(|message| *message == "You make a piloting skill roll!")
-                .expect("the actual avoidance roll must be displayed");
-            assert!(roll_index > 0, "collision warning precedes the roll");
-            assert!(pilot[roll_index + 1].starts_with("Modified Pilot Skill: BTH "));
-            assert!(pilot[roll_index + 1].ends_with("\tRoll: 12"));
-            assert_eq!(
-                output
-                    .iter()
-                    .filter(|(_, message)| message.source() == "You make a piloting skill roll!")
-                    .count(),
-                1
-            );
-            assert!(
-                !output
-                    .iter()
-                    .any(|(recipient, message)| *recipient != ObjectId(1)
-                        && message.source().starts_with("Modified Pilot Skill:"))
-            );
-            assert!(
-                output
-                    .iter()
-                    .any(|(recipient, message)| *recipient == ObjectId(2)
-                        && message.source().contains("nearly"))
-            );
-            let candidate = scripts.world().clone();
-            let amount = if entry == StackingEntry::Ground { 1 } else { 3 };
-            assert_eq!(
-                candidate.btech.character_values()[&ObjectId(1)][skill].experience_balance(),
-                amount
-            );
-            assert_eq!(
-                candidate.btech.constructed_units()[&id].posture(),
-                Posture::Standing
-            );
-            assert_eq!(
-                candidate.btech.constructed_units()[&ids[1]],
-                before.btech.constructed_units()[&ids[1]]
-            );
-            assert_eq!(
-                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience),
-                [format!("GOD gained {amount} {skill} XP")]
-            );
-            persistence::save(&config.database(), &candidate)
-                .await
-                .unwrap();
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                candidate.btech
-            );
-            *scripts.world_mut() = before;
-            scripts
-                .world_mut()
-                .objects
-                .get_mut(&ObjectId(1))
-                .unwrap()
-                .flags
-                .remove(Flag::Connected);
-            let _ =
-                resolve_battle_stacking_action(&scripts, &config, id, input(entry), rules, fall)
-                    .unwrap();
-            assert_eq!(
-                scripts.world().btech.character_values()[&ObjectId(1)][skill].experience_balance(),
-                0
-            );
-            assert!(
-                support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience).is_empty()
-            );
-        }
-    }
-}
-
 /// Domino target packets warn a held mover; reciprocal self damage stays silent and deterministic.
 #[tokio::test]
 async fn weapons_hold_collision_feedback_preserves_damage_and_replay() {
     for held_unit in [0, 1] {
         let (_dir, config, mut base, ids) = fixture(&[0, 0, 0, 0]).await;
-        seed(&mut base, ids[0], 3, 1, None);
+        seed(&mut base, ids[0], 3, 1, Some(12));
         let mut ordinary = base.clone();
-        let expected = resolve_battle_stacking(
-            &mut ordinary,
-            ids[0],
-            input(StackingEntry::Jump),
-            StackingRules::STANDARD,
-            fall(),
-        )
-        .unwrap();
+        let expected =
+            resolve_battle_stacking(&mut ordinary, ids[0], input(StackingEntry::Jump), fall())
+                .unwrap();
         set_battle_weapons_hold(&mut base, ids[held_unit], true).unwrap();
         persistence::save(&config.database(), &base).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
-        let events = resolve_battle_stacking(
-            &mut base,
-            ids[0],
-            input(StackingEntry::Jump),
-            StackingRules::STANDARD,
-            fall(),
-        )
-        .unwrap();
+        let events =
+            resolve_battle_stacking(&mut base, ids[0], input(StackingEntry::Jump), fall()).unwrap();
         let warnings: Vec<_> = events
             .iter()
             .filter(|n| n.text == "You are currently in weapons hold!")
@@ -1830,14 +1328,8 @@ async fn weapons_hold_collision_feedback_preserves_damage_and_replay() {
             expected
         );
         assert_eq!(
-            resolve_battle_stacking(
-                &mut replay,
-                ids[0],
-                input(StackingEntry::Jump),
-                StackingRules::STANDARD,
-                fall()
-            )
-            .unwrap(),
+            resolve_battle_stacking(&mut replay, ids[0], input(StackingEntry::Jump), fall())
+                .unwrap(),
             events
         );
         assert_eq!(base.btech, replay.btech);
@@ -1895,7 +1387,6 @@ async fn collision_damage_preserves_target_balance_feedback() {
             &config,
             mover,
             input(StackingEntry::Ground),
-            StackingRules::STANDARD,
             fall(),
         )
         .unwrap();
@@ -1922,7 +1413,6 @@ async fn collision_damage_preserves_target_balance_feedback() {
             &config,
             mover,
             input(StackingEntry::Ground),
-            StackingRules::STANDARD,
             fall(),
         )
         .unwrap();

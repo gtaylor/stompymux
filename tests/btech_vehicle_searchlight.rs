@@ -103,11 +103,7 @@ async fn vehicle_lamp_damage_shares_rolls_and_cancels_pending_switches() {
             unit["searchlight"] = serde_json::json!({"on":true,"destroyed":false,"remaining":3})
         });
         let rules = VehicleCriticalRules {
-            rotor_damage_divisor: 0,
             extended_piloting: false,
-            vtol_table: None,
-            table: VehicleCriticalTable::Advanced,
-            enabled: false,
             combat_safe: false,
             toughness: false,
         };

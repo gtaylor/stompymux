@@ -191,12 +191,11 @@ async fn cutoff_cockpit_transition_and_restart() {
 /// Environment modifiers precede regulation; submerged bonuses are recomputed next sample.
 #[tokio::test]
 async fn cutoff_environment_samples_and_damaged_capacity() {
-    for (tile, temperature, inferno, stored, disabled, sampled_cooling, inspected_cooling) in [
-        (".0", 20, 0, 20.0, 2, 8.0, 8.0),
-        ("~2", 20, 0, 20.0, 6, 10.0, 8.0),
-        (".0", 20, 5, 20.0, 2, 2.0, 2.0),
-        (".0", 51, 0, 13.0, 6, 3.0, 3.0),
-        (".0", -41, 0, 16.0, 6, 6.0, 6.0),
+    for (tile, temperature, stored, disabled, sampled_cooling, inspected_cooling) in [
+        (".0", 20, 20.0, 2, 8.0, 8.0),
+        ("~2", 20, 20.0, 6, 10.0, 8.0),
+        (".0", 51, 13.0, 6, 3.0, 3.0),
+        (".0", -41, 16.0, 6, 6.0, 6.0),
     ] {
         let (_dir, config, mut world, id) = fixture(
             include_str!("../game/units/JR7-D.toml"),
@@ -210,7 +209,6 @@ async fn cutoff_environment_samples_and_damaged_capacity() {
                 unit["heat_cutoff"] =
                     serde_json::json!({"enabled":true,"disabled":4,"remaining":null});
                 unit["heat"] = serde_json::json!({"stored":stored,"excess":0.0});
-                unit["inferno_remaining"] = inferno.into();
             })
             .unwrap();
         world.validate(&config).unwrap();

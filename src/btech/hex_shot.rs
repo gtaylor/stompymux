@@ -176,9 +176,6 @@ fn resolve_hex_shot_inner(
     let field = electronic_field(world, shooter)?;
     let fall = FallRules {
         vehicle_impact: rules.vehicle_impact,
-        stacking: rules.stacking,
-        stagger: rules.stagger,
-        hit: rules.hit,
         extended_piloting: rules.extended_piloting,
         toughness,
     };
@@ -193,7 +190,6 @@ fn resolve_hex_shot_inner(
                 distance: aim.modifiers.distance,
                 target_number,
                 streak_confused: field.angel_disturbed,
-                glancing: rules.glancing,
                 fall,
                 character_shooter,
             },
@@ -213,8 +209,6 @@ fn resolve_hex_shot_inner(
             if launch.hit {
                 let packets = super::weapon_groups::roll_weapon_groups(
                     super::weapon_groups::WeaponGroupRequest {
-                        submerged,
-                        range_damage: rules.range_damage,
                         damage_penalty: launch.expenditure.damage_penalty,
                         weapon,
                         ammunition: if launch.expenditure.ammunition_mode

@@ -267,33 +267,11 @@ pub fn advance_vehicle_fires_action(
     vehicle_damage_action(scripts, config, |world| {
         let report = super::advance_vehicle_fires(world, config)?;
         let effects = VehicleDamageEffects {
-            pilot_notices: report.pilot_notices.clone(),
+            pilot_notices: Vec::new(),
             notices: report.notices.clone(),
             broadcasts: Vec::new(),
-            injuries: report.character_injuries.clone(),
-        };
-        Ok((report, effects))
-    })
-}
-
-/// Apply one fire exposure with the same injury publication as armor and critical actions.
-pub fn resolve_vehicle_fire_exposure_action(
-    scripts: &Scripts,
-    config: &Config,
-    unit: ObjectId,
-    rules: super::VehicleCriticalRules,
-) -> Result<super::VehicleFireExposure> {
-    vehicle_damage_action(scripts, config, |world| {
-        let report = super::resolve_vehicle_fire_exposure(world, unit, rules)?;
-        let mut effects = VehicleDamageEffects {
-            pilot_notices: report.effects.pilot_notices.clone(),
-            notices: report.effects.notices.clone(),
-            broadcasts: report.effects.broadcasts.clone(),
             injuries: Vec::new(),
         };
-        for damage in &report.effects.damage {
-            super::vehicle_injuries::collect_armor(damage, &mut effects.injuries);
-        }
         Ok((report, effects))
     })
 }
@@ -314,8 +292,8 @@ pub fn resolve_vehicle_inferno_hit_action(
             broadcasts: report.broadcasts.clone(),
             injuries: Vec::new(),
         };
-        for damage in &report.damage {
-            super::vehicle_injuries::collect_armor(damage, &mut effects.injuries);
+        for missile in &report.criticals {
+            super::vehicle_injuries::collect_critical(&missile.critical, &mut effects.injuries);
         }
         Ok((report, effects))
     })
@@ -331,13 +309,12 @@ pub fn resolve_vehicle_heat_exposure_action(
 ) -> Result<super::VehicleHeatExposure> {
     vehicle_damage_action(scripts, config, |world| {
         let report = super::resolve_vehicle_heat_exposure(world, unit, heat, rules)?;
-        let mut effects = VehicleDamageEffects {
+        let effects = VehicleDamageEffects {
             pilot_notices: report.pilot_notices.clone(),
             notices: report.notices.clone(),
             broadcasts: report.broadcasts.clone(),
             injuries: Vec::new(),
         };
-        super::vehicle_injuries::collect_heat(&report, &mut effects.injuries);
         Ok((report, effects))
     })
 }
@@ -490,6 +467,9 @@ pub(super) fn publish_movement_consequences(
     for charge in &report.charges {
         publish_charge_consequences(scripts, config, charge)?;
     }
+    for fracture in &report.surface_breaks {
+        publish_surface_consequences(scripts, config, fracture)?;
+    }
     Ok(())
 }
 
@@ -543,9 +523,6 @@ pub(super) fn publish_fall_consequences(
     for group in &report.groups {
         for exposure in &group.impact.exposures {
             publish_section_exposure_consequences(scripts, config, exposure)?;
-        }
-        for blast in &group.impact.reactor_explosions {
-            publish_reactor_consequences(scripts, config, blast)?;
         }
         for injury in &group.impact.character_injuries {
             super::character_pilot::notify_injury(scripts, injury)?;
@@ -761,7 +738,6 @@ pub fn stacking_action(
     config: &Config,
     unit: ObjectId,
     input: super::StackingInput,
-    rules: super::StackingRules,
     fall: super::FallRules,
 ) -> Result<Vec<super::Notice>> {
     scripts.atomic(|before| {
@@ -771,7 +747,6 @@ pub fn stacking_action(
             &mut scripts.world.borrow_mut(),
             unit,
             input,
-            rules,
             fall,
             &mut effects,
             (&mut private, 0),
@@ -792,9 +767,6 @@ pub(super) fn publish_impact_consequences(
 ) -> Result<()> {
     for exposure in &report.impact.exposures {
         publish_section_exposure_consequences(scripts, config, exposure)?;
-    }
-    for blast in &report.impact.reactor_explosions {
-        publish_reactor_consequences(scripts, config, blast)?;
     }
     for injury in &report.impact.character_injuries {
         super::character_pilot::notify_injury(scripts, injury)?;
@@ -982,9 +954,6 @@ fn publish_dfa_consequences(
     report: &super::DfaReport,
 ) -> Result<()> {
     super::diagnostics::publish(scripts, &report.experience_messages);
-    if let Some(injury) = &report.character_injury {
-        super::character_pilot::notify_injury(scripts, injury)?;
-    }
     for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
         publish_impact_consequences(scripts, config, impact)?;
     }
@@ -992,6 +961,13 @@ fn publish_dfa_consequences(
         if let Some(fall) = &balance.fall {
             publish_fall_consequences(scripts, config, fall)?;
         }
+    }
+    // A missed landing's crash carries its own injury, flooding and XP consequences.
+    if let Some(fall) = &report.miss_fall {
+        return publish_fall_consequences(scripts, config, fall);
+    }
+    if let Some(injury) = &report.character_injury {
+        super::character_pilot::notify_injury(scripts, injury)?;
     }
     for flooding in &report.flooding {
         publish_section_exposure_consequences(scripts, config, flooding)?;
@@ -1162,9 +1138,6 @@ fn publish_salvo_consequences(
     for group in &report.groups {
         for exposure in &group.impact.exposures {
             publish_section_exposure_consequences(scripts, config, exposure)?;
-        }
-        for blast in &group.impact.reactor_explosions {
-            publish_reactor_consequences(scripts, config, blast)?;
         }
         if notices {
             super::piloting::publish_ordered_notices(
@@ -1497,7 +1470,7 @@ pub(super) fn publish_blast_consequences(
     scripts: &Scripts,
     config: &Config,
     impacts: &[super::BlastImpact],
-    heat: Option<&super::VehicleHeatExposure>,
+    _heat: Option<&super::VehicleHeatExposure>,
 ) -> Result<()> {
     for impact in impacts {
         match impact {
@@ -1513,13 +1486,6 @@ pub(super) fn publish_blast_consequences(
                     super::character_pilot::notify_injury(scripts, &injury)?;
                 }
             }
-        }
-    }
-    if let Some(heat) = heat {
-        let mut injuries = Vec::new();
-        super::vehicle_injuries::collect_heat(heat, &mut injuries);
-        for injury in injuries {
-            super::character_pilot::notify_injury(scripts, &injury)?;
         }
     }
     Ok(())
@@ -1646,30 +1612,12 @@ pub(super) fn publish_vehicle_fall_consequences(
     publish_mine_consequences(scripts, config, &report.mines)
 }
 
-/// Publish secondary reactor injuries after the enclosing action has staged ordered blast notices.
-pub(super) fn publish_reactor_consequences(
-    scripts: &Scripts,
-    config: &Config,
-    blast: &super::ReactorExplosion,
-) -> Result<()> {
-    if let Some(nested) = &blast.section_explosion {
-        publish_reactor_consequences(scripts, config, nested)?;
-    }
-    for hit in &blast.hits {
-        publish_blast_consequences(scripts, config, &hit.impacts, hit.vehicle_heat.as_ref())?;
-    }
-    Ok(())
-}
-
-/// Flooding can cause a reactor blast or an immediate support-loss fall.
+/// Flooding can cause an immediate support-loss fall.
 pub(super) fn publish_section_exposure_consequences(
     scripts: &Scripts,
     config: &Config,
     flood: &super::SectionExposureReport,
 ) -> Result<()> {
-    if let Some(blast) = &flood.reactor_explosion {
-        publish_reactor_consequences(scripts, config, blast)?;
-    }
     if let Some(fall) = &flood.fall {
         publish_fall_consequences(scripts, config, fall)?;
     }

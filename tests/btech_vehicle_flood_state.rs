@@ -37,15 +37,11 @@ fn flooding_preserves_armor_ammunition_and_crew_without_reviving_a_wreck() {
     assert_eq!(unit.definition(), before.definition());
     assert_eq!(unit.pilot_injuries(), 0);
     assert!(!unit.c3_operational().unwrap());
-    let mut saved = serde_json::to_value(&unit).unwrap();
-    saved["burning_sections"]["front"] = 15.into();
-    unit = serde_json::from_value(saved).unwrap();
-    let burning = unit.clone();
+    let wreck = unit.clone();
     assert!(!unit.destroy_by_flooding());
-    assert_eq!(unit, burning);
+    assert_eq!(unit, wreck);
     unit.damage_phase(VehicleSection::Front, 1, DamagePhase::Armor { rear: false })
         .unwrap();
-    assert_eq!(unit.burning_sections(), burning.burning_sections());
     let restored: Vehicle = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
     assert_eq!(restored, unit);
     let mut hull_wreck = before;
@@ -97,8 +93,6 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
             value["motion"]["speed"] = 20.into();
             value["motion"]["desired_speed"] = 20.into();
             value["inferno_remaining"] = 30.into();
-            value["burning_sections"]["front"] = 15.into();
-            value["extinguishing"] = 20.into();
         })
         .unwrap();
     let mut unit = world.btech.vehicles()[&id].clone();
@@ -110,8 +104,6 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
     assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
     assert_eq!(unit.electronics().guardian, ElectronicMode::Off);
     assert_eq!(unit.inferno_remaining(), 0);
-    assert!(unit.burning_sections().is_empty());
-    assert_eq!(unit.extinguishing(), None);
     assert_eq!(unit.sections(), before.sections());
     assert_eq!(unit.ammunition(), before.ammunition());
     world

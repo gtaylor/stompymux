@@ -1,5 +1,5 @@
 //! Wizard diagnostics expose actual Rust scheduler state and explicitly bounded storage measurements.
-use crate::{Config, ObjectId, World};
+use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::Serialize;
 use std::{collections::BTreeMap, io::Write};
@@ -9,7 +9,6 @@ use std::{collections::BTreeMap, io::Write};
 pub struct RuntimeStats {
     pub simulation_pending: bool,
     pub scanner_observers: usize,
-    pub reactor_startup_remaining: u8,
     pub artillery_shots: usize,
     pub maps: usize,
     pub mechs: usize,
@@ -37,7 +36,7 @@ impl Write for ByteCounter {
 }
 
 /// Inspect the same live state used by the one-second simulation scheduler without advancing it.
-pub fn runtime_stats(world: &World, config: &Config, actor: ObjectId) -> Result<RuntimeStats> {
+pub fn runtime_stats(world: &World, actor: ObjectId) -> Result<RuntimeStats> {
     ensure!(
         crate::authority::is_wizard(world, actor),
         "Permission denied."
@@ -51,13 +50,8 @@ pub fn runtime_stats(world: &World, config: &Config, actor: ObjectId) -> Result<
         *registration_kinds.entry(kind.clone()).or_insert(0) += 1;
     }
     Ok(RuntimeStats {
-        simulation_pending: super::simulation_pending::pending(
-            world,
-            config,
-            scanner_observers != 0,
-        ),
+        simulation_pending: super::simulation_pending::pending(world, scanner_observers != 0),
         scanner_observers,
-        reactor_startup_remaining: state.reactor.startup_remaining,
         artillery_shots: state
             .maps()
             .values()
@@ -99,14 +93,11 @@ pub(crate) fn command(
             input.args.trim().is_empty() || memory && long,
             "Usage: EVENTSTATS or MEMSTATS [LONG]"
         );
-        let stats = runtime_stats(&ctx.scripts.world(), ctx.config, ctx.player)?;
+        let stats = runtime_stats(&ctx.scripts.world(), ctx.player)?;
         if !memory {
             return Ok(format!(
-                "BattleTech simulation interval: 1 second\nSimulation work pending: {}\nScanner observers: {}\nArtillery shots in flight: {}\nReactor startup grace: {} seconds",
-                stats.simulation_pending,
-                stats.scanner_observers,
-                stats.artillery_shots,
-                stats.reactor_startup_remaining
+                "BattleTech simulation interval: 1 second\nSimulation work pending: {}\nScanner observers: {}\nArtillery shots in flight: {}",
+                stats.simulation_pending, stats.scanner_observers, stats.artillery_shots,
             ));
         }
         let mut text = format!(

@@ -277,7 +277,7 @@ mod tests {
             ("Claw", "Claw", false, false),
             ("Mace", "Mace", true, true),
             ("Dual_Saw", "Saw", false, true),
-            ("Retractable_Blade", "RBlade", true, true),
+            ("Retractable_Blade", "RBlade", false, true),
             ("Lance", "Lance", false, true),
             ("Flail", "Flail", false, true),
             ("Wrecking_Ball", "WBall", false, true),

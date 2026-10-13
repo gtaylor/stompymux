@@ -91,7 +91,6 @@ pub(super) fn enter_water(
             falls.push(fall);
         }
     }
-    notices.extend(super::extinguish_inferno_in_water(world, id)?);
     let unit = &world.btech.constructed_units()[&id];
     Ok(WaterEntryReport {
         notices,

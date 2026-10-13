@@ -1,4 +1,4 @@
-//! Restored action-time staggering participates in landing without replacing rolling damage history.
+//! Restored action-time staggering participates in landing without replacing the turn's damage accounting.
 use crate::support::btech_firing as firing;
 use stompymux_rs::*;
 
@@ -45,8 +45,6 @@ async fn restored_landing_scalar_matrix(template: &str, weight_modifier: i32) {
                 .unwrap();
             firing::edit(&mut world, unit, |s| {
                 s["stagger"]["action_damage"] = scalar.into();
-                s["stagger"]["hits"] =
-                    serde_json::json!([{"damage":60,"remaining":60,"counted":false}]);
                 s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             });
             persistence::save(&config.database(), &world).await.unwrap();
@@ -165,8 +163,8 @@ async fn stagger_landing_roll_precedes_damaged_gyro_roll() {
     }
 }
 
-/// Traditional completion resets only the action scalar; early stagger falls retain it in every mode.
-async fn landing_scalar_reset_matrix(template: &str, mode: StaggerMode) {
+/// Completion resets only the action scalar; early stagger falls retain it.
+async fn landing_scalar_reset_matrix(template: &str) {
     let (_dir, config, base, unit, _, _) =
         firing::fixture_with_target(template, None, template).await;
     let mut probed_fidelity = [false; 2];
@@ -179,32 +177,22 @@ async fn landing_scalar_reset_matrix(template: &str, mode: StaggerMode) {
                 .unwrap();
             firing::edit(&mut world, unit, |s| {
                 s["stagger"]["action_damage"] = scalar.into();
-                s["stagger"]["hits"] =
-                    serde_json::json!([{"damage":40,"remaining":60,"counted":false}]);
+                s["stagger"]["turn_damage"] = 15.into();
                 s["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             });
             persistence::save(&config.database(), &world).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
-            let mut rules = MovementRules::STANDARD;
-            rules.fall.stagger = mode;
-            land(&mut world, &mut replay, unit, rules);
+            land(&mut world, &mut replay, unit, MovementRules::STANDARD);
             let failed = scalar >= 20 && !success;
             let state = world.btech.constructed_units()[&unit].stagger();
-            assert_eq!(
-                state.action_damage,
-                if mode == StaggerMode::Traditional && !failed {
-                    0
-                } else {
-                    scalar
-                }
-            );
+            assert_eq!(state.action_damage, if failed { scalar } else { 0 });
             assert_eq!(
                 world.btech.constructed_units()[&unit].posture() == Posture::Prone,
                 failed
             );
-            // Successful completion does not erase the independent damage window.
+            // Successful completion does not erase the independent turn damage.
             if !failed {
-                assert_eq!(state.hits.len(), 1);
+                assert_eq!(state.turn_damage, 15);
             }
             // Fidelity probe once per outcome shape per shard; the lockstep replay
             // twin above stays per scenario.
@@ -222,57 +210,13 @@ async fn landing_scalar_reset_matrix(template: &str, mode: StaggerMode) {
 }
 
 #[tokio::test]
-async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_traditional() {
-    landing_scalar_reset_matrix(
-        include_str!("../game/units/JR7-D.toml"),
-        StaggerMode::Traditional,
-    )
-    .await;
+async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d() {
+    landing_scalar_reset_matrix(include_str!("../game/units/JR7-D.toml")).await;
 }
 
 #[tokio::test]
-async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_retain() {
-    landing_scalar_reset_matrix(
-        include_str!("../game/units/JR7-D.toml"),
-        StaggerMode::Retain,
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_jr7d_consume() {
-    landing_scalar_reset_matrix(
-        include_str!("../game/units/JR7-D.toml"),
-        StaggerMode::Consume,
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_traditional() {
-    landing_scalar_reset_matrix(
-        include_str!("../game/units/StalkingSpider-1.toml"),
-        StaggerMode::Traditional,
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_retain() {
-    landing_scalar_reset_matrix(
-        include_str!("../game/units/StalkingSpider-1.toml"),
-        StaggerMode::Retain,
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider_consume() {
-    landing_scalar_reset_matrix(
-        include_str!("../game/units/StalkingSpider-1.toml"),
-        StaggerMode::Consume,
-    )
-    .await;
+async fn landing_scalar_reset_distinguishes_completion_from_stagger_failure_spider() {
+    landing_scalar_reset_matrix(include_str!("../game/units/StalkingSpider-1.toml")).await;
 }
 
 /// Reference-style map reassignment preserves action stagger; material destruction resets it.
@@ -288,8 +232,7 @@ async fn map_reassignment_preserves_scalar_and_core_destruction_clears_it() {
             let mut world = base.clone();
             firing::edit(&mut world, unit, |s| {
                 s["stagger"]["action_damage"] = 60.into();
-                s["stagger"]["hits"] =
-                    serde_json::json!([{"damage":40,"remaining":60,"counted":false}]);
+                s["stagger"]["turn_damage"] = 40.into();
             });
             let before = world.btech.constructed_units()[&unit].stagger().clone();
             let map = world.create(&config, "New field".into(), Kind::Room);

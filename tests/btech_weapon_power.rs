@@ -207,11 +207,7 @@ async fn powered_down_vehicle_gauss_critical_is_inert() {
         .await;
         disable_gauss_weapon(&mut base, id, ObjectId(1), index).unwrap();
         let rules = VehicleCriticalRules {
-            rotor_damage_divisor: 0,
             extended_piloting: false,
-            vtol_table: None,
-            table: VehicleCriticalTable::Advanced,
-            enabled: true,
             combat_safe: false,
             toughness: false,
         };

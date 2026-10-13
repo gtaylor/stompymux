@@ -491,11 +491,6 @@ async fn idle_clock_wraps_is_stored_at_shutdown_and_resumes_from_saved_phase() {
             let config = support::with_clock_save_interval(dir.path(), 60);
             assert!(world.btech.constructed_units().is_empty());
             assert!(world.btech.vehicles().is_empty());
-            // Expire the separate startup grace so the host takes its otherwise-idle branch.
-            for _ in 0..31 {
-                advance_battle_reactor_windows(&mut world);
-            }
-            assert!(!reactor_windows_pending(&world));
             phase(&mut world, 29);
             persistence::save(&config.database(), &world).await.unwrap();
             let mut sql = SqliteConnection::connect_with(

@@ -1,5 +1,5 @@
 //! Target-side missile admission is distinct from the launcher's near-miss feedback threshold.
-use super::{AmmunitionMode, BeaconLaunch, GlancingMode, Weapon};
+use super::{AmmunitionMode, BeaconLaunch, Weapon};
 
 /// Whether a launched roll reaches defenses/material and how it modifies those damage packets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,15 +9,14 @@ pub(super) struct TargetHit {
 }
 
 impl TargetHit {
-    /// Missiles require the base target number even when launch feedback admits a near miss.
-    /// Their boundary cluster modifier also uses that base; other weapons keep launch classification.
+    /// Missiles require the base target number; a roll exactly on it is a glancing blow
+    /// (Tactical Operations) unless the weapon is a beacon pod or a locked Streak launcher.
     pub(super) fn for_weapon(
         self,
         weapon: Weapon,
         ammunition: AmmunitionMode,
         roll: u8,
         base: Option<i32>,
-        mode: GlancingMode,
         streak_confused: bool,
     ) -> Self {
         if weapon.gunnery_skill(true) != "Gunnery-Missile" {
@@ -28,7 +27,6 @@ impl TargetHit {
             hit,
             glancing: hit
                 && weapon.beacon_kind(ammunition).is_none()
-                && mode != GlancingMode::Disabled
                 && base == Some(i32::from(roll))
                 && (!weapon.is_streak() || streak_confused),
         }
@@ -39,55 +37,40 @@ impl TargetHit {
 mod tests {
     use super::*;
 
-    /// Missile effects use the base boundary in every glancing mode, independently of launch feedback.
+    /// Missile effects use the base boundary independently of launch feedback.
     #[test]
-    fn missile_boundary_does_not_follow_near_miss_classification() {
-        for mode in [
-            GlancingMode::Disabled,
-            GlancingMode::AtTarget,
-            GlancingMode::BelowTarget,
-        ] {
-            for roll in [5, 6, 7] {
-                let threshold = mode.threshold(6);
-                let launch = TargetHit {
-                    hit: i32::from(roll) >= threshold,
-                    glancing: mode != GlancingMode::Disabled && i32::from(roll) == threshold,
-                };
-                for weapon in [Weapon::Lrm20, Weapon::ClanLrm20, Weapon::Srm6] {
-                    assert_eq!(
-                        launch.for_weapon(
-                            weapon,
-                            AmmunitionMode::Normal,
-                            roll,
-                            Some(6),
-                            mode,
-                            false
-                        ),
-                        TargetHit {
-                            hit: roll >= 6,
-                            glancing: roll == 6 && mode != GlancingMode::Disabled,
-                        }
-                    );
-                    assert_eq!(
-                        launch.for_weapon(weapon, AmmunitionMode::Normal, roll, None, mode, false),
-                        TargetHit {
-                            hit: false,
-                            glancing: false
-                        }
-                    );
-                }
+    fn missile_boundary_follows_the_base_target_number() {
+        for roll in [5, 6, 7] {
+            let launch = TargetHit {
+                hit: roll >= 6,
+                glancing: roll == 6,
+            };
+            for weapon in [Weapon::Lrm20, Weapon::ClanLrm20, Weapon::Srm6] {
                 assert_eq!(
-                    launch.for_weapon(
-                        Weapon::SmallLaser,
-                        AmmunitionMode::Normal,
-                        roll,
-                        Some(6),
-                        mode,
-                        false
-                    ),
-                    launch
+                    launch.for_weapon(weapon, AmmunitionMode::Normal, roll, Some(6), false),
+                    TargetHit {
+                        hit: roll >= 6,
+                        glancing: roll == 6,
+                    }
+                );
+                assert_eq!(
+                    launch.for_weapon(weapon, AmmunitionMode::Normal, roll, None, false),
+                    TargetHit {
+                        hit: false,
+                        glancing: false
+                    }
                 );
             }
+            assert_eq!(
+                launch.for_weapon(
+                    Weapon::SmallLaser,
+                    AmmunitionMode::Normal,
+                    roll,
+                    Some(6),
+                    false
+                ),
+                launch
+            );
         }
     }
 
@@ -100,14 +83,7 @@ mod tests {
         };
         for weapon in [Weapon::NarcBeacon, Weapon::StreakSrm6] {
             assert_eq!(
-                launch.for_weapon(
-                    weapon,
-                    AmmunitionMode::Normal,
-                    6,
-                    Some(6),
-                    GlancingMode::BelowTarget,
-                    false
-                ),
+                launch.for_weapon(weapon, AmmunitionMode::Normal, 6, Some(6), false),
                 TargetHit {
                     hit: true,
                     glancing: false
@@ -115,14 +91,7 @@ mod tests {
             );
         }
         assert_eq!(
-            launch.for_weapon(
-                Weapon::StreakSrm6,
-                AmmunitionMode::Normal,
-                6,
-                Some(6),
-                GlancingMode::BelowTarget,
-                true
-            ),
+            launch.for_weapon(Weapon::StreakSrm6, AmmunitionMode::Normal, 6, Some(6), true),
             TargetHit {
                 hit: true,
                 glancing: true

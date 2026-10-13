@@ -132,26 +132,16 @@ fn seat(world: &mut World, id: ObjectId, pilot: ObjectId) {
 /// Tactical conventional shot configuration without optional damage or arc rules.
 fn shot_rules() -> ShotRules {
     ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
         vehicle_impact: VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
         aim: AimRules {
             woods_damage: false,
-            hit_arc_mode: 0,
             fasa_turning: false,
             extended_movement: false,
             extended_ranges: false,
             hotload_half_minimum: false,
             override_weapon_arcs: false,
         },
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
         extended_gunnery: false,
         extended_piloting: false,
         target_toughness: false,

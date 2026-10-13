@@ -1,31 +1,29 @@
-//! Advanced rotor criticals use the shared critical transaction while live aircraft remain gated.
+//! The VTOL Combat Vehicle Critical Hits Table: rotor and hull columns, pilot and co-pilot
+//! escalations, engine-damage landings and fuel-tank explosions.
 use crate::support;
 use stompymux_rs::*;
 
-#[tokio::test]
-async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_together() {
-    let (_dir, config, mut world) = support::isolated_world().await;
-    let id = world.create(&config, "Rotor critical fixture".into(), Kind::Thing);
-    // Install material directly for the critical transaction; this does not admit a live VTOL.
-    let aircraft = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
-    )
-    .unwrap();
-    let rules = VehicleCriticalRules {
-        rotor_damage_divisor: 0,
+fn rules() -> VehicleCriticalRules {
+    VehicleCriticalRules {
         extended_piloting: false,
-        vtol_table: None,
-        table: VehicleCriticalTable::Advanced,
-        enabled: true,
         combat_safe: false,
         toughness: false,
-    };
-    for roll in 2..=12 {
-        let seed = (0..=255)
-            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
-            .unwrap();
-        let mut saved = serde_json::to_value(&aircraft).unwrap();
-        saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
+    }
+}
+
+/// A seed whose first 2d6 is `roll`.
+fn rolling(roll: u8) -> u8 {
+    (0..=255)
+        .find(|value| Dice::seeded([*value; 32]).two_d6() == roll)
+        .unwrap()
+}
+
+/// Install an unplaced or airborne Kestrel directly for the critical transaction.
+fn install(world: &mut World, id: ObjectId, unit: &Vehicle, seed: u8, airborne: Option<ObjectId>) {
+    let mut saved = serde_json::to_value(unit).unwrap();
+    saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+    if let Some(map) = airborne {
+        saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
         saved["map_slot"] = 0.into();
         saved["power"] = serde_json::to_value(Power::Running).unwrap();
         saved["motion"] =
@@ -38,39 +36,73 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
             altitude: 10.0,
         })
         .unwrap();
+    }
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["vehicles"][id.0.to_string()] = saved;
+    world.btech = serde_json::from_value(state).unwrap();
+}
 
-        saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()] = saved;
-        world.btech = serde_json::from_value(state).unwrap();
+fn kestrel() -> Vehicle {
+    Vehicle::new(
+        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
+    )
+    .unwrap()
+}
+
+#[tokio::test]
+async fn rotor_criticals_commit_saved_dice_and_material_effects_together() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Rotor field".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        map,
+        "rotor",
+        MapAsset::from_cells("1 1\n.3\n").unwrap(),
+    )
+    .unwrap();
+    let id = world.create(&config, "Rotor critical fixture".into(), Kind::Thing);
+    let aircraft = kestrel();
+    for roll in 2..=12 {
+        install(&mut world, id, &aircraft, rolling(roll), Some(map));
         let mut replay = world.clone();
         let report =
-            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules).unwrap();
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules())
+                .unwrap();
         assert_eq!(report.selection.rolls, [roll]);
+        let expected = match roll {
+            2..=5 => None,
+            6..=8 => Some(RotorHit::Damage),
+            9 | 10 => Some(RotorHit::FlightStabilizer),
+            _ => Some(RotorHit::Destroy),
+        };
         assert_eq!(
             report.selection.effect,
-            RotorHit::from_critical_roll(roll)
-                .unwrap()
-                .map(VehicleCriticalEffect::Rotor)
+            expected.map(VehicleCriticalEffect::Rotor)
         );
         assert_eq!(
-            resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Rotor, rules).unwrap(),
+            resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Rotor, rules())
+                .unwrap(),
             report
         );
         assert_eq!(world.btech, replay.btech);
         let unit = &world.btech.vehicles()[&id];
         assert_eq!(
             unit.maximum_speed(),
-            if roll >= 11 {
-                0.0
-            } else if (6..=8).contains(&roll) {
-                182.75
-            } else {
-                193.5
+            match roll {
+                11 | 12 => 0.0,
+                6..=8 => 182.75,
+                _ => 193.5,
             }
         );
+        // Flight Stabilizer Hit: cruising speed only, +3 driving, +1 to-hit (TW p. 198).
         assert_eq!(unit.tail_rotor_destroyed(), matches!(roll, 9 | 10));
+        assert_eq!(
+            unit.piloting_damage(),
+            if matches!(roll, 9 | 10) { 3 } else { 0 }
+        );
+        assert_eq!(unit.gunnery_damage(), u8::from(matches!(roll, 9 | 10)));
         assert_eq!(unit.rotor_destroyed(), roll >= 11);
+        // Rotors Destroyed plays out as a crash: the VTOL falls and dies on impact.
         assert!(!unit.is_destroyed() && !unit.crew_killed());
         assert_eq!(unit.vtol_flight().unwrap().altitude, 10.0);
         assert_eq!(
@@ -81,25 +113,93 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
                 VtolFlightPhase::Airborne
             }
         );
-
         assert_eq!(
             serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
             *unit
         );
-        let mut dice = Dice::seeded([seed; 32]);
-        dice.two_d6();
-        assert_eq!(
-            serde_json::to_value(unit).unwrap()["dice"],
-            serde_json::to_value(dice).unwrap()
-        );
         if roll >= 11 {
             let before = world.btech.clone();
             assert!(
-                resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules)
+                resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules())
                     .is_err()
             );
             assert_eq!(world.btech, before);
         }
+    }
+    // A second Flight Stabilizer Hit moves down the column to Rotors Destroyed.
+    install(&mut world, id, &aircraft, rolling(9), Some(map));
+    let _ =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules()).unwrap();
+    world
+        .btech
+        .set_unit_dice(id, Dice::seeded([rolling(9); 32]))
+        .unwrap();
+    let report =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules()).unwrap();
+    assert_eq!(
+        report.selection.effect,
+        Some(VehicleCriticalEffect::Rotor(RotorHit::Destroy))
+    );
+}
+
+#[tokio::test]
+async fn rotor_damage_that_leaves_no_movement_forces_an_engine_damage_landing() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Landing field".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        map,
+        "land",
+        MapAsset::from_cells("1 1\n.3\n").unwrap(),
+    )
+    .unwrap();
+    let id = world.create(&config, "Slow rotor".into(), Kind::Thing);
+    let slow = Vehicle::new(
+        VehicleTemplate::parse(
+            "Kestrel",
+            &include_str!("../game/units/Kestrel.toml").replace("walk_mp = 18", "walk_mp = 1"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    install(&mut world, id, &slow, 0, Some(map));
+    let target = battle_unit_piloting_target(&world, id, false).unwrap() + 4;
+    for success in [false, true] {
+        let seed = (0..=255)
+            .find(|seed| {
+                let mut dice = Dice::seeded([*seed; 32]);
+                dice.two_d6() == 7 && (i16::from(dice.two_d6()) >= target) == success
+            })
+            .unwrap();
+        install(&mut world, id, &slow, seed, Some(map));
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["vtol_flight"]["vertical_speed"] = 0.0.into();
+            })
+            .unwrap();
+        let report =
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules())
+                .unwrap();
+        assert_eq!(
+            report.selection.effect,
+            Some(VehicleCriticalEffect::Rotor(RotorHit::Damage))
+        );
+        let check = report.emergency_landing.as_ref().unwrap();
+        assert_eq!(check.situational, 4, "engine-damage landings roll at +4");
+        assert_eq!(check.success, success);
+        let unit = &world.btech.vehicles()[&id];
+        assert_eq!(unit.maximum_speed(), 0.0);
+        assert!(!unit.rotor_destroyed());
+        assert!(!unit.engine_destroyed(), "the engine itself keeps working");
+        assert_eq!(
+            unit.vtol_flight().unwrap().phase,
+            if success {
+                VtolFlightPhase::Landed
+            } else {
+                VtolFlightPhase::Falling
+            }
+        );
     }
 }
 
@@ -107,7 +207,7 @@ async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_togethe
 async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Protected rotor".into(), Kind::Thing);
-    for suppression in ["disabled", "safe", "proof"] {
+    for suppression in ["safe", "proof"] {
         let source = if suppression == "proof" {
             include_str!("../game/units/Kestrel.toml")
                 .replace("\"CargoTech\"", "\"CargoTech\", \"CritProof_Tech\"")
@@ -115,22 +215,15 @@ async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
             include_str!("../game/units/Kestrel.toml").into()
         };
         let aircraft = Vehicle::new(VehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()] = serde_json::to_value(aircraft).unwrap();
-        world.btech = serde_json::from_value(state).unwrap();
+        install(&mut world, id, &aircraft, 0, None);
         let before = world.btech.clone();
         let report = resolve_battle_vehicle_critical(
             &mut world,
             id,
             VehicleSection::Rotor,
             VehicleCriticalRules {
-                rotor_damage_divisor: 0,
-                extended_piloting: false,
-                vtol_table: None,
-                table: VehicleCriticalTable::Advanced,
-                enabled: suppression != "disabled",
                 combat_safe: suppression == "safe",
-                toughness: false,
+                ..rules()
             },
         )
         .unwrap();
@@ -152,51 +245,23 @@ async fn stationary_observation_aircraft_still_use_the_rotor_critical_table() {
         .unwrap(),
     )
     .unwrap();
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 9)
-        .unwrap();
-    let mut saved = serde_json::to_value(unit).unwrap();
-    saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()] = saved;
-    world.btech = serde_json::from_value(state).unwrap();
-    let report = resolve_battle_vehicle_critical(
-        &mut world,
-        id,
-        VehicleSection::Rotor,
-        VehicleCriticalRules {
-            rotor_damage_divisor: 0,
-            extended_piloting: false,
-            vtol_table: None,
-            table: VehicleCriticalTable::Advanced,
-            enabled: true,
-            combat_safe: false,
-            toughness: false,
-        },
-    )
-    .unwrap();
+    install(&mut world, id, &unit, rolling(9), None);
+    let report =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Rotor, rules()).unwrap();
     assert_eq!(
         report.selection.effect,
-        Some(VehicleCriticalEffect::Rotor(RotorHit::TailRotor))
+        Some(VehicleCriticalEffect::Rotor(RotorHit::FlightStabilizer))
     );
     assert!(world.btech.vehicles()[&id].tail_rotor_destroyed());
 }
 
 #[tokio::test]
-async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() {
+async fn hull_columns_move_down_and_apply_pilot_and_copilot_effects() {
     use VehicleCriticalEffect as E;
     use VehicleSection as S;
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Hull critical fixture".into(), Kind::Thing);
-    let rules = VehicleCriticalRules {
-        rotor_damage_divisor: 0,
-        extended_piloting: false,
-        vtol_table: None,
-        table: VehicleCriticalTable::Advanced,
-        enabled: true,
-        combat_safe: false,
-        toughness: false,
-    };
+    // A pristine Kestrel: machine guns and ammunition in the front only, ICE engine.
     let rows = [
         (
             S::Front,
@@ -213,10 +278,10 @@ async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() 
         (
             S::Left,
             [
-                E::WeaponJam,
-                E::Cargo,
                 E::Stabilizer,
-                E::WeaponDestroyed,
+                E::Stabilizer,
+                E::Stabilizer,
+                E::Engine,
                 E::Engine,
                 E::Ammunition,
                 E::FuelTank,
@@ -225,10 +290,10 @@ async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() 
         (
             S::Right,
             [
-                E::WeaponJam,
-                E::Cargo,
                 E::Stabilizer,
-                E::WeaponDestroyed,
+                E::Stabilizer,
+                E::Stabilizer,
+                E::Engine,
                 E::Engine,
                 E::Ammunition,
                 E::FuelTank,
@@ -237,189 +302,149 @@ async fn advanced_aircraft_hull_rows_share_selection_dice_and_control_effects() 
         (
             S::Rear,
             [
-                E::Cargo,
-                E::WeaponJam,
                 E::Stabilizer,
-                E::WeaponDestroyed,
+                E::Stabilizer,
+                E::Stabilizer,
+                E::Sensors,
                 E::Sensors,
                 E::Engine,
                 E::FuelTank,
             ],
         ),
     ];
-    for source in [
-        include_str!("../game/units/Kestrel.toml"),
-        include_str!("../game/units/ObservationVTOL.toml"),
-    ] {
-        let unit = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
-        for (section, row) in rows {
-            for roll in 2..=12 {
-                let seed = (0..=255)
-                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
-                    .unwrap();
-                let mut saved = serde_json::to_value(&unit).unwrap();
-                saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["vehicles"][id.0.to_string()] = saved;
-                world.btech = serde_json::from_value(state).unwrap();
-                let base = world.clone();
-                let report = roll_battle_vehicle_critical(&mut world, id, section, rules).unwrap();
-                assert_eq!(report.rolls, [roll]);
+    let unit = kestrel();
+    for (section, row) in rows {
+        for roll in 2..=12 {
+            install(&mut world, id, &unit, rolling(roll), None);
+            let base = world.clone();
+            let report = roll_battle_vehicle_critical(&mut world, id, section, rules()).unwrap();
+            assert_eq!(report.rolls, [roll]);
+            assert_eq!(
+                report.effect,
+                if roll < 6 {
+                    None
+                } else {
+                    Some(row[usize::from(roll - 6)])
+                },
+                "{section:?}/{roll}"
+            );
+            if matches!(report.effect, Some(E::VtolPilot | E::VtolCopilot)) {
+                let mut resolved = base.clone();
+                let mut replay = base;
+                let result =
+                    resolve_battle_vehicle_critical(&mut resolved, id, section, rules()).unwrap();
+                assert_eq!(result.selection, report);
                 assert_eq!(
-                    report.effect,
-                    if roll < 6 {
-                        None
-                    } else {
-                        Some(row[usize::from(roll - 6)])
-                    }
+                    resolve_battle_vehicle_critical(&mut replay, id, section, rules()).unwrap(),
+                    result
                 );
-                if matches!(report.effect, Some(E::VtolPilot | E::VtolCopilot)) {
-                    let mut resolved = base.clone();
-                    let mut replay = base;
-                    let result =
-                        resolve_battle_vehicle_critical(&mut resolved, id, section, rules).unwrap();
-                    assert_eq!(result.selection, report);
-                    assert_eq!(
-                        resolve_battle_vehicle_critical(&mut replay, id, section, rules).unwrap(),
-                        result
-                    );
-                    assert_eq!(replay.btech, resolved.btech);
-                    let changed = &resolved.btech.vehicles()[&id];
-                    assert_eq!(changed.piloting_damage(), if roll == 10 { 2 } else { 0 });
-                    assert_eq!(changed.gunnery_damage(), if roll == 6 { 1 } else { 0 });
-                    assert_eq!(changed.pilot_injuries(), 0);
-                    assert_eq!(changed.crew_stun_remaining(), 0);
-                    assert_eq!(
-                        serde_json::from_value::<Vehicle>(serde_json::to_value(changed).unwrap())
-                            .unwrap(),
-                        *changed
-                    );
-                }
+                assert_eq!(replay.btech, resolved.btech);
+                let changed = &resolved.btech.vehicles()[&id];
+                assert_eq!(changed.piloting_damage(), if roll == 10 { 2 } else { 0 });
+                assert_eq!(changed.gunnery_damage(), if roll == 6 { 1 } else { 0 });
+                assert_eq!(changed.pilot_injuries(), 0);
+                assert_eq!(changed.crew_stun_remaining(), 0);
+                // Landed aircraft make no control roll for a Pilot Hit.
+                assert!(result.control_check.is_none());
+                // A second hit on the same crew member kills the crew (TW p. 197).
+                resolved
+                    .btech
+                    .set_unit_dice(id, Dice::seeded([rolling(roll); 32]))
+                    .unwrap();
+                let repeat =
+                    resolve_battle_vehicle_critical(&mut resolved, id, section, rules()).unwrap();
+                assert_eq!(repeat.selection.effect, report.effect);
+                assert!(repeat.unit_destroyed);
+                assert!(resolved.btech.vehicles()[&id].crew_killed());
             }
         }
     }
 }
 
 #[tokio::test]
-async fn airborne_engine_critical_requires_emergency_resolution_without_partial_changes() {
+async fn airborne_pilot_hits_roll_for_control_and_drop_a_level_on_failure() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Pilot field".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        map,
+        "pilot",
+        MapAsset::from_cells("1 1\n.3\n").unwrap(),
+    )
+    .unwrap();
+    let id = world.create(&config, "Pilot hit".into(), Kind::Thing);
+    let unit = kestrel();
+    for success in [false, true] {
+        let seed = (0..=255)
+            .find(|seed| {
+                let mut dice = Dice::seeded([*seed; 32]);
+                dice.two_d6() == 10 && (dice.two_d6() >= 6) == success
+            })
+            .unwrap();
+        install(&mut world, id, &unit, seed, Some(map));
+        let report =
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules())
+                .unwrap();
+        assert_eq!(
+            report.selection.effect,
+            Some(VehicleCriticalEffect::VtolPilot)
+        );
+        let check = report.control_check.as_ref().unwrap();
+        assert_eq!(check.situational, 0);
+        assert_eq!(check.success, success);
+        let changed = &world.btech.vehicles()[&id];
+        assert_eq!(changed.piloting_damage(), 2);
+        assert_eq!(
+            changed.vtol_flight().unwrap().altitude,
+            if success { 10.0 } else { 9.0 }
+        );
+        assert_eq!(
+            changed.vtol_flight().unwrap().phase,
+            VtolFlightPhase::Airborne
+        );
+    }
+    // One level above the ground, a failed roll is a crash.
+    let seed = (0..=255)
+        .find(|seed| {
+            let mut dice = Dice::seeded([*seed; 32]);
+            dice.two_d6() == 10 && dice.two_d6() < 6
+        })
+        .unwrap();
+    install(&mut world, id, &unit, seed, Some(map));
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["vtol_flight"]["altitude"] = 4.0.into();
+        })
+        .unwrap();
+    let _ =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules()).unwrap();
+    assert_eq!(
+        world.btech.vehicles()[&id].vtol_flight().unwrap().phase,
+        VtolFlightPhase::Falling
+    );
+}
+
+#[tokio::test]
+async fn airborne_engine_critical_without_a_map_leaves_no_partial_changes() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Airborne engine".into(), Kind::Thing);
-    let unit = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
-    )
-    .unwrap();
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 10)
-        .unwrap();
-    let mut saved = serde_json::to_value(unit).unwrap();
-    saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-    saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
-    saved["map_slot"] = 0.into();
-    saved["power"] = serde_json::to_value(Power::Running).unwrap();
-    saved["motion"] =
-        serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center())).unwrap();
-    saved["vtol_flight"] = serde_json::to_value(VtolFlight {
-        fall: None,
-        phase: VtolFlightPhase::Airborne,
-        altitude: 5.0,
-        vertical_speed: 0.0,
-    })
-    .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()] = saved;
-    world.btech = serde_json::from_value(state).unwrap();
-    let before = world.btech.clone();
-    let error = resolve_battle_vehicle_critical(
+    install(
         &mut world,
         id,
-        VehicleSection::Left,
-        VehicleCriticalRules {
-            rotor_damage_divisor: 0,
-            extended_piloting: false,
-            vtol_table: None,
-            table: VehicleCriticalTable::Advanced,
-            enabled: true,
-            combat_safe: false,
-            toughness: false,
-        },
-    )
-    .unwrap_err();
-    assert!(error.to_string().contains("emergency landing"));
+        &kestrel(),
+        rolling(10),
+        Some(ObjectId(999_999)),
+    );
+    let before = world.btech.clone();
+    assert!(
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules()).is_err()
+    );
     assert_eq!(world.btech, before);
 }
 
 #[tokio::test]
-async fn standard_vtol_criticals_share_common_effects_without_ground_preliminary_rolls() {
-    use VehicleCriticalEffect as E;
-    let (_dir, config, mut world) = support::isolated_world().await;
-    let id = world.create(&config, "Standard aircraft criticals".into(), Kind::Thing);
-    for source in [
-        include_str!("../game/units/Kestrel.toml"),
-        include_str!("../game/units/ObservationVTOL.toml"),
-    ] {
-        let aircraft = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
-        for table in [VehicleCriticalTable::Standard] {
-            for (index, effect) in [
-                E::CrewKilled,
-                E::MainWeaponJam,
-                E::Engine,
-                E::CrewKilled,
-                E::FuelTank,
-                E::PowerPlant,
-            ]
-            .into_iter()
-            .enumerate()
-            {
-                let roll = index as u8 + 1;
-                let seed = (0..=255)
-                    .find(|seed| Dice::seeded([*seed; 32]).d6() == roll)
-                    .unwrap();
-                let mut saved = serde_json::to_value(&aircraft).unwrap();
-                saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["vehicles"][id.0.to_string()] = saved;
-                world.btech = serde_json::from_value(state).unwrap();
-                let mut replay = world.clone();
-                let rules = VehicleCriticalRules {
-                    rotor_damage_divisor: 0,
-                    extended_piloting: false,
-                    vtol_table: None,
-                    table,
-                    enabled: true,
-                    combat_safe: false,
-                    toughness: false,
-                };
-                let report =
-                    resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules)
-                        .unwrap();
-                assert_eq!(report.selection.rolls, [roll]);
-                assert_eq!(report.selection.effect, Some(effect));
-                assert_eq!(report.selection.table, VehicleCriticalTable::Standard);
-                assert_eq!(
-                    resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Front, rules)
-                        .unwrap(),
-                    report
-                );
-                assert_eq!(world.btech, replay.btech);
-                let unit = &world.btech.vehicles()[&id];
-                assert_eq!(unit.crew_killed(), matches!(roll, 1 | 4 | 5 | 6));
-                if roll == 3 {
-                    assert_eq!(unit.maximum_speed(), 0.0);
-                }
-                if matches!(roll, 5 | 6) {
-                    assert!(report.explosion.is_some());
-                }
-                assert_eq!(
-                    serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
-                    *unit
-                );
-            }
-        }
-    }
-}
-
-#[tokio::test]
-async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomically() {
+async fn fuel_tank_explosions_settle_at_the_surface_and_destroy_the_vtol() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Explosion field".into(), Kind::Room);
     create_battle_map(
@@ -431,18 +456,6 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Exploding aircraft".into(), Kind::Thing);
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).d6() == 6)
-        .unwrap();
-    let rules = VehicleCriticalRules {
-        rotor_damage_divisor: 0,
-        extended_piloting: false,
-        vtol_table: None,
-        table: VehicleCriticalTable::Standard,
-        enabled: true,
-        combat_safe: false,
-        toughness: false,
-    };
     for case in [false, true] {
         let source = if case {
             include_str!("../game/units/Kestrel.toml").replace(
@@ -454,39 +467,23 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
         };
         let unit = Vehicle::new(VehicleTemplate::parse("Kestrel", &source).unwrap()).unwrap();
         assert_eq!(unit.has_powerplant_containment(), case);
-        let mut saved = serde_json::to_value(unit).unwrap();
-        saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
-        saved["map_slot"] = 0.into();
-        saved["power"] = serde_json::to_value(Power::Running).unwrap();
-        saved["motion"] =
-            serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center()))
-                .unwrap();
-        saved["vtol_flight"] = serde_json::to_value(VtolFlight {
-            fall: None,
-            phase: VtolFlightPhase::Airborne,
-            altitude: 20.0,
-            vertical_speed: 60.0,
-        })
-        .unwrap();
-        saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["vehicles"][id.0.to_string()] = saved.clone();
-        world.btech = serde_json::from_value(state.clone()).unwrap();
+        install(&mut world, id, &unit, rolling(12), Some(map));
         let mut replay = world.clone();
         let report =
-            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).unwrap();
-        assert_eq!(report.explosion.as_ref().unwrap().contained, case);
-        if case {
-            assert_eq!(
-                report.explosion.as_ref().unwrap().destroyed_sections,
-                [VehicleSection::Rear]
-            );
-        }
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules()).unwrap();
+        assert_eq!(
+            report.selection.effect,
+            Some(VehicleCriticalEffect::FuelTank)
+        );
+        // CASE does not contain a fuel-tank explosion (TW p. 197).
+        assert!(!report.explosion.as_ref().unwrap().contained);
         let unit = &world.btech.vehicles()[&id];
+        assert!(unit.is_destroyed());
         assert_eq!(unit.vtol_flight().unwrap().altitude, 3.0);
         assert_eq!(unit.vtol_flight().unwrap().vertical_speed, 0.0);
         assert_eq!(
-            resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Front, rules).unwrap(),
+            resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Left, rules())
+                .unwrap(),
             report
         );
         assert_eq!(replay.btech, world.btech);
@@ -494,19 +491,23 @@ async fn aircraft_explosions_settle_at_surface_and_share_case_containment_atomic
             serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
             *unit
         );
-        saved["position"]["map"] = 999999.into();
-        state["vehicles"][id.0.to_string()] = saved;
-        world.btech = serde_json::from_value(state).unwrap();
-        let before = world.btech.clone();
-        assert!(
-            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules).is_err()
-        );
-        assert_eq!(world.btech, before);
     }
+    install(
+        &mut world,
+        id,
+        &kestrel(),
+        rolling(12),
+        Some(ObjectId(999_999)),
+    );
+    let before = world.btech.clone();
+    assert!(
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules()).is_err()
+    );
+    assert_eq!(world.btech, before);
 }
 
 #[tokio::test]
-async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_as_falls() {
+async fn engine_emergency_landings_roll_at_plus_four_and_commit_failed_attempts_as_falls() {
     let (_dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Emergency field".into(), Kind::Room);
     create_battle_map(
@@ -518,126 +519,81 @@ async fn engine_emergency_landings_use_shared_checks_and_commit_failed_attempts_
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Emergency aircraft".into(), Kind::Thing);
-    let unit = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
-    )
-    .unwrap();
-    for advanced in [false, true] {
-        for success in [false, true] {
-            let seed = (0..=255)
-                .find(|seed| {
-                    let mut dice = Dice::seeded([*seed; 32]);
-                    let engine = if advanced {
-                        dice.two_d6() == 10
-                    } else {
-                        dice.d6() == 3
-                    };
-                    engine && (dice.two_d6() >= 8) == success
-                })
-                .unwrap();
-            let mut saved = serde_json::to_value(&unit).unwrap();
-            saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
-            saved["map_slot"] = 0.into();
-            saved["power"] = serde_json::to_value(Power::Running).unwrap();
-            saved["motion"] =
-                serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center()))
-                    .unwrap();
-            saved["vtol_flight"] = serde_json::to_value(VtolFlight {
-                fall: None,
-                phase: VtolFlightPhase::Airborne,
-                altitude: 5.0,
-                vertical_speed: 60.0,
+    let unit = kestrel();
+    for success in [false, true] {
+        let seed = (0..=255)
+            .find(|seed| {
+                let mut dice = Dice::seeded([*seed; 32]);
+                dice.two_d6() == 10 && (dice.two_d6() >= 10) == success
             })
             .unwrap();
-            saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["vehicles"][id.0.to_string()] = saved;
-            world.btech = serde_json::from_value(state).unwrap();
-            let before = world.btech.clone();
-            let mut replay = world.clone();
-            let rules = VehicleCriticalRules {
-                rotor_damage_divisor: 0,
-                extended_piloting: true,
-                vtol_table: None,
-                table: if advanced {
-                    VehicleCriticalTable::Advanced
-                } else {
-                    VehicleCriticalTable::Standard
-                },
-                enabled: true,
-                combat_safe: false,
-                toughness: false,
-            };
-            let report =
-                resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules);
-            if !success {
-                let report = report.unwrap();
-                assert!(!report.emergency_landing.as_ref().unwrap().success);
-                assert_ne!(world.btech, before);
-                assert_eq!(
-                    resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Left, rules)
-                        .unwrap(),
-                    report
-                );
-                assert_eq!(replay.btech, world.btech);
-                let changed = &world.btech.vehicles()[&id];
-                assert_eq!(changed.maximum_speed(), 0.0);
-                assert_eq!(
-                    changed.vtol_flight().unwrap().phase,
-                    VtolFlightPhase::Falling
-                );
-                assert_eq!(changed.vtol_flight().unwrap().altitude, 5.0);
-                assert!(changed.vtol_flight().unwrap().fall.is_some());
-                assert_eq!(
-                    serde_json::from_value::<Vehicle>(serde_json::to_value(changed).unwrap())
-                        .unwrap(),
-                    *changed
-                );
-                world
-                    .btech
-                    .set_unit_dice(id, Dice::seeded([seed; 32]))
+        install(&mut world, id, &unit, seed, Some(map));
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["vtol_flight"]["altitude"] = 5.0.into();
+            })
+            .unwrap();
+        let before = world.btech.clone();
+        let mut replay = world.clone();
+        let rules = VehicleCriticalRules {
+            extended_piloting: true,
+            ..rules()
+        };
+        let report =
+            resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules).unwrap();
+        assert_eq!(report.selection.effect, Some(VehicleCriticalEffect::Engine));
+        let check = report.emergency_landing.as_ref().unwrap();
+        assert_eq!(check.success, success);
+        assert_eq!(check.skill, 6);
+        assert_eq!(check.situational, 4);
+        assert_eq!(check.target, 10);
+        assert_ne!(world.btech, before);
+        assert_eq!(
+            resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Left, rules).unwrap(),
+            report
+        );
+        assert_eq!(replay.btech, world.btech);
+        let changed = &world.btech.vehicles()[&id];
+        assert_eq!(changed.maximum_speed(), 0.0);
+        assert!(changed.engine_destroyed());
+        if !success {
+            assert_eq!(
+                changed.vtol_flight().unwrap().phase,
+                VtolFlightPhase::Falling
+            );
+            assert_eq!(changed.vtol_flight().unwrap().altitude, 5.0);
+            assert!(changed.vtol_flight().unwrap().fall.is_some());
+            // A second Engine Hit no longer applies; the column moves on to Ammunition.
+            world
+                .btech
+                .set_unit_dice(id, Dice::seeded([seed; 32]))
+                .unwrap();
+            let repeated =
+                resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules)
                     .unwrap();
-                let cursor = world.btech.vehicles()[&id].vtol_flight().unwrap().fall;
-                let repeated =
-                    resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules)
-                        .unwrap();
-                assert!(repeated.emergency_landing.is_none());
-                assert_eq!(
-                    world.btech.vehicles()[&id].vtol_flight().unwrap().fall,
-                    cursor
-                );
-                continue;
-            }
-            let report = report.unwrap();
-            let check = report.emergency_landing.as_ref().unwrap();
-            assert!(check.success);
-            assert_eq!(check.skill, 6);
-            assert_eq!(check.situational, 2);
-            assert_eq!(check.target, 8);
             assert_eq!(
-                resolve_battle_vehicle_critical(&mut replay, id, VehicleSection::Left, rules)
-                    .unwrap(),
-                report
+                repeated.selection.effect,
+                Some(VehicleCriticalEffect::Ammunition)
             );
-            assert_eq!(replay.btech, world.btech);
-            let changed = &world.btech.vehicles()[&id];
-            assert_eq!(changed.maximum_speed(), 0.0);
-            assert_eq!(
-                changed.vtol_flight().unwrap(),
-                VtolFlight {
-                    fall: None,
-                    phase: VtolFlightPhase::Landed,
-                    altitude: 3.0,
-                    vertical_speed: 0.0
-                }
-            );
-            assert_eq!(changed.sections(), unit.sections());
-            assert!(!changed.is_destroyed());
-            assert_eq!(
-                serde_json::from_value::<Vehicle>(serde_json::to_value(changed).unwrap()).unwrap(),
-                *changed
-            );
+            assert!(repeated.emergency_landing.is_none());
+            continue;
         }
+        assert_eq!(
+            changed.vtol_flight().unwrap(),
+            VtolFlight {
+                fall: None,
+                phase: VtolFlightPhase::Landed,
+                altitude: 3.0,
+                vertical_speed: 0.0
+            }
+        );
+        assert_eq!(changed.sections(), unit.sections());
+        assert!(!changed.is_destroyed());
+        assert_eq!(
+            serde_json::from_value::<Vehicle>(serde_json::to_value(changed).unwrap()).unwrap(),
+            *changed
+        );
     }
 }
 
@@ -654,50 +610,15 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Aircraft".into(), Kind::Thing);
-    let unit = Vehicle::new(
-        VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
-    )
-    .unwrap();
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).d6() == 3)
-        .unwrap();
-    let mut saved = serde_json::to_value(unit).unwrap();
-    saved["position"] = serde_json::json!({"map":map.0,"x":0,"y":0});
-    saved["map_slot"] = 0.into();
-    saved["power"] = serde_json::to_value(Power::Running).unwrap();
-    saved["motion"] =
-        serde_json::to_value(Motion::stationary(HexCoordinate { x: 0, y: 0 }.center())).unwrap();
-    saved["vtol_flight"] = serde_json::to_value(VtolFlight {
-        fall: None,
-        phase: VtolFlightPhase::Airborne,
-        altitude: 5.0,
-        vertical_speed: 60.0,
-    })
-    .unwrap();
-    saved["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["vehicles"][id.0.to_string()] = saved;
-    world.btech = serde_json::from_value(state).unwrap();
-    let report = resolve_battle_vehicle_critical(
-        &mut world,
-        id,
-        VehicleSection::Front,
-        VehicleCriticalRules {
-            rotor_damage_divisor: 0,
-            extended_piloting: false,
-            vtol_table: None,
-            table: VehicleCriticalTable::Standard,
-            enabled: true,
-            combat_safe: false,
-            toughness: false,
-        },
-    )
-    .unwrap();
+    install(&mut world, id, &kestrel(), rolling(10), Some(map));
+    let report =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Left, rules()).unwrap();
+    assert_eq!(report.selection.effect, Some(VehicleCriticalEffect::Engine));
     assert!(report.emergency_landing.is_none());
     let unit = &world.btech.vehicles()[&id];
     assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);
-    let mut dice = Dice::seeded([seed; 32]);
-    dice.d6();
+    let mut dice = Dice::seeded([rolling(10); 32]);
+    dice.two_d6();
     assert_eq!(
         serde_json::to_value(unit).unwrap()["dice"],
         serde_json::to_value(dice).unwrap()
@@ -770,12 +691,12 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
         },
     )
     .unwrap();
-    let target = battle_unit_piloting_target(&world, id, true).unwrap() + 2;
+    let target = battle_unit_piloting_target(&world, id, true).unwrap() + 4;
     for success in [false, true] {
         let seed = (0..=255)
             .find(|seed| {
                 let mut dice = Dice::seeded([*seed; 32]);
-                dice.d6() == 3 && (i16::from(dice.two_d6()) >= target) == success
+                dice.two_d6() == 10 && (i16::from(dice.two_d6()) >= target) == success
             })
             .unwrap();
         let mut candidate = world.clone();
@@ -815,12 +736,7 @@ async fn emergency_landing_feedback_is_private_and_replayable() {
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
         let rules = VehicleCriticalRules {
             extended_piloting: true,
-            table: VehicleCriticalTable::Standard,
-            rotor_damage_divisor: 0,
-            vtol_table: None,
-            enabled: true,
-            combat_safe: false,
-            toughness: false,
+            ..rules()
         };
         let report = resolve_battle_vehicle_critical_action(
             &scripts,

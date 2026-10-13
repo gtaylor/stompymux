@@ -47,10 +47,7 @@ pub fn damage_action(
         let mut private = Vec::new();
         for _ in 0..request.clusters {
             let mut world = scripts.world_mut();
-            let arc = super::hit_direction::HitDirection::SelfHit {
-                mode: config.battletech.hit_arcs,
-            }
-            .current(&world, unit)?;
+            let arc = super::hit_direction::HitDirection::SelfHit.current(&world, unit)?;
             rear |= arc == HitArc::Rear;
             let character = world.objects[&unit].flags.contains(Flag::InCharacter);
             let pilot = world

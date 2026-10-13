@@ -234,8 +234,8 @@ impl ArtilleryFlight {
         let mut cells = Vec::new();
         if self.mode == ArtilleryMode::Cluster {
             let mut totals = BTreeMap::<(i32, i32), u16>::new();
-            // The reference emits damage-count bomblets of two points each, despite its dam/2 comment.
-            for _ in 0..self.weapon.profile().damage {
+            // Two-point bomblets, as many as the cluster round's own damage value.
+            for _ in 0..cluster_bomblets(self.weapon) {
                 let x = cluster_axis(impact.x, dimensions.0, dice)?;
                 let y = cluster_axis(impact.y, dimensions.1, dice)?;
                 *totals.entry((x, y)).or_default() += 2;
@@ -252,15 +252,16 @@ impl ArtilleryFlight {
                 });
             }
         } else {
-            let mut positions = vec![(impact, true, u16::from(self.weapon.profile().damage))];
+            let rings = blast_rings(self.weapon);
+            let mut positions = vec![(impact, true, rings[0])];
             if self.mode != ArtilleryMode::Mine {
-                positions.extend(
-                    impact
-                        .neighbors_within(dimensions.0, dimensions.1)
-                        .into_iter()
-                        .flatten()
-                        .map(|cell| (cell, false, u16::from(self.weapon.profile().damage / 2))),
-                );
+                for (radius, &damage) in rings.iter().enumerate().skip(1) {
+                    positions.extend(
+                        ring(impact, radius as u64, dimensions)
+                            .into_iter()
+                            .map(|cell| (cell, false, damage)),
+                    );
+                }
             }
             for (position, direct, total) in positions {
                 let effect = match self.mode {
@@ -288,6 +289,56 @@ impl ArtilleryFlight {
             cells,
         })
     }
+}
+
+/// Damage by distance from the impact hex for a high-explosive round, from the Artillery
+/// Ordnance Table (Tactical Operations p. 183): the Long Tom reaches two hexes out, the
+/// others one. Artillery cannons and other tubes halve their damage in the adjacent hexes.
+pub fn blast_rings(weapon: Weapon) -> Vec<u16> {
+    match weapon {
+        Weapon::LongTom => vec![25, 15, 5],
+        Weapon::Sniper => vec![20, 10],
+        Weapon::Thumper => vec![15, 5],
+        Weapon::ArrowIv | Weapon::ClanArrowIv => vec![20, 10],
+        other => {
+            let damage = u16::from(other.profile().damage);
+            vec![damage, damage / 2]
+        }
+    }
+}
+
+/// Two-point bomblets a cluster round scatters: its damage value on the Artillery Ordnance
+/// Table (Tactical Operations p. 183), one bomblet per two points.
+pub fn cluster_bomblets(weapon: Weapon) -> u16 {
+    match weapon {
+        Weapon::LongTom | Weapon::ArrowIv | Weapon::ClanArrowIv => 20,
+        Weapon::Sniper => 15,
+        Weapon::Thumper => 10,
+        other => u16::from(other.profile().damage),
+    }
+}
+
+/// The on-map cells exactly `radius` hexes from `center`, in coordinate order; radius one is
+/// the six neighbours clockwise from north.
+fn ring(center: HexCoordinate, radius: u64, (width, height): (u16, u16)) -> Vec<HexCoordinate> {
+    if radius == 1 {
+        return center
+            .neighbors_within(width, height)
+            .into_iter()
+            .flatten()
+            .collect();
+    }
+    let reach = i32::try_from(radius).unwrap_or(i32::MAX);
+    let mut cells = Vec::new();
+    for x in center.x.saturating_sub(reach)..=center.x.saturating_add(reach) {
+        for y in center.y.saturating_sub(reach)..=center.y.saturating_add(reach) {
+            let cell = HexCoordinate { x, y };
+            if contains((width, height), cell) && cell.distance(center) == radius {
+                cells.push(cell);
+            }
+        }
+    }
+    cells
 }
 
 /// Test current rectangular map bounds without materializing terrain.
@@ -324,6 +375,31 @@ pub(super) fn flight_seconds(origin: super::Point, target: super::Point) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The Artillery Ordnance Table's high-explosive values and radii.
+    #[test]
+    fn blast_rings_follow_the_ordnance_table() {
+        assert_eq!(blast_rings(Weapon::LongTom), [25, 15, 5]);
+        assert_eq!(blast_rings(Weapon::Sniper), [20, 10]);
+        assert_eq!(blast_rings(Weapon::Thumper), [15, 5]);
+        assert_eq!(blast_rings(Weapon::ArrowIv), [20, 10]);
+        assert_eq!(blast_rings(Weapon::ClanArrowIv), [20, 10]);
+        assert_eq!(blast_rings(Weapon::LongTomCannon), [20, 10]);
+        assert_eq!(cluster_bomblets(Weapon::LongTom), 20);
+        assert_eq!(cluster_bomblets(Weapon::Sniper), 15);
+        assert_eq!(cluster_bomblets(Weapon::Thumper), 10);
+    }
+
+    /// The second ring holds the twelve cells two hexes out, clipped to the map.
+    #[test]
+    fn rings_count_cells_by_hex_distance() {
+        let center = HexCoordinate { x: 5, y: 5 };
+        assert_eq!(ring(center, 1, (12, 12)).len(), 6);
+        let outer = ring(center, 2, (12, 12));
+        assert_eq!(outer.len(), 12);
+        assert!(outer.iter().all(|cell| cell.distance(center) == 2));
+        assert!(ring(HexCoordinate { x: 0, y: 0 }, 2, (2, 2)).is_empty());
+    }
 
     /// Interior and clipped-edge samples preserve triangular rather than uniform placement weights.
     #[test]

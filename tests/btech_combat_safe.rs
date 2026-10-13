@@ -72,7 +72,6 @@ async fn fixture(
 fn rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
         extended_ranges: false,
@@ -84,18 +83,9 @@ fn rules() -> AimRules {
 /// Tactical conventional shot configuration shared by admission cases.
 fn shot_rules() -> ShotRules {
     ShotRules {
-        range_damage: false,
         tsm_tow_bonus: true,
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
         aim: rules(),
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
         extended_gunnery: false,
         extended_piloting: false,
         target_toughness: false,
@@ -349,18 +339,12 @@ async fn immunity_preserves_hit_routing_and_internal_damage_boundaries() {
             let mut unit = world.btech.constructed_units()[&id].clone();
             assert!(unit.choose_critical(MechSection::CenterTorso).is_none());
             assert_eq!(&unit, &world.btech.constructed_units()[&id]);
-            let rules = HitRules {
-                inferno_penalty: false,
-                exile_stun_mode: 1,
-            };
             for roll in [2, 12] {
                 let mut dice = Dice::seeded([19; 32]);
                 let original = dice.clone();
-                let hit = rules
-                    .resolve(&unit, HitArc::Front, roll, &mut dice)
-                    .unwrap();
+                let hit = resolve_battle_hit(&unit, HitArc::Front, roll, &mut dice).unwrap();
                 assert_eq!(hit.section, MechSection::LeftArm);
-                assert!(!hit.crew_stun && !hit.through_armor_critical);
+                assert!(!hit.through_armor_critical);
                 assert_eq!(dice, original);
             }
             let report = resolve_battle_impact(
@@ -370,7 +354,6 @@ async fn immunity_preserves_hit_routing_and_internal_damage_boundaries() {
                     section: MechSection::Head,
                     rear_armor: false,
                     through_armor_critical: true,
-                    crew_stun: true,
                 },
                 100,
             )
@@ -422,11 +405,8 @@ async fn immunity_protects_physical_damage_for_bipeds_and_quads() {
             target,
             Leg::Left,
             PhysicalRules {
-                use_pilot_skill: false,
                 fasa_turning: false,
                 extended_movement: false,
-                hit_arc_mode: 0,
-                glancing: GlancingMode::Disabled,
                 fall: FallRules::configured(&config),
             },
         )

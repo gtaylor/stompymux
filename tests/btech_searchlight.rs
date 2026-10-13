@@ -201,7 +201,6 @@ async fn front_torso_damage_uses_lamp_state_and_exact_dice() {
                             section,
                             rear_armor: rear,
                             through_armor_critical: false,
-                            crew_stun: false,
                         },
                         1,
                     )

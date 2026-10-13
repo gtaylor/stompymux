@@ -1,8 +1,8 @@
 //! The simulation scheduler and operator diagnostics share one live-work predicate.
-use crate::{Config, World};
+use crate::World;
 
 /// Decide whether a tick has work, reusing already collected scanners in the server path.
-pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: bool) -> bool {
+pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
     super::autopilot::runtime::pending(world)
         || super::sixth_sense::pending(world)
         || world.btech.vehicles().values().any(|unit| {
@@ -21,8 +21,6 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
                 || unit.tag().remaining > 0
                 || unit.searchlight().remaining > 0
                 || unit.inferno_remaining() > 0
-                || !unit.burning_sections().is_empty()
-                || unit.extinguishing().is_some()
                 || unit.crew_recovery().remaining > 0
                 || unit.unjam().is_some()
                 || unit.pod_removal().is_some()
@@ -39,7 +37,6 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
         || crate::automatic_turrets_pending(world)
         || crate::hiding_pending(world)
         || crate::self_destructs_pending(world)
-        || crate::reactor_windows_pending(world)
         || crate::wrecks_pending(world)
         || has_scanner_observers
         || crate::battle_building_entries_pending(world)
@@ -58,15 +55,12 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
             .any(|recovery| recovery.remaining > 0)
         || world.btech.constructed_units().values().any(|unit| {
             unit.radio_experience_remaining() > 0
-                || unit.inferno_remaining() > 0
                 || unit.spotter_events.pending()
                 || unit.tag().target.is_some()
                 || unit.tag().remaining > 0
                 || unit.fired_recently()
                 || unit.power() == crate::Power::Running
-                || unit.stagger_active(crate::StaggerMode::from_setting(
-                    config.battletech.newstagger,
-                ))
+                || unit.stagger_active()
                 || unit.stand_timer().is_some()
                 || unit.crew_recovery().remaining > 0
                 || unit.unjam().is_some()

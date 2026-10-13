@@ -79,9 +79,6 @@ pub(super) fn resolve_balance(
             unit.hull_down = Default::default();
             unit.posture = Posture::Prone;
             unit.facing = Default::default();
-            if rules.stagger != super::StaggerMode::Traditional {
-                unit.stagger.clear_damage();
-            }
         }
         return Ok(None);
     }

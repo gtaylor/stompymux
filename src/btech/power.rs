@@ -252,13 +252,12 @@ fn stop_inner(
                         world,
                         id,
                         input,
-                        rules.stacking,
                         rules,
                         &mut effects.stacking,
                         (&mut effects.pilot_notices, notices.len()),
                     )?
                 } else {
-                    super::resolve_stacking(world, id, input, rules.stacking, rules)?
+                    super::resolve_stacking(world, id, input, rules)?
                 };
                 notices.extend(collisions);
             }

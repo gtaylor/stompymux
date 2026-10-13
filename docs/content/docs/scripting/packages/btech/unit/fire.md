@@ -11,7 +11,7 @@ An omitted target uses cockpit selection, including automatic coolant self-selec
 An IDF observer takes precedence when the firer has no unit lock, even with explicit arguments.
 Explicit coordinates select an occupant for conventional weapons or use terrain effects when empty.
 Artillery always uses coordinates and queues its impact. Explicit requests do not change saved locks.
-Missile effects require the base target number even with near-miss glancing enabled.
+Missile effects require the base target number; meeting it exactly is a glancing blow.
 Such a near miss spends its launch and aimed preparation, but starts no AMS, pod effect or Swarm flight.
 Results are detached; optional fields use nil.
 

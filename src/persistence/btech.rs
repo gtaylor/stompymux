@@ -125,7 +125,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         inventories: super::btech_inventory::load(c).await?.into(),
         part_costs: super::btech_part_costs::load(c).await?.into(),
         weapon_settings: Default::default(),
-        reactor: super::btech_reactor::load(c, clock).await?,
         wrecks: super::btech_wrecks::load(c).await?.into(),
         tows: super::btech_tows::load(c).await?.into(),
         player_preferences: player_preferences.into(),
@@ -157,7 +156,6 @@ pub(super) fn validate_changes(
     let mut expected = before.btech.clone();
     expected.turn_clock = after.btech.turn_clock;
     expected.simulation_seconds = after.btech.simulation_seconds;
-    expected.reactor = after.btech.reactor.clone();
     // Runtime-only sanction stamps never round-trip through the database.
     expected.retire_sanctions = after.btech.retire_sanctions.clone();
     // Administratively unregistered MECH roles dispose the full unit identity; wreck
@@ -455,7 +453,6 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_part_costs::save(c, before, after).await?;
     changed |= super::btech_cargo_bay::save(c, before, after).await?;
     changed |= super::btech_recovery::save(c, before, after).await?;
-    changed |= super::btech_reactor::save(c, before, after).await?;
     changed |= super::btech_wrecks::save(c, before, after).await?;
     changed |= super::btech_decorations::save(c, before, after).await?;
     changed |= super::btech_static_decorations::save(c, before, after).await?;

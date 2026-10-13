@@ -161,10 +161,6 @@ pub fn pickup_admission(
             "That target is immobile"
         );
         ensure!(
-            unit.burning_sections().is_empty(),
-            "You can't tow a burning unit!"
-        );
-        ensure!(
             (unit.free_fall().is_none() && unit.orbital_drop().is_none()),
             "Wait until the falling target lands"
         );

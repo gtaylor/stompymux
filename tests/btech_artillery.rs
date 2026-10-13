@@ -99,7 +99,7 @@ fn artillery_standard_smoke_and_mine_patterns() {
             assert_eq!(pattern.cells.len(), 1);
             assert_eq!(
                 pattern.cells[0].effect,
-                ArtilleryEffect::Mine { strength: 5 }
+                ArtilleryEffect::Mine { strength: 15 }
             );
         } else {
             assert_eq!(pattern.cells.len(), 7);
@@ -122,8 +122,10 @@ fn artillery_standard_smoke_and_mine_patterns() {
                 } else {
                     assert_eq!(
                         cell.effect,
+                        // A Thumper's high-explosive round: fifteen in the target hex, five
+                        // in the ring around it (Tactical Operations p. 183).
                         ArtilleryEffect::Damage {
-                            total: if index == 0 { 5 } else { 2 },
+                            total: if index == 0 { 15 } else { 5 },
                             packet_size: 5,
                             table: HitTable::Weapon
                         }

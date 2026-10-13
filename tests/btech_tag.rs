@@ -375,7 +375,6 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
         });
         let rules = AimRules {
             woods_damage: false,
-            hit_arc_mode: 0,
             fasa_turning: false,
             extended_movement: false,
             extended_ranges: false,

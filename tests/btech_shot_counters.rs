@@ -53,9 +53,7 @@ async fn direct_shots_count_the_launch_result_for_every_chassis() {
             let hit = if let Some(hit) = launch.get("hit") {
                 hit.as_bool().unwrap()
             } else {
-                report["roll"].as_i64().unwrap()
-                    >= (report["target_number"].as_i64().unwrap()
-                        - i64::from(config.battletech.glancing_blows == 2))
+                report["roll"].as_i64().unwrap() >= report["target_number"].as_i64().unwrap()
             };
             outcomes[usize::from(hit)] = true;
             let expected =

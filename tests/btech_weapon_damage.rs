@@ -54,7 +54,6 @@ async fn critical_degradation_replays_and_survives_database_restart() {
                 section: MechSection::LeftTorso,
                 rear_armor: false,
                 through_armor_critical: true,
-                crew_stun: false,
             };
             let report = resolve_battle_impact(&mut world, id, hit, 1).unwrap();
             if report.criticals.len() != 1
