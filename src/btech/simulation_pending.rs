@@ -30,7 +30,6 @@ pub(crate) fn pending(world: &World, config: &Config, has_scanner_observers: boo
                     .target_selection()
                     .is_some_and(|lock| lock.remaining() > 0)
                 || !unit.turret_repairs().is_empty()
-                || unit.dig_state().remaining() > 0
                 || unit.crew_stun_remaining() > 0
                 || matches!(unit.power(), crate::Power::Starting { .. })
                 || unit.power() == crate::Power::Running

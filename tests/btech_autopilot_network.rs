@@ -1,11 +1,9 @@
-//! End-to-end autopilot use of C3i peer sightings through the production heartbeat:
-//! automatic network formation, an attack order on an enemy only a peer can see, holding fire
-//! while the sighting is relayed, closing in, and locking once its own sensors acquire it.
+//! End-to-end autopilot use of side-wide spotting (Tactical Operations p. 191) through the
+//! production heartbeat: automatic C3i formation, an attack order on an enemy only a teammate
+//! can see, holding fire while the sighting is relayed, closing in, and locking once the hunter
+//! perceives the enemy itself; and the refusal to attack an enemy nobody on the side spots.
 use crate::support;
 use stompymux_rs::*;
-
-/// Sensor and sight reach in hexes; short enough that the autopilot starts blind to the enemy.
-const REACH: u8 = 5;
 
 /// A JR7-D carrying a C3i computer in its otherwise empty left-torso slots.
 fn networked_jenner() -> MechTemplate {
@@ -50,19 +48,10 @@ fn place(
     id
 }
 
-/// Hunter and spotter share C3i; the enemy sits beside the spotter, far beyond the hunter's reach.
+/// Hunter and spotter share C3i on a moonlit field without sensors: units see ten hexes, the
+/// spotter stands beside the enemy, and the hunter starts eighteen hexes away.
 async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
     let (directory, _, mut world) = support::isolated_world().await;
-    // The runtime reapplies the configured sensor reach, so shorten it in the copied config.
-    let settings = directory.path().join("stompymux.toml");
-    let text = std::fs::read_to_string(&settings).unwrap();
-    let edited = text.replacen(
-        "[battletech]\n",
-        &format!("[battletech]\nsensor_range = {REACH}\n"),
-        1,
-    );
-    assert_ne!(text, edited, "fixture battletech table not found");
-    std::fs::write(&settings, edited).unwrap();
     let config = Config::load(directory.path()).unwrap();
     let map = world.create(&config, "Network hunt".into(), Kind::Room);
     create_battle_map(
@@ -73,7 +62,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    set_battle_map_visibility(&mut world, map, Light::Day, REACH).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let hunter = place(
         &mut world,
         &config,
@@ -90,7 +80,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         map,
         "Spotter",
         networked_jenner(),
-        (0, 17),
+        (4, 20),
         Some(spotter_pilot),
     );
     let enemy = place(
@@ -115,12 +105,20 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
     (directory, config, world, [hunter, spotter, enemy])
 }
 
-/// Whether `observer` holds `target` through its own sensors.
-fn holds(world: &World, observer: ObjectId, target: ObjectId) -> bool {
+/// Whether `observer`'s contact list carries `target`, perceived itself or spotted by its side.
+fn spotted(world: &World, observer: ObjectId, target: ObjectId) -> bool {
     visible_battle_contacts(world, observer)
         .unwrap()
         .iter()
         .any(|contact| contact.target == target)
+}
+
+/// Whether `observer` perceives `target` itself: the row carries a detection channel of its own.
+fn holds(world: &World, observer: ObjectId, target: ObjectId) -> bool {
+    visible_battle_contacts(world, observer)
+        .unwrap()
+        .iter()
+        .any(|contact| contact.target == target && contact.detection.is_some())
 }
 
 /// Current row of the hunter.
@@ -128,18 +126,41 @@ fn row(world: &World, id: ObjectId) -> u16 {
     world.btech.constructed_units()[&id].position().unwrap().y
 }
 
+/// Advance the heartbeat one simulation second and insist it commits.
+async fn step(harness: &mut HeartbeatHarness) -> HeartbeatMetrics {
+    let now = harness.world().btech.simulation_time() + 1;
+    let metrics = harness.step(now).await;
+    assert!(metrics.committed, "heartbeat must commit");
+    metrics
+}
+
+/// Hand the hunter an attack order on `enemy` through the Lua director.
+fn order_attack(
+    harness: &HeartbeatHarness,
+    hunter: ObjectId,
+    enemy: ObjectId,
+) -> anyhow::Result<()> {
+    harness.scripts().eval_callback::<()>(&format!(
+        r#"
+        local u = mux.world.object({hunter})
+        local a = btech.autopilot
+        a.attach(u)
+        a.configure(u, {{ fire_mode = a.fire_modes.ASSIGNED_TARGET }})
+        local result = a.submit(u, {{ {{ kind = a.orders.ATTACK, target = {enemy} }} }}, a.submission_modes.APPEND)
+        assert(result.ids[1] == 1)
+        a.resume(u)
+        "#,
+        hunter = hunter.0,
+        enemy = enemy.0,
+    ))
+}
+
 #[tokio::test]
-async fn autopilot_hunts_an_enemy_only_its_c3i_peer_can_see() {
+async fn autopilot_hunts_an_enemy_only_a_teammate_can_see() {
     let (_directory, config, world, [hunter, spotter, enemy]) = fixture().await;
     let mut harness = HeartbeatHarness::new(config.clone(), world).unwrap();
-    let step = async |harness: &mut HeartbeatHarness| {
-        let now = harness.world().btech.simulation_time() + 1;
-        let metrics = harness.step(now).await;
-        assert!(metrics.committed, "heartbeat must commit");
-        metrics
-    };
 
-    // The heartbeat links the pair with no pilot action and the spotter acquires the enemy.
+    // The heartbeat links the pair with no pilot action and the spotter sees the enemy beside it.
     let mut ready = false;
     for _ in 0..30 {
         step(&mut harness).await;
@@ -150,38 +171,33 @@ async fn autopilot_hunts_an_enemy_only_its_c3i_peer_can_see() {
             break;
         }
     }
-    assert!(ready, "network formed and spotter acquired the enemy");
+    assert!(ready, "network formed and spotter sees the enemy");
     let world = harness.world();
-    assert!(!holds(&world, hunter, enemy), "hunter starts blind");
+    assert!(
+        !holds(&world, hunter, enemy),
+        "hunter perceives nothing itself"
+    );
+    assert!(
+        spotted(&world, hunter, enemy),
+        "the side's sighting reaches the hunter"
+    );
     let relayed = stompymux_rs::btech::autopilot::observations::observe(&world, hunter, 0)
         .unwrap()
         .contacts
         .into_iter()
         .find(|contact| contact.unit == enemy)
-        .expect("peer sighting reaches the autopilot");
+        .expect("teammate sighting reaches the autopilot");
     assert!(relayed.relayed && relayed.identified && !relayed.friendly);
+    assert!((relayed.network_range.unwrap() - 1.0).abs() < 1e-8);
 
-    // An attack order may name an enemy held only by the network.
-    harness
-        .scripts()
-        .eval_callback::<()>(&format!(
-            r#"
-            local u = mux.world.object({hunter})
-            local a = btech.autopilot
-            a.attach(u)
-            a.configure(u, {{ fire_mode = a.fire_modes.ASSIGNED_TARGET }})
-            local result = a.submit(u, {{ {{ kind = a.orders.ATTACK, target = {enemy} }} }}, a.submission_modes.APPEND)
-            assert(result.ids[1] == 1)
-            a.resume(u)
-            "#,
-            hunter = hunter.0,
-            enemy = enemy.0,
-        ))
-        .unwrap();
+    // An attack order may name an enemy held only by a teammate.
+    order_attack(&harness, hunter, enemy).unwrap();
 
-    // While the sighting is relayed the hunter closes in but neither locks nor fires.
+    // A target only a teammate spots may be engaged (Tactical Operations p. 191): the hunter
+    // locks it at once, closes in, and fires as soon as its weapons reach, before it sees the
+    // enemy itself.
     let start = row(&harness.world(), hunter);
-    let mut acquired_at = None;
+    let mut fired_at = None;
     for tick in 0..240 {
         let metrics = step(&mut harness).await;
         let world = harness.world();
@@ -191,40 +207,70 @@ async fn autopilot_hunts_an_enemy_only_its_c3i_peer_can_see() {
             stompymux_rs::btech::AutopilotState::Executing,
             "attack order stays active at tick {tick}"
         );
-        if holds(&world, hunter, enemy) {
-            acquired_at = Some(tick);
-            break;
-        }
-        assert_eq!(
-            metrics.autopilot.autonomous_shots, 0,
-            "no shots at a relayed target (tick {tick})"
-        );
         assert!(
             world.btech.constructed_units()[&hunter]
                 .target_lock()
-                .is_none_or(|lock| lock.target != enemy),
-            "no lock on a relayed target (tick {tick})"
+                .is_some_and(|lock| lock.target == enemy),
+            "the relayed enemy stays locked (tick {tick})"
         );
+        if metrics.autopilot.autonomous_shots > 0 {
+            fired_at = Some((tick, holds(&world, hunter, enemy)));
+            break;
+        }
     }
+    let (_, own_sighting) = fired_at.expect("hunter fired on the relayed enemy");
     assert!(
-        acquired_at.is_some(),
-        "hunter closed until its own sensors acquired the enemy"
+        !own_sighting,
+        "the hunter fired before it perceived the enemy itself"
     );
     assert!(
         row(&harness.world(), hunter) > start,
         "hunter advanced on the enemy"
     );
+}
 
-    // With its own contact, ordinary targeting takes over.
-    let mut locked = false;
-    for _ in 0..30 {
+/// With the spotter shut down nobody on the side perceives the enemy: it is no contact, the
+/// attack order is refused, and the heartbeat never locks or fires.
+#[tokio::test]
+async fn autopilot_cannot_attack_an_enemy_nobody_on_its_side_spots() {
+    let (_directory, config, mut world, [hunter, spotter, enemy]) = fixture().await;
+    world.btech.set_unit_power(spotter, Power::Off).unwrap();
+    let mut harness = HeartbeatHarness::new(config.clone(), world).unwrap();
+    for _ in 0..10 {
         step(&mut harness).await;
-        locked = harness.world().btech.constructed_units()[&hunter]
-            .target_lock()
-            .is_some_and(|lock| lock.target == enemy);
-        if locked {
-            break;
-        }
     }
-    assert!(locked, "hunter locks the enemy once it holds it directly");
+    let world = harness.world();
+    assert!(!spotted(&world, hunter, enemy), "nobody spots the enemy");
+    assert!(
+        !stompymux_rs::btech::autopilot::observations::observe(&world, hunter, 0)
+            .unwrap()
+            .contacts
+            .iter()
+            .any(|contact| contact.unit == enemy)
+    );
+    drop(world);
+    let error = order_attack(&harness, hunter, enemy)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("hostile contact"), "{error}");
+    let start = row(&harness.world(), hunter);
+    for tick in 0..30 {
+        let metrics = step(&mut harness).await;
+        let world = harness.world();
+        assert_eq!(
+            metrics.autopilot.autonomous_shots, 0,
+            "no shots at an unseen enemy (tick {tick})"
+        );
+        assert!(
+            world.btech.constructed_units()[&hunter]
+                .target_lock()
+                .is_none(),
+            "no lock on an unseen enemy (tick {tick})"
+        );
+    }
+    assert_eq!(
+        row(&harness.world(), hunter),
+        start,
+        "hunter has nowhere to go"
+    );
 }

@@ -96,7 +96,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                 "radio_experience_remaining",
                 vehicle.radio_experience_remaining(),
             )?;
-            state.set("dig", detached(lua, &vehicle.dig_state())?)?;
             state.set(
                 "mass",
                 detached(lua, &vehicle.mass().map_err(mlua::Error::external)?)?,
@@ -134,6 +133,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("signature", detached(lua, &vehicle.signature())?)?;
             state.set("hide_elapsed", vehicle.hide_elapsed())?;
             state.set("scanner_perception", vehicle.scanner_perception())?;
+            state.set("sensor_sweep", vehicle.sensor_sweep())?;
             state.set("sensor_ranges", detached(lua, &vehicle.sensor_ranges())?)?;
             state.set("friendly_fire_safety", vehicle.friendly_fire_safety())?;
             state.set("auto_fall", vehicle.auto_fall())?;
@@ -302,6 +302,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             "radio_experience_remaining",
             unit.radio_experience_remaining(),
         )?;
+        state.set("sensor_sweep", unit.sensor_sweep())?;
         state.set("sensor_ranges", detached(lua, &unit.sensor_ranges())?)?;
         state.set(
             "preferred_id",

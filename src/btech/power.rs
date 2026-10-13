@@ -317,7 +317,6 @@ pub fn advance_units(world: &mut World, now: i64, extended_piloting: bool) -> Ve
     super::radio_experience::advance(world);
     let mut notices = super::scenario_map::advance_detached(world);
     notices.extend(super::vehicle_power::advance(world, now));
-    notices.extend(super::dig::advance(world));
     notices.extend(super::hull_down::advance(world, extended_piloting));
     notices.extend(super::vehicle_pods::advance(world));
     notices.extend(super::crew_recovery::advance(world));

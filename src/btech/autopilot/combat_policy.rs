@@ -4,9 +4,9 @@ use super::observations::AutopilotObservation;
 use crate::ObjectId;
 
 /// Select a currently observed hostile target. The explicit assignment wins when visible,
-/// including through a C3/C3i peer.
-/// Targets the unit can engage itself are always preferred to network-relayed ones, which
-/// are chosen only so the unit can close on and face an enemy it cannot yet see.
+/// including through a teammate's spotting.
+/// Targets the unit perceives itself are preferred to ones its side relays, which it can
+/// still engage along its own line of fire (Tactical Operations p. 191).
 /// An existing target is retained until another candidate scores at least 20% higher.
 pub fn choose_target(
     observation: &AutopilotObservation,

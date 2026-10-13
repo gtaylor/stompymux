@@ -37,6 +37,17 @@ pub struct TerrainLos {
     /// A standing 'Mech behind a hex one level above its own ground, or standing in water one
     /// level deep, so that only its upper body can be hit (Total Warfare p. 102).
     pub partial_cover: bool,
+    /// Intervening ground (a hill) blocks the line; infrared and radar sensors cannot pass it.
+    pub hills: bool,
+    /// Building or wall hexes along the line that are not hardened; they block radar and
+    /// magscans and shorten infrared brackets.
+    pub buildings: u8,
+    /// Hardened building hexes along the line, which shorten infrared brackets twice as much.
+    pub hardened_buildings: u8,
+    /// Heavy woods or jungle hexes along the line, which shorten infrared and radar brackets.
+    pub heavy_woods: u8,
+    /// Ultra-heavy woods or jungle hexes along the line, which shorten them twice as much.
+    pub ultra_woods: u8,
 }
 
 impl TerrainLos {
@@ -74,6 +85,7 @@ fn ground_posture_los(
             if target_prone { 0.5 } else { 1.5 },
         ),
         airborne,
+        TraceOptions::default(),
     )
 }
 
@@ -86,15 +98,29 @@ fn intervenes(height: f64, index: usize, steps: usize, start: f64, end: f64) -> 
         || (index + 1 == steps && height >= end)
 }
 
+/// Endpoint rules a trace applies beyond its heights.
+#[derive(Debug, Clone, Copy, Default)]
+struct TraceOptions {
+    /// A hull-down biped at either end: one level tall, it still uses a one-level rise beside
+    /// it as partial cover instead of being hidden by it (Tactical Operations p. 19).
+    kneeling: (bool, bool),
+    /// The target is a hex, not a unit: the hex next to it along the line counts one level
+    /// lower (Total Warfare p. 100).
+    hex_target: bool,
+}
+
 /// Trace with explicit eye offsets so empty hexes do not acquire a standing unit's height.
-/// Airborne heights replace the ground under either endpoint.
+/// Airborne heights replace the ground under either endpoint. The walk continues past the
+/// first blocker so sensors learn what lies along the whole line.
 fn terrain_los_at_heights(
     map: &StoredMap,
     observer: HexCoordinate,
     target: HexCoordinate,
     eyes: (f64, f64),
     airborne: (Option<f64>, Option<f64>),
+    options: TraceOptions,
 ) -> Result<TerrainLos> {
+    let kneeling = options.kneeling;
     let hex = |point: HexCoordinate| map.hex(i64::from(point.x), i64::from(point.y));
     let base = |point: HexCoordinate| map.base_hex(i64::from(point.x), i64::from(point.y));
     let source = base(observer)?;
@@ -126,13 +152,50 @@ fn terrain_los_at_heights(
     }
     let cells = super::los_trace::center_trace(observer, target)?;
     let steps = cells.len() - 1;
+    // The one-level rise a kneeling unit shelters behind is cover, not a wall.
+    let shelters = |index: usize, ground: super::Hex| {
+        (kneeling.0
+            && index == 1
+            && airborne.0.is_none()
+            && f64::from(ground.surface_height()) == start_ground + 1.0)
+            || (kneeling.1
+                && index + 1 == steps
+                && airborne.1.is_none()
+                && f64::from(ground.surface_height()) == end_ground + 1.0)
+    };
     for (index, &point) in cells.iter().enumerate().skip(1) {
         if index == steps {
             // The target's own hex never intervenes.
             break;
         }
+        // Sensors care what the line crosses even where sight is already blocked, but once a
+        // hill and a building both lie on it no sensor's answer can change: hills stop infrared
+        // and radar, buildings stop magscans, and seismic sensors and probes ignore terrain.
+        if report.hills && (report.buildings > 0 || report.hardened_buildings > 0) {
+            break;
+        }
         let tile = hex(point)?;
         let ground = base(point)?;
+        if let Some(structure) = ground.structure()
+            && structure.is_standing()
+        {
+            if structure.class == super::ConstructionClass::Hardened {
+                report.hardened_buildings = report.hardened_buildings.saturating_add(1);
+            } else {
+                report.buildings = report.buildings.saturating_add(1);
+            }
+        }
+        match tile.woods_density() {
+            2 => report.heavy_woods = report.heavy_woods.saturating_add(1),
+            3 => report.ultra_woods = report.ultra_woods.saturating_add(1),
+            _ => {}
+        }
+        // Targeting a hex, the hex before it along the line sits one level lower.
+        let relief = if options.hex_target && index + 1 == steps {
+            1.0
+        } else {
+            0.0
+        };
         if underwater {
             // An underwater line follows the water, under any bed and below the surface.
             let height = f64::from(ground.surface_height());
@@ -148,18 +211,19 @@ fn terrain_los_at_heights(
             report.water = report.water.saturating_add(1).min(7);
             continue;
         }
-        let level = f64::from(ground.level());
+        let level = f64::from(ground.level()) - relief;
         if ground.is_water_surface() {
             if intervenes(level, index, steps, start_height, end_height) {
                 report.blocked = true;
-                return Ok(report);
+                report.hills = true;
             }
             if level + 2.0 > start_height.min(end_height) {
                 report.water = report.water.saturating_add(1).min(7);
             }
         } else if !ground.has_bridge()
+            && !shelters(index, ground)
             && intervenes(
-                f64::from(ground.surface_height()),
+                f64::from(ground.surface_height()) - relief,
                 index,
                 steps,
                 start_height,
@@ -167,7 +231,9 @@ fn terrain_los_at_heights(
             )
         {
             report.blocked = true;
-            return Ok(report);
+            if !ground.has_standing_structure() {
+                report.hills = true;
+            }
         }
         let canopy = level + f64::from(tile.foliage_height());
         if tile.foliage().is_some() && intervenes(canopy, index, steps, start_height, end_height) {
@@ -181,15 +247,25 @@ fn terrain_los_at_heights(
             report.smoke = report.smoke.saturating_add(tile.smoke_density()).min(15);
         }
     }
-    if steps >= 2 && eyes.1 == 1.5 && airborne.1.is_none() {
+    if steps >= 2 && (eyes.1 == 1.5 || kneeling.1) && airborne.1.is_none() {
         let preceding = base(cells[cells.len() - 2])?;
         // A hill or building one level up gives cover only to a target the attacker does not
-        // look down on; water around the legs covers them from any height.
-        let ridge = start_height <= end_height
+        // look down on; a kneeling biped and water around the legs are covered from any height.
+        let ridge = (start_height <= end_height || kneeling.1)
             && !preceding.has_bridge()
             && f64::from(preceding.surface_height()) == end_ground + 1.0;
         report.partial_cover =
             ridge || (destination.is_open_water() && end_ground == surface(destination) - 1.0);
+    }
+    // A standing 'Mech inside a building one level below its roof shows only its upper body,
+    // whatever height the attacker fires from (Total Warfare p. 171).
+    if steps >= 1
+        && eyes.1 == 1.5
+        && !kneeling.1
+        && destination.has_building()
+        && airborne.1 == Some(end_ground - 1.0)
+    {
+        report.partial_cover = true;
     }
     Ok(report)
 }
@@ -198,6 +274,8 @@ fn terrain_los_at_heights(
 pub(super) struct UnitSightPoint {
     pub position: super::Position,
     pub point: super::Point,
+    /// A hull-down biped: one level tall, sheltering behind a one-level rise.
+    pub kneeling: bool,
     pub eye: f64,
     /// Explicit altitude preserves flight precision and vehicle bridge/water position.
     pub height: Option<f64>,
@@ -234,10 +312,9 @@ pub(super) fn unit_sight_point(world: &World, id: ObjectId) -> Result<UnitSightP
         return Ok(UnitSightPoint {
             position,
             point: vehicle.motion().context("Unit has no motion")?.point,
+            kneeling: false,
             eye: if vehicle.definition().movement == super::VehicleMovement::Stationary {
                 1.5
-            } else if vehicle.dig_state().dug_in {
-                0.1
             } else {
                 0.5
             },
@@ -258,10 +335,14 @@ pub(super) fn unit_sight_point(world: &World, id: ObjectId) -> Result<UnitSightP
         .get(&position.map)
         .context("Map not found")?;
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+    // A hull-down biped kneels to one level (Tactical Operations p. 19); a squatting quad keeps
+    // its height.
+    let kneeling = unit.hull_down().active && unit.chassis() != super::MechChassis::Quad;
     Ok(UnitSightPoint {
         position,
         point: unit.motion().context("Unit has no motion")?.point,
-        eye: if unit.posture() == super::Posture::Prone {
+        kneeling,
+        eye: if unit.posture() == super::Posture::Prone || kneeling {
             0.5
         } else {
             1.5
@@ -273,31 +354,10 @@ pub(super) fn unit_sight_point(world: &World, id: ObjectId) -> Result<UnitSightP
 }
 
 /// The worst-case LOS range precedes terrain tracing and is symmetric for unit endpoints.
-fn beyond_maximum_range(
-    world: &World,
-    map: &StoredMap,
-    observer: ObjectId,
-    target: Option<ObjectId>,
-    distance: f64,
-) -> bool {
-    // Either endpoint's radar can select only one of these two ceilings.
-    // Outside their overlap, hardware inspection cannot change the answer.
-    let ordinary = map.maximum_visibility as f64;
-    if distance <= ordinary.min(180.0) {
-        return false;
-    }
-    if distance > ordinary.max(180.0) {
-        return true;
-    }
-    let radar = std::iter::once(observer)
-        .chain(target)
-        .any(|id| super::scanner::scanner_unit(world, id).is_some_and(|unit| unit.radar));
-    distance
-        > if radar {
-            180.0
-        } else {
-            map.maximum_visibility as f64
-        }
+/// Whether two points are too far apart for any line of sight: nothing on the ground sees
+/// past daylight's sixty hexes (Tactical Operations p. 189).
+fn beyond_maximum_range(distance: f64) -> bool {
+    distance > f64::from(super::MAX_SIGHT)
 }
 
 /// Inspect terrain and the map's LOS distance ceiling without changing contact state.
@@ -315,8 +375,6 @@ pub(super) fn unit_terrain_geometry(
     let _measurement = crate::btech::autopilot::diagnostics::measure(
         crate::btech::autopilot::diagnostics::Category::Geometry,
     );
-    let observer_id = observer;
-    let target_id = target;
     let range = super::unit_range(world, observer, target)?;
     let distance = range.spatial;
     let observer = unit_sight_point(world, observer)?;
@@ -330,7 +388,7 @@ pub(super) fn unit_terrain_geometry(
         .maps()
         .get(&observer.position.map)
         .context("Map not found")?;
-    if beyond_maximum_range(world, map, observer_id, Some(target_id), distance) {
+    if beyond_maximum_range(distance) {
         return Ok((
             TerrainLos {
                 blocked: true,
@@ -351,6 +409,10 @@ pub(super) fn unit_terrain_geometry(
         },
         (observer.eye, target.eye),
         (observer.height, target.height),
+        TraceOptions {
+            kneeling: (observer.kneeling, target.kneeling),
+            hex_target: false,
+        },
     )?;
     let tile = map.base_hex(i64::from(target.position.x), i64::from(target.position.y))?;
     if target.level > i32::from(tile.level()) + i32::from(tile.foliage_height()) {
@@ -379,10 +441,17 @@ pub(super) fn unit_hex_los(
     let altitude = unit
         .height
         .unwrap_or(f64::from(source_tile.standing_height()));
-    let target_height = f64::from(tile.standing_height());
+    // A water hex is targeted at its surface (Total Warfare p. 100), anything else where a
+    // unit would stand. A submerged observer's line runs under the water, so it targets the
+    // bed of a water hex instead.
+    let target_height = f64::from(if tile.is_open_water() && !unit.below_waterline() {
+        tile.water_line()
+    } else {
+        tile.standing_height()
+    });
     let horizontal = unit.point.range(target.center())?;
     let distance = horizontal.hypot((altitude - target_height) / 5.0);
-    if beyond_maximum_range(world, map, observer, None, distance) {
+    if beyond_maximum_range(distance) {
         return Ok((
             TerrainLos {
                 blocked: true,
@@ -398,6 +467,10 @@ pub(super) fn unit_hex_los(
         target,
         (unit.eye, 0.1),
         (Some(altitude), Some(target_height)),
+        TraceOptions {
+            kneeling: (unit.kneeling, false),
+            hex_target: true,
+        },
     )?;
     Ok((report, distance))
 }
@@ -408,48 +481,37 @@ mod tests {
     use crate::{Hex, Terrain};
     use std::sync::Arc;
 
-    /// Empty-hex LOS has only an observer hardware exception, even on maps with a larger ceiling.
+    /// Empty-hex LOS stops at daylight's sixty hexes and still reports the range beyond it.
     #[test]
     fn coordinate_los_uses_the_same_cutoff_and_retains_range_when_blocked() {
-        for radar in [false, true] {
-            for maximum in [10, 200] {
-                let mut world = World::default();
-                let mut map = lane(&[(Terrain::Clear, 0); 201]);
-                map.maximum_visibility = maximum;
-                world.btech.maps.insert(ObjectId(99), map);
-                let mut template = crate::MechTemplate::parse(
-                    "JR7-D",
-                    include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
-                )
-                .unwrap();
-                if radar {
-                    template
-                        .attributes
-                        .insert("specials".into(), "AntiAircraft".into());
-                }
-                let mut unit = crate::Mech::from_template(template).unwrap();
-                unit.position = Some(crate::Position {
-                    map: ObjectId(99),
-                    x: 0,
-                    y: 0,
-                });
-                unit.motion = Some(crate::Motion::stationary(
-                    HexCoordinate { x: 0, y: 0 }.center(),
-                ));
-                world.btech.constructed.insert(ObjectId(1), unit);
-                let before = world.btech.clone();
-                for y in [10, 11, 180, 181, 200] {
-                    let (los, distance) =
-                        unit_hex_los(&world, ObjectId(1), HexCoordinate { x: 0, y }).unwrap();
-                    assert_eq!(distance, f64::from(y));
-                    assert_eq!(
-                        los.blocked,
-                        i64::from(y) > if radar { 180 } else { maximum }
-                    );
-                }
-                assert_eq!(world.btech, before);
-            }
+        let mut world = World::default();
+        world
+            .btech
+            .maps
+            .insert(ObjectId(99), lane(&[(Terrain::Clear, 0); 201]));
+        let template = crate::MechTemplate::parse(
+            "JR7-D",
+            include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
+        )
+        .unwrap();
+        let mut unit = crate::Mech::from_template(template).unwrap();
+        unit.position = Some(crate::Position {
+            map: ObjectId(99),
+            x: 0,
+            y: 0,
+        });
+        unit.motion = Some(crate::Motion::stationary(
+            HexCoordinate { x: 0, y: 0 }.center(),
+        ));
+        world.btech.constructed.insert(ObjectId(1), unit);
+        let before = world.btech.clone();
+        for y in [10, 60, 61, 180, 200] {
+            let (los, distance) =
+                unit_hex_los(&world, ObjectId(1), HexCoordinate { x: 0, y }).unwrap();
+            assert_eq!(distance, f64::from(y));
+            assert_eq!(los.blocked, y > i32::from(crate::btech::MAX_SIGHT));
         }
+        assert_eq!(world.btech, before);
     }
 
     /// A north/south lane avoids ambiguous hex-edge crossings in terrain rule fixtures.
@@ -477,13 +539,13 @@ mod tests {
             authored_link: None,
             movement_modifier: 100,
             light: 2,
-            visibility: 30,
-            maximum_visibility: 60,
+            weather: 0,
             cloud_base: 200,
             sensor_flags: 0,
             wind_direction: 0,
             wind_speed: 0,
             fire_dice: None,
+            sensor_dice: None,
             terrain_damage: Default::default(),
             decorations: Default::default(),
             static_decorations: Default::default(),
@@ -633,7 +695,7 @@ mod tests {
         let from = HexCoordinate { x: 1, y: 0 };
         let to = HexCoordinate { x: 1, y: 4 };
         let los = |eyes: (f64, f64)| {
-            terrain_los_at_heights(&map, from, to, eyes, (None, None))
+            terrain_los_at_heights(&map, from, to, eyes, (None, None), TraceOptions::default())
                 .unwrap()
                 .blocked
         };
@@ -645,14 +707,28 @@ mod tests {
         // Next to the vehicle it reaches the vehicle's level and hides it from the 'Mech.
         let near = lane(&[(Clear, 0), (Clear, 0), (Clear, 0), (Clear, 1), (Clear, 0)]);
         assert!(
-            terrain_los_at_heights(&near, from, to, (1.5, 0.5), (None, None))
-                .unwrap()
-                .blocked
+            terrain_los_at_heights(
+                &near,
+                from,
+                to,
+                (1.5, 0.5),
+                (None, None),
+                TraceOptions::default()
+            )
+            .unwrap()
+            .blocked
         );
         assert!(
-            terrain_los_at_heights(&map, from, to, (0.5, 0.5), (Some(0.0), Some(0.0)))
-                .unwrap()
-                .blocked
+            terrain_los_at_heights(
+                &map,
+                from,
+                to,
+                (0.5, 0.5),
+                (Some(0.0), Some(0.0)),
+                TraceOptions::default()
+            )
+            .unwrap()
+            .blocked
         );
     }
 
@@ -695,15 +771,29 @@ mod tests {
         for eye in [0.5, 1.5] {
             let clear = lane(&[(Terrain::Clear, 0), (Terrain::Clear, 0), (Terrain::Ice, 0)]);
             assert!(
-                !terrain_los_at_heights(&clear, from, to, (eye, 0.1), (None, None))
-                    .unwrap()
-                    .blocked
+                !terrain_los_at_heights(
+                    &clear,
+                    from,
+                    to,
+                    (eye, 0.1),
+                    (None, None),
+                    TraceOptions::default()
+                )
+                .unwrap()
+                .blocked
             );
             let ridge = lane(&[(Terrain::Clear, 0), (Terrain::Clear, 2), (Terrain::Ice, 0)]);
             assert!(
-                terrain_los_at_heights(&ridge, from, to, (eye, 0.1), (None, None))
-                    .unwrap()
-                    .blocked
+                terrain_los_at_heights(
+                    &ridge,
+                    from,
+                    to,
+                    (eye, 0.1),
+                    (None, None),
+                    TraceOptions::default()
+                )
+                .unwrap()
+                .blocked
             );
         }
     }

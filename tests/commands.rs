@@ -47,7 +47,6 @@ async fn native_catalog_permissions_and_aliases() {
             .collect::<Vec<_>>(),
         [
             "hulldown",
-            "dig",
             "pickup",
             "dropoff",
             "enterbase",
@@ -323,7 +322,6 @@ async fn native_catalog_permissions_and_aliases() {
             if [
                 "view",
                 "hulldown",
-                "dig",
                 "pickup",
                 "dropoff",
                 "enterbase",

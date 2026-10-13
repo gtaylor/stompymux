@@ -54,8 +54,6 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 fn rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
         hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
@@ -352,7 +350,7 @@ async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
     assert!(report.salvo.is_none());
     assert_eq!(base.btech.vehicles()[&shooter].ammunition(), before_ammo);
     assert_eq!(base.btech.vehicles()[&target], before_target);
-    let (_dir, _config, base, map, [_, _, shooter, target]) =
+    let (_dir, _config, base, _map, [_, _, shooter, target]) =
         engagement(include_str!("../game/units/Demolisher.toml")).await;
     for case in ["pilot", "contact", "character"] {
         let mut world = base.clone();
@@ -362,9 +360,17 @@ async fn vehicle_shot_failures_and_failed_streak_locks_preserve_target_state() {
             ObjectId(1)
         };
         if case == "contact" {
-            // Without the sensor band or any sight the target is no longer perceived.
-            set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
-            set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
+            // Sight always reaches the adjacent target, so hide it by operator flag: the held
+            // contact no longer stands for a perceived target.
+            set_battle_visibility(
+                &mut world,
+                target,
+                Visibility {
+                    invisible: true,
+                    clairvoyant: false,
+                },
+            )
+            .unwrap();
         }
         if case == "character" {
             world

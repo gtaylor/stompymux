@@ -992,6 +992,86 @@ pub(super) static LIGHT_LEVELS: Catalog = Catalog {
     ],
 };
 
+/// Battlefield weather conditions accepted by map condition changes; values match the saved
+/// map column and the order of `Weather::ALL`.
+pub(super) static WEATHER_CONDITIONS: Catalog = Catalog {
+    qualified_name: "btech.map.weather_conditions",
+    entries: &[
+        Entry {
+            name: "CLEAR",
+            value: 0,
+        },
+        Entry {
+            name: "LIGHT_FOG",
+            value: 1,
+        },
+        Entry {
+            name: "HEAVY_FOG",
+            value: 2,
+        },
+        Entry {
+            name: "LIGHT_RAIN",
+            value: 3,
+        },
+        Entry {
+            name: "MODERATE_RAIN",
+            value: 4,
+        },
+        Entry {
+            name: "HEAVY_RAIN",
+            value: 5,
+        },
+        Entry {
+            name: "GUSTING_RAIN",
+            value: 6,
+        },
+        Entry {
+            name: "TORRENTIAL_DOWNPOUR",
+            value: 7,
+        },
+        Entry {
+            name: "LIGHT_SNOW",
+            value: 8,
+        },
+        Entry {
+            name: "MODERATE_SNOW",
+            value: 9,
+        },
+        Entry {
+            name: "HEAVY_SNOW",
+            value: 10,
+        },
+        Entry {
+            name: "SNOW_FLURRIES",
+            value: 11,
+        },
+        Entry {
+            name: "SLEET",
+            value: 12,
+        },
+        Entry {
+            name: "LIGHT_HAIL",
+            value: 13,
+        },
+        Entry {
+            name: "HEAVY_HAIL",
+            value: 14,
+        },
+        Entry {
+            name: "ICE_STORM",
+            value: 15,
+        },
+        Entry {
+            name: "BLOWING_SAND",
+            value: 16,
+        },
+        Entry {
+            name: "LIGHTNING_STORM",
+            value: 17,
+        },
+    ],
+};
+
 /// Battlefield rule switches; values are the persisted `MapFlag` bits.
 pub(super) static MAP_FLAGS: Catalog = Catalog {
     qualified_name: "btech.map.flags",
@@ -1071,16 +1151,12 @@ pub(super) static DETECTION_CHANNELS: StringCatalog = StringCatalog {
     qualified_name: "btech.unit.detection_channels",
     entries: &[
         StringEntry {
-            name: "SENSORS",
-            value: "sensors",
-        },
-        StringEntry {
             name: "SIGHT",
             value: "sight",
         },
         StringEntry {
-            name: "RADAR",
-            value: "radar",
+            name: "SENSORS",
+            value: "sensors",
         },
         StringEntry {
             name: "PROBE",
@@ -1741,6 +1817,7 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
 
     let map = table(lua, package, "map")?;
     map.raw_set("light_levels", namespace(lua, &LIGHT_LEVELS)?)?;
+    map.raw_set("weather_conditions", namespace(lua, &WEATHER_CONDITIONS)?)?;
     map.raw_set("flags", namespace(lua, &MAP_FLAGS)?)?;
     map.raw_set("terrain_types", string_namespace(lua, &TERRAIN_TYPES)?)?;
     map.raw_set("ground_types", string_namespace(lua, &GROUND_TYPES)?)?;

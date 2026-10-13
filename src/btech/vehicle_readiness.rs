@@ -206,7 +206,7 @@ impl Vehicle {
             section_recycle: None,
             carried_club: false,
             posture_failure: None,
-            covered: self.dig.dug_in && mount.criticals[0].section != VehicleSection::Turret,
+            covered: false,
         })
     }
 }

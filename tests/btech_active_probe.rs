@@ -1,5 +1,5 @@
-//! Active probes: family reach, installation bonus, concealment, electronic rejection, hidden-unit
-//! acquisition and lock-only contacts behind blocking terrain.
+//! Active probes: the hidden units each family reveals within its reach and clear line, and the
+//! woods a probe lets its carrier aim through.
 use crate::support;
 use stompymux_rs::*;
 
@@ -122,16 +122,6 @@ fn relocate(world: &mut World, id: ObjectId, map: ObjectId, y: i64) {
     running(world, id);
 }
 
-/// Switch on a Mech's null signature system directly in saved state.
-fn conceal(world: &mut World, id: ObjectId) {
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["null_signature"]["enabled"] = true.into();
-        })
-        .unwrap();
-}
-
 /// Seat a pilot in a unit so it can operate equipment.
 fn seat(world: &mut World, id: ObjectId, pilot: ObjectId) {
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
@@ -150,8 +140,6 @@ fn shot_rules() -> ShotRules {
         glancing: GlancingMode::Disabled,
         aim: AimRules {
             woods_damage: false,
-            dig_bonus: 3,
-            dig_only_front: false,
             hit_arc_mode: 0,
             fasa_turning: false,
             extended_movement: false,
@@ -170,324 +158,98 @@ fn shot_rules() -> ShotRules {
     }
 }
 
-/// Each family reaches exactly its range through a hill, finding an unidentified contact with no
-/// aim cost; only the Bloodhound sees through a null signature.
+/// Every probe family reveals a hidden enemy exactly as far as Total Warfare lets it (Light 3,
+/// Beagle 4, Bloodhound 8 hexes), never one hex farther or through a hill.
 #[tokio::test]
-async fn probe_families_reach_their_range_and_only_bloodhound_sees_concealment() {
-    assert_eq!(
-        FAMILIES.map(|(probe, _)| (probe.range(false), probe.sees_concealed(), probe.name())),
-        [
-            (3, false, "Light Active Probe"),
-            (4, false, "Beagle Active Probe"),
-            (8, true, "Bloodhound Active Probe"),
-        ]
-    );
-    for (probe, equipment) in FAMILIES {
-        let reach = i64::from(probe.range(false));
-        let (_dir, config, mut world, map) = hill_lane(10).await;
-        let observer = probe_vehicle(&mut world, &config, map, Some(equipment), false, 0);
-        let target = target(&mut world, &config, map, reach);
-        let profile = battle_perception_profile(&world, observer).unwrap();
-        assert_eq!(
-            profile.probe,
-            Some(ProbeProfile {
-                kind: probe,
-                range: u16::from(probe.range(false)),
-                status: PerceptionStatus::Ready,
-            })
+async fn probes_reveal_hidden_units_within_their_reach_and_line_of_sight() {
+    for (family, equipment) in FAMILIES {
+        let reach = i64::from(family.range(false));
+        let (_dir, config, mut world, map) = lane(&[".0"; 12]).await;
+        let carrier = probe_vehicle(&mut world, &config, map, Some(equipment), false, 0);
+        seat(&mut world, carrier, ObjectId(1));
+        let hidden = target(&mut world, &config, map, reach + 1);
+        let conceal_unit = |world: &mut World| {
+            set_battle_unit_signature(
+                world,
+                hidden,
+                UnitSignature {
+                    team: 2,
+                    hidden: true,
+                    illuminated: false,
+                },
+            )
+            .unwrap();
+        };
+        conceal_unit(&mut world);
+        let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
+        assert!(
+            events.iter().all(|event| event.revealed.is_none()),
+            "{family:?} one hex past its reach"
         );
-        let before = world.btech.clone();
-        let perception = battle_perceive(&world, observer, target).unwrap().unwrap();
-        assert_eq!(perception.channel, DetectionChannel::Probe, "{probe:?}");
-        assert!(perception.probed && !perception.identified, "{probe:?}");
-        assert_eq!(perception.aim_modifier, 0, "{probe:?}");
-        conceal(&mut world, target);
+        assert!(battle_perceive(&world, carrier, hidden).unwrap().is_none());
+        relocate(&mut world, hidden, map, reach);
+        conceal_unit(&mut world);
+        let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
+        assert!(
+            events.iter().any(|event| event.revealed.is_some()),
+            "{family:?} at its reach"
+        );
+        assert!(
+            !world.btech.constructed_units()[&hidden].signature().hidden,
+            "{family:?} revealed the unit"
+        );
         assert_eq!(
-            battle_perceive(&world, observer, target)
+            battle_perceive(&world, carrier, hidden)
                 .unwrap()
                 .map(|perception| perception.channel),
-            probe.sees_concealed().then_some(DetectionChannel::Probe),
-            "{probe:?} against a null signature"
+            Some(DetectionChannel::Sight)
         );
-        world.btech = before;
-        relocate(&mut world, target, map, reach + 1);
-        assert!(
-            battle_perceive(&world, observer, target).unwrap().is_none(),
-            "{probe:?} beyond reach"
-        );
+        world.validate(&config).unwrap();
     }
-}
-
-/// Fixed-installation reach uses integer 140% boundaries; merely stopping a mobile vehicle does not qualify.
-#[tokio::test]
-async fn stationary_probe_ranges_use_shared_bonus_and_preserve_boundaries() {
-    for ((probe, equipment), fixed) in FAMILIES.into_iter().zip([4, 5, 11]) {
-        let ordinary = i64::from(probe.range(false));
-        for stationary in [false, true] {
-            let (_dir, config, mut world, map) = lane(&[".0"; 14]).await;
-            let observer = probe_vehicle(&mut world, &config, map, Some(equipment), stationary, 0);
-            let target = target(&mut world, &config, map, ordinary);
-            let maximum = if stationary { fixed } else { ordinary };
-            assert_eq!(
-                battle_perception_profile(&world, observer)
-                    .unwrap()
-                    .probe
-                    .map(|profile| i64::from(profile.range)),
-                Some(maximum)
-            );
-            for distance in [ordinary, maximum, maximum + 1] {
-                relocate(&mut world, target, map, distance);
-                let before = world.btech.clone();
-                let perception = battle_perceive(&world, observer, target).unwrap().unwrap();
-                assert_eq!(
-                    perception.probed,
-                    distance <= maximum,
-                    "{probe:?} fixed={stationary} distance={distance}"
-                );
-                assert_eq!(world.btech, before);
-            }
-        }
-    }
-}
-
-/// Hostile ECM jams every probe family, the battlefield switch disables them, and an
-/// Angel-protected target refuses even a Bloodhound.
-#[tokio::test]
-async fn hostile_ecm_map_switch_and_angel_protection_reject_probes() {
-    for (probe, equipment) in FAMILIES {
-        let (_dir, config, mut world, map) = hill_lane(8).await;
-        let observer = probe_vehicle(&mut world, &config, map, Some(equipment), false, 0);
-        let target = target(&mut world, &config, map, 3);
-        let jammer = mech(
-            &mut world,
-            &config,
-            map,
-            include_str!("../game/units/RVN-1X.toml"),
-            2,
-            6,
-        );
-        seat(&mut world, jammer, ObjectId(2));
-        let probed = |world: &World| {
-            battle_perceive(world, observer, target)
-                .unwrap()
-                .map(|perception| perception.channel)
-        };
-        let status = |world: &World| {
-            battle_perception_profile(world, observer)
-                .unwrap()
-                .probe
-                .unwrap()
-                .status
-        };
-        assert_eq!(probed(&world), Some(DetectionChannel::Probe));
-
-        let mut switched = world.clone();
-        set_battle_map_perception(&mut switched, map, MapPerceptionFlag::Probes, false).unwrap();
-        assert_eq!(status(&switched), PerceptionStatus::Disabled);
-        assert_eq!(probed(&switched), None, "{probe:?} disabled");
-        set_battle_map_perception(&mut switched, map, MapPerceptionFlag::Probes, true).unwrap();
-        assert_eq!(probed(&switched), Some(DetectionChannel::Probe));
-
-        toggle_battle_electronics(
-            &mut world,
-            jammer,
-            ObjectId(2),
-            ElectronicSuite::Guardian,
-            ElectronicMode::Ecm,
-        )
-        .unwrap();
-        assert_eq!(status(&world), PerceptionStatus::Jammed, "{probe:?}");
-        assert_eq!(probed(&world), None, "{probe:?} jammed");
-    }
-
-    // Angel ECM beyond its six-hex field leaves the observer clear, so only protection remains.
-    let (_dir, config, mut world, map) = hill_lane(9).await;
-    let observer = probe_vehicle(&mut world, &config, map, Some("BloodhoundProbe"), false, 0);
-    let source = include_str!("../game/units/JR7-D.toml").replace(
-        r#"{ at = "1-2", item = "JumpJet" },"#,
-        r#"{ at = "1-2", item = "JumpJet" }, { at = "3-4", item = "AngelEcm" },"#,
-    );
-    let target = mech(&mut world, &config, map, &source, 2, 8);
-    seat(&mut world, target, ObjectId(2));
-    assert!(
-        battle_perceive(&world, observer, target)
-            .unwrap()
-            .is_some_and(|perception| perception.probed)
-    );
-    toggle_battle_electronics(
+    // A hill between the carrier and its target breaks the probe's line.
+    let (_dir, config, mut world, map) = hill_lane(12).await;
+    let carrier = probe_vehicle(&mut world, &config, map, Some("BloodhoundProbe"), false, 0);
+    seat(&mut world, carrier, ObjectId(1));
+    let hidden = target(&mut world, &config, map, 3);
+    set_battle_unit_signature(
         &mut world,
-        target,
-        ObjectId(2),
-        ElectronicSuite::Angel,
-        ElectronicMode::Ecm,
+        hidden,
+        UnitSignature {
+            team: 2,
+            hidden: true,
+            illuminated: false,
+        },
     )
     .unwrap();
-    let profile = battle_perception_profile(&world, observer).unwrap();
-    assert_eq!(
-        profile.probe.map(|probe| probe.status),
-        Some(PerceptionStatus::Ready)
-    );
-    assert!(battle_perceive(&world, observer, target).unwrap().is_none());
+    let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
+    assert!(events.iter().all(|event| event.revealed.is_none()));
+    assert!(world.btech.constructed_units()[&hidden].signature().hidden);
 }
 
-/// A probe that reaches a hidden hostile unit acquires it at once without a search roll, even
-/// beyond five hexes; out of probe reach the ordinary hidden-unit rules apply.
+/// A working probe within its reach lets the carrier shoot through one point of woods.
 #[tokio::test]
-async fn probes_acquire_hidden_hostiles_without_a_search() {
-    let rules = ContactRules {
-        hostile: true,
-        hidden: true,
-        perception: 7,
-        acquire: true,
-    };
-    let dice = |world: &World, id: ObjectId| -> Dice {
-        serde_json::from_value(
-            serde_json::to_value(&world.btech.vehicles()[&id]).unwrap()["dice"].clone(),
-        )
-        .unwrap()
-    };
-    for (equipment, distance, acquired, searched) in [
-        (Some("BloodhoundProbe"), 6, Some(true), false),
-        (Some("BeagleProbe"), 4, Some(true), false),
-        (Some("Light_BAP"), 4, None, true),
-        (None, 4, None, true),
-        (None, 6, Some(false), false),
-    ] {
-        let (_dir, config, mut world, map) = lane(&[".0"; 8]).await;
-        let observer = probe_vehicle(&mut world, &config, map, equipment, false, 0);
-        let target = target(&mut world, &config, map, distance);
-        set_battle_unit_signature(
-            &mut world,
-            target,
-            UnitSignature {
-                team: 2,
-                hidden: true,
-                illuminated: false,
-            },
-        )
-        .unwrap();
-        let case = format!("{equipment:?} at {distance}");
-        let mut expected = dice(&world, observer);
-        let update = update_battle_contact(&mut world, observer, target, rules).unwrap();
-        let detection = update.detection.unwrap();
-        if !searched {
-            assert_eq!(detection.roll, None, "{case}");
-            assert_eq!(detection.threshold, 0, "{case}");
-            assert_eq!(dice(&world, observer), expected, "{case}");
-        } else {
-            let roll = expected.die(10_000).unwrap();
-            assert_eq!(detection.roll, Some(roll), "{case}");
-            assert!(detection.threshold > 0, "{case}");
-            assert_eq!(detection.detected, roll < detection.threshold, "{case}");
-            assert_eq!(dice(&world, observer), expected, "{case}");
-        }
-        let acquired = acquired.unwrap_or(detection.detected);
-        assert_eq!(detection.detected, acquired, "{case}");
-        assert_eq!(
-            update.transition,
-            if acquired {
-                ContactTransition::Acquired
-            } else {
-                ContactTransition::Unseen
-            },
-            "{case}"
-        );
-    }
-}
-
-/// A probe contact behind a hill can be locked and spotted for indirect fire, but direct fire
-/// and detailed scans need a line of sight.
-#[tokio::test]
-async fn probe_contacts_behind_hills_lock_and_spot_but_refuse_direct_fire_and_scans() {
-    let (_dir, config, mut world, map) = lane(&[".0", ".0", ".9", ".0", ".0", ".0", ".0"]).await;
-    let target = target(&mut world, &config, map, 0);
-    let observer_source = include_str!("../game/units/JR7-D.toml").replace(
-        r#"{ at = "1-2", item = "JumpJet" },"#,
-        r#"{ at = "1-2", item = "JumpJet" }, { at = 3, item = "BeagleProbe" },"#,
-    );
-    let observer = mech(&mut world, &config, map, &observer_source, 0, 3);
-    let shooter = mech(
-        &mut world,
-        &config,
-        map,
-        include_str!("../game/units/AS7-D.toml"),
-        0,
-        6,
-    );
-    seat(&mut world, observer, ObjectId(2));
-    seat(&mut world, shooter, ObjectId(1));
-    refresh_battle_contacts(&mut world, &[observer, shooter]).unwrap();
-    assert!(
-        !world.btech.constructed_units()[&shooter]
-            .contacts()
-            .contains_key(&target)
-    );
-    let view = visible_battle_contact(&world, observer, target)
-        .unwrap()
-        .unwrap();
-    assert!(!view.identified);
-    assert_eq!(view.detection, Some(DetectionChannel::Probe));
-    assert!(view.short_text.starts_with("p "), "{}", view.short_text);
-
-    select_battle_target(&mut world, observer, ObjectId(2), Some(target)).unwrap();
-    assert_eq!(
-        world.btech.constructed_units()[&observer]
-            .target_lock()
+async fn probes_let_the_carrier_aim_through_a_point_of_woods() {
+    let (_dir, config, mut world, map) = lane(&[".0", "`0", "`0", ".0", ".0", ".0"]).await;
+    let bare = probe_vehicle(&mut world, &config, map, None, false, 0);
+    let probed = probe_vehicle(&mut world, &config, map, Some("BeagleProbe"), false, 0);
+    let enemy = target(&mut world, &config, map, 3);
+    seat(&mut world, bare, ObjectId(1));
+    seat(&mut world, probed, ObjectId(2));
+    refresh_battle_contacts(&mut world, &[bare, probed]).unwrap();
+    let aim = |world: &World, shooter| {
+        battle_aim_modifiers(world, shooter, enemy, 0, 4, shot_rules().aim)
             .unwrap()
-            .target,
-        target
-    );
-    let before = world.btech.clone();
+            .perception
+            .unwrap()
+            .modifier
+    };
+    assert_eq!(aim(&world, bare), 2, "two light woods on the way");
+    assert_eq!(aim(&world, probed), 1, "the probe sees through one of them");
+    relocate(&mut world, enemy, map, 5);
+    refresh_battle_contacts(&mut world, &[bare, probed]).unwrap();
     assert_eq!(
-        scan_battle_unit(&world, observer, ObjectId(2), target, "")
-            .unwrap_err()
-            .to_string(),
-        "That target isn't seen well enough by the scanners for scanning!"
+        aim(&world, probed),
+        2,
+        "five hexes is past the Beagle's reach"
     );
-    let mut direct = world.clone();
-    assert_eq!(
-        resolve_battle_shot(&mut direct, observer, ObjectId(2), target, 0, shot_rules())
-            .unwrap_err()
-            .to_string(),
-        "That target is behind cover you cannot shoot through; use indirect fire."
-    );
-    assert_eq!(direct.btech, before);
-
-    select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
-    select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
-    assert_eq!(
-        battle_spotter_target(&world, shooter).unwrap(),
-        SpotterTarget {
-            spotter: observer,
-            target
-        }
-    );
-    let lrm = world.btech.constructed_units()[&shooter]
-        .loadout()
-        .unwrap()
-        .weapons
-        .iter()
-        .position(|mount| mount.weapon == Weapon::Lrm20)
-        .unwrap();
-    let aim = battle_aim_modifiers(&world, shooter, target, lrm, 4, shot_rules().aim).unwrap();
-    assert_eq!(
-        aim.indirect.map(|indirect| indirect.spotter),
-        Some(observer)
-    );
-    assert_eq!(
-        aim.perception,
-        Some(PerceptionAim {
-            channel: Some(DetectionChannel::Probe),
-            direct_fire: false,
-            modifier: 0,
-        })
-    );
-    assert!(aim.subtotal().is_some());
-    let shot =
-        resolve_battle_shot(&mut world, shooter, ObjectId(1), target, lrm, shot_rules()).unwrap();
-    assert_eq!(
-        (shot.target, shot.aim.perception, shot.aim.indirect),
-        (target, aim.perception, aim.indirect)
-    );
-    world.validate(&config).unwrap();
 }

@@ -34,6 +34,8 @@ pub(super) struct DirectEffects {
     pub heat_transfer: u8,
     pub woods: Option<WoodsAbsorption>,
     pub missed_terrain: Option<WoodlandImpact>,
+    /// A miss from the next hex striking the building around a target inside one.
+    pub missed_building: Option<super::StrayHit>,
 }
 
 /// Apply effects inside the caller's unpublished candidate, preserving normal pod and heat ordering.
@@ -69,6 +71,16 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
         });
     }
     if !request.hit {
+        let fall_rules = super::FallRules {
+            vehicle_impact: request.vehicle_impact,
+            hit: request.hit_rules,
+            ..super::FallRules::STANDARD
+        };
+        // A miss from the hex next door strikes the building the target is in (Total Warfare
+        // p. 171); its damage is rolled only when there is a building to strike.
+        let sheltered = request.launched
+            && request.coordinate.is_none()
+            && super::building_interior::unit_inside(world, request.target)?.is_some();
         if request.launched
             && request.weapon.profile().missiles == 0
             && !request.weapon.is_artillery()
@@ -97,6 +109,24 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
                     intent: WoodlandIntent::Incidental,
                 },
             )?);
+            if sheltered {
+                report.missed_building = super::building_interior::stray_shot(
+                    world,
+                    request.shooter,
+                    request.target,
+                    damage,
+                    fall_rules,
+                )?;
+            }
+        } else if sheltered {
+            let damage = terrain_damage(world, &request)?;
+            report.missed_building = super::building_interior::stray_shot(
+                world,
+                request.shooter,
+                request.target,
+                damage,
+                fall_rules,
+            )?;
         }
         return Ok(report);
     }

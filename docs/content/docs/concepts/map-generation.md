@@ -137,7 +137,7 @@ Generated maps use the same hex layers as every other [map file](../map-files/):
 | Condition | Deep and thin snow, and ice over frozen water. |
 | Overlay | Permanent fire and smoke. |
 
-Generated maps leave light, visibility and wind unset, so loading one keeps the
+Generated maps leave light, weather and wind unset, so loading one keeps the
 live map's current values.
 
 Each settlement is also marked for scripts. The map gets a
@@ -226,7 +226,7 @@ Every change regenerates the map in the background and shows it on the canvas
 in place of the open map. A blank seed gets a new random one, which then fills
 the seed field, so later changes keep the same landscape until **New seed** is
 pressed. **Apply** replaces the open map's size, hexes, gravity, temperature and
-flags as one step that undo reverses; light, visibility and wind are kept. Points
+flags as one step that undo reverses; light, weather and wind are kept. Points
 of interest and region corners still on the map are kept too, except those of
 type `settlement` from an earlier generation, which give way to the new map's
 settlement points and regions. **Cancel** or Escape goes back to the map as

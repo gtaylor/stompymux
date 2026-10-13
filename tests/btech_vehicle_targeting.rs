@@ -187,8 +187,9 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     refresh_battle_contacts(&mut initial, &[observer]).unwrap();
     select_battle_target(&mut initial, observer, ObjectId(1), Some(vehicle)).unwrap();
     let mut world = initial.clone();
+    // Pitch black sees three hexes; with the map's sensors off nothing reaches the target.
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
-    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
     let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert!(
         events
@@ -231,8 +232,8 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
             .is_none()
     );
     let mut world = initial.clone();
-    // Light changes wait for the next scan, where the sensor band still reaches the target.
-    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
+    // Light changes wait for the next scan, where moonless-night sight still reaches five hexes.
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
     assert!(world.btech.vehicles()[&observer].target_lock().is_some());
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert!(world.btech.vehicles()[&observer].target_lock().is_some());
@@ -245,7 +246,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     )
     .unwrap();
     let coordinate_target = world.btech.vehicles()[&observer].target_selection();
-    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::Clear).unwrap();
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert_eq!(
         world.btech.vehicles()[&observer].target_selection(),

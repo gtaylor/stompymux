@@ -68,8 +68,6 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
 fn rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
         hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
@@ -100,7 +98,7 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         assert_eq!(
             aim.perception,
             Some(PerceptionAim {
-                channel: Some(DetectionChannel::Sensors),
+                channel: Some(DetectionChannel::Sight),
                 direct_fire: true,
                 modifier: 0,
             })
@@ -169,13 +167,14 @@ async fn vehicle_aim_rechecks_contact_sensors_and_does_not_spend_candidate_dice(
     let before = world.btech.clone();
     assert!(battle_aim_modifiers(&world, shooter, target, 99, 6, rules()).is_err());
     assert_eq!(world.btech, before);
+    // Pitch black sees three hexes; with the map's sensors off nothing reaches the target.
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
-    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
     let before = world.btech.clone();
     let unseen = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
     assert!(unseen.perception.is_none() && unseen.subtotal().is_none());
     assert_eq!(world.btech, before);
-    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::Clear).unwrap();
     let before = world.btech.clone();
     let aim = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
     assert_eq!(

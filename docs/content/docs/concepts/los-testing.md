@@ -7,8 +7,8 @@ BattleTech line-of-sight (LOS) behavior is tested with Rust unit and
 integration tests. `src/btech/los.rs` traces terrain at unit eye heights and
 reports blocking terrain, woods, smoke, crops, water and partial cover. The
 perception module (`src/btech/perception/`) then applies the clear-line rule,
-the sensor band, sight, active probes and radar to that trace to decide what a
-unit can detect.
+the Tactical Operations visual ranges, the selected sensor's sweep and the
+active probe to that trace to decide what a unit can detect.
 
 Run the full suite or a focused integration target from `stompymux-rs/`:
 
@@ -21,8 +21,9 @@ cargo test btech_perception
 ```
 
 Related scenarios live in `tests/btech_perception.rs`,
-`tests/btech_*contact*.rs`, and `tests/btech_scan.rs`. The pure clear-line and
-band rules are unit-tested in `src/btech/perception/sight.rs`. Use `cargo test <name>`
+`tests/btech_*contact*.rs`, and `tests/btech_scan.rs`. The pure clear-line rule
+is unit-tested in `src/btech/perception/sight.rs` and the sensor sweep bands in
+`src/btech/perception/sensors.rs`. Use `cargo test <name>`
 to select a specific test by name.
 
 ## Adding scenarios

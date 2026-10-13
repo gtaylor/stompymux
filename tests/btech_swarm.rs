@@ -76,8 +76,6 @@ async fn fixture(
 fn rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
         hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,

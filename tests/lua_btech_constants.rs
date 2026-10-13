@@ -52,7 +52,7 @@ fn verify(scripts: &Scripts) {
             assert(not ok and err.code=='mux.arg.invalid' and err.detail==nil,path)
         end
         for path, expected in pairs({
-            ['btech.unit.detection_channels'] = { SENSORS='sensors', SIGHT='sight', RADAR='radar', PROBE='probe' },
+            ['btech.unit.detection_channels'] = { SENSORS='sensors', SIGHT='sight', PROBE='probe' },
             ['btech.autopilot.states'] = { PAUSED='paused', IDLE='idle', EXECUTING='executing', BLOCKED='blocked' },
             ['btech.autopilot.order_states'] = { QUEUED='queued', RUNNING='running', SUCCEEDED='succeeded', FAILED='failed', CANCELED='canceled' },
             ['btech.autopilot.reasons'] = { MANUAL_TAKEOVER='manual_takeover', CONTACT_LOST='contact_lost', STUCK='stuck', UNREACHABLE='unreachable', INVALIDATED='invalidated', RESOURCE_LIMIT='resource_limit', CONGESTED='congested', INVALID_TARGET='invalid_target', UNIT_UNAVAILABLE='unit_unavailable', MAP_CHANGED='map_changed', UNSUPPORTED='unsupported', STALE_REVISION='stale_revision' },

@@ -10,6 +10,10 @@ pub struct VehicleMotionRules {
     pub speed_demon: bool,
     /// Positive map movement percentage; nonpositive values use the ordinary rate.
     pub movement_modifier: i64,
+    /// Movement points the battlefield adds to every hex entered beyond the terrain's own:
+    /// fog slows everything that drives (Tactical Operations p. 55), and a building's floors
+    /// cost by its class (Total Warfare p. 167).
+    pub extra_cost: u8,
 }
 
 impl VehicleMotionRules {
@@ -19,6 +23,7 @@ impl VehicleMotionRules {
         slowdown: 2,
         speed_demon: false,
         movement_modifier: 0,
+        extra_cost: 0,
     };
 }
 
@@ -125,7 +130,8 @@ impl VehicleTemplateMotion for VehicleTemplate {
         } else {
             motion.turn_toward(maximum, rules.fasa_turning, 1.0);
         }
-        let mut target = motion.desired_speed.abs() / terrain_divisor(hex, self.movement);
+        let mut target = motion.desired_speed.abs()
+            / (terrain_divisor(hex, self.movement) + f64::from(rules.extra_cost));
         // Ground vehicles on pavement, a road or a bridge deck gain a point of movement
         // (Total Warfare p. 61).
         if hex.is_paved() && self.movement != VehicleMovement::Vtol {

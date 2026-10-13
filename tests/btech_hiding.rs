@@ -18,10 +18,7 @@ fn hiding(world: &World, id: ObjectId) -> (Option<u16>, bool) {
 }
 
 /// One running wizard-piloted unit on forest cover, with deterministic owned dice.
-async fn fixture(
-    source: &str,
-    camouflage: bool,
-) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
+async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Camouflage field".into(), Kind::Room);
     let row = format!("{}0", Terrain::LightWoods.symbol()).repeat(3) + "\n";
@@ -35,12 +32,7 @@ async fn fixture(
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Hiding unit".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let source = match (camouflage, source.contains("specials = [")) {
-        (false, _) => source.to_owned(),
-        (true, true) => source.replacen("specials = [", "specials = [\"Camo_Tech\", ", 1),
-        (true, false) => format!("specials = [\"Camo_Tech\"]\n{source}"),
-    };
-    UnitTemplate::parse("test", &source)
+    UnitTemplate::parse("test", source)
         .unwrap()
         .create(&mut world, id)
         .unwrap();
@@ -78,8 +70,8 @@ async fn hiding_native_lua_all_chassis_timing_and_restart() {
         stationary.as_str(),
         include_str!("../game/units/Kestrel.toml"),
     ] {
-        for camouflage in [false, true] {
-            let (_dir, config, world, _map, id) = fixture(source, camouflage).await;
+        {
+            let (_dir, config, world, _map, id) = fixture(source).await;
             let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             let call = format!("btech.unit.hide({},1)", id.0);
@@ -127,7 +119,7 @@ async fn hiding_native_lua_all_chassis_timing_and_restart() {
                 .vehicles()
                 .get(&id)
                 .is_some_and(|unit| unit.definition().is_vtol());
-            let limit = if vtol { 40 } else { 50 } * if camouflage { 1 } else { 2 };
+            let limit = if vtol { 40 } else { 50 };
             for tick in 8..=limit + 1 {
                 let notices = advance_battle_hiding(&mut world).unwrap();
                 assert_eq!(notices, advance_battle_hiding(&mut restored).unwrap());
@@ -151,15 +143,15 @@ async fn hiding_native_lua_all_chassis_timing_and_restart() {
     }
 }
 
-/// Camouflage grants ordinary pilots admission; hostile cached observations stop the event without rolls.
+/// Any pilot may start hiding; an enemy that already holds the unit as a contact stops the event.
 #[tokio::test]
 async fn hiding_authority_and_cached_observer_rules() {
     for source in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/Demolisher.toml"),
     ] {
-        for camouflage in [false, true] {
-            let (_dir, config, mut world, map, id) = fixture(source, camouflage).await;
+        {
+            let (_dir, config, mut world, map, id) = fixture(source).await;
             release_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
             world
                 .objects
@@ -170,14 +162,7 @@ async fn hiding_authority_and_cached_observer_rules() {
             world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
             assign_battle_pilot(&mut world, id, ObjectId(2)).unwrap();
             support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
-            let before = world.btech.clone();
-            let result = begin_battle_hiding(&mut world, id, ObjectId(2));
-            if !camouflage {
-                assert!(result.unwrap_err().to_string().contains("aren't capable"));
-                assert_eq!(world.btech, before);
-                continue;
-            }
-            result.unwrap();
+            begin_battle_hiding(&mut world, id, ObjectId(2)).unwrap();
             let observer = world.create(&config, "Observer".into(), Kind::Thing);
             world.objects.get_mut(&observer).unwrap().home = Some(ObjectId(config.home()));
             UnitTemplate::parse("Hunter", include_str!("../game/units/Hunter.toml"))
@@ -247,7 +232,7 @@ async fn hiding_fire_intent_survives_rejection_and_rolls_back_with_callbacks() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/Kestrel.toml"),
     ] {
-        let (_dir, config, mut world, _, id) = fixture(source, false).await;
+        let (_dir, config, mut world, _, id) = fixture(source).await;
         edit(&mut world, id, |unit| {
             unit["signature"]["hidden"] = serde_json::json!(true);
             unit["hide_elapsed"] = serde_json::json!(7);
@@ -288,7 +273,7 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/Kestrel.toml"),
     ] {
-        let (_dir, config, mut world, _, id) = fixture(source, false).await;
+        let (_dir, config, mut world, _, id) = fixture(source).await;
         edit(&mut world, id, |unit| {
             unit["signature"]["hidden"] = serde_json::json!(true);
             unit["hide_elapsed"] = serde_json::json!(3);
@@ -352,7 +337,7 @@ async fn hiding_movement_waits_for_a_hex_crossing() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/Kestrel.toml"),
     ] {
-        let (_dir, config, mut world, _, id) = fixture(source, false).await;
+        let (_dir, config, mut world, _, id) = fixture(source).await;
         let vtol = world
             .btech
             .vehicles()
@@ -403,7 +388,7 @@ async fn hiding_idle_server_heartbeat_finishes_saved_event() {
     tokio::task::LocalSet::new()
         .run_until(async {
             let (_dir, config, mut world, _, id) =
-                fixture(include_str!("../game/units/Demolisher.toml"), true).await;
+                fixture(include_str!("../game/units/Demolisher.toml")).await;
             begin_battle_hiding(&mut world, id, ObjectId(1)).unwrap();
             edit(&mut world, id, |unit| {
                 unit["hide_elapsed"] = serde_json::json!(49)
@@ -428,7 +413,7 @@ async fn hiding_failed_save_preserves_pending_event_for_retry() {
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/Demolisher.toml"),
     ] {
-        let (_dir, config, mut world, _, id) = fixture(source, true).await;
+        let (_dir, config, mut world, _, id) = fixture(source).await;
         begin_battle_hiding(&mut world, id, ObjectId(1)).unwrap();
         edit(&mut world, id, |unit| {
             unit["hide_elapsed"] = serde_json::json!(50)
@@ -475,7 +460,7 @@ async fn hiding_admission_and_elevation_checks_are_atomic() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/Kestrel.toml"),
     ] {
-        let (_dir, config, world, map, id) = fixture(source, false).await;
+        let (_dir, config, world, map, id) = fixture(source).await;
         for (speed, accepted) in [(10.75, true), (10.7501, false)] {
             let mut test = world.clone();
             edit(&mut test, id, |unit| {
@@ -489,19 +474,35 @@ async fn hiding_admission_and_elevation_checks_are_atomic() {
                 assert_eq!(test.btech, before);
             }
         }
+        // Clear ground hides a vehicle but never a 'Mech (Total Warfare p. 259).
         let mut terrain = world.clone();
         let mut state = serde_json::to_value(&terrain.btech).unwrap();
         state["maps"][map.0.to_string()]["terrain"][7] =
             serde_json::to_value(Hex::new(Terrain::Clear, 0)).unwrap();
         terrain.btech = serde_json::from_value(state).unwrap();
         let before = terrain.btech.clone();
+        let result = begin_battle_hiding(&mut terrain, id, ObjectId(1));
+        if world.btech.constructed_units().contains_key(&id) {
+            assert!(result.unwrap_err().to_string().contains("big enough"));
+            assert_eq!(terrain.btech, before);
+        } else {
+            assert!(result.unwrap().text.contains("where you stand"));
+            assert_eq!(hiding(&terrain, id), (Some(0), false));
+        }
+        // Pavement hides nothing at all.
+        let mut paved = world.clone();
+        let mut state = serde_json::to_value(&paved.btech).unwrap();
+        state["maps"][map.0.to_string()]["terrain"][7] =
+            serde_json::to_value(Hex::new(Terrain::Pavement, 0)).unwrap();
+        paved.btech = serde_json::from_value(state).unwrap();
+        let before = paved.btech.clone();
         assert!(
-            begin_battle_hiding(&mut terrain, id, ObjectId(1))
+            begin_battle_hiding(&mut paved, id, ObjectId(1))
                 .unwrap_err()
                 .to_string()
-                .contains("isn't going to work")
+                .contains("pavement")
         );
-        assert_eq!(terrain.btech, before);
+        assert_eq!(paved.btech, before);
         let mut high = world.clone();
         begin_battle_hiding(&mut high, id, ObjectId(1)).unwrap();
         let vtol = high
@@ -552,7 +553,7 @@ async fn hiding_admission_and_elevation_checks_are_atomic() {
 async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
     for crossed in [false, true] {
         let (_dir, config, mut world, map, id) =
-            fixture(include_str!("../game/units/Kestrel.toml"), false).await;
+            fixture(include_str!("../game/units/Kestrel.toml")).await;
         world
             .btech
             .rewrite_map_record(map, |record| {
@@ -671,7 +672,7 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ];
     for source in chassis {
-        let (_dir, config, mut world, _, id) = fixture(&source, false).await;
+        let (_dir, config, mut world, _, id) = fixture(&source).await;
         edit(&mut world, id, |unit| {
             unit["signature"]["hidden"] = true.into();
             unit["hide_elapsed"] = 7.into();
@@ -786,7 +787,7 @@ async fn weapons_hold_authority_and_rejected_edits_are_atomic() {
         include_str!("../game/units/Demolisher.toml"),
         include_str!("../game/units/Kestrel.toml"),
     ] {
-        let (_dir, config, mut world, map, id) = fixture(source, false).await;
+        let (_dir, config, mut world, map, id) = fixture(source).await;
         world
             .objects
             .get_mut(&ObjectId(2))

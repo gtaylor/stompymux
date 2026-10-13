@@ -5,13 +5,13 @@ linkTitle: "conditions"
 manualLinkTitle: "conditions"
 ---
 
-Change saved light/weather conditions without reloading occupied terrain.
-Perception follows the new light and visibility on the next scan; contacts and locks remain until then.
+Change saved light and weather conditions without reloading occupied terrain.
+Perception follows the new conditions on the next scan; contacts and locks remain until then.
 
 ## Signature
 
 ```lua
-btech.map.conditions(dbref, light, visibility)
+btech.map.conditions(dbref, light, weather)
 ```
 
 ## Parameters
@@ -20,7 +20,7 @@ btech.map.conditions(dbref, light, visibility)
 | --- | --- | --- |
 | `dbref` | `integer` | Map object dbref. |
 | `light` | `LightLevel` | Typed constant from btech.map.light_levels. |
-| `visibility` | `integer` | Weather range from 0 through 60. |
+| `weather` | `WeatherCondition` | Typed constant from btech.map.weather_conditions. |
 
 ## Returns
 

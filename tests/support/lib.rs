@@ -41,11 +41,11 @@ pub fn write_map(dir: &std::path::Path, name: &str, cells: &str) {
     std::fs::write(dir.join(format!("{name}.toml")), text).unwrap();
 }
 
-/// `asset` as a live map exports it: with the light, visibility and wind a new map starts
+/// `asset` as a live map exports it: with the light, weather and wind a new map starts
 /// with filled in where the asset leaves them unset.
 pub fn as_exported(mut asset: stompymux_rs::MapAsset) -> stompymux_rs::MapAsset {
     asset.light.get_or_insert(stompymux_rs::Light::Day);
-    asset.visibility.get_or_insert(30);
+    asset.weather.get_or_insert(stompymux_rs::Weather::Clear);
     asset.wind.get_or_insert(stompymux_rs::Wind {
         direction: 0,
         speed: 0,

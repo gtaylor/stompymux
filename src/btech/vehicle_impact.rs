@@ -237,28 +237,7 @@ fn resolve_location_followup(
         return Ok(result);
     }
 
-    let turret = if table == VehicleCriticalTable::Advanced {
-        vehicle
-            .sections()
-            .get(&VehicleSection::Turret)
-            .is_some_and(|section| section.internal > 0)
-    } else {
-        vehicle
-            .definition()
-            .sections
-            .get(&VehicleSection::Turret)
-            .is_some_and(|section| section.internal > 0)
-    };
-    let exposed_turret = vehicle.dig_state().dug_in && turret && dice.die(100)? >= 42;
-    let hit = if exposed_turret {
-        super::VehicleHit {
-            section: VehicleSection::Turret,
-            through_armor_critical: false,
-            motive: None,
-            motive_roll: None,
-            piloting_penalty: 0,
-        }
-    } else if table == VehicleCriticalTable::Advanced {
+    let hit = if table == VehicleCriticalTable::Advanced {
         vehicle.advanced_hit(
             arc,
             roll,

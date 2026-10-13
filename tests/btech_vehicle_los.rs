@@ -43,13 +43,6 @@ async fn fixture(
     (dir, config, world, map, ids.try_into().unwrap())
 }
 
-/// Mark units running through their saved state so contact updates may run without crews.
-fn running(world: &mut World, ids: &[ObjectId]) {
-    for id in ids {
-        world.btech.set_unit_power(*id, Power::Running).unwrap();
-    }
-}
-
 /// Low vehicles lose sight of each other over a one-level ridge midway that Mechs and tall
 /// installations see across; a Mech also sees a vehicle over that ridge, because the ridge is
 /// below the Mech and next to neither unit (Total Warfare p. 100).
@@ -136,7 +129,8 @@ async fn vehicle_water_height_and_perception_use_actual_surface_position() {
     }
 }
 
-/// Beyond the sensor band, darkness costs +1 unless a Mech searchlight lights the vehicle target.
+/// Pitch black hides a vehicle four hexes away unless a Mech searchlight lights it, and the
+/// lit target is seen out to the lit-target reach.
 #[tokio::test]
 async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     let (_dir, config, mut world, map, [lamp, _, observer, target]) = fixture(
@@ -144,13 +138,8 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
         include_str!("../game/units/Demolisher.toml"),
     )
     .await;
-    world
-        .btech
-        .rewrite_map_record(map, |record| {
-            record["light"] = 0.into();
-        })
-        .unwrap();
-    // Without the all-conditions band, only sight reaches the target four hexes away.
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::Clear).unwrap();
+    // With the map's sensors off, only sight reaches the target four hexes away.
     set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let before = world.btech.clone();
     let sight = |world: &World| {
@@ -159,8 +148,9 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
             .map(|perception| (perception.channel, perception.aim_modifier))
     };
     assert_eq!(sight(&world), Some((DetectionChannel::Sight, 0)));
+    // Pitch black limits sight to three hexes.
     let mut short = world.clone();
-    set_battle_map_visibility(&mut short, map, Light::MoonlessNight, 2).unwrap();
+    set_battle_map_conditions(&mut short, map, Light::PitchBlack, Weather::Clear).unwrap();
     assert_eq!(sight(&short), None);
     assert_eq!(world.btech, before);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(lamp);
@@ -177,9 +167,9 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     assert!(battle_unit_illuminated(&world, target));
     let lit = sight(&world);
     assert_eq!(lit, Some((DetectionChannel::Sight, 0)));
-    // A lit target stays visible out to three times the night visibility.
+    // A lit target stays visible at night out to the lit-target reach.
     let mut short = world.clone();
-    set_battle_map_visibility(&mut short, map, Light::MoonlessNight, 2).unwrap();
+    set_battle_map_conditions(&mut short, map, Light::PitchBlack, Weather::Clear).unwrap();
     assert_eq!(sight(&short), lit);
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -225,192 +215,5 @@ async fn hovercraft_sight_lines_retain_under_bridge_height_after_restart() {
     assert_eq!(
         blocked,
         battle_unit_terrain_los(&restored, observer, target).unwrap()
-    );
-}
-
-/// A hidden hostile target searched for by a pilot with perception skill seven.
-const HIDDEN: ContactRules = ContactRules {
-    hostile: true,
-    hidden: true,
-    perception: 7,
-    acquire: true,
-};
-
-/// Hidden-unit searches weight the vehicle hull arc, add the turret bonus and save exact dice.
-#[tokio::test]
-async fn vehicle_acquisition_uses_hull_and_turret_weights_and_saves_exact_dice() {
-    let (_dir, config, mut world, map, [_mech_a, mech_b, vehicle_a, vehicle_b]) = fixture(
-        ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/units/Demolisher.toml"),
-    )
-    .await;
-    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
-    running(&mut world, &[vehicle_a]);
-    assert_eq!(battle_perception_factor(HIDDEN.perception), 79);
-    for target in [mech_b, vehicle_b] {
-        // Four hexes lies between the automatic and maximum search ranges: trunc(100 - 4/3) = 98.
-        let distance = battle_perceive(&world, vehicle_a, target)
-            .unwrap()
-            .unwrap()
-            .range
-            .spatial;
-        assert!(
-            (AUTOMATIC_DETECTION_RANGE..=HIDDEN_DETECTION_RANGE).contains(&distance),
-            "{distance}"
-        );
-        assert_eq!((100.0 - distance / 3.0) as u16, 98);
-        // Threshold = hull arc (+15 turret) * 79 / 100 / 4 * 98.
-        for (heading, offset, threshold, arc) in [
-            (0.0, 0.0, 2156, SensorArc::Front),
-            (0.0, 90.0, 1862, SensorArc::Front),
-            (90.0, 0.0, 1470, SensorArc::Side),
-            (90.0, 270.0, 1764, SensorArc::Side),
-            (180.0, 0.0, 882, SensorArc::Rear),
-            (180.0, 180.0, 1176, SensorArc::Rear),
-        ] {
-            world
-                .btech
-                .rewrite_unit_record(vehicle_a, |record| {
-                    let vehicle = record;
-                    vehicle["motion"]["heading"] = serde_json::json!(heading);
-                    vehicle["motion"]["desired_heading"] = serde_json::json!(heading);
-                    vehicle["turret_offset"] = serde_json::json!(offset);
-                    vehicle["dice"] = serde_json::to_value(Dice::seeded([43; 32])).unwrap();
-                    vehicle["contacts"] = serde_json::json!({});
-                })
-                .unwrap();
-            assert_eq!(
-                SensorArc::from_bearing(0.0, heading, Facing::default()).unwrap(),
-                arc
-            );
-            let before = world.clone();
-            let mut expected = Dice::seeded([43; 32]);
-            let roll = expected.die(10_000).unwrap();
-            let detection = update_battle_contact(&mut world, vehicle_a, target, HIDDEN)
-                .unwrap()
-                .detection
-                .unwrap();
-            assert_eq!(
-                detection,
-                Detection {
-                    detected: roll < threshold,
-                    threshold,
-                    roll: Some(roll)
-                }
-            );
-            persistence::save(&config.database(), &world).await.unwrap();
-            let mut restored = persistence::load(&config.database()).await.unwrap();
-            assert_eq!(
-                roll_unit_dice(&mut restored, vehicle_a, 1).unwrap(),
-                vec![expected.d6()]
-            );
-            assert_eq!(
-                roll_unit_dice(&mut restored, target, 1).unwrap(),
-                roll_unit_dice(&mut before.clone(), target, 1).unwrap()
-            );
-        }
-    }
-}
-
-/// Only hidden hostile targets between the automatic and maximum search ranges consume dice.
-#[tokio::test]
-async fn vehicle_acquisition_rolls_only_for_hidden_hostiles_beyond_automatic_range() {
-    let (_dir, _config, mut world, map, [_mech_a, _mech_b, vehicle_a, vehicle_b]) = fixture(
-        ".0\n.0\n.0\n.0\n.0\n",
-        include_str!("../game/units/Demolisher.toml"),
-    )
-    .await;
-    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
-    running(&mut world, &[vehicle_a]);
-    world
-        .btech
-        .set_unit_dice(vehicle_a, Dice::seeded([77; 32]))
-        .unwrap();
-    let before = world.btech.clone();
-    for (hostile, hidden) in [(false, false), (true, false), (false, true)] {
-        let mut trial = world.clone();
-        let update = update_battle_contact(
-            &mut trial,
-            vehicle_a,
-            vehicle_b,
-            ContactRules {
-                hostile,
-                hidden,
-                ..HIDDEN
-            },
-        )
-        .unwrap();
-        assert_eq!(update.transition, ContactTransition::Acquired);
-        assert_eq!(
-            update.detection,
-            Some(Detection {
-                detected: true,
-                threshold: 0,
-                roll: None
-            })
-        );
-        assert_eq!(
-            roll_unit_dice(&mut trial, vehicle_a, 1).unwrap(),
-            vec![Dice::seeded([77; 32]).d6()]
-        );
-    }
-    let mut searched = world.clone();
-    let mut expected = Dice::seeded([77; 32]);
-    let update = update_battle_contact(&mut searched, vehicle_a, vehicle_b, HIDDEN).unwrap();
-    assert_eq!(
-        update.detection.unwrap().roll,
-        Some(expected.die(10_000).unwrap())
-    );
-    assert_eq!(
-        roll_unit_dice(&mut searched, vehicle_a, 1).unwrap(),
-        vec![expected.d6()]
-    );
-    assert_eq!(world.btech, before);
-
-    place_battle_unit(&mut world, vehicle_b, map, 0, 3).unwrap();
-    let update = update_battle_contact(&mut world, vehicle_a, vehicle_b, HIDDEN).unwrap();
-    let detection = update.detection.unwrap();
-    assert!(detection.detected);
-    assert!(detection.threshold > 0);
-    assert_eq!(detection.roll, None);
-    assert_eq!(update.transition, ContactTransition::Acquired);
-    assert_eq!(
-        roll_unit_dice(&mut world, vehicle_a, 1).unwrap(),
-        vec![Dice::seeded([77; 32]).d6()]
-    );
-}
-
-/// Digging in does not change terrain line of sight: a one-level ridge next to a vehicle hides
-/// it whether or not it is dug in, and the saved dig state survives a restart.
-#[tokio::test]
-async fn dug_in_eye_height_leaves_terrain_los_alone_and_survives_restart() {
-    let (_dir, config, mut world, _map, [observer, _, _, target]) = fixture(
-        ".0\n.1\n.0\n.0\n.2\n",
-        include_str!("../game/units/Demolisher.toml"),
-    )
-    .await;
-    assert!(
-        battle_unit_terrain_los(&world, observer, target)
-            .unwrap()
-            .blocked
-    );
-    world
-        .btech
-        .rewrite_unit_record(target, |record| {
-            record["dig"] = serde_json::to_value(DigState::covered()).unwrap();
-        })
-        .unwrap();
-    let before = world.btech.clone();
-    for (a, b) in [(observer, target), (target, observer)] {
-        assert!(battle_unit_terrain_los(&world, a, b).unwrap().blocked);
-    }
-    assert_eq!(world.btech, before);
-    persistence::save(&config.database(), &world).await.unwrap();
-    let loaded = persistence::load(&config.database()).await.unwrap();
-    assert!(loaded.btech.vehicles()[&target].dig_state().dug_in);
-    assert!(
-        battle_unit_terrain_los(&loaded, observer, target)
-            .unwrap()
-            .blocked
     );
 }

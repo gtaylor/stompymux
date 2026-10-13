@@ -55,11 +55,11 @@ impl TargetSalvo {
         let (mut notices, destroyed) = match self {
             Self::Swarm(_) => unreachable!("handled swarm"),
             Self::Mech(report) => (
-                super::fire_feedback::mech_salvo_notices(report, private),
+                super::fire_feedback::mech_salvo_notices(report, target, private),
                 report.groups.iter().any(|group| group.impact.destroyed),
             ),
             Self::Vehicle(report) => (
-                super::fire_feedback::vehicle_salvo_notices(report, private),
+                super::fire_feedback::vehicle_salvo_notices(report, target, private),
                 report.inferno.as_ref().is_some_and(|inferno| {
                     inferno.explosion.is_some()
                         || inferno.damage.iter().any(|damage| damage.unit_destroyed)

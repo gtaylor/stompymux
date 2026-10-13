@@ -77,7 +77,7 @@ The gameplay modules are organized around focused rules and state transitions:
 | Units and equipment | `unit.rs`, `vehicle.rs`, `mass.rs`, `ammunition_mode.rs`, `fire_mode.rs`; templates, loadouts and the equipment catalogue live in `crates/unit-construction` |
 | Movement and time | `motion.rs`, `jump.rs`, `power.rs`, `heat.rs`, `simulation_pending.rs` |
 | Combat | `shot.rs`, `damage.rs`, `critical.rs`, `artillery.rs`, weapon and ammunition modules |
-| Perception | `perception/` (sensor band, sight, probes, radar, acquisition), `contacts.rs`, `scanner.rs`, LOS and electronics modules |
+| Perception | `perception/` (sight, sensor sweeps, probes), `contacts.rs`, `scanner.rs`, `hiding.rs`, LOS and electronics modules |
 | Commands and output | `special_dispatch.rs`, `special_commands.rs`, command and report modules |
 
 These are source areas, not independent subsystems with separate world owners.

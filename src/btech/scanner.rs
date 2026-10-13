@@ -1,5 +1,5 @@
 //! Automatic scans: every running unit perceives its map each tick and commits contact changes.
-use super::{ContactRules, ContactTransition, Mech, Perception, Power};
+use super::{ContactTransition, Mech, Perception, Power};
 use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -22,14 +22,21 @@ pub struct ContactEvent {
     pub acquired: bool,
     /// This contact loss also canceled the observer's selected target.
     pub lock_lost: bool,
-    /// Accepted perception award diagnostic, published with the contact transaction.
-    pub experience_message: Option<super::DiagnosticMessage>,
+    /// A hidden unit was found: the text for its cockpit, with `observer` the unit revealed
+    /// and `target` the enemy that found it.
+    pub revealed: Option<String>,
 }
 
 impl ContactEvent {
     /// Capture cockpit feedback without changing acquisition or lock state.
     /// Observer units suppress routine contact chatter but still announce a lost weapon lock.
     pub fn notice(&self, world: &World) -> Option<super::Notice> {
+        if let Some(text) = &self.revealed {
+            return Some(super::Notice {
+                unit: self.observer,
+                text: text.clone(),
+            });
+        }
         let unit = scanner_unit(world, self.observer)?;
         let mut lines = Vec::new();
         if !unit.observer
@@ -119,6 +126,11 @@ impl Mech {
     pub fn scanner_perception(&self) -> i16 {
         self.scanner_perception
     }
+
+    /// This turn's 2d6 sensor sweep, once rolled.
+    pub fn sensor_sweep(&self) -> Option<u8> {
+        self.sensor_sweep
+    }
 }
 
 impl super::Vehicle {
@@ -130,6 +142,11 @@ impl super::Vehicle {
     /// Perception captured when startup completes; it remains fixed until the next startup.
     pub fn scanner_perception(&self) -> i16 {
         self.scanner_perception
+    }
+
+    /// This turn's 2d6 sensor sweep, once rolled.
+    pub fn sensor_sweep(&self) -> Option<u8> {
+        self.sensor_sweep
     }
 }
 
@@ -167,7 +184,7 @@ pub(super) struct ScannerUnit<'a> {
     pub(super) observer: bool,
     pub(super) visibility: super::Visibility,
     pub(super) concealed: bool,
-    pub(super) radar: bool,
+    pub(super) sensor_sweep: Option<u8>,
     pub(super) autocon_shutdown: bool,
     pub(super) vehicle: bool,
     pub(super) speed: f64,
@@ -218,7 +235,7 @@ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_
             observer: unit.is_observer(),
             visibility: unit.visibility,
             concealed: false,
-            radar: unit.definition().has_special("AntiAircraft"),
+            sensor_sweep: unit.sensor_sweep,
             autocon_shutdown: unit.autocon_shutdown(),
             vehicle: true,
         });
@@ -251,7 +268,7 @@ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_
         observer: unit.is_observer(),
         visibility: unit.visibility,
         concealed: unit.range_concealed(),
-        radar: unit.has_radar(),
+        sensor_sweep: unit.sensor_sweep,
         autocon_shutdown: unit.autocon_shutdown(),
         vehicle: false,
     })
@@ -304,36 +321,49 @@ pub fn contact_observers(world: &World) -> Vec<ObjectId> {
         .collect()
 }
 
-/// Refresh contacts in stable object order, committing all dice, contacts and events together.
+/// Refresh contacts in stable object order, committing all contacts and events together.
 ///
-/// Perception is resolved first against the unchanged world, sharing one observer profile and
-/// lighting cache per observer. Commits follow in the same order; nothing they change (contacts,
-/// locks, dice, experience) feeds back into perception.
+/// Hidden units an enemy has found are revealed first (Total Warfare p. 259). Perception is
+/// then resolved against the unchanged world, sharing one observer profile and lighting cache
+/// per observer. Commits follow in the same order; nothing they change (contacts, locks) feeds
+/// back into perception.
 pub fn refresh_contacts(world: &mut World, observers: &[ObjectId]) -> Result<Vec<ContactEvent>> {
-    let observations = observe(world, observers)?;
     world.attempt(|world| {
         let mut events = Vec::new();
+        // A unit that has not swept its sensors yet sweeps them now.
+        for &observer in observers {
+            if scanner_unit(world, observer).is_some_and(|unit| {
+                unit.power == Power::Running
+                    && unit.position.is_some()
+                    && unit.sensor_sweep.is_none()
+            }) && available(world, observer)
+            {
+                super::perception::sweep_unit(world, observer)?;
+            }
+        }
+        for (id, finder, how) in super::hiding::discoveries(world)? {
+            for notice in super::hiding::reveal_discovered_unit(world, id, finder, how) {
+                events.push(ContactEvent {
+                    identified: true,
+                    observer: notice.unit,
+                    target: finder,
+                    acquired: true,
+                    lock_lost: false,
+                    revealed: Some(notice.text),
+                });
+            }
+        }
+        let observations = observe(world, observers)?;
         for observation in observations {
             let observer = observation.observer;
-            for (target, signature, perception) in observation.targets {
+            for (target, perception) in observation.targets {
                 let unit = scanner_unit(world, observer).expect("validated observer");
                 let previously_identified = unit
                     .contacts
                     .get(&target)
                     .is_some_and(|contact| contact.identified);
                 let selected = unit.selected == Some(target);
-                let update = super::contacts::apply_contact(
-                    world,
-                    observer,
-                    target,
-                    perception,
-                    ContactRules {
-                        hidden: signature.hidden,
-                        hostile: observation.team != signature.team,
-                        perception: observation.perception,
-                        acquire: true,
-                    },
-                )?;
+                let update = super::contacts::apply_contact(world, observer, target, perception)?;
                 if !matches!(
                     update.transition,
                     ContactTransition::Acquired | ContactTransition::Lost
@@ -345,18 +375,13 @@ pub fn refresh_contacts(world: &mut World, observers: &[ObjectId]) -> Result<Vec
                 } else {
                     update.contact.is_some_and(|contact| contact.identified)
                 };
-                let experience_message = if update.transition == ContactTransition::Acquired {
-                    acquisition_experience(world, observer, target)?
-                } else {
-                    None
-                };
                 events.push(ContactEvent {
                     identified,
                     observer,
                     target,
                     acquired: update.transition == ContactTransition::Acquired,
                     lock_lost: selected && update.transition == ContactTransition::Lost,
-                    experience_message,
+                    revealed: None,
                 });
             }
         }
@@ -367,9 +392,7 @@ pub fn refresh_contacts(world: &mut World, observers: &[ObjectId]) -> Result<Vec
 /// One observer's view of its map, resolved before any contact is committed.
 struct Observation {
     observer: ObjectId,
-    team: i32,
-    perception: i16,
-    targets: Vec<(ObjectId, UnitSignature, Option<Perception>)>,
+    targets: Vec<(ObjectId, Option<Perception>)>,
 }
 
 /// Perceive every same-map target for each running, placed observer in stable object order.
@@ -408,64 +431,15 @@ fn observe(world: &World, observers: &[ObjectId]) -> Result<Vec<Observation>> {
                 None,
                 Some(&illumination),
             )?;
-            targets.push((target, other.signature, perception));
+            targets.push((target, perception));
         }
-        observations.push(Observation {
-            observer,
-            team: unit.signature.team,
-            perception: unit.perception,
-            targets,
-        });
+        observations.push(Observation { observer, targets });
     }
     Ok(observations)
 }
 
-/// Hostile character acquisition draws its one-in-six gate before checking pilot eligibility.
-/// Skill checks and accepted awards use the same implementation as building and mine scans.
-fn acquisition_experience(
-    world: &mut World,
-    observer: ObjectId,
-    target: ObjectId,
-) -> Result<Option<super::DiagnosticMessage>> {
-    if [observer, target]
-        .iter()
-        .any(|id| !world.objects[id].flags.contains(Flag::InCharacter))
-    {
-        return Ok(None);
-    }
-    let source = scanner_unit(world, observer).expect("validated observer");
-    let victim = scanner_unit(world, target).expect("validated target");
-    if source.signature.team == victim.signature.team {
-        return Ok(None);
-    }
-    if super::dice::unit_dice_mut(world, observer)?.die(6)? != 1 {
-        return Ok(None);
-    }
-    let pilot = world
-        .btech
-        .vehicles()
-        .get(&observer)
-        .and_then(|unit| unit.pilot())
-        .or_else(|| {
-            world
-                .btech
-                .constructed_units()
-                .get(&observer)
-                .and_then(|unit| unit.pilot())
-        });
-    let Some(pilot) = pilot else {
-        return Ok(None);
-    };
-    let (_, message) =
-        super::perception_check::attempt(world, observer, pilot, -2, crate::clock::wall_time())?;
-    Ok(message)
-}
-
 /// Stage contact feedback and experience diagnostics before the server commit.
 pub(crate) fn notify_contact(scripts: &crate::Scripts, event: ContactEvent) -> Result<()> {
-    if let Some(message) = &event.experience_message {
-        super::diagnostics::publish(scripts, std::slice::from_ref(message));
-    }
     let Some(notice) = event.notice(&scripts.world.borrow()) else {
         return Ok(());
     };

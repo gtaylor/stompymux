@@ -1,6 +1,6 @@
 //! Map assets: a battlefield's dimensions, environment, hexes, and scripted points of
 //! interest and regions, as read from and written to map files.
-use crate::{Hex, Light, MapRegion, Terrain, Wind};
+use crate::{Hex, Light, MapRegion, Terrain, Weather, Wind};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -15,9 +15,9 @@ pub struct MapAsset {
     pub temperature: i8,
     /// Battlefield light; `None` keeps a live map's current light when the map is reloaded.
     pub light: Option<Light>,
-    /// Weather visibility in hexes, up to [`MAX_VISIBILITY`](crate::MAX_VISIBILITY); `None`
-    /// keeps a live map's current visibility when the map is reloaded.
-    pub visibility: Option<u8>,
+    /// Battlefield weather; `None` keeps a live map's current weather when the map is
+    /// reloaded.
+    pub weather: Option<Weather>,
     /// Prevailing wind; `None` keeps a live map's current wind when the map is reloaded.
     pub wind: Option<Wind>,
     /// Row-major immutable tiles shared by transaction checkpoints.
@@ -126,7 +126,7 @@ impl MapAsset {
             gravity,
             temperature,
             light: None,
-            visibility: None,
+            weather: None,
             wind: None,
             hexes: Arc::new(hexes),
             points_of_interest: Vec::new(),

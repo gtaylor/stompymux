@@ -818,6 +818,7 @@ fn resolve_ground_segment(
         None
     } else if actual_height != current.standing_height()
         && !(current.has_bridge() && actual_height == current.water_line() - 1)
+        && !super::building_interior::inside(current, i32::from(actual_height))
         && !(current.is_ice()
             && (actual_height == current.surface_height()
                 || actual_height == current.water_line() - 1))
@@ -852,26 +853,38 @@ fn resolve_ground_segment(
                 }
             } else if tile.has_bridge() && actual_height < tile.standing_height() - 2 {
                 tile.water_line() - 1
+            } else if tile.has_building() {
+                // A building is entered at the level the unit arrives at, or crossed on its
+                // roof from roof height (Total Warfare p. 167).
+                i16::try_from(super::building_interior::entry_level(
+                    tile,
+                    i32::from(actual_height),
+                ))?
             } else {
                 tile.standing_height()
             };
+            let enters_building = tile.has_building() && next_height < tile.surface_height();
             let next_elevation =
                 (next_height != tile.standing_height()).then_some(f64::from(next_height));
-            let last_surface = if previous_tile.is_ice()
-                && next_height >= previous_tile.water_line()
-            {
-                previous_tile.water_line()
-            } else if previous_tile.has_bridge() && actual_height < previous_tile.standing_height()
-            {
-                // Under a bridge the deck is not the surface the unit stands on.
-                actual_height
-            } else {
-                previous_height
-            };
+            let last_surface =
+                if previous_tile.is_ice() && next_height >= previous_tile.water_line() {
+                    previous_tile.water_line()
+                } else if (previous_tile.has_bridge() || previous_tile.has_building())
+                    && actual_height < previous_tile.standing_height()
+                {
+                    // Under a bridge the deck is not the surface the unit stands on, and inside a
+                    // building the unit stands on its floor, not the roof.
+                    actual_height
+                } else {
+                    previous_height
+                };
             let collision_height = if tile.is_ice() && last_surface >= tile.water_line() {
                 tile.water_line()
             } else if tile.has_bridge() && next_height < tile.water_line() {
                 // Passing beneath the span, the unit stays on the river bed.
+                next_height
+            } else if enters_building {
+                // Inside, the floor the unit enters at is the surface it meets.
                 next_height
             } else {
                 tile.surface_height()
@@ -911,6 +924,7 @@ fn resolve_ground_segment(
             let stopping = stop.is_some();
             if checked_height
                 || enters_water
+                || enters_building
                 || tile.is_ice()
                 || hazardous_ground
                 || map.mine_coverage(hex)?
@@ -926,9 +940,14 @@ fn resolve_ground_segment(
                     stop,
                 });
             }
-            if !checked_height && next_height == tile.surface_height() {
-                elevation_cost +=
-                    f64::from((tile.surface_height() - last_surface).unsigned_abs()) * 10.75;
+            if !checked_height && (next_height == tile.surface_height() || enters_building) {
+                // Inside a building the floor entered is the level climbed to, not the roof.
+                let climbed = if enters_building {
+                    next_height
+                } else {
+                    tile.surface_height()
+                };
+                elevation_cost += f64::from((climbed - last_surface).unsigned_abs()) * 10.75;
             }
             actual_height = next_height;
             ground_elevation = next_elevation;
@@ -1096,6 +1115,20 @@ fn resolve_ground_segment(
             );
             notices.extend(entry.notices);
             experience_messages.extend(entry.experience_messages);
+            if let Some(breach) = super::building_interior::breach(
+                world,
+                id,
+                motion.speed < 0.0,
+                fall_rules,
+                falls.is_some(),
+            )? && let Some(collapse) =
+                breach.append_to(&mut notices, &mut pilot_notices, &mut experience_messages)
+            {
+                vehicle_falls.extend(collapse.vehicle_falls.into_iter().map(|(_, fall)| fall));
+                if let Some(falls) = falls.as_deref_mut() {
+                    falls.extend(collapse.falls.into_iter().map(|(_, fall)| fall));
+                }
+            }
             let unit = &world.btech.constructed_units()[&id];
             motion = unit.motion().unwrap();
             if unit.is_destroyed()
@@ -1159,6 +1192,20 @@ fn resolve_ground_segment(
             );
             notices.extend(entry.notices);
             experience_messages.extend(entry.experience_messages);
+            if let Some(breach) = super::building_interior::breach(
+                world,
+                id,
+                motion.speed < 0.0,
+                fall_rules,
+                falls.is_some(),
+            )? && let Some(collapse) =
+                breach.append_to(&mut notices, &mut pilot_notices, &mut experience_messages)
+            {
+                vehicle_falls.extend(collapse.vehicle_falls.into_iter().map(|(_, fall)| fall));
+                if let Some(falls) = falls.as_deref_mut() {
+                    falls.extend(collapse.falls.into_iter().map(|(_, fall)| fall));
+                }
+            }
             let unit = &world.btech.constructed_units()[&id];
             motion = unit.motion().unwrap();
             if unit.is_destroyed()

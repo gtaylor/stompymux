@@ -355,6 +355,10 @@ pub struct SalvoGroup {
 /// and [`super::VehicleSalvoReport`] name it for each chassis.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SalvoReport<G, I> {
+    /// The building around a target inside one, which took its share of every grouping.
+    pub building: Option<super::BuildingCover>,
+    /// The building's collapse once the groupings exhausted it.
+    pub collapse: Option<super::SurfaceBreak>,
     pub initial_woods: Option<super::WoodsAbsorption>,
     pub woods: Option<super::WoodsAbsorption>,
     pub missiles_before_defense: Option<u8>,
@@ -724,6 +728,8 @@ fn resolve_salvo_with_effects(
         HitGeometry::Fixed(_) => None,
     });
     let mut report = MechSalvoReport {
+        building: None,
+        collapse: None,
         initial_woods,
         woods: None,
         missiles_before_defense: None,
@@ -773,6 +779,15 @@ fn resolve_salvo_with_effects(
             glancing,
         )?;
     }
+    let building = super::building_interior::absorb(
+        world,
+        match geometry {
+            HitGeometry::Direct { shooter, .. } => Some(shooter),
+            HitGeometry::Fixed(_) => None,
+        },
+        target,
+        &mut packets.damage,
+    )?;
     let damage_groups = packets.damage;
     let weapon_effect = if weapon == Weapon::PlasmaRifle {
         Some(super::impact::WeaponEffect::Plasma)
@@ -909,6 +924,11 @@ fn resolve_salvo_with_effects(
             balance,
             flooding,
         });
+    }
+    report.building = building;
+    if let Some(cover) = &report.building {
+        let rules = tactical_rules.unwrap_or(super::FallRules::STANDARD);
+        report.collapse = super::building_interior::collapse(world, target, cover, rules)?;
     }
     Ok(report)
 }

@@ -234,6 +234,8 @@ impl<'a> UnitRef<'a> {
         /// Nonzero template ranges override technology-base defaults independently.
         /// Template zero selects defaults; runtime zero remains zero. Subsequent sensor hits degrade ranges.
         pub fn sensor_ranges(&self) -> SensorRanges;
+        /// This turn's 2d6 sensor sweep, once rolled.
+        pub fn sensor_sweep(&self) -> Option<u8>;
         /// Saved team and target visibility facts.
         pub fn signature(&self) -> UnitSignature;
         /// Self-selection declares this unit a spotter; another ID selects a forward observer.
@@ -588,6 +590,17 @@ impl BtechState {
         *stream = dice;
         self.clear_runtime_state();
         Ok(true)
+    }
+
+    /// Replace the dice stream a map's units roll their sensor sweeps from, creating it if
+    /// the map has none yet.
+    pub fn replace_map_sensor_dice(&mut self, map: ObjectId, dice: Dice) -> Result<()> {
+        self.maps
+            .get_mut(&map)
+            .with_context(|| format!("#{} has no map record", map.0))?
+            .sensor_dice = Some(dice);
+        self.clear_runtime_state();
+        Ok(())
     }
 }
 

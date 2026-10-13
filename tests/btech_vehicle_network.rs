@@ -274,8 +274,6 @@ async fn mixed_network_reports_messages_and_range_share_one_path() {
             4,
             AimRules {
                 woods_damage: false,
-                dig_bonus: 3,
-                dig_only_front: false,
                 hit_arc_mode: 0,
                 fasa_turning: true,
                 extended_movement: false,
@@ -447,8 +445,6 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         .unwrap();
     let rules = AimRules {
         woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
         hit_arc_mode: 0,
         fasa_turning: true,
         extended_movement: false,
@@ -542,8 +538,6 @@ async fn vehicle_hex_aim_shares_mixed_network_range_and_rejects_stinger() {
         .unwrap();
     let rules = AimRules {
         woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
         hit_arc_mode: 0,
         fasa_turning: true,
         extended_movement: false,

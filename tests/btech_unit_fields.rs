@@ -3164,31 +3164,6 @@ async fn movement_field_rejects_overfilled_quad_limbs_atomically_scenario(f: &Un
     assert_eq!(scripts.world().btech, before);
 }
 
-/// A construction edit cannot strand a pending event the new movement cannot perform: a
-/// tracked vehicle digging in cannot become a hovercraft.
-async fn movement_field_rejects_incompatible_live_conditions_scenario(f: &UnitFields) {
-    let config = &f.config;
-    let templates = firing::templates();
-    let source = &templates[2];
-    let (mut world, id, _, _) = f.pair(source, source);
-    assert!(world.btech.vehicles().contains_key(&id));
-    firing::edit(&mut world, id, |state| {
-        state["dig"] = serde_json::to_value(DigState::preparing(7)).unwrap();
-    });
-    world.validate(config).unwrap();
-    let scripts = &f.native;
-    support::install(scripts, world.clone());
-    let before = scripts.world().btech.clone();
-    let error =
-        set_battle_unit_field_action(scripts, config, ObjectId(1), id, "unitmovetype", "Hover")
-            .unwrap_err();
-    assert!(
-        format!("{error:#}").contains("Digging requires"),
-        "{error:#}"
-    );
-    assert_eq!(scripts.world().btech, before);
-}
-
 /// Vehicles expose no conventional jump course and must not acquire a fabricated flight.
 async fn vehicle_jump_course_edits_reject_without_mutation_scenario(f: &UnitFields) {
     let config = &f.config;
@@ -3346,7 +3321,6 @@ async fn unit_fields_overrides_mass_and_anatomy_harness() {
 async fn unit_fields_live_rejections_and_codec_harness() {
     let f = UnitFields::new().await;
     movement_field_rejects_overfilled_quad_limbs_atomically_scenario(&f).await;
-    movement_field_rejects_incompatible_live_conditions_scenario(&f).await;
     vehicle_jump_course_edits_reject_without_mutation_scenario(&f).await;
     compact_damage_reports_round_trip_through_the_shared_codec_scenario(&f).await;
 }

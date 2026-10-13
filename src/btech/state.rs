@@ -63,10 +63,10 @@ pub struct StoredMap {
     /// Saved map movement percentage; zero or negative uses the standard rate.
     #[serde(default)]
     pub movement_modifier: i64,
-    /// Battlefield illumination, weather visibility and saved sensor range ceiling.
+    /// Battlefield light and weather, stored as the indexes of `Light::ALL` and `Weather::ALL`.
     pub light: i64,
-    pub visibility: i64,
-    pub maximum_visibility: i64,
+    #[serde(default)]
+    pub weather: i64,
     /// Cloud boundary in elevation levels; zero disables cloud obstruction.
     pub cloud_base: i16,
     /// Perception channels switched off for this battlefield; see `MapPerceptionFlag`.
@@ -79,6 +79,9 @@ pub struct StoredMap {
     /// Map-owned replayable stream established with decoded map creation.
     #[serde(default)]
     pub(crate) fire_dice: Option<super::Dice>,
+    /// Map-owned replayable stream for the sensor sweeps of every unit on the map.
+    #[serde(default)]
+    pub(crate) sensor_dice: Option<super::Dice>,
 
     /// Absent until the terrain dictionary has been explicitly established.
     #[serde(default)]
@@ -305,9 +308,8 @@ impl StoredMap {
         };
         ensure!(
             super::Light::from_stored(self.light).is_ok()
-                && (0..=60).contains(&self.visibility)
-                && (0..=i64::from(i16::MAX)).contains(&self.maximum_visibility),
-            "Invalid map visibility conditions"
+                && super::Weather::from_stored(self.weather).is_ok(),
+            "Invalid map light or weather"
         );
         ensure!(
             (1..=1000).contains(&self.width) && (1..=1000).contains(&self.height),
@@ -425,9 +427,6 @@ pub struct BtechState {
     pub(crate) player_configuration: SharedMap<ObjectId, super::PlayerConfiguration>,
     #[serde(default)]
     pub(crate) unit_configuration: SharedMap<ObjectId, super::UnitConfiguration>,
-    /// Runtime sensor band reach supplied by the host configuration; not stored in database tables.
-    #[serde(default)]
-    pub(crate) sensor_range: super::SensorRange,
     /// Runtime skill threshold overrides; database reload starts with catalog defaults.
     #[serde(default)]
     pub(crate) skill_thresholds: Arc<BTreeMap<String, u32>>,
@@ -1033,17 +1032,16 @@ pub(super) fn replace_map_asset(
     let old = world.btech.maps.get(&id).context("Map not found")?;
     let modifier = old.movement_modifier;
     // Conditions the file leaves out keep the live map's current ones.
-    let (light, visibility, wind) = (asset.light, asset.visibility, asset.wind);
+    let (light, weather, wind) = (asset.light, asset.weather, asset.wind);
     let mut map = map_from_asset(name, asset)?;
     map.movement_modifier = modifier;
     map.cargo_transfer_point = old.cargo_transfer_point;
     if light.is_none() {
         map.light = old.light;
     }
-    if visibility.is_none() {
-        map.visibility = old.visibility;
+    if weather.is_none() {
+        map.weather = old.weather;
     }
-    map.maximum_visibility = old.maximum_visibility;
     map.cloud_base = old.cloud_base;
     map.sensor_flags = old.sensor_flags;
     if wind.is_none() {
@@ -1065,6 +1063,7 @@ pub(super) fn replace_map_asset(
     map.authored_link = old.authored_link;
     map.static_decorations = old.static_decorations.clone();
     map.fire_dice = old.fire_dice.clone().or(map.fire_dice);
+    map.sensor_dice = old.sensor_dice.clone().or(map.sensor_dice);
     world.btech.maps.insert(id, map);
     Ok(())
 }
@@ -1112,13 +1111,13 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         authored_link: None,
         movement_modifier: 0,
         light: asset.light.unwrap_or(super::Light::Day).stored(),
-        visibility: asset.visibility.map_or(30, i64::from),
-        maximum_visibility: 60,
+        weather: asset.weather.unwrap_or(super::Weather::Clear).stored(),
         cloud_base: 200,
         sensor_flags: 0,
         wind_direction: asset.wind.map_or(0, |wind| i64::from(wind.direction)),
         wind_speed: asset.wind.map_or(0, |wind| i64::from(wind.speed)),
         fire_dice: Some(super::Dice::fresh()),
+        sensor_dice: Some(super::Dice::fresh()),
         terrain: None,
         terrain_damage: Default::default(),
         decorations: Default::default(),
@@ -1178,15 +1177,14 @@ pub fn register_empty_battle_unit(world: &mut World, id: ObjectId) -> Result<()>
     Ok(())
 }
 
-/// Change light and weather visibility without changing occupied terrain or unit placement.
-pub fn set_map_visibility(
+/// Change light and weather without changing occupied terrain or unit placement.
+pub fn set_map_conditions(
     world: &mut World,
     id: ObjectId,
     light: super::Light,
-    visibility: u8,
+    weather: super::Weather,
 ) -> Result<()> {
     map_target(world, id)?;
-    ensure!(visibility <= 60, "Invalid battlefield visibility");
     let map = world.btech.maps.get(&id).context("Map not found")?;
     ensure!(
         map.terrain_ready(),
@@ -1195,8 +1193,7 @@ pub fn set_map_visibility(
     let map = world.btech.maps.get_mut(&id).unwrap();
     let previous = map.light;
     map.light = light.stored();
-    map.visibility = i64::from(visibility);
-    map.maximum_visibility = (map.visibility * 3).clamp(24, 60);
+    map.weather = weather.stored();
     if previous != map.light {
         super::searchlight::reconcile_map(world, id);
     }

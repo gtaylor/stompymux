@@ -52,7 +52,7 @@ bridge over rapids. A hex is rejected when its layers contradict each other:
 gravity = 100
 temperature = -5
 light = "dusk"
-visibility = 20
+weather = "light_fog"
 wind = { direction = 270, speed = 15 }
 flags = ["dark"]
 
@@ -122,7 +122,7 @@ corners = [[0, 0], [2, 0], [2, 1], [0, 1]]
 | `gravity` | `100` | Gravity in percent of standard, 0 to 255. Missile and ballistic fire takes +1 to hit for every full 20 points away from 100. |
 | `temperature` | `20` | Temperature in degrees Celsius, -128 to 127. Each started 10 degrees beyond -30 or 50 costs Mechs a point of cooling (or gives them one) and vehicles a cruising MP. |
 | `light` | keep current | `"day"`, `"dawn"`, `"dusk"`, `"full_moon_night"`, `"moonless_night"` or `"pitch_black"`; see [Light](#light). A new map starts in daylight. |
-| `visibility` | keep current | Weather visibility in hexes, 0 to 60. A new map starts at 30. |
+| `weather` | keep current | `"clear"`, `"light_fog"`, `"heavy_fog"`, `"light_rain"`, `"moderate_rain"`, `"heavy_rain"`, `"gusting_rain"`, `"torrential_downpour"`, `"light_snow"`, `"moderate_snow"`, `"heavy_snow"`, `"snow_flurries"`, `"sleet"`, `"light_hail"`, `"heavy_hail"`, `"ice_storm"`, `"blowing_sand"` or `"lightning_storm"`; see [Weather](#weather). A new map starts clear. |
 | `wind` | keep current | `{ direction, speed }`: the bearing the wind blows from, 0 to 359, and its speed in km/h, where 0 is calm. Wind carries smoke and spreads fire. From 62 km/h it spoils missile and then ballistic fire, and from 75 km/h it makes piloting harder; see [Wind](#wind). A new map starts calm. |
 | `flags` | keep current | Map flags by name, such as `"dark"` or `"underground"`. `flags = []` clears them. See `help @setmap` for the list. |
 
@@ -227,8 +227,13 @@ Every bridge hex must be water; the `terrain` grid shows the water beneath it.
 Each structure hex tracks its own CF. Weapons fired at a hex wear it down, and
 at 0 the hex collapses: a bridge falls into its water, and a building or wall
 leaves rubble, or ultra rubble for heavy and hardened construction. Units
-standing on it fall. The `indestructible_structures` map flag protects every
-structure on the map.
+standing on it fall, and units inside a building take its rubble. The
+`indestructible_structures` map flag protects every structure on the map.
+
+Ground units entering a building hex below its roof move inside it, following
+the Total Warfare building rules: a piloting roll by class, damage to the hex
+from their weight, extra movement cost per class, cover against fire from
+outside and a share of the collapse. See `help piloting` in the game.
 
 ## Points of interest
 

@@ -15,7 +15,7 @@ async fn notice_preferences_share_delivery_and_persistence_across_chassis() {
             unit["signature"]["team"] = serde_json::json!(2);
         });
         let event = ContactEvent {
-            experience_message: None,
+            revealed: None,
             identified: true,
             observer: id,
             target,

@@ -145,7 +145,6 @@ fn continue_after_breach(
         if let Some(fall) = fall {
             unit.free_fall = Some(fall);
             unit.ground_elevation = None;
-            unit.dig = DigState::default();
             unit.building_entry = None;
             unit.halt();
         } else if retired {

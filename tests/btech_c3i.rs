@@ -388,7 +388,8 @@ async fn invalid_saved_networks_and_unfriendly_admission_are_rejected() {
     }
 }
 
-/// A friendly unit found only by an active probe through a hill joins without revealing its name.
+/// A friendly unit found only by an active-probe sweep through a hill, with no teammate
+/// identifying it, joins without revealing its name.
 #[tokio::test]
 async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
     let (_dir, _config, mut world, units) = field_with_probes(&[0]).await;
@@ -407,6 +408,30 @@ async fn unidentified_friendly_contact_can_join_without_disclosing_its_name() {
             }
         })
         .unwrap();
+    // Nobody else on the side holds the target, the hill stops the shooter's own sight, and
+    // its Beagle probe sweeps the short band, which hills do not block.
+    for &(id, _) in &units[1..] {
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["contacts"] = serde_json::json!({});
+            })
+            .unwrap();
+    }
+    world
+        .btech
+        .rewrite_unit_record(first, |record| {
+            record["sensor_sweep"] = serde_json::json!(7);
+        })
+        .unwrap();
+    assert!(
+        battle_unit_terrain_los(&world, first, target)
+            .unwrap()
+            .blocked
+    );
+    let perception = battle_perceive(&world, first, target).unwrap().unwrap();
+    assert_eq!(perception.channel, DetectionChannel::Probe);
+    assert!(!perception.identified);
     let contact = visible_battle_contact(&world, first, target)
         .unwrap()
         .unwrap();
@@ -465,14 +490,33 @@ fn weapon_index(world: &World, id: ObjectId, weapon: Weapon) -> usize {
 fn aim_rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
         hit_arc_mode: 0,
         fasa_turning: true,
         extended_movement: false,
         extended_ranges: false,
         hotload_half_minimum: false,
         override_weapon_arcs: false,
+    }
+}
+
+/// Deterministic shot rules built on [`aim_rules`] for resolving network-assisted shots.
+fn shot_rules() -> ShotRules {
+    ShotRules {
+        range_damage: false,
+        tsm_tow_bonus: true,
+        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
+        stacking: StackingRules::STANDARD,
+        stagger: StaggerMode::Retain,
+        glancing: GlancingMode::Disabled,
+        aim: aim_rules(),
+        hit: HitRules {
+            inferno_penalty: false,
+            exile_stun_mode: 0,
+        },
+        hit_arc_mode: 0,
+        extended_gunnery: true,
+        extended_piloting: true,
+        target_toughness: false,
     }
 }
 
@@ -547,8 +591,6 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
             4,
             AimRules {
                 woods_damage: false,
-                dig_bonus: 3,
-                dig_only_front: false,
                 hit_arc_mode: 0,
                 hotload_half_minimum: half,
                 ..aim_rules()
@@ -562,8 +604,6 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     relocate(&mut world, first, 8);
     let extended = AimRules {
         woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
         hit_arc_mode: 0,
         extended_ranges: true,
         ..aim_rules()
@@ -578,7 +618,7 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
 }
 
 #[tokio::test]
-async fn shared_range_ignores_unavailable_peers_and_does_not_grant_firing_visibility() {
+async fn shared_range_ignores_unavailable_peers() {
     let (_dir, _config, mut world, units) = field().await;
     let (first, pilot) = units[0];
     let (peer, peer_pilot) = units[5];
@@ -621,23 +661,128 @@ async fn shared_range_ignores_unavailable_peers_and_does_not_grant_firing_visibi
     )
     .unwrap();
     assert!(jammed_shooter.network_range.is_none());
-    let mut world = baseline.clone();
+    let mut world = baseline;
     stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
     let stopped = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(stopped.range.unwrap().modifier, 4);
     assert_eq!(stopped.network_range.unwrap().source, None);
     assert_eq!(battle_c3i_members(&world, first).unwrap().len(), 2);
-    let mut world = baseline;
+}
+
+/// A target any running teammate spots may be attacked (Tactical Operations p. 191): the row
+/// carries no detection of the shooter's own, the shot still needs the shooter's own line of
+/// fire, and a target nobody on the side perceives stays unseen.
+#[tokio::test]
+async fn team_spotted_targets_are_engaged_along_the_shooters_own_line_of_fire() {
+    let (_dir, _config, mut world, units) = field().await;
+    let (first, pilot) = units[0];
+    let (peer, peer_pilot) = units[5];
+    let target = units[6].0;
+    join_leave_battle_c3i(&mut world, first, pilot, Some(peer)).unwrap();
+    set_battle_unit_signature(
+        &mut world,
+        target,
+        UnitSignature {
+            team: 1,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    relocate(&mut world, first, 2);
+    relocate(&mut world, peer, 17);
+    relocate(&mut world, target, 18);
+    let map = world.btech.constructed_units()[&first]
+        .position()
+        .unwrap()
+        .map;
+    // Moonless night without sensors: only the peer, adjacent to the target, perceives it.
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    let mut encoded = serde_json::to_value(&world.btech).unwrap();
+    for &(id, _) in &units {
+        encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
+    }
+    encoded["constructed"][peer.0.to_string()]["contacts"][target.0.to_string()] =
+        serde_json::json!({"identified":true});
+    world.btech = serde_json::from_value(encoded).unwrap();
+    assert!(battle_perceive(&world, first, target).unwrap().is_none());
+    assert_eq!(
+        battle_perceive(&world, peer, target)
+            .unwrap()
+            .unwrap()
+            .channel,
+        DetectionChannel::Sight
+    );
+    let contact = visible_battle_contact(&world, first, target)
+        .unwrap()
+        .unwrap();
+    assert!(contact.identified && !contact.friendly);
+    assert_eq!(contact.detection, None);
+    assert!(
+        contact.short_text.starts_with("  "),
+        "{}",
+        contact.short_text
+    );
+    let index = weapon_index(&world, first, Weapon::Lrm20);
+    let aim = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
+    let perception = aim.perception.unwrap();
+    assert_eq!(perception.channel, None);
+    assert!(perception.direct_fire);
+    assert!(aim.subtotal().is_some());
+    assert_eq!(aim.network_range.unwrap().source, Some(peer));
+    assert_eq!(aim.range.unwrap().modifier, 0);
+    let spotted = world.clone();
+    let shot = resolve_battle_shot(&mut world, first, pilot, target, index, shot_rules()).unwrap();
+    assert_eq!(shot.aim.perception, Some(perception));
+
+    // A hill across the shooter's own line leaves the target spotted but out of reach.
+    let mut world = spotted.clone();
     world
         .btech
-        .rewrite_unit_record(first, |record| {
+        .rewrite_map_record(map, |record| {
+            for x in 0..20 {
+                record["terrain"][5 * 20 + x] =
+                    serde_json::to_value(Hex::new(Terrain::Clear, 9)).unwrap();
+            }
+        })
+        .unwrap();
+    let covered = visible_battle_contact(&world, first, target)
+        .unwrap()
+        .unwrap();
+    assert!(covered.identified);
+    assert_eq!(covered.detection, None);
+    let blocked = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
+    assert!(!blocked.perception.unwrap().direct_fire);
+    let error = resolve_battle_shot(&mut world, first, pilot, target, index, shot_rules())
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("behind cover"), "{error}");
+
+    // Nobody on the side perceives the target: no contact, no aim, no shot.
+    let mut world = spotted.clone();
+    world
+        .btech
+        .rewrite_unit_record(peer, |record| {
             record["contacts"] = serde_json::json!({});
         })
         .unwrap();
+    assert!(
+        visible_battle_contact(&world, first, target)
+            .unwrap()
+            .is_none()
+    );
     let unseen = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
-    assert_eq!(unseen.network_range.unwrap().source, Some(peer));
-    assert_eq!(unseen.range.unwrap().modifier, 0);
     assert!(unseen.perception.is_none() && unseen.subtotal().is_none());
+    assert!(resolve_battle_shot(&mut world, first, pilot, target, index, shot_rules()).is_err());
+
+    // A shut-down teammate spots nothing for the side.
+    let mut world = spotted;
+    stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
+    assert!(
+        visible_battle_contact(&world, first, target)
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[tokio::test]
@@ -673,23 +818,7 @@ async fn shared_range_applies_to_hex_aim_and_replays_in_actual_shots() {
     assert_eq!(aim.modifiers.network_range.unwrap().source, Some(peer));
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
-    let rules = ShotRules {
-        range_damage: false,
-        tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
-        aim: aim_rules(),
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
-        extended_gunnery: true,
-        extended_piloting: true,
-        target_toughness: false,
-    };
+    let rules = shot_rules();
     let shot = resolve_battle_shot(&mut world, first, pilot, target, index, rules).unwrap();
     assert_eq!(shot.aim.range.unwrap().modifier, 0);
     assert_eq!(shot.aim.network_range.unwrap().source, Some(peer));
@@ -991,8 +1120,11 @@ async fn status_excludes_shutdown_and_jammed_peers_but_reports_unconscious_pilot
     world.validate(&config).unwrap();
 }
 
+/// A target only a teammate spots is a contact with no detection of the observer's own: its
+/// identity comes from the teammate and the shared aiming range from the active network. The
+/// row outlives the network and disappears when no running teammate holds the target.
 #[tokio::test]
-async fn network_targets_share_identification_and_range_without_acquiring_contacts() {
+async fn team_spotted_targets_carry_identification_and_shared_range_without_own_detection() {
     let (_dir, config, mut world, units) = field().await;
     let (first, pilot) = units[0];
     let (peer, peer_pilot) = units[5];
@@ -1010,14 +1142,22 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
     relocate(&mut world, first, 2);
     relocate(&mut world, peer, 17);
     relocate(&mut world, target, 18);
+    let map = world.btech.constructed_units()[&first]
+        .position()
+        .unwrap()
+        .map;
+    // Moonless night without sensors: only the peer, adjacent to the target, perceives it.
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &(id, _) in &units {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
     }
     encoded["constructed"][peer.0.to_string()]["contacts"][target.0.to_string()] =
-        serde_json::json!({"identified":false});
+        serde_json::json!({"identified":true});
     world.btech = serde_json::from_value(encoded).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(first);
+    assert!(battle_perceive(&world, first, target).unwrap().is_none());
     let before = world.btech.clone();
     let contacts = displayed_battle_contacts(&world, first).unwrap();
     assert_eq!(contacts.len(), 1);
@@ -1025,6 +1165,7 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
     assert!(row.identified && !row.friendly);
     assert_eq!(row.name, "Atlas");
     assert_eq!(row.detection, None);
+    assert!(row.short_text.starts_with("  "), "{}", row.short_text);
     assert!((row.range.spatial - 16.0).abs() < 1e-8);
     assert!((row.network_range.unwrap() - 1.0).abs() < 1e-8);
     assert!(row.short_text.contains("r:16.0 c: 1.0"));
@@ -1051,14 +1192,28 @@ async fn network_targets_share_identification_and_range_without_acquiring_contac
             .contains(&row.short_text)
     );
     assert_eq!(scripts.world().btech, before);
+    // Leaving the network drops the shared range, not the side's sighting.
+    join_leave_battle_c3i(&mut world, first, pilot, None).unwrap();
+    let unlinked = displayed_battle_contacts(&world, first).unwrap();
+    assert_eq!(unlinked.len(), 1);
+    assert!(unlinked[0].identified);
+    assert_eq!(unlinked[0].detection, None);
+    assert!(unlinked[0].network_range.is_none());
+    assert!(
+        !unlinked[0].short_text.contains(" c:"),
+        "{}",
+        unlinked[0].short_text
+    );
+    // A shut-down teammate spots nothing for the side.
     stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
     assert!(displayed_battle_contacts(&world, first).unwrap().is_empty());
 }
 
-/// Each row is recomputed from current sightings; a peer's probe contact behind a hill stays unidentified.
+/// Each row is recomputed from current sightings: a teammate's unidentified contact in plain
+/// sight is identified by the observer's own eyes, one behind a hill stays unidentified.
 #[tokio::test]
 async fn network_target_visibility_is_recomputed_for_every_row() {
-    let (_dir, _config, mut world, units) = field_with_probes(&[1]).await;
+    let (_dir, _config, mut world, units) = field().await;
     let (first, pilot) = units[0];
     let peer = units[1].0;
     let known = units[2].0;
@@ -1100,8 +1255,10 @@ async fn network_target_visibility_is_recomputed_for_every_row() {
     assert!(!contacts.iter().any(|r| r.target == units[4].0));
 }
 
+/// Daylight targets the unit perceives itself keep the sight marker, selection colour and
+/// destroyed-first order when no peer sees any of them closer.
 #[tokio::test]
-async fn direct_network_targets_keep_sensor_markers_selection_and_destroyed_first_order() {
+async fn direct_network_targets_keep_sight_markers_selection_and_destroyed_first_order() {
     let (_dir, config, mut world, units) = field().await;
     let (first, pilot) = units[0];
     let peer = units[1].0;
@@ -1132,17 +1289,19 @@ async fn direct_network_targets_keep_sensor_markers_selection_and_destroyed_firs
         vec![wreck, near, far]
     );
     assert_eq!(contacts[0].status.chars().nth(1), Some('D'));
+    // Sight identifies every row, whatever the saved contact recorded.
     assert!(
         contacts
             .iter()
-            .all(|r| r.detection == Some(DetectionChannel::Sensors))
+            .all(|r| r.detection == Some(DetectionChannel::Sight) && r.identified)
     );
-    assert!(contacts.iter().all(|r| r.short_text.starts_with("S ")));
-    // No peer sees closer, so the shared range equals the physical range on every row.
+    assert!(contacts.iter().all(|r| r.short_text.starts_with("V ")));
+    // The peer stands one hex nearer every target along the same column and sees them all, so
+    // it supplies the shared range on every row.
     assert!(
         contacts
             .iter()
-            .all(|r| (r.network_range.unwrap() - r.range.spatial).abs() < 1e-8)
+            .all(|r| (r.network_range.unwrap() - (r.range.spatial - 1.0)).abs() < 1e-8)
     );
     assert!(
         contacts[1]
@@ -1478,23 +1637,7 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     let mut world = distant;
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
-    let rules = ShotRules {
-        range_damage: false,
-        tsm_tow_bonus: true,
-        vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-        stacking: StackingRules::STANDARD,
-        stagger: StaggerMode::Retain,
-        glancing: GlancingMode::Disabled,
-        aim: aim_rules(),
-        hit: HitRules {
-            inferno_penalty: false,
-            exile_stun_mode: 0,
-        },
-        hit_arc_mode: 0,
-        extended_gunnery: true,
-        extended_piloting: true,
-        target_toughness: false,
-    };
+    let rules = shot_rules();
     let shot = resolve_battle_shot(&mut world, first, pilot, target, lrm, rules).unwrap();
     assert_eq!(shot.aim.network_range.unwrap().kind, CommandNetwork::C3);
     assert_eq!(shot.aim.range.unwrap().modifier, 0);
@@ -1614,6 +1757,14 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
     relocate(&mut world, first, 2);
     relocate(&mut world, units[4].0, 17);
     relocate(&mut world, target, 18);
+    let map = world.btech.constructed_units()[&first]
+        .position()
+        .unwrap()
+        .map;
+    // Moonless night without sensors: the master at y17 spots the target for the side; the
+    // shooter has no detection of its own.
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
+    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &(id, _) in &units {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
@@ -1661,11 +1812,19 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
             .collect::<Vec<_>>(),
         vec![units[1].0, units[2].0, units[3].0]
     );
-    // The stopped master leaves the classic set, so the C3i peer supplies the sighting
-    // while the shared range falls back to the physical distance.
+    // The stopped master shrinks the classic set below the unit at y17, which still spots the
+    // target for the side; the nearest remaining classic member, five hexes off and just within
+    // moonless sight, now supplies the shared range.
+    assert_eq!(
+        battle_perceive(&world, units[3].0, target)
+            .unwrap()
+            .map(|perception| perception.channel),
+        Some(DetectionChannel::Sight)
+    );
     let contacts = displayed_battle_contacts(&world, first).unwrap();
     assert_eq!(contacts[0].target, target);
-    assert!((contacts[0].network_range.unwrap() - 16.0).abs() < 1e-8);
+    assert_eq!(contacts[0].detection, None);
+    assert!((contacts[0].network_range.unwrap() - 5.0).abs() < 1e-8);
     assert_eq!(battle_c3_members(&world, first).unwrap().len(), 6);
     assert_eq!(world.btech, before);
     world.validate(&config).unwrap();
@@ -1755,6 +1914,11 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
         rules,
     )
     .unwrap();
+    // The submerged peer beside the hex must sight it for the network to use its distance.
+    assert!(
+        battle_hex_visible(&world, peer, HexCoordinate { x: 10, y: 8 }).unwrap(),
+        "a submerged peer sights the adjacent water hex"
+    );
     assert_eq!(
         coordinate.modifiers.network_range.unwrap().source,
         Some(peer)

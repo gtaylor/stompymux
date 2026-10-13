@@ -5,7 +5,7 @@
 //! gravity = 100              # optional, default 100
 //! temperature = 20           # optional, default 20 (Celsius)
 //! light = "day"              # optional: day, twilight or night
-//! visibility = 30            # optional, weather visibility in hexes, 0 to 60
+//! weather = "clear"          # optional: clear, light_fog, heavy_fog, light_rain, ...
 //! wind = { direction = 90, speed = 10 }  # optional
 //! flags = ["dark"]           # optional; when absent a reload keeps the map's current flags
 //!
@@ -71,8 +71,8 @@
 //! members are the outline plus every hex inside it; see [`MapRegion`].
 use crate::{
     Condition, ConstructionClass, DecorationKind, Flow, Foliage, Ground, Hex, Light, MAX_HEIGHT,
-    MAX_VISIBILITY, MapAsset, MapFlag, MapPointOfInterest, MapRegion, Route, Structure,
-    StructureKind, Water, Wind,
+    MapAsset, MapFlag, MapPointOfInterest, MapRegion, Route, Structure, StructureKind, Water,
+    Weather, Wind,
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -92,7 +92,7 @@ struct MapFile {
     #[serde(default)]
     light: Option<Light>,
     #[serde(default)]
-    visibility: Option<u8>,
+    weather: Option<Weather>,
     #[serde(default)]
     wind: Option<Wind>,
     #[serde(default)]
@@ -455,12 +455,6 @@ impl MapAsset {
         for region in &file.regions {
             region.validate(width as i64, rows as i64)?;
         }
-        if let Some(visibility) = file.visibility {
-            ensure!(
-                visibility <= MAX_VISIBILITY,
-                "visibility must be at most {MAX_VISIBILITY}"
-            );
-        }
         if let Some(wind) = file.wind {
             wind.validate()?;
         }
@@ -477,7 +471,7 @@ impl MapAsset {
             gravity: file.gravity,
             temperature: file.temperature,
             light: file.light,
-            visibility: file.visibility,
+            weather: file.weather,
             wind: file.wind,
             hexes: Arc::new(hexes),
             points_of_interest: file.points_of_interest,
@@ -520,8 +514,8 @@ impl MapAsset {
         if let Some(light) = self.light {
             writeln!(text, "light = \"{}\"", light.name())?;
         }
-        if let Some(visibility) = self.visibility {
-            writeln!(text, "visibility = {visibility}")?;
+        if let Some(weather) = self.weather {
+            writeln!(text, "weather = \"{}\"", weather.name())?;
         }
         if let Some(wind) = self.wind {
             writeln!(
@@ -668,7 +662,7 @@ mod tests {
 gravity = 80
 temperature = -10
 light = "moonless_night"
-visibility = 12
+weather = "heavy_fog"
 wind = { direction = 270, speed = 15 }
 flags = ["dark", "vacuum"]
 
@@ -720,7 +714,7 @@ hexes = [[2, 1]]
         assert_eq!((map.width, map.height), (6, 2));
         assert_eq!((map.gravity, map.temperature), (80, -10));
         assert_eq!(map.light, Some(Light::MoonlessNight));
-        assert_eq!(map.visibility, Some(12));
+        assert_eq!(map.weather, Some(Weather::HeavyFog));
         assert_eq!(
             map.wind,
             Some(Wind {
@@ -786,7 +780,7 @@ hexes = [[2, 1]]
             "flow",
             "light",
             "wind",
-            "visibility",
+            "weather",
         ] {
             assert!(!text.contains(absent), "{absent} in {text}");
         }
@@ -806,7 +800,7 @@ hexes = [[2, 1]]
                     gravity: 100,
                     temperature: 20,
                     light: None,
-                    visibility: None,
+                    weather: None,
                     wind: None,
                     hexes: Arc::new(vec![hex]),
                     points_of_interest: Vec::new(),
@@ -1089,7 +1083,10 @@ hexes = [[2, 1]]
                 base(".\n", "0\n", "flags = [\"bogus\"]"),
                 "invalid map file",
             ),
-            (base(".\n", "0\n", "visibility = 61"), "visibility"),
+            (
+                base(".\n", "0\n", "weather = 'drizzle'"),
+                "invalid map file",
+            ),
             (
                 base(".\n", "0\n", "wind = { direction = 400, speed = 1 }"),
                 "Wind direction",

@@ -395,16 +395,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_dig_only_fs",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "btech_digbonus",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "cache_depth",
     "parser": "cf_int",
     "permission": "CA_DISABLED"

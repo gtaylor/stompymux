@@ -172,7 +172,7 @@ async fn vehicle_scan_ranges_and_observer_disclosure_follow_current_state() {
     )
     .await;
     power(&mut world, &[a, b, c, d], Power::Running);
-    set_battle_map_visibility(&mut world, map, Light::Day, 30).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::Day, Weather::Clear).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(c);
     assign_battle_pilot(&mut world, c, ObjectId(1)).unwrap();
     refresh_battle_contacts(&mut world, &[c]).unwrap();
@@ -269,8 +269,14 @@ async fn coordinate_scans_choose_visible_mixed_occupants_in_battlefield_order() 
     }
 }
 
-/// A nearby structure shares a coordinate with a minefield without triggering either during setup.
-fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {
+/// A structure at `coordinate` shares it with a minefield without triggering either during
+/// setup.
+fn terrain_targets(
+    world: &mut World,
+    config: &Config,
+    map: ObjectId,
+    coordinate: HexCoordinate,
+) -> ObjectId {
     let interior = world.create(config, "Hangar".into(), Kind::Room);
     create_battle_map(
         world,
@@ -291,7 +297,6 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
         },
     )
     .unwrap();
-    let coordinate = HexCoordinate { x: 0, y: 1 };
     set_building_entrance(
         world,
         map,
@@ -327,12 +332,13 @@ fn terrain_targets(world: &mut World, config: &Config, map: ObjectId) -> ObjectI
 async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
     let (_dir, config, mut world, [mech, _, observer, _]) = formation().await;
     let map = world.btech.vehicles()[&observer].position().unwrap().map;
-    terrain_targets(&mut world, &config, map);
+    // Four hexes off, so pitch black can take the structure out of sight at the end.
+    let coordinate = HexCoordinate { x: 0, y: 4 };
+    terrain_targets(&mut world, &config, map, coordinate);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
-    let coordinate = HexCoordinate { x: 0, y: 1 };
     assert!(battle_hex_visible(&world, observer, coordinate).unwrap());
     let expected = scan_battle_unit(&world, observer, ObjectId(1), mech, "").unwrap();
     let before = world.btech.clone();
@@ -347,12 +353,12 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
         .unwrap();
     assert_eq!(lua, expected);
     assert_eq!(
-        support::run_text(&scripts, &config, ObjectId(1), 2, "scan 0 1 B"),
+        support::run_text(&scripts, &config, ObjectId(1), 2, "scan 0 4 B"),
         "The Hangar's CF is 31."
     );
     let lua: String = scripts
         .eval_callback(&format!(
-            "return btech.unit.scan_building({},1,0,1).text",
+            "return btech.unit.scan_building({},1,0,4).text",
             observer.0
         ))
         .unwrap();
@@ -378,36 +384,44 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
         .unwrap();
     let limited = world.btech.clone();
     assert!(
-        scan_battle_building(
-            &mut world,
-            observer,
-            ObjectId(1),
-            HexCoordinate { x: 0, y: 4 },
-            1000
-        )
-        .unwrap_err()
-        .to_string()
-        .contains("out of scanner range")
+        scan_battle_building(&mut world, observer, ObjectId(1), coordinate, 1000)
+            .unwrap_err()
+            .to_string()
+            .contains("out of scanner range")
     );
     assert_eq!(world.btech, limited);
-    // The sensor band sees the adjacent hex in any weather until the battlefield disables it.
-    set_battle_map_visibility(&mut world, map, Light::Day, 0).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["definition"]["attributes"]
+                .as_object_mut()
+                .unwrap()
+                .remove("scan_range");
+        })
+        .unwrap();
+    // Hexes are perceived by sight alone: moonless night still reaches four hexes, pitch black
+    // stops at three.
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
     assert_eq!(
         battle_hex_detection(&world, observer, coordinate).unwrap(),
-        Some(DetectionChannel::Sensors)
+        Some(DetectionChannel::Sight)
     );
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
+    assert_eq!(
+        battle_hex_detection(&world, observer, coordinate).unwrap(),
+        None
+    );
     assert!(!battle_hex_visible(&world, observer, coordinate).unwrap());
-    let disabled = world.btech.clone();
+    let dark = world.btech.clone();
     assert!(scan_battle_mines(&mut world, observer, ObjectId(1), coordinate, 1000).is_err());
-    assert_eq!(world.btech, disabled);
+    assert_eq!(world.btech, dark);
 }
 
 #[tokio::test]
 async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
     let (_dir, config, mut world, [_, _, observer, _]) = formation().await;
     let map = world.btech.vehicles()[&observer].position().unwrap().map;
-    let interior = terrain_targets(&mut world, &config, map);
+    let interior = terrain_targets(&mut world, &config, map, HexCoordinate { x: 0, y: 1 });
     let mut building = world.btech.maps()[&interior].building;
     building.flags = 4;
     set_building_state(&mut world, interior, building).unwrap();
@@ -541,7 +555,8 @@ async fn vehicle_terrain_perception_owns_dice_and_rolls_back_experience() {
 async fn vehicle_building_contacts_honor_passengers_preferences_and_identification_locks() {
     let (_dir, config, mut world, [_, _, observer, _]) = formation().await;
     let map = world.btech.vehicles()[&observer].position().unwrap().map;
-    let interior = terrain_targets(&mut world, &config, map);
+    // Four hexes off, so pitch black can take the structure out of sight at the end.
+    let interior = terrain_targets(&mut world, &config, map, HexCoordinate { x: 0, y: 4 });
     // Contact displays admit passengers; detailed scan actions still require the assigned pilot.
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
@@ -647,25 +662,27 @@ async fn vehicle_building_contacts_honor_passengers_preferences_and_identificati
     assert!(battle_building_contacts(&scripts, observer, ObjectId(1)).is_err());
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
-    // Only sight can lose the adjacent building, so leave it to weather.
-    set_battle_map_perception(
-        &mut shared.borrow_mut(),
-        map,
-        MapPerceptionFlag::Sensors,
-        false,
-    )
-    .unwrap();
+    // Buildings are perceived by sight alone, which pitch black stops at three hexes.
     scripts.eval_callback::<()>(&format!(
-        "_parents['default_room.lua'].locks.identify_building=function(ctx) btech.map.conditions({},btech.map.light_levels.DAY,0); return true end", map.0
+        "_parents['default_room.lua'].locks.identify_building=function(ctx) btech.map.conditions({},btech.map.light_levels.PITCH_BLACK,btech.map.weather_conditions.CLEAR); return true end", map.0
     )).unwrap();
     assert!(
         battle_building_contacts(&scripts, observer, ObjectId(1))
             .unwrap()
             .is_empty()
     );
-    assert_eq!(scripts.world().btech.maps()[&map].visibility, 0);
+    assert_eq!(
+        scripts.world().btech.maps()[&map].light,
+        Light::PitchBlack.stored()
+    );
     scripts.eval_callback::<()>("_parents['default_room.lua'].locks.identify_building=function(ctx) error('must not run') end").unwrap();
-    set_battle_map_visibility(&mut shared.borrow_mut(), map, Light::Day, 0).unwrap();
+    set_battle_map_conditions(
+        &mut shared.borrow_mut(),
+        map,
+        Light::PitchBlack,
+        Weather::Clear,
+    )
+    .unwrap();
     // No visible candidate means the deliberately failing lock must not run.
     assert!(
         battle_building_contacts(&scripts, observer, ObjectId(1))

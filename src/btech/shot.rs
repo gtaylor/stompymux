@@ -108,6 +108,8 @@ pub struct ShotReport<U, M> {
     pub thermal_woods: Option<super::WoodsAbsorption>,
     /// Incidental terrain check from a launched non-missile miss.
     pub missed_terrain: Option<super::WoodlandImpact>,
+    /// A miss from the next hex striking the building around a target inside one.
+    pub missed_building: Option<super::StrayHit>,
     /// Coolant reduction applied to stored heat, including temporary negative credit.
     pub cooling: Option<f64>,
     /// Present when Heavy Gauss firing required a moving-shooter control check.
@@ -155,6 +157,17 @@ impl MechShotReport {
         }
         if let Some(terrain) = &self.missed_terrain {
             notices.extend(terrain.notices.iter().cloned());
+        }
+        if let Some(stray) = &self.missed_building {
+            notices.extend(stray.notices.iter().cloned());
+            if let Some(collapse) = &stray.collapse {
+                super::piloting::append_feedback(
+                    private,
+                    collapse.pilot_notices.iter().cloned(),
+                    notices.len(),
+                );
+                notices.extend(collapse.notices.iter().cloned());
+            }
         }
         if let Some(woods) = &self.thermal_woods {
             notices.extend(woods.notices.iter().cloned());
@@ -517,6 +530,7 @@ fn resolve_shot_inner(
         heat_transfer,
         woods: thermal_woods,
         missed_terrain,
+        missed_building,
     } = super::direct_effects::resolve(
         &mut candidate,
         super::direct_effects::DirectEffectRequest {
@@ -695,6 +709,7 @@ fn resolve_shot_inner(
         heat_transfer,
         thermal_woods,
         missed_terrain,
+        missed_building,
         cooling,
         recoil,
         ams,

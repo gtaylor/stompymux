@@ -20,7 +20,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     }
     let mut maps = BTreeMap::new();
     for row in sqlx::query(
-        "SELECT dbref,first_free,on_map,map_name,width,height,gravity,temperature,flags,move_mod,light,visibility,max_visibility,cloudbase,sensor_flags,wind_direction,wind_speed,cf,cf_max,build_flag,regen_factor FROM btech_maps ORDER BY dbref",
+        "SELECT dbref,first_free,on_map,map_name,width,height,gravity,temperature,flags,move_mod,light,weather,cloudbase,sensor_flags,wind_direction,wind_speed,cf,cf_max,build_flag,regen_factor FROM btech_maps ORDER BY dbref",
     )
     .fetch_all(&mut *c)
     .await?
@@ -54,13 +54,13 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
                 },
                 movement_modifier: row.try_get("move_mod")?,
                 light: row.try_get("light")?,
-                visibility: row.try_get("visibility")?,
-                maximum_visibility: row.try_get("max_visibility")?,
+                weather: row.try_get("weather")?,
                 cloud_base: i16::try_from(row.try_get::<i64, _>("cloudbase")?)?,
                 sensor_flags: row.try_get("sensor_flags")?,
                 wind_direction: row.try_get("wind_direction")?,
                 wind_speed: row.try_get("wind_speed")?,
             fire_dice: None,
+            sensor_dice: None,
             terrain_damage: Default::default(),
             decorations: Default::default(),
             static_decorations: Default::default(),
@@ -104,6 +104,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     super::btech_decorations::load(c, &mut maps, clock).await?;
     super::btech_static_decorations::load(c, &mut maps).await?;
     super::btech_map_random::load(c, &mut maps).await?;
+    super::btech_map_sensor_random::load(c, &mut maps).await?;
     super::btech_points_of_interest::load(c, &mut maps).await?;
     super::btech_regions::load(c, &mut maps).await?;
     super::btech_artillery::load(c, &mut maps, clock).await?;
@@ -130,7 +131,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         player_preferences: player_preferences.into(),
         player_configuration: player_configuration.into(),
         unit_configuration: super::btech_unit_configuration::load(c).await?.into(),
-        sensor_range: Default::default(),
         skill_thresholds: Default::default(),
         character_values: super::btech_values::load(c).await?.into(),
         characters: super::btech_character::load(c).await?.into(),
@@ -209,7 +209,6 @@ pub(super) fn validate_changes(
     expected.part_costs = after.btech.part_costs.clone();
     expected.skill_thresholds = after.btech.skill_thresholds.clone();
     expected.weapon_settings = after.btech.weapon_settings.clone();
-    expected.sensor_range = after.btech.sensor_range;
     if let Some(purges) = purges {
         expected.purge(purges);
     }
@@ -461,6 +460,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_decorations::save(c, before, after).await?;
     changed |= super::btech_static_decorations::save(c, before, after).await?;
     changed |= super::btech_map_random::save(c, before, after).await?;
+    changed |= super::btech_map_sensor_random::save(c, before, after).await?;
     changed |= super::btech_points_of_interest::save(c, before, after).await?;
     changed |= super::btech_regions::save(c, before, after).await?;
     changed |= super::btech_entrances::save(c, before, after).await?;
@@ -494,8 +494,7 @@ fn map_fields(map: &StoredMap) -> super::write::Fields {
         ("regen_factor", Cell::Integer(map.building.regeneration)),
         ("move_mod", Cell::Integer(map.movement_modifier)),
         ("light", Cell::Integer(map.light)),
-        ("visibility", Cell::Integer(map.visibility)),
-        ("max_visibility", Cell::Integer(map.maximum_visibility)),
+        ("weather", Cell::Integer(map.weather)),
         ("cloudbase", Cell::Integer(i64::from(map.cloud_base))),
         ("sensor_flags", Cell::Integer(map.sensor_flags)),
         ("wind_direction", Cell::Integer(map.wind_direction)),

@@ -377,7 +377,6 @@ fn c_catalog_defaults() {
                 | "turret"
                 | "fixturret"
                 | "hulldown"
-                | "dig"
                 | "pickup"
                 | "dropoff"
                 | "fliparms"

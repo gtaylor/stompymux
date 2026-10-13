@@ -117,15 +117,20 @@ moving them through ordinary world commands. Placement preserves unit condition.
 It distinguishes horizontal range, spatial range including height/depth, and
 adjacent hex steps. It does not perform line-of-sight or weapon checks.
 
-`map-conditions <map>=<light>,<visibility>` sets saved battlefield
-lighting and weather visibility (0–60 hexes). The light is `day`, `dawn`,
-`dusk`, `full_moon_night`, `moonless_night` or `pitch_black`; see `help night`.
-For example, `@btech map-conditions #43=moonless_night,15`. This requires
-Wizard authority and control of the map. Units may remain on the map; terrain
-is unchanged. `inspect` displays light as 0 (day), 1 (dawn), 2 (dusk), 3 (full
-moon night), 4 (moonless night) or 5 (pitch black), plus visibility and the
-line-of-sight ceiling. Sensors reach fifteen hexes in any conditions; beyond that, visibility
-sets how far units see (see `help line of sight`). Failed saves leave the previous conditions in effect. Moving a map into or out of night switches running automatic searchlights on that map on or off.
+`map-conditions <map>=<light>,<weather>` sets saved battlefield lighting and
+weather. The light is `day`, `dawn`, `dusk`, `full_moon_night`,
+`moonless_night` or `pitch_black`; see `help night`. The weather is `clear`,
+`light_fog`, `heavy_fog`, `light_rain`, `moderate_rain`, `heavy_rain`,
+`gusting_rain`, `torrential_downpour`, `light_snow`, `moderate_snow`,
+`heavy_snow`, `snow_flurries`, `sleet`, `light_hail`, `heavy_hail`,
+`ice_storm`, `blowing_sand` or `lightning_storm`. For example,
+`@btech map-conditions #43=moonless_night,heavy_fog`. This requires Wizard
+authority and control of the map. Units may remain on the map; terrain is
+unchanged. `inspect` displays light as 0 (day), 1 (dawn), 2 (dusk), 3 (full
+moon night), 4 (moonless night) or 5 (pitch black), the weather, the visual
+range the two together allow (see `help line of sight`) and the line-of-sight
+ceiling. Failed saves leave the previous conditions in effect. Moving a map into
+or out of night switches running automatic searchlights on that map on or off.
 
 `@btech inspect` includes a placed unit's signed elevation. This follows its
 current altitude, including jumping and height retained after terrain collapses.
@@ -450,9 +455,8 @@ retaining stored ammunition. Leaving vacuum does not restore breached equipment.
 
 Use `@btech map-cloud <map>=<altitude>` to set the cloud boundary. Its initial
 altitude is 200; zero disables cloud obstruction. Values range from -32768 to
-32767 elevation levels. Neither sensors nor sight cross this boundary, for units or
-terrain. A unit exactly at the boundary is on its upper side. Radar and active
-probes ignore clouds.
+32767 elevation levels. Sight does not cross this boundary, for units or terrain;
+sensors do. A unit exactly at the boundary is on its upper side.
 Lua callbacks use `btech.map.cloud_base(actor, map, altitude)`. The value is saved
 with the map and survives restart.
 
@@ -676,8 +680,8 @@ match in full without regard to case. Lua uses
 `btech.map.set_field(actor, map, field, value)` with the same wizard authority.
 
 Writable fields are `cf`, `cfmax`, `regen_factor`, `gravity`, `temperature`,
-`maplight`, `mapname`, `mapvis`, `winddir`, `windspeed`, `cloudbase`, `flags`
-and `sensorflags`. Dimensions, `maxvis`, `buildonmap` and `firstfree` are read-only.
+`maplight`, `mapname`, `mapweather`, `winddir`, `windspeed`, `cloudbase`, `flags`
+and `sensorflags`. Dimensions, `buildonmap` and `firstfree` are read-only.
 `flags` and `sensorflags` take a list of names separated by spaces or commas,
 which replaces the current set; `-` clears every flag. `@VIEWMAP` shows the same
 names. Map `flags` are:
@@ -693,8 +697,10 @@ names. Map `flags` are:
 | `no_stacking` | Units share crowded hexes without stacking collisions, and autopilots do not route around them. |
 
 `sensorflags` switches perception off for everyone on the map: `sensors`
-disables the sensor band, `radar` radar and `probes` active probes.
-Light accepts 0–5 (day through pitch black, as for `map-conditions`) and visibility 0–60. Wind direction must be 0–359 and speed
+disables the built-in sensors, `radar` the radar system alone and `probes`
+active probes.
+Light accepts 0–5 (day through pitch black, as for `map-conditions`) and weather
+0–17 in the order of the weather names `map-conditions` lists. Wind direction must be 0–359 and speed
 nonnegative. Integrity must stay between zero and its maximum; set the maximum
 first when creating a structure. Numeric input must fit a signed 32-bit integer.
 Short fields clamp to signed 16-bit before domain checks; temperature clamps
@@ -909,7 +915,7 @@ continuation.
 `@ood <x> <y> [z]` inserts your occupied unit at the chosen coordinates on its
 current battlefield. Omitted altitude is 300; explicit altitude uses the same
 signed-short range as SETXY. You must be a wizard. Detach towing before insertion;
-prone Mechs, actively digging vehicles and units already in a cocoon are rejected.
+prone Mechs and units already in a cocoon are rejected.
 Ground units receive protection based on their current mass and descend during
 one-second airborne updates. VTOLs enter ordinary flight without a cocoon, with
 half their maximum speed requested. Stopped VTOLs wait aloft until startup finishes.
@@ -1101,8 +1107,8 @@ the `STAGGERING` status banner. `unusablearcs` remains a read-only zero; it does
 not report a weapon's current firing eligibility. Normal combat checks apply.
 
 `@viewunit tankcritstatus` reports vehicle critical conditions as letters:
-`a` turret locked, `b` turret jammed, `c` dug in, `d` digging, `e` crew stunned,
-and `f` tail rotor destroyed. `@viewunit critstatus2` reports `a` for a damaged
+`a` turret locked, `b` turret jammed, `e` crew stunned, and `f` tail rotor
+destroyed. `@viewunit critstatus2` reports `a` for a damaged
 hardened gyro and `b` for an unavailable installed light probe. A dash means none
 of those conditions apply. Lua unit fields expose the same values.
 
@@ -1228,12 +1234,12 @@ Edits retain material, survive restart, and share validation with Lua unit field
 
 
 `@setunit tankcritstatus <letters>` edits vehicle conditions: `a` turret locked,
-`b` turret jammed, `c` dug in, `d` digging, `e` crew stunned, and `f` tail rotor
-destroyed. `-` clears them. Flags retain material, turret heading and pending
-completion/recovery events. Setting digging or stun without a timer leaves that
-condition active until cleared; it does not start a timed dig or stun action.
-Cover and digging can coexist, as can turret lock and jam. Chassis and hardware
-constraints still apply. Native and Lua edits share rollback and persistence.
+`b` turret jammed, `e` crew stunned, and `f` tail rotor destroyed. `-` clears
+them; `c` and `d` (the removed dig-in states) are rejected. Flags retain material,
+turret heading and pending recovery events. Setting stun without a timer leaves
+it active until cleared; it does not start a timed stun action. Turret lock and
+jam can coexist. Chassis and hardware constraints still apply. Native and Lua
+edits share rollback and persistence.
 
 
 `@setunit unitmovetype <name>` changes locomotion while retaining equipment,

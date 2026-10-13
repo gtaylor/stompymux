@@ -96,7 +96,7 @@ pub(crate) fn set_control_by_actor(
         vehicle.definition().movement != VehicleMovement::Stationary && maximum > 0.0,
         "Vehicle cannot move"
     );
-    let mut text = if let Some(speed) = speed {
+    let text = if let Some(speed) = speed {
         let speed = if let Some(flight) = vehicle.vtol_flight() {
             vehicle.vtol_throttle_at(speed, flight.vertical_speed, maximum)?
         } else {
@@ -118,22 +118,12 @@ pub(crate) fn set_control_by_actor(
         motion.desired_speed = speed;
         super::motion_controls::speed_confirmation(speed)
     } else {
-        ensure!(
-            !vehicle.dig.dug_in,
-            "You are dug in; use speed to leave cover"
-        );
         let heading = heading.context("Missing vehicle control request")?;
         ensure!(heading.is_finite(), "Invalid heading");
         motion.desired_heading = heading.rem_euclid(360.0);
         format!("Desired heading: {:.1} degrees.", motion.desired_heading)
     };
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-    if speed.is_some_and(|speed| speed.abs() > 0.1) || (heading.is_some() && vehicle.dig.digging) {
-        if vehicle.cancel_digging() {
-            text = format!("You cease your attempts at digging in.\r\n{text}");
-        }
-        vehicle.dig = super::DigState::default();
-    }
     vehicle.motion = Some(motion);
     Ok(Notice { unit: id, text })
 }
@@ -268,6 +258,10 @@ pub(super) fn advance(
                 && (under_bridge || previous_tile.is_water_surface());
             let height = if tile.is_ice() && previous_height < i32::from(tile.water_line()) {
                 i32::from(tile.surface_height())
+            } else if tile.has_building() {
+                // A building is entered at the level the vehicle arrives at, or crossed on
+                // its roof from roof height (Total Warfare p. 167).
+                super::building_interior::entry_level(tile, previous_height)
             } else {
                 vehicle.terrain_elevation(tile, next_under)
             };
@@ -541,6 +535,33 @@ pub(super) fn advance(
                     .as_mut()
                     .unwrap();
                 motion.speed = motion.speed.signum() * (motion.speed.abs() - 21.5).max(0.0);
+            }
+            if let Some(breach) = super::building_interior::breach(
+                world,
+                id,
+                entry_motion.speed < 0.0,
+                rules.fall,
+                character,
+            )? {
+                if let Some(collapse) = breach.append_to(
+                    &mut report.notices,
+                    &mut report.pilot_notices,
+                    &mut report.experience_messages,
+                ) {
+                    report
+                        .vehicle_falls
+                        .extend(collapse.vehicle_falls.into_iter().map(|(_, fall)| fall));
+                    report
+                        .falls
+                        .extend(collapse.falls.into_iter().map(|(_, fall)| fall));
+                }
+                let vehicle = &world.btech.vehicles()[&id];
+                if vehicle.is_destroyed() || vehicle.immobilized() {
+                    next = vehicle.motion().unwrap();
+                    under_bridge = vehicle.under_bridge();
+                    interrupted = true;
+                    break;
+                }
             }
             let event = super::mine_event::resolve(
                 world,

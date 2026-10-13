@@ -315,17 +315,18 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "map_environment",
         error::wrap(lua, environment, "btech.operation.failed")?,
     )?;
-    let conditions = lua.create_function(|lua, (id, light, visibility): (i64, Value, i64)| {
+    let conditions = lua.create_function(|lua, (id, light, weather): (i64, Value, Value)| {
         crate::lua::transactions::require(lua)?;
         let light = constants::require(light, 2, "light", &constants::LIGHT_LEVELS)?;
+        let weather = constants::require(weather, 3, "weather", &constants::WEATHER_CONDITIONS)?;
         let scripts = crate::Scripts::services(lua)?;
         crate::lua::transactions::run(lua, &scripts.world, || {
             (|| -> anyhow::Result<_> {
-                crate::set_battle_map_visibility(
+                crate::set_battle_map_conditions(
                     &mut scripts.world_mut(),
                     ObjectId(id),
                     crate::Light::from_stored(i64::from(light))?,
-                    u8::try_from(visibility)?,
+                    crate::Weather::from_stored(i64::from(weather))?,
                 )
             })()
             .map_err(|e| error::failure("btech.operation.failed", e))?;

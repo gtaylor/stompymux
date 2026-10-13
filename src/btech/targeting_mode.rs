@@ -53,7 +53,9 @@ pub(super) fn apply(
                         )
                     });
             if airborne {
-                if super::scanner::scanner_unit(world, source.unit).is_some_and(|unit| unit.radar) {
+                if world.btech.unit(source.unit).is_some_and(|unit| {
+                    super::with_unit!(unit, |unit| unit.definition().has_special("AntiAircraft"))
+                }) {
                     -3
                 } else {
                     -2

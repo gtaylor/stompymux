@@ -131,7 +131,7 @@ async fn movement_stance_and_takeoff_controls_share_the_fortification_gate() {
         match index {
             0 => commands.push("jump 0 1"),
             1 => commands.push("hulldown"),
-            2 => commands.push("dig"),
+            2 => {}
             3 => commands.extend(["takeoff", "vertical 1"]),
             _ => unreachable!(),
         }

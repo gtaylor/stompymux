@@ -1,6 +1,8 @@
-//! Automatic perception scenarios: the sensor band, sight, probes, jamming, damage and acquisition.
+//! Perception under the Tactical Operations double-blind rules: visual ranges by light and
+//! weather, searchlights and lit targets, smoke, the automatic sensor suite's sweeps by system
+//! and band, the terrain each sensor cares about, probe sweeps and the discovery of hidden
+//! units.
 use crate::support;
-use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 use DetectionChannel::{Probe, Sensors, Sight};
@@ -42,16 +44,46 @@ impl Lane {
         .unwrap();
     }
 
-    /// Current channel and aim of the observer's view of the target.
-    fn perceived(&self) -> Option<(DetectionChannel, i16)> {
+    /// Current channel and identification of the observer's view of the target.
+    fn perceived(&self) -> Option<(DetectionChannel, bool)> {
         battle_perceive(&self.world, self.observer, self.target)
             .unwrap()
-            .map(|perception| (perception.channel, perception.aim_modifier))
+            .map(|perception| (perception.channel, perception.identified))
     }
 
-    /// Set battlefield light and weather visibility.
-    fn conditions(&mut self, light: Light, visibility: u8) {
-        set_battle_map_visibility(&mut self.world, self.map, light, visibility).unwrap();
+    /// Set battlefield light and weather.
+    fn conditions(&mut self, light: Light, weather: Weather) {
+        set_battle_map_conditions(&mut self.world, self.map, light, weather).unwrap();
+    }
+
+    /// Give the observer a fixed sweep result for the turn.
+    fn sweep(&mut self, roll: u8) {
+        self.world
+            .btech
+            .rewrite_unit_record(self.observer, |record| {
+                record["sensor_sweep"] = serde_json::json!(roll);
+            })
+            .unwrap();
+    }
+
+    /// The sensor system whose sweep found the target, if a sweep did.
+    fn found_by(&self) -> Option<SensorMode> {
+        battle_perceive(&self.world, self.observer, self.target)
+            .unwrap()
+            .and_then(|perception| perception.sweep)
+            .filter(|sweep| sweep.detected)
+            .map(|sweep| sweep.mode)
+    }
+
+    /// Replace one row of the lane's terrain.
+    fn terrain(&mut self, y: usize, hex: Hex) {
+        let map = self.map;
+        self.world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["terrain"][y] = serde_json::to_value(hex).unwrap();
+            })
+            .unwrap();
     }
 }
 
@@ -59,9 +91,7 @@ impl Lane {
 enum Observer<'a> {
     /// A Demolisher tank, optionally with one front-mounted item such as a probe.
     Vehicle(Option<&'a str>),
-    /// A stationary radio tower, optionally with one front-mounted item.
-    Installation(Option<&'a str>),
-    /// A Jenner, whose head carries two sensor criticals.
+    /// A Jenner.
     Mech,
 }
 
@@ -81,41 +111,34 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
     for id in [observer_id, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    let vehicle = |source: &str, equipment: Option<&str>| {
-        let mut definition = VehicleTemplate::parse("test", source).unwrap();
-        if let Some(equipment) = equipment {
-            let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
-            front.criticals.clear();
-            front.criticals.insert(
-                0,
-                CriticalDefinition {
-                    equipment: equipment.into(),
-                    data: "-".into(),
-                    modes: vec![],
-                },
-            );
-        }
-        definition
-    };
     match observer {
-        Observer::Vehicle(equipment) => create_battle_vehicle(
-            &mut world,
-            observer_id,
-            vehicle(include_str!("../game/units/Demolisher.toml"), equipment),
-        )
-        .unwrap(),
-        Observer::Installation(equipment) => create_battle_vehicle(
-            &mut world,
-            observer_id,
-            vehicle(include_str!("../game/units/RadioTower.toml"), equipment),
-        )
-        .unwrap(),
-        Observer::Mech => create_battle_unit(
-            &mut world,
-            observer_id,
-            MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
-        )
-        .unwrap(),
+        Observer::Vehicle(equipment) => {
+            let mut definition =
+                VehicleTemplate::parse("test", include_str!("../game/units/Demolisher.toml"))
+                    .unwrap();
+            if let Some(equipment) = equipment {
+                let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
+                front.criticals.clear();
+                front.criticals.insert(
+                    0,
+                    CriticalDefinition {
+                        equipment: equipment.into(),
+                        data: "-".into(),
+                        modes: vec![],
+                    },
+                );
+            }
+            create_battle_vehicle(&mut world, observer_id, definition).unwrap();
+        }
+        Observer::Mech => {
+            // The lane's Jenner carries a searchlight so night sight can be exercised.
+            let mut definition =
+                MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
+            definition
+                .attributes
+                .insert("specials".into(), "FlipArms Searchlight".into());
+            create_battle_unit(&mut world, observer_id, definition).unwrap();
+        }
     }
     create_battle_unit(
         &mut world,
@@ -126,6 +149,8 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer_id, map, 0, 0).unwrap();
     place_battle_unit(&mut world, target, map, 0, 1).unwrap();
+    world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer_id);
+    assign_battle_pilot(&mut world, observer_id, ObjectId(1)).unwrap();
     for id in [observer_id, target] {
         set_power(&mut world, id, Power::Running);
     }
@@ -142,8 +167,6 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
 }
 
 /// Switch a unit on or off without startup countdowns by editing its saved power state.
-/// This edits the raw record because some lane targets deliberately carry an active null
-/// signature without its equipment, so perception is tested apart from that equipment.
 fn set_power(world: &mut World, id: ObjectId, power: Power) {
     world
         .btech
@@ -153,394 +176,365 @@ fn set_power(world: &mut World, id: ObjectId, power: Power) {
         .unwrap();
 }
 
-/// Drift permanent smoke over rows two and three of the lane: heavy smoke and light smoke
-/// together count three points, like a heavy and a light woods hex.
-fn add_smoke(lane: &mut Lane) {
-    for (y, kind) in [(2, DecorationKind::HeavySmoke), (3, DecorationKind::Smoke)] {
-        set_map_decoration(
-            &mut lane.world,
-            lane.map,
-            HexCoordinate { x: 0, y },
-            Some(Decoration::new(kind, 0, None)),
-        )
-        .unwrap();
-    }
-}
-
-/// Neutral aim rules for inspecting the perception term of a weapon's aim.
-fn aim_rules() -> AimRules {
-    AimRules {
-        woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
-        hit_arc_mode: 1,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
-        override_weapon_arcs: false,
-    }
-}
-
-/// Inside fifteen hexes the sensor band ignores darkness; beyond it, sight follows visibility,
-/// darkness costs +1 unless the target is lit, and lighting triples night reach.
+/// Sight reaches exactly the Visual Range Table's distance for the light and the weather,
+/// whichever is shorter, and identifies what it sees.
 #[tokio::test]
-async fn sensor_band_ignores_darkness_and_sight_follows_visibility() {
-    let mut lane = lane(&grass(62), Observer::Vehicle(None)).await;
-    lane.conditions(Light::MoonlessNight, 10);
-    // Night visibility 10 sets a thirty-hex map ceiling.
-    for (distance, lit, expected) in [
-        (1, false, Some((Sensors, 0))),
-        (15, false, Some((Sensors, 0))),
-        (16, false, None),
-        (16, true, Some((Sight, 0))),
-        (30, true, Some((Sight, 0))),
-        (31, true, None),
+async fn sight_follows_the_visual_range_table() {
+    let mut lane = lane(&grass(62), Observer::Mech).await;
+    for (light, weather, reach) in [
+        (Light::Day, Weather::Clear, 60),
+        (Light::Day, Weather::LightFog, 30),
+        (Light::Day, Weather::ModerateRain, 20),
+        (Light::Day, Weather::HeavyRain, 15),
+        (Light::Day, Weather::BlowingSand, 10),
+        (Light::Day, Weather::HeavyFog, 5),
+        (Light::Dusk, Weather::Clear, 15),
+        (Light::Dusk, Weather::LightSnow, 15),
+        (Light::FullMoonNight, Weather::Clear, 10),
+        (Light::FullMoonNight, Weather::HeavyFog, 5),
+        (Light::MoonlessNight, Weather::Clear, 5),
+        (Light::PitchBlack, Weather::Clear, 3),
+        (Light::PitchBlack, Weather::HeavyFog, 3),
     ] {
-        lane.place_target(distance);
-        lane.target_signature(false, lit);
+        assert_eq!(visual_range(light, weather), reach, "{light:?} {weather:?}");
+        lane.conditions(light, weather);
+        lane.place_target(i64::from(reach));
         assert_eq!(
             lane.perceived(),
-            expected,
-            "night distance={distance} lit={lit}"
+            Some((Sight, true)),
+            "{light:?} {weather:?}"
         );
+        lane.place_target(i64::from(reach) + 1);
+        assert_eq!(
+            lane.perceived(),
+            None,
+            "{light:?} {weather:?} one hex farther"
+        );
+        let report = battle_perception_report(&lane.world, lane.observer).unwrap();
+        assert_eq!(report.profile.sight_range, u16::from(reach));
     }
-    // A shorter band leaves sight inside visibility, with darkness costing +1 unless lit.
-    configure_battle_perception(&mut lane.world, 5);
-    lane.place_target(8);
-    for (lit, aim) in [(false, 0), (true, 0)] {
-        lane.target_signature(false, lit);
-        assert_eq!(lane.perceived(), Some((Sight, aim)), "lit={lit}");
-    }
-    // Dusk sight works as by day; its darkness costs to hit through the light term.
-    lane.conditions(Light::Dusk, 10);
-    lane.target_signature(false, true);
-    assert_eq!(lane.perceived(), Some((Sight, 0)));
-    lane.place_target(16);
+    assert_eq!(MAX_SIGHT, 60);
+}
+
+/// At night a searchlight of the observer's own lets it see thirty hexes, a lit target is
+/// seen out to forty-five, and smoke on the way takes a hex off the reach per point.
+#[tokio::test]
+async fn searchlights_lit_targets_and_smoke_change_the_reach_of_sight() {
+    let mut lane = lane(&grass(50), Observer::Mech).await;
+    set_battle_map_perception(&mut lane.world, lane.map, MapPerceptionFlag::Sensors, false)
+        .unwrap();
+    lane.conditions(Light::MoonlessNight, Weather::Clear);
+    lane.place_target(6);
     assert_eq!(lane.perceived(), None);
-    // Daylight reaches the full weather visibility.
-    lane.conditions(Light::Day, 30);
+    toggle_battle_searchlight(&mut lane.world, lane.observer, ObjectId(1)).unwrap();
+    for _ in 0..6 {
+        advance_battle_searchlights(&mut lane.world);
+    }
+    assert!(battle_unit_illuminated(&lane.world, lane.observer));
+    lane.place_target(30);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    assert_eq!(
+        battle_perception_report(&lane.world, lane.observer)
+            .unwrap()
+            .profile
+            .sight_range,
+        u16::from(SEARCHLIGHT_SIGHT)
+    );
+    lane.place_target(31);
+    assert_eq!(lane.perceived(), None);
+    // A lit target is seen far beyond the observer's own reach, lamp or no lamp.
+    lane.target_signature(false, true);
+    lane.place_target(45);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    lane.place_target(46);
+    assert_eq!(lane.perceived(), None);
+    toggle_battle_searchlight(&mut lane.world, lane.observer, ObjectId(1)).unwrap();
+    for _ in 0..6 {
+        advance_battle_searchlights(&mut lane.world);
+    }
+    assert!(!battle_unit_illuminated(&lane.world, lane.observer));
+    lane.place_target(45);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    assert_eq!(LIT_TARGET_SIGHT, 45);
+    // Daylight needs no lamp: sixty hexes with or without one.
     lane.target_signature(false, false);
-    for (distance, expected) in [(30, Some((Sight, 0))), (31, None)] {
-        lane.place_target(distance);
-        assert_eq!(lane.perceived(), expected, "day distance={distance}");
-    }
-    let profile = battle_perception_profile(&lane.world, lane.observer).unwrap();
-    assert_eq!(
-        (
-            profile.sensor_range,
-            profile.sight_range,
-            profile.lit_sight_range
-        ),
-        (5, 30, 30)
-    );
-}
-
-/// Hills, dense woods and smoke break the clear line for sensors and sight; a probe still
-/// finds the target, behind the hill only as a lock-and-spot contact.
-#[tokio::test]
-async fn obstacles_block_sensors_and_sight_but_not_probes() {
-    for (name, middle, probed) in [
-        ("hill", [".0", ".4"], (false, 0)),
-        ("woods", ["\"0", "`0"], (true, 0)),
-        ("smoke", [".0", ".0"], (true, 0)),
-    ] {
-        let rows = [".0", middle[0], middle[1], ".0", ".0", ".0", ".0", ".0"];
-        let mut bare = lane(&rows, Observer::Vehicle(None)).await;
-        if name == "smoke" {
-            add_smoke(&mut bare);
-        }
-        bare.place_target(4);
-        assert_eq!(bare.perceived(), None, "{name} without a probe");
-
-        let mut probe = lane(&rows, Observer::Vehicle(Some("BeagleProbe"))).await;
-        if name == "smoke" {
-            add_smoke(&mut probe);
-        }
-        probe.place_target(4);
-        let perception = battle_perceive(&probe.world, probe.observer, probe.target)
-            .unwrap()
-            .unwrap();
-        assert_eq!(perception.channel, Probe, "{name}");
-        assert!(perception.probed);
-        assert_eq!(
-            (perception.identified, perception.aim_modifier),
-            probed,
-            "{name}"
-        );
-        refresh_battle_contacts(&mut probe.world, &[probe.observer]).unwrap();
-        let view = visible_battle_contact(&probe.world, probe.observer, probe.target)
-            .unwrap()
-            .unwrap();
-        let code = if probed.0 { "P " } else { "p " };
-        assert!(
-            view.short_text.starts_with(code),
-            "{name}: {}",
-            view.short_text
-        );
-        let aim = battle_aim_modifiers(
-            &probe.world,
-            probe.observer,
-            probe.target,
-            0,
-            4,
-            aim_rules(),
-        )
-        .unwrap();
-        assert_eq!(
-            aim.perception.map(|perception| perception.direct_fire),
-            Some(probed.0),
-            "{name}"
-        );
-        // Beyond the probe's six hexes nothing reaches the target.
-        probe.place_target(7);
-        assert_eq!(probe.perceived(), None, "{name} beyond probe range");
-    }
-    // Two woods points still leave a clear line, and they count against aim.
-    let mut light = lane(&[".0", "`0", "`0", ".0"], Observer::Vehicle(None)).await;
-    light.place_target(3);
-    assert_eq!(light.perceived(), Some((Sensors, 2)));
-    refresh_battle_contacts(&mut light.world, &[light.observer]).unwrap();
-    let view = visible_battle_contact(&light.world, light.observer, light.target)
-        .unwrap()
-        .unwrap();
-    assert!(view.short_text.starts_with("S "), "{}", view.short_text);
-    assert_eq!(view.detection, Some(Sensors));
-}
-
-/// Sensor damage halves and then removes the band; stationary installations reach forty
-/// percent further; map switches turn channels off for everyone.
-#[tokio::test]
-async fn damage_installations_and_map_switches_shape_the_band() {
-    let mut mech = lane(&grass(4), Observer::Mech).await;
-    for (slot, status, range) in [
-        (None, PerceptionStatus::Ready, 15),
-        (Some(1), PerceptionStatus::Degraded, 7),
-        (Some(4), PerceptionStatus::Damaged, 0),
-    ] {
-        if let Some(slot) = slot {
-            destroy_battle_critical(
-                &mut mech.world,
-                mech.observer,
-                CriticalLocation {
-                    section: MechSection::Head,
-                    slot,
-                },
-            )
-            .unwrap();
-        }
-        let profile = battle_perception_profile(&mech.world, mech.observer).unwrap();
-        assert_eq!((profile.sensors, profile.sensor_range), (status, range));
-    }
-
-    let installation = lane(&grass(4), Observer::Installation(Some("BeagleProbe"))).await;
-    let profile = battle_perception_profile(&installation.world, installation.observer).unwrap();
-    assert_eq!(profile.sensor_range, 21);
-    assert_eq!(profile.probe.map(|probe| probe.range), Some(5));
-
-    let mut switched = lane(&grass(4), Observer::Vehicle(Some("BeagleProbe"))).await;
-    let profile = battle_perception_profile(&switched.world, switched.observer).unwrap();
-    assert_eq!(
-        (profile.sensors, profile.probe.unwrap().status),
-        (PerceptionStatus::Ready, PerceptionStatus::Ready)
-    );
-    for flag in [MapPerceptionFlag::Sensors, MapPerceptionFlag::Probes] {
-        set_battle_map_perception(&mut switched.world, switched.map, flag, false).unwrap();
-    }
-    let profile = battle_perception_profile(&switched.world, switched.observer).unwrap();
-    assert_eq!(
-        (
-            profile.sensors,
-            profile.sensor_range,
-            profile.probe.unwrap().status
-        ),
-        (PerceptionStatus::Disabled, 0, PerceptionStatus::Disabled)
-    );
-    switched.conditions(Light::MoonlessNight, 1);
-    switched.place_target(3);
-    assert_eq!(switched.perceived(), None);
-    assert_eq!(
-        switched.world.btech.maps()[&switched.map].sensor_flags,
-        MapPerceptionFlag::Sensors.bit() | MapPerceptionFlag::Probes.bit()
-    );
-}
-
-/// Hostile ECM jams the sensor band and the probe, leaving only sight.
-#[tokio::test]
-async fn hostile_ecm_leaves_only_sight() {
-    let mut lane = lane(&grass(8), Observer::Vehicle(Some("BeagleProbe"))).await;
-    let jammer = lane
-        .world
-        .create(&lane.config, "Jammer".into(), Kind::Thing);
-    lane.world.objects.get_mut(&jammer).unwrap().home = Some(ObjectId(lane.config.home()));
-    create_battle_unit(
+    lane.conditions(Light::Day, Weather::Clear);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    // One point of light smoke on the way shortens a moonless night's five hexes to four.
+    lane.conditions(Light::MoonlessNight, Weather::Clear);
+    lane.place_target(5);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    set_map_decoration(
         &mut lane.world,
-        jammer,
-        MechTemplate::parse("RVN-1X", include_str!("../game/units/RVN-1X.toml")).unwrap(),
+        lane.map,
+        HexCoordinate { x: 0, y: 2 },
+        Some(Decoration::new(DecorationKind::Smoke, 0, None)),
     )
     .unwrap();
-    place_battle_unit(&mut lane.world, jammer, lane.map, 0, 6).unwrap();
-    set_power(&mut lane.world, jammer, Power::Running);
+    assert_eq!(lane.perceived(), None);
+    lane.place_target(4);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    lane.world.validate(&lane.config).unwrap();
+}
+
+/// Sensors find what sight cannot: one sweep per turn is tried against every system of the
+/// suite, the roll picks one range band, 'Mechs and vehicles use their own brackets, hills stop
+/// infrared and radar but not magscan or seismic, seismic sensors need ground movement, and
+/// sensor contacts are never identified.
+#[tokio::test]
+async fn sensor_sweeps_find_targets_in_one_band_of_each_system() {
+    for (observer, infrared, radar_short, seismic_short) in [
+        (Observer::Mech, [10, 20, 30], 8, 2_i64),
+        (Observer::Vehicle(None), [9, 18, 27], 6, 1),
+    ] {
+        let mut lane = lane(&grass(40), observer).await;
+        lane.conditions(Light::PitchBlack, Weather::Clear);
+        let [short, medium, long] = infrared;
+        for (roll, reach) in [
+            (8, short),
+            (7, short),
+            (6, medium),
+            (5, medium),
+            (4, long),
+            (2, long),
+        ] {
+            lane.sweep(roll);
+            lane.place_target(reach);
+            assert_eq!(lane.perceived(), Some((Sensors, false)), "roll {roll}");
+            assert_eq!(lane.found_by(), Some(SensorMode::Infrared), "roll {roll}");
+            lane.place_target(reach + 1);
+            assert_eq!(lane.perceived(), None, "roll {roll} one hex past the band");
+        }
+        // The medium band starts past every system's short band; a nine finds nothing.
+        lane.sweep(5);
+        lane.place_target(radar_short);
+        assert_eq!(lane.perceived(), None);
+        lane.sweep(9);
+        lane.place_target(4);
+        assert_eq!(lane.perceived(), None);
+        // Within three hexes sight still wins, identifying the target.
+        lane.place_target(3);
+        assert_eq!(lane.perceived(), Some((Sight, true)));
+        // A hill between them stops infrared and radar; the magscan looks straight through.
+        lane.terrain(2, Hex::new(Terrain::Clear, 9));
+        lane.sweep(7);
+        lane.place_target(radar_short);
+        assert_eq!(lane.perceived(), Some((Sensors, false)));
+        assert_eq!(lane.found_by(), Some(SensorMode::Magscan));
+        // Heavy industrial ground hides the target from the magscan too; only its footsteps
+        // give it away, in the seismic long band on a low roll, and only while it moves.
+        let seismic_long = seismic_short * 3;
+        lane.terrain(1, Hex::new(Terrain::Clear, 9));
+        lane.terrain(
+            seismic_long as usize,
+            Hex::new(Terrain::Clear, 0).with_ground(Ground::HeavyIndustrial),
+        );
+        lane.sweep(4);
+        lane.place_target(seismic_long);
+        assert_eq!(lane.perceived(), None, "a parked target is silent");
+        lane.world
+            .btech
+            .rewrite_unit_record(lane.target, |record| {
+                record["motion"]["speed"] = serde_json::json!(10.75);
+            })
+            .unwrap();
+        assert_eq!(lane.perceived(), Some((Sensors, false)));
+        assert_eq!(lane.found_by(), Some(SensorMode::Seismic));
+        // Switching the battlefield's sensors off leaves sight alone.
+        set_battle_map_perception(&mut lane.world, lane.map, MapPerceptionFlag::Sensors, false)
+            .unwrap();
+        assert_eq!(lane.perceived(), None);
+        let profile = battle_perception_report(&lane.world, lane.observer)
+            .unwrap()
+            .profile;
+        assert_eq!(profile.sensor.status, PerceptionStatus::Disabled);
+        assert!(profile.sensor.systems.is_empty());
+        lane.world.validate(&lane.config).unwrap();
+    }
+}
+
+/// Each new turn rolls a fresh sweep from the map's own dice, and the first contact refresh
+/// of a unit without a sweep rolls one.
+#[tokio::test]
+async fn sweeps_roll_at_the_turn_and_on_demand() {
+    let mut lane = lane(&grass(40), Observer::Mech).await;
+    world_turn(&mut lane.world, 2);
+    assert!(sweep_of(&lane, lane.observer).is_none());
+    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
+    let first = sweep_of(&lane, lane.observer).expect("first refresh sweeps");
+    assert!((2..=12).contains(&first));
+    assert_eq!(
+        events.len(),
+        1,
+        "the adjacent target is a contact: {events:?}"
+    );
+    // The same sweep stands for the rest of the turn.
+    refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
+    advance_battle_sensor_sweeps(&mut lane.world).unwrap();
+    assert_eq!(sweep_of(&lane, lane.observer), Some(first));
+    // A new turn rolls again for every running unit.
+    world_turn(&mut lane.world, 0);
+    advance_battle_sensor_sweeps(&mut lane.world).unwrap();
+    assert!(sweep_of(&lane, lane.observer).is_some());
+    assert!(sweep_of(&lane, lane.target).is_some());
+    // The report lists every system of the suite with the roll.
+    let report = battle_perception_report(&lane.world, lane.observer).unwrap();
+    assert!(
+        report.text.contains(&format!(
+            "Sensors: infrared 10/20/30, magnetic anomaly 10/20/30, radar 8/16/24, seismic 2/4/6 hexes; sweep {} ",
+            report.profile.sensor.sweep.unwrap()
+        )),
+        "{}",
+        report.text
+    );
+    persistence::save(&lane.config.database(), &lane.world)
+        .await
+        .unwrap();
+    assert_eq!(
+        persistence::load(&lane.config.database())
+            .await
+            .unwrap()
+            .btech,
+        lane.world.btech
+    );
+}
+
+/// The sweep a 'Mech in the lane last rolled.
+fn sweep_of(lane: &Lane, id: ObjectId) -> Option<u8> {
+    lane.world.btech.constructed_units()[&id].sensor_sweep()
+}
+
+/// Put the turn clock at `phase`, where zero starts a turn, by editing the saved state.
+fn world_turn(world: &mut World, phase: i64) {
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["turn_clock"] = phase.into();
+    world.btech = serde_json::from_value(state).unwrap();
+}
+
+/// A hidden enemy is never perceived until an enemy stands next to it or an enemy probe in
+/// reveal range has a clear line to it; its own side always sees it.
+#[tokio::test]
+async fn hidden_units_are_revealed_by_adjacency_and_probes() {
+    let mut lane = lane(&grass(12), Observer::Vehicle(Some("BeagleProbe"))).await;
+    lane.target_signature(true, false);
+    lane.place_target(5);
+    assert_eq!(lane.perceived(), None, "hidden five hexes off in daylight");
+    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
+    assert!(events.iter().all(|event| event.revealed.is_none()));
+    assert!(
+        lane.world.btech.constructed_units()[&lane.target]
+            .signature()
+            .hidden
+    );
+    // Within the Beagle's four hexes the probe finds it.
+    lane.place_target(4);
+    lane.target_signature(true, false);
+    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
+    assert!(
+        events.iter().any(|event| event.revealed.is_some()),
+        "{events:?}"
+    );
+    assert!(
+        !lane.world.btech.constructed_units()[&lane.target]
+            .signature()
+            .hidden
+    );
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    // A hill between them hides it from the probe again.
+    lane.terrain(2, Hex::new(Terrain::Clear, 9));
+    lane.target_signature(true, false);
+    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
+    assert!(events.iter().all(|event| event.revealed.is_none()));
+    assert!(
+        lane.world.btech.constructed_units()[&lane.target]
+            .signature()
+            .hidden
+    );
+    // Standing next to it reveals it, probe or no probe, hill or no hill.
+    lane.terrain(2, Hex::new(Terrain::Clear, 0));
+    lane.place_target(1);
+    lane.target_signature(true, false);
+    assert_eq!(lane.perceived(), None);
+    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
+    assert!(events.iter().any(|event| event.revealed.is_some()));
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    // A teammate always knows where its hidden friend is.
+    lane.target_signature(true, false);
     set_battle_unit_signature(
         &mut lane.world,
-        jammer,
+        lane.observer,
         UnitSignature {
             team: 2,
-            ..Default::default()
+            hidden: false,
+            illuminated: false,
         },
     )
     .unwrap();
-    lane.world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(jammer);
-    assign_battle_pilot(&mut lane.world, jammer, ObjectId(2)).unwrap();
-    lane.conditions(Light::MoonlessNight, 2);
-    lane.place_target(4);
-    assert_eq!(lane.perceived(), Some((Sensors, 0)));
-    toggle_battle_electronics(
-        &mut lane.world,
-        jammer,
-        ObjectId(2),
-        ElectronicSuite::Guardian,
-        ElectronicMode::Ecm,
-    )
-    .unwrap();
-    let profile = battle_perception_profile(&lane.world, lane.observer).unwrap();
-    assert_eq!(
-        (
-            profile.sensors,
-            profile.sensor_range,
-            profile.probe.unwrap().status
-        ),
-        (PerceptionStatus::Jammed, 0, PerceptionStatus::Jammed)
-    );
-    assert_eq!(lane.perceived(), None);
-    lane.place_target(2);
-    assert_eq!(lane.perceived(), Some((Sight, 0)));
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    lane.world.validate(&lane.config).unwrap();
 }
 
-/// Stealth armor and null signature hide a unit from enemy sensors and ordinary probes, but
-/// not from sight or a Bloodhound.
+/// A carried probe sweeps with the suite ahead of the built-in sensors, with its own longer
+/// brackets, and what it finds shows the probe channel.
 #[tokio::test]
-async fn concealed_targets_hide_from_sensors_and_ordinary_probes() {
-    for (equipment, expected) in [
-        (None, None),
-        (Some("BeagleProbe"), None),
-        (Some("BloodhoundProbe"), Some((Probe, 0))),
-    ] {
-        let mut lane = lane(&grass(12), Observer::Vehicle(equipment)).await;
-        let mut state = serde_json::to_value(&lane.world.btech).unwrap();
-        state["constructed"][lane.target.0.to_string()]["null_signature"]["enabled"] = true.into();
-        lane.world.btech = serde_json::from_value(state).unwrap();
-        lane.conditions(Light::MoonlessNight, 2);
-        lane.place_target(5);
-        assert_eq!(lane.perceived(), expected, "{equipment:?}");
-        lane.conditions(Light::Day, 30);
-        lane.place_target(10);
-        assert_eq!(
-            lane.perceived(),
-            Some((Sight, 0)),
-            "{equipment:?} in daylight"
-        );
-    }
-}
-
-/// Visible targets are acquired at once without dice; hidden hostile units need a probe beyond
-/// five hexes, are found automatically inside three, and require a search in between.
-#[tokio::test]
-async fn acquisition_is_instant_except_for_hidden_units() {
-    let rules = ContactRules {
-        hostile: true,
-        hidden: true,
-        perception: 6,
-        acquire: true,
-    };
-    // `None` means the outcome depends on the search roll.
-    for (distance, equipment, acquired, rolled) in [
-        (2, None, Some(true), false),
-        (6, None, Some(false), false),
-        (6, Some("BloodhoundProbe"), Some(true), false),
-        (4, None, None, true),
-    ] {
-        let mut lane = lane(&grass(8), Observer::Vehicle(equipment)).await;
-        lane.target_signature(true, false);
-        lane.place_target(distance);
-        let update =
-            update_battle_contact(&mut lane.world, lane.observer, lane.target, rules).unwrap();
-        let detection = update.detection.unwrap();
-        assert_eq!(detection.roll.is_some(), rolled, "distance={distance}");
-        if let Some(acquired) = acquired {
-            assert_eq!(
-                update.transition,
-                if acquired {
-                    ContactTransition::Acquired
-                } else {
-                    ContactTransition::Unseen
-                },
-                "distance={distance} equipment={equipment:?}"
-            );
-        } else {
-            assert!(detection.threshold > 0);
-            assert_eq!(
-                detection.detected,
-                detection.roll.unwrap() < detection.threshold
-            );
-        }
-    }
-    // A visible hostile twelve hexes away is acquired on the next scan without touching dice.
-    let mut lane = lane(&grass(14), Observer::Vehicle(None)).await;
+async fn probe_sweeps_with_the_probes_brackets() {
+    let mut lane = lane(&grass(40), Observer::Vehicle(Some("BeagleProbe"))).await;
+    lane.conditions(Light::PitchBlack, Weather::Clear);
+    // Vehicle infrared stops at nine hexes; the Beagle's short band reaches twelve.
+    lane.sweep(7);
     lane.place_target(12);
-    let dice = |world: &World, id: ObjectId| {
-        serde_json::to_value(&world.btech.vehicles()[&id]).unwrap()["dice"].clone()
-    };
-    let before = dice(&lane.world, lane.observer);
-    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
-    assert!(events.iter().any(|event| event.acquired));
-    assert!(
-        lane.world.btech.vehicles()[&lane.observer]
-            .contacts()
-            .contains_key(&lane.target)
+    assert_eq!(lane.perceived(), Some((Probe, false)));
+    lane.place_target(13);
+    assert_eq!(lane.perceived(), None);
+    lane.place_target(9);
+    assert_eq!(
+        lane.perceived(),
+        Some((Probe, false)),
+        "the probe sweeps first"
     );
-    assert_eq!(dice(&lane.world, lane.observer), before);
-}
-
-/// The sensor command and Lua report the same automatic perception summary.
-#[tokio::test]
-async fn sensor_command_and_lua_report_perception() {
-    let mut lane = lane(&grass(4), Observer::Vehicle(Some("BeagleProbe"))).await;
-    lane.world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(lane.observer);
-    let observer = lane.observer;
-    let config = lane.config.clone();
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(lane.world))).unwrap();
-    let text = support::run_text(&scripts, &config, ObjectId(1), 1, "sensor");
-    for line in [
-        "Sensors: 15 hexes in any light or weather",
-        "Sight:   30 hexes",
-        "Probe:   Beagle Active Probe, 4 hexes",
-        "Radar:   none",
-    ] {
-        assert!(text.contains(line), "{text}");
-    }
+    let report = battle_perception_report(&lane.world, lane.observer).unwrap();
     assert!(
-        support::run_text(&scripts, &config, ObjectId(1), 1, "sensor V L")
-            .contains("Sensors are automatic")
+        report
+            .text
+            .contains("Sensors: infrared 9/18/27, magnetic anomaly 9/18/27, radar 6/12/18, seismic 1/2/3 hexes; sweep 7 finds the short band"),
+        "{}",
+        report.text
     );
-    let report = battle_perception_report(&scripts.world(), observer).unwrap();
-    assert!(report.running);
-    let range: i64 = scripts
-        .eval_callback(&format!(
-            "return btech.unit.perception({}).sensor_range",
-            observer.0
-        ))
-        .unwrap();
-    assert_eq!(range, 15);
-    let lua_text: String = scripts
-        .eval_callback(&format!(
-            "return btech.unit.perception({}).text",
-            observer.0
-        ))
-        .unwrap();
-    assert_eq!(lua_text, report.text);
-    let probe: String = scripts
-        .eval_callback("return btech.unit.detection_channels.PROBE")
-        .unwrap();
-    assert_eq!(probe, "probe");
+    assert!(
+        report.text.contains(
+            "Probe:   Beagle Active Probe, sweeps 12/24/36 hexes and reveals hidden units within 4 hexes"
+        ),
+        "{}",
+        report.text
+    );
+    // Hills do not stop a probe sweep.
+    lane.terrain(2, Hex::new(Terrain::Clear, 9));
+    lane.place_target(12);
+    assert_eq!(lane.perceived(), Some((Probe, false)));
+    // Switching probes off on the map leaves the built-in sensors, which the hill stops for
+    // infrared and radar but not for the magscan.
+    set_battle_map_perception(&mut lane.world, lane.map, MapPerceptionFlag::Probes, false).unwrap();
+    assert_eq!(
+        lane.perceived(),
+        None,
+        "twelve hexes is past the vehicle magscan short band"
+    );
+    lane.place_target(9);
+    assert_eq!(lane.perceived(), Some((Sensors, false)));
+    assert_eq!(lane.found_by(), Some(SensorMode::Magscan));
+    assert_eq!(
+        battle_ecm_modifier(
+            SensorMode::Probe,
+            true,
+            Some(ActiveProbe::Beagle),
+            TargetSystems {
+                angel: false,
+                guardian: true,
+                null_signature: false,
+                stealth: false,
+            }
+        ),
+        4
+    );
+    lane.world.validate(&lane.config).unwrap();
 }

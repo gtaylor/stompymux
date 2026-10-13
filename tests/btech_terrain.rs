@@ -426,15 +426,15 @@ async fn server_rolls_back_schema_and_output_on_failed_creation_then_recovers() 
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].hex(2,1).unwrap().terrain(),Terrain::UltraRough);
         sqlx::query("DROP TRIGGER reject_reload").execute(&mut sql).await.unwrap();
         sqlx::query("CREATE TRIGGER reject_conditions BEFORE UPDATE OF light ON btech_maps BEGIN SELECT RAISE(ABORT,'condition failure'); END").execute(&mut sql).await.unwrap();
-        client.send(&format!("@btech map-conditions #{}=moonless_night,10", id.0)).await;
+        client.send(&format!("@btech map-conditions #{}=moonless_night,heavy_fog", id.0)).await;
         let text = client.until("Unable to save your changes.").await;
         assert!(!text.contains("conditions saved"));
         client.send(&format!("@btech inspect #{}", id.0)).await;
-        client.until("Light 0; visibility 30; maximum visibility 60 hexes").await;
+        client.until("Light day; weather clear; units see 60 hexes").await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].light, 0);
         sqlx::query("DROP TRIGGER reject_conditions").execute(&mut sql).await.unwrap();
-        client.send(&format!("@btech map-conditions #{}=moonless_night,10", id.0)).await;
-        client.until("conditions saved: moonless_night, visibility 10 hexes.").await;
+        client.send(&format!("@btech map-conditions #{}=moonless_night,heavy_fog", id.0)).await;
+        client.until("conditions saved: moonless_night, heavy_fog; units see 5 hexes.").await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.maps()[&id].light, 4);
 
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
@@ -532,30 +532,36 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
             &format!("@btech map-conditions #{}={args}", id.0),
         )
     };
-    for invalid in ["noon,10", "night,-1", "day,61", "night,10,20", "night"] {
+    for invalid in [
+        "noon,clear",
+        "night,drizzle",
+        "day,61",
+        "night,clear,20",
+        "night",
+    ] {
         run(invalid);
         assert_eq!(scripts.world().btech, before, "{invalid}");
     }
-    assert!(run("Moonless Night, 10").contains("conditions saved"));
+    assert!(run("Moonless Night, heavy fog").contains("conditions saved"));
     assert_eq!(scripts.world().btech.maps()[&id].light, 4);
-    assert_eq!(scripts.world().btech.maps()[&id].maximum_visibility, 30);
+    assert_eq!(scripts.world().btech.maps()[&id].weather, 2);
     let changed = scripts.world().btech.clone();
     assert!(
         scripts
             .eval_callback::<()>(&format!(
-                "btech.map.conditions({}, btech.map.light_levels.DAY, 60); error('abort')",
+                "btech.map.conditions({}, btech.map.light_levels.DAY, btech.map.weather_conditions.CLEAR); error('abort')",
                 id.0
             ))
             .is_err()
     );
     assert_eq!(scripts.world().btech, changed);
-    // Plain strings and constants from other catalogs are rejected like out-of-range visibility.
+    // Plain strings, numbers and constants from other catalogs are rejected for either argument.
     for invalid in [
-        "btech.map.light_levels.MOONLESS_NIGHT, -1",
-        "btech.map.light_levels.MOONLESS_NIGHT, 256",
-        "btech.map.light_levels.MOONLESS_NIGHT, 61",
-        "'night', 10",
-        "btech.unit.types.MECH, 10",
+        "btech.map.light_levels.MOONLESS_NIGHT, 2",
+        "btech.map.light_levels.MOONLESS_NIGHT, 'heavy_fog'",
+        "btech.map.light_levels.MOONLESS_NIGHT, btech.unit.types.MECH",
+        "'night', btech.map.weather_conditions.CLEAR",
+        "btech.unit.types.MECH, btech.map.weather_conditions.CLEAR",
     ] {
         assert!(
             scripts
@@ -566,7 +572,7 @@ async fn map_condition_commands_and_lua_validate_and_rollback() {
     }
     let light: i64 = scripts
         .eval_callback(&format!(
-            "btech.map.conditions({}, btech.map.light_levels.DUSK, 20); return btech.map.inspect({}).light",
+            "btech.map.conditions({}, btech.map.light_levels.DUSK, btech.map.weather_conditions.LIGHT_FOG); return btech.map.inspect({}).light",
             id.0, id.0
         ))
         .unwrap();

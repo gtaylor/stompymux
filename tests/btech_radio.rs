@@ -1473,7 +1473,7 @@ async fn targeted_radio_power_observer_contact_and_message_guards() {
 }
 
 /// Observer mode silences routine contact notices but still reports acquisition and lock loss
-/// once neither the sensor band nor sight reaches the target.
+/// once nothing perceives the target any more.
 #[tokio::test]
 async fn observer_scans_keep_acquisition_and_lock_loss_without_routine_chatter() {
     let (_dir, config, mut normal, map, units) = relay_fixture().await;
@@ -1495,9 +1495,20 @@ async fn observer_scans_keep_acquisition_and_lock_loss_without_routine_chatter()
     assert_eq!(compared.btech, normal.btech);
     let _ = select_battle_target(&mut observing, observer, ObjectId(1), Some(target)).unwrap();
     let _ = select_battle_target(&mut normal, observer, ObjectId(1), Some(target)).unwrap();
+    // Heavy fog without sensors drops every distant contact; the adjacent target, which a clear
+    // line always keeps in sight and which relocating would unlock outright, goes invisible.
     for world in [&mut normal, &mut observing] {
-        set_battle_map_visibility(world, map, Light::Day, 0).unwrap();
+        set_battle_map_conditions(world, map, Light::Day, Weather::HeavyFog).unwrap();
         set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
+        set_battle_visibility(
+            world,
+            target,
+            Visibility {
+                invisible: true,
+                clairvoyant: false,
+            },
+        )
+        .unwrap();
     }
     let normal_events = refresh_battle_contacts(&mut normal, &[observer]).unwrap();
     let events = refresh_battle_contacts(&mut observing, &[observer]).unwrap();
@@ -1536,7 +1547,7 @@ async fn observer_contact_notice_policy_preserves_lock_warning_only() {
     let (_dir, _config, mut world, unit) = fixture().await;
     for acquired in [false, true] {
         let event = ContactEvent {
-            experience_message: None,
+            revealed: None,
             identified: true,
             observer: unit,
             target: ObjectId(99),
@@ -1561,7 +1572,7 @@ async fn observer_contact_notice_policy_preserves_lock_warning_only() {
     }
     assert!(
         ContactEvent {
-            experience_message: None,
+            revealed: None,
             identified: true,
             observer: ObjectId(-1),
             target: unit,

@@ -526,15 +526,23 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
             .unwrap();
         assert_eq!(result, (true, 1, 0));
         let blind = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        // The observer's sensor band reaches the adjacent hex in any weather, so silence it too.
-        set_battle_map_visibility(&mut blind.world_mut(), map, Light::Day, 0).unwrap();
-        set_battle_map_perception(
-            &mut blind.world_mut(),
-            map,
-            MapPerceptionFlag::Sensors,
-            false,
-        )
-        .unwrap();
+        // Sight always reaches the adjacent hex, so stand the observer behind the ridge with
+        // the shooter, where the hill hides the target hex from it as well.
+        let saved = serde_json::to_value(&blind.world().btech).unwrap();
+        let standing = &saved[class][shooter.0.to_string()];
+        let (position, point) = (
+            standing["position"].clone(),
+            standing["motion"]["point"].clone(),
+        );
+        blind
+            .world_mut()
+            .btech
+            .rewrite_unit_record(observer, |record| {
+                record["position"] = position;
+                record["motion"]["point"] = point;
+            })
+            .unwrap();
+        assert!(!battle_hex_visible(&blind.world(), observer, hex).unwrap());
         let before = blind.world().btech.clone();
         assert!(blind.eval_callback::<()>(&call).is_err());
         assert_eq!(blind.world().btech, before);

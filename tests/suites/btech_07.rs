@@ -29,9 +29,6 @@ mod btech_map_block;
 #[path = "../btech_orbital_drop_movement.rs"]
 mod btech_orbital_drop_movement;
 
-#[path = "../btech_radar.rs"]
-mod btech_radar;
-
 #[path = "../btech_registration.rs"]
 mod btech_registration;
 

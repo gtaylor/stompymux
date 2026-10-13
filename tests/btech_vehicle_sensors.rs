@@ -13,7 +13,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
         MapAsset::from_cells("1 1\n.0\n").unwrap(),
     )
     .unwrap();
-    set_battle_map_visibility(&mut world, map, Light::MoonlessNight, 30).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_vehicle(
@@ -33,7 +33,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     (dir, config, world, id)
 }
 
-/// Demolisher with radar, a two-slot Beagle probe in front slots 0-1 and a Bloodhound in slot 2.
+/// Demolisher with a two-slot Beagle probe in front slots 0-1 and a Bloodhound in slot 2.
 fn equipped() -> String {
     support::templates::with_flags(
         include_str!("../game/units/Demolisher.toml"),
@@ -53,108 +53,6 @@ slots = [
 /// The installed probe summary for a vehicle.
 fn probe(world: &World, id: ObjectId) -> Option<ProbeProfile> {
     battle_perception_profile(world, id).unwrap().probe
-}
-
-/// The `sensor` command and Lua share one read-only report and reject mode arguments.
-#[tokio::test]
-async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
-    let (_dir, config, world, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
-    let scripts = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let report = battle_perception_report(&world, id).unwrap();
-    assert!(report.running);
-    assert_eq!(report.profile.light, Light::MoonlessNight);
-    assert_eq!(report.profile.sensors, PerceptionStatus::Ready);
-    assert_eq!(
-        (
-            report.profile.sensor_range,
-            report.profile.sight_range,
-            report.profile.lit_sight_range
-        ),
-        (15, 30, 60)
-    );
-    assert_eq!((report.profile.probe, report.profile.radar), (None, None));
-    assert_eq!(
-        report.text,
-        [
-            "Sensors: 15 hexes in any light or weather",
-            "Sight:   30 hexes, moonless night: +3 to hit, +0 if lit; lit targets to 60",
-            "Probe:   none",
-            "Radar:   none",
-        ]
-        .join("\r\n")
-    );
-    let output = support::run_text(&scripts, &config, ObjectId(1), 1, "sensor");
-    assert_eq!(output, report.text);
-    let lua: (String, u16, String, bool) = scripts
-        .eval_callback(&format!(
-            "local r=btech.unit.perception({}); return r.text,r.sensor_range,r.sensors,r.running",
-            id.0
-        ))
-        .unwrap();
-    assert_eq!(lua, (report.text.clone(), 15, "ready".into(), true));
-    for arguments in ["sensor L V", "sensor H"] {
-        let output = support::run_text(&scripts, &config, ObjectId(1), 1, arguments);
-        assert_eq!(
-            output,
-            "Sensors are automatic; the sensor command takes no arguments."
-        );
-    }
-    assert_eq!(scripts.world().btech, world.btech);
-    stop_battle_unit(
-        &mut scripts.world_mut(),
-        id,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
-    let stopped = battle_perception_report(&scripts.world(), id).unwrap();
-    assert!(!stopped.running);
-    assert_eq!(stopped.profile, report.profile);
-    assert!(
-        stopped
-            .text
-            .ends_with("\r\nYour unit is shut down; nothing is perceived until it starts.")
-    );
-}
-
-/// Fixed installations extend the sensor band and probes by forty percent; radar keeps the
-/// 180-hex line-of-sight ceiling on every chassis.
-#[tokio::test]
-async fn stationary_vehicles_extend_sensor_and_probe_reach() {
-    for (template, sensors, bloodhound, radar) in [
-        (equipped(), 15, 8, 180),
-        (
-            equipped()
-                .replace("movement = \"track\"", "movement = \"none\"")
-                .replace("walk_mp = 5", "walk_mp = 0"),
-            21,
-            11,
-            180,
-        ),
-    ] {
-        let (_dir, _config, world, id) = fixture(&template).await;
-        let profile = battle_perception_profile(&world, id).unwrap();
-        assert_eq!(profile.sensor_range, sensors);
-        assert_eq!(
-            profile.probe,
-            Some(ProbeProfile {
-                kind: ActiveProbe::Bloodhound,
-                range: bloodhound,
-                status: PerceptionStatus::Ready
-            })
-        );
-        assert_eq!(
-            profile.radar,
-            Some(RadarProfile {
-                range: radar,
-                status: PerceptionStatus::Ready
-            })
-        );
-    }
 }
 
 /// Probe reports fall back to the next working family, then report the best one as destroyed.
@@ -200,12 +98,9 @@ async fn vehicle_probe_profile_follows_critical_and_section_loss() {
         .unwrap();
         assert_eq!(probe(&world, id), expected, "slot {slot}");
     }
-    assert!(
-        battle_perception_report(&world, id)
-            .unwrap()
-            .text
-            .contains("Probe:   Bloodhound Active Probe, 8 hexes (destroyed)")
-    );
+    assert!(battle_perception_report(&world, id).unwrap().text.contains(
+        "Probe:   Bloodhound Active Probe, reveals hidden units within 8 hexes (destroyed)"
+    ));
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
@@ -214,41 +109,176 @@ async fn vehicle_probe_profile_follows_critical_and_section_loss() {
     );
 }
 
-/// Map switches silence the band, probes and radar independently and survive restart.
+/// The `sensor` command and Lua share one read-only report of the automatic sensor suite.
+#[tokio::test]
+async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
+    let (_dir, config, world, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
+    let scripts = Scripts::new(
+        &config,
+        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
+    )
+    .unwrap();
+    let report = battle_perception_report(&world, id).unwrap();
+    assert!(report.running);
+    assert_eq!(report.profile.light, Light::MoonlessNight);
+    assert_eq!(report.profile.sensor.status, PerceptionStatus::Ready);
+    assert_eq!(
+        report
+            .profile
+            .sensor
+            .systems
+            .iter()
+            .map(|system| system.mode)
+            .collect::<Vec<_>>(),
+        [
+            SensorMode::Infrared,
+            SensorMode::Magscan,
+            SensorMode::Radar,
+            SensorMode::Seismic
+        ]
+    );
+    assert_eq!(report.profile.sensor.sweep, None);
+    assert_eq!(
+        (report.profile.sight_range, report.profile.lit_sight_range),
+        (5, 45)
+    );
+    assert_eq!(report.profile.probe, None);
+    assert_eq!(
+        report.text,
+        [
+            "Sight:   5 hexes (moonless night, clear): +3 to hit, +0 if lit; lit targets seen to 45",
+            "Sensors: infrared 9/18/27, magnetic anomaly 9/18/27, radar 6/12/18, seismic 1/2/3 hexes; sweep pending",
+            "Probe:   none",
+        ]
+        .join("\r\n")
+    );
+    let output = support::run_text(&scripts, &config, ObjectId(1), 1, "sensor");
+    assert_eq!(output, report.text);
+    let lua: (String, String, String, bool) = scripts
+        .eval_callback(&format!(
+            "local r=btech.unit.perception({}); return r.text,r.sensor.systems[1].mode,r.sensor.status,r.running",
+            id.0
+        ))
+        .unwrap();
+    assert_eq!(
+        lua,
+        (report.text.clone(), "infrared".into(), "ready".into(), true)
+    );
+    for argument in ["sensor H", "sensor radar"] {
+        let output = support::run_text(&scripts, &config, ObjectId(1), 1, argument);
+        assert!(output.contains("`sensor` takes no arguments"), "{output}");
+    }
+    assert_eq!(scripts.world().btech, world.btech);
+    // The first contact refresh sweeps the suite; the report then shows the roll.
+    refresh_battle_contacts(&mut scripts.world_mut(), &[id]).unwrap();
+    let swept = battle_perception_report(&scripts.world(), id).unwrap();
+    let sweep = swept.profile.sensor.sweep.expect("the refresh sweeps");
+    assert!((2..=12).contains(&sweep));
+    assert!(
+        swept
+            .text
+            .contains(&format!("seismic 1/2/3 hexes; sweep {sweep} ")),
+        "{}",
+        swept.text
+    );
+    stop_battle_unit(
+        &mut scripts.world_mut(),
+        id,
+        ObjectId(1),
+        MovementRules::STANDARD.fall,
+    )
+    .unwrap();
+    let stopped = battle_perception_report(&scripts.world(), id).unwrap();
+    assert!(!stopped.running);
+    assert!(
+        stopped
+            .text
+            .ends_with("\r\nYour unit is shut down; nothing is perceived until it starts.")
+    );
+}
+
+/// Map switches silence sensors, the radar system and probes independently and survive restart.
 #[tokio::test]
 async fn vehicle_map_perception_switches_persist() {
     let (_dir, config, mut world, id) = fixture(&equipped()).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
-    for flag in [
-        MapPerceptionFlag::Sensors,
-        MapPerceptionFlag::Probes,
-        MapPerceptionFlag::Radar,
-    ] {
+    let modes = |world: &World| {
+        battle_perception_profile(world, id)
+            .unwrap()
+            .sensor
+            .systems
+            .iter()
+            .map(|system| system.mode)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        modes(&world),
+        [
+            SensorMode::Probe,
+            SensorMode::Infrared,
+            SensorMode::Magscan,
+            SensorMode::Radar,
+            SensorMode::Seismic
+        ]
+    );
+    for flag in [MapPerceptionFlag::Sensors, MapPerceptionFlag::Probes] {
         set_battle_map_perception(&mut world, map, flag, false).unwrap();
     }
     let profile = battle_perception_profile(&world, id).unwrap();
-    assert_eq!(
-        (profile.sensors, profile.sensor_range),
-        (PerceptionStatus::Disabled, 0)
-    );
+    assert_eq!(profile.sensor.status, PerceptionStatus::Disabled);
+    assert!(profile.sensor.systems.is_empty());
     assert_eq!(profile.probe.unwrap().status, PerceptionStatus::Disabled);
-    assert_eq!(profile.radar.unwrap().status, PerceptionStatus::Disabled);
     assert_eq!(
         battle_perception_report(&world, id).unwrap().text,
         [
+            "Sight:   5 hexes (moonless night, clear): +3 to hit, +0 if lit; lit targets seen to 45",
             "Sensors: disabled on this battlefield",
-            "Sight:   30 hexes, moonless night: +3 to hit, +0 if lit; lit targets to 60",
-            "Probe:   Bloodhound Active Probe, 8 hexes (disabled on this battlefield)",
-            "Radar:   180 hexes against airborne targets (disabled on this battlefield)",
+            "Probe:   Bloodhound Active Probe, reveals hidden units within 8 hexes (disabled on this battlefield)",
         ]
         .join("\r\n")
     );
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(battle_perception_profile(&restored, id).unwrap(), profile);
+    set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Sensors, true).unwrap();
+    let profile = battle_perception_profile(&restored, id).unwrap();
+    assert_eq!(profile.sensor.status, PerceptionStatus::Ready);
+    assert_eq!(
+        profile.probe.unwrap().status,
+        PerceptionStatus::Disabled,
+        "probes stay off"
+    );
+    assert!(!modes(&restored).contains(&SensorMode::Probe));
     set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Probes, true).unwrap();
     let profile = battle_perception_profile(&restored, id).unwrap();
     assert_eq!(profile.probe.unwrap().status, PerceptionStatus::Ready);
-    assert_eq!(profile.sensors, PerceptionStatus::Disabled);
-    assert_eq!(profile.radar.unwrap().status, PerceptionStatus::Disabled);
+    assert_eq!(
+        profile.sensor.systems[0],
+        SensorSystem {
+            mode: SensorMode::Probe,
+            bands: SensorBands {
+                short: 16,
+                medium: 32,
+                long: 48
+            }
+        }
+    );
+    assert!(
+        battle_perception_report(&restored, id).unwrap().text.contains(
+            "Probe:   Bloodhound Active Probe, sweeps 16/32/48 hexes and reveals hidden units within 8 hexes"
+        )
+    );
+    // Only the radar system minds the radar switch.
+    set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Radar, false).unwrap();
+    let profile = battle_perception_profile(&restored, id).unwrap();
+    assert_eq!(profile.sensor.status, PerceptionStatus::Ready);
+    assert_eq!(
+        modes(&restored),
+        [
+            SensorMode::Probe,
+            SensorMode::Infrared,
+            SensorMode::Magscan,
+            SensorMode::Seismic
+        ]
+    );
 }

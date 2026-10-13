@@ -3,7 +3,7 @@
 //! `mappy [MAP_DIR]` edits the `.toml` map files in `MAP_DIR` (default `game/maps`). The File
 //! menu creates maps, opens them from that directory and saves them back into it, offering to
 //! save unsaved changes first, as closing the window does. The Map menu's Options dialog sets
-//! the map's rule flags, gravity, temperature, light, visibility and wind, and its Resize
+//! the map's rule flags, gravity, temperature, light, weather and wind, and its Resize
 //! dialog changes the map's size at the chosen edges. Its Map generator panel describes a
 //! battlefield for `stompymux-mapgen` and previews it live in place of the map; applying it
 //! replaces the map as one undoable edit. The toolbar picks a brush, which paints
@@ -28,12 +28,14 @@ use std::{path::PathBuf, sync::Arc};
 use iced::{
     Alignment, Color, Element, Fill, Point, Size, Subscription, Task, Theme, Vector, keyboard,
     widget::{
-        button, center, checkbox, column, container, mouse_area, opaque, operation, radio, row,
-        rule, scrollable, shader, slider, space, stack, text, text_input, tooltip,
+        button, center, checkbox, column, container, mouse_area, opaque, operation, pick_list,
+        radio, row, rule, scrollable, shader, slider, space, stack, text, text_input, tooltip,
     },
     window,
 };
-use stompymux_map::{Hex, HexCoordinate, Light, MAX_VISIBILITY, MapFlag, StructureKind, Wind};
+use stompymux_map::{
+    Hex, HexCoordinate, Illumination, Light, MapFlag, StructureKind, Weather, Wind,
+};
 
 use brush_panel::{BrushEdit, BrushMode, BrushPanel};
 use document::{Document, MapSettings, ResizeEdge};
@@ -1208,13 +1210,13 @@ impl Mappy {
             row(night.iter().copied().map(light_choice)),
         ]
         .spacing(6);
-        let visibility = slider(0..=MAX_VISIBILITY, settings.visibility, move |visibility| {
-            drag(MapSettings {
-                visibility,
+        let weather = pick_list(Weather::ALL, Some(settings.weather), move |weather| {
+            Message::SetSettings(MapSettings {
+                weather,
                 ..settings
             })
         })
-        .on_release(Message::StrokeEnded);
+        .text_size(13);
         let wind = settings.wind;
         let direction = slider(0..=359_u16, wind.direction, move |direction| {
             drag(MapSettings {
@@ -1238,8 +1240,11 @@ impl Mappy {
             ),
             row![text("Light").size(13).width(SETTING_LABEL_WIDTH), lights],
             setting(
-                format!("Visibility {} hexes", settings.visibility),
-                visibility
+                format!(
+                    "Weather (see {} hexes)",
+                    stompymux_map::visual_range(settings.light, settings.weather)
+                ),
+                weather
             ),
             setting(format!("Wind from {}°", wind.direction), direction),
             setting(format!("Wind speed {}", wind.speed), speed),
@@ -1445,16 +1450,20 @@ fn annotation_lines(document: &Document, coordinate: HexCoordinate) -> Vec<Strin
 /// dialog.
 fn light_effects(light: Light) -> String {
     let Some(heat_step) = light.heat_step() else {
-        return "No to-hit modifiers. Units see as far as the map's visibility.".into();
+        return format!(
+            "No to-hit modifiers. Units see {} hexes, or less in bad weather.",
+            light.visual_range()
+        );
     };
-    let weapon = light.aim_modifier(false, false, None);
-    let lit = light.aim_modifier(false, true, None);
-    let physical = light.aim_modifier(true, false, None);
+    let weapon = light.aim_modifier(false, Illumination::None, None);
+    let lit = light.aim_modifier(false, Illumination::Searchlight, None);
+    let physical = light.aim_modifier(true, Illumination::None, None);
     if !light.is_night() {
         return format!(
             "Weapon attacks +{weapon} to hit, -1 for every {heat_step} heat the target has. \
-             Physical attacks +{physical}.\nUnits see as far as the map's visibility; \
-             searchlights do not help."
+             Physical attacks +{physical}.\nUnits see {} hexes, or less in bad weather; \
+             searchlights stretch sight to 30 but do not help to hit.",
+            light.visual_range()
         );
     }
     let physical = if physical > 0 {
@@ -1465,8 +1474,9 @@ fn light_effects(light: Light) -> String {
     format!(
         "Weapon attacks +{weapon} to hit (+{lit} against lit targets or ones with their \
          searchlight on), -1 for every {heat_step} heat the target has. Physical attacks \
-         {physical}.\nUnits see as far as the map's visibility, and lit targets up to three \
-         times as far."
+         {physical}.\nUnits see {} hexes, or less in bad weather; a searchlight stretches \
+         sight to 30 and a lit target is seen at 45.",
+        light.visual_range()
     )
 }
 
@@ -1649,7 +1659,7 @@ mod tests {
         assert!(light_effects(Light::Day).starts_with("No to-hit modifiers"));
         let dawn = light_effects(Light::Dawn);
         assert!(dawn.contains("+1 to hit, -1 for every 25 heat"), "{dawn}");
-        assert!(dawn.contains("searchlights do not help"), "{dawn}");
+        assert!(dawn.contains("searchlights stretch sight"), "{dawn}");
         let moonless = light_effects(Light::MoonlessNight);
         assert!(
             moonless.contains("+3 to hit (+0 against lit targets"),

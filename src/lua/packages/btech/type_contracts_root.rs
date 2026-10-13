@@ -77,9 +77,9 @@
 //|---@field temperature integer
 //|---@field flags MapFlag[] Enabled map flags.
 //|---@field light integer 0 day, 1 dawn, 2 dusk, 3 full moon night, 4 moonless night, 5 pitch black
-//|---@field visibility integer Weather range in hexes
-//|---@field sensor_flags integer Disabled perception channels: sensor band bit 0 (1), radar bit 5 (32), probes bit 6 (64).
-//|---@field maximum_visibility integer Saved map sensor range ceiling
+//|---@field weather integer Weather condition index, in the order of btech.map.weather_conditions
+//|---@field visual_range integer How far units on the map see under its light and weather, in hexes
+//|---@field sensor_flags integer Disabled perception channels: sensors bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 //|---@field terrain_ready boolean Whether saved tiles have a valid dictionary.
 // lua-types-end
 
@@ -243,8 +243,10 @@
 // lua-types-end
 
 // lua-types-begin btech 00043
-//|---@alias DetectionChannel "sensors"|"sight"|"radar"|"probe" Values from btech.unit.detection_channels.
-//|---@alias PerceptionStatus "ready"|"degraded"|"jammed"|"damaged"|"disabled"|"absent"
+//|---@alias DetectionChannel "sight"|"sensors"|"probe" Values from btech.unit.detection_channels.
+//|---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"disabled"|"absent"
+//|---@alias SensorMode "infrared"|"magscan"|"radar"|"seismic"|"probe" A sensor system of a unit's suite.
+//|---@alias SensorBand "short"|"medium"|"long"
 // lua-types-end
 
 // lua-types-begin btech 00044
@@ -378,6 +380,7 @@
 //|---@field tag TagState
 //|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 //|---@field scanner_perception integer Perception captured at startup completion.
+//|---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
 //|---@field facing {torso: "left"|"center"|"right"|"both", arms_flipped: boolean}
 //|---@field stun_remaining integer Remaining seconds of cockpit stun.
 //|---@field pilot_injuries integer Tactical injury count; six means scenario pilot loss.
@@ -445,13 +448,6 @@
 //|---@field design_total integer Current component total with full surviving bins.
 // lua-types-end
 
-// lua-types-begin btech 00056
-//|---@class DigState
-//|---@field dug_in boolean Whether cover applies.
-//|---@field digging boolean Whether preparation is active.
-//|---@field completion integer[] Pending completion deadlines in seconds; empty means none.
-// lua-types-end
-
 // lua-types-begin btech 00057
 //|---@class VehicleState: TransportState, RadioState
 //|---@field armor_warning boolean Armor severity warnings; enabled by default.
@@ -470,7 +466,6 @@
 //|---@field combat_safe boolean Operator-imposed immunity to combat damage.
 //|---@field weapons_hold boolean Operator-imposed firing restriction; mechanical readiness is independent.
 //|---@field visibility {invisible: boolean, clairvoyant: boolean} Operator visibility state.
-//|---@field dig DigState Saved ground-vehicle cover preparation.
 //|---@field mass VehicleMass Derived from current material and ammunition; units are 1/1024 ton.
 //|---@field inferno_remaining integer Stationary-unit jelly duration.
 //|---@field burning_sections table<string, integer> Section fire countdowns in seconds.
@@ -497,6 +492,7 @@
 //|---@field lost_stabilizers string[] Sections with destroyed weapon stabilizers.
 //|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 //|---@field scanner_perception integer Perception captured at startup completion.
+//|---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
 //|---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits.
 //|---@field aimed_section AimSelection|nil Saved anatomy preference; independent of the current lock.
 //|---@field target_lock TargetLock|HexLock|nil Saved selection and settling countdown.
@@ -790,7 +786,7 @@
 //|---@field verbose_text string Plain multiline C0 contact report.
 //|---@field identified boolean Current terrain permits identification.
 //|---@field weapon_arc ContactArc Observer torso direction; individual weapons may have different arcs.
-//|---@field detection DetectionChannel|nil How the observer currently perceives this contact; nil for clairvoyant-only views.
+//|---@field detection DetectionChannel|nil How the observer itself perceives this contact; nil for a target only a teammate spotted or a clairvoyant view.
 //|---@field status string Five visible condition columns; blank behind blocking terrain.
 //|---@field target integer Acquired unit dbref.
 //|---@field name string Chassis name, or "something" for unidentified signals.
@@ -861,7 +857,6 @@
 //|---@field attacker_movement integer
 //|---@field woods_cover integer Configured occupied-forest accuracy credit: zero, minus one or minus two.
 //|---@field target_movement integer Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
-//|---@field dug_in integer Configured cover modifier, shared by Mech and vehicle attackers.
 //|---@field bogged_down integer Minus two against a target stuck in soft ground.
 //|---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
 //|---@field light integer Darkness on the target's map, less what searchlights and target heat offset.
@@ -878,7 +873,7 @@
 //|---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 //|---@field weapon_damage integer Penalty from damaged focusing, ranging and other weapon components.
 //|---@field target_lock integer
-//|---@field perception {channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil Nil without a current contact; direct_fire is false behind blocking terrain.
+//|---@field perception {channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil Nil unless the shooter or its side holds the target as a contact; direct_fire is false behind blocking terrain.
 // lua-types-end
 
 // lua-types-begin btech 00180
@@ -942,6 +937,12 @@
 //|---@field map integer
 //|---@field coordinate HexCoordinate
 //|---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"}|{effect: "damage", total: integer} What the attack did to the woods; damage is the terrain factor spent so far.
+//|---@field notices Notice[]
+//|---@class StrayHit
+//|---@field coordinate HexCoordinate The building hex the miss struck.
+//|---@field damage integer Construction factor the hex lost.
+//|---@field remaining integer Construction factor left; zero means it collapsed.
+//|---@field collapse table|nil The collapse and its occupant falls, when the shot brought the hex down.
 //|---@field notices Notice[]
 // lua-types-end
 
@@ -1061,6 +1062,7 @@
 //|---@field heat_transfer integer Heat already added to the target, zero unless a heat-mode shot hits.
 //|---@field thermal_woods WoodsAbsorption|nil Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
 //|---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
+//|---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
 //|---@field cooling number? Coolant reduction applied to stored heat, including temporary negative credit.
 // lua-types-end
 
@@ -1092,6 +1094,7 @@
 //|---@field heat_transfer integer Direct flamer heat added to the target, otherwise zero.
 //|---@field thermal_woods WoodsAbsorption|nil Terrain effects and feedback preceding thermal transfer; heat/cooling strength remains unchanged.
 //|---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
+//|---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
 //|---@field salvo {kind: 'mech'|'vehicle'|'swarm', report: table}|nil Target-specific ordered damage groups.
 // lua-types-end
 
@@ -2233,6 +2236,6 @@
 //|btech.tactical = btech_tactical
 // lua-types-end
 
-// lua-types-begin btech 00554
+// lua-types-begin btech 00555
 //|return btech
 // lua-types-end

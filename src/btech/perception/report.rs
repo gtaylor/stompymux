@@ -1,5 +1,5 @@
 //! The read-only perception summary printed by the `sensor` command and returned to Lua.
-use super::{PerceptionProfile, PerceptionStatus, perception_profile};
+use super::{PerceptionProfile, PerceptionStatus, SensorMode, perception_profile};
 use crate::btech::Power;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
@@ -23,10 +23,9 @@ pub fn perception_report(world: &World, id: ObjectId) -> Result<PerceptionReport
     let running = unit.power == Power::Running;
     let profile = perception_profile(world, id)?;
     let mut lines = vec![
-        sensors_line(&profile),
         sight_line(&profile),
+        sensors_line(&profile),
         probe_line(&profile),
-        radar_line(&profile),
     ];
     if !running {
         lines.push("Your unit is shut down; nothing is perceived until it starts.".into());
@@ -38,69 +37,92 @@ pub fn perception_report(world: &World, id: ObjectId) -> Result<PerceptionReport
     })
 }
 
-/// Explain the all-conditions band, including why it is short or silent.
-fn sensors_line(profile: &PerceptionProfile) -> String {
-    let detail = match profile.sensors {
-        PerceptionStatus::Ready => {
-            format!("{} hexes in any light or weather", profile.sensor_range)
-        }
-        PerceptionStatus::Degraded => format!(
-            "{} hexes in any light or weather (damaged)",
-            profile.sensor_range
-        ),
-        PerceptionStatus::Jammed => "jammed by ECM, relying on sight".into(),
-        PerceptionStatus::Damaged => "destroyed, relying on sight".into(),
-        PerceptionStatus::Disabled => "disabled on this battlefield".into(),
-        PerceptionStatus::Absent => "none".into(),
-    };
-    format!("Sensors: {detail}")
-}
-
-/// Explain weather reach, the light and what darkness costs to hit.
+/// Explain sight: its reach under the conditions, what darkness costs to hit, and how far a
+/// lit target can be seen.
 fn sight_line(profile: &PerceptionProfile) -> String {
     let light = profile.light;
-    let penalty = light.aim_modifier(false, false, None);
-    if penalty == 0 {
-        return format!("Sight:   {} hexes", profile.sight_range);
+    let conditions = format!(
+        "{}, {}",
+        light.label().to_lowercase(),
+        profile.weather.label().to_lowercase()
+    );
+    let penalty = light.aim_modifier(false, super::super::Illumination::None, None);
+    if light == crate::btech::Light::Day {
+        return format!("Sight:   {} hexes ({conditions})", profile.sight_range);
     }
-    let lit = light.aim_modifier(false, true, None);
-    if !light.is_night() {
+    let lit = light.aim_modifier(false, super::super::Illumination::Searchlight, None);
+    if !light.searchlights_help_sight() {
         return format!(
-            "Sight:   {} hexes, {}: +{penalty} to hit",
-            profile.sight_range,
-            light.label().to_lowercase()
+            "Sight:   {} hexes ({conditions}): +{penalty} to hit",
+            profile.sight_range
         );
     }
     format!(
-        "Sight:   {} hexes, {}: +{penalty} to hit, +{lit} if lit; lit targets to {}",
-        profile.sight_range,
-        light.label().to_lowercase(),
-        profile.lit_sight_range
+        "Sight:   {} hexes ({conditions}): +{penalty} to hit, +{lit} if lit; lit targets seen to {}",
+        profile.sight_range, profile.lit_sight_range
     )
 }
 
-/// Name the working probe, or the reason it cannot see.
+/// Explain the built-in sensors: each system's brackets and this turn's sweep.
+fn sensors_line(profile: &PerceptionProfile) -> String {
+    let sensor = &profile.sensor;
+    match sensor.status {
+        PerceptionStatus::Absent => return "Sensors: none".into(),
+        PerceptionStatus::Disabled => return "Sensors: disabled on this battlefield".into(),
+        PerceptionStatus::Damaged => return "Sensors: destroyed".into(),
+        PerceptionStatus::Ready | PerceptionStatus::Jammed => {}
+    }
+    let systems = sensor
+        .systems
+        .iter()
+        .filter(|system| system.mode != SensorMode::Probe)
+        .map(|system| {
+            format!(
+                "{} {}/{}/{}",
+                system.mode.label(),
+                system.bands.short,
+                system.bands.medium,
+                system.bands.long
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sweep = match (sensor.sweep, sensor.band) {
+        (None, _) => "sweep pending".to_owned(),
+        (Some(roll), Some(band)) => format!("sweep {roll} finds the {} band", band.label()),
+        (Some(roll), None) => format!("sweep {roll} finds nothing this turn"),
+    };
+    let jammed = if sensor.jammed {
+        ", radar jammed by ECM"
+    } else {
+        ""
+    };
+    format!("Sensors: {systems} hexes; {sweep}{jammed}")
+}
+
+/// Name the probe, the brackets it sweeps with and how far it finds hidden units, or the
+/// reason it cannot.
 fn probe_line(profile: &PerceptionProfile) -> String {
     let Some(probe) = profile.probe else {
         return "Probe:   none".into();
     };
+    let sweeps = profile
+        .sensor
+        .systems
+        .iter()
+        .find(|system| system.mode == SensorMode::Probe)
+        .map(|system| {
+            format!(
+                "sweeps {}/{}/{} hexes and ",
+                system.bands.short, system.bands.medium, system.bands.long
+            )
+        })
+        .unwrap_or_default();
     format!(
-        "Probe:   {}, {} hexes{}",
+        "Probe:   {}, {sweeps}reveals hidden units within {} hexes{}",
         probe.kind.name(),
         probe.range,
         status_suffix(probe.status)
-    )
-}
-
-/// Describe installed radar and its condition.
-fn radar_line(profile: &PerceptionProfile) -> String {
-    let Some(radar) = profile.radar else {
-        return "Radar:   none".into();
-    };
-    format!(
-        "Radar:   {} hexes against airborne targets{}",
-        radar.range,
-        status_suffix(radar.status)
     )
 }
 
@@ -108,7 +130,6 @@ fn radar_line(profile: &PerceptionProfile) -> String {
 fn status_suffix(status: PerceptionStatus) -> &'static str {
     match status {
         PerceptionStatus::Ready | PerceptionStatus::Absent => "",
-        PerceptionStatus::Degraded => " (damaged)",
         PerceptionStatus::Jammed => " (jammed by ECM)",
         PerceptionStatus::Damaged => " (destroyed)",
         PerceptionStatus::Disabled => " (disabled on this battlefield)",
@@ -118,25 +139,53 @@ fn status_suffix(status: PerceptionStatus) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::btech::{ActiveProbe, Light, ProbeProfile, RadarProfile};
+    use crate::btech::{
+        ActiveProbe, Light, ProbeProfile, SensorBands, SensorProfile, SensorSystem, Weather,
+    };
+
+    fn system(mode: SensorMode, short: u8, medium: u8, long: u8) -> SensorSystem {
+        SensorSystem {
+            mode,
+            bands: SensorBands {
+                short,
+                medium,
+                long,
+            },
+        }
+    }
 
     fn profile() -> PerceptionProfile {
         PerceptionProfile {
             light: Light::MoonlessNight,
-            sight_range: 10,
-            lit_sight_range: 30,
-            sensor_range: 15,
-            sensors: PerceptionStatus::Ready,
+            weather: Weather::Clear,
+            sight_range: 5,
+            lit_sight_range: 45,
+            sensor: SensorProfile {
+                systems: vec![
+                    system(SensorMode::Infrared, 10, 20, 30),
+                    system(SensorMode::Magscan, 10, 20, 30),
+                    system(SensorMode::Radar, 8, 16, 24),
+                    system(SensorMode::Seismic, 2, 4, 6),
+                    system(SensorMode::Probe, 12, 24, 36),
+                ],
+                status: PerceptionStatus::Ready,
+                jammed: false,
+                sweep: Some(6),
+                band: Some(super::super::SensorBand::Medium),
+                probe: Some(ActiveProbe::Beagle),
+            },
             probe: Some(ProbeProfile {
                 kind: ActiveProbe::Beagle,
-                range: 6,
-                status: PerceptionStatus::Jammed,
+                range: 4,
+                status: PerceptionStatus::Ready,
             }),
-            radar: None,
             clairvoyant: false,
-            ceiling: 30,
             cloud_base: 0,
             level: 0,
+            team: 0,
+            vehicle: false,
+            underwater: false,
+            disturbed: (false, false),
         }
     }
 
@@ -145,36 +194,63 @@ mod tests {
     fn lines_describe_reach_and_conditions() {
         let profile = profile();
         assert_eq!(
-            sensors_line(&profile),
-            "Sensors: 15 hexes in any light or weather"
+            sight_line(&profile),
+            "Sight:   5 hexes (moonless night, clear): +3 to hit, +0 if lit; lit targets seen to 45"
         );
         assert_eq!(
-            sight_line(&profile),
-            "Sight:   10 hexes, moonless night: +3 to hit, +0 if lit; lit targets to 30"
+            sensors_line(&profile),
+            "Sensors: infrared 10/20/30, magnetic anomaly 10/20/30, radar 8/16/24, seismic 2/4/6 hexes; sweep 6 finds the medium band"
         );
         assert_eq!(
             probe_line(&profile),
-            "Probe:   Beagle Active Probe, 6 hexes (jammed by ECM)"
+            "Probe:   Beagle Active Probe, sweeps 12/24/36 hexes and reveals hidden units within 4 hexes"
         );
-        assert_eq!(radar_line(&profile), "Radar:   none");
-        let jammed = PerceptionProfile {
-            sensors: PerceptionStatus::Jammed,
-            sensor_range: 0,
+        let day = PerceptionProfile {
             light: Light::Day,
-            radar: Some(RadarProfile {
-                range: 180,
-                status: PerceptionStatus::Ready,
+            weather: Weather::HeavyFog,
+            sight_range: 5,
+            sensor: SensorProfile {
+                systems: profile.sensor.systems[..4].to_vec(),
+                jammed: true,
+                sweep: Some(11),
+                band: None,
+                ..profile.sensor.clone()
+            },
+            probe: Some(ProbeProfile {
+                kind: ActiveProbe::Beagle,
+                range: 4,
+                status: PerceptionStatus::Disabled,
             }),
+            ..profile.clone()
+        };
+        assert_eq!(sight_line(&day), "Sight:   5 hexes (day, heavy fog)");
+        assert_eq!(
+            sensors_line(&day),
+            "Sensors: infrared 10/20/30, magnetic anomaly 10/20/30, radar 8/16/24, seismic 2/4/6 hexes; sweep 11 finds nothing this turn, radar jammed by ECM"
+        );
+        assert_eq!(
+            probe_line(&day),
+            "Probe:   Beagle Active Probe, reveals hidden units within 4 hexes (disabled on this battlefield)"
+        );
+        let pending = PerceptionProfile {
+            sensor: SensorProfile {
+                sweep: None,
+                band: None,
+                ..profile.sensor.clone()
+            },
+            probe: None,
+            ..profile.clone()
+        };
+        assert!(sensors_line(&pending).ends_with("hexes; sweep pending"));
+        assert_eq!(probe_line(&pending), "Probe:   none");
+        let silent = PerceptionProfile {
+            sensor: SensorProfile {
+                systems: Vec::new(),
+                status: PerceptionStatus::Damaged,
+                ..profile.sensor.clone()
+            },
             ..profile
         };
-        assert_eq!(
-            sensors_line(&jammed),
-            "Sensors: jammed by ECM, relying on sight"
-        );
-        assert_eq!(sight_line(&jammed), "Sight:   10 hexes");
-        assert_eq!(
-            radar_line(&jammed),
-            "Radar:   180 hexes against airborne targets"
-        );
+        assert_eq!(sensors_line(&silent), "Sensors: destroyed");
     }
 }

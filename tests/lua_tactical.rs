@@ -133,8 +133,11 @@ async fn tactical_snapshots_are_detached_sorted_and_use_committed_time() {
     );
 }
 
+/// A target one teammate sights is spotted for the whole side (Tactical Operations p. 191): a
+/// teammate may be ordered to attack it, though its own shot still needs its own line of fire.
+/// Changes nobody on the side observes never reach tactical input.
 #[tokio::test]
-async fn shared_sightings_do_not_grant_attack_acquisition_or_leak_hidden_changes() {
+async fn shared_sightings_admit_attacks_but_do_not_leak_hidden_changes() {
     let (_dir, _config, scripts, units, map) = fixture().await;
     {
         let mut world = scripts.world_mut();
@@ -157,14 +160,78 @@ async fn shared_sightings_do_not_grant_attack_acquisition_or_leak_hidden_changes
         for _,contact in ipairs(s.contacts) do
             if contact.unit==enemy_id then
                 found=true
-                assert(#contact.observations==1)
-                assert(contact.observations[1].observer==a_id and contact.observations[1].current)
+                -- A sights the enemy itself; B holds only what its side spotted.
+                assert(#contact.observations==2)
+                local own, shared = contact.observations[1], contact.observations[2]
+                assert(own.observer==a_id and own.current and own.relayed==false)
+                assert(shared.observer==b_id and shared.current and shared.relayed==true)
+                assert(shared.identified==true and shared.friendly==false)
             end
         end
         assert(found)
-        assert(not pcall(t.submit,{{unit=b_id,expected_revision=0,mode=a.submission_modes.APPEND,orders={{kind=a.orders.ATTACK,target=enemy_id}}}}))
-        t.submit({{unit=b_id,expected_revision=0,mode=a.submission_modes.APPEND,orders={{kind=a.orders.MOVE,destination={map=map_id,x=0,y=7}}}}})
+        local result=t.submit({{unit=b_id,expected_revision=0,mode=a.submission_modes.APPEND,orders={{kind=a.orders.ATTACK,target=enemy_id}}}})
+        assert(result[1].unit==b_id and result[1].revision==1)
+        t.submit({{unit=b_id,expected_revision=1,mode=a.submission_modes.APPEND,orders={{kind=a.orders.MOVE,destination={map=map_id,x=0,y=7}}}}})
     "#).unwrap();
+    let rules = AimRules {
+        woods_damage: false,
+        hit_arc_mode: 0,
+        fasa_turning: false,
+        extended_movement: false,
+        extended_ranges: false,
+        hotload_half_minimum: false,
+        override_weapon_arcs: false,
+    };
+    {
+        let mut world = scripts.world_mut();
+        // In the open B sees the enemy four hexes away for itself.
+        let aim = battle_aim_modifiers(&world, units[1], units[2], 0, 4, rules).unwrap();
+        assert_eq!(
+            aim.perception,
+            Some(PerceptionAim {
+                channel: Some(DetectionChannel::Sight),
+                direct_fire: true,
+                modifier: 0,
+            })
+        );
+        // Behind a wall B still knows of the enemy through A, but has no line of fire of its
+        // own; A's own sight is untouched.
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["terrain"][2] = serde_json::to_value(Hex::new(Terrain::Wall, 5)).unwrap();
+            })
+            .unwrap();
+        let aim = battle_aim_modifiers(&world, units[1], units[2], 0, 4, rules).unwrap();
+        assert_eq!(
+            aim.perception,
+            Some(PerceptionAim {
+                channel: None,
+                direct_fire: false,
+                modifier: 0,
+            })
+        );
+        assert_eq!(
+            battle_aim_modifiers(&world, units[0], units[2], 0, 4, rules)
+                .unwrap()
+                .perception
+                .map(|perception| perception.channel),
+            Some(Some(DetectionChannel::Sight))
+        );
+        // Once A drops the sighting, nobody on the side holds the enemy.
+        world
+            .btech
+            .rewrite_unit_record(units[0], |record| {
+                record["contacts"] = serde_json::json!({});
+            })
+            .unwrap();
+        assert!(
+            battle_aim_modifiers(&world, units[1], units[2], 0, 4, rules)
+                .unwrap()
+                .perception
+                .is_none()
+        );
+    }
     let before = serde_json::to_value(
         observe_tactical(&scripts.world(), &[units[1]], &Default::default()).unwrap(),
     )

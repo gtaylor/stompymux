@@ -1,5 +1,5 @@
 //! Durable contacts with explicit acquisition, retention and loss transitions.
-use super::{AcquisitionRules, Detection, DetectionChannel, Mech, Perception, PerceptionProfile};
+use super::{DetectionChannel, Mech, Perception, PerceptionProfile};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -42,23 +42,11 @@ pub enum ContactTransition {
     Lost,
 }
 
-/// Target facts supplied by the scanner for one observer/target update.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ContactRules {
-    pub hostile: bool,
-    pub hidden: bool,
-    /// The observing pilot's perception skill target.
-    pub perception: i16,
-    /// False refreshes existing observations without trying to acquire unseen targets.
-    pub acquire: bool,
-}
-
-/// A committed observation and the hidden-unit search, when one was needed.
+/// A committed observation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ContactUpdate {
     pub transition: ContactTransition,
     pub contact: Option<Contact>,
-    pub detection: Option<Detection>,
 }
 
 impl Mech {
@@ -80,22 +68,20 @@ pub fn update_contact(
     world: &mut World,
     observer: ObjectId,
     target: ObjectId,
-    rules: ContactRules,
 ) -> Result<ContactUpdate> {
     ensure!(observer != target, "A unit cannot acquire itself");
     let perception = super::perceive(world, observer, target)?;
-    apply_contact(world, observer, target, perception, rules)
+    apply_contact(world, observer, target, perception)
 }
 
-/// Commit an already computed perception. New targets are acquired at once, except hidden
-/// hostile units, which need a probe or a successful search; known targets are retained for
-/// as long as any channel still reaches them. Loss clears the observer's lock on the target.
+/// Commit an already computed perception. A perceived target is a contact; known targets
+/// are retained for as long as any channel still reaches them. Loss clears the observer's
+/// lock on the target.
 pub(super) fn apply_contact(
     world: &mut World,
     observer: ObjectId,
     target: ObjectId,
     perception: Option<Perception>,
-    rules: ContactRules,
 ) -> Result<ContactUpdate> {
     ensure!(observer != target, "A unit cannot acquire itself");
     let (power, known) = super::with_unit!(
@@ -106,31 +92,9 @@ pub(super) fn apply_contact(
         |unit| { (unit.power(), unit.contacts.contains_key(&target)) }
     );
     ensure!(power == super::Power::Running, "Start the unit first");
-    let mut contact = perception.map(|perception| Contact {
+    let contact = perception.map(|perception| Contact {
         identified: perception.identified,
     });
-    let mut detection = None;
-    if !known {
-        match perception {
-            Some(perception) if rules.acquire => {
-                let attempt = super::perception::acquire(
-                    world,
-                    observer,
-                    &perception,
-                    AcquisitionRules {
-                        hostile: rules.hostile,
-                        hidden: rules.hidden,
-                        perception: rules.perception,
-                    },
-                )?;
-                if !attempt.detected {
-                    contact = None;
-                }
-                detection = Some(attempt);
-            }
-            _ => contact = None,
-        }
-    }
     let transition = match (known, contact.is_some()) {
         (false, false) => ContactTransition::Unseen,
         (false, true) => ContactTransition::Acquired,
@@ -154,7 +118,6 @@ pub(super) fn apply_contact(
     Ok(ContactUpdate {
         transition,
         contact,
-        detection,
     })
 }
 
@@ -373,29 +336,45 @@ fn contact_observer(world: &World, observer: ObjectId) -> Result<super::scanner:
 pub(crate) struct ContactFacts {
     pub(crate) target: ObjectId,
     pub(crate) position: super::Position,
+    /// Someone on the observer's side has the target in sight, so its identity is known.
     pub(crate) identified: bool,
     pub(crate) friendly: bool,
+    /// How the observer itself perceives the target; `None` for a target only a teammate
+    /// has spotted, or a clairvoyant view.
     pub(crate) detection: Option<DetectionChannel>,
+    /// Terrain leaves the observer a line of fire to the target.
+    pub(crate) line_of_fire: bool,
     pub(crate) known_destroyed: bool,
     pub(crate) range: super::Range,
 }
 
-/// Build an acquired contact or a clairvoyant observation using current mixed-class geometry.
+/// Build the facts for one target: the observer's own perception when it has one, or what a
+/// teammate's spotting gives it, or a clairvoyant observation.
 fn contact_facts_with_unit(
     world: &World,
     observer: ObjectId,
     unit: &super::scanner::ScannerUnit<'_>,
     profile: &PerceptionProfile,
+    team: &BTreeMap<ObjectId, bool>,
     target: ObjectId,
     illumination: Option<&super::searchlight::IlluminationContext<'_>>,
 ) -> Result<Option<ContactFacts>> {
-    if observer == target || (!unit.visibility.clairvoyant && !unit.contacts.contains_key(&target))
-    {
+    if observer == target {
+        return Ok(None);
+    }
+    let own = unit.contacts.contains_key(&target);
+    let team_identified = team.get(&target).copied();
+    if !unit.visibility.clairvoyant && !own && team_identified.is_none() {
         return Ok(None);
     }
     let Some(other) = super::scanner::scanner_unit(world, target) else {
         return Ok(None);
     };
+    // An operator-invisible unit stays out of every list, including rows a teammate's
+    // older sighting would otherwise relay; clairvoyants alone still inspect it.
+    if other.visibility.invisible && !unit.visibility.clairvoyant {
+        return Ok(None);
+    }
     let position = unit.position.expect("validated observer placement");
     if other.position.is_none_or(|p| p.map != position.map)
         || world
@@ -405,11 +384,16 @@ fn contact_facts_with_unit(
     {
         return Ok(None);
     }
-    // Clairvoyant views skip the trace: they neither need nor imply a real detection.
-    let (detection, identified, range) = if unit.visibility.clairvoyant {
-        (None, true, super::unit_range(world, observer, target)?)
+    let (detection, identified, line_of_fire, range) = if unit.visibility.clairvoyant {
+        // Clairvoyant views skip the trace: they neither need nor imply a real detection.
+        (
+            None,
+            true,
+            true,
+            super::unit_range(world, observer, target)?,
+        )
     } else {
-        let Some(perception) = super::perception::perceive_prepared(
+        let perception = super::perception::perceive_prepared(
             world,
             observer,
             profile,
@@ -418,14 +402,25 @@ fn contact_facts_with_unit(
             illumination,
         )
         .ok()
-        .flatten() else {
-            return Ok(None);
-        };
-        (
-            Some(perception.channel),
-            perception.identified,
-            perception.range,
-        )
+        .flatten();
+        match perception {
+            Some(perception) => (
+                Some(perception.channel),
+                perception.identified || team_identified.unwrap_or(false),
+                perception.line_of_fire,
+                perception.range,
+            ),
+            // Only a teammate spots it: the observer learns where it is and whether its own
+            // terrain leaves a line of fire (Tactical Operations p. 191).
+            None => match team_identified {
+                Some(identified) => {
+                    let (terrain, range) =
+                        super::los::unit_terrain_geometry(world, observer, target)?;
+                    (None, identified, !terrain.blocked, range)
+                }
+                None => return Ok(None),
+            },
+        }
     };
     let friendly = identified && unit.signature.team == other.signature.team;
     let position = other.position.context("Contact has no position")?;
@@ -435,10 +430,7 @@ fn contact_facts_with_unit(
         identified,
         friendly,
         detection,
-        // contact_status hides all condition columns behind the same clear
-        // terrain rule.  The target's authoritative destruction bit plus the
-        // already-computed identification result is the equivalent fact,
-        // without allocating the five-column status string.
+        line_of_fire,
         known_destroyed: identified && other.destroyed,
         range,
     }))
@@ -446,33 +438,67 @@ fn contact_facts_with_unit(
 
 /// One observer's contact reads over an immutable world.
 ///
-/// The observer's perception profile and lighting cache are built once and shared by every
-/// target, so loops over many targets (map displays, pathfinding occupancy) stay cheap. Nothing
-/// here survives the borrow: build a new reader after any world mutation.
+/// The observer's perception profile, lighting cache and its side's spotting are built once
+/// and shared by every target, so loops over many targets (map displays, pathfinding
+/// occupancy) stay cheap. Nothing here survives the borrow: build a new reader after any
+/// world mutation.
 pub(crate) struct ContactReader<'w> {
     world: &'w World,
     observer: ObjectId,
     unit: super::scanner::ScannerUnit<'w>,
     profile: PerceptionProfile,
     illumination: super::searchlight::IlluminationContext<'w>,
+    /// Targets running teammates on the same map hold as contacts, and whether any of them
+    /// has the target in sight.
+    team: BTreeMap<ObjectId, bool>,
 }
 
 impl<'w> ContactReader<'w> {
-    /// Admit a running, placed observer and prepare its perception profile.
+    /// Admit a running, placed observer and prepare its perception profile and its side's
+    /// spotting.
     pub(crate) fn new(world: &'w World, observer: ObjectId) -> Result<Self> {
         let _measurement = crate::btech::autopilot::diagnostics::measure(
             crate::btech::autopilot::diagnostics::Category::Contacts,
         );
+        let unit = contact_observer(world, observer)?;
         Ok(Self {
             world,
             observer,
-            unit: contact_observer(world, observer)?,
+            team: team_spotting(world, observer, &unit)?,
+            unit,
             profile: super::perception_profile(world, observer)?,
             illumination: super::searchlight::IlluminationContext::new(world),
         })
     }
 
+    /// The observer's perception profile.
+    pub(crate) fn profile(&self) -> &PerceptionProfile {
+        &self.profile
+    }
+
+    /// Every target the observer or its side holds as a contact, in stable order.
+    pub(crate) fn targets(&self) -> Vec<ObjectId> {
+        self.unit
+            .contacts
+            .keys()
+            .copied()
+            .chain(self.team.keys().copied())
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
+
+    /// Whether the observer itself, rather than a teammate, holds `target` as a contact.
+    pub(crate) fn own(&self, target: ObjectId) -> bool {
+        self.unit.contacts.contains_key(&target)
+    }
+
     /// Live facts for one target, or `None` when it is not a current contact.
+    /// Whether a running teammate holds `target` as a contact, so the side may engage it.
+    pub(crate) fn team_spots(&self, target: ObjectId) -> bool {
+        self.team.contains_key(&target)
+    }
+
     pub(crate) fn facts(&self, target: ObjectId) -> Result<Option<ContactFacts>> {
         let _measurement = crate::btech::autopilot::diagnostics::measure(
             crate::btech::autopilot::diagnostics::Category::Contacts,
@@ -482,6 +508,7 @@ impl<'w> ContactReader<'w> {
             self.observer,
             &self.unit,
             &self.profile,
+            &self.team,
             target,
             Some(&self.illumination),
         )
@@ -489,72 +516,52 @@ impl<'w> ContactReader<'w> {
 
     /// The display view of one target, or `None` when it is not a current contact.
     pub(crate) fn view(&self, target: ObjectId) -> Result<Option<ContactView>> {
-        contact_view(
-            self.world,
-            self.observer,
-            &self.unit,
-            &self.profile,
-            target,
-            Some(&self.illumination),
-        )
+        let Some(facts) = self.facts(target)? else {
+            return Ok(None);
+        };
+        let status = super::contact_status::contact_status(self.world, self.observer, target)?;
+        view_from_facts(self.world, &self.unit, facts, status).map(Some)
     }
 }
 
-/// Build an acquired contact or a clairvoyant observation using current mixed-class geometry.
-fn contact_view(
+/// What the observer's side has spotted: every contact of a running teammate on the same
+/// map, and whether any teammate identifies it (Tactical Operations p. 191).
+fn team_spotting(
     world: &World,
     observer: ObjectId,
     unit: &super::scanner::ScannerUnit<'_>,
-    profile: &PerceptionProfile,
-    target: ObjectId,
-    illumination: Option<&super::searchlight::IlluminationContext<'_>>,
-) -> Result<Option<ContactView>> {
-    let Some(facts) =
-        contact_facts_with_unit(world, observer, unit, profile, target, illumination)?
-    else {
-        return Ok(None);
+) -> Result<BTreeMap<ObjectId, bool>> {
+    let mut team = BTreeMap::new();
+    let Some(position) = unit.position else {
+        return Ok(team);
     };
-    let status = super::contact_status::contact_status(world, observer, target)?;
-    view_from_facts(world, unit, facts, status).map(Some)
-}
-
-/// Present a sighting reported by a command-network peer as the observer's own row.
-/// The observer supplies geometry and arcs; identification comes from the peer's view.
-fn network_view(
-    world: &World,
-    observer: ObjectId,
-    unit: &super::scanner::ScannerUnit<'_>,
-    target: ObjectId,
-    identified: bool,
-) -> Result<ContactView> {
-    let facts = relayed_facts(world, observer, unit.signature.team, target, identified)?;
-    let status = if identified {
-        super::contact_status::known_status(world, observer, target)?
-    } else {
-        "     ".into()
-    };
-    view_from_facts(world, unit, facts, status)
-}
-
-/// Facts for a sighting relayed by a command-network peer. Geometry is measured from the
-/// observer; identification, and so allegiance and known destruction, come from the peer.
-pub(super) fn relayed_facts(
-    world: &World,
-    observer: ObjectId,
-    observer_team: i32,
-    target: ObjectId,
-    identified: bool,
-) -> Result<ContactFacts> {
-    let other = super::scanner::scanner_unit(world, target).context("Contact disappeared")?;
-    Ok(ContactFacts {
-        target,
-        position: other.position.context("Contact has no position")?,
-        identified,
-        friendly: identified && observer_team == other.signature.team,
-        detection: None,
-        known_destroyed: identified && other.destroyed,
-        range: super::unit_range(world, observer, target)?,
-    })
+    for peer in super::map_slots::all_unit_order(world, position.map)? {
+        if peer == observer {
+            continue;
+        }
+        let Some(other) = super::scanner::scanner_unit(world, peer) else {
+            continue;
+        };
+        if other.signature.team != unit.signature.team
+            || other.power != super::Power::Running
+            || other.destroyed
+            || other.observer
+            || world
+                .objects
+                .get(&peer)
+                .is_none_or(|object| object.flags.contains(crate::Flag::Going))
+        {
+            continue;
+        }
+        for (&target, contact) in other.contacts {
+            if target == observer {
+                continue;
+            }
+            let identified = team.entry(target).or_insert(false);
+            *identified |= contact.identified;
+        }
+    }
+    Ok(team)
 }
 
 /// Build the display row from established facts and the already-resolved status columns.
@@ -638,8 +645,9 @@ pub(super) fn movement_type(world: &World, target: ObjectId) -> &'static str {
     }
 }
 
-/// Inspect one visible contact without scanning, sorting or allocating other contacts.
-/// Clairvoyants can inspect unacquired or invisible units; invalid observers return an error.
+/// Inspect one contact, the observer's own or one its side spotted, without scanning, sorting
+/// or allocating other contacts. Clairvoyants can inspect unacquired or invisible units;
+/// invalid observers return an error.
 pub fn visible_contact(
     world: &World,
     observer: ObjectId,
@@ -648,9 +656,8 @@ pub fn visible_contact(
     ContactReader::new(world, observer)?.view(target)
 }
 
-/// One contact as the cockpit displays it: a direct sighting, or one relayed by an active
-/// command-network peer, with the shared aiming distance attached either way.
-/// Relayed rows never satisfy the firing, locking, or spotting rules built on `visible_contact`.
+/// One contact as the cockpit displays it: the observer's own sighting or one its side
+/// relays, with the shared command-network aiming distance attached when a network is up.
 pub fn displayed_contact(
     world: &World,
     observer: ObjectId,
@@ -658,36 +665,25 @@ pub fn displayed_contact(
 ) -> Result<Option<ContactView>> {
     let reader = ContactReader::new(world, observer)?;
     let mut view = reader.view(target)?;
-    let Some(mut network) = super::network_contacts::NetworkSightings::new(world, observer)? else {
+    let Some(network) = super::network_contacts::NetworkSightings::new(world, observer)? else {
         return Ok(view);
     };
-    if view.is_none()
-        && observer != target
-        && let Some(identified) = network.identified(target)?
-    {
-        view = Some(network_view(
-            world,
-            observer,
-            &reader.unit,
-            target,
-            identified,
-        )?);
-    }
     if let Some(view) = &mut view {
         attach_network_range(world, &network, view)?;
     }
     Ok(view)
 }
 
-/// List eligible acquired contacts, or all same-map units for a clairvoyant observer.
-/// This read-only display never attempts acquisition or updates the saved observation.
+/// List eligible contacts, the observer's own and its side's, or all same-map units for a
+/// clairvoyant observer. This read-only display never attempts acquisition or updates the
+/// saved observation.
 pub fn visible_contacts(world: &World, observer: ObjectId) -> Result<Vec<ContactView>> {
     let reader = ContactReader::new(world, observer)?;
     let mut views = Vec::new();
     let targets: Vec<_> = if reader.unit.visibility.clairvoyant {
         super::map_slots::all_unit_order(world, reader.unit.position.unwrap().map)?
     } else {
-        reader.unit.contacts.keys().copied().collect()
+        reader.targets()
     };
     for target in targets {
         if let Some(view) = reader.view(target)? {
@@ -703,42 +699,16 @@ pub fn visible_contacts(world: &World, observer: ObjectId) -> Result<Vec<Contact
     Ok(views)
 }
 
-/// The cockpit contact list: direct sightings plus targets relayed by active command-network
-/// peers, every row carrying the shared aiming distance. See [`displayed_contact`].
+/// The cockpit contact list: every row of [`visible_contacts`] carrying the shared aiming
+/// distance when a command network is up. See [`displayed_contact`].
 pub fn displayed_contacts(world: &World, observer: ObjectId) -> Result<Vec<ContactView>> {
     let mut views = visible_contacts(world, observer)?;
-    let Some(mut network) = super::network_contacts::NetworkSightings::new(world, observer)? else {
+    let Some(network) = super::network_contacts::NetworkSightings::new(world, observer)? else {
         return Ok(views);
     };
-    let reader = ContactReader::new(world, observer)?;
-    let map = reader
-        .unit
-        .position
-        .expect("validated observer placement")
-        .map;
-    for target in super::map_slots::all_unit_order(world, map)? {
-        if target == observer || views.iter().any(|view| view.target == target) {
-            continue;
-        }
-        if let Some(identified) = network.identified(target)? {
-            views.push(network_view(
-                world,
-                observer,
-                &reader.unit,
-                target,
-                identified,
-            )?);
-        }
-    }
     for view in &mut views {
         attach_network_range(world, &network, view)?;
     }
-    views.sort_by(|a, b| {
-        a.range
-            .spatial
-            .total_cmp(&b.range.spatial)
-            .then(a.target.cmp(&b.target))
-    });
     Ok(views)
 }
 
@@ -751,18 +721,19 @@ pub(super) fn styled_row(text: &str, color: Option<&str>) -> String {
     )
 }
 
-/// Read acquired facts in stable unit order, resolving observer state once.
-/// Unlike the contact display, clairvoyance does not enumerate unacquired enemies.
+/// Read contact facts in stable unit order, the observer's own and its side's, resolving
+/// observer state once. Unlike the contact display, clairvoyance does not enumerate
+/// unacquired enemies.
+#[cfg(test)]
 pub(crate) fn acquired_contact_facts(
     world: &World,
     observer: ObjectId,
 ) -> Result<Vec<ContactFacts>> {
     let reader = ContactReader::new(world, observer)?;
     Ok(reader
-        .unit
-        .contacts
-        .keys()
-        .filter_map(|&target| reader.facts(target).ok().flatten())
+        .targets()
+        .into_iter()
+        .filter_map(|target| reader.facts(target).ok().flatten())
         .collect())
 }
 
@@ -901,10 +872,10 @@ mod tests {
                 unit.contacts.insert(target, contact);
             });
             for light in 0..=5 {
-                for visibility in [0, 10, 60] {
+                for weather in [0, 2, 16] {
                     let map = world.btech.maps.get_mut(&map).unwrap();
                     map.light = light;
-                    map.visibility = visibility;
+                    map.weather = weather;
                     let expected: Vec<_> = contact_facts(&world, observer, target)
                         .ok()
                         .flatten()

@@ -136,8 +136,6 @@ async fn intact_target_bonus_is_shared_and_disappears_after_breach() {
         protect(&mut world, target, 100 * 1024, 42);
         let rules = AimRules {
             woods_damage: false,
-            dig_bonus: 2,
-            dig_only_front: false,
             hit_arc_mode: 0,
             fasa_turning: false,
             extended_movement: false,

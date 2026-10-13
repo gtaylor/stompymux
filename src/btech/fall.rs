@@ -228,6 +228,9 @@ fn resolve_material_with_tonnage(
     });
     let below_ice =
         tile.is_some_and(|tile| tile.is_ice() && tile.immerses(unit.elevation_level(tile)));
+    let inside_building = tile
+        .filter(|tile| super::building_interior::inside(*tile, unit.elevation_level(*tile)))
+        .map(|tile| unit.elevation_level(tile));
     let tons = tonnage.unwrap_or(u32::from(unit.definition().tons));
     let pilot = unit.pilot();
     let has_pilot = pilot.is_some();
@@ -274,6 +277,8 @@ fn resolve_material_with_tonnage(
         unit.stagger.clear_damage();
         unit.ground_elevation = if below_bridge {
             Some(-1.0)
+        } else if let Some(level) = inside_building {
+            Some(f64::from(level))
         } else if below_ice {
             Some(f64::from(
                 tile.expect("ice fall has a terrain tile").surface_height(),
@@ -470,6 +475,20 @@ impl MechFallReport {
 }
 
 impl FallRules {
+    /// Default tactical rules for consequences that reach a unit outside any configured
+    /// action, such as a building collapsing onto it.
+    pub const STANDARD: Self = Self {
+        vehicle_impact: super::VehicleImpactRules::STANDARD,
+        stacking: super::StackingRules::STANDARD,
+        stagger: super::StaggerMode::Retain,
+        hit: HitRules {
+            inferno_penalty: false,
+            exile_stun_mode: 0,
+        },
+        extended_piloting: false,
+        toughness: false,
+    };
+
     /// Standard host fall policy shared by shutdown, landing and towing actions.
     pub fn configured(settings: &crate::Config) -> Self {
         let config = &settings.battletech;

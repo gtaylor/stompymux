@@ -85,6 +85,7 @@ fn dfa_profile_inner(
         unit.validate()?;
         ensure!(!unit.is_destroyed(), "Unit is destroyed");
     }
+    super::building_interior::check_physical(world, attacker, target)?;
     let source = &world.btech.constructed_units()[&attacker];
     let victim = &world.btech.constructed_units()[&target];
     let position = source.position().context("Unit is not placed")?;

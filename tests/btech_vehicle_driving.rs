@@ -129,7 +129,7 @@ async fn native_and_lua_vehicle_controls_share_rollback_and_shutdown() {
     );
 }
 
-/// Authored building, wall and high-water tiles use ordinary ground elevation rules.
+/// Authored wall and high-water tiles use ordinary ground elevation rules; buildings are entered.
 #[tokio::test]
 async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
     for movement in [
@@ -165,6 +165,41 @@ async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
                 }
                 saved["maps"][map.0.to_string()]["decorations"]["23"] = serde_json::json!({"kind":"smoke", "remaining":120, "object_duration":120, "order":-1});
                 world.btech = serde_json::from_value(saved).unwrap();
+                if terrain == Terrain::Building && height > 0 {
+                    // A building below roof height is entered, not climbed (Total Warfare
+                    // p. 167): the drive pushes through its walls at ground level, rolling
+                    // against the medium class and costing the hex a tenth of its tonnage.
+                    let tons = world.btech.vehicles()[&id].definition().tons;
+                    let mut entered = false;
+                    let mut breached = false;
+                    for tick in 0..45 {
+                        let notices =
+                            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+                        entered |= world.btech.vehicles()[&id].position().unwrap().x >= 3;
+                        breached |= notices
+                            .iter()
+                            .any(|notice| notice.text.contains("push through the walls"));
+                        if tick == 20 {
+                            persistence::save(&config.database(), &world).await.unwrap();
+                            let restored = persistence::load(&config.database()).await.unwrap();
+                            assert_eq!(restored.btech, world.btech);
+                            world = restored;
+                        }
+                    }
+                    assert!(entered && breached);
+                    // The truck stays on the ground floor of the first hex it broke into; a
+                    // failed roll can wreck so light a vehicle, so its material is not compared.
+                    assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(0));
+                    let inside = battle_unit_inside_building(&world, id).unwrap().unwrap();
+                    assert_eq!(inside.level, 0);
+                    assert_eq!(
+                        inside.cf(),
+                        ConstructionClass::Medium.construction_factor() - tons.div_ceil(10)
+                    );
+                    assert!(!world.btech.vehicles()[&id].flooded());
+                    world.validate(&config).unwrap();
+                    continue;
+                }
                 let material = world.btech.vehicles()[&id].sections().clone();
                 let mut entered = false;
                 let mut hazard = false;

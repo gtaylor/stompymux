@@ -54,8 +54,6 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 fn rules() -> AimRules {
     AimRules {
         woods_damage: false,
-        dig_bonus: 3,
-        dig_only_front: false,
         hit_arc_mode: 0,
         fasa_turning: false,
         extended_movement: false,
@@ -108,7 +106,7 @@ async fn engagement() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId;
 /// Vehicle fire checks crew, arcs, contacts, perception and weapon readiness without mutation.
 #[tokio::test]
 async fn vehicle_firing_checks_readiness_arcs_visibility_and_preserves_all_state() {
-    let (_dir, _config, initial, map, [mech, _, shooter, vehicle]) = engagement().await;
+    let (_dir, _config, initial, _map, [mech, _, shooter, vehicle]) = engagement().await;
     for target in [mech, vehicle] {
         let aim =
             check_battle_vehicle_shot(&initial, shooter, ObjectId(1), target, 0, shot_rules())
@@ -150,6 +148,18 @@ async fn vehicle_firing_checks_readiness_arcs_visibility_and_preserves_all_state
                     .unwrap()
                     .flags
                     .insert(Flag::InCharacter);
+            } else if condition == "unperceived" {
+                // Sight always reaches the adjacent target, so hide it by operator flag: the
+                // held contact alone does not admit the shot.
+                set_battle_visibility(
+                    &mut world,
+                    target,
+                    Visibility {
+                        invisible: true,
+                        clairvoyant: false,
+                    },
+                )
+                .unwrap();
             } else {
                 let mut saved = serde_json::to_value(&world.btech).unwrap();
                 match condition {
@@ -162,11 +172,6 @@ async fn vehicle_firing_checks_readiness_arcs_visibility_and_preserves_all_state
                     "contacts" => {
                         saved["vehicles"][shooter.0.to_string()]["contacts"] =
                             serde_json::json!({});
-                    }
-                    "unperceived" => {
-                        // Neither the switched-off sensor band nor zero visibility reaches.
-                        saved["maps"][map.0.to_string()]["sensor_flags"] = serde_json::json!(1);
-                        saved["maps"][map.0.to_string()]["visibility"] = serde_json::json!(0);
                     }
                     "destroyed" => {
                         saved["vehicles"][shooter.0.to_string()]["weapon_failures"]["0"] =

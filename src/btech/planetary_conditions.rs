@@ -1,6 +1,6 @@
 //! Tactical Operations planetary-condition modifiers a unit's surroundings impose on it: the
-//! piloting modifier its hex and the wind add to every control roll, and the to-hit modifier
-//! wind and gravity give each kind of weapon.
+//! piloting modifier its hex, the wind and the weather add to every control roll, and the
+//! to-hit modifier wind, weather and gravity give each kind of weapon.
 use super::{AttackKind, GroundMovement, StoredMap, VehicleMovement, Weapon, Wind};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
@@ -52,15 +52,18 @@ fn unit_map(world: &World, id: ObjectId) -> Option<&StoredMap> {
     world.btech.maps().get(&position.map)
 }
 
-/// To-hit modifier wind and gravity on the shooter's battlefield give `weapon`, or `None`
-/// when the wind is too strong for the weapon to fire at all.
+/// To-hit modifier wind, weather and gravity on the shooter's battlefield give `weapon`, or
+/// `None` when the wind is too strong for the weapon to fire at all.
 pub(super) fn aim_modifier(world: &World, shooter: ObjectId, weapon: Weapon) -> Option<i16> {
     let Some(map) = unit_map(world, shooter) else {
         return Some(0);
     };
     let kind = attack_kind(weapon);
     let wind = map.wind().strength().aim_modifier(kind)?;
-    Some(wind + super::gravity_aim_modifier(map.gravity_percent(), kind))
+    let weather = map
+        .weather_condition()
+        .map_or(0, |weather| weather.aim_modifier(kind));
+    Some(wind + weather + super::gravity_aim_modifier(map.gravity_percent(), kind))
 }
 
 /// Refuse to fire a weapon the battlefield's wind keeps from flying: missiles in any tornado,
@@ -116,21 +119,29 @@ pub(super) fn terrain_piloting_modifier(world: &World, id: ObjectId) -> i16 {
     })
 }
 
-/// What the terrain under a unit and the wind add to every piloting or driving roll it makes:
-/// the hex's Tactical Operations PSR modifier for where the unit stands, plus gale and storm
-/// penalties. Unplaced units take none.
+/// What the terrain under a unit, the wind and the weather add to every piloting or driving
+/// roll it makes: the hex's Tactical Operations PSR modifier for where the unit stands, plus
+/// gale, storm and precipitation penalties. Unplaced units take none.
 pub(super) fn piloting_modifier(world: &World, id: ObjectId) -> i16 {
     let Some((tile, level, terrain, wind)) = footing(world, id) else {
         return 0;
     };
-    // Rotorcraft catch the wind like hovercraft do.
-    let buffeted = match world.btech.vehicles().get(&id) {
-        Some(vehicle) if vehicle.definition().movement == VehicleMovement::Vtol => {
-            GroundMovement::Hover
-        }
-        _ => terrain,
+    // Rotorcraft catch the wind like hovercraft do, and the weather table groups them with
+    // hovercraft and wheels.
+    let rotorcraft = world
+        .btech
+        .vehicles()
+        .get(&id)
+        .is_some_and(|vehicle| vehicle.definition().movement == VehicleMovement::Vtol);
+    let buffeted = if rotorcraft {
+        GroundMovement::Hover
+    } else {
+        terrain
     };
-    tile.piloting_modifier(terrain, level) + wind.strength().piloting_modifier(buffeted)
+    let weather = unit_map(world, id)
+        .and_then(|map| map.weather_condition().ok())
+        .map_or(0, |weather| weather.piloting_modifier(terrain, rotorcraft));
+    tile.piloting_modifier(terrain, level) + wind.strength().piloting_modifier(buffeted) + weather
 }
 
 #[cfg(test)]

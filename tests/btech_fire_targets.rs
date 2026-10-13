@@ -541,21 +541,6 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
         .unwrap();
     });
     assert_mechanical_rejection(&config, &quad, shooter, "Quads need at least 3 legs");
-
-    let (_dir, config, mut covered, shooter, _) = fixture(
-        include_str!("../game/units/Hunter.toml"),
-        HexTargetMode::UnitAtHex,
-    )
-    .await;
-    edit_shooter(&mut covered, shooter, |unit| {
-        unit["dig"] = serde_json::to_value(DigState::covered()).unwrap()
-    });
-    assert_mechanical_rejection(
-        &config,
-        &covered,
-        shooter,
-        "Only turret weapons are available while in cover",
-    );
 }
 
 /// Defensive-only classification precedes target syntax and retains readiness for automatic defense.

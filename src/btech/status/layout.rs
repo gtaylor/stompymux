@@ -548,8 +548,6 @@ fn condition_lines(
                 },
                 "red bold",
             ),
-            (u.dig_state().dug_in, "DUG IN", "green bold"),
-            (u.dig_state().digging, "DIGGING IN", "green"),
             (
                 owned && u.automatic_turret(),
                 "TURRET AUTO-TURN ENGAGED",

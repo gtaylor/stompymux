@@ -21,6 +21,7 @@ mod btech_landing_exclusions;
 mod btech_map_lifecycle;
 mod btech_map_links;
 mod btech_map_random;
+mod btech_map_sensor_random;
 mod btech_minefields;
 mod btech_object_order;
 mod btech_part_costs;
@@ -71,6 +72,7 @@ const TABLES: &[&str] = &[
     "btech_map_regions",
     "btech_map_region_corners",
     "btech_map_random",
+    "btech_map_sensor_random",
     "btech_building_repair",
     "btech_artillery",
     "btech_tows",

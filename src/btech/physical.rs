@@ -619,6 +619,7 @@ fn attack_profile_inner(
         unit.validate()?;
         ensure!(!unit.is_destroyed(), "Unit is destroyed");
     }
+    super::building_interior::check_physical(world, attacker, target)?;
     let source = &world.btech.constructed_units()[&attacker];
     let victim = &world.btech.constructed_units()[&target];
     attack.validate_chassis_support(source)?;

@@ -5,7 +5,7 @@ linkTitle: "perception"
 manualLinkTitle: "perception"
 ---
 
-Read-only summary of a placed unit's automatic perception: sensor band, sight, probe and radar.
+Read-only summary of a placed unit's perception: sight, the selected sensor and its sweep, and its active probe.
 
 ## Signature
 
