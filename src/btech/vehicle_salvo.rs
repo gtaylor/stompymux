@@ -7,9 +7,6 @@ use serde::Serialize;
 /// Damage inputs from an already successful attack, after launch expenditure and defense resolution.
 #[derive(Debug, Clone, Copy)]
 pub struct VehicleSalvoRequest {
-    /// Apply the configured energy range rule before glancing damage.
-    /// Damage lost to the launching weapon’s focusing components.
-    pub damage_penalty: u8,
     pub weapon: Weapon,
     pub ammunition: AmmunitionMode,
     pub fire_mode: FireMode,
@@ -156,7 +153,6 @@ pub(super) fn resolve_with_context_in_candidate(
         && super::woods_absorption::direct_shells(weapon, request.ammunition);
     let mut packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
-            damage_penalty: request.damage_penalty,
             weapon,
             ammunition: request.ammunition,
             fire_mode: request.fire_mode,

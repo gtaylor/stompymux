@@ -1374,9 +1374,8 @@ is recycling or out of ammunition, and preserves hiding and weapons hold.
 It consumes the aiming dice but never fires, spends ammunition, adds heat,
 or clears a jam. Destroyed and defensive-only weapons cannot be sighted.
 
-`weaponstatus` lists every installed weapon's component condition and damage
-penalties, including preferred ammunition sources and damaged, destroyed or
-disabled slots. A conscious passenger may use it while the unit is on a map,
+`weaponstatus` lists every installed weapon's condition, including preferred
+ammunition sources and destroyed or disabled slots. A conscious passenger may use it while the unit is on a map,
 including while shut down. Empty ammunition and recycling belong to the
 `weapons` readiness report and do not imply equipment damage.
 
@@ -1389,7 +1388,7 @@ extended ranges; artillery maximum ranges are shown in hexes.
 empty slots. Use a section abbreviation such as `la`, `ct` or `h`; quads use
 `fll` and `frl` for their front legs, and vehicles accept names such as `front`,
 `turret` or `rotor` when those sections exist. The report shows broken, destroyed,
-disabled and damaged equipment, ammunition quantities and capacities, spent
+and disabled equipment, ammunition quantities and capacities, spent
 one-shot launchers, rear mounts and Artemis links. Split slots identify their
 linked weapon. You must be the conscious assigned pilot, but the unit may be
 shut down or off-map.

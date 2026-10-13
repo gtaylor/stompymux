@@ -220,18 +220,10 @@ async fn critical_report_material_conditions() {
         .clone();
     let location = mount.criticals[0];
     let section = location.section.name();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["weapon_damage"] =
-                serde_json::json!([WeaponDamage::new(location, WeaponDamageKind::Focus)]);
-        })
-        .unwrap();
-    world.validate(&config).unwrap();
     assert_eq!(
         battle_critical_report(&world, id, section).unwrap().slots[usize::from(location.slot)]
             .condition,
-        EquipmentCondition::Damaged
+        EquipmentCondition::Operational
     );
     let mut flooded = world.clone();
     flooded

@@ -11,7 +11,6 @@ use std::collections::BTreeSet;
 pub enum EquipmentCondition {
     Empty,
     Operational,
-    Damaged,
     Disabled,
     Broken,
     Destroyed,
@@ -26,7 +25,6 @@ impl EquipmentCondition {
         match self {
             Self::Empty => "Empty",
             Self::Operational => "Operational",
-            Self::Damaged => "Damaged",
             Self::Disabled => "Disabled",
             Self::Broken => "Broken",
             Self::Destroyed => "Destroyed",
@@ -37,17 +35,15 @@ impl EquipmentCondition {
     }
 }
 
-/// One installed weapon's durable condition and the effects already used by firing.
+/// One installed weapon's durable condition and the slots behind it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct WeaponDiagnostic {
     pub index: usize,
     pub weapon: Weapon,
     pub section: String,
     pub condition: EquipmentCondition,
-    pub damaged_slots: u8,
     pub destroyed_slots: u8,
     pub disabled_slots: u8,
-    pub effects: WeaponDamageEffects,
     pub preferred_ammunition_section: Option<String>,
 }
 
@@ -88,10 +84,8 @@ pub fn weapon_diagnostics(world: &World, id: ObjectId) -> Result<Vec<WeaponDiagn
                     weapon: mount.weapon,
                     section: mount.criticals[0].section.name().into(),
                     condition,
-                    damaged_slots: 0,
                     destroyed_slots: destroyed,
                     disabled_slots: disabled,
-                    effects: Default::default(),
                     preferred_ammunition_section: unit
                         .ammunition_section(index)
                         .map(|section| section.name().into()),
@@ -121,23 +115,14 @@ pub fn weapon_diagnostics(world: &World, id: ObjectId) -> Result<Vec<WeaponDiagn
                     !unit.critical_destroyed(**slot) && unit.critical_unavailable(**slot)
                 })
                 .count() as u8;
-            let damaged = unit
-                .weapon_damage()
-                .iter()
-                .filter(|damage| mount.criticals.contains(&damage.location))
-                .count() as u8;
             let condition = if destroyed > 0 {
                 EquipmentCondition::Destroyed
             } else if disabled > 0 || unit.powered_down_weapons.contains(&index) {
                 EquipmentCondition::Disabled
             } else if let Some(failure) = unit.weapon_failures.get(&index) {
                 failure.condition()
-            } else if unit.jammed_weapons.contains(&index)
-                || unit.weapon_damage_jams.contains(&index)
-            {
+            } else if unit.jammed_weapons.contains(&index) {
                 EquipmentCondition::AmmoJam
-            } else if damaged > 0 {
-                EquipmentCondition::Damaged
             } else {
                 EquipmentCondition::Operational
             };
@@ -149,10 +134,8 @@ pub fn weapon_diagnostics(world: &World, id: ObjectId) -> Result<Vec<WeaponDiagn
                     .section_name(mount.criticals[0].section)
                     .into(),
                 condition,
-                damaged_slots: damaged,
                 destroyed_slots: destroyed,
                 disabled_slots: disabled,
-                effects: unit.weapon_damage_effects(index)?,
                 preferred_ammunition_section: unit
                     .ammunition_section(index)
                     .map(|section| unit.chassis().section_name(section).into()),
@@ -230,7 +213,7 @@ pub fn weapon_specifications(
         .collect())
 }
 
-/// Render damage without treating shutdown, recycle or an empty bin as equipment destruction.
+/// Render material damage without treating shutdown, recycle or an empty bin as destruction.
 pub fn weapon_diagnostic_text(world: &World, id: ObjectId) -> Result<String> {
     let mut lines = vec![
         "WEAPON SYSTEMS STATUS".into(),
@@ -244,53 +227,13 @@ pub fn weapon_diagnostic_text(world: &World, id: ObjectId) -> Result<String> {
             row.section,
             row.condition.label().to_ascii_uppercase()
         ));
-        let effect = row.effects;
-        if effect.moderate > 0 {
-            lines.push(format!("  General damage: +{} to hit.", effect.moderate));
-        }
-        if effect.damage > 0 {
-            lines.push(format!(
-                "  Focus misalignment: -{} damage; +{} to hit beyond {} hexes.",
-                effect.damage,
-                effect.ranging,
-                row.weapon.profile().short_range
-            ));
-        } else if effect.ranging > 0 {
-            lines.push(format!(
-                "  Ranging system damage: +{} to hit beyond {} hexes.",
-                effect.ranging,
-                row.weapon.profile().short_range
-            ));
-        }
-        if effect.heat > 0 {
-            lines.push(format!(
-                "  Charging crystal damage: +{} heat; explodes on {} or less.",
-                effect.heat,
-                effect.explosion + 1
-            ));
-        }
-        if effect.feed_locked {
-            lines.push(format!(
-                "  Ammo feed damage: can't switch ammo; explodes on {} or less.",
-                effect.explosion + 1
-            ));
-        }
-        if effect.jam > 0 {
-            lines.push(format!(
-                "  Barrel damage: jams on {} or less.",
-                effect.jam + 1
-            ));
-        }
-        if row.damaged_slots > 0 && effect == WeaponDamageEffects::default() {
-            lines.push("  Damaged, but fully operational.".into());
-        }
         if let Some(section) = row.preferred_ammunition_section {
             lines.push(format!("  Preferred ammo source: {section}"));
         }
-        if row.damaged_slots + row.destroyed_slots + row.disabled_slots > 0 {
+        if row.destroyed_slots + row.disabled_slots > 0 {
             lines.push(format!(
-                "  Slot status: Damaged: {}. Destroyed: {}. Disabled: {}",
-                row.damaged_slots, row.destroyed_slots, row.disabled_slots
+                "  Slot status: Destroyed: {}. Disabled: {}",
+                row.destroyed_slots, row.disabled_slots
             ));
         }
     }

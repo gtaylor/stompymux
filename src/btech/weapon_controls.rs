@@ -32,12 +32,6 @@ pub(super) fn ready_weapon(
         unit.loadout()?.weapons[index].one_shot
     });
     ensure!(!one_shot, "One-shot weapons' mode cannot be altered!");
-    if let Some(unit) = world.btech.constructed_units().get(&id) {
-        ensure!(
-            !unit.weapon_damage_effects(index)?.feed_locked,
-            "That weapon's ammo feed mechanism is damaged!"
-        );
-    }
     Ok(ready)
 }
 

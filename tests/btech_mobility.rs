@@ -368,9 +368,10 @@ fn quad_physical_support_uses_selected_front_leg_and_surviving_hips() {
     }
 }
 
-/// Front-leg weapon accuracy uses leg actuator rules, including feet and hip precedence.
+/// Leg actuator damage counts for the bootlegger manoeuvre on all four legs, feet included
+/// and with hip precedence, while leg-mounted weapons fire unpenalised (Total Warfare p. 127).
 #[test]
-fn quad_mounting_modifiers_use_all_four_leg_roles() {
+fn quad_leg_actuator_penalties_use_all_four_leg_roles() {
     for &section in quad().chassis().legs() {
         for (slots, expected) in [
             (vec![1], 1),
@@ -388,7 +389,8 @@ fn quad_mounting_modifiers_use_all_four_leg_roles() {
             )
             .unwrap();
             let damaged: Mech = serde_json::from_value(encoded).unwrap();
-            assert_eq!(damaged.mounting_modifier(section), expected);
+            assert_eq!(damaged.leg_actuator_penalty(section), expected);
+            assert_eq!(damaged.mounting_modifier(section), 0);
         }
     }
 }

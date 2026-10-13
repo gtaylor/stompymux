@@ -381,7 +381,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("supercharger_operational", unit.supercharger_operational())?;
         state.set("unjam", detached(lua, &unit.unjam())?)?;
         state.set("dumping", detached(lua, &unit.dumping())?)?;
-        state.set("weapon_damage", detached(lua, &unit.weapon_damage())?)?;
         state.set(
             "artemis",
             detached(

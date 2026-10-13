@@ -107,7 +107,6 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                     shooter,
                     target,
                     VehicleSalvoRequest {
-                        damage_penalty: request.weapon.damage_penalty,
                         weapon,
                         ammunition: request.weapon.ammunition_mode,
                         fire_mode: request.weapon.fire_mode,

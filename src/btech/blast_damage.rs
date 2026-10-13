@@ -284,7 +284,7 @@ fn blast_arc(bearing: f64, heading: f64) -> HitArc {
     HitArc::Right
 }
 
-/// Neighboring blast cells ignite undecorated woods using the map's durable random stream.
+/// Set an undecorated woods hex alight using the map's durable random stream.
 pub(super) fn ignite_forest(
     world: &mut World,
     map: ObjectId,

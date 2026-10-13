@@ -272,16 +272,12 @@ pub struct Mech {
     pub(super) ammunition_modes: BTreeMap<usize, super::AmmunitionMode>,
     #[serde(default)]
     pub(super) ammunition_sections: BTreeMap<usize, MechSection>,
-    #[serde(default)]
-    pub(super) weapon_damage: Vec<super::WeaponDamage>,
     /// Inspectable component conditions independent of physical system availability.
     #[serde(default)]
     pub(super) component_failures: Vec<super::ComponentFailure<super::CriticalLocation>>,
     /// Temporary weapon conditions independent of material loss and recovery timers.
     #[serde(default)]
     pub(super) weapon_failures: BTreeMap<usize, super::EquipmentFailure>,
-    #[serde(default)]
-    pub(super) weapon_damage_jams: std::collections::BTreeSet<usize>,
     #[serde(default)]
     pub(super) lost_criticals: std::collections::BTreeSet<super::CriticalLocation>,
     pub(crate) dice: super::Dice,
@@ -391,10 +387,8 @@ super::saved_parts::saved_parts!(Mech {
         fire_modes,
         ammunition_modes,
         ammunition_sections,
-        weapon_damage,
         component_failures,
         weapon_failures,
-        weapon_damage_jams,
         lost_criticals,
         pilot,
         detached,
@@ -681,11 +675,8 @@ impl Mech {
         self.lost_criticals.remove(&location);
         self.component_failures
             .retain(|failure| failure.location != location);
-        self.weapon_damage
-            .retain(|damage| damage.location != location);
         if let Some(index) = weapon {
             self.weapon_failures.remove(&index);
-            self.weapon_damage_jams.remove(&index);
             self.jammed_weapons.remove(&index);
             self.spent_launchers.remove(&index);
             self.powered_down_weapons.remove(&index);
@@ -760,10 +751,7 @@ impl Mech {
         self.spent_launchers = remap_set(&remap, &self.spent_launchers);
         self.powered_down_weapons = remap_set(&remap, &self.powered_down_weapons);
         self.weapon_failures = remap_map(&remap, &self.weapon_failures);
-        self.weapon_damage_jams = remap_set(&remap, &self.weapon_damage_jams);
         self.lost_criticals.retain(|slot| !touched.contains(slot));
-        self.weapon_damage
-            .retain(|damage| !touched.contains(&damage.location));
         self.component_failures
             .retain(|failure| !touched.contains(&failure.location));
         self.live_mass.invalidate();
@@ -992,11 +980,9 @@ impl Mech {
                 .filter_map(|(index, mount)| mount.initially_spent.then_some(index))
                 .collect(),
             lost_criticals: Default::default(),
-            weapon_damage: Default::default(),
             powered_down_weapons: Default::default(),
             component_failures: Default::default(),
             weapon_failures: Default::default(),
-            weapon_damage_jams: Default::default(),
             dice: super::Dice::fresh(),
             motion: None,
             power: super::Power::Off,
@@ -1410,7 +1396,6 @@ impl Mech {
         ensure!(self.c3i_network != Some(0), "Invalid C3i network identity");
         self.masc.validate()?;
         self.supercharger.validate()?;
-        self.validate_weapon_damage()?;
         super::weapon_power::validate(&self.powered_down_weapons, &loadout.weapons)?;
         super::component_failure::validate(&self.component_failures, |location| {
             loadout.systems.iter().any(|part| part.location == location)

@@ -750,59 +750,10 @@ impl<'a> ImpactContext<'a> {
         } else {
             None
         };
-        let mut destructive_table = None;
-        if let Some(CriticalLoss::Weapon {
-            index,
-            explosion_damage: 0,
-        }) = self.unit().critical_loss(location)?
-            && self.unit().weapon_intact(index)?
-            && !self
-                .unit()
-                .weapon_damage()
-                .iter()
-                .any(|damage| damage.location == location)
-        {
-            if self.unit().loadout()?.weapons[index].weapon.is_ams() {
-                self.unit_mut().ams_enabled = false;
-            }
-            let roll = self.unit_mut().dice.generic_roll();
-            if let Some(damage) = self.unit_mut().degrade_weapon(location, roll)? {
-                let weapon = self.unit().loadout()?.weapons[index].weapon;
-                let name = weapon.name().split_once('.').expect("catalog namespace").1;
-                let detail = match damage {
-                    super::WeaponDamageKind::Superficial => {
-                        "takes a hit but suffers no noticeable damage!!"
-                    }
-                    super::WeaponDamageKind::Moderate => "takes a hit but continues working!!",
-                    super::WeaponDamageKind::Focus => {
-                        "has its focusing mechanism knocked out of alignment!!"
-                    }
-                    super::WeaponDamageKind::Crystal => "has its charging crystal damaged!!",
-                    super::WeaponDamageKind::Ranging => "has its ranging system damaged!!",
-                    super::WeaponDamageKind::Barrel => "has its barrel warped!!",
-                    super::WeaponDamageKind::Feed => "has its ammunition feed damaged!!",
-                };
-                self.report.notices.push(super::Notice {
-                    unit: self.id,
-                    text: format!("Your {name} {detail}"),
-                });
-                self.report
-                    .impact
-                    .criticals
-                    .push((location, CriticalLoss::WeaponDamage { index, damage }));
-                return Ok(());
-            }
-            destructive_table = Some(index);
-        }
         let carried_before = self.unit().carried_club();
         let was_destroyed = self.unit().is_destroyed();
-        let loss = if let Some(index) = destructive_table {
-            self.unit_mut().destroy_degraded_weapon(index)?
-        } else {
-            let Some(loss) = self.unit_mut().destroy_critical(location)? else {
-                return Ok(());
-            };
-            loss
+        let Some(loss) = self.unit_mut().destroy_critical(location)? else {
+            return Ok(());
         };
         let destroyed = self.unit().is_destroyed();
         super::kill_counters::transition(
@@ -1058,22 +1009,15 @@ impl<'a> ImpactContext<'a> {
             if core_before > 0 && self.unit().sections()[&MechSection::CenterTorso].internal == 0 {
                 self.kill_crew(pilot_before.is_some(), true)?;
             }
-            let hotload = if let CriticalLoss::Weapon { index, .. } = loss {
-                self.unit().loadout()?.weapons[index]
-                    .weapon
-                    .supports_hotload()
-            } else {
-                false
-            };
-            if self.rules.is_some() && matches!(loss, CriticalLoss::Weapon { .. }) && !hotload {
+            if self.rules.is_some() && matches!(loss, CriticalLoss::Weapon { .. }) {
                 self.report.notices.push(super::Notice {
                     unit: self.id,
                     text: "You take personal injury from the weapon's explosion!".to_owned(),
                 });
             }
-            if !hotload {
-                self.effect(ImpactEffect::ExplosionInjury)?;
-            }
+            // Total Warfare p. 41: every ammunition explosion, a hot-loaded launcher's
+            // included, injures the MechWarrior.
+            self.effect(ImpactEffect::ExplosionInjury)?;
         }
         Ok(())
     }

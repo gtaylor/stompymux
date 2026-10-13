@@ -1415,8 +1415,6 @@ fn resolve_attack_inner(
         let balance_check = match weapon {
             _ if fumble.is_some() => Some((attacker, 0)),
             Some(ArmAttack::Mace) if !hit => Some((attacker, 2)),
-            // A wrecking ball hit unbalances its target as a charge does.
-            Some(ArmAttack::WreckingBall) if hit && mech_target => Some((target, 2)),
             _ if matches!(attack, PhysicalAttack::Kick { .. }) && !hit => Some((attacker, 0)),
             _ if matches!(attack, PhysicalAttack::Kick { .. }) && mech_target => Some((target, 0)),
             _ if attack.is_trip() && hit => Some((target, 0)),

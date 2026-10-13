@@ -1415,7 +1415,6 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
     seed(&mut world, target, value);
     let mut blocked = world.clone();
     let request = VehicleSalvoRequest {
-        damage_penalty: 0,
         weapon: Weapon::Lrm20,
         ammunition: AmmunitionMode::Narc,
         fire_mode: FireMode::Normal,
@@ -1439,7 +1438,6 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
         target,
         HitArc::Front,
         VehicleSalvoRequest {
-            damage_penalty: 0,
             guidance_blocked: true,
             ..request
         },

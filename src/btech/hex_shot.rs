@@ -209,7 +209,6 @@ fn resolve_hex_shot_inner(
             if launch.hit {
                 let packets = super::weapon_groups::roll_weapon_groups(
                     super::weapon_groups::WeaponGroupRequest {
-                        damage_penalty: launch.expenditure.damage_penalty,
                         weapon,
                         ammunition: if launch.expenditure.ammunition_mode
                             == AmmunitionMode::Flechette

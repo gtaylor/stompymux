@@ -126,12 +126,13 @@ fn resolve(
         };
         for (coordinate, damage) in cells {
             hit_hex(world, &mut report, coordinate, damage, rules, character)?;
-            if coordinate == mine.coordinate {
-                continue;
-            }
-            if super::blast_damage::ignite_forest(world, map, coordinate)? {
-                report.ignited.push(coordinate);
-            }
+        }
+        // Tactical Operations p. 177: an inferno mine sets its hex on fire; other mines
+        // start no fires.
+        if mine.kind == MineKind::Inferno
+            && super::blast_damage::ignite_forest(world, map, mine.coordinate)?
+        {
+            report.ignited.push(mine.coordinate);
         }
         deplete(world, &mut report, ordinal)?;
         world.btech.validate_action(world)?;

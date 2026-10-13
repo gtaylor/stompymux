@@ -235,13 +235,9 @@ pub fn unit_damage_field(world: &World, id: ObjectId) -> Result<String> {
         |index| {
             failure(
                 unit.powered_down_weapons.contains(&index),
-                if let Some(failure) = unit.weapon_failures.get(&index) {
-                    failure.code()
-                } else if unit.weapon_damage_jams.contains(&index) {
-                    7
-                } else {
-                    0
-                },
+                unit.weapon_failures
+                    .get(&index)
+                    .map_or(0, |failure| failure.code()),
                 unit.jammed_weapons.contains(&index),
             )
         },

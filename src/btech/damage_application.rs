@@ -157,9 +157,6 @@ fn set_mech(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     if protection_changed || previous_ammunition != unit.ammunition {
         unit.live_mass.invalidate();
     }
-    unit.weapon_damage
-        .retain(|damage| !material.restored.contains(&damage.location));
-    unit.weapon_damage_jams.clear();
     let available = loadout
         .weapons
         .iter()

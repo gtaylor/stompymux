@@ -1790,7 +1790,8 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
     }
 }
 
-/// A hotloaded launcher critical applies internal damage and feedback without the Gauss crew-injury rule.
+/// A hotloaded launcher critical applies internal damage and injures the MechWarrior like any
+/// ammunition explosion (Total Warfare p. 41).
 #[tokio::test]
 async fn hotloaded_launcher_tactical_explosion_replays() {
     use stompymux_rs::*;
@@ -1841,7 +1842,7 @@ async fn hotloaded_launcher_tactical_explosion_replays() {
             continue;
         }
         assert!(
-            !report
+            report
                 .notices
                 .iter()
                 .any(|notice| notice.text.contains("personal injury from the weapon"))

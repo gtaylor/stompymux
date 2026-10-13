@@ -4,7 +4,6 @@ use crate::ObjectId;
 
 /// Mechanical launch facts plus the consequence notices already captured by the resolver.
 pub(super) struct LaunchFeedback {
-    critical_failure: Option<super::WeaponDamageKind>,
     shooter: ObjectId,
     weapon: Weapon,
     fire_mode: super::FireMode,
@@ -21,7 +20,6 @@ impl From<&MechShotReport> for LaunchFeedback {
     /// Capture common mechanical facts without inventing a damage target.
     fn from(report: &MechShotReport) -> Self {
         Self {
-            critical_failure: report.expenditure.critical_failure,
             shooter: report.shooter,
             weapon: report.expenditure.weapon,
             fire_mode: report.expenditure.fire_mode,
@@ -43,7 +41,6 @@ impl From<&HexShotReport> for LaunchFeedback {
     /// Capture common mechanical facts without inventing a damage target.
     fn from(report: &HexShotReport) -> Self {
         Self {
-            critical_failure: report.expenditure.critical_failure,
             shooter: report.shooter,
             weapon: report.expenditure.weapon,
             fire_mode: report.expenditure.fire_mode,
@@ -65,7 +62,6 @@ impl From<&super::ArtilleryLaunchReport> for LaunchFeedback {
     /// Artillery shares loader failures and immediate shooter consequences.
     fn from(report: &super::ArtilleryLaunchReport) -> Self {
         Self {
-            critical_failure: report.expenditure.critical_failure,
             shooter: report.shooter,
             weapon: report.expenditure.weapon,
             fire_mode: report.expenditure.fire_mode,
@@ -90,31 +86,6 @@ pub(super) fn failure_messages(
     private: &mut Vec<super::PilotNotice>,
 ) -> Option<Vec<(ObjectId, String)>> {
     let shooter = report.shooter;
-    if let Some(failure) = report.critical_failure {
-        let name = report.weapon.name().split_once('.').unwrap().1;
-        let text = match failure {
-            super::WeaponDamageKind::Crystal => format!(
-                "[fg=red bold]The damaged charging crystal on your {name} overloads![reset]"
-            ),
-            super::WeaponDamageKind::Feed => format!(
-                "[fg=red bold]The damaged ammo feed on your {name} triggers an internal explosion![reset]"
-            ),
-            _ => format!("[fg=red bold]The ammo loader mechanism jams on your {name}![reset]"),
-        };
-        let mut messages = vec![(shooter, text)];
-        if report.misload {
-            messages.extend(observers);
-        }
-        super::piloting::append_feedback(private, report.pilot_notices, messages.len());
-        messages.extend(
-            report
-                .notices
-                .into_iter()
-                .map(|notice| (notice.unit, notice.text)),
-        );
-        return Some(messages);
-    }
-
     if report.propellant_roll.is_some() {
         let name = report.weapon.name().split_once('.').unwrap().1;
         let mut messages = vec![(
@@ -198,7 +169,6 @@ impl From<&super::VehicleShotReport> for LaunchFeedback {
     /// Vehicle storage supplies the same launch facts to the common feedback policy.
     fn from(report: &super::VehicleShotReport) -> Self {
         Self {
-            critical_failure: None,
             shooter: report.shooter,
             weapon: report.expenditure.weapon,
             fire_mode: report.expenditure.fire_mode,

@@ -5825,7 +5825,8 @@ async fn conventional_mine_blasts_packets_neighbors_removal_and_restart() {
                 before.btech.constructed_units()[&units[1]]
             );
         }
-        assert_eq!(report.ignited.len(), if area { 6 } else { 0 });
+        // Conventional, command and vibra blasts start no fires (TO:AR p. 176–177).
+        assert!(report.ignited.is_empty());
         // A conventional field thins on a density roll and never below five points; the
         // others drop a step and are spent once that would leave less than five.
         let conventional = kind == MineKind::Standard;
@@ -5862,7 +5863,9 @@ async fn conventional_mine_blasts_packets_neighbors_removal_and_restart() {
             persistence::load(&config.database()).await.unwrap().btech,
             world.btech
         );
-        if area {
+        // A conventional field's depletion roll needs the map's random stream; its loss
+        // rejects the whole blast after the damage was applied.
+        if conventional && strength >= 5 {
             let mut invalid = before;
             invalid
                 .btech
@@ -6682,27 +6685,6 @@ async fn command_mines_character_publication_and_late_rejection_are_atomic() {
         persistence::load(&config.database()).await.unwrap().btech,
         saved.btech
     );
-    let mut invalid = before;
-    set_minefield(
-        &mut invalid,
-        map,
-        1,
-        Some(Minefield {
-            coordinate: HexCoordinate { x: 1, y: 5 },
-            strength: 2,
-            ..mine
-        }),
-    )
-    .unwrap();
-    support::fail_mine_ignition(&mut invalid, map, 5);
-    let scripts = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(invalid.clone())),
-    )
-    .unwrap();
-    assert!(detonate_command_mines_action(&scripts, &config, sender, 5, rules()).is_err());
-    assert_eq!(scripts.world().btech, invalid.btech);
-    assert!(scripts.drain_outbox().is_empty());
 }
 
 #[tokio::test]

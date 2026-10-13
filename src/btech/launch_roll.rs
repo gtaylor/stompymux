@@ -4,7 +4,6 @@ use anyhow::{Result, ensure};
 
 /// Current weapon and admitted target facts after gatling preparation and ammunition fallback.
 pub(super) struct LaunchRollRequest {
-    pub damage: super::WeaponDamageEffects,
     pub weapon: Weapon,
     pub ammunition: AmmunitionMode,
     pub fire_mode: FireMode,
@@ -15,8 +14,6 @@ pub(super) struct LaunchRollRequest {
 
 /// Unit-independent decisions consumed by both launch adapters.
 pub(super) struct LaunchRoll {
-    pub critical_explosion: bool,
-    pub critical_jam: bool,
     pub roll: u8,
     pub propellant_roll: Option<u8>,
     pub loader_destroyed: bool,
@@ -30,7 +27,6 @@ pub(super) struct LaunchRoll {
 /// Draw attack and propellant dice, then decide loader failure, Streak locking and glancing once.
 pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result<LaunchRoll> {
     let LaunchRollRequest {
-        damage,
         weapon,
         ammunition,
         fire_mode,
@@ -45,7 +41,7 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result
     let roll = attack_roll(weapon, distance, dice);
     let propellant_roll =
         (ammunition == AmmunitionMode::Caseless && roll <= 3).then(|| dice.generic_roll());
-    let (mut loader_destroyed, mut jammed) = propellant_roll.map_or_else(
+    let (loader_destroyed, jammed) = propellant_roll.map_or_else(
         || {
             (
                 fire_mode.is_double_shot() && roll == 2,
@@ -54,10 +50,6 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result
         },
         |propellant| (propellant > 7, propellant <= 7),
     );
-    let critical_explosion = !loader_destroyed && !jammed && damage.explodes(roll);
-    let critical_jam = !loader_destroyed && !jammed && !critical_explosion && damage.jams(roll);
-    loader_destroyed |= critical_explosion;
-    jammed |= critical_jam;
     let launched = !loader_destroyed
         && !jammed
         && (!weapon.is_streak()
@@ -66,15 +58,13 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result
     let pod = weapon.beacon_kind(ammunition).is_some();
     let threshold = target_number;
     Ok(LaunchRoll {
-        critical_explosion,
-        critical_jam,
         roll,
         propellant_roll,
         loader_destroyed,
         jammed,
         launched,
-        misload_required: critical_explosion
-            || (loader_destroyed && (fire_mode == FireMode::Rapid || propellant_roll.is_some())),
+        misload_required: loader_destroyed
+            && (fire_mode == FireMode::Rapid || propellant_roll.is_some()),
         hit: launched && threshold.is_some_and(|number| i32::from(roll) >= number),
         // Tactical Operations glancing blows: a roll exactly equal to the target number halves damage.
         glancing: launched
@@ -121,7 +111,6 @@ mod tests {
             let mut dice = Dice::seeded([seed; 32]);
             let outcome = roll_launch(
                 LaunchRollRequest {
-                    damage: Default::default(),
                     weapon,
                     ammunition,
                     fire_mode: FireMode::Normal,
@@ -140,64 +129,6 @@ mod tests {
                 outcome.propellant_roll.is_some(),
                 ammunition == AmmunitionMode::Caseless
             );
-        }
-    }
-
-    /// Enhanced failures reuse the attack roll and occur only after ordinary loader failures.
-    #[test]
-    fn enhanced_failures_share_attack_dice_and_precedence() {
-        let seed = (0..=255)
-            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
-            .unwrap();
-        for (damage, explosion, jam) in [
-            (super::super::WeaponDamageEffects::default(), false, false),
-            (
-                super::super::WeaponDamageEffects {
-                    explosion: 1,
-                    ..Default::default()
-                },
-                true,
-                false,
-            ),
-            (
-                super::super::WeaponDamageEffects {
-                    jam: 1,
-                    ..Default::default()
-                },
-                false,
-                true,
-            ),
-            (
-                super::super::WeaponDamageEffects {
-                    explosion: 1,
-                    jam: 1,
-                    ..Default::default()
-                },
-                true,
-                false,
-            ),
-        ] {
-            let mut dice = Dice::seeded([seed; 32]);
-            let mut expected = dice.clone();
-            assert_eq!(expected.two_d6(), 2);
-            let result = roll_launch(
-                LaunchRollRequest {
-                    damage,
-                    weapon: Weapon::Ac10,
-                    ammunition: AmmunitionMode::Normal,
-                    fire_mode: FireMode::Normal,
-                    distance: 1.0,
-                    target_number: Some(2),
-                    streak_confused: false,
-                },
-                &mut dice,
-            )
-            .unwrap();
-            assert_eq!(result.critical_explosion, explosion);
-            assert_eq!(result.critical_jam, jam);
-            assert_eq!(result.misload_required, explosion);
-            assert_eq!(result.launched, !explosion && !jam);
-            assert_eq!(dice, expected);
         }
     }
 

@@ -57,7 +57,6 @@ fn rules() -> VehicleImpactRules {
 /// Ordinary direct packet inputs supplied after the firing action has admitted a hit.
 fn request(weapon: Weapon) -> VehicleSalvoRequest {
     VehicleSalvoRequest {
-        damage_penalty: 0,
         weapon,
         ammunition: AmmunitionMode::Normal,
         fire_mode: FireMode::Normal,

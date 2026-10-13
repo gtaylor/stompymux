@@ -186,20 +186,17 @@ fn valid_combat_target_is_retained_between_reassessment_ticks_but_loss_is_immedi
 }
 
 #[test]
-fn projected_heat_accounts_for_burst_modes_damage_and_gatling_bound_without_dice() {
+fn projected_heat_accounts_for_burst_modes_and_gatling_bound_without_dice() {
     use crate::{FireMode as Mode, Weapon};
     assert_eq!(
-        projected_launch_heat(Weapon::MediumLaser, Mode::Normal, 2),
-        u16::from(Weapon::MediumLaser.profile().heat) + 2
+        projected_launch_heat(Weapon::MediumLaser, Mode::Normal),
+        u16::from(Weapon::MediumLaser.profile().heat)
     );
     assert_eq!(
-        projected_launch_heat(Weapon::UltraAc5, Mode::Ultra, 0),
+        projected_launch_heat(Weapon::UltraAc5, Mode::Ultra),
         2 * u16::from(Weapon::UltraAc5.profile().heat)
     );
-    assert_eq!(
-        projected_launch_heat(Weapon::MachineGun, Mode::Gatling, 1),
-        7
-    );
+    assert_eq!(projected_launch_heat(Weapon::MachineGun, Mode::Gatling), 6);
 }
 
 /// Attribution is opt-in and never mistakes an opposing unit's shot for the focal unit.

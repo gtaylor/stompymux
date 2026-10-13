@@ -1619,26 +1619,6 @@ pub(super) static REPAIR_OPERATIONS: Catalog = Catalog {
             value: 3,
         },
         Entry {
-            name: "REPAIR_FOCUS",
-            value: 4,
-        },
-        Entry {
-            name: "REPAIR_CRYSTAL",
-            value: 5,
-        },
-        Entry {
-            name: "REPAIR_BARREL",
-            value: 6,
-        },
-        Entry {
-            name: "REPAIR_AMMO_FEED",
-            value: 7,
-        },
-        Entry {
-            name: "REPAIR_RANGING",
-            value: 8,
-        },
-        Entry {
             name: "REPAIR_AMMO_MOUNT",
             value: 9,
         },

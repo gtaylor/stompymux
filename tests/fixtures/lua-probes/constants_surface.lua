@@ -203,11 +203,9 @@ local SPECS = {
   {
     page = 5, path = 'btech.repair.operations', cross = 'btech_types',
     names = { 'REATTACH', 'REPAIR_PART', 'REPAIR_WEAPON_TEMPORARY',
-      'REPAIR_ENHANCEMENT', 'REPAIR_FOCUS', 'REPAIR_CRYSTAL', 'REPAIR_BARREL',
-      'REPAIR_AMMO_FEED', 'REPAIR_RANGING', 'REPAIR_AMMO_MOUNT',
-      'REPLACE_WEAPON', 'RELOAD', 'REPAIR_ARMOR', 'REPAIR_REAR_ARMOR',
-      'REPAIR_INTERNAL', 'DETACH', 'SCRAP_PART', 'SCRAP_WEAPON', 'UNLOAD',
-      'RESEAL', 'REPLACE_SUIT' },
+      'REPAIR_ENHANCEMENT', 'REPAIR_AMMO_MOUNT', 'REPLACE_WEAPON', 'RELOAD',
+      'REPAIR_ARMOR', 'REPAIR_REAR_ARMOR', 'REPAIR_INTERNAL', 'DETACH',
+      'SCRAP_PART', 'SCRAP_WEAPON', 'UNLOAD', 'RESEAL', 'REPLACE_SUIT' },
   },
   {
     page = 6, path = 'btech.autopilot.orders', cross = 'btech_types',

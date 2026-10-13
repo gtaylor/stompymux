@@ -64,6 +64,3 @@ mod btech_vehicle_mines;
 
 #[path = "../btech_vehicle_surfaces.rs"]
 mod btech_vehicle_surfaces;
-
-#[path = "../btech_weapon_damage.rs"]
-mod btech_weapon_damage;

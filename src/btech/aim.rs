@@ -94,8 +94,6 @@ pub struct AimModifiers {
     pub mounting_section: u8,
     /// Signed intrinsic equipment accuracy, including pulse laser bonuses.
     pub weapon_accuracy: i8,
-    /// Accuracy lost to critical weapon degradation.
-    pub weapon_damage: u8,
     /// Signed accuracy adjustment from selected ammunition.
     pub ammunition_accuracy: i8,
     /// Haywire interference and iNarc homing assistance.
@@ -139,7 +137,6 @@ impl AimModifiers {
                 + i32::from(self.control_damage)
                 + i32::from(self.mounting_section)
                 + i32::from(self.weapon_accuracy)
-                + i32::from(self.weapon_damage)
                 + i32::from(self.beacon_accuracy)
                 + i32::from(self.ammunition_accuracy)
                 + i32::from(self.targeting_computer)
@@ -175,11 +172,11 @@ impl Mech {
         ground_attacker_movement(self.motion(), maximum, fasa_turning)
     }
 
-    /// Derive section accuracy penalties without accumulating hit-order-dependent modifiers.
-    pub fn mounting_modifier(&self, section: MechSection) -> u8 {
-        let leg = self.chassis().is_leg(section);
-        let arm = !leg && matches!(section, MechSection::LeftArm | MechSection::RightArm);
-        if !arm && !leg {
+    /// Destroyed leg actuators in one leg, for the bootlegger manoeuvre's difficulty: a
+    /// destroyed hip supersedes the actuators below it, otherwise each destroyed upper, lower
+    /// or foot actuator counts one.
+    pub fn leg_actuator_penalty(&self, section: MechSection) -> u8 {
+        if !self.chassis().is_leg(section) {
             return 0;
         }
         let damaged: Vec<_> = self.definition().sections[&section]
@@ -194,14 +191,45 @@ impl Mech {
             .filter_map(|(_, critical)| System::named(&critical.equipment))
             .collect();
         if damaged.contains(&System::ShoulderOrHip) {
-            return if arm { 4 } else { 0 };
+            return 0;
         }
         damaged
             .iter()
             .filter(|system| {
-                matches!(system, System::UpperActuator | System::LowerActuator)
-                    || (leg && **system == System::HandOrFootActuator)
+                matches!(
+                    system,
+                    System::UpperActuator | System::LowerActuator | System::HandOrFootActuator
+                )
             })
+            .count() as u8
+    }
+
+    /// Arm actuator damage penalises weapons fired from that arm (Total Warfare p. 127): a
+    /// destroyed shoulder +4, each destroyed upper or lower arm actuator +1. Leg actuators
+    /// affect movement and piloting only, never weapon fire.
+    pub fn mounting_modifier(&self, section: MechSection) -> u8 {
+        let arm = !self.chassis().is_leg(section)
+            && matches!(section, MechSection::LeftArm | MechSection::RightArm);
+        if !arm {
+            return 0;
+        }
+        let damaged: Vec<_> = self.definition().sections[&section]
+            .criticals
+            .iter()
+            .filter(|(slot, _)| {
+                self.critical_destroyed(CriticalLocation {
+                    section,
+                    slot: **slot,
+                })
+            })
+            .filter_map(|(_, critical)| System::named(&critical.equipment))
+            .collect();
+        if damaged.contains(&System::ShoulderOrHip) {
+            return 4;
+        }
+        damaged
+            .iter()
+            .filter(|system| matches!(system, System::UpperActuator | System::LowerActuator))
             .count() as u8
     }
 }
@@ -502,9 +530,6 @@ pub(super) fn aim_modifiers_for_source(
         submerged,
         &mut modifiers,
     )?;
-    modifiers.weapon_damage = attacker
-        .weapon_damage_effects(weapon_index)?
-        .accuracy(modifiers.range.map(|range| range.bracket));
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut modifiers)?;
     modifiers.self_target = shooter == target && mount.weapon == Weapon::CoolantGun;
     modifiers.indirect = indirect;
@@ -559,9 +584,6 @@ pub(super) fn weapon_modifiers(
         attacker.fire_mode(weapon_index)?,
         ammunition,
     )?;
-    aim.weapon_damage = attacker
-        .weapon_damage_effects(weapon_index)?
-        .accuracy(aim.range.map(|range| range.bracket));
     aim.attacker_movement = attacker.attacker_movement_modifier(rules.fasa_turning);
     aim.heat = attacker.heat().to_hit_modifier();
     aim.sensors = match attacker.system_hits(System::Sensors) {
@@ -619,7 +641,6 @@ pub(super) fn weapon_base(
         control_damage: 0,
         mounting_section: 0,
         weapon_accuracy: weapon.accuracy_modifier(),
-        weapon_damage: 0,
         beacon_accuracy: 0,
         ammunition_accuracy: match ammunition {
             super::AmmunitionMode::Cluster => -1,

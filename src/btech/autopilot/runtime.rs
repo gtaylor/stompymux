@@ -1894,12 +1894,12 @@ fn record_replan(metrics: &mut Option<&mut AutopilotRuntimeMetrics>, id: ObjectI
 
 /// Bound a launch without rolling combat dice, using the same mode heat rule as
 /// expenditure. Gatling fire uses its maximum six-point roll for admission.
-fn projected_launch_heat(weapon: crate::Weapon, mode: crate::FireMode, damage_heat: u8) -> u16 {
+fn projected_launch_heat(weapon: crate::Weapon, mode: crate::FireMode) -> u16 {
     u16::from(mode.launch_heat(
         weapon,
         (mode == crate::FireMode::Gatling).then_some(6),
         true,
-    )) + u16::from(damage_heat)
+    ))
 }
 
 fn fire_target_if_ready(
@@ -1948,14 +1948,10 @@ fn fire_target_if_ready(
             else {
                 continue;
             };
-            let unit = &world.btech.constructed_units()[&shooter];
-            let (Ok(mode), Ok(damage)) = (
-                unit.effective_fire_mode_with_loadout(&loadout, index),
-                unit.weapon_damage_with_loadout(&loadout, index),
-            ) else {
+            let Ok(mode) = unit.effective_fire_mode_with_loadout(&loadout, index) else {
                 continue;
             };
-            let projected = projected_launch_heat(readiness.weapon, mode, damage.heat);
+            let projected = projected_launch_heat(readiness.weapon, mode);
             if unit.heat().stored + f64::from(projected) > f64::from(controller_config.heat_ceiling)
             {
                 continue;
@@ -2019,7 +2015,7 @@ fn fire_target_if_ready(
             let Ok(mode) = unit.effective_fire_mode_with_loadout(&loadout, index) else {
                 continue;
             };
-            let projected = projected_launch_heat(readiness.weapon, mode, 0);
+            let projected = projected_launch_heat(readiness.weapon, mode);
             if unit.weapon_heat() + f64::from(projected) > f64::from(controller_config.heat_ceiling)
             {
                 continue;

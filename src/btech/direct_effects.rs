@@ -15,7 +15,6 @@ pub(super) struct DirectEffectRequest {
     pub intercepted: bool,
     pub vehicle_impact: VehicleImpactRules,
     pub woods_damage: bool,
-    pub damage_penalty: u8,
     pub distance: f64,
     pub gatling_damage: Option<u8>,
     pub coordinate: Option<HexCoordinate>,
@@ -149,7 +148,6 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
 fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u16> {
     let packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
-            damage_penalty: request.damage_penalty,
             weapon: request.weapon,
             ammunition: if request.ammunition == AmmunitionMode::Cluster {
                 AmmunitionMode::Normal

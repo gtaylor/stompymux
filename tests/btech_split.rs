@@ -347,57 +347,8 @@ fn arrow_mount_can_end_before_the_primary_section_boundary() {
     }
 }
 
-/// Damage in either half contributes to one launcher and excludes exactly the damaged slots.
-#[test]
-fn split_weapon_degradation_shares_one_effect_set() {
-    use MechSection::*;
-    for (parent, extension) in [
-        (LeftArm, LeftTorso),
-        (RightArm, RightTorso),
-        (LeftTorso, LeftLeg),
-        (RightTorso, CenterTorso),
-    ] {
-        let base = Mech::from_template(definition(Weapon::Ac20, parent, extension)).unwrap();
-        let loadout = base.loadout().unwrap();
-        let index = loadout
-            .weapons
-            .iter()
-            .position(|mount| mount.weapon == Weapon::Ac20)
-            .unwrap();
-        let mount = &loadout.weapons[index];
-        let first = mount.criticals[0];
-        let second = *mount
-            .criticals
-            .iter()
-            .find(|location| location.section == extension)
-            .unwrap();
-        let mut state = serde_json::to_value(&base).unwrap();
-        state["weapon_damage"] = serde_json::json!([
-            WeaponDamage::new(first, WeaponDamageKind::Barrel),
-            WeaponDamage::new(second, WeaponDamageKind::Feed),
-        ]);
-        let damaged: Mech = serde_json::from_value(state).unwrap();
-        assert!(damaged.weapon_intact(index).unwrap());
-        assert_eq!(damaged.mass().unwrap(), base.mass().unwrap());
-        let effects = damaged.weapon_damage_effects(index).unwrap();
-        assert_eq!(effects.jam, 1);
-        assert_eq!(effects.explosion, 1);
-        assert!(effects.feed_locked);
-        for location in [first, second] {
-            assert!(
-                !damaged
-                    .critical_candidates(location.section)
-                    .contains(&location)
-            );
-        }
-        let restored: Mech =
-            serde_json::from_str(&serde_json::to_string(&damaged).unwrap()).unwrap();
-        assert_eq!(restored.weapon_damage_effects(index).unwrap(), effects);
-    }
-}
-
-/// Select one requested critical and, while the mount works, its exact enhanced table roll.
-fn critical_stream(unit: &Mech, location: CriticalLocation, weapon_roll: Option<u8>) -> Dice {
+/// Select one requested critical with a two-die critical check that scores a single hit.
+fn critical_stream(unit: &Mech, location: CriticalLocation) -> Dice {
     let candidates = unit.critical_candidates(location.section);
     let selected = candidates
         .iter()
@@ -413,7 +364,6 @@ fn critical_stream(unit: &Mech, location: CriticalLocation, weapon_roll: Option<
             trial.two_d6(); // Material entry precedes critical selection.
             (matches!(trial.two_d6(), 8 | 9)
                 && trial.die(candidates.len() as u16).unwrap() == selected
-                && weapon_roll.is_none_or(|roll| trial.two_d6() == roll)
                 // The penetrating damage's own Determining Critical Hits roll scores nothing.
                 && trial.two_d6() < 8)
                 .then_some(dice)
@@ -421,9 +371,9 @@ fn critical_stream(unit: &Mech, location: CriticalLocation, weapon_roll: Option<
         .expect("seed for the requested critical sequence")
 }
 
-/// Repeated proxy hits accumulate flags on one parent, then destroy damaged slots and an additional slot.
+/// One hit on either part destroys the launcher; later hits on its other slots only soak criticals.
 #[tokio::test]
-async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
+async fn split_proxy_critical_destroys_the_mount_once_and_replays() {
     for weapon in [
         Weapon::Ac20,
         Weapon::Lbx20,
@@ -452,27 +402,21 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                 .iter()
                 .find(|location| location.section == extension)
                 .unwrap();
-            let hit = Hit {
-                section: extension,
-                rear_armor: false,
-                through_armor_critical: true,
-            };
-            for (step, roll) in [Some(5), Some(6), Some(2), Some(2), Some(12), None]
-                .into_iter()
-                .enumerate()
-            {
+            for (step, location) in [proxy, primary].into_iter().enumerate() {
+                let hit = Hit {
+                    section: location.section,
+                    rear_armor: false,
+                    through_armor_critical: true,
+                };
                 let unit = &world.btech.constructed_units()[&id];
-                let candidates = unit.critical_candidates(extension).len() as u16;
-                let dice = critical_stream(unit, proxy, roll);
+                let candidates = unit.critical_candidates(location.section).len() as u16;
+                let dice = critical_stream(unit, location);
                 let mut expected = dice.clone();
                 expected.two_d6(); // Material entry.
                 expected.two_d6();
                 expected.die(candidates).unwrap();
-                if roll.is_some() {
-                    expected.two_d6();
-                }
                 // Penetrating damage consumes its own roll even when the TAC supplied a critical.
-                if unit.sections()[&extension].armor == 0 {
+                if unit.sections()[&location.section].armor == 0 {
                     expected.two_d6();
                 }
                 world.btech.set_unit_dice(id, dice).unwrap();
@@ -484,35 +428,33 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                     report
                 );
                 assert_eq!(world.btech, replay.btech);
-                assert_eq!(report.criticals.len(), 1);
-                assert_eq!(report.criticals[0].0, proxy);
-                let unit = &world.btech.constructed_units()[&id];
-                if step < 4 {
-                    assert_eq!(unit.weapon_damage().len(), 1);
-                    assert_eq!(unit.weapon_damage()[0].location, primary);
-                    assert_eq!(unit.weapon_damage()[0].effects.len(), (step + 1).min(3));
-                    let effects = unit.weapon_damage_effects(index).unwrap();
-                    assert_eq!(effects.jam, 1);
-                    assert_eq!(effects.damage, 0);
-                    assert_eq!(effects.heat, 0);
-                    assert_eq!(effects.feed_locked, step > 0);
-                    assert_eq!(effects.explosion, u8::from(step > 0));
-                    assert_eq!(effects.moderate, u8::from(step > 1));
-                } else {
-                    assert!(unit.weapon_damage().is_empty());
-                    assert_eq!(
-                        unit.weapon_damage_effects(index).unwrap(),
-                        WeaponDamageEffects::default()
-                    );
-                }
-                let criticals = battle_critical_report(&world, id, primary.section.name()).unwrap();
                 assert_eq!(
-                    criticals.slots[usize::from(primary.slot)].condition,
-                    if step < 4 {
-                        EquipmentCondition::Damaged
+                    report.criticals,
+                    vec![(
+                        location,
+                        CriticalLoss::Weapon {
+                            index,
+                            explosion_damage: 0,
+                        }
+                    )]
+                );
+                let unit = &world.btech.constructed_units()[&id];
+                assert!(!unit.weapon_intact(index).unwrap());
+                assert!(unit.critical_destroyed(proxy));
+                assert_eq!(unit.critical_destroyed(primary), step == 1);
+                assert!(!unit.critical_destroyed(mount.criticals[1]));
+                let parents = battle_critical_report(&world, id, primary.section.name()).unwrap();
+                assert_eq!(
+                    parents.slots[usize::from(primary.slot)].condition,
+                    if step == 0 {
+                        EquipmentCondition::Broken
                     } else {
                         EquipmentCondition::Destroyed
                     }
+                );
+                assert_eq!(
+                    parents.slots[usize::from(mount.criticals[1].slot)].condition,
+                    EquipmentCondition::Broken
                 );
                 let extensions = battle_critical_report(&world, id, proxy.section.name()).unwrap();
                 let proxy_row = &extensions.slots[usize::from(proxy.slot)];
@@ -520,25 +462,8 @@ async fn repeated_split_proxy_criticals_accumulate_once_and_replay() {
                 assert!(!proxy_row.equipment.contains("SplitCrit"));
                 assert_eq!(proxy_row.condition, EquipmentCondition::Operational);
                 let diagnostic = &battle_weapon_diagnostics(&world, id).unwrap()[index];
-                assert_eq!(diagnostic.damaged_slots, u8::from(step < 4));
-                assert_eq!(
-                    diagnostic.destroyed_slots,
-                    if step < 4 {
-                        0
-                    } else if step == 4 {
-                        2
-                    } else {
-                        3
-                    }
-                );
-                assert_eq!(
-                    diagnostic.effects,
-                    unit.weapon_damage_effects(index).unwrap()
-                );
-                assert_eq!(unit.weapon_intact(index).unwrap(), step < 4);
-                assert_eq!(unit.critical_destroyed(primary), step >= 4);
-                assert_eq!(unit.critical_destroyed(mount.criticals[1]), step >= 4);
-                assert_eq!(unit.critical_destroyed(proxy), step >= 5);
+                assert_eq!(diagnostic.condition, EquipmentCondition::Destroyed);
+                assert_eq!(diagnostic.destroyed_slots, step as u8 + 1);
                 assert_eq!(
                     roll_unit_dice(&mut world, id, 2).unwrap(),
                     vec![expected.d6(), expected.d6()],

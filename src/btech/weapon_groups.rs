@@ -1,11 +1,9 @@
 //! Target-independent weapon packet sizing after a successful launch and hit.
 use super::{AmmunitionMode, Dice, FireMode, FlechetteDamage, RotaryDamage, Weapon, WeaponSalvo};
-use anyhow::{Result, ensure};
+use anyhow::Result;
 
 /// Damage inputs resolved by the enclosing unit or terrain attack.
 pub(super) struct WeaponGroupRequest {
-    /// Whether the launching mount is below the waterline.
-    pub damage_penalty: u8,
     pub weapon: Weapon,
     pub ammunition: AmmunitionMode,
     pub fire_mode: FireMode,
@@ -33,7 +31,6 @@ pub(super) fn roll_weapon_groups(
     dice: &mut Dice,
 ) -> Result<WeaponGroups> {
     let WeaponGroupRequest {
-        damage_penalty,
         weapon,
         ammunition: mode,
         fire_mode,
@@ -45,13 +42,6 @@ pub(super) fn roll_weapon_groups(
         target_beacon,
         artemis_v,
     } = request;
-    ensure!(
-        damage_penalty == 0
-            || (weapon.gunnery_skill(true) == "Gunnery-Laser"
-                && damage_penalty <= weapon.profile().critical_slots),
-        "Invalid weapon damage penalty"
-    );
-    let defer_glancing = damage_penalty > 0;
     let burst = fire_mode.rounds_per_cycle() > 1;
     let cluster_roll = (burst || weapon.profile().missiles > 0 || mode == AmmunitionMode::Cluster)
         .then(|| {
@@ -112,20 +102,12 @@ pub(super) fn roll_weapon_groups(
         weapon.damage_groups_for_guided_hit(
             guided_mode,
             cluster_roll,
-            glancing && !defer_glancing,
+            glancing,
             distance,
             artemis_v,
             guidance_blocked,
         )?
     };
-    if defer_glancing {
-        for packet in &mut damage {
-            *packet = packet.saturating_sub(u16::from(damage_penalty));
-            if glancing {
-                *packet /= 2;
-            }
-        }
-    }
     // A glancing blow halves damage rounding down (Tactical Operations p. 79), so a one-point
     // round lands without effect and no hit location is rolled for it.
     damage.retain(|packet| *packet > 0);
@@ -236,7 +218,6 @@ mod tests {
         for seed in 0..=31 {
             let request =
                 |ammunition, artemis_v, target_beacon, guidance_blocked| WeaponGroupRequest {
-                    damage_penalty: 0,
                     weapon,
                     ammunition,
                     fire_mode: FireMode::Normal,
@@ -289,7 +270,6 @@ mod tests {
                 };
                 let groups = roll_weapon_groups(
                     WeaponGroupRequest {
-                        damage_penalty: 0,
                         weapon,
                         ammunition: AmmunitionMode::Normal,
                         fire_mode,
@@ -337,7 +317,6 @@ mod tests {
                             let mut dice = Dice::seeded([seed; 32]);
                             let mut groups = roll_weapon_groups(
                                 WeaponGroupRequest {
-                                    damage_penalty: 0,
                                     weapon,
                                     ammunition: mode,
                                     fire_mode: FireMode::Normal,
@@ -376,34 +355,6 @@ mod tests {
             }
         }
     }
-
-    /// Focus loss reduces energy packets before glancing rounding, for every damage recipient.
-    #[test]
-    fn energy_degradation_precedes_glancing_packet_rounding() {
-        for (glancing, expected) in [(false, 9), (true, 4)] {
-            let mut dice = Dice::seeded([0; 32]);
-            let before = dice.clone();
-            let groups = roll_weapon_groups(
-                WeaponGroupRequest {
-                    weapon: Weapon::Ppc,
-                    ammunition: AmmunitionMode::Normal,
-                    fire_mode: FireMode::Normal,
-                    gatling_damage: None,
-                    damage_penalty: 1,
-                    distance: Some(4.0),
-                    glancing,
-                    guidance_blocked: false,
-                    angel_blocked: false,
-                    target_beacon: false,
-                    artemis_v: false,
-                },
-                &mut dice,
-            )
-            .unwrap();
-            assert_eq!(groups.damage, vec![expected]);
-            assert_eq!(dice, before);
-        }
-    }
 }
 
 #[cfg(test)]
@@ -427,7 +378,6 @@ mod streak_lrm_tests {
                         let roll = expected_dice.two_d6();
                         let groups = roll_weapon_groups(
                             WeaponGroupRequest {
-                                damage_penalty: 0,
                                 weapon,
                                 ammunition: AmmunitionMode::Normal,
                                 fire_mode: FireMode::Normal,
