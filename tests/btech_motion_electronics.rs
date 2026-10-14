@@ -3080,7 +3080,7 @@ async fn tag_miss_designates_nothing_and_recycles() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = shot_fixture().await;
     install_test_tag(&mut world, id, target);
-    // Gunnery 4 against a running, unlocked, adjacent target needs a 4; the dice roll a 2.
+    // Gunnery 4 against a running, unlocked, adjacent target needs a 5; the dice roll a 2.
     shot_skill(&mut world, 7);
     shot_seed(&mut world, id, support::roll_two_seed());
     world
@@ -3090,7 +3090,7 @@ async fn tag_miss_designates_nothing_and_recycles() {
         })
         .unwrap();
     let aim = battle_tag_aim_modifiers(&world, id, target, 4, optical_aim_rules()).unwrap();
-    assert_eq!(aim.subtotal(), Some(4), "{aim:?}");
+    assert_eq!(aim.subtotal(), Some(5), "{aim:?}");
     let notices =
         select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
     assert_eq!(notices.len(), 1);
@@ -3163,8 +3163,8 @@ async fn tag_aim_uses_weapon_attack_modifiers() {
         let range = aim.range.unwrap();
         assert_eq!((range.bracket, range.modifier), (bracket, modifier), "{x}");
         assert_eq!(aim.gunnery, 4);
-        // With no lock at all there is no secondary-target penalty.
-        assert_eq!(aim.target_lock, 0);
+        // With no lock every target, TAG's included, is a secondary one.
+        assert_eq!(aim.target_lock, 1);
         assert_eq!(aim.beacon_accuracy, 0);
         assert_eq!(aim.ammunition_accuracy, 0);
         assert_eq!(aim.targeting_computer, 0);
@@ -4041,7 +4041,7 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     let seen_aim =
         battle_aim_modifiers(&seen, shooter, target, index, 6, shot_rules().aim).unwrap();
     assert!(seen_aim.indirect.is_none());
-    assert_eq!(seen_aim.target_lock, 0);
+    assert_eq!(seen_aim.target_lock, 1);
     assert_eq!(
         seen_aim.perception,
         Some(PerceptionAim {

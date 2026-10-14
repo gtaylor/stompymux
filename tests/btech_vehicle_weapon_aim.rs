@@ -85,7 +85,7 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         assert_eq!(aim.gunnery, 6);
         assert_eq!(aim.distance, 0.0);
         assert_eq!(aim.range.unwrap().modifier, 0);
-        assert_eq!(aim.target_lock, 0);
+        assert_eq!(aim.target_lock, 1); // No lock: every shot is a secondary attack.
         assert_eq!(aim.attacker_movement, 0);
         assert_eq!(aim.sensors, 0);
         assert_eq!(aim.control_damage, 0);
@@ -105,7 +105,7 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         let selected =
             battle_pilot_aim_modifiers(&world, shooter, target, 0, false, rules()).unwrap();
         assert_eq!(selected.target_lock, 0);
-        assert_eq!(selected.subtotal(), aim.subtotal());
+        assert_eq!(selected.subtotal(), aim.subtotal().map(|n| n - 1));
         damage_battle_vehicle_controls(&mut world, shooter, VehicleControlHit::Sensors).unwrap();
         damage_battle_vehicle_controls(
             &mut world,

@@ -213,10 +213,9 @@ reveal positions from stale observations. `contacts` takes no switches.
 
 Use `lock #unit` to select a currently visible contact from `contacts`, or `lock -`
 to clear your target. Selection requires the running unit's conscious assigned
-pilot and takes effect at once. Your lock is your primary target: firing at any
-other unit is a secondary attack at +1 to hit when that unit is in your forward
-arc (after any torso twist or turret rotation) or +2 elsewhere. Without a lock,
-whatever you fire at is your primary target. A scanner update reporting your
+pilot and takes effect at once. Your lock is your primary target and takes no
+to-hit modifier; firing at any other unit is a secondary attack at +1. Without
+a lock every shot is a secondary attack at +1. A scanner update reporting your
 selected contact lost clears the lock. Shutdown and battlefield removal clear
 selection. `lock` takes no switches. Aimed-section commands are not yet available.
 

@@ -970,8 +970,8 @@ async fn aim_breakdown_tracks_turning_equipment_and_heat_without_mutation() {
     let base = battle_aim_modifiers(&world, shooter, target, 0, 4, rules).unwrap();
     assert_eq!(base.distance, 2.0);
     assert_eq!(base.target_movement, -4);
-    assert_eq!(base.target_lock, 0);
-    assert_eq!(base.subtotal(), Some(0));
+    assert_eq!(base.target_lock, 1);
+    assert_eq!(base.subtotal(), Some(1));
     // Turning in place is not movement (Total Warfare p. 117).
     set_battle_heading(&mut world, shooter, ObjectId(1), 90.0).unwrap();
     assert_eq!(
@@ -2061,10 +2061,10 @@ async fn target_lock_rejects_corrupt_state_and_clears_on_destruction() {
     world.validate(&config).unwrap();
 }
 
-/// Total Warfare p. 108: the selected lock is the primary target; any other target is a
-/// secondary one at +1 in the forward arc or +2 elsewhere, keyed on that target's own arc.
+/// The selected lock is the primary target at +0; every other unit is a secondary target at a
+/// flat +1, and with no lock every shot is secondary (realtime reading of Total Warfare p. 108).
 #[tokio::test]
-async fn aim_lock_penalty_follows_selected_target_and_secondary_arcs() {
+async fn aim_lock_penalty_is_flat_for_every_unselected_target() {
     use stompymux_rs::{battle_aim_modifiers, select_battle_target};
     let (_dir, config, mut world, id, rear) = lock_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -2083,14 +2083,14 @@ async fn aim_lock_penalty_follows_selected_target_and_secondary_arcs() {
             .unwrap()
             .target_lock
     };
-    assert_eq!(penalty(&world, front), 0); // No selection: the shot's target is primary.
-    assert_eq!(penalty(&world, rear), 0);
+    assert_eq!(penalty(&world, front), 1); // No selection: nothing is primary.
+    assert_eq!(penalty(&world, rear), 1);
     select_battle_target(&mut world, id, ObjectId(1), Some(rear)).unwrap();
     assert_eq!(penalty(&world, rear), 0);
-    assert_eq!(penalty(&world, front), 1); // Secondary target in the forward arc.
+    assert_eq!(penalty(&world, front), 1);
     select_battle_target(&mut world, id, ObjectId(1), Some(front)).unwrap();
     assert_eq!(penalty(&world, front), 0);
-    assert_eq!(penalty(&world, rear), 2); // Secondary target behind the attacker.
+    assert_eq!(penalty(&world, rear), 1); // Behind the attacker, still a flat +1.
     stompymux_rs::rotate_battle_torso(&mut world, id, ObjectId(1), stompymux_rs::Torso::Right)
         .unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 30.0).unwrap();
@@ -2098,7 +2098,7 @@ async fn aim_lock_penalty_follows_selected_target_and_secondary_arcs() {
         advance_battle_motion(&mut world, RULES).unwrap();
     }
     select_battle_target(&mut world, id, ObjectId(1), Some(rear)).unwrap();
-    assert_eq!(penalty(&world, front), 2); // Torso and heading together put the front unit to the side.
+    assert_eq!(penalty(&world, front), 1); // Arc geometry never changes the secondary penalty.
     let mut rules = optical_aim_rules();
     rules.override_weapon_arcs = true;
     assert_eq!(
@@ -2234,9 +2234,9 @@ async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
             Some(stompymux_rs::DetectionChannel::Sight)
         );
         assert_eq!(perception.modifier, expected, "{tile}");
-        // Gunnery 4 + immobile target -4 + moonless night 3 + perception contribution.
+        // Gunnery 4 + immobile target -4 + no lock +1 + moonless night 3 + perception contribution.
         assert_eq!(aim.light, 3);
-        assert_eq!(aim.subtotal(), Some(3 + i32::from(expected)));
+        assert_eq!(aim.subtotal(), Some(4 + i32::from(expected)));
     }
 }
 
@@ -2336,7 +2336,7 @@ async fn pilot_gunnery_uses_current_family_skills_connection_and_signed_targets(
     .unwrap();
     let aim = battle_pilot_aim_modifiers(&world, id, target, 0, true, optical_aim_rules()).unwrap();
     assert_eq!(aim.gunnery, -4);
-    assert_eq!(aim.subtotal(), Some(-8)); // -4 gunnery -4 immobile target.
+    assert_eq!(aim.subtotal(), Some(-7)); // -4 gunnery -4 immobile target +1 no lock.
     world
         .objects
         .get_mut(&pilot)
@@ -2381,7 +2381,7 @@ async fn signed_aim_subtotal_does_not_overflow_at_supplied_skill_limits() {
         let aim =
             stompymux_rs::battle_aim_modifiers(&world, id, target, 0, gunnery, optical_aim_rules())
                 .unwrap();
-        assert_eq!(aim.subtotal(), Some(i32::from(gunnery) - 4));
+        assert_eq!(aim.subtotal(), Some(i32::from(gunnery) - 3));
     }
 }
 
@@ -2399,7 +2399,7 @@ async fn direct_shot_hit_threshold_and_expenditure_match_manual_composition() {
     shot_seed(&mut base, id, seed);
     shot_seed(&mut base, target, 17);
     // A roll one under the target hits without glancing; one over misses.
-    for (level, hit) in [(8 - roll, true), (6 - roll, false)] {
+    for (level, hit) in [(9 - roll, true), (7 - roll, false)] {
         let mut world = base.clone();
         shot_skill(&mut world, level);
         let mut expected = world.clone();
@@ -4778,7 +4778,7 @@ async fn direct_glancing_blows_resolve_exact_boundaries_and_replay_after_restart
         [(5, Some(5), false), (6, Some(2), true), (7, None, false)]
     {
         let mut world = base.clone();
-        shot_skill(&mut world, 7 - ordinary_target);
+        shot_skill(&mut world, 8 - ordinary_target);
         let rules = shot_rules();
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
@@ -4853,7 +4853,7 @@ async fn direct_glancing_missiles_spend_full_salvo_and_apply_reduced_clusters() 
         ObjectId(1),
         "Gunnery-Missile",
         stompymux_rs::CharacterValue {
-            value: 0,
+            value: 1,
             experience: 0,
             last_used: 0,
         },
@@ -4900,7 +4900,7 @@ async fn direct_glancing_missiles_spend_full_salvo_and_apply_reduced_clusters() 
 #[tokio::test]
 async fn fire_command_lists_weapons_rejects_invalid_requests_and_reports_glancing_hits() {
     let (_dir, config, mut world, id, target) = shot_fixture().await;
-    shot_skill(&mut world, 0);
+    shot_skill(&mut world, 1);
     let seed = (0..=255)
         .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 7)
         .unwrap();
@@ -5673,7 +5673,7 @@ async fn overheat_server_retries_shutdown_without_advancing_the_failed_clock_or_
 async fn lua_firing_matches_native_commands_and_returns_detached_weapon_and_shot_tables() {
     for selected in [false, true] {
         let (_dir, config, mut world, id, target) = shot_fixture().await;
-        shot_skill(&mut world, 0);
+        shot_skill(&mut world, 1);
         let seed = (0..=255)
             .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 7)
             .unwrap();
@@ -5708,7 +5708,8 @@ async fn lua_firing_matches_native_commands_and_returns_detached_weapon_and_shot
             .eval_callback(&format!("return btech.unit.fire({},1,0,{argument})", id.0))
             .unwrap();
         assert_eq!(report.get::<u8>("roll").unwrap(), 7);
-        assert!(report.get::<bool>("glancing").unwrap());
+        // The locked primary target is one easier to hit than an unlocked one.
+        assert_eq!(report.get::<bool>("glancing").unwrap(), !selected);
         assert_eq!(report.get::<i64>("target").unwrap(), target.0);
         assert!(matches!(
             report.get::<mlua::Value>("dice").unwrap(),

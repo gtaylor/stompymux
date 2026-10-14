@@ -479,10 +479,11 @@ pub(super) fn ensure_perceived(aim: &AimModifiers) -> Result<()> {
     Ok(())
 }
 
-/// Multiple targets (Total Warfare p. 108): the selected lock is the declared primary target.
-/// A shot at any other unit is a secondary attack and takes +1 when that target lies in the
-/// attacker's forward arc, after any torso twist or turret rotation, or +2 in a side or rear
-/// arc. With no selection the shot's own target is the primary target.
+/// Multiple targets, the realtime reading of Total Warfare p. 108: the selected lock is the
+/// declared primary target and takes no modifier, and a shot at any other unit is a secondary
+/// attack at +1. Without a lock nothing has been declared, so every shot is secondary at +1.
+/// The book's +2 for a secondary target outside the forward arc is deliberately not used:
+/// a single flat +1 keeps the lock meaningful without punishing arc geometry twice.
 pub(super) fn lock_modifier(
     world: &World,
     source: super::fire_target::TargetSource,
@@ -492,41 +493,10 @@ pub(super) fn lock_modifier(
     if override_arcs {
         return Ok(0);
     }
-    match source.selection(world) {
-        None => Ok(0),
-        Some(super::TargetSelection::Unit(lock)) if lock.target == target => Ok(0),
-        Some(_) => Ok(if target_in_forward_arc(world, source.unit, target)? {
-            1
-        } else {
-            2
-        }),
-    }
-}
-
-/// Whether a unit lies in the attacker's forward arc as rotated by its torso twist or, for a
-/// turreted vehicle, its turret.
-fn target_in_forward_arc(world: &World, shooter: ObjectId, target: ObjectId) -> Result<bool> {
-    let attacker =
-        super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
-    let heading = attacker
-        .heading
-        .context("Shooter has no battlefield motion")?;
-    let bearing = super::unit_range(world, shooter, target)?
-        .bearing
-        .unwrap_or(180.0);
-    let rotation = match world.btech.vehicles().get(&shooter) {
-        Some(vehicle) => vehicle
-            .turret_heading()
-            .map_or(0.0, |turret| turret - heading),
-        None => attacker.facing.torso.offset(),
-    };
-    anyhow::ensure!(
-        bearing.is_finite() && heading.is_finite() && rotation.is_finite(),
-        "Invalid target direction"
-    );
-    let relative =
-        (bearing.rem_euclid(360.0) - heading.rem_euclid(360.0) - rotation).rem_euclid(360.0);
-    Ok(relative <= 60.0 || relative >= 300.0)
+    Ok(match source.selection(world) {
+        Some(super::TargetSelection::Unit(lock)) if lock.target == target => 0,
+        _ => 1,
+    })
 }
 
 /// Inspect numeric contributions without consuming ammunition/dice or establishing firing permission.
