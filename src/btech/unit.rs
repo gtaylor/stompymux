@@ -1342,7 +1342,7 @@ impl Mech {
             (self.gyro() == super::Gyro::Hardened).then(|| self.system_hits(System::Gyro)),
         )?;
         if !self.contract_loadout {
-            self.jump_capacity(50)?;
+            self.jump_capacity(100)?;
             if self
                 .definition
                 .attributes

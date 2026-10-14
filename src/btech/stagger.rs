@@ -24,7 +24,9 @@ pub struct Stagger {
 }
 
 impl Stagger {
-    /// Positive twenty-point levels govern action-time checks, independently of the turn total.
+    /// Positive twenty-point levels of the restored action-time scalar, independently of the
+    /// turn total. Takeoff and landing never roll on it: the twenty-point check is the single
+    /// turn roll made here (Total Warfare p. 60).
     pub fn action_level(&self) -> i32 {
         (self.action_damage / 20).max(0)
     }
@@ -59,25 +61,6 @@ impl Mech {
     pub fn stagger_active(&self) -> bool {
         !self.is_destroyed() && (self.stagger.turn_damage > 0 || self.power() == Power::Running)
     }
-}
-
-/// Reference weight-class adjustment for action-time checks.
-fn tonnage_modifier(tons: u16) -> i32 {
-    match tons {
-        0..=35 => 1,
-        36..=55 => 0,
-        56..=75 => -1,
-        _ => -2,
-    }
-}
-
-/// Action-time checks always apply the tonnage adjustment.
-pub(super) fn action_modifier(unit: &Mech) -> i16 {
-    if unit.power() != Power::Running {
-        return 999;
-    }
-    (unit.stagger().action_level() + tonnage_modifier(unit.definition().tons))
-        .clamp(i32::from(i16::MIN), i32::from(i16::MAX)) as i16
 }
 
 /// Rule choices shared by the server heartbeat and isolated simulation callers.

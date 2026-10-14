@@ -2,7 +2,7 @@
 //! following the Total Warfare Heat Scale (p. 159–160).
 use super::{Mech, Notice, Power};
 use crate::{Flag, ObjectId, World};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 
 /// Most heat that outside sources (fire, infernos, heat-causing weapons) can add to a Mech in
@@ -377,19 +377,12 @@ fn resolve_shutdown(
         },
     ));
     if airborne {
-        let input = super::stacking::physical_input(world, id, super::StackingEntry::Fall)?;
-        let resolve = if character_unit {
-            super::fall::resolve_character_signed_fall
+        // A jumping 'Mech brought down in flight has fallen zero levels (Total Warfare p. 68).
+        let fall = if character_unit {
+            super::fall::resolve_character_fall(world, id, 1, fall_rules)?
         } else {
-            super::fall::resolve_signed_fall
+            super::resolve_fall(world, id, 1, fall_rules)?
         };
-        let fall = resolve(
-            world,
-            id,
-            i16::try_from(input.jump_movement_points)
-                .context("Jump fall multiplier exceeds supported range")?,
-            fall_rules,
-        )?;
         fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
         report.fall = Some(fall);
         let input = super::stacking::physical_input(world, id, super::StackingEntry::Fall)?;

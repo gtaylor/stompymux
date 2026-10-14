@@ -1,4 +1,5 @@
-//! Transactional conventional jumping on supported terrain routes, with committed landing and stabilization.
+//! Transactional conventional jumping: launch admission against terrain and water, jump heat,
+//! the airborne tick, and committed landing with its footing, strain and stabilization rules.
 use super::{JumpFlight, JumpOutcome, JumpPath, Mech, Notice, Posture, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -71,6 +72,12 @@ impl Mech {
 }
 
 /// Validate the currently supported route on launch and persisted-world loading.
+///
+/// A jump may not cross a hex whose surface is higher than the unit's Jumping MP plus the
+/// level the jump started from (Total Warfare p. 52), so a legal route never collides with
+/// terrain; bridge decks and building roofs are the hexes' surfaces. The destination's own
+/// climb is bounded by the path, and the hex the jump leaves is not crossed. Units on the
+/// ground are ignored until the landing hex (p. 59).
 pub(super) fn validate_route(map: &super::StoredMap, path: JumpPath) -> Result<()> {
     ensure!(
         !map.has_flag(super::MapFlag::Underground),
@@ -78,20 +85,61 @@ pub(super) fn validate_route(map: &super::StoredMap, path: JumpPath) -> Result<(
     );
     let start = path.sample(0.0, path.movement_points())?;
     let end = path.sample(1.0, path.movement_points())?;
-    ensure!(
-        path.is_continuation() || start.point.containing_hex()? != end.point.containing_hex()?,
-        "You're already in the target hex."
-    );
-    // Endpoint heights are launch-time facts; ice may break beneath a saved destination.
-    for coordinate in start.point.trace(end.point)? {
-        map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    let ceiling = f64::from(path.movement_points()) + start.elevation;
+    let crossed = start.point.trace(end.point)?;
+    let count = crossed.len();
+    for (index, coordinate) in crossed.into_iter().enumerate() {
+        // Endpoint heights are launch-time facts; ice may break beneath a saved destination.
+        let tile = map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+        if index == 0 || index + 1 == count {
+            continue;
+        }
+        ensure!(
+            f64::from(tile.surface_height()) <= ceiling,
+            "That jump would cross terrain higher than your jets can clear"
+        );
     }
     Ok(())
 }
 
+/// Lowest apex that keeps the displayed curve above every hex the route crosses between its
+/// endpoints, measured where the curve enters and leaves each hex. The curve is concave, so
+/// clearing both boundaries clears the whole crossing. Boundaries within a quarter hex of
+/// either endpoint are measured a quarter hex in, since the curve leaves the ground there.
+pub(super) fn trajectory_clearance(map: &super::StoredMap, path: JumpPath) -> Result<u16> {
+    let points = path.movement_points();
+    let start = path.sample(0.0, points)?;
+    let end = path.sample(1.0, points)?;
+    let distance = path.distance();
+    if distance == 0.0 {
+        return Ok(0);
+    }
+    let margin = (0.25 / distance).min(0.5);
+    let intervals = start.point.trace_intervals(end.point)?;
+    let count = intervals.len();
+    let mut clearance: f64 = 0.0;
+    for (index, (coordinate, entry, exit)) in intervals.into_iter().enumerate() {
+        if index == 0 || index + 1 == count {
+            continue;
+        }
+        let surface = f64::from(
+            map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?
+                .surface_height(),
+        );
+        for progress in [entry.max(margin), exit.min(1.0 - margin)] {
+            let line = start.elevation + (end.elevation - start.elevation) * progress;
+            let lift = 1.0 - ((progress - 0.5) * 2.0).powi(4);
+            if lift <= 0.0 {
+                continue;
+            }
+            clearance = clearance.max((surface - line) / lift);
+        }
+    }
+    Ok(clearance.ceil().clamp(0.0, f64::from(u16::MAX)) as u16)
+}
+
 /// Launch toward a bearing/range projection, snapping the destination to its hex center.
-/// Supported terrain uses destination height and resolves hills during flight.
-/// Failed pre-launch checks resolve tactical falls; host actions additionally publish character consequences.
+/// The route is admitted against terrain at launch, so the flight itself never collides.
 pub fn launch_jump(
     world: &mut World,
     id: ObjectId,
@@ -105,9 +153,7 @@ pub fn launch_jump(
             id,
             pilot,
             JumpRequest::Projected { bearing, range },
-            super::MovementRules::STANDARD.fall,
             super::SpeedPolicy::STANDARD,
-            None,
         )?;
         world.btech.validate_action(world)?;
         Ok(notices)
@@ -128,9 +174,7 @@ pub fn launch_dfa(
             id,
             pilot,
             JumpRequest::Target(target),
-            super::MovementRules::STANDARD.fall,
             super::SpeedPolicy::STANDARD,
-            None,
         )?;
         world.btech.validate_action(world)?;
         Ok(notices)
@@ -153,7 +197,7 @@ enum JumpRequest<'a> {
 }
 
 impl JumpRequest<'_> {
-    /// Interpret only after the pre-launch roll; a failed roll never examines destination arguments.
+    /// Interpret the request's destination arguments.
     fn destination(self, world: &World, id: ObjectId) -> Result<JumpDestination> {
         match self {
             Self::Projected { bearing, range } => Ok(JumpDestination::Projected { bearing, range }),
@@ -190,24 +234,17 @@ impl JumpRequest<'_> {
     }
 }
 
-/// Fully checked geometry remains uncommitted until all post-roll request validation succeeds.
+/// Fully checked geometry remains uncommitted until all request validation succeeds.
 struct PreparedJump {
     motion: super::Motion,
     flight: JumpFlight,
     last_jump: LastJump,
     dfa: bool,
+    /// Heat the jump builds up, charged once at takeoff.
+    heat: u64,
 }
 
-/// Consequences that need the host's private injury, XP and casualty publication.
-#[derive(Default)]
-struct LaunchEffects {
-    pilot_notices: Vec<super::PilotNotice>,
-    rejection: Option<String>,
-    fall: Option<super::MechFallReport>,
-    experience_messages: Vec<super::DiagnosticMessage>,
-}
-
-/// Native and Lua conventional jumps publish a failed launch's consequences atomically.
+/// Native and Lua conventional jumps share one atomic launch.
 pub(crate) fn launch_jump_action(
     scripts: &crate::Scripts,
     config: &crate::Config,
@@ -236,7 +273,7 @@ pub(crate) fn launch_dfa_action(
     launch_action(scripts, config, id, pilot, JumpRequest::Target(target))
 }
 
-/// Mechanical effects and every publication share the caller's world/effects checkpoint.
+/// Mechanical effects and every publication share the caller's world checkpoint.
 fn launch_action(
     scripts: &crate::Scripts,
     config: &crate::Config,
@@ -244,43 +281,30 @@ fn launch_action(
     pilot: ObjectId,
     request: JumpRequest<'_>,
 ) -> Result<()> {
-    scripts.atomic(|before| {
-        let mut effects = LaunchEffects::default();
-        let mut rules = super::FallRules::configured(config);
-        rules.toughness =
-            super::skills::boolean_advantage(&scripts.world.borrow(), pilot, "Toughness");
+    scripts.atomic(|_| {
         let notices = launch(
             &mut scripts.world.borrow_mut(),
             id,
             pilot,
             request,
-            rules,
             super::SpeedPolicy::configured(config),
-            Some(&mut effects),
         )?;
-        super::piloting::publish_ordered_notices(scripts, &notices, &effects.pilot_notices)?;
-        super::diagnostics::publish(scripts, &effects.experience_messages);
-        if let Some(rejection) = &effects.rejection {
-            super::notify_message(scripts, super::MessageTarget::Player(pilot), rejection)?;
-        }
-        if let Some(fall) = effects.fall {
-            super::evacuation::publish_fall_consequences(scripts, config, &fall)?;
-        }
-        super::evacuation::publish_new_casualties(scripts, config, before)?;
+        super::piloting::publish_ordered_notices(scripts, &notices, &[])?;
         scripts.world.borrow().validate_action(config)?;
         Ok(())
     })
 }
 
-/// Shared launch authorization, terrain validation and flight publication.
+/// Shared launch authorization, terrain validation, jump heat and flight publication.
+///
+/// Damage taken this turn never adds a takeoff roll: the twenty-point check is the single
+/// roll the turn's damage accounting already makes (Total Warfare p. 60).
 fn launch(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
     request: JumpRequest<'_>,
-    rules: super::FallRules,
     speed: super::SpeedPolicy,
-    mut effects: Option<&mut LaunchEffects>,
 ) -> Result<Vec<Notice>> {
     ensure!(
         !world.btech.tows().contains_key(&id),
@@ -337,76 +361,13 @@ fn launch(
             .has_flag(super::MapFlag::Underground),
         "The underground ceiling prevents jumping"
     );
-    let checked = unit.stagger().action_level() > 0;
-    let mut notices = Vec::new();
-    if checked {
-        notices.push(Notice {
-            unit: id,
-            text: "The damage inhibits your coordination...".into(),
-        });
-        let modifier = super::stagger::action_modifier(unit);
-        let mut check = super::roll_piloting(world, id, modifier, rules.extended_piloting)?;
-        if let Some(effects) = effects.as_deref_mut() {
-            super::piloting::capture_feedback(
-                id,
-                Some(pilot),
-                &check,
-                &mut notices,
-                &mut effects.pilot_notices,
-            );
-            effects
-                .experience_messages
-                .extend(super::piloting::award_control_check(
-                    world,
-                    id,
-                    &mut check,
-                    rules.extended_piloting,
-                )?);
-        }
-        if !check.success {
-            notices.push(Notice {
-                unit: id,
-                text: "... something you apparently can't handle!".into(),
-            });
-            notices.extend(super::broadcast::observer_notices(
-                world,
-                id,
-                "engages jumpjets, rolls to the side and slams into the ground!",
-            ));
-            let fall = if effects.is_some() && world.objects[&id].flags.contains(Flag::InCharacter)
-            {
-                super::fall::resolve_character_fall(world, id, 1, rules)?
-            } else {
-                super::resolve_fall(world, id, 1, rules)?
-            };
-            if let Some(effects) = effects {
-                fall.append_notices(id, &mut notices, &mut effects.pilot_notices);
-                effects.fall = Some(fall);
-            } else {
-                notices.extend(fall.notices(id));
-            }
-            return Ok(notices);
-        }
-    }
-    let prepared = match prepare_jump(world, id, request) {
-        Ok(prepared) => prepared,
-        Err(error) if checked => {
-            let text = format!("{error:#}");
-            if let Some(effects) = effects {
-                effects.rejection = Some(text);
-            } else {
-                notices.push(Notice { unit: id, text });
-            }
-            return Ok(notices);
-        }
-        Err(error) => return Err(error),
-    };
     let PreparedJump {
         mut motion,
         flight,
         last_jump,
         dfa,
-    } = prepared;
+        heat,
+    } = prepare_jump(world, id, request)?;
     motion.speed = 0.0;
     motion.desired_heading = motion.heading;
     let unit = world.btech.constructed.get_mut(&id).unwrap();
@@ -414,10 +375,12 @@ fn launch(
     unit.ground_elevation = None;
     unit.flight = Some(flight);
     unit.last_jump = last_jump;
+    // Jumping heat is built up by the jump as a whole (Total Warfare p. 53).
+    unit.heat.stored += heat as f64;
     // Jump jets lift a 'Mech clear of any ground it was stuck in.
     unit.bogged_down = false;
     unit.slick.reset();
-    notices.push(Notice {
+    let mut notices = vec![Notice {
         unit: id,
         text: if dfa {
             "You engage your jump jets for a Death From Above attack!"
@@ -425,7 +388,7 @@ fn launch(
             "You engage your jump jets."
         }
         .to_owned(),
-    });
+    }];
     notices.extend(super::broadcast::observer_notices(
         world,
         id,
@@ -434,17 +397,44 @@ fn launch(
     Ok(notices)
 }
 
-/// Route validation cannot mutate the launch attempt or undo its already-completed control roll.
+/// Plan the route without mutating the unit: destination, range, takeoff depth, the terrain
+/// ceiling and the heat the jump will cost. A jump may end in its own hex (Total Warfare
+/// p. 52) and may descend any number of levels (p. 53).
 fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result<PreparedJump> {
     let request = request.destination(world, id)?;
     let unit = &world.btech.constructed_units()[&id];
     let position = unit.position().context("Unit is not on a battlefield")?;
     let map = &world.btech.maps()[&position.map];
-    let capacity = unit.jump_capacity(map.gravity)?;
     let motion = unit.motion().context("Unit has no motion state")?;
+    let launch = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+    let elevation = unit.elevation_level(launch) as i16;
+    ensure!(
+        elevation >= launch.water_line() - 1,
+        "Cannot launch from more than one level underwater"
+    );
+    // A deck directly overhead is solid; a 'Mech beneath a bridge cannot jump up through it.
+    ensure!(
+        launch.deck_height().is_none_or(|deck| elevation >= deck),
+        "The bridge overhead prevents jumping"
+    );
+    // Jets cannot fire under water: from Depth 1 only torso jets lift the 'Mech (Total
+    // Warfare p. 53).
+    let capacity = if launch.water_depth() > 0 && elevation < launch.water_line() {
+        unit.torso_jump_capacity(map.gravity)?
+    } else {
+        unit.jump_capacity(map.gravity)?
+    };
+    ensure!(
+        capacity.movement_points > 0,
+        if launch.water_depth() > 0 && elevation < launch.water_line() {
+            "Your leg jets are under water and no torso jets can lift you"
+        } else {
+            "You have no working jump jets"
+        }
+    );
     let (destination, range, target) = match request {
         JumpDestination::Projected { bearing, range } => {
-            ensure!(range.is_finite() && range > 0.0, "Invalid jump range");
+            ensure!(range.is_finite() && range >= 0.0, "Invalid jump range");
             (
                 motion
                     .point
@@ -492,16 +482,6 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
         range <= f64::from(capacity.movement_points),
         "That target is out of range!"
     );
-    ensure!(
-        (destination.x, destination.y) != (i32::from(position.x), i32::from(position.y)),
-        "You're already in the target hex."
-    );
-    let launch = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let elevation = unit.elevation_level(launch) as i16;
-    ensure!(
-        elevation >= launch.water_line() - 1,
-        "Cannot launch from more than one level underwater"
-    );
     let destination_elevation = map
         .base_hex(i64::from(destination.x), i64::from(destination.y))?
         .standing_height();
@@ -524,6 +504,13 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
         )?,
     };
     validate_route(map, path)?;
+    let path = path.with_clearance(trajectory_clearance(map, path)?);
+    let hexes = super::HexCoordinate {
+        x: i32::from(position.x),
+        y: i32::from(position.y),
+    }
+    .distance(destination);
+    let heat = super::jump::jump_heat(hexes, unit.definition().has_special("ImprovedJJ_Tech"));
     let last_jump = LastJump::from_path(path)?;
     let flight = JumpFlight::new(path);
     Ok(PreparedJump {
@@ -531,6 +518,7 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
         last_jump,
         dfa: target.is_some(),
         flight: target.map_or(flight, |target| flight.with_dfa_target(target)),
+        heat,
     })
 }
 
@@ -845,140 +833,8 @@ fn advance_jumps_inner(
                 continue;
             }
         }
-        let unit = &candidate.btech.constructed_units()[&id];
-        let map = &candidate.btech.maps()[&position.map];
-        let previous_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-        if previous_tile.strikes_bridge_during_jump((step.to.elevation + 0.5).trunc() as i32) {
-            // Vertical integration precedes hex synchronization. Preserve both positions if interrupted.
-            let unit = candidate.btech.constructed.get_mut(&id).unwrap();
-            unit.motion
-                .as_mut()
-                .context("Airborne unit has no motion")?
-                .point = step.to.point;
-            unit.hex_sync_pending =
-                (coordinate.x, coordinate.y) != (i32::from(position.x), i32::from(position.y));
-            unit.flight = None;
-            unit.ground_elevation = None;
-            unit.jump_stabilization = 12;
-            notices.push(Notice {
-                unit: id,
-                text: "CRASH! You crash into the bridge!".to_owned(),
-            });
-            let fall = if character && candidate.objects[&id].flags.contains(Flag::InCharacter) {
-                super::fall::resolve_character_fall(&mut candidate, id, 1, rules)?
-            } else {
-                super::resolve_fall(&mut candidate, id, 1, rules)?
-            };
-            fall.append_notices(id, &mut notices, &mut pilot_notices);
-            falls.push(fall);
-            continue;
-        }
-        let tile = map.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
         let crossed_hex =
             (coordinate.x, coordinate.y) != (i32::from(position.x), i32::from(position.y));
-        if crossed_hex && tile.blocks_jump_entry((step.to.elevation + 0.5).trunc() as i32) {
-            // Reject the attempted transition before publishing position or flight progress.
-            let previous_height = map
-                .base_hex(i64::from(position.x), i64::from(position.y))?
-                .surface_height();
-            notices.push(Notice {
-                unit: id,
-                text: "[bold]You attempt to jump over elevation that is too high![reset]"
-                    .to_owned(),
-            });
-            let active_pilot = unit.pilot().is_some_and(|pilot| {
-                candidate
-                    .objects
-                    .get(&pilot)
-                    .is_some_and(|player| player.flags.contains(Flag::Connected))
-            });
-            let pilot = unit.pilot();
-            let safe = if active_pilot {
-                let mut check = super::roll_piloting(
-                    &mut candidate,
-                    id,
-                    previous_height / 3,
-                    rules.extended_piloting,
-                )?;
-                super::piloting::capture_feedback(
-                    id,
-                    pilot,
-                    &check,
-                    &mut notices,
-                    &mut pilot_notices,
-                );
-                if character {
-                    experience_messages.extend(super::piloting::award_control_check(
-                        &mut candidate,
-                        id,
-                        &mut check,
-                        rules.extended_piloting,
-                    )?);
-                }
-                check.success
-            } else {
-                false
-            };
-            if safe {
-                notices.push(Notice {
-                    unit: id,
-                    text: "[bold]You land safely.[reset]".to_owned(),
-                });
-                let landing = finish_landing_inner(
-                    &mut candidate,
-                    id,
-                    false,
-                    super::MovementRules {
-                        fall: rules,
-                        ..movement
-                    },
-                    character.then_some(&mut dfas),
-                    &mut falls,
-                    &mut collisions,
-                )?;
-                mines.extend(landing.mines);
-                vehicle_falls.extend(landing.vehicle_falls);
-                super::piloting::append_feedback(
-                    &mut pilot_notices,
-                    landing.pilot_notices,
-                    notices.len(),
-                );
-                notices.extend(landing.notices);
-                experience_messages.extend(landing.experience_messages);
-            } else {
-                notices.push(Notice {
-                    unit: id,
-                    text: "[bold]You crash into the obstacle and fall from the sky![reset]"
-                        .to_owned(),
-                });
-                let fall = if character && candidate.objects[&id].flags.contains(Flag::InCharacter)
-                {
-                    super::fall::resolve_character_fall(&mut candidate, id, 1, rules)?
-                } else {
-                    super::resolve_fall(&mut candidate, id, 1, rules)?
-                };
-                fall.append_notices(id, &mut notices, &mut pilot_notices);
-                falls.push(fall);
-                let input =
-                    super::stacking::physical_input(&candidate, id, super::StackingEntry::Fall)?;
-                notices.extend(resolve_airborne_stacking(
-                    &mut candidate,
-                    id,
-                    input,
-                    rules,
-                    character.then_some(&mut collisions),
-                    (&mut pilot_notices, notices.len()),
-                )?);
-            }
-            notices.extend(super::charge_tracking::finish_update(
-                &mut candidate,
-                id,
-                movement,
-                character.then_some(&mut charges),
-                (&mut pilot_notices, notices.len()),
-            )?);
-            continue;
-        }
         position.x = u16::try_from(coordinate.x)?;
         position.y = u16::try_from(coordinate.y)?;
         let unit = candidate.btech.constructed.get_mut(&id).unwrap();
@@ -1164,7 +1020,12 @@ fn finish_landing_inner(
     // Tactical crew consciousness exists independently of an assigned player.
     let uncontrolled = super::crew::unit_unconscious(world, id);
     let target = unit.flight().and_then(|flight| flight.dfa_target());
-    let action_stagger = unit.stagger().action_level() > 0;
+    // The segment flown, for the gravity strain roll after touchdown.
+    let origin = unit
+        .flight()
+        .map(|flight| flight.path())
+        .and_then(|path| path.sample(0.0, path.movement_points()).ok())
+        .and_then(|sample| sample.point.containing_hex().ok());
     let pilot = unit.pilot();
     let mut notices = Vec::new();
     let mut pilot_notices = Vec::new();
@@ -1238,10 +1099,10 @@ fn finish_landing_inner(
     let mut fall = lost_thrust || uncontrolled;
     let mut fall_levels: u8 = 1;
     let mut landing_failure = None;
-    let mut stagger_failed = false;
     // Ice that holds and water both test a 'Mech's footing as it comes down: ice at the +4 it
     // gives every roll on it (Tactical Operations p. 48), water with an ordinary roll whose
-    // failure tumbles the 'Mech to the bottom (Total Warfare p. 53).
+    // failure tumbles the 'Mech to the bottom, falling as many levels as the water is deep
+    // (Total Warfare p. 53); the fall multiplier is the levels fallen plus one (p. 68).
     if !lost_thrust && !uncontrolled && !ice_broke && !dfa {
         let unit = &world.btech.constructed_units()[&id];
         let position = unit.position().context("Landing unit is not placed")?;
@@ -1260,7 +1121,7 @@ fn finish_landing_inner(
                 "You come down in the water and fight for your footing.",
                 "You tumble to the bottom!",
                 "lands in the water and tumbles to the bottom!",
-                tile.water_depth(),
+                tile.water_depth().saturating_add(1),
             ))
         } else {
             None
@@ -1287,31 +1148,16 @@ fn finish_landing_inner(
             }
         }
     }
-    if !lost_thrust && !uncontrolled && !fall && action_stagger {
-        notices.push(Notice {
-            unit: id,
-            text: "The damage you've taken makes the landing a bit harder...".into(),
-        });
-        let modifier = super::stagger::action_modifier(&world.btech.constructed_units()[&id]);
-        let mut check = super::roll_piloting(world, id, modifier, rules.extended_piloting)?;
-        super::piloting::capture_feedback(id, pilot, &check, &mut notices, &mut pilot_notices);
-        if character {
-            experience_messages.extend(super::piloting::award_control_check(
-                world,
-                id,
-                &mut check,
-                rules.extended_piloting,
-            )?);
-        }
-        stagger_failed = !check.success;
-        fall = stagger_failed;
-        landing_failure = stagger_failed.then_some((
-            "... something you apparently can't handle!",
-            "lands, staggers, and falls down!",
-        ));
-    }
+    // Landing with damaged leg actuators, a hit gyro or a destroyed leg takes a roll (Total
+    // Warfare p. 53, p. 60). A quad missing one leg has no preexisting-damage modifier of its
+    // own for that leg, but its landing roll is at +5 (p. 123).
     let unit = &world.btech.constructed_units()[&id];
-    if !lost_thrust && !fall && !unit.is_destroyed() && unit.mobility().piloting_modifier > 0 {
+    let quad_leg = unit.chassis() == super::MechChassis::Quad && unit.unavailable_legs() == 1;
+    if !lost_thrust
+        && !fall
+        && !unit.is_destroyed()
+        && (unit.mobility().piloting_modifier > 0 || quad_leg)
+    {
         let missing_leg = unit.unavailable_legs() > 0;
         let gyro_modifier = if unit.gyro_damage() > 0 { 3 } else { 0 };
         let (warning, failure, observed) = if missing_leg {
@@ -1337,7 +1183,8 @@ fn finish_landing_inner(
             unit: id,
             text: warning.to_owned(),
         });
-        let mut check = super::roll_piloting(world, id, 0, rules.extended_piloting)?;
+        let modifier = if quad_leg { 5 } else { 0 };
+        let mut check = super::roll_piloting(world, id, modifier, rules.extended_piloting)?;
         super::piloting::capture_feedback(id, pilot, &check, &mut notices, &mut pilot_notices);
         if character {
             experience_messages.extend(super::piloting::award_control_check(
@@ -1373,20 +1220,68 @@ fn finish_landing_inner(
         report.append_notices(id, &mut notices, &mut pilot_notices);
         falls.push(report);
     }
-    // A stagger failure terminates landing; its shared fall already handles immersion and mines.
-    if stagger_failed {
-        // Flight was cleared for surface resolution; retain the shared airborne fall's stabilization.
-        let unit = world.btech.constructed.get_mut(&id).unwrap();
-        if !dfa && !unit.is_destroyed() {
-            unit.jump_stabilization = 12;
+    // Low gravity lets a 'Mech jump farther than its jets are built for: jumping more hexes
+    // than its normal Jumping MP strains the legs (Tactical Operations p. 53). The roll is
+    // modified by one per full half G off standard; failure costs each leg one point of
+    // internal structure per hex beyond the normal Jumping MP, without a fall.
+    let unit = &world.btech.constructed_units()[&id];
+    let strain = match (origin, unit.position()) {
+        (Some(origin), Some(position)) if !unit.is_destroyed() => {
+            let gravity = world.btech.maps()[&position.map].gravity;
+            let hexes = origin.distance(super::HexCoordinate {
+                x: i32::from(position.x),
+                y: i32::from(position.y),
+            });
+            let normal = u64::from(unit.jump_capacity(100)?.movement_points);
+            (gravity < 100 && hexes > normal).then(|| (gravity, hexes - normal))
         }
-        return Ok(LandingOutcome {
-            vehicle_falls,
-            mines: Vec::new(),
-            notices,
-            pilot_notices,
-            experience_messages,
+        _ => None,
+    };
+    if let Some((gravity, excess)) = strain {
+        notices.push(Notice {
+            unit: id,
+            text: "The low gravity let you jump farther than your jets were built for..."
+                .to_owned(),
         });
+        let mut check = super::roll_piloting(
+            world,
+            id,
+            super::jump::jump_strain_modifier(gravity),
+            rules.extended_piloting,
+        )?;
+        super::piloting::capture_feedback(id, pilot, &check, &mut notices, &mut pilot_notices);
+        if character {
+            experience_messages.extend(super::piloting::award_control_check(
+                world,
+                id,
+                &mut check,
+                rules.extended_piloting,
+            )?);
+        }
+        if !check.success {
+            notices.push(Notice {
+                unit: id,
+                text: "Your legs take some damage!".to_owned(),
+            });
+            let damage = u16::try_from(excess).unwrap_or(u16::MAX);
+            let legs = world.btech.constructed_units()[&id]
+                .chassis()
+                .legs()
+                .to_vec();
+            for section in legs {
+                if world.btech.constructed_units()[&id].sections()[&section].internal == 0 {
+                    continue;
+                }
+                let impact =
+                    super::impact::resolve_internal_stress(world, id, section, damage, rules)?;
+                super::piloting::append_feedback(
+                    &mut pilot_notices,
+                    impact.pilot_notices.iter().cloned(),
+                    notices.len(),
+                );
+                notices.extend(impact.notices);
+            }
+        }
     }
     let unit = &world.btech.constructed_units()[&id];
     if !dfa && !fall && !unit.is_destroyed() && unit.posture() != super::Posture::Prone {
@@ -1466,8 +1361,7 @@ fn finish_landing_inner(
     if !dfa && !unit.is_destroyed() {
         unit.jump_stabilization = 12;
     }
-    // Only a completed landing stops the separate action-time stagger check.
-    // The early stagger-failure return above deliberately retains its scalar.
+    // A completed landing ends the restored action-time damage window.
     unit.stagger.action_damage = 0;
     Ok(LandingOutcome {
         vehicle_falls,

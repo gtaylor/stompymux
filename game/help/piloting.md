@@ -76,7 +76,7 @@ Crowded hexes can cause collisions when you enter them. More than two friendly
 units, or more than six total units, can trigger the configured collision rules.
 Ground damage depends on current mass and relative speed; avoidance rules can
 stop you or cause a fall. Landing among three friendly ground units can also
-trigger crowding; landing impacts use current mass and remaining jump thrust.
+trigger crowding; landing impacts use current mass.
 Maps with the `no_stacking` flag have no crowding collisions.
 
 Water depth affects piloting checks. Entering water a level or more deep requires a
@@ -140,15 +140,28 @@ Use `jump <bearing> <range>` to engage jump jets toward a hex center. Grassland,
 forests, rough ground, mountains, snow, sand, smoke, fire, water, ice, bridges,
 buildings and walls are supported,
 including changes in elevation. Jump progress survives restart
-and pauses while the server is offline or unable to save. Jet damage and gravity
-limit range; jumping produces at least three heat, or one per undamaged jump MP.
+and pauses while the server is offline or unable to save. You have one jump MP
+per working jet; in unusual gravity your jump MP is divided by the G-rating and
+rounded to the nearest whole number, halves down. Range is limited to your jump
+MP, and so is the climb to the landing hex, but you may jump down any number of
+levels. A jump may not cross a hex whose surface (ground, roof or bridge deck) is
+higher than your jump MP plus the level you took off from; such a jump is refused
+before you leave the ground, so a jump that launches never hits terrain. A range of
+zero jumps in place and lands in your own hex. Jumping builds up one heat per hex
+jumped, at least three, charged at takeoff; improved jump jets charge one per two
+hexes, still at least three. Gravity does not change the heat.
 Jumping and death-from-above attacks are refused when load-adjusted effective
 speed is more than one MP (10.75 KPH) below the unloaded maximum. CargoTech,
 movement boosters, TSM and special gravity affect that calculation. A loss of
 exactly one MP is allowed. You cannot jump while towing another unit.
 Wait twelve seconds after an ordinary landing before jumping again. Stabilizing adds two
 to firing difficulty. Damaged landing gear or loss of consciousness can cause
-a fall, and losing all jump thrust or overheating can cut the flight short.
+a fall, and losing all jump thrust or overheating can cut the flight short; a
+fall in flight is a zero-level fall. A quad missing one leg lands at +5 and has
+lost its -2 piloting bonus. On a low-gravity world, jumping more hexes than your
+normal jump MP strains the legs: a piloting roll at +1 per full half G below
+standard, and failure costs each leg one point of internal structure per hex
+beyond your normal jump MP.
 Use `land` to attempt an early landing at your current location. A failed
 control check causes a fall; a successful abort still requires any damaged-leg
 or gyro landing check. Ground speed changes are unavailable in flight. Use `heading <degrees>` to turn
@@ -163,18 +176,18 @@ Losing both legs or hips leaves you unable to stand while your jets finish the
 jump; further jet loss can still bring you down.
 Crossing ice during a jump can break it and drop other units standing on that hex.
 Breaking downward can end your jump in a fall; breaking upward preserves your flight.
-A hill taller than your current jump height can force an early landing or crash.
 Water crossings use your current altitude. Submerging can flood breached sections
-and improve cooling; takeoff is limited to water one level deep. Landing in water a
+and improve cooling; takeoff is limited to water one level deep, and from water one
+level deep only torso-mounted jets can fire. Landing in water a
 level or more deep takes a piloting check; failure tumbles you to the bottom for
 a fall as many levels as the water is deep, at half damage. Intact ice is at
 surface level. Landing on it breaks it half the time, dropping units on that tile
 into the water, and ice that holds takes a piloting check to keep your feet.
 Landing in a swamp sticks you fast, and landing in liquid magma or other soft
-ground rolls against getting stuck. Buildings and walls block jumps that are too
-low to clear them. DFA remains unavailable.
-Accumulated damage does not block takeoff. Twenty or more points of damage in
-one turn still force a piloting check, which can cause a fall in flight.
+ground rolls against getting stuck. DFA remains unavailable.
+Accumulated damage never adds a takeoff or landing check. Twenty or more points of
+damage in one turn force the turn's single piloting check, which can cause a fall
+in flight.
 
 Cockpit stun blocks firing for ten simulation seconds and slows a running unit
 toward walking speed. Another stunning hit restarts that countdown.
@@ -350,9 +363,8 @@ cockpit assignment and target and stops the unit. If you were moving faster than
 also knock the unit prone. Take the cockpit again and wait for safe startup heat
 before restarting. These checks currently cover supported tactical units.
 
-A reactor shutdown during flight causes a fall scaled by remaining jump thrust.
-Falling after a jump obstacle or airborne shutdown can also cause a collision
-with units crowding the same hex.
+A reactor shutdown during flight causes a zero-level fall. Falling after an
+airborne shutdown can also cause a collision with units crowding the same hex.
 
 An airborne gyro failure can make you fall onto a crowded hex. Losing the last
 jump jet also causes a fall, but leaves no thrust for the collision damage rule.

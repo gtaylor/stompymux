@@ -658,7 +658,6 @@ fn advance_motion_inner(
             let input = super::StackingInput {
                 entry: super::StackingEntry::Ground,
                 mass: unit.effective_mass()?,
-                jump_movement_points: 0,
             };
             let events = if character {
                 super::stacking::resolve_in_action(

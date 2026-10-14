@@ -105,13 +105,14 @@ pub struct JumpStep {
 
 impl JumpFlight {
     /// Begin at the validated takeoff point without consuming time or altering the launch geometry.
+    /// A same-hex jump has no distance to fly and lands on the next step.
     pub fn new(path: JumpPath) -> Self {
         Self {
             path,
             relocated: None,
             travelled: 0.0,
             completed_distance: 0.0,
-            landing_requested: false,
+            landing_requested: path.distance() == 0.0,
             sampled_movement_points: path.movement_points(),
             dfa_target: None,
             reassigned: false,
@@ -189,11 +190,13 @@ impl JumpFlight {
         if let Some(sample) = self.relocated {
             return sample;
         }
+        let progress = if self.path.distance() == 0.0 {
+            0.0
+        } else {
+            self.travelled / self.path.distance()
+        };
         self.path
-            .sample(
-                self.travelled / self.path.distance(),
-                self.sampled_movement_points,
-            )
+            .sample(progress, self.sampled_movement_points)
             .expect("validated jump cursor")
     }
 
@@ -223,8 +226,9 @@ impl JumpFlight {
     }
 
     /// Whether the endpoint has been reached; landing consequences remain caller-owned.
+    /// A same-hex jump arrives through its requested landing rather than by distance.
     pub fn arrived(self) -> bool {
-        self.travelled == self.path.distance()
+        self.path.distance() > 0.0 && self.travelled == self.path.distance()
     }
 
     /// Advance one second using current gravity-adjusted thrust and the map's movement percentage.

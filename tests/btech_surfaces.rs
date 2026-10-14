@@ -1281,41 +1281,36 @@ async fn below_bridge_cooling_and_fresh_breaches_use_actual_depth() {
     );
 }
 
+/// A bridge deck is the crossed hex's surface: a deck above Jumping MP plus the takeoff
+/// level refuses the jump at launch (Total Warfare p. 52), and a deck exactly that high is
+/// cleared by the displayed flight and landed beyond.
 #[tokio::test]
-async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_restart() {
-    for (deck, rate, outcome) in [(9, 100, "clear"), (6, 100, "entry"), (5, 160, "span")] {
+async fn bridge_decks_bound_jump_routes_at_launch_and_legal_spans_are_cleared() {
+    for (deck, rate, clears) in [
+        (9, 100, false),
+        (6, 100, false),
+        (5, 160, true),
+        (5, 100, true),
+    ] {
         let source = format!("3 5\n.0.0.0\n.0.0.0\n/{deck}/{deck}/{deck}\n.0.0.0\n.0.0.0\n");
         let (_dir, config, mut world, map, units) =
             fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(rate);
-        // Keep the later resumed controls independent of random pilot recovery.
-        let safe_seed = (0..=255)
-            .find(|seed| {
-                let mut dice = Dice::seeded([*seed; 32]);
-                let protected = dice.two_d6() >= 7;
-                dice.d6();
-                protected && dice.two_d6() == 7
-            })
-            .unwrap();
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(Dice::seeded([safe_seed; 32])).unwrap();
         world.btech = serde_json::from_value(state).unwrap();
-        launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
-        for _ in 0..3 {
-            advance_battle_jumps(
-                &mut world,
-                stompymux_rs::MovementRules {
-                    fall: rules(),
-                    ..stompymux_rs::MovementRules::STANDARD
-                },
-            )
-            .unwrap();
+        let before = world.btech.clone();
+        let launch = launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0);
+        if !clears {
+            let error = launch.unwrap_err();
+            assert!(format!("{error:#}").contains("higher than your jets can clear"));
+            assert_eq!(world.btech, before);
+            continue;
         }
+        launch.unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
-        let mut notices = Vec::new();
+        let mut crossed = false;
         while world.btech.constructed_units()[&id].flight().is_some() {
             let expected = advance_battle_jumps(
                 &mut world,
@@ -1337,237 +1332,38 @@ async fn bridge_jump_entry_underpass_and_interrupted_hex_update_replay_after_res
                 expected
             );
             assert_eq!(world.btech, loaded.btech);
-            notices.extend(expected);
-        }
-        let unit = &world.btech.constructed_units()[&id];
-        match outcome {
-            "clear" => {
-                assert_eq!(unit.position().unwrap().y, 3);
-                assert_eq!(unit.posture(), Posture::Standing);
-                assert!(!unit.hex_sync_pending());
-            }
-            "entry" => {
-                assert_eq!(unit.position().unwrap().y, 1);
-                assert_eq!(unit.posture(), Posture::Prone);
-                assert!(
-                    notices
-                        .iter()
-                        .any(|notice| notice.text.contains("too high"))
-                );
-                assert!(!unit.hex_sync_pending());
-            }
-            _ => {
-                assert_eq!(unit.position().unwrap().y, 2);
-                assert_eq!(unit.motion().unwrap().point.containing_hex().unwrap().y, 3);
-                assert!(unit.hex_sync_pending());
-                assert!(
-                    (battle_unit_range(&world, id, units[1]).unwrap().horizontal - 1.6).abs()
-                        < 1e-9
-                );
-                assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(5));
-                assert_eq!(unit.jump_stabilization(), 12);
-                assert!(
-                    notices
-                        .iter()
-                        .any(|notice| notice.text == "CRASH! You crash into the bridge!")
-                );
-                let mut invalid = serde_json::to_value(&world.btech).unwrap();
-                invalid["constructed"][id.0.to_string()]["hex_sync_pending"] =
-                    serde_json::json!(false);
-                let mut bad = world.clone();
-                bad.btech = serde_json::from_value(invalid).unwrap();
-                assert!(bad.validate(&config).is_err());
-            }
-        }
-        world.validate(&config).unwrap();
-        if outcome == "span" {
-            use sqlx::Connection;
-            let stored = persistence::load(&config.database()).await.unwrap();
-            let mut sql = sqlx::SqliteConnection::connect_with(
-                &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
-            )
-            .await
-            .unwrap();
-            sqlx::query("CREATE TRIGGER reject_bridge_collision BEFORE UPDATE ON btech_units BEGIN SELECT RAISE(ABORT,'bridge collision save failure'); END").execute(&mut sql).await.unwrap();
-            assert!(persistence::save(&config.database(), &world).await.is_err());
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                stored.btech
-            );
-            sqlx::query("DROP TRIGGER reject_bridge_collision")
-                .execute(&mut sql)
-                .await
-                .unwrap();
-        }
-        persistence::save(&config.database(), &world).await.unwrap();
-        let mut restarted = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(restarted.btech, world.btech);
-        if outcome == "span" {
-            let scripts = Scripts::new(
-                &config,
-                std::rc::Rc::new(std::cell::RefCell::new(restarted.clone())),
-            )
-            .unwrap();
-            let pending: bool = scripts
-                .eval_callback(&format!(
-                    "return btech.unit.state({}).hex_sync_pending",
-                    id.0
-                ))
-                .unwrap();
-            assert!(pending);
-            let mut resumed = restarted.clone();
-            set_battle_heading(&mut resumed, id, ObjectId(1), 90.0).unwrap();
-            advance_battle_motion(
-                &mut resumed,
-                MovementRules {
-                    fasa_turning: false,
-                    slowdown: 0,
-                    ..stompymux_rs::MovementRules::STANDARD
-                },
-            )
-            .unwrap();
-            assert!(resumed.btech.constructed_units()[&id].hex_sync_pending());
-            assert_eq!(battle_unit_elevation(&resumed, id).unwrap(), Some(5));
-            for _ in 0..12 {
-                advance_battle_jumps(
-                    &mut resumed,
-                    stompymux_rs::MovementRules {
-                        fall: rules(),
-                        ..stompymux_rs::MovementRules::STANDARD
-                    },
-                )
-                .unwrap();
-            }
-            let seed = (0..=255)
-                .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 6)
-                .unwrap();
-            resumed
-                .btech
-                .set_unit_dice(id, Dice::seeded([seed; 32]))
-                .unwrap();
-            let stand = begin_battle_stand(
-                &mut resumed,
-                id,
-                ObjectId(1),
-                StandMode::Normal,
-                true,
-                rules(),
-            )
-            .unwrap();
-            assert!(stand.check.success);
-            while resumed.btech.constructed_units()[&id]
-                .stand_timer()
-                .is_some()
+            let unit = &world.btech.constructed_units()[&id];
+            if unit.position().unwrap().y == 2
+                && let Some(flight) = unit.flight()
             {
-                advance_battle_standing(&mut resumed);
+                crossed = true;
+                assert!(flight.sample().elevation >= f64::from(deck));
+                assert!(battle_unit_elevation(&world, id).unwrap().unwrap() >= deck);
             }
-            launch_battle_jump(&mut resumed, id, ObjectId(1), 180, 1.0).unwrap();
-            resumed.validate(&config).unwrap();
-            advance_battle_jumps(
-                &mut resumed,
-                stompymux_rs::MovementRules {
-                    fall: rules(),
-                    ..stompymux_rs::MovementRules::STANDARD
-                },
-            )
-            .unwrap();
-            assert!(!resumed.btech.constructed_units()[&id].hex_sync_pending());
-            resumed.validate(&config).unwrap();
-            stop_battle_unit(
-                &mut restarted,
-                id,
-                ObjectId(1),
-                stompymux_rs::MovementRules::STANDARD.fall,
-            )
-            .unwrap();
-            place_battle_unit(&mut restarted, id, map, 1, 3).unwrap();
-            assert!(!restarted.btech.constructed_units()[&id].hex_sync_pending());
-            restarted.validate(&config).unwrap();
         }
+        assert!(crossed);
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.position().unwrap().y, 3);
+        assert_eq!(unit.posture(), Posture::Standing);
+        assert!(!unit.hex_sync_pending());
+        world.validate(&config).unwrap();
     }
 }
 
+/// A 'Mech standing beneath a bridge deck has a solid obstacle directly overhead and is
+/// refused a jump before it leaves the ground.
 #[tokio::test]
-async fn bridge_jump_vertical_collision_inside_the_starting_hex_uses_the_deck() {
+async fn jumps_are_refused_beneath_a_bridge_deck() {
     let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Bridge, 3).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(50);
     state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(-1);
     world.btech = serde_json::from_value(state).unwrap();
-    launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-    let mut notices = Vec::new();
-    for _ in 0..3 {
-        notices.extend(
-            advance_battle_jumps(
-                &mut world,
-                stompymux_rs::MovementRules {
-                    fall: rules(),
-                    ..stompymux_rs::MovementRules::STANDARD
-                },
-            )
-            .unwrap(),
-        );
-    }
-    let unit = &world.btech.constructed_units()[&id];
-    assert!(unit.flight().is_none());
-    assert!(!unit.hex_sync_pending());
-    assert_eq!(unit.position().unwrap().y, 1);
-    assert_eq!(unit.posture(), Posture::Prone);
-    assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(3));
-    assert!(notices.iter().any(|notice| notice.text.contains("CRASH!")));
-    world.validate(&config).unwrap();
-}
-
-#[tokio::test]
-async fn lost_jump_thrust_beneath_bridge_preserves_altitude_for_the_fall() {
-    let source = "3 3\n.0.0.0\n/9/9/9\n.0.0.0\n";
-    let (_dir, config, mut world, _map, units) =
-        fixture_asset(MapAsset::from_cells(source).unwrap()).await;
-    let id = units[0];
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["ground_elevation"] = serde_json::json!(-1);
-        })
-        .unwrap();
-    launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-    let jets: Vec<_> = world.btech.constructed_units()[&id]
-        .loadout()
-        .unwrap()
-        .systems
-        .into_iter()
-        .filter(|part| part.system == System::JumpJet)
-        .map(|part| part.location)
-        .collect();
-    for jet in jets {
-        destroy_battle_critical(&mut world, id, jet).unwrap();
-    }
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut loaded = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(
-        advance_battle_jumps(
-            &mut world,
-            stompymux_rs::MovementRules {
-                fall: rules(),
-                ..stompymux_rs::MovementRules::STANDARD
-            }
-        )
-        .unwrap(),
-        advance_battle_jumps(
-            &mut loaded,
-            stompymux_rs::MovementRules {
-                fall: rules(),
-                ..stompymux_rs::MovementRules::STANDARD
-            }
-        )
-        .unwrap()
-    );
-    assert_eq!(world.btech, loaded.btech);
-    let unit = &world.btech.constructed_units()[&id];
-    assert!(unit.flight().is_none());
-    assert_eq!(unit.posture(), Posture::Prone);
-    assert_eq!(unit.jump_stabilization(), 12);
+    let before = world.btech.clone();
+    let error = launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap_err();
+    assert!(format!("{error:#}").contains("bridge overhead"));
+    assert_eq!(world.btech, before);
     assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-1));
     world.validate(&config).unwrap();
 }
@@ -3607,7 +3403,7 @@ async fn mapped_surface_jump_routes_land_at_height_and_replay() {
 }
 
 #[tokio::test]
-async fn structure_jump_controls_land_and_collide_with_saved_replay() {
+async fn structure_jump_controls_land_or_refuse_the_route_with_saved_replay() {
     for symbol in ['@', '='] {
         for height in [0, 3, 9] {
             let row = format!("{symbol}{height}").repeat(3);
@@ -3630,10 +3426,18 @@ async fn structure_jump_controls_land_and_collide_with_saved_replay() {
                 std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
             )
             .unwrap();
-            support::run_text(&native, &config, ObjectId(1), 1, "jump 180 2");
-            lua.eval_callback::<()>(&format!("btech.unit.jump({},1,180,2)", id.0))
-                .unwrap();
+            let text = support::run_text(&native, &config, ObjectId(1), 1, "jump 180 2");
+            let launch = lua.eval_callback::<()>(&format!("btech.unit.jump({},1,180,2)", id.0));
             assert_eq!(native.world().btech, lua.world().btech);
+            if height == 9 {
+                // A structure above Jumping MP plus the takeoff level refuses the route at
+                // launch (Total Warfare p. 52) in both adapters.
+                assert!(text.contains("higher than your jets can clear"), "{text}");
+                assert!(launch.is_err());
+                assert_eq!(native.world().btech, world.btech);
+                continue;
+            }
+            launch.unwrap();
             world = native.world().clone();
             assert!(world.btech.constructed_units()[&id].flight().is_some());
             persistence::save(&config.database(), &world).await.unwrap();
@@ -3664,20 +3468,12 @@ async fn structure_jump_controls_land_and_collide_with_saved_replay() {
             }
             let unit = &world.btech.constructed_units()[&id];
             assert!(unit.flight().is_none());
-            assert_eq!(
-                unit.posture(),
-                if height == 9 {
-                    Posture::Prone
-                } else {
-                    Posture::Standing
-                }
-            );
-            assert_eq!(unit.position().unwrap().y, if height == 9 { 1 } else { 3 });
-            assert_eq!(
-                notices
+            assert_eq!(unit.posture(), Posture::Standing);
+            assert_eq!(unit.position().unwrap().y, 3);
+            assert!(
+                !notices
                     .iter()
-                    .any(|notice| notice.text.contains("too high")),
-                height == 9
+                    .any(|notice| notice.text.contains("too high"))
             );
             world.validate(&config).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();

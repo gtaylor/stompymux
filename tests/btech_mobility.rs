@@ -113,12 +113,14 @@ fn quad_leg_loss_patterns_and_flooded_support_have_distinct_limits() {
                 1 | 2 => assert!(damaged.stand_requires_roll().unwrap()),
                 _ => assert!(damaged.stand_requires_roll().is_err()),
             }
+            // A quad missing one leg loses one MP and its -2 bonus; missing two it is
+            // restricted like a one-legged biped (Total Warfare p. 123).
             let mobility = damaged.mobility();
             let (speed, penalty) = match missing {
                 0 => (96.75, 0),
-                1 => (86.0, 2),
-                2 => (10.75, 7),
-                _ => (0.0, 2),
+                1 => (86.0, 0),
+                2 => (10.75, 5),
+                _ => (0.0, 10),
             };
             assert_eq!(
                 (mobility.maximum_speed, mobility.piloting_modifier),
@@ -126,12 +128,8 @@ fn quad_leg_loss_patterns_and_flooded_support_have_distinct_limits() {
                 "mask={mask} flooded={flooded}"
             );
             assert_eq!(
-                i16::from(penalty) + damaged.chassis().piloting_modifier(),
-                match missing {
-                    0 => -2,
-                    2 => 5,
-                    _ => 0,
-                }
+                damaged.chassis_piloting_modifier(),
+                if missing == 0 { -2 } else { 0 }
             );
         }
     }

@@ -281,11 +281,7 @@ pub fn unit_piloting_target(world: &World, unit: ObjectId, extended: bool) -> Re
 /// Control checks include the chassis advantage, unlike raw attack and valuation skill inputs.
 pub(super) fn control_target(world: &World, unit: ObjectId, extended: bool) -> Result<i16> {
     let skill = unit_piloting_target(world, unit, extended)?;
-    Ok(skill.saturating_add(
-        world.btech.constructed_units()[&unit]
-            .chassis()
-            .piloting_modifier(),
-    ))
+    Ok(skill.saturating_add(world.btech.constructed_units()[&unit].chassis_piloting_modifier()))
 }
 
 /// Boolean character advantages are enabled only by the canonical value one.

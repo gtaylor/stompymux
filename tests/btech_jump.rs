@@ -1,6 +1,6 @@
 //! Jump thrust, gravity, continuous trajectory boundaries and detached persisted inspection.
 use crate::support;
-use stompymux_rs::{JumpPath, Mech, MechSection, MechTemplate, Point, System};
+use stompymux_rs::{JumpPath, JumpSample, Mech, MechSection, MechTemplate, Point, System};
 
 /// Loose stock uses the shared load calculation for both projected and targeted jumps.
 #[tokio::test]
@@ -316,7 +316,13 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer, map, 3, 4).unwrap();
     set_battle_speed(&mut world, id, ObjectId(1), 32.25).unwrap();
+    let stored = world.btech.constructed_units()[&id].heat().stored;
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
+    // A two-hex jump builds up the three-point minimum at takeoff (Total Warfare p. 53).
+    assert_eq!(
+        world.btech.constructed_units()[&id].heat().stored,
+        stored + 3.0
+    );
     let launch = world.btech.clone();
     assert!(
         advance_battle_motion(
@@ -335,7 +341,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         world.btech.constructed_units()[&id]
             .heat_rates(&world)
             .production,
-        5.0
+        0.0
     );
     assert_eq!(
         world.btech.constructed_units()[&id].attacker_movement_modifier(),
@@ -488,13 +494,7 @@ async fn native_and_lua_launch_share_state_and_reject_routes_or_callbacks_atomic
         std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
     )
     .unwrap();
-    for command in [
-        "jump",
-        "jump north two",
-        "jump 0 99",
-        "jump 0 0",
-        "jump 0 -1",
-    ] {
+    for command in ["jump", "jump north two", "jump 0 99", "jump 0 -1"] {
         let text = support::run_text(&native, &config, ObjectId(1), 1, command);
         assert!(!text.contains("You engage your jump jets."), "{text}");
         assert_eq!(native.world().btech, base.btech);
@@ -749,9 +749,18 @@ fn saved_flight_rejects_corrupt_progress_and_reconstructs_launch_geometry() {
             "{key}"
         );
     }
-    let mut corrupt = state;
-    corrupt["path"]["end"] = corrupt["path"]["start"].clone();
-    assert!(serde_json::from_value::<JumpFlight>(corrupt).is_err());
+    // A destination equal to the start is a same-hex jump, which lands on its first step.
+    let mut hop = state;
+    hop["path"]["end"] = hop["path"]["start"].clone();
+    hop["path"]["end_elevation"] = serde_json::json!(-1);
+    let mut hop = serde_json::from_value::<JumpFlight>(hop).unwrap();
+    assert!(!hop.arrived());
+    let step = hop
+        .advance(jenner().jump_capacity(100).unwrap(), 100)
+        .unwrap();
+    assert_eq!(step.outcome, stompymux_rs::JumpOutcome::Landing);
+    assert_eq!(step.from, step.to);
+    assert_eq!(step.to.point, flight_path().sample(0.0, 5).unwrap().point);
 }
 
 /// Intact Jenner with five conventional jump jets.
@@ -764,19 +773,25 @@ fn jenner() -> Mech {
 
 #[test]
 fn gravity_and_effective_jet_losses_bound_jump_capacity() {
+    // Jumping MP divided by the G-rating, rounded to the nearest whole number with halves
+    // down and no lower bound on the gravity (Tactical Operations p. 53).
     let mut unit = jenner();
     for (gravity, points) in [
-        (0, 10),
+        (0, 500),
+        (20, 25),
         (49, 10),
         (50, 10),
+        (75, 7),
         (100, 5),
-        (101, 4),
+        (101, 5),
+        (125, 4),
+        (150, 3),
         (200, 2),
-        (255, 1),
+        (255, 2),
     ] {
         let capacity = unit.jump_capacity(gravity).unwrap();
-        assert_eq!(capacity.movement_points, points);
-        assert_eq!(capacity.speed, 53.75 * 100.0 / gravity.max(50) as f64);
+        assert_eq!(capacity.movement_points, points, "{gravity}");
+        assert_eq!(capacity.speed, 53.75 * 100.0 / gravity.max(1) as f64);
     }
     assert!(unit.jump_capacity(-1).is_err());
     assert!(unit.jump_capacity(256).is_err());
@@ -838,10 +853,38 @@ fn trajectory_preserves_endpoints_apex_and_lost_thrust_curve() {
         }
     }
     assert!(JumpPath::new(start, end, 0, 6, 5).is_err());
-    assert!(JumpPath::new(start, end, 6, 0, 5).is_err());
+    // Descent is unlimited (Total Warfare p. 53).
+    assert!(JumpPath::new(start, end, 6, 0, 5).is_ok());
+    assert!(JumpPath::new(start, end, 40, 0, 5).is_ok());
     assert!(JumpPath::new(start, end, 0, 0, 4).is_err());
-    assert!(JumpPath::new(start, start, 0, 0, 5).is_err());
+    // A jump may end in its own hex (Total Warfare p. 52); it has one sample.
+    let hop = JumpPath::new(start, start, 2, 2, 5).unwrap();
+    assert_eq!(hop.distance(), 0.0);
+    for progress in [0.0, 0.5, 1.0] {
+        assert_eq!(
+            hop.sample(progress, 5).unwrap(),
+            JumpSample {
+                point: start,
+                elevation: 2.0
+            }
+        );
+    }
     assert!(JumpPath::new(start, end, 0, 0, 0).is_err());
+    // A raised clearance lifts the natural apex but never lowers it.
+    assert_eq!(
+        JumpPath::new(start, end, 0, 0, 5)
+            .unwrap()
+            .with_clearance(2)
+            .apex(),
+        4
+    );
+    assert_eq!(
+        JumpPath::new(start, end, 0, 0, 5)
+            .unwrap()
+            .with_clearance(9)
+            .apex(),
+        9
+    );
     assert!(
         JumpPath::new(
             start,
@@ -1101,7 +1144,7 @@ async fn airborne_actuator_damage_defers_balance_and_last_jet_falls_immediately(
 }
 
 #[tokio::test]
-async fn airborne_gyro_falls_use_gravity_adjusted_capacity_and_replay_after_restart() {
+async fn airborne_gyro_falls_are_zero_level_falls_scaled_by_gravity_and_replay_after_restart() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id) = runtime_fixture().await;
     let (observer, _witness) = jump_observer(&mut base, &config, id);
@@ -1111,8 +1154,9 @@ async fn airborne_gyro_falls_use_gravity_adjusted_capacity_and_replay_after_rest
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    // Fall damage scales with the world's gravity (Tactical Operations p. 53).
-    for (gravity, damage) in [(100, 20), (200, 16)] {
+    // A jumping 'Mech that fails the roll has fallen zero levels (Total Warfare p. 68); fall
+    // damage scales with the world's gravity (Tactical Operations p. 53).
+    for (gravity, damage) in [(100, 4), (200, 8)] {
         let mut world = base.clone();
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         world
@@ -1358,9 +1402,10 @@ async fn second_airborne_gyro_forces_a_fall_even_with_zero_whole_jump_points() {
     )
     .unwrap();
     assert!(second.balance[0].check.is_none());
+    // Zero levels fallen (Total Warfare p. 68), doubled by the two-G world.
     let fall = second.balance[0].fall.as_ref().unwrap();
-    assert_eq!(fall.damage, 0);
-    assert!(fall.groups.is_empty());
+    assert_eq!(fall.damage, 8);
+    assert_eq!(fall.groups.len(), 2);
     assert!(fall.avoidance.unwrap().roll.is_some());
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(unit.posture(), Posture::Prone);
@@ -1932,10 +1977,12 @@ fn jump_hills(
 }
 
 #[tokio::test]
-async fn jumps_use_destination_height_and_enforce_ascent_and_descent_capacity() {
+async fn jumps_use_destination_height_and_bound_only_the_climb() {
     use stompymux_rs::*;
     let (_dir, _config, base, id) = runtime_fixture().await;
-    for (start, end) in [(0, 3), (3, 0), (0, 5), (5, 0)] {
+    // Climbing is bounded by Jumping MP; a jump may descend any number of levels (Total
+    // Warfare pp. 52-53).
+    for (start, end) in [(0, 3), (3, 0), (0, 5), (5, 0), (6, 0), (9, 1)] {
         let (_case_dir, config, mut world, id) = runtime_fixture().await;
         jump_hills(&mut world, id, start, end, 0);
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
@@ -1973,7 +2020,7 @@ async fn jumps_use_destination_height_and_enforce_ascent_and_descent_capacity() 
         assert_eq!(unit.posture(), Posture::Standing);
         world.validate(&config).unwrap();
     }
-    for (start, end) in [(0, 6), (6, 0)] {
+    for (start, end) in [(0, 6), (3, 9)] {
         let mut world = base.clone();
         jump_hills(&mut world, id, start, end, 0);
         let before = world.btech.clone();
@@ -1982,110 +2029,52 @@ async fn jumps_use_destination_height_and_enforce_ascent_and_descent_capacity() 
     }
 }
 
+/// A route over terrain higher than Jumping MP plus the takeoff level is refused at launch
+/// (Total Warfare p. 52); a hill exactly that high is legal, and the displayed flight clears it.
 #[tokio::test]
-async fn hill_collision_rolls_back_the_transition_then_lands_or_falls() {
+async fn jump_routes_are_admitted_against_terrain_at_launch_and_clear_legal_hills() {
     use stompymux_rs::*;
     let (_dir, config, base, id) = runtime_fixture().await;
-    for safe in [false, true] {
+    for hill in [6, 9] {
         let mut world = base.clone();
-        jump_hills(&mut world, id, 0, 0, 9);
-        if safe {
-            world
-                .objects
-                .get_mut(&ObjectId(1))
-                .unwrap()
-                .flags
-                .insert(Flag::Connected);
-            set_battle_character(
-                &mut world,
-                ObjectId(1),
-                Character {
-                    build: 5,
-                    reflexes: 4,
-                    intuition: 3,
-                    learn: 2,
-                    charisma: 1,
-                    bruise: 0,
-                    lethal: 0,
-                },
-            )
-            .unwrap();
-            support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-            set_battle_character_value(
-                &mut world,
-                ObjectId(1),
-                "Piloting-Biped",
-                CharacterValue {
-                    value: 30,
-                    experience: 0,
-                    last_used: 0,
-                },
-            )
-            .unwrap();
-        }
+        jump_hills(&mut world, id, 0, 0, hill);
+        let before = world.btech.clone();
+        let error = launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap_err();
+        assert!(format!("{error:#}").contains("higher than your jets can clear"));
+        assert_eq!(world.btech, before);
+    }
+    for (start, hill) in [(0, 5), (2, 7)] {
+        let mut world = base.clone();
+        jump_hills(&mut world, id, start, 0, hill);
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restarted = persistence::load(&config.database()).await.unwrap();
-        if safe {
-            restarted
-                .objects
-                .get_mut(&ObjectId(1))
-                .unwrap()
-                .flags
-                .insert(Flag::Connected);
-        }
-        let mut collided = false;
-        for _ in 0..24 {
-            let point = world.btech.constructed_units()[&id].motion().unwrap().point;
-            let notices = advance_battle_jumps(
-                &mut world,
-                stompymux_rs::MovementRules {
-                    fall: jump_rules(),
-                    ..stompymux_rs::MovementRules::STANDARD
-                },
-            )
-            .unwrap();
+        let rules = stompymux_rs::MovementRules {
+            fall: jump_rules(),
+            ..stompymux_rs::MovementRules::STANDARD
+        };
+        let mut crossed = false;
+        for _ in 0..40 {
             assert_eq!(
-                notices,
-                advance_battle_jumps(
-                    &mut restarted,
-                    stompymux_rs::MovementRules {
-                        fall: jump_rules(),
-                        ..stompymux_rs::MovementRules::STANDARD
-                    }
-                )
-                .unwrap()
+                advance_battle_jumps(&mut world, rules).unwrap(),
+                advance_battle_jumps(&mut restarted, rules).unwrap()
             );
             assert_eq!(world.btech, restarted.btech);
-            if world.btech.constructed_units()[&id].flight().is_some() {
-                continue;
-            }
-            collided = true;
             let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(unit.motion().unwrap().point, point);
-            assert_eq!(unit.position().unwrap().y, 5);
-            assert_eq!(
-                unit.posture(),
-                if safe {
-                    Posture::Standing
-                } else {
-                    Posture::Prone
-                }
-            );
-            assert_eq!(unit.jump_stabilization(), 12);
-            assert!(
-                notices
-                    .iter()
-                    .any(|notice| notice.text.contains("too high"))
-            );
-            assert!(notices.iter().any(|notice| notice.text.contains(if safe {
-                "land safely"
-            } else {
-                "crash into the obstacle"
-            })));
-            break;
+            let Some(flight) = unit.flight() else {
+                break;
+            };
+            if unit.position().unwrap().y == 4 {
+                crossed = true;
+                assert!(flight.sample().elevation >= f64::from(hill));
+                assert!(battle_unit_elevation(&world, id).unwrap().unwrap() >= i32::from(hill));
+            }
         }
-        assert!(collided);
+        assert!(crossed);
+        let unit = &world.btech.constructed_units()[&id];
+        assert!(unit.flight().is_none());
+        assert_eq!(unit.position().unwrap().y, 3);
+        assert_eq!(unit.posture(), Posture::Standing);
         world.validate(&config).unwrap();
     }
 }
@@ -2150,7 +2139,11 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
             flight_world.btech.constructed_units()[&id]
                 .heat_rates(&flight_world)
                 .production,
-            if terrain == Terrain::Fire { 10.0 } else { 5.0 }
+            if terrain == Terrain::Fire { 5.0 } else { 0.0 }
+        );
+        assert_eq!(
+            flight_world.btech.constructed_units()[&id].heat().stored,
+            before["heat"]["stored"].as_f64().unwrap() + 3.0
         );
         for _ in 0..12 {
             advance_battle_jumps(
@@ -3401,11 +3394,17 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
             assert_eq!(native.drain_outbox(), lua.drain_outbox());
             let mut world = native.world().clone();
             assert!(world.btech.constructed_units()[&id].airborne());
+            // A one-hex jump on improved jets still costs the three-point minimum (Total
+            // Warfare p. 53), charged at takeoff rather than as an airborne rate.
+            assert_eq!(
+                world.btech.constructed_units()[&id].heat().stored,
+                before.btech.constructed_units()[&id].heat().stored + 3.0
+            );
             assert_eq!(
                 world.btech.constructed_units()[&id]
                     .heat_rates(&world)
                     .production,
-                if last { 3.0 } else { 5.0 }
+                0.0
             );
             let mass = world.btech.constructed_units()[&id].mass().unwrap();
             seed_airborne_critical(&mut world, id, location);
@@ -3447,9 +3446,7 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
             );
             assert_eq!(unit.airborne(), !last);
             assert_eq!(unit.mass().unwrap().equipment, mass.equipment);
-            if !last {
-                assert_eq!(unit.heat_rates(&world).production, 4.0);
-            }
+            assert_eq!(unit.heat_rates(&world).production, 0.0);
             let observed: Vec<_> = report
                 .notices
                 .iter()
@@ -4585,7 +4582,7 @@ async fn character_jump_commands_land_and_rollback() {
 #[tokio::test]
 async fn character_landing_control_experience_and_restart() {
     use stompymux_rs::*;
-    for obstacle in [false, true] {
+    {
         for extended in [false, true] {
             for (section, slot, skill_level) in [
                 (MechSection::LeftLeg, 1, 0),
@@ -4593,9 +4590,6 @@ async fn character_landing_control_experience_and_restart() {
                 (MechSection::CenterTorso, 3, 2),
             ] {
                 let (_dir, config, mut world, id) = runtime_fixture().await;
-                if obstacle {
-                    jump_hills(&mut world, id, 0, 0, 9);
-                }
                 world
                     .objects
                     .get_mut(&id)
@@ -4698,7 +4692,7 @@ async fn character_landing_control_experience_and_restart() {
                         (*text == "You make a piloting skill roll!").then_some(index)
                     })
                     .collect();
-                assert_eq!(rolls.len(), if obstacle { 2 } else { 1 });
+                assert_eq!(rolls.len(), 1);
                 for &index in &rolls {
                     assert!(index > 0);
                     assert!(pilot_output[index + 1].starts_with("Modified Pilot Skill: BTH "));
@@ -4713,13 +4707,6 @@ async fn character_landing_control_experience_and_restart() {
                         "Your damaged leg actuators make it harder to land"
                     }
                 );
-                if obstacle {
-                    assert!(
-                        pilot_output[rolls[0] - 1]
-                            .contains("You attempt to jump over elevation that is too high!")
-                    );
-                    assert!(pilot_output[rolls[0] + 2].contains("You land safely."));
-                }
                 assert!(!output.iter().any(|(who, text)| *who != ObjectId(1)
                     && (text.source().starts_with("You make a piloting")
                         || text.source().starts_with("Modified Pilot Skill:"))));
@@ -4731,11 +4718,11 @@ async fn character_landing_control_experience_and_restart() {
                 );
                 assert_eq!(
                     candidate.btech.character_values()[&ObjectId(1)][skill].experience_balance(),
-                    if obstacle { 4 } else { 2 }
+                    2
                 );
                 let traces =
                     support::drain_traces(&scripts, logging::TraceTopic::PilotingExperience);
-                assert_eq!(traces.len(), if obstacle { 2 } else { 1 });
+                assert_eq!(traces.len(), 1);
                 assert_eq!(traces[0], format!("GOD gained 2 {skill} XP"));
                 persistence::save(&config.database(), &candidate)
                     .await
@@ -5217,9 +5204,10 @@ async fn jump_fields_keep_dfa_intent_without_chasing_the_target() {
     world.validate(&config).unwrap();
 }
 
-/// A new course uses ordinary terrain collision and preserves deterministic restart outcomes.
+/// A new course is admitted against terrain like a launch: a redirect over a hill above
+/// Jumping MP plus the takeoff level is refused and the flight continues unchanged.
 #[tokio::test]
-async fn jump_fields_redirect_into_existing_collision_handling() {
+async fn jump_fields_redirect_is_admitted_against_terrain() {
     use std::{cell::RefCell, rc::Rc};
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
@@ -5233,30 +5221,30 @@ async fn jump_fields_redirect_into_existing_collision_handling() {
         advance_battle_jumps(&mut world, rules).unwrap();
     }
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "jumpheading", "0").unwrap();
+    let before = scripts.world().btech.clone();
+    let error =
+        set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "jumpheading", "0")
+            .unwrap_err();
+    assert!(format!("{error:#}").contains("higher than your jets can clear"));
+    assert_eq!(scripts.world().btech, before);
     let mut world = scripts.world().clone();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut replay = persistence::load(&config.database()).await.unwrap();
-    for _ in 0..24 {
-        let point = world.btech.constructed_units()[&id].motion().unwrap().point;
+    for _ in 0..60 {
         assert_eq!(
             advance_battle_jumps(&mut world, rules).unwrap(),
             advance_battle_jumps(&mut replay, rules).unwrap()
         );
         assert_eq!(world.btech, replay.btech);
         if world.btech.constructed_units()[&id].flight().is_none() {
-            assert_eq!(
-                world.btech.constructed_units()[&id].motion().unwrap().point,
-                point
-            );
             break;
         }
     }
-    assert!(world.btech.constructed_units()[&id].flight().is_none());
-    assert_eq!(
-        world.btech.constructed_units()[&id].position().unwrap().y,
-        5
-    );
+    let unit = &world.btech.constructed_units()[&id];
+    assert!(unit.flight().is_none());
+    assert_eq!(unit.posture(), Posture::Standing);
+    assert_eq!(unit.position().unwrap().y, 5);
+    assert_eq!(unit.position().unwrap().x, 9);
     world.validate(&config).unwrap();
 }
 
@@ -5437,5 +5425,368 @@ async fn free_fall_landing_feedback_is_private_and_replays() {
                 .any(|(who, message)| *who == ObjectId(2)
                     && message.source() == "You hit the ground!")
         );
+    }
+}
+
+/// A jump may end in the hex it started in (Total Warfare p. 52): it costs the three-point
+/// minimum heat, lands on the next step where it began and stabilizes like any landing.
+#[tokio::test]
+async fn same_hex_jump_lands_in_place_with_minimum_heat() {
+    use stompymux_rs::*;
+    let (_dir, config, mut world, id) = runtime_fixture().await;
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["bogged_down"] = true.into();
+        })
+        .unwrap();
+    let unit = &world.btech.constructed_units()[&id];
+    let position = unit.position().unwrap();
+    let point = unit.motion().unwrap().point;
+    let stored = unit.heat().stored;
+    let notices = launch_battle_jump(&mut world, id, ObjectId(1), 0, 0.0).unwrap();
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text == "You engage your jump jets.")
+    );
+    let unit = &world.btech.constructed_units()[&id];
+    assert!(unit.airborne());
+    assert_eq!(serde_json::to_value(unit).unwrap()["bogged_down"], false);
+    assert_eq!(unit.heat().stored, stored + 3.0);
+    assert_eq!(unit.flight().unwrap().path().distance(), 0.0);
+    persistence::save(&config.database(), &world).await.unwrap();
+    let mut restarted = persistence::load(&config.database()).await.unwrap();
+    let rules = stompymux_rs::MovementRules {
+        fall: jump_rules(),
+        ..stompymux_rs::MovementRules::STANDARD
+    };
+    let notices = advance_battle_jumps(&mut world, rules).unwrap();
+    assert_eq!(
+        advance_battle_jumps(&mut restarted, rules).unwrap(),
+        notices
+    );
+    assert_eq!(world.btech, restarted.btech);
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text == "You finish your jump.")
+    );
+    let unit = &world.btech.constructed_units()[&id];
+    assert!(unit.flight().is_none());
+    assert_eq!(unit.position(), Some(position));
+    assert_eq!(unit.motion().unwrap().point, point);
+    assert_eq!(unit.posture(), Posture::Standing);
+    assert_eq!(unit.jump_stabilization(), 12);
+    world.validate(&config).unwrap();
+}
+
+/// From Depth 1 water only torso-mounted jets can fire (Total Warfare p. 53); leg jets are
+/// submerged and a 'Mech with jets only in its legs cannot jump at all.
+#[tokio::test]
+async fn depth_one_takeoff_uses_only_torso_jets() {
+    use stompymux_rs::*;
+    let (_dir, config, mut world, id) = water_jump_fixture(1, true).await;
+    let source = include_str!("fixtures/btech/units/JR7-D.toml");
+    let leg_jets = source
+        .replace("    { at = \"1-2\", item = \"JumpJet\" },\n", "")
+        .replace(
+            "[sections.left_leg]\narmor = 6\n",
+            "[sections.left_leg]\narmor = 6\nslots = [\n    { at = \"5-6\", item = \"JumpJet\" },\n]\n",
+        );
+    assert_ne!(leg_jets, source);
+    world
+        .btech
+        .set_unit_definition(id, MechTemplate::parse("JR7-D", &leg_jets).unwrap())
+        .unwrap();
+    world.validate(&config).unwrap();
+    let unit = &world.btech.constructed_units()[&id];
+    assert_eq!(unit.jump_capacity(100).unwrap().movement_points, 5);
+    assert_eq!(unit.torso_jump_capacity(100).unwrap().movement_points, 3);
+    assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-1));
+    let before = world.btech.clone();
+    let error = launch_battle_jump(&mut world, id, ObjectId(1), 0, 4.0).unwrap_err();
+    assert!(format!("{error:#}").contains("out of range"));
+    assert_eq!(world.btech, before);
+    launch_battle_jump(&mut world, id, ObjectId(1), 0, 3.0).unwrap();
+    assert_eq!(
+        world.btech.constructed_units()[&id]
+            .flight()
+            .unwrap()
+            .path()
+            .movement_points(),
+        3
+    );
+    let only_legs = source
+        .replace("    { at = \"1-2\", item = \"JumpJet\" },\n", "")
+        .replace("    { at = \"2-3\", item = \"JumpJet\" },\n", "")
+        .replace("    { at = 12, item = \"JumpJet\" },\n", "")
+        .replace(
+            "[sections.left_leg]\narmor = 6\n",
+            "[sections.left_leg]\narmor = 6\nslots = [\n    { at = \"5-6\", item = \"JumpJet\" },\n]\n",
+        )
+        .replace(
+            "[sections.right_leg]\narmor = 6\n",
+            "[sections.right_leg]\narmor = 6\nslots = [\n    { at = \"5-6\", item = \"JumpJet\" },\n]\n",
+        )
+        .replace("jump_mp = 5", "jump_mp = 4");
+    let (_dir, config, mut world, id) = water_jump_fixture(1, true).await;
+    world
+        .btech
+        .set_unit_definition(id, MechTemplate::parse("JR7-D", &only_legs).unwrap())
+        .unwrap();
+    world.validate(&config).unwrap();
+    assert_eq!(
+        world.btech.constructed_units()[&id]
+            .jump_capacity(100)
+            .unwrap()
+            .movement_points,
+        4
+    );
+    let before = world.btech.clone();
+    let error = launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap_err();
+    assert!(format!("{error:#}").contains("no torso jets"));
+    assert_eq!(world.btech, before);
+}
+
+/// A failed footing roll in water tumbles the 'Mech to the bottom, falling as many levels as
+/// the water is deep at half damage (Total Warfare p. 53): a 35-ton 'Mech in Depth 1 water
+/// takes four points, two levels' worth halved.
+#[tokio::test]
+async fn water_landing_tumble_falls_the_water_depth() {
+    use stompymux_rs::*;
+    let (_dir, config, mut world, id) = water_jump_fixture(1, false).await;
+    let seed = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+        .unwrap();
+    world
+        .btech
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
+        .unwrap();
+    let protection = |world: &World| {
+        world.btech.constructed_units()[&id]
+            .sections()
+            .values()
+            .map(|section| u32::from(section.armor) + u32::from(section.internal))
+            .sum::<u32>()
+    };
+    let before = protection(&world);
+    launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
+    let rules = stompymux_rs::MovementRules {
+        fall: jump_rules(),
+        ..stompymux_rs::MovementRules::STANDARD
+    };
+    let mut notices = Vec::new();
+    for _ in 0..60 {
+        if world.btech.constructed_units()[&id].flight().is_none() {
+            break;
+        }
+        notices.extend(advance_battle_jumps(&mut world, rules).unwrap());
+    }
+    let unit = &world.btech.constructed_units()[&id];
+    assert!(unit.flight().is_none());
+    assert_eq!(unit.position().unwrap().y, 3);
+    assert_eq!(unit.posture(), Posture::Prone);
+    assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-1));
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text == "You tumble to the bottom!")
+    );
+    assert_eq!(before - protection(&world), 4);
+    world.validate(&config).unwrap();
+}
+
+/// A running quad with five jump jets on a flat field, piloted from the cockpit.
+async fn quad_jump_fixture() -> (
+    tempfile::TempDir,
+    stompymux_rs::Config,
+    stompymux_rs::World,
+    stompymux_rs::ObjectId,
+) {
+    use stompymux_rs::*;
+    let (dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Quad field".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        map,
+        "quad",
+        MapAsset::from_cells(&format!(
+            "12 12\n{}",
+            format!("{}\n", ".0".repeat(12)).repeat(12)
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
+    let id = world.create(&config, "Quad".into(), Kind::Thing);
+    let mut definition =
+        MechTemplate::parse("test", include_str!("../game/units/SCP-1N.toml")).unwrap();
+    definition.jump_speed = 53.75;
+    create_battle_unit(&mut world, id, definition).unwrap();
+    support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
+    place_battle_unit(&mut world, id, map, 5, 5).unwrap();
+    world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
+    assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
+    start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
+    for _ in 0..5 {
+        advance_battle_units(&mut world, 0, true);
+    }
+    (dir, config, world, id)
+}
+
+/// A quad missing one leg loses its -2 bonus and lands at +5 (Total Warfare p. 123), while an
+/// intact quad lands without a roll.
+#[tokio::test]
+async fn quad_missing_a_leg_lands_at_plus_five_without_its_bonus() {
+    use stompymux_rs::*;
+    let (_dir, config, mut world, id) = quad_jump_fixture().await;
+    let mut probe = world.clone();
+    let intact = roll_battle_piloting(&mut probe, id, 0, false)
+        .unwrap()
+        .target;
+    assert_eq!(
+        world.btech.constructed_units()[&id].chassis_piloting_modifier(),
+        -2
+    );
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["sections"]["LeftArm"]["armor"] = 0.into();
+            record["sections"]["LeftArm"]["internal"] = 0.into();
+        })
+        .unwrap();
+    world.validate(&config).unwrap();
+    let unit = &world.btech.constructed_units()[&id];
+    assert_eq!(unit.unavailable_legs(), 1);
+    assert_eq!(unit.chassis_piloting_modifier(), 0);
+    assert_eq!(unit.mobility().piloting_modifier, 0);
+    let seed = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
+        .unwrap();
+    world
+        .btech
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
+        .unwrap();
+    launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
+    let rules = stompymux_rs::MovementRules {
+        fall: jump_rules(),
+        ..stompymux_rs::MovementRules::STANDARD
+    };
+    let mut notices = Vec::new();
+    for _ in 0..60 {
+        if world.btech.constructed_units()[&id].flight().is_none() {
+            break;
+        }
+        notices.extend(advance_battle_jumps(&mut world, rules).unwrap());
+    }
+    let texts: Vec<_> = notices
+        .iter()
+        .filter(|notice| notice.unit == id)
+        .map(|notice| notice.text.as_str())
+        .collect();
+    assert!(texts.contains(&"Your missing leg makes it harder to land"));
+    let unit = &world.btech.constructed_units()[&id];
+    assert_eq!(unit.posture(), Posture::Standing);
+    assert_eq!(unit.position().unwrap().y, 3);
+    // Exactly the landing roll drew dice, at the bonus-less skill plus five.
+    let mut expected = Dice::seeded([seed; 32]);
+    assert_eq!(expected.two_d6(), 12);
+    assert_eq!(
+        serde_json::to_value(unit).unwrap()["dice"],
+        serde_json::to_value(&expected).unwrap()
+    );
+    let mut probe = world.clone();
+    assert_eq!(
+        roll_battle_piloting(&mut probe, id, 5, false)
+            .unwrap()
+            .target,
+        intact + 2 + 5
+    );
+    world.validate(&config).unwrap();
+}
+
+/// Low gravity lets a 'Mech jump farther than its normal Jumping MP; doing so strains the
+/// legs with a roll at +1 per full half G below standard, and failure costs each leg one point
+/// of internal structure per hex beyond the normal Jumping MP without a fall (Tactical
+/// Operations p. 53).
+#[tokio::test]
+async fn low_gravity_jumps_beyond_normal_capacity_strain_the_legs() {
+    use stompymux_rs::*;
+    for (roll, damaged) in [(2, true), (12, false)] {
+        let (_dir, config, mut world, id) = runtime_fixture().await;
+        jump_hills(&mut world, id, 0, 0, 0);
+        let map = world.btech.constructed_units()[&id].position().unwrap().map;
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                record["gravity"] = 50.into();
+            })
+            .unwrap();
+        let rules = stompymux_rs::MovementRules {
+            fall: jump_rules(),
+            ..stompymux_rs::MovementRules::STANDARD
+        };
+        let fly = |world: &mut World| {
+            launch_battle_jump(world, id, ObjectId(1), 180, 6.0).unwrap();
+            let mut notices = Vec::new();
+            for _ in 0..80 {
+                if world.btech.constructed_units()[&id].flight().is_none() {
+                    break;
+                }
+                notices.extend(advance_battle_jumps(world, rules).unwrap());
+            }
+            notices
+        };
+        // The strain roll comes first; structure damage then rolls for critical hits, so
+        // keep a seed whose later rolls leave the legs' actuators intact.
+        let seed = (0..=255)
+            .filter(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
+            .find(|seed| {
+                let mut probe = world.clone();
+                probe
+                    .btech
+                    .set_unit_dice(id, Dice::seeded([*seed; 32]))
+                    .unwrap();
+                fly(&mut probe);
+                probe.btech.constructed_units()[&id].posture() == Posture::Standing
+            })
+            .unwrap();
+        world
+            .btech
+            .set_unit_dice(id, Dice::seeded([seed; 32]))
+            .unwrap();
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.jump_capacity(50).unwrap().movement_points, 10);
+        let legs: Vec<_> = unit
+            .chassis()
+            .legs()
+            .iter()
+            .map(|leg| (*leg, unit.sections()[leg].internal))
+            .collect();
+        let notices = fly(&mut world);
+        let texts: Vec<_> = notices
+            .iter()
+            .filter(|notice| notice.unit == id)
+            .map(|notice| notice.text.as_str())
+            .collect();
+        assert!(
+            texts
+                .contains(&"The low gravity let you jump farther than your jets were built for...")
+        );
+        assert_eq!(texts.contains(&"Your legs take some damage!"), damaged);
+        let unit = &world.btech.constructed_units()[&id];
+        assert!(unit.flight().is_none());
+        assert_eq!(unit.posture(), Posture::Standing);
+        assert_eq!(unit.position().unwrap().y, 11);
+        for (leg, internal) in legs {
+            assert_eq!(
+                unit.sections()[&leg].internal,
+                internal - u16::from(damaged),
+                "{leg:?}"
+            );
+        }
+        world.validate(&config).unwrap();
     }
 }

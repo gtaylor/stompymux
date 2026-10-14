@@ -10,6 +10,15 @@ pub struct Mobility {
 }
 
 impl Mech {
+    /// Inherent chassis control bonus: a quad's -2 to Piloting Skill Rolls lasts only while
+    /// none of its four legs is destroyed (Total Warfare p. 59, p. 123).
+    pub fn chassis_piloting_modifier(&self) -> i16 {
+        if self.unavailable_legs() > 0 {
+            return 0;
+        }
+        self.chassis().piloting_modifier()
+    }
+
     /// Recompute mobility from facts instead of accumulating mutable penalties after each hit.
     pub fn mobility(&self) -> Mobility {
         // Hardened armor costs one running MP before damage adjusts the ceiling.
@@ -20,11 +29,14 @@ impl Mech {
         let legs = chassis.legs();
         let missing = self.unavailable_legs();
         let gyro = self.gyro_damage();
+        // A destroyed leg adds +5 to a biped's rolls (Total Warfare p. 60). A quad missing one
+        // leg loses one MP and its -2 bonus but takes no leg modifier of its own; missing two
+        // it is restricted like a one-legged biped, and three like a legless one (p. 123).
         let (mut maximum_speed, leg_penalty) = match (chassis, missing) {
             (_, 0) => (baseline, 0),
-            (MechChassis::Quad, 1) => (baseline - 10.75, 2),
-            (MechChassis::Quad, 2) => (10.75, 7),
-            (MechChassis::Quad, _) => (0.0, 2),
+            (MechChassis::Quad, 1) => (baseline - 10.75, 0),
+            (MechChassis::Quad, 2) => (10.75, 5),
+            (MechChassis::Quad, _) => (0.0, 10),
             (MechChassis::Biped, 1) => (10.75, 5),
             (MechChassis::Biped, _) => (0.0, 10),
         };

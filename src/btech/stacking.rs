@@ -31,9 +31,6 @@ pub enum StackingEntry {
 pub struct StackingInput {
     pub entry: StackingEntry,
     pub mass: u32,
-    /// Surviving jump capacity in movement points under the map's gravity; an airborne
-    /// shutdown scales its fall by it.
-    pub jump_movement_points: u16,
 }
 
 /// Levels fallen at the point of impact of a landing or fall into a crowded hex (Total
@@ -55,20 +52,10 @@ pub(super) fn physical_input(
         .constructed_units()
         .get(&id)
         .context("Unit is unavailable")?;
-    let position = unit.position().context("Collision requires placement")?;
-    let map = &world.btech.maps()[&position.map];
-    let gravity = map.gravity.max(50);
-    let thrust = (unit.definition().jump_speed
-        - f64::from(unit.system_hits(super::System::JumpJet)) * 10.75)
-        .max(0.0);
+    unit.position().context("Collision requires placement")?;
     Ok(StackingInput {
         entry,
         mass: unit.effective_mass()?,
-        jump_movement_points: if entry == StackingEntry::Ground {
-            0
-        } else {
-            (thrust * 100.0 / gravity as f64 / 10.75) as u16
-        },
     })
 }
 
@@ -450,7 +437,6 @@ mod tests {
         let input = StackingInput {
             entry: StackingEntry::Ground,
             mass: 35 * 1024,
-            jump_movement_points: 0,
         };
         assert_eq!(collision_damage(input, 21.5, 21.5, 0.0), 0);
         assert_eq!(collision_damage(input, 21.5, 21.5, 180.0), 10);

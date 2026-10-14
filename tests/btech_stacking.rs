@@ -71,7 +71,6 @@ fn input(entry: StackingEntry) -> StackingInput {
     StackingInput {
         entry,
         mass: 35 * 1024,
-        jump_movement_points: 5,
     }
 }
 
@@ -229,7 +228,6 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
                 } else {
                     20 * 1024
                 },
-                jump_movement_points: 2,
             };
             let events = resolve_battle_stacking(&mut world, ids[0], physical, fall()).unwrap();
             let location = if prone || entry == StackingEntry::Ground {
@@ -589,96 +587,9 @@ async fn landing_collision_thrust_uses_map_gravity() {
     }
 }
 
-#[tokio::test]
-async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
-    let (_dir, config, mut world, ids) = fixture(&[0, 0, 0]).await;
-    let id = ids[0];
-    let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let chosen = (0..=255)
-        .find(|value| {
-            let mut dice = Dice::seeded([*value; 32]);
-            let safe = dice.two_d6() >= 7;
-            dice.d6();
-            safe && dice.two_d6() == 7 && dice.die(3).unwrap() == 1 && dice.two_d6() >= 7
-        })
-        .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["movement_modifier"] = 800.into();
-    for index in 3..6 {
-        state["maps"][map.0.to_string()]["terrain"][index] =
-            serde_json::to_value(Hex::new(Terrain::Wall, 9)).unwrap();
-    }
-    for unit in &ids {
-        state["constructed"][unit.0.to_string()]["position"]["y"] = 0.into();
-        state["constructed"][unit.0.to_string()]["motion"]["point"] =
-            serde_json::to_value(HexCoordinate { x: 1, y: 0 }.center()).unwrap();
-    }
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(Dice::seeded([chosen; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
-    launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
-    let rules = fall();
-    let mut rejected = world.clone();
-    rejected
-        .objects
-        .get_mut(&ids[1])
-        .unwrap()
-        .flags
-        .insert(Flag::InCharacter);
-    let before = rejected.btech.clone();
-    assert!(
-        advance_battle_jumps(
-            &mut rejected,
-            stompymux_rs::MovementRules {
-                fall: rules,
-                ..stompymux_rs::MovementRules::STANDARD
-            }
-        )
-        .is_err()
-    );
-    assert_eq!(rejected.btech, before);
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut loaded = persistence::load(&config.database()).await.unwrap();
-    let events = advance_battle_jumps(
-        &mut world,
-        stompymux_rs::MovementRules {
-            fall: rules,
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
-    // The obstacle fall's damage precedes the crowding collision it causes.
-    let crash = events
-        .iter()
-        .position(|notice| notice.text.contains("crash into the obstacle"))
-        .expect("obstacle fall notice");
-    let collision = events
-        .iter()
-        .position(|notice| notice.text.contains("land on another"))
-        .expect("collision notice");
-    assert!(crash < collision);
-    assert_eq!(
-        events,
-        advance_battle_jumps(
-            &mut loaded,
-            stompymux_rs::MovementRules {
-                fall: rules,
-                ..stompymux_rs::MovementRules::STANDARD
-            }
-        )
-        .unwrap()
-    );
-    assert_eq!(world.btech, loaded.btech);
-    assert!(
-        events
-            .iter()
-            .any(|notice| notice.text.contains("land on another"))
-    );
-    world.validate(&config).unwrap();
-}
-
-/// Avoid unrelated pilot injuries and distribute a five-level fall over four intact sections;
-/// `accept` then checks the whole action, so the landing's accidental-fall roll also passes.
+/// Avoid unrelated pilot injuries and land the zero-level fall's single packet on an intact
+/// section; `accept` then checks the whole action, so the landing's accidental-fall roll also
+/// passes.
 fn thermal_fall_dice(accept: impl Fn(&Dice) -> bool) -> Dice {
     (0u32..100_000)
         .find_map(|value| {
@@ -693,20 +604,16 @@ fn thermal_fall_dice(accept: impl Fn(&Dice) -> bool) -> Dice {
                 return None;
             }
             dice.d6();
-            let mut locations = Vec::new();
-            for _ in 0..4 {
-                locations.push(dice.two_d6());
-                dice.two_d6(); // Each fall packet enters material resolution.
-            }
-            locations.sort();
-            (locations == [5, 6, 8, 9] && dice.die(3).unwrap() == 1 && accept(&original))
+            let location = dice.two_d6();
+            dice.two_d6(); // The fall packet enters material resolution.
+            (matches!(location, 5 | 6 | 8 | 9) && dice.die(3).unwrap() == 1 && accept(&original))
                 .then_some(original)
         })
         .unwrap()
 }
 
 #[tokio::test]
-async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() {
+async fn airborne_shutdown_falls_zero_levels_and_commits_crowding_before_power_down() {
     {
         let (_dir, config, mut world, ids) = landing_fixture(2).await;
         let id = ids[0];
@@ -755,7 +662,8 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
             advance_battle_overheat(&mut loaded, rules).unwrap()
         );
         assert_eq!(world.btech, loaded.btech);
-        assert_eq!(reports[0].fall.as_ref().unwrap().damage, 20);
+        // A jumping 'Mech brought down has fallen zero levels (Total Warfare p. 68).
+        assert_eq!(reports[0].fall.as_ref().unwrap().damage, 4);
         assert!(
             reports[0]
                 .notices

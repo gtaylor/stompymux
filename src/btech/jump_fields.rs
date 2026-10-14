@@ -60,6 +60,7 @@ pub(super) fn set(world: &mut World, id: ObjectId, heading: bool, value: &str) -
             let path =
                 JumpPath::continuation(origin, end, elevation, cursor.path().movement_points())?;
             super::jumping::validate_route(map, path)?;
+            let path = path.with_clearance(super::jumping::trajectory_clearance(map, path)?);
             cursor.redirect(path)?;
         }
     }

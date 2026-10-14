@@ -2614,7 +2614,7 @@ async fn jump_speed_fields_share_thrust_without_rebuilding_equipment_scenario(f:
             );
         }
         let before = lua.world().btech.clone();
-        for value in ["-1", "NaN", "inf", "1e100", "352256"] {
+        for value in ["-1", "NaN", "inf", "1e100", "704502"] {
             assert!(
                 set_battle_unit_field_action(lua, config, ObjectId(1), id, "maxjumpspeed", value)
                     .is_err()
@@ -2740,7 +2740,7 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitF
     }
 }
 
-/// Saved propulsion must satisfy the same low-gravity capacity bounds as administrative edits.
+/// Saved propulsion must satisfy the same flight-capacity bound as administrative edits.
 async fn saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(f: &UnitFields) {
     let config = &f.config;
     let source = include_str!("../game/units/JR7-D.toml");
@@ -2757,15 +2757,19 @@ async fn saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(f
     let scripts = &f.native;
     support::install(scripts, world.clone());
     // The stored baseline includes the destroyed jet, so it can exceed the live-speed bound.
-    set_battle_unit_field_action(scripts, config, ObjectId(1), id, "maxjumpspeed", "352255")
+    set_battle_unit_field_action(scripts, config, ObjectId(1), id, "maxjumpspeed", "704501")
         .unwrap();
+    assert!(
+        set_battle_unit_field_action(scripts, config, ObjectId(1), id, "maxjumpspeed", "704502")
+            .is_err()
+    );
     let saved = scripts.world().clone();
     saved.validate(config).unwrap();
     persistence::save(&config.database(), &saved).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, saved.btech);
     firing::edit(&mut loaded, id, |unit| {
-        unit["propulsion"]["jump"] = (352256.0 + 10.75).into()
+        unit["propulsion"]["jump"] = (704502.0 + 10.75).into()
     });
     let error = loaded.validate(config).unwrap_err();
     assert!(format!("{error:#}").contains("Invalid jump capacity"));

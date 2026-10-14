@@ -128,13 +128,8 @@ impl Mech {
             * f64::from(u8::from(self.stealth().enabled) + u8::from(self.null_signature().enabled));
         if self.power() == Power::Running {
             production += 5.0 * f64::from(self.system_hits(System::Engine));
-            if self.airborne() {
-                production += ((self.definition().jump_speed
-                    - f64::from(self.system_hits(System::JumpJet)) * 10.75)
-                    .max(0.0)
-                    / 10.75)
-                    .max(3.0);
-            }
+            // Jumping heat is charged once per jump at takeoff (Total Warfare p. 53), not
+            // as a rate while airborne.
             if let Some(motion) = self.motion().filter(|motion| motion.speed != 0.0) {
                 production +=
                     if motion.desired_speed > self.update_maximum_speed() * 2.0 / 3.0 + 0.1 {
