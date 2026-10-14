@@ -240,7 +240,7 @@ fn resolve(
             )
         }
     };
-    let roll = super::launch_roll::attack_roll(weapon, &mut dice);
+    let roll = dice.generic_roll();
     crate::btech::with_unit_mut!(world.btech.unit_mut(shooter).unwrap(), |unit| {
         unit.dice = dice;
     });
@@ -325,18 +325,8 @@ fn check_unit_target(
     let source = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
     let recipient = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
     ensure!(!recipient.destroyed, "Unit is destroyed");
-    let coolant = weapon == Weapon::CoolantGun;
-    ensure!(shooter != target || coolant, "A unit cannot fire on itself");
-    super::fire_target::check_target_safety_for_source(world, targeting, target, weapon)?;
-    let ammunition = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
-        unit.ammunition_mode(index)?
-    });
-    if ammunition.munition() == AmmunitionMode::Stinger {
-        ensure!(
-            super::stinger::target_airborne(world, target),
-            "Stinger missiles can only engage airborne targets!"
-        );
-    }
+    ensure!(shooter != target, "A unit cannot fire on itself");
+    super::fire_target::check_target_safety_for_source(world, targeting, target)?;
     super::torpedo::check_target(
         world,
         weapon,
@@ -361,10 +351,7 @@ fn check_unit_target(
     super::weapon_geometry::check_water(geometry.weapon, geometry.submerged)?;
     super::planetary_conditions::check_wind(world, shooter, geometry.weapon)?;
     ensure!(
-        (coolant && shooter == target)
-            || indirect.is_some()
-            || rules.override_weapon_arcs
-            || geometry.bears,
+        indirect.is_some() || rules.override_weapon_arcs || geometry.bears,
         "Target is outside weapon arc"
     );
     Ok(())

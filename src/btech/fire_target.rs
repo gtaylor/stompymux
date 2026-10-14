@@ -1,5 +1,5 @@
 //! Shared firing requests defer native target decoding until per-weapon dispatch.
-use super::{HexCoordinate, Weapon};
+use super::HexCoordinate;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum FireTarget {
-    /// Use the current cockpit selection and automatic coolant target.
+    /// Use the current cockpit selection.
     #[default]
     Selected,
     /// Supply a unit without changing the cockpit lock.
@@ -121,10 +121,7 @@ pub(super) fn resolve_conventional_for_source(
     requested: FireTarget,
 ) -> Result<ResolvedFireTarget> {
     let shooter = source.unit;
-    let (weapon, ammunition) = super::spotter::installation(world, shooter, index)?;
-    let mode = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
-        unit.fire_mode(index)?
-    });
+    super::spotter::installation(world, shooter, index)?;
     let (unit_lock, hex_lock) = match source.selection(world) {
         Some(super::TargetSelection::Unit(lock)) => (Some(lock), None),
         Some(super::TargetSelection::Hex(lock)) => (None, Some(lock)),
@@ -147,10 +144,8 @@ pub(super) fn resolve_conventional_for_source(
     // firer cannot see that target itself (Total Warfare p. 111).
     let observed = super::spotter::observed_target_for_source(world, source, index)?;
     let indirect = super::spotter::indirect_target_for_source(world, source, index)?;
-    let self_cooling = requested == FireTarget::Selected && mode.self_cooling(weapon);
     if observed.is_none()
         && requested == FireTarget::Selected
-        && !self_cooling
         && let Some(lock) = hex_lock
     {
         coordinate = Some(lock.hex);
@@ -162,8 +157,6 @@ pub(super) fn resolve_conventional_for_source(
     }
     let unit = if let Some(link) = observed {
         link.target
-    } else if self_cooling {
-        shooter
     } else if let Some(hex) = coordinate {
         super::hex_occupant(world, shooter, hex)?.context("Target left the coordinate")?
     } else {
@@ -180,10 +173,6 @@ pub(super) fn resolve_conventional_for_source(
             y: i32::from(position.y),
         });
     }
-    ensure!(
-        coordinate.is_none() || ammunition.munition() != super::AmmunitionMode::Stinger,
-        "Stinger missiles cannot shoot hexes!"
-    );
     Ok(ResolvedFireTarget::Unit { unit, coordinate })
 }
 
@@ -192,7 +181,6 @@ pub(super) fn check_target_safety_for_source(
     world: &World,
     targeting: TargetSource,
     target: ObjectId,
-    weapon: Weapon,
 ) -> Result<()> {
     let shooter = targeting.unit;
     let source = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
@@ -213,7 +201,7 @@ pub(super) fn check_target_safety_for_source(
             || lock.is_some_and(|lock| lock.target == target),
         "You need a stable lock to fire on that target!"
     );
-    if weapon == Weapon::CoolantGun || source.signature.team != recipient.signature.team {
+    if source.signature.team != recipient.signature.team {
         return Ok(());
     }
     ensure!(!safety, "You can't fire on a teammate with FFSafeties on!");

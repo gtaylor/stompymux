@@ -30,11 +30,6 @@ impl FireMode {
         gatling_damage.unwrap_or(weapon.profile().heat * self.rounds_per_cycle() as u8)
     }
 
-    /// Coolant heat mode redirects the shot to its carrier before target selection.
-    pub fn self_cooling(self, weapon: Weapon) -> bool {
-        self == Self::Heat && weapon == Weapon::CoolantGun
-    }
-
     /// Whether this firing behavior is valid for the installed weapon family.
     pub fn supports(self, weapon: Weapon) -> bool {
         match self {

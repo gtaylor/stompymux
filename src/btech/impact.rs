@@ -907,13 +907,9 @@ impl<'a> ImpactContext<'a> {
                         format!(
                             "[fg=red bold]Your jammed autocannon explodes for {explosion} points of damage![reset]"
                         )
-                    } else if weapon.supports_hotload() {
-                        format!(
-                            "[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]"
-                        )
                     } else {
                         format!(
-                            "[fg=red bold]The incendiary ammunition in your launcher ignites for {explosion} points of damage![reset]"
+                            "[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]"
                         )
                     };
                     let notices = [format!("Your {name} has been destroyed!"), detail];
@@ -949,10 +945,8 @@ impl<'a> ImpactContext<'a> {
                             format!("'s {section} is covered in a large electrical discharge!")
                         } else if weapon.jammed_explosion_damage() > 0 {
                             "loses an autocannon in a brilliant explosion!".to_owned()
-                        } else if weapon.supports_hotload() {
-                            "loses a launcher in a brilliant explosion!".to_owned()
                         } else {
-                            format!("'s {section} is engulfed in a brilliant blue flame!")
+                            "loses a launcher in a brilliant explosion!".to_owned()
                         })
                     }
                     _ => None,

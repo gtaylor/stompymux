@@ -212,7 +212,6 @@ fn fire_shot(
     let indirect_fire = aim.indirect.is_some();
     let super::direct_effects::DirectEffects {
         narc,
-        cooling,
         heat_transfer,
         missed_terrain,
         missed_building,
@@ -270,12 +269,7 @@ fn fire_shot(
                 ams_engaged,
             },
         )?))
-    } else if missile_destroyed
-        || !resolved.hit
-        || narc.is_some()
-        || cooling.is_some()
-        || heat_transfer > 0
-    {
+    } else if missile_destroyed || !resolved.hit || narc.is_some() || heat_transfer > 0 {
         None
     } else if candidate.btech.vehicles().contains_key(&target) {
         Some(super::target_salvo::resolve_vehicle_target_in_candidate(
@@ -388,7 +382,6 @@ fn fire_shot(
         streak_confused: weapon.is_streak() && angel_blocked,
         ams,
         narc,
-        cooling,
         heat_transfer,
         missed_terrain,
         missed_building,
@@ -442,7 +435,6 @@ impl VehicleShotReport {
         notices.extend(super::direct_effects::thermal_notices(
             self.shooter,
             self.target,
-            self.cooling,
             self.heat_transfer,
         ));
         notices.extend(super::fire_feedback::streak_notices(

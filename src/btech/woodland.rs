@@ -91,9 +91,6 @@ impl TerrainIgnition for Weapon {
         if matches!(self, Self::Flamer | Self::ClanFlamer | Self::HeavyFlamer) {
             return Some(4);
         }
-        if ammunition == AmmunitionMode::Incendiary && self.profile().missiles > 0 {
-            return Some(5);
-        }
         if !self.can_ignite_terrain() || self.is_artillery() {
             return None;
         }
@@ -214,15 +211,11 @@ mod tests {
             );
         }
         assert_eq!(
-            Weapon::Lrm20.terrain_ignition_target(AmmunitionMode::Incendiary),
-            Some(5)
-        );
-        assert_eq!(
             Weapon::Srm6.terrain_ignition_target(AmmunitionMode::Inferno),
             Some(0)
         );
         assert_eq!(
-            Weapon::Ac10.terrain_ignition_target(AmmunitionMode::Incendiary),
+            Weapon::Ac10.terrain_ignition_target(AmmunitionMode::Precision),
             Some(9)
         );
     }

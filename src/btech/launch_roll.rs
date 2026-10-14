@@ -47,7 +47,7 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result
         distance.is_finite() && distance >= 0.0,
         "Invalid weapon range"
     );
-    let roll = attack_roll(weapon, dice);
+    let roll = dice.generic_roll();
     let caseless_failure = ammunition == AmmunitionMode::Caseless && roll == 2;
     let exploded = fire_mode.explodes_on(roll);
     let feed_broken = caseless_failure || fire_mode.breaks_feed_on(roll);
@@ -74,17 +74,6 @@ pub(super) fn roll_launch(request: LaunchRollRequest, dice: &mut Dice) -> Result
             && (!weapon.is_streak() || streak_confused)
             && target_number == Some(i32::from(roll)),
     })
-}
-
-/// Dead-fire missiles attack with the lowest two of three dice; every other weapon rolls 2d6.
-pub(super) fn attack_roll(weapon: Weapon, dice: &mut Dice) -> u8 {
-    if weapon.is_dead_fire() {
-        let first = dice.d6();
-        let second = dice.d6();
-        let third = dice.d6();
-        return first + second + third - first.max(second).max(third);
-    }
-    dice.generic_roll()
 }
 
 #[cfg(test)]
@@ -121,16 +110,15 @@ mod tests {
         .unwrap()
     }
 
-    /// Generic attack checks count once; direct three-die attacks do not; extended LRMs no
-    /// longer use the three-die attack inside their minimum range.
+    /// Every attack is one generic 2d6 check, including extended LRMs inside their minimum
+    /// range and caseless autocannons.
     #[test]
-    fn launch_roll_accounting_distinguishes_direct_dice_and_generic_checks() {
+    fn every_launch_counts_one_generic_attack_check() {
         let seed = seed_rolling(2);
-        for (weapon, ammunition, count) in [
-            (W::MediumLaser, AmmunitionMode::Normal, 1),
-            (W::LrDfm5, AmmunitionMode::Normal, 0),
-            (W::Elrm5, AmmunitionMode::Normal, 1),
-            (W::Ac10, AmmunitionMode::Caseless, 1),
+        for (weapon, ammunition) in [
+            (W::MediumLaser, AmmunitionMode::Normal),
+            (W::Elrm5, AmmunitionMode::Normal),
+            (W::Ac10, AmmunitionMode::Caseless),
         ] {
             let mut dice = Dice::seeded([seed; 32]);
             let outcome = roll_launch(
@@ -145,10 +133,8 @@ mod tests {
                 &mut dice,
             )
             .unwrap();
-            assert_eq!(dice.generic_roll_statistics().total(), count, "{weapon:?}");
-            if count != 0 {
-                assert!(dice.generic_roll_statistics().counts()[usize::from(outcome.roll - 2)] > 0);
-            }
+            assert_eq!(dice.generic_roll_statistics().total(), 1, "{weapon:?}");
+            assert!(dice.generic_roll_statistics().counts()[usize::from(outcome.roll - 2)] > 0);
         }
     }
 
@@ -250,37 +236,6 @@ mod tests {
             );
             assert!(boundary.launched && boundary.hit);
             assert_eq!(boundary.glancing, confused);
-        }
-    }
-
-    /// Dead-fire attack dice never revert to ordinary 2d6; extended LRMs always roll 2d6.
-    #[test]
-    fn dead_fire_attack_dice_and_elrm_replay() {
-        for weapon in [
-            W::LrDfm5,
-            W::LrDfm10,
-            W::LrDfm15,
-            W::LrDfm20,
-            W::SrDfm2,
-            W::SrDfm4,
-            W::SrDfm6,
-        ] {
-            for seed in 0..=255 {
-                let mut expected = Dice::seeded([seed; 32]);
-                let mut values = [expected.d6(), expected.d6(), expected.d6()];
-                values.sort_unstable();
-                let mut actual = Dice::seeded([seed; 32]);
-                assert_eq!(attack_roll(weapon, &mut actual), values[0] + values[1]);
-                assert_eq!(actual, expected);
-            }
-        }
-        for weapon in [W::Elrm5, W::Elrm10, W::Elrm15, W::Elrm20, W::Lrm20] {
-            for seed in 0..=255 {
-                let mut ordinary = Dice::seeded([seed; 32]);
-                let mut expected = ordinary.clone();
-                assert_eq!(attack_roll(weapon, &mut ordinary), expected.two_d6());
-                assert_eq!(ordinary, expected);
-            }
         }
     }
 }

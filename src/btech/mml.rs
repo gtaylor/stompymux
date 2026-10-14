@@ -76,7 +76,6 @@ mod tests {
             ("Swarm", AmmunitionMode::MmlLrmSwarm),
             ("Swarm1", AmmunitionMode::MmlLrmSwarm1),
             ("Sguided", AmmunitionMode::MmlLrmSemiGuided),
-            ("Stinger", AmmunitionMode::MmlLrmStinger),
         ] {
             for flags in [
                 vec!["MML_LRM".to_string(), flag.into()],
@@ -107,7 +106,7 @@ mod tests {
                 .2,
             AmmunitionMode::Artemis
         );
-        for flag in ["Swarm", "Swarm1", "Sguided", "Stinger"] {
+        for flag in ["Swarm", "Swarm1", "Sguided"] {
             assert!(AmmunitionBin::configuration(Weapon::Mml5, &[flag.into()]).is_err());
         }
         assert!(

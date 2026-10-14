@@ -23,7 +23,6 @@ pub(super) struct DirectEffectRequest {
 #[derive(Default)]
 pub(super) struct DirectEffects {
     pub narc: Option<NarcReport<UnitSection>>,
-    pub cooling: Option<f64>,
     pub heat_transfer: u8,
     pub missed_terrain: Option<WoodlandImpact>,
     /// A miss from the next hex striking the building around a target inside one.
@@ -113,17 +112,10 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
         }
         return Ok(report);
     }
-    let cooling = request.weapon == Weapon::CoolantGun;
-    if !cooling && request.fire_mode != FireMode::Heat {
+    if request.fire_mode != FireMode::Heat {
         return Ok(report);
     }
     let heat = stored_heat_mut(world, request.target)?;
-    if cooling {
-        let removed = f64::from(request.weapon.profile().damage);
-        *heat -= removed;
-        report.cooling = Some(removed);
-        return Ok(report);
-    }
     report.heat_transfer = request.weapon.profile().damage;
     *heat += f64::from(report.heat_transfer);
     Ok(report)
@@ -156,26 +148,13 @@ fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u1
     Ok(packets.damage.first().copied().unwrap_or(1).max(1))
 }
 
-/// Common coolant and direct heat feedback, ordered before electronic and damage consequences.
+/// Direct heat-transfer feedback, ordered before electronic and damage consequences.
 pub(super) fn thermal_notices(
     shooter: ObjectId,
     target: ObjectId,
-    cooling: Option<f64>,
     heat_transfer: u8,
 ) -> Vec<Notice> {
     let mut notices = Vec::new();
-    if cooling.is_some() {
-        if shooter != target {
-            notices.push(Notice {
-                unit: shooter,
-                text: "[fg=cyan]You hit with the stream of coolant!![reset]".into(),
-            });
-        }
-        notices.push(Notice {
-            unit: target,
-            text: "[fg=cyan]Coolant washes over your systems!![reset]".into(),
-        });
-    }
     if heat_transfer > 0 {
         notices.push(Notice {
             unit: target,

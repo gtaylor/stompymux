@@ -17,8 +17,6 @@ pub enum AmmunitionMode {
     SemiGuided,
     Swarm,
     Swarm1,
-    /// Anti-air indirect missiles with additional reach.
-    Stinger,
     /// Long-range ammunition dedicated to a multi-missile launcher.
     MmlLrm,
     /// MML long-range rounds compatible with Artemis IV guidance.
@@ -31,8 +29,6 @@ pub enum AmmunitionMode {
     MmlLrmSwarm1,
     /// MML long-range semi-guided rounds.
     MmlLrmSemiGuided,
-    /// MML long-range anti-air Stinger rounds.
-    MmlLrmStinger,
     ExtendedRange,
     HighExplosive,
     INarcExplosive,
@@ -43,7 +39,6 @@ pub enum AmmunitionMode {
     Flechette,
     ArmorPiercing,
     Caseless,
-    Incendiary,
     Inferno,
     /// Thunder rounds that seed a weaker minefield across the target and adjacent hexes.
     ThunderAugmented,
@@ -59,8 +54,8 @@ impl AmmunitionMode {
     ///
     /// Missile munitions follow the launcher tables in Total Warfare pp. 130-142 and Tactical
     /// Operations: Advanced Units & Equipment p. 228: standard LRM, SRM and MML launchers take
-    /// the special rounds, while Streak, MRM, rocket, ATM, Thunderbolt, Extended LRM, Narc and
-    /// dead-fire launchers fire only their ordinary rounds (ATMs also choose between their own
+    /// the special rounds, while Streak, MRM, rocket, ATM, Thunderbolt, Extended LRM and Narc
+    /// launchers fire only their ordinary rounds (ATMs also choose between their own
     /// three missile types). An MML takes a round only in the family that round belongs to.
     pub fn supports(self, weapon: Weapon) -> bool {
         // Torpedo launchers carry ordinary or Artemis-guided torpedoes only.
@@ -74,14 +69,11 @@ impl AmmunitionMode {
             | Self::MmlLrmNarc
             | Self::MmlLrmSwarm
             | Self::MmlLrmSwarm1
-            | Self::MmlLrmSemiGuided
-            | Self::MmlLrmStinger => weapon.is_mml(),
+            | Self::MmlLrmSemiGuided => weapon.is_mml(),
             Self::ExtendedRange | Self::HighExplosive => weapon.is_atm(),
             // Inferno rounds are an SRM munition (Total Warfare p. 141).
             Self::Inferno => weapon.is_standard_srm() || weapon.is_mml(),
-            Self::SemiGuided | Self::Stinger | Self::Swarm | Self::Swarm1 => {
-                weapon.supports_semiguided()
-            }
+            Self::SemiGuided | Self::Swarm | Self::Swarm1 => weapon.supports_semiguided(),
             Self::INarcExplosive | Self::INarcHaywire | Self::INarcEcm | Self::INarcNemesis => {
                 weapon == Weapon::INarcBeacon
             }
@@ -109,11 +101,9 @@ impl AmmunitionMode {
                         Weapon::AntiMissileSystem | Weapon::ClanAntiMissileSystem
                     )
             }
-            Self::Precision
-            | Self::Flechette
-            | Self::ArmorPiercing
-            | Self::Caseless
-            | Self::Incendiary => weapon.supports_rapid_fire(),
+            Self::Precision | Self::Flechette | Self::ArmorPiercing | Self::Caseless => {
+                weapon.supports_rapid_fire()
+            }
         }
     }
 
@@ -128,7 +118,6 @@ impl AmmunitionMode {
             "Sguided" => Some(Self::SemiGuided),
             "Swarm" => Some(Self::Swarm),
             "Swarm1" => Some(Self::Swarm1),
-            "Stinger" => Some(Self::Stinger),
             "MML_LRM" => Some(Self::MmlLrm),
             "ExtendedRange" => Some(Self::ExtendedRange),
             "HighExplosive" => Some(Self::HighExplosive),
@@ -138,7 +127,6 @@ impl AmmunitionMode {
             "iNarc_ECM" => Some(Self::INarcEcm),
             "iNarc_Nemesis" => Some(Self::INarcNemesis),
             "Inferno" => Some(Self::Inferno),
-            "Incendiary" => Some(Self::Incendiary),
             "Caseless" => Some(Self::Caseless),
             "AP" => Some(Self::ArmorPiercing),
             "Precision" => Some(Self::Precision),
@@ -157,7 +145,6 @@ impl AmmunitionMode {
             "Precision",
             "Flechette",
             "Caseless",
-            "Incendiary",
             "Cluster",
             "Smoke",
             "Mine",
@@ -172,7 +159,6 @@ impl AmmunitionMode {
             "Swarm",
             "Swarm1",
             "Sguided",
-            "Stinger",
             "MML_LRM",
             "ExtendedRange",
             "HighExplosive",
@@ -235,7 +221,6 @@ impl AmmunitionMode {
                 | Self::MmlLrmSwarm
                 | Self::MmlLrmSwarm1
                 | Self::MmlLrmSemiGuided
-                | Self::MmlLrmStinger
         )
     }
 
@@ -249,7 +234,6 @@ impl AmmunitionMode {
             Self::MmlLrmSwarm => Self::Swarm,
             Self::MmlLrmSwarm1 => Self::Swarm1,
             Self::MmlLrmSemiGuided => Self::SemiGuided,
-            Self::MmlLrmStinger => Self::Stinger,
             mode => mode,
         }
     }
@@ -260,10 +244,8 @@ impl AmmunitionMode {
     pub fn with_mml_family(self, long_range: bool) -> Option<Self> {
         let munition = self.munition();
         if !long_range {
-            return (!matches!(
-                munition,
-                Self::Swarm | Self::Swarm1 | Self::SemiGuided | Self::Stinger
-            ) && munition.supports(Weapon::Mml3))
+            return (!matches!(munition, Self::Swarm | Self::Swarm1 | Self::SemiGuided)
+                && munition.supports(Weapon::Mml3))
             .then_some(munition);
         }
         Some(match munition {
@@ -273,7 +255,6 @@ impl AmmunitionMode {
             Self::Swarm => Self::MmlLrmSwarm,
             Self::Swarm1 => Self::MmlLrmSwarm1,
             Self::SemiGuided => Self::MmlLrmSemiGuided,
-            Self::Stinger => Self::MmlLrmStinger,
             _ => return None,
         })
     }
@@ -310,7 +291,7 @@ mod tests {
     use Weapon as W;
 
     /// Launchers the munition tables exclude from every special missile round.
-    const RESTRICTED_LAUNCHERS: [Weapon; 10] = [
+    const RESTRICTED_LAUNCHERS: [Weapon; 8] = [
         W::StreakSrm6,
         W::ClanStreakSrm2,
         W::ClanStreakLrm20,
@@ -319,8 +300,6 @@ mod tests {
         W::ClanAtm12,
         W::Thunderbolt15,
         W::Elrm10,
-        W::LrDfm20,
-        W::SrDfm6,
     ];
 
     /// Special missile rounds follow the launcher tables in Total Warfare pp. 130-142 and
@@ -337,7 +316,6 @@ mod tests {
                 M::SemiGuided,
                 M::Swarm,
                 M::Swarm1,
-                M::Stinger,
                 M::ThunderAugmented,
                 M::ThunderActive,
                 M::ThunderVibrabomb,
@@ -355,7 +333,6 @@ mod tests {
                 M::SemiGuided,
                 M::Swarm,
                 M::Swarm1,
-                M::Stinger,
                 M::ThunderAugmented,
                 M::ThunderActive,
                 M::ThunderVibrabomb,
@@ -373,7 +350,6 @@ mod tests {
                 M::SemiGuided,
                 M::Swarm,
                 M::Swarm1,
-                M::Stinger,
                 M::ThunderActive,
             ] {
                 assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
@@ -421,7 +397,6 @@ mod tests {
             (M::SemiGuided, None, Some(M::MmlLrmSemiGuided)),
             (M::Swarm, None, Some(M::MmlLrmSwarm)),
             (M::Swarm1, None, Some(M::MmlLrmSwarm1)),
-            (M::Stinger, None, Some(M::MmlLrmStinger)),
         ] {
             assert_eq!(mode.with_mml_family(false), short, "{mode:?}");
             assert_eq!(mode.with_mml_family(true), long, "{mode:?}");

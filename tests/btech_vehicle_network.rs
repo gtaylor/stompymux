@@ -505,7 +505,7 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
 
 /// Vehicle coordinate previews use the same C3 sighting selection as unit targets.
 #[tokio::test]
-async fn vehicle_hex_aim_shares_mixed_network_range_and_rejects_stinger() {
+async fn vehicle_hex_aim_shares_mixed_network_range() {
     let (_dir, _config, mut world, units) = field().await;
     let (shooter, pilot) = units[0];
     join_leave_battle_c3i(&mut world, shooter, pilot, Some(units[5].0)).unwrap();
@@ -523,20 +523,6 @@ async fn vehicle_hex_aim_shares_mixed_network_range_and_rejects_stinger() {
         Some(units[5].0)
     );
     assert_eq!(aim.modifiers.range.unwrap().modifier, 0);
-    world
-        .btech
-        .rewrite_unit_record(shooter, |record| {
-            record["ammunition_modes"][index.to_string()] = "stinger".into();
-        })
-        .unwrap();
-    let before = world.btech.clone();
-    assert!(
-        battle_hex_aim_modifiers(&world, shooter, hex, index, 4)
-            .unwrap_err()
-            .to_string()
-            .contains("Stinger")
-    );
-    assert_eq!(before, world.btech);
 }
 
 #[tokio::test]

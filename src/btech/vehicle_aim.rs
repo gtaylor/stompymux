@@ -43,7 +43,6 @@ pub(super) fn modifiers(
         tag_guided: target_terms.tag_guided,
         ..aim
     });
-    aim.self_target = shooter == target && mount.weapon == super::Weapon::CoolantGun;
     aim.indirect = indirect;
     aim.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     aim.ammunition_accuracy += target_terms.ammunition_accuracy;

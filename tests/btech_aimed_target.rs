@@ -520,13 +520,6 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                     "",
                     false,
                 ),
-                (
-                    Weapon::CoolantGun,
-                    FireMode::Normal,
-                    AmmunitionMode::Normal,
-                    "",
-                    false,
-                ),
             ] {
                 let (mut world, shooter, target, index) = firing_support::supply_fixture_on(
                     base.clone(),
@@ -596,7 +589,7 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                 assert_eq!(a, b, "{weapon:?} {mode:?} miss={miss}");
                 if miss {
                     assert!(a["salvo"].is_null(), "{a}");
-                } else if mode != FireMode::Heat && weapon != Weapon::CoolantGun {
+                } else if mode != FireMode::Heat {
                     assert!(a["salvo"].is_object(), "{a}");
                 }
                 if vehicle {

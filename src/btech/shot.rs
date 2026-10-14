@@ -46,7 +46,7 @@ pub struct ShotReport<U, M> {
     pub aim: AimModifiers,
     /// None represents a physically out-of-range attempt; ordinary weapons still spend a salvo.
     pub target_number: Option<i32>,
-    /// Attack result, including dead-fire and close-range extended-LRM dice rules.
+    /// The 2d6 attack roll.
     pub roll: u8,
     /// False only for a failed Streak lock; a feed failure still fires the shot.
     pub launched: bool,
@@ -77,8 +77,6 @@ pub struct ShotReport<U, M> {
     pub missed_terrain: Option<super::WoodlandImpact>,
     /// A miss from the next hex striking the building around a target inside one.
     pub missed_building: Option<super::StrayHit>,
-    /// Coolant reduction applied to stored heat, including temporary negative credit.
-    pub cooling: Option<f64>,
     /// Present when Heavy Gauss firing required a moving-shooter control check.
     pub recoil: Option<RecoilReport>,
     /// Defensive activation after the missile reaches its base target number.
@@ -137,7 +135,6 @@ impl MechShotReport {
         notices.extend(super::direct_effects::thermal_notices(
             self.shooter,
             self.target,
-            self.cooling,
             self.heat_transfer,
         ));
         notices.extend(super::fire_feedback::streak_notices(
@@ -225,7 +222,7 @@ pub(crate) fn resolve_shot_autopilot(
 /// The damage recipient and optional coordinate-directed presentation of an admitted attack.
 #[derive(Clone, Copy)]
 pub(super) struct ShotTarget {
-    /// Damage or coolant recipient already selected by the host.
+    /// Damage recipient already selected by the host.
     pub unit: ObjectId,
     pub coordinate: Option<super::HexCoordinate>,
 }
@@ -313,7 +310,6 @@ fn resolve_shot_inner(
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
 
     let target = observed.map_or(target, |link| link.target);
-    let coolant = selected_weapon == super::Weapon::CoolantGun;
     let coordinate = if indirect.is_some() {
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
@@ -325,19 +321,8 @@ fn resolve_shot_inner(
     } else {
         effects.coordinate
     };
-    if attacker.ammunition_mode(weapon_index)?.munition() == super::AmmunitionMode::Stinger {
-        ensure!(coordinate.is_none(), "Stinger missiles cannot shoot hexes!");
-        ensure!(
-            super::stinger::target_airborne(world, target),
-            "Stinger missiles can only engage airborne targets!"
-        );
-    }
     let vehicle_target = world.btech.vehicles().contains_key(&target);
-    let self_cooling = coolant && shooter == target;
-    ensure!(
-        shooter != target || self_cooling,
-        "A unit cannot fire on itself"
-    );
+    ensure!(shooter != target, "A unit cannot fire on itself");
     for id in [shooter, target] {
         let object = world.objects.get(&id).context("Unit is unavailable")?;
         ensure!(!object.flags.contains(Flag::Going), "Unit is unavailable");
@@ -361,12 +346,7 @@ fn resolve_shot_inner(
         super::spotter::check_indirect_water(world, shooter, target)?;
     }
     let attacker = &world.btech.constructed_units()[&shooter];
-    super::fire_target::check_target_safety_for_source(
-        world,
-        operator.source,
-        target,
-        selected_weapon,
-    )?;
+    super::fire_target::check_target_safety_for_source(world, operator.source, target)?;
     let loadout = attacker.loadout()?;
     ensure!(
         attacker
@@ -376,8 +356,7 @@ fn resolve_shot_inner(
     );
     let mount = &loadout.weapons[weapon_index];
     ensure!(
-        self_cooling
-            || indirect.is_some()
+        indirect.is_some()
             || rules.aim.override_weapon_arcs
             || super::weapon_bears_on(world, shooter, target, weapon_index)?,
         "Target is outside weapon arc"
@@ -393,9 +372,7 @@ fn resolve_shot_inner(
         gunnery,
         rules.aim,
     )?;
-    if !self_cooling {
-        super::aim::ensure_perceived(&aim)?;
-    }
+    super::aim::ensure_perceived(&aim)?;
     super::hit_direction::HitDirection::Direct { shooter }.current(world, target)?;
     drop(loadouts);
     drop(admission);
@@ -481,7 +458,6 @@ fn resolve_shot_inner(
     let indirect_fire = aim.indirect.is_some();
     let super::direct_effects::DirectEffects {
         narc,
-        cooling,
         heat_transfer,
         missed_terrain,
         missed_building,
@@ -541,7 +517,7 @@ fn resolve_shot_inner(
                 ams_engaged,
             },
         )?))
-    } else if missile_destroyed || !resolved.hit || pod || heat_transfer > 0 || cooling.is_some() {
+    } else if missile_destroyed || !resolved.hit || pod || heat_transfer > 0 {
         None
     } else if vehicle_target {
         Some(super::target_salvo::resolve_vehicle_target_in_candidate(
@@ -649,7 +625,6 @@ fn resolve_shot_inner(
         heat_transfer,
         missed_terrain,
         missed_building,
-        cooling,
         recoil,
         ams,
         streak_confused,

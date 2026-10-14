@@ -5,7 +5,7 @@ linkTitle: "friendly_fire_safety"
 manualLinkTitle: "friendly_fire_safety"
 ---
 
-Set the assigned pilot's friendly-fire safety. Coolant guns are exempt.
+Set the assigned pilot's friendly-fire safety.
 
 ## Signature
 

@@ -310,7 +310,6 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
     for weapon in [
         Weapon::HeavyFlamer,
         Weapon::VehicleFlamer,
-        Weapon::VehicleHeavyFlamer,
         Weapon::MachineGun,
         Weapon::ClanMachineGun,
     ] {

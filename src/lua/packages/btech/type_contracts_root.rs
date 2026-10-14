@@ -103,7 +103,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00011
-//|---@alias Weapon "arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_rifle"|"flamer"|"coolant_gun"|"heavy_flamer"|"vehicle_flamer"|"vehicle_heavy_flamer"|"plasma_rifle"|"acid_thrower"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"lr_dfm5"|"lr_dfm10"|"lr_dfm15"|"lr_dfm20"|"sr_dfm2"|"sr_dfm4"|"sr_dfm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"nlrm5"|"nlrm10"|"nlrm15"|"nlrm20"|"lrt5"|"lrt10"|"lrt15"|"lrt20"|"srt2"|"srt4"|"srt6"|"clan_lrt5"|"clan_lrt10"|"clan_lrt15"|"clan_lrt20"|"clan_srt2"|"clan_srt4"|"clan_srt6"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"|"clan_rotary_ac10"
+//|---@alias Weapon "arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_rifle"|"flamer"|"heavy_flamer"|"vehicle_flamer"|"plasma_rifle"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"nlrm5"|"nlrm10"|"nlrm15"|"nlrm20"|"lrt5"|"lrt10"|"lrt15"|"lrt20"|"srt2"|"srt4"|"srt6"|"clan_lrt5"|"clan_lrt10"|"clan_lrt15"|"clan_lrt20"|"clan_srt2"|"clan_srt4"|"clan_srt6"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"
 // lua-types-end
 
 // lua-types-begin btech 00012
@@ -113,7 +113,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00013
-//|---@alias AmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"stinger"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"incendiary"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"mml_lrm_stinger"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"
+//|---@alias AmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"
 // lua-types-end
 
 // lua-types-begin btech 00014
@@ -334,7 +334,7 @@
 //|---@field autocon_shutdown boolean Include shutdown targets in routine notices; defaults false.
 //|---@field armor_warning boolean Armor threshold warnings; enabled by default.
 //|---@field ammunition_warning boolean Low-ammunition warnings; enabled by default.
-//|---@field friendly_fire_safety boolean Reject non-coolant fire at teammates; off by default.
+//|---@field friendly_fire_safety boolean Reject fire at teammates; off by default.
 //|---@field null_signature SignatureState
 //|---@field stealth SignatureState
 //|---@field electronics Electronics Selected suite modes and last committed field.
@@ -382,7 +382,7 @@
 //|---@field heat_cutoff {enabled: boolean, disabled: integer, remaining: integer|nil} Intentional cooling suppression and seconds until the toggle completes.
 //|---@field last_jump {heading: integer, length: integer} Current course bearing and signed length in field units, retained after landing.
 //|---@field heat_sample {production: number, dissipation: number} Last committed thermal sample; production includes stored weapon heat.
-//|---@field heat {stored: number, excess: number} Weapon heat (possibly negative coolant credit until the next sample) and sampled excess heat.
+//|---@field heat {stored: number, excess: number} Weapon heat and sampled excess heat.
 //|---@field overheat_clock {elapsed: integer, phase: integer, injury_due: boolean, outside_heat: integer} Saved committed-second thermal checks and the turn's absorbed outside heat.
 //|---@field weapon_recycle table<integer, integer> Remaining seconds keyed by zero-based weapon index.
 //|---@field component_failures {location: table, failure: string}[] Nonweapon diagnostic conditions; material damage determines system operation.
@@ -473,7 +473,7 @@
 //|---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
 //|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
-//|---@field weapon_heat number Passive weapon heat and coolant credit; ground vehicles do not overheat.
+//|---@field weapon_heat number Passive weapon heat; ground vehicles do not overheat.
 //|---@field gunnery_damage integer Cumulative firing penalty from sensor and commander damage.
 //|---@field lost_stabilizers string[] Sections with destroyed weapon stabilizers.
 //|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
@@ -822,7 +822,6 @@
 
 // lua-types-begin btech 00179
 //|---@class AimModifiers
-//|---@field self_target boolean Coolant self-application bypasses contact acquisition.
 //|---@field indirect {spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
 //|---@field gunnery integer
 //|---@field distance number
@@ -842,7 +841,7 @@
 //|---@field targeting_computer integer Eligible computer fire: -1 normally, +3 for a selected section on a mobile target.
 //|---@field aimed_section integer Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
 //|---@field beacon_accuracy integer Haywire interference and iNarc homing assistance.
-//|---@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -1, -3 against an airborne target (flak); Stinger is -3 versus flying VTOLs and -1 during orbital descent.
+//|---@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -1, -3 against an airborne target (flak).
 //|---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 //|---@field target_lock integer
 //|---@field perception {channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil Nil unless the shooter or its side holds the target as a contact; direct_fire is false behind blocking terrain.
@@ -1029,7 +1028,6 @@
 //|---@field heat_transfer integer Heat already added to the target, zero unless a heat-mode shot hits.
 //|---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 //|---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
-//|---@field cooling number? Coolant reduction applied to stored heat, including temporary negative credit.
 // lua-types-end
 
 // lua-types-begin btech 00196
@@ -1057,7 +1055,6 @@
 //|---@field expenditure VehicleWeaponUse
 //|---@field ams AmsReport|nil
 //|---@field narc NarcReport|nil Beacon attachment or interception; vehicle sections use their own names.
-//|---@field cooling number|nil Coolant removed from target stored heat.
 //|---@field heat_transfer integer Direct flamer heat added to the target, otherwise zero.
 //|---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 //|---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.

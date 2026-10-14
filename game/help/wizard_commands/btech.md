@@ -679,7 +679,7 @@ names. Map `flags` are:
 | `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
 | `dark` | Units see only terrain in their line of sight. |
 | `indestructible_structures` | Weapon fire cannot damage buildings, walls or bridges. |
-| `no_friendly_fire` | Teammates cannot damage each other with non-coolant weapons. |
+| `no_friendly_fire` | Teammates cannot damage each other with weapons. |
 | `no_physical_attacks` | Physical attacks are not allowed. |
 | `no_stacking` | Units share crowded hexes without stacking collisions, and autopilots do not route around them. |
 

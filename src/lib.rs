@@ -95,10 +95,10 @@ pub use btech::{
     toggle_electronics as toggle_battle_electronics, toggle_explosive as toggle_battle_explosive,
     toggle_flamer_heat as toggle_battle_flamer_heat, toggle_flechette as toggle_battle_flechette,
     toggle_gatling as toggle_battle_gatling, toggle_hotload as toggle_battle_hotload,
-    toggle_incendiary as toggle_battle_incendiary, toggle_lbx as toggle_battle_lbx,
-    toggle_narc as toggle_battle_narc, toggle_precision as toggle_battle_precision,
-    toggle_rapid as toggle_battle_rapid, toggle_ultra as toggle_battle_ultra,
-    unit_elevation as battle_unit_elevation, unit_gunnery_target as battle_unit_gunnery_target,
+    toggle_lbx as toggle_battle_lbx, toggle_narc as toggle_battle_narc,
+    toggle_precision as toggle_battle_precision, toggle_rapid as toggle_battle_rapid,
+    toggle_ultra as toggle_battle_ultra, unit_elevation as battle_unit_elevation,
+    unit_gunnery_target as battle_unit_gunnery_target,
     unit_inside_building as battle_unit_inside_building,
     unit_piloting_target as battle_unit_piloting_target, unit_range as battle_unit_range,
     unit_terrain_los as battle_unit_terrain_los, update_contact as update_battle_contact,
@@ -696,9 +696,6 @@ pub use btech::{VehicleWeaponUse, reserve_vehicle_weapon as reserve_battle_vehic
 /// Read target movement contributions for Mechs and ground vehicles.
 pub use btech::unit_target_movement_modifier as battle_unit_target_movement_modifier;
 pub use btech::{TargetMovement, unit_target_movement as battle_unit_target_movement};
-
-/// Toggle Stinger ammunition on an intact, recycled indirect missile launcher.
-pub use btech::toggle_stinger as toggle_battle_stinger;
 
 /// Destroy an installed vehicle equipment slot inside an enclosing damage transaction.
 pub use btech::destroy_vehicle_critical as destroy_battle_vehicle_critical;

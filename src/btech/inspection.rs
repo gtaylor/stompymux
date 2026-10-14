@@ -469,8 +469,7 @@ fn live_munition_bit(mode: super::AmmunitionMode, weapon: super::Weapon) -> Opti
         | super::AmmunitionMode::MmlLrmNarc
         | super::AmmunitionMode::MmlLrmSwarm
         | super::AmmunitionMode::MmlLrmSwarm1
-        | super::AmmunitionMode::MmlLrmSemiGuided
-        | super::AmmunitionMode::MmlLrmStinger => return None,
+        | super::AmmunitionMode::MmlLrmSemiGuided => return None,
         super::AmmunitionMode::Cluster => {
             if weapon.is_lbx() {
                 1
@@ -485,7 +484,6 @@ fn live_munition_bit(mode: super::AmmunitionMode, weapon: super::Weapon) -> Opti
         super::AmmunitionMode::SemiGuided => 524288,
         super::AmmunitionMode::Swarm => 128,
         super::AmmunitionMode::Swarm1 => 256,
-        super::AmmunitionMode::Stinger => 131072,
         super::AmmunitionMode::ExtendedRange => 1048576,
         super::AmmunitionMode::HighExplosive => 2097152,
         super::AmmunitionMode::INarcExplosive => 512,
@@ -496,7 +494,6 @@ fn live_munition_bit(mode: super::AmmunitionMode, weapon: super::Weapon) -> Opti
         super::AmmunitionMode::Flechette => 16384,
         super::AmmunitionMode::ArmorPiercing => 8192,
         super::AmmunitionMode::Caseless => 262144,
-        super::AmmunitionMode::Incendiary => 32768,
         super::AmmunitionMode::Inferno => 64,
         super::AmmunitionMode::ThunderAugmented => 8388608,
         super::AmmunitionMode::ThunderVibrabomb => 16777216,

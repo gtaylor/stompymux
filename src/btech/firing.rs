@@ -221,8 +221,6 @@ fn weapon_line<S>(mount: WeaponInspection<S>, location: &str) -> String {
         },
         if mount.ammunition_mode == super::AmmunitionMode::Inferno {
             " [Inferno]"
-        } else if mount.ammunition_mode == super::AmmunitionMode::Incendiary {
-            " [Incendiary]"
         } else if mount.ammunition_mode == super::AmmunitionMode::Caseless {
             " [CASELESS]"
         } else if mount.ammunition_mode == super::AmmunitionMode::ArmorPiercing {
@@ -487,11 +485,8 @@ pub(super) fn resolve_in_action(
             glancing: report.glancing,
             hit: report.salvo.is_some()
                 || report.narc.as_ref().is_some_and(|pod| pod.hit)
-                || report.heat_transfer > 0
-                || report.cooling.is_some(),
-            observer_hit: report.salvo.is_some()
-                || report.heat_transfer > 0
-                || report.cooling.is_some(),
+                || report.heat_transfer > 0,
+            observer_hit: report.salvo.is_some() || report.heat_transfer > 0,
             coordinate: report.coordinate.map(|_| target_hex),
             notices,
             pilot_notices,

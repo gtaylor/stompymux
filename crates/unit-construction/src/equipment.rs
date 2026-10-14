@@ -71,17 +71,13 @@ impl Weapon {
     pub fn is_flamer(self) -> bool {
         matches!(
             self,
-            Self::ClanFlamer
-                | Self::Flamer
-                | Self::HeavyFlamer
-                | Self::VehicleFlamer
-                | Self::VehicleHeavyFlamer
+            Self::ClanFlamer | Self::Flamer | Self::HeavyFlamer | Self::VehicleFlamer
         )
     }
 
-    /// Heat-mode controls select flamer heat transfer or coolant self-application.
+    /// Heat-mode controls select flamer heat transfer.
     pub fn supports_heat_mode(self) -> bool {
-        self.is_flamer() || self == Self::CoolantGun
+        self.is_flamer()
     }
 
     /// Machine guns can trade three rounds per rolled damage point for gatling fire.
@@ -100,11 +96,7 @@ impl Weapon {
     pub fn is_rotary(self) -> bool {
         matches!(
             self,
-            Self::RotaryAc2
-                | Self::RotaryAc5
-                | Self::ClanRotaryAc2
-                | Self::ClanRotaryAc5
-                | Self::ClanRotaryAc10
+            Self::RotaryAc2 | Self::RotaryAc5 | Self::ClanRotaryAc2 | Self::ClanRotaryAc5
         )
     }
 
@@ -160,10 +152,6 @@ impl Weapon {
                     | Self::Elrm10
                     | Self::Elrm15
                     | Self::Elrm20
-                    | Self::LrDfm5
-                    | Self::LrDfm10
-                    | Self::LrDfm15
-                    | Self::LrDfm20
             )
     }
 
@@ -214,10 +202,7 @@ impl Weapon {
     pub fn is_energy(self) -> bool {
         match self {
             Self::APod | Self::ClanAPod | Self::LaserAms | Self::ClanLaserAms => false,
-            Self::HeavyFlamer
-            | Self::VehicleFlamer
-            | Self::VehicleHeavyFlamer
-            | Self::PlasmaRifle => true,
+            Self::HeavyFlamer | Self::VehicleFlamer | Self::PlasmaRifle => true,
             _ => self.gunnery_skill(true) == "Gunnery-Laser",
         }
     }
@@ -262,20 +247,6 @@ impl Weapon {
                 | Self::ClanStreakLrm10
                 | Self::ClanStreakLrm15
                 | Self::ClanStreakLrm20
-        )
-    }
-
-    /// Dead-fire launchers always use the lowest two of three attack dice.
-    pub fn is_dead_fire(self) -> bool {
-        matches!(
-            self,
-            Self::LrDfm5
-                | Self::LrDfm10
-                | Self::LrDfm15
-                | Self::LrDfm20
-                | Self::SrDfm2
-                | Self::SrDfm4
-                | Self::SrDfm6
         )
     }
 

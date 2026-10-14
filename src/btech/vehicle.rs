@@ -161,7 +161,7 @@ pub struct Vehicle {
     pub(super) friendly_fire_safety: bool,
     pub(super) auto_fall: bool,
     pub(super) ams_enabled: bool,
-    /// Passive weapon heat and coolant credit; ground vehicles do not sample overheating.
+    /// Passive weapon heat; ground vehicles do not sample overheating.
     pub(super) weapon_heat: f64,
     pub(super) inferno_remaining: u32,
     pub(super) building_entry: Option<super::BuildingEntry>,
@@ -1072,7 +1072,7 @@ impl Vehicle {
         self.engine_destroyed
     }
 
-    /// Stored weapon heat, including coolant credit; never sampled as ground-vehicle overheating.
+    /// Stored weapon heat; never sampled as ground-vehicle overheating.
     pub fn weapon_heat(&self) -> f64 {
         self.weapon_heat
     }

@@ -5851,7 +5851,7 @@ async fn lua_firing_misses_and_optional_state_use_nil_without_losing_expenditure
 }
 
 /// Conventional direct-fire matrix coverage; sharded twelve weapons per test.
-const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::Weapon; 107] = [
+const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::Weapon; 98] = [
     stompymux_rs::Weapon::ClanLbx2,
     stompymux_rs::Weapon::ClanLbx5,
     stompymux_rs::Weapon::ClanLbx10,
@@ -5899,7 +5899,6 @@ const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::Weapon; 107] = [
     stompymux_rs::Weapon::ClanStreakSrm4,
     stompymux_rs::Weapon::ClanStreakSrm6,
     stompymux_rs::Weapon::PlasmaRifle,
-    stompymux_rs::Weapon::AcidThrower,
     stompymux_rs::Weapon::Flamer,
     stompymux_rs::Weapon::MachineGun,
     stompymux_rs::Weapon::HeavyMachineGun,
@@ -5913,7 +5912,6 @@ const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::Weapon; 107] = [
     stompymux_rs::Weapon::RotaryAc5,
     stompymux_rs::Weapon::ClanRotaryAc2,
     stompymux_rs::Weapon::ClanRotaryAc5,
-    stompymux_rs::Weapon::ClanRotaryAc10,
     stompymux_rs::Weapon::SmallLaser,
     stompymux_rs::Weapon::LargeLaser,
     stompymux_rs::Weapon::Ppc,
@@ -5942,13 +5940,6 @@ const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::Weapon; 107] = [
     stompymux_rs::Weapon::Mrm20,
     stompymux_rs::Weapon::Mrm30,
     stompymux_rs::Weapon::Mrm40,
-    stompymux_rs::Weapon::LrDfm5,
-    stompymux_rs::Weapon::LrDfm10,
-    stompymux_rs::Weapon::LrDfm15,
-    stompymux_rs::Weapon::LrDfm20,
-    stompymux_rs::Weapon::SrDfm2,
-    stompymux_rs::Weapon::SrDfm4,
-    stompymux_rs::Weapon::SrDfm6,
     stompymux_rs::Weapon::Elrm5,
     stompymux_rs::Weapon::Elrm10,
     stompymux_rs::Weapon::Elrm15,
@@ -6089,13 +6080,10 @@ async fn conventional_direct_fire_matrix(weapons: &[stompymux_rs::Weapon]) {
             .unwrap()
             .get::<f64>("distance")
             .unwrap();
-        let mut attack_dice = Dice::seeded([1; 32]);
-        let mut values = vec![attack_dice.d6(), attack_dice.d6()];
-        if weapon.is_dead_fire() {
-            values.push(attack_dice.d6());
-            values.sort_unstable();
-        }
-        assert_eq!(report.get::<u8>("roll").unwrap(), values[0] + values[1]);
+        assert_eq!(
+            report.get::<u8>("roll").unwrap(),
+            Dice::seeded([1; 32]).two_d6()
+        );
         let expected_groups = weapon.damage_groups_at_range(cluster, distance).unwrap();
         let delivered = groups.len().unwrap() as usize;
         assert!(delivered <= expected_groups.len());
@@ -6339,7 +6327,6 @@ async fn flamer_heat_hits_glances_and_misses_do_not_roll_target_damage() {
         Weapon::Flamer,
         Weapon::HeavyFlamer,
         Weapon::VehicleFlamer,
-        Weapon::VehicleHeavyFlamer,
     ] {
         let mut base = base.clone();
         let mut definition = base.btech.constructed_units()[&id].definition().clone();

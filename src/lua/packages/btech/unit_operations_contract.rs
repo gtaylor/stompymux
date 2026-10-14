@@ -250,9 +250,7 @@ fn munition_mode(bit: i32) -> AmmunitionMode {
         4096 => AmmunitionMode::INarcNemesis,
         8192 => AmmunitionMode::ArmorPiercing,
         16384 => AmmunitionMode::Flechette,
-        32768 => AmmunitionMode::Incendiary,
         65536 => AmmunitionMode::Precision,
-        131072 => AmmunitionMode::Stinger,
         262144 => AmmunitionMode::Caseless,
         524288 => AmmunitionMode::SemiGuided,
         1048576 => AmmunitionMode::ExtendedRange,
@@ -282,9 +280,7 @@ fn mode_names(bits: &[i32]) -> Vec<String> {
                 4096 => Some("iNarc_Nemesis"),
                 8192 => Some("AP"),
                 16384 => Some("Flechette"),
-                32768 => Some("Incendiary"),
                 65536 => Some("Precision"),
-                131072 => Some("Stinger"),
                 262144 => Some("Caseless"),
                 524288 => Some("Sguided"),
                 1048576 => Some("ExtendedRange"),
@@ -909,7 +905,6 @@ mod tests {
             (4, AmmunitionMode::MmlLrmNarc),
             (128, AmmunitionMode::MmlLrmSwarm),
             (256, AmmunitionMode::MmlLrmSwarm1),
-            (131072, AmmunitionMode::MmlLrmStinger),
             (524288, AmmunitionMode::MmlLrmSemiGuided),
         ] {
             let bits: Vec<i32> = [bit, 4194304].into_iter().filter(|&bit| bit != 0).collect();

@@ -60,8 +60,8 @@ impl Weapon {
     }
 
     /// Standard LRM launchers: Inner Sphere, Clan and Enhanced (NLRM) racks, which share every
-    /// LRM munition (Tactical Operations: Advanced Units & Equipment p. 139). Extended, Streak and
-    /// dead-fire racks, Thunderbolts, MRMs, rockets and ATMs are not standard LRM launchers.
+    /// LRM munition (Tactical Operations: Advanced Units & Equipment p. 139). Extended and Streak
+    /// racks, Thunderbolts, MRMs, rockets and ATMs are not standard LRM launchers.
     pub fn is_standard_lrm(self) -> bool {
         matches!(
             self,
@@ -96,7 +96,7 @@ impl Weapon {
 
     /// Launchers whose rounds may carry Artemis IV or V guidance: standard LRM and SRM racks, MMLs
     /// and torpedo launchers (Total Warfare p. 131, TechManual p. 206). Streak, MRM, rocket, ATM,
-    /// Thunderbolt, Extended LRM, Narc and dead-fire launchers are excluded.
+    /// Thunderbolt, Extended LRM and Narc launchers are excluded.
     pub fn accepts_artemis(self) -> bool {
         self.is_standard_lrm() || self.is_standard_srm() || self.is_mml() || self.is_torpedo()
     }
@@ -178,7 +178,7 @@ impl Weapon {
         matches!(self, Self::NarcBeacon | Self::ClanNarcBeacon)
     }
 
-    /// Standard LRM launchers take semi-guided, Swarm and Stinger rounds (Total Warfare p. 142;
+    /// Standard LRM launchers take semi-guided and Swarm rounds (Total Warfare p. 142;
     /// Tactical Operations: Advanced Units & Equipment p. 228). MML long-range bins carry their own
     /// family variants of these rounds instead.
     pub fn supports_semiguided(self) -> bool {

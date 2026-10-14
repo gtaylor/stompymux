@@ -67,8 +67,6 @@ impl IndirectAim {
 /// An inspectable subtotal, not firing permission; posture and advanced equipment remain separate.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AimModifiers {
-    /// Coolant self-application does not require an acquired contact.
-    pub self_target: bool,
     /// Observer sensor aim replaces the firing unit sensor aim when present.
     pub indirect: Option<IndirectAim>,
     pub gunnery: i16,
@@ -115,12 +113,7 @@ pub struct AimModifiers {
 impl AimModifiers {
     /// Sum supported contributions only; unseen or out-of-range shots have no subtotal.
     pub fn subtotal(&self) -> Option<i32> {
-        let perception = if self.self_target {
-            0
-        } else {
-            self.perception?.modifier
-        };
-        self.subtotal_with_terrain(perception)
+        self.subtotal_with_terrain(self.perception?.modifier)
     }
 
     /// Shared arithmetic; terrain targets supply zero instead of a unit sensor contribution.
@@ -464,11 +457,8 @@ pub(super) fn perception_aim(
 }
 
 /// Shared firing admission: the target must be a perceived contact, and a direct shot needs a
-/// line of fire. Self-applied coolant needs neither.
+/// line of fire.
 pub(super) fn ensure_perceived(aim: &AimModifiers) -> Result<()> {
-    if aim.self_target {
-        return Ok(());
-    }
     let perception = aim
         .perception
         .context("Target is not a current acquired contact")?;
@@ -575,7 +565,6 @@ pub(super) fn aim_modifiers_for_source(
         tag_guided: target_terms.tag_guided,
         ..aim
     });
-    modifiers.self_target = shooter == target && mount.weapon == Weapon::CoolantGun;
     modifiers.indirect = indirect;
     modifiers.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     modifiers.range = modifiers
@@ -652,7 +641,6 @@ pub(super) fn weapon_base(
     ammunition: super::AmmunitionMode,
 ) -> Result<AimModifiers> {
     Ok(AimModifiers {
-        self_target: false,
         indirect: None,
         gunnery,
         distance,
@@ -751,19 +739,10 @@ pub(super) fn target_modifiers(
             super::scanner::scanner_unit(world, tagger)
                 .is_some_and(|unit| unit.signature.team == attacker.signature.team)
         });
-    let flying_vtol = world
-        .btech
-        .vehicles()
-        .get(&target)
-        .is_some_and(vtol_airborne);
-    let airborne = super::stinger::target_airborne(world, target);
-    let cocoon = super::orbital_drop_state::current(world, target).is_some();
     Ok(TargetAimModifiers {
         ammunition_accuracy: airborne_ammunition_adjustment(
             ammunition,
-            airborne,
-            flying_vtol,
-            cocoon,
+            target_airborne(world, target),
         ),
         bogged_down: super::bog_down::target_modifier(world, target),
         orbital_drop: super::orbital_drop_state::current(world, target)
@@ -785,48 +764,44 @@ pub(super) fn target_modifiers(
 
 /// Flak (TW p. 114, p. 141): LB-X cluster rounds take -2 against any target in the air, an
 /// airborne VTOL, a jumping Mech or a dropping unit, and nothing against a parked VTOL.
-/// Stinger rounds, a house munition, take -3 against a flying VTOL and -1 against an orbital
-/// descent, keyed on the same airborne states.
-fn airborne_ammunition_adjustment(
-    ammunition: super::AmmunitionMode,
-    airborne: bool,
-    flying_vtol: bool,
-    cocoon: bool,
-) -> i8 {
+fn airborne_ammunition_adjustment(ammunition: super::AmmunitionMode, airborne: bool) -> i8 {
     match ammunition.munition() {
         super::AmmunitionMode::Cluster if airborne => -2,
-        super::AmmunitionMode::Stinger if flying_vtol => -3,
-        super::AmmunitionMode::Stinger if cocoon => -1,
         _ => 0,
     }
+}
+
+/// Whether the target is in the air: an airborne Mech, a flying or falling VTOL, or a unit on
+/// an orbital descent. Ground launch preparation is not enough.
+pub(super) fn target_airborne(world: &World, target: ObjectId) -> bool {
+    world
+        .btech
+        .constructed_units()
+        .get(&target)
+        .is_some_and(|unit| unit.airborne())
+        || world
+            .btech
+            .vehicles()
+            .get(&target)
+            .is_some_and(|unit| unit.orbital_drop().is_some() || vtol_airborne(unit))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Flak applies to every airborne target; Stinger tells a flying VTOL from a descent and
-    /// gets nothing extra against a jumping Mech.
+    /// Flak applies to every airborne target and to nothing else; other rounds get nothing.
     #[test]
-    fn airborne_ammunition_distinguishes_flak_flying_vtols_and_descents() {
+    fn flak_applies_only_to_cluster_rounds_against_airborne_targets() {
         use super::super::AmmunitionMode as Mode;
-        for (airborne, flying_vtol, cocoon, cluster, stinger) in [
-            (false, false, false, 0, 0),
-            (true, false, false, -2, 0),
-            (true, true, false, -2, -3),
-            (true, false, true, -2, -1),
-            (true, true, true, -2, -3),
-        ] {
+        for (airborne, cluster) in [(false, 0), (true, -2)] {
             assert_eq!(
-                airborne_ammunition_adjustment(Mode::Cluster, airborne, flying_vtol, cocoon),
+                airborne_ammunition_adjustment(Mode::Cluster, airborne),
                 cluster
             );
+            assert_eq!(airborne_ammunition_adjustment(Mode::Normal, airborne), 0);
             assert_eq!(
-                airborne_ammunition_adjustment(Mode::Stinger, airborne, flying_vtol, cocoon),
-                stinger
-            );
-            assert_eq!(
-                airborne_ammunition_adjustment(Mode::Normal, airborne, flying_vtol, cocoon),
+                airborne_ammunition_adjustment(Mode::MmlLrmSwarm, airborne),
                 0
             );
         }

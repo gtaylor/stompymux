@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
 article_tags = ["show_in_index"]
 +++
 
@@ -289,8 +289,6 @@ Select numbers and ranges separated by commas without spaces, such as `0,2-4`.
 Reversed ranges work; repeated numbers toggle again. An invalid selection clause
 stops processing after earlier changes. Weapons that cannot toggle are skipped
 with an error. The command accepts no switches.
-For coolant guns, heat mode automatically cools your own unit when `fire` has no
-target argument. Supply a target ID or dbref to cool that recipient instead.
 
 
 Direct fire currently covers Inner Sphere small, medium and large lasers, ER
@@ -298,13 +296,8 @@ lasers, pulse and X-pulse lasers, standard/ER/light/heavy/Snub-Nosed PPCs,
 machine guns, flamers, SRM-2/4/6, Streak SRM-2/4/6, LRM-5/10/15/20, MRM-10/20/30/40
 and AC/2/5/10/20 in supported tactical bipeds. Pulse lasers reduce the target
 number by two. MRMs increase it by one and deliver damage in groups of up to five.
-Extended-range LRM-5/10/15/20 launchers are also supported. Below ten hexes they
-use the lowest two of three attack dice, in addition to the minimum-range penalty.
-Their short/medium/long ranges are 12/24/36 hexes.
-Dead-fire LR 5/10/15/20 and SR 2/4/6 launchers always use the lowest two of three
-attack dice. LR dead-fire missiles deal two damage each at 6/12/18 ranges with a
-four-hex minimum; SR dead-fire missiles deal three each at 2/4/6 ranges. Each
-missile hits a separate location.
+Extended-range LRM-5/10/15/20 launchers are also supported. Their
+short/medium/long ranges are 12/24/36 hexes.
 Standard, light and Magshot Gauss rifles are supported. Their ammunition does
 not explode, but a critical hit on a functional rifle destroys the entire mount
 and causes an internal explosion: 20 damage for standard, 16 for light, and 3
@@ -340,7 +333,7 @@ it also uses water ranges.
 `inferno <selection>` toggles a ready missile launcher between normal and inferno
 ammunition. Inferno rounds are an SRM munition (Total Warfare p. 141): only standard
 SRM launchers and MMLs loaded with SRM rounds carry them; LRM, Streak, MRM, rocket,
-ATM, Thunderbolt, Narc and dead-fire launchers do not. A matching bin is required to
+ATM, Thunderbolt and Narc launchers do not. A matching bin is required to
 fire. Surviving inferno missiles add
 two heat points each to a Mech instead of armor damage, as in Total Warfare;
 outside heat is capped at fifteen points per turn. AMS can intercept them.
@@ -450,7 +443,7 @@ preserves an active jump. Heavy-duty gyros weigh twice as much as standard gyros
 launcher with a working linked Artemis IV controller. Selection accepts weapon
 numbers, comma-separated numbers and ranges. Artemis rounds exist for standard
 LRM (including Enhanced LRM), SRM, MML and torpedo launchers only (Total Warfare
-p. 131); Streak, MRM, rocket, ATM, Thunderbolt, extended LRM, Narc and dead-fire
+p. 131); Streak, MRM, rocket, ATM, Thunderbolt, extended LRM and Narc
 launchers cannot use them, and an ATM's built-in guidance never stacks with
 Artemis. One-shot launchers cannot change modes. Compatible rounds use their own
 bins; ordinary ammunition
@@ -476,8 +469,8 @@ Every feed failure happens after the shot: the burst or round is still fired, it
 ammunition and heat are spent and its damage is resolved as rolled, and only
 then is the weapon disabled (Total Warfare p. 114).
 
-`hotload <selection>` toggles hotloading on supported LRM, extended LRM and
-long-range dead-fire launchers. It removes the minimum-range penalty, or halves
+`hotload <selection>` toggles hotloading on supported LRM and extended LRM
+launchers. It removes the minimum-range penalty, or halves
 it when the game option requests that behavior. Cluster hits use the lowest two
 of three dice. Hotloaded launchers never jam (Tactical Operations p. 101). A
 hotloaded launcher may explode when critically hit while ordinary ammunition
@@ -540,11 +533,6 @@ to the autocannon's own slots, and the weapon is useless for the rest of the gam
 `unjam` cannot clear it; no internal damage or pilot injury results. Vehicles
 treat the breakdown as a Weapon Destroyed critical hit.
 
-`incendiary <selection>` toggles incendiary ammunition for conventional and light
-IS autocannons. Against BattleMechs it deals ordinary shell damage. A critical
-hit on a recycling weapon can ignite its loaded rounds if matching ammunition
-remains, destroying the mount and causing internal damage.
-
 ### Searchlights
 
 Units fitted with `Searchlight` start in automatic mode: the lamp switches on when the battlefield is at night (full moon, moonless or pitch black) and off at dawn, dusk or in daylight, where it gives no benefit. Automatic lamps react when an administrator changes the map's light, when the unit moves to another battlefield, and when the unit finishes starting up. Every switch takes five seconds.
@@ -563,7 +551,7 @@ Use `unitprefs SLWarn ON` to receive external searchlight entry/exit warnings, `
 
 `unitprefs ArmorWarn` and `unitprefs AmmoWarn` toggle combat warnings; append `ON` or `OFF` to choose explicitly. Both default to on and persist with the unit. Armor warnings report transitions to low, critical or breached protection separately for front and rear armor. Ammunition warnings use installed-bin weighting and the firing mode's warning window, including shots that miss. Lua exposes `btech.unit.armor_warning(unit, pilot, enabled)` and `btech.unit.ammunition_warning(unit, pilot, enabled)`.
 
-`unitprefs FFSafety ON` blocks non-coolant weapon fire at units on your team. Use `OFF` to disable it or omit the setting to toggle; the default is off. A battlefield with the no-friendly-fire flag (256) independently blocks these attacks. Coolant guns can still cool teammates or their own carrier. Lua provides `btech.unit.friendly_fire_safety(unit, pilot, enabled)`.
+`unitprefs FFSafety ON` blocks weapon fire at units on your team. Use `OFF` to disable it or omit the setting to toggle; the default is off. A battlefield with the no-friendly-fire flag (256) independently blocks these attacks. Lua provides `btech.unit.friendly_fire_safety(unit, pilot, enabled)`.
 
 ### Viewing unit markings
 
@@ -669,8 +657,8 @@ destroyed on a 1-3. Destroying the marked
 section removes its beacon; otherwise the mark persists across shutdowns and restarts.
 
 `narc <weapon>` toggles Narc-compatible ammunition on a standard LRM, SRM or MML
-launcher (Total Warfare pp. 141-142); Streak, MRM, rocket, ATM, Thunderbolt, extended
-LRM and dead-fire launchers fire only ordinary rounds. Compatible missiles gain a
+launcher (Total Warfare pp. 141-142); Streak, MRM, rocket, ATM, Thunderbolt and extended
+LRM launchers fire only ordinary rounds. Compatible missiles gain a
 cluster bonus against a marked target and require a matching bin.
 `explosive <weapon>` toggles explosive ammunition on a Narc launcher: these rounds
 inflict damage instead of attaching a beacon. Narc launchers display explosive mode
@@ -1194,25 +1182,8 @@ intact hotloaded launcher can explode if critically hit while ordinary
 ammunition remains aboard.
 Hotloading leaves the selected artillery payload and its aiming rules unchanged.
 
-Use `stinger <weapon>` to select anti-air Stinger rounds on a standard LRM launcher
-or an MML loaded with long-range rounds. Repeat the command to return to normal
-ammunition. The weapon
-must be intact and recycled, and one-shot launchers cannot change modes. Matching
-Stinger ammunition is required to fire; ordinary rounds are not substituted.
-Stinger shots can engage airborne units but cannot target grounded units or hexes.
-They receive a −3 to-hit bonus against airborne VTOLs (hovering included, never a
-landed one) and −1 against units in orbital descent, including descent controlled
-by jump jets after a cocoon opens. Jumping Mechs receive no additional Stinger
-bonus.
-Their maximum reach is seven hexes longer, with ordinary range penalties. Lua uses
-`btech.unit.stinger(unit, pilot, weapon)`.
-
-The `stinger` command and Lua operation also work in ground vehicles, including
-stationary turrets. Selected ammunition is saved independently of the template.
-Mechs and vehicles use the same Stinger targeting and firing rules.
-
 Ground vehicles also accept `lbx`, `sguided`, `precision`, `flechette`,
-`armorpiercing`, `caseless` and `incendiary`, with the same Lua operation names.
+`armorpiercing` and `caseless`, with the same Lua operation names.
 These change the ammunition selection on compatible, intact, recycled weapons.
 
 

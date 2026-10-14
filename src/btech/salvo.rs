@@ -56,7 +56,7 @@ pub trait WeaponSalvo {
     /// Resolve an unmodified 2d6 cluster roll for a supported conventional launcher.
     fn missile_hits(self, roll: u8) -> Result<u8>;
 
-    /// Each group receives an independent location; dead-fire missiles always hit individually.
+    /// Each group receives an independent location.
     fn damage_groups(self, cluster_roll: Option<u8>) -> Result<Vec<u16>>;
 
     /// Group a hit using its actual spatial range, before any aim-bracket rounding.
@@ -106,11 +106,10 @@ impl WeaponSalvo for Weapon {
             | Self::Srm2
             | Self::ClanSrt2
             | Self::Srt2
-            | Self::SrDfm2
             | Self::ClanLbx2
             | Self::Lbx2 => 2,
             Self::Mml3 | Self::ClanAtm3 => 3,
-            Self::ClanSrm4 | Self::Srm4 | Self::ClanSrt4 | Self::Srt4 | Self::SrDfm4 => 4,
+            Self::ClanSrm4 | Self::Srm4 | Self::ClanSrt4 | Self::Srt4 => 4,
             Self::Mml5
             | Self::ClanLrm5
             | Self::Lrm5
@@ -118,15 +117,9 @@ impl WeaponSalvo for Weapon {
             | Self::Lrt5
             | Self::Nlrm5
             | Self::Elrm5
-            | Self::LrDfm5
             | Self::ClanLbx5
             | Self::Lbx5 => 5,
-            Self::ClanSrm6
-            | Self::Srm6
-            | Self::ClanSrt6
-            | Self::Srt6
-            | Self::SrDfm6
-            | Self::ClanAtm6 => 6,
+            Self::ClanSrm6 | Self::Srm6 | Self::ClanSrt6 | Self::Srt6 | Self::ClanAtm6 => 6,
             Self::Mml7 => 7,
             Self::Mml9 | Self::ClanAtm9 => 9,
             Self::ClanLrm10
@@ -136,7 +129,6 @@ impl WeaponSalvo for Weapon {
             | Self::Nlrm10
             | Self::Rocket10
             | Self::Elrm10
-            | Self::LrDfm10
             | Self::ClanLbx10
             | Self::Lbx10
             | Self::Mrm10 => 10,
@@ -147,8 +139,7 @@ impl WeaponSalvo for Weapon {
             | Self::Lrt15
             | Self::Nlrm15
             | Self::Rocket15
-            | Self::Elrm15
-            | Self::LrDfm15 => 15,
+            | Self::Elrm15 => 15,
             Self::ClanLrm20
             | Self::ClanLrt20
             | Self::Lrt20
@@ -157,7 +148,6 @@ impl WeaponSalvo for Weapon {
             | Self::Nlrm20
             | Self::Mrm20
             | Self::Elrm20
-            | Self::LrDfm20
             | Self::ClanLbx20
             | Self::Lbx20 => 20,
             Self::Mrm30 => 30,
@@ -1261,13 +1251,6 @@ mod tests {
             (W::Elrm10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
             (W::Elrm15, [5, 5, 5, 5, 5, 5, 6, 9, 9, 9, 9]),
             (W::Elrm20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
-            (W::LrDfm5, [1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3]),
-            (W::LrDfm10, [3, 3, 3, 3, 3, 3, 4, 6, 6, 6, 6]),
-            (W::LrDfm15, [5, 5, 5, 5, 5, 5, 6, 9, 9, 9, 9]),
-            (W::LrDfm20, [6, 6, 6, 6, 6, 6, 9, 12, 12, 12, 12]),
-            (W::SrDfm2, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]),
-            (W::SrDfm4, [1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3]),
-            (W::SrDfm6, [2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4]),
         ] {
             for roll in 2..=12 {
                 let groups = weapon

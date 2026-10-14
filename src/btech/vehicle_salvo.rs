@@ -122,9 +122,7 @@ pub(super) fn resolve_with_context_in_candidate(
         "Weapon mode is not supported"
     );
     ensure!(
-        weapon.beacon_kind(request.ammunition).is_none()
-            && weapon != Weapon::CoolantGun
-            && request.fire_mode != FireMode::Heat,
+        weapon.beacon_kind(request.ammunition).is_none() && request.fire_mode != FireMode::Heat,
         "Vehicle beacon and thermal effects require dedicated target resolution"
     );
     ensure!(

@@ -1,4 +1,4 @@
-//! Light autocannon, machine-gun and acid-thrower ranges, ammunition and critical behavior.
+//! Light autocannon and machine-gun ranges, ammunition and critical behavior.
 use stompymux_rs::*;
 
 /// Replace one conventional mount and its bin with the requested ballistic weapon.
@@ -29,7 +29,6 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
         (Weapon::ClanMachineGun, 0, 2, 1, 200, 256, 7, [1, 2, 3]),
         (Weapon::ClanLightMachineGun, 0, 1, 1, 200, 256, 7, [2, 4, 6]),
         (Weapon::ClanHeavyMachineGun, 0, 3, 1, 100, 512, 7, [1, 2, 2]),
-        (Weapon::AcidThrower, 3, 3, 2, 10, 1536, 25, [1, 2, 3]),
         (Weapon::LightAc2, 1, 2, 1, 45, 4096, 12, [6, 12, 18]),
         (Weapon::LightAc5, 1, 5, 2, 20, 5120, 20, [5, 10, 15]),
         (Weapon::HeavyMachineGun, 0, 3, 1, 100, 1024, 7, [1, 2, 2]),
@@ -139,39 +138,6 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
     }
 }
 
-/// Acid throwers require a complete mount and cannot select a flamer's thermal effect.
-#[test]
-fn acid_thrower_requires_two_slots_and_rejects_heat_mode() {
-    let weapon = Weapon::AcidThrower;
-    assert!(!weapon.is_flamer());
-    assert!(!weapon.supports_heat_mode());
-    assert!(!weapon.supports_rapid_fire());
-    assert!(!weapon.supports_gatling());
-    assert!(weapon.supports_targeting_computer());
-    let template = definition(weapon);
-    for missing in [2, 3] {
-        let mut incomplete = template.clone();
-        incomplete
-            .sections
-            .get_mut(&MechSection::LeftArm)
-            .unwrap()
-            .criticals
-            .remove(&missing);
-        assert!(Mech::from_template(incomplete).is_err());
-    }
-    let mut thermal = template;
-    for part in thermal
-        .sections
-        .values_mut()
-        .flat_map(|s| s.criticals.values_mut())
-    {
-        if part.equipment == weapon.name() {
-            part.modes.push("Heat".into());
-        }
-    }
-    assert!(Mech::from_template(thermal).is_err());
-}
-
 /// Hyper autocannons retain ordinary direct damage and reject RFAC-specific firing/ammunition modes.
 #[test]
 fn hyper_ac_construction_ranges_and_critical_supply() {
@@ -209,14 +175,7 @@ fn hyper_ac_construction_ranges_and_critical_supply() {
                 .is_none()
         );
         let template = definition(weapon);
-        for flag in [
-            "RapidFire",
-            "AP",
-            "Precision",
-            "Caseless",
-            "Incendiary",
-            "Flechette",
-        ] {
+        for flag in ["RapidFire", "AP", "Precision", "Caseless", "Flechette"] {
             let mut flagged = template.clone();
             for part in flagged
                 .sections

@@ -687,7 +687,7 @@ fn swarm_template_modes_cover_compatible_catalogue() {
             ("Swarm", AmmunitionMode::Swarm),
             ("Swarm1", AmmunitionMode::Swarm1),
         ] {
-            let compatible = weapon.supports_semiguided() && !weapon.is_dead_fire();
+            let compatible = weapon.supports_semiguided();
             assert_eq!(
                 weapon
                     .damage_groups_for_ammunition(mode, Some(7), 10.0)

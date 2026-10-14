@@ -115,7 +115,6 @@ mod tests {
             Weapon::RotaryAc5,
             Weapon::ClanRotaryAc2,
             Weapon::ClanRotaryAc5,
-            Weapon::ClanRotaryAc10,
         ] {
             for (rounds, counts) in [
                 (2, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),

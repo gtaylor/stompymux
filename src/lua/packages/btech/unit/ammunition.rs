@@ -1,34 +1,10 @@
-//! Special munition commands: incendiary, inferno, precision, swarm, semi-guided, MML, ATM, and other rounds.
+//! Special munition commands: inferno, precision, swarm, semi-guided, MML, ATM, and other rounds.
 
 use super::super::*;
 use crate::btech::AmmunitionFeedback;
 
 /// Register this package slice on the private native table.
 pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua::Result<()> {
-    let incendiary = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        crate::lua::transactions::run(lua, &scripts.world, || {
-            let mode = crate::toggle_battle_incendiary(
-                &mut scripts.world.borrow_mut(),
-                ObjectId(unit),
-                ObjectId(pilot),
-                index,
-            )
-            .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
-            crate::btech::notify_unit_text(
-                &scripts,
-                ObjectId(unit),
-                &mode.incendiary_message(index),
-            )
-            .map_err(|e| error::failure("btech.operation.failed", e))?;
-            detached(lua, &mode)
-        })
-    })?;
-    native.set(
-        "unit_incendiary",
-        error::wrap(lua, incendiary, "btech.operation.failed")?,
-    )?;
     let inferno = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;
@@ -170,26 +146,6 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             })?;
         native.set(name, error::wrap(lua, callback, "btech.operation.failed")?)?;
     }
-    let stinger = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        crate::lua::transactions::run(lua, &scripts.world, || {
-            let mode = crate::toggle_battle_stinger(
-                &mut scripts.world.borrow_mut(),
-                ObjectId(unit),
-                ObjectId(pilot),
-                index,
-            )
-            .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
-            crate::btech::notify_unit_text(&scripts, ObjectId(unit), &mode.stinger_message(index))
-                .map_err(|e| error::failure("btech.operation.failed", e))?;
-            detached(lua, &mode)
-        })
-    })?;
-    native.set(
-        "unit_stinger",
-        error::wrap(lua, stinger, "btech.operation.failed")?,
-    )?;
     let flechette = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;

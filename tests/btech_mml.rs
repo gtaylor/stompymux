@@ -414,7 +414,7 @@ async fn mml_ammunition_hazards_follow_bin_contents() {
 #[tokio::test]
 async fn mml_long_range_special_rounds_select_fire_and_persist() {
     type Toggle = fn(&mut World, ObjectId, ObjectId, usize) -> anyhow::Result<AmmunitionMode>;
-    let rounds: [(&str, Toggle, AmmunitionMode, AmmunitionMode); 5] = [
+    let rounds: [(&str, Toggle, AmmunitionMode, AmmunitionMode); 4] = [
         (
             "Narc/Smoke",
             toggle_battle_narc,
@@ -438,12 +438,6 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
             toggle_battle_semiguided,
             AmmunitionMode::SemiGuided,
             AmmunitionMode::MmlLrmSemiGuided,
-        ),
-        (
-            "Stinger",
-            toggle_battle_stinger,
-            AmmunitionMode::Stinger,
-            AmmunitionMode::MmlLrmStinger,
         ),
     ];
     for source in firing::templates() {
@@ -508,17 +502,6 @@ async fn mml_long_range_special_rounds_select_fire_and_persist() {
                 "return btech.unit.fire({},1,{index},{})",
                 shooter.0, target.0
             );
-            if round == AmmunitionMode::Stinger {
-                // Stinger rounds keep their airborne-only restriction in the LRM family.
-                let before = scripts.world().btech.clone();
-                let error = scripts
-                    .eval_callback::<mlua::Table>(&fire)
-                    .unwrap_err()
-                    .to_string();
-                assert!(error.contains("airborne"), "{error}");
-                assert_eq!(scripts.world().btech, before);
-                continue;
-            }
             let report: mlua::Table = scripts.eval_callback(&fire).unwrap();
             let launch = report
                 .get::<Option<mlua::Table>>("launch")

@@ -14,7 +14,7 @@ impl Mech {
     }
 }
 
-/// Toggle an intact, recycled flamer heat mode or coolant self-application.
+/// Toggle an intact, recycled flamer heat mode.
 pub fn toggle_flamer_heat(
     world: &mut World,
     id: ObjectId,

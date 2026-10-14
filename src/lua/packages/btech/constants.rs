@@ -853,16 +853,8 @@ pub(super) static AMMUNITION_MODES: Catalog = Catalog {
             value: 16384,
         },
         Entry {
-            name: "INCENDIARY",
-            value: 32768,
-        },
-        Entry {
             name: "PRECISION",
             value: 65536,
-        },
-        Entry {
-            name: "STINGER",
-            value: 131072,
         },
         Entry {
             name: "CASELESS",

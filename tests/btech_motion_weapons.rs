@@ -1,7 +1,7 @@
 //! Weapon families and their ammunition: LB-X, rockets and one-shots, targeting computers,
 //! hardened and half-ton construction, Artemis, jams and hotloading, ultra/rapid/rotary/gatling
-//! and special autocannons, caseless, armor-piercing and incendiary rounds; then observer and
-//! cockpit feedback, fueled flamers and coolant, status and warning reports, and kick, punch,
+//! and special autocannons, caseless and armor-piercing rounds; then observer and
+//! cockpit feedback, fueled flamers, status and warning reports, and kick, punch,
 //! and trip attacks.
 
 use crate::btech_motion_common::{
@@ -542,7 +542,6 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
         Weapon::Flamer,
         Weapon::HeavyFlamer,
         Weapon::VehicleFlamer,
-        Weapon::VehicleHeavyFlamer,
         Weapon::HeavyMachineGun,
         Weapon::Srm4,
     ] {
@@ -1604,7 +1603,7 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
 #[tokio::test]
 async fn hotload_native_lua_shots_jams_and_recovery() {
     use stompymux_rs::*;
-    for weapon in [Weapon::Lrm5, Weapon::Elrm5, Weapon::LrDfm5] {
+    for weapon in [Weapon::Lrm5, Weapon::Elrm5] {
         for low_roll in [false, true] {
             let (_dir, config, mut base, id, target) = shot_fixture().await;
             let mut template = base.btech.constructed_units()[&id].definition().clone();
@@ -1645,15 +1644,7 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
             .unwrap();
             let seed = (0..=255)
                 .find(|seed| {
-                    let mut dice = Dice::seeded([*seed; 32]);
-                    let a = dice.d6();
-                    let b = dice.d6();
-                    let roll = if weapon == Weapon::Lrm5 {
-                        a + b
-                    } else {
-                        let c = dice.d6();
-                        a + b + c - a.max(b).max(c)
-                    };
+                    let roll = Dice::seeded([*seed; 32]).two_d6();
                     (roll <= 3) == low_roll
                 })
                 .unwrap();
@@ -2806,12 +2797,6 @@ async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac5() {
     rotary_unjam_matrix(&[Weapon::ClanRotaryAc5]).await;
 }
 
-#[tokio::test(flavor = "current_thread")]
-async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac10() {
-    use stompymux_rs::Weapon;
-    rotary_unjam_matrix(&[Weapon::ClanRotaryAc10]).await;
-}
-
 /// Rotary burst controls and firing agree across native/Lua, supply fallback, jams and restart.
 async fn rotary_burst_matrix(weapons: &[stompymux_rs::Weapon]) {
     use stompymux_rs::*;
@@ -3122,12 +3107,6 @@ async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac2() {
 async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac5() {
     use stompymux_rs::Weapon;
     rotary_burst_matrix(&[Weapon::ClanRotaryAc5]).await;
-}
-
-#[tokio::test(flavor = "current_thread")]
-async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac10() {
-    use stompymux_rs::Weapon;
-    rotary_burst_matrix(&[Weapon::ClanRotaryAc10]).await;
 }
 
 /// Gatling fire shares a single supply-limited die across damage/heat/expenditure and replays both interfaces.
@@ -3503,7 +3482,6 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::Weapon]) {
         (AmmunitionMode::Precision, "Precision", "precision", 2),
         (AmmunitionMode::Flechette, "Flechette", "flechette", 1),
         (AmmunitionMode::Caseless, "CASELESS", "caseless", 1),
-        (AmmunitionMode::Incendiary, "Incendiary", "incendiary", 1),
     ] {
         for weapon in weapons.iter().copied() {
             for rapid in [false, true] {
@@ -3723,9 +3701,6 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::Weapon]) {
                         report
                     );
                     assert_eq!(restored.btech, expected.btech);
-                }
-                if ammunition == AmmunitionMode::Incendiary {
-                    check_incendiary_impact(&expected, id, index, weapon);
                 }
 
                 let shell_damage = u16::from(weapon.profile().damage)
@@ -4237,110 +4212,6 @@ async fn check_caseless_failures(
             );
         }
     }
-}
-
-/// A critical after firing ignites loaded rounds through the shared tactical cascade.
-fn check_incendiary_impact(
-    base: &stompymux_rs::World,
-    id: ObjectId,
-    index: usize,
-    weapon: stompymux_rs::Weapon,
-) {
-    use stompymux_rs::*;
-    let unit = &base.btech.constructed_units()[&id];
-    let loadout = unit.loadout().unwrap();
-    let mount = &loadout.weapons[index];
-    let section = mount.criticals[0].section;
-    let candidates = unit.critical_candidates(section);
-    let seed = (0u32..10000)
-        .find_map(|value| {
-            let mut bytes = [0; 32];
-            bytes[..4].copy_from_slice(&value.to_le_bytes());
-            let initial = Dice::seeded(bytes);
-            let mut dice = initial.clone();
-            dice.two_d6(); // Material entry before the selected weapon critical.
-            (dice.two_d6() == 8
-                && mount.criticals.contains(
-                    &candidates[usize::from(dice.die(candidates.len() as u16).unwrap() - 1)],
-                ))
-            .then_some(initial)
-        })
-        .unwrap();
-    let mut world = base.clone();
-    let observer = *world
-        .btech
-        .constructed_units()
-        .keys()
-        .find(|other| **other != id)
-        .unwrap();
-    // Use an intact observer independently of damage to the previous shot's target.
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let previous = state["constructed"][observer.0.to_string()].clone();
-    let fresh = Mech::from_template(
-        world.btech.constructed_units()[&observer]
-            .definition()
-            .clone(),
-    )
-    .unwrap();
-    let mut fresh = serde_json::to_value(fresh).unwrap();
-    fresh["position"] = previous["position"].clone();
-    fresh["map_slot"] = previous["map_slot"].clone();
-    fresh["motion"] = previous["motion"].clone();
-    fresh["power"] = serde_json::json!({"state":"running"});
-    state["constructed"][observer.0.to_string()] = fresh;
-    world.btech = serde_json::from_value(state).unwrap();
-    for _ in 0..16 {
-        if world.btech.constructed_units()[&observer]
-            .contacts()
-            .contains_key(&id)
-        {
-            break;
-        }
-        refresh_battle_contacts(&mut world, &[observer]).unwrap();
-    }
-    assert!(!battle_observer_messages(&world, id, "test").is_empty());
-    world.btech.set_unit_dice(id, seed).unwrap();
-    let rules = shot_rules();
-    let report = resolve_battle_tactical_impact(
-        &mut world,
-        id,
-        Hit {
-            section,
-            rear_armor: false,
-            through_armor_critical: true,
-        },
-        1,
-        FallRules {
-            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-            extended_piloting: rules.extended_piloting,
-            toughness: rules.target_toughness,
-        },
-    )
-    .unwrap();
-    assert_eq!(
-        report.impact.criticals[0].1,
-        CriticalLoss::Weapon {
-            index,
-            explosion_damage: weapon.profile().damage
-        }
-    );
-    assert!(
-        report
-            .notices
-            .iter()
-            .any(|notice| notice.text.contains("incendiary ammunition"))
-    );
-    assert!(report.notices.iter().any(|notice| notice.unit == observer
-        && notice.text.contains("engulfed in a brilliant blue flame")));
-    assert!(
-        world.btech.constructed_units()[&id].sections()[&section].internal
-            < unit.sections()[&section].internal
-    );
-    assert!(mount.criticals.iter().all(|slot| {
-        world.btech.constructed_units()[&id]
-            .lost_criticals()
-            .contains(slot)
-    }));
 }
 
 #[tokio::test]
@@ -6738,7 +6609,6 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
     for (weapon, mass, ranges) in [
         (Weapon::HeavyFlamer, 1536, (2, 3, 4)),
         (Weapon::VehicleFlamer, 512, (1, 2, 3)),
-        (Weapon::VehicleHeavyFlamer, 1024, (2, 4, 6)),
     ] {
         let profile = weapon.profile();
         let mut definition = base.btech.constructed_units()[&id].definition().clone();
@@ -6886,254 +6756,6 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
     }
 }
 
-/// Coolant hits preserve armor and target dice while fuel, cooling and self-routing replay atomically.
-#[tokio::test]
-async fn coolant_modes_fuel_native_lua_and_saved_replay() {
-    use stompymux_rs::*;
-    let (_dir, config, mut base, id, target) = shot_fixture().await;
-    shot_skill(&mut base, 0);
-    set_battle_character_value(
-        &mut base,
-        ObjectId(1),
-        "Gunnery-Ballistic",
-        CharacterValue {
-            value: 4,
-            experience: 0,
-            last_used: 0,
-        },
-    )
-    .unwrap();
-    set_battle_friendly_fire_safety(&mut base, id, ObjectId(1), true).unwrap();
-    let mut definition = base.btech.constructed_units()[&id].definition().clone();
-    definition
-        .sections
-        .get_mut(&MechSection::LeftArm)
-        .unwrap()
-        .criticals
-        .get_mut(&2)
-        .unwrap()
-        .equipment = "IS.CoolantGun".into();
-    let bin = definition
-        .sections
-        .get_mut(&MechSection::RightTorso)
-        .unwrap()
-        .criticals
-        .get_mut(&0)
-        .unwrap();
-    bin.equipment = "Ammo_IS.CoolantGun".into();
-    bin.data = "25".into();
-    let mut state = serde_json::to_value(&base.btech).unwrap();
-    let map = base.btech.constructed_units()[&id].position().unwrap().map;
-    state["maps"][map.0.to_string()]["flags"] = 256.into();
-
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
-    state["constructed"][id.0.to_string()]["ammunition"][0] = 25.into();
-    base.btech = serde_json::from_value(state).unwrap();
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
-        .unwrap();
-    let native = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
-    )
-    .unwrap();
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
-    )
-    .unwrap();
-    let pristine_db = snapshot_database(&config);
-    // Explicit heat-mode coolant shots keep the supplied recipient in both
-    // single and grouped host actions; the omitted-target path below cools self.
-    let mut explicit_world = base.clone();
-    toggle_battle_flamer_heat(&mut explicit_world, id, ObjectId(1), 0).unwrap();
-    edit_battle_tic(
-        &mut explicit_world,
-        id,
-        ObjectId(1),
-        0,
-        TicEdit::Add(vec![0]),
-    )
-    .unwrap();
-    shot_seed(&mut explicit_world, id, seed);
-    for grouped in [false, true] {
-        install(&native, explicit_world.clone());
-        install(&lua, explicit_world.clone());
-        let call = if grouped {
-            format!(
-                "btech.unit.tic_fire({},1,{{0}},{})[1].report",
-                id.0, target.0
-            )
-        } else {
-            format!("btech.unit.fire({},1,0,{})", id.0, target.0)
-        };
-        assert!(
-            lua.eval_callback::<()>(&format!("local r={call}; error('abort')"))
-                .is_err()
-        );
-        assert_eq!(lua.world().btech, explicit_world.btech);
-        assert!(lua.drain_outbox().is_empty());
-        let (recipient, cooling): (i64, f64) = lua
-            .eval_callback(&format!("local r={call}; return r.target,r.cooling"))
-            .unwrap();
-        assert_eq!((recipient, cooling), (target.0, 3.0));
-        let command = if grouped { "firetic" } else { "fire" };
-        let text = support::run_text(
-            &native,
-            &config,
-            ObjectId(1),
-            1,
-            &format!("{command} 0 #{}", target.0),
-        );
-        assert!(text.contains("stream of coolant"), "{text}");
-        assert_eq!(native.world().btech, lua.world().btech);
-        assert_eq!(
-            lua.world().btech.constructed_units()[&id].heat(),
-            explicit_world.btech.constructed_units()[&id].heat()
-        );
-    }
-    for self_cooling in [false, true] {
-        for stored in [0.0_f64, 1.5, 9.0] {
-            for rounds in [0, 1, 25] {
-                let mut world = base.clone();
-                let recipient = if self_cooling { id } else { target };
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                for unit in [id, target] {
-                    state["constructed"][unit.0.to_string()]["heat"]["stored"] = 6.0.into();
-                }
-                state["constructed"][recipient.0.to_string()]["heat"]["stored"] = stored.into();
-                state["constructed"][id.0.to_string()]["ammunition"][0] = rounds.into();
-                state["constructed"][id.0.to_string()]["target_lock"] = serde_json::Value::Null;
-                world.btech = serde_json::from_value(state).unwrap();
-                if self_cooling {
-                    toggle_battle_flamer_heat(&mut world, id, ObjectId(1), 0).unwrap();
-                }
-                shot_seed(&mut world, id, seed);
-                restore_database(&config, &pristine_db);
-                persistence::save(&config.database(), &world).await.unwrap();
-                let mut restored = persistence::load(&config.database()).await.unwrap();
-                restored
-                    .objects
-                    .get_mut(&ObjectId(1))
-                    .unwrap()
-                    .flags
-                    .insert(Flag::Connected);
-                install(&native, world.clone());
-                install(&lua, restored);
-                let call = if self_cooling {
-                    format!("btech.unit.fire({},1,0)", id.0)
-                } else {
-                    format!("btech.unit.fire({},1,0,{})", id.0, target.0)
-                };
-                assert!(
-                    lua.eval_callback::<()>(&format!("{call}; error('abort')"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, world.btech);
-                assert!(lua.drain_outbox().is_empty());
-                let command = if self_cooling {
-                    "fire 0".to_owned()
-                } else {
-                    format!("fire 0 #{}", target.0)
-                };
-                commands::run(&native, &config, ObjectId(1), 1, &command).unwrap();
-                let result = lua.eval_callback::<mlua::Table>(&format!("return {call}"));
-                if rounds == 0 {
-                    assert!(result.is_err());
-                    assert_eq!(native.world().btech, world.btech);
-                    assert_eq!(lua.world().btech, world.btech);
-                    continue;
-                }
-                let result = result.unwrap();
-                assert_eq!(result.get::<f64>("cooling").unwrap(), 3.0);
-                assert_eq!(result.get::<i64>("target").unwrap(), recipient.0);
-                assert_eq!(result.get::<u8>("heat_transfer").unwrap(), 0);
-                assert!(
-                    result
-                        .get::<Option<mlua::Table>>("salvo")
-                        .unwrap()
-                        .is_none()
-                );
-                assert_eq!(native.world().btech, lua.world().btech);
-                let messages = native.drain_outbox();
-                assert_eq!(messages, lua.drain_outbox());
-                if self_cooling {
-                    assert!(
-                        messages
-                            .iter()
-                            .all(|(_, text)| !text.source().contains("has fired"))
-                    );
-                }
-                let after = native.world().clone();
-                assert_eq!(
-                    after.btech.constructed_units()[&recipient].heat().stored,
-                    stored - 3.0
-                );
-                assert_eq!(
-                    after.btech.constructed_units()[&id].ammunition()[0],
-                    rounds as u16 - 1
-                );
-                for unit in [id, target] {
-                    assert_eq!(
-                        after.btech.constructed_units()[&unit].sections(),
-                        world.btech.constructed_units()[&unit].sections()
-                    );
-                }
-                assert_eq!(
-                    serde_json::to_value(&after.btech.constructed_units()[&target]).unwrap()["dice"],
-                    serde_json::to_value(&world.btech.constructed_units()[&target]).unwrap()["dice"]
-                );
-                persistence::save(&config.database(), &after).await.unwrap();
-                let mut saved = persistence::load(&config.database()).await.unwrap();
-                saved
-                    .objects
-                    .get_mut(&ObjectId(1))
-                    .unwrap()
-                    .flags
-                    .insert(Flag::Connected);
-                assert_eq!(saved.btech, after.btech);
-            }
-        }
-        let mut before = base.clone();
-        if self_cooling {
-            toggle_battle_flamer_heat(&mut before, id, ObjectId(1), 0).unwrap();
-        }
-        let mut state = serde_json::to_value(&before.btech).unwrap();
-        for unit in [id, target] {
-            state["constructed"][unit.0.to_string()]["heat"]["stored"] = 9.0.into();
-        }
-        before.btech = serde_json::from_value(state).unwrap();
-        let rules = ShotRules {
-            tsm_tow_bonus: true,
-            ..shot_rules()
-        };
-        let mut probe = before.clone();
-        let number = resolve_battle_shot(&mut probe, id, ObjectId(1), target, 0, rules)
-            .unwrap()
-            .target_number
-            .unwrap();
-        assert!((3..=11).contains(&number));
-        for roll in [number - 1, number, number + 1] {
-            let mut world = before.clone();
-            let seed = (0..=255)
-                .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) == roll)
-                .unwrap();
-            shot_seed(&mut world, id, seed);
-            let report =
-                resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
-            assert_eq!(report.target, target);
-            assert_eq!(report.cooling, (roll >= number).then_some(3.0));
-            assert_eq!(report.glancing, roll == number);
-            assert!(report.salvo.is_none());
-            assert_eq!(world.btech.constructed_units()[&id].ammunition()[0], 24);
-        }
-    }
-    let before = base.btech.clone();
-    assert!(resolve_battle_shot(&mut base, id, ObjectId(1), id, 1, shot_rules()).is_err());
-    assert_eq!(base.btech, before);
-}
-
 /// Plasma heat accompanies material hits, remains full on glances, and consumes no target dice on misses.
 #[tokio::test]
 async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
@@ -7196,7 +6818,6 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
         shot_seed(&mut world, id, seed);
         let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
         assert_eq!(report.heat_transfer, 0);
-        assert_eq!(report.cooling, None);
         assert_eq!(report.glancing, roll == number);
         assert_eq!(world.btech.constructed_units()[&id].ammunition()[0], 9);
         assert_eq!(world.btech.constructed_units()[&id].heat().stored, 10.0);

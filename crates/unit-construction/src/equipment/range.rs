@@ -60,13 +60,7 @@ impl Weapon {
             ensure!(self.supports_hotload(), "Weapon cannot be hotloaded");
             profile.minimum_range = 0;
         }
-        // Stinger ammunition reaches seven hexes beyond the launcher's long range.
-        let reach = if ammunition.munition() == AmmunitionMode::Stinger {
-            7
-        } else {
-            0
-        };
-        let maximum = self.effective_range_for_ammunition(ammunition) + reach;
+        let maximum = self.effective_range_for_ammunition(ammunition);
         if distance > f64::from(maximum) {
             return Ok(None);
         }
@@ -78,7 +72,7 @@ impl Weapon {
         }
         let rounded = (distance + 0.95).floor() as u8;
         // Total Warfare p. 107: beyond long range a weapon cannot fire at all.
-        let (bracket, modifier) = if u16::from(rounded) > u16::from(profile.long_range) + reach {
+        let (bracket, modifier) = if rounded > profile.long_range {
             return Ok(None);
         } else if rounded > profile.medium_range {
             (RangeBracket::Long, 4)

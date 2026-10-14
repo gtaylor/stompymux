@@ -429,9 +429,6 @@ pub use armor_piercing::toggle_armor_piercing;
 pub(crate) mod caseless;
 pub use caseless::toggle_caseless;
 
-pub(crate) mod incendiary;
-pub use incendiary::toggle_incendiary;
-
 mod broadcast;
 pub use broadcast::{MessageTarget, observer_messages};
 
@@ -613,8 +610,6 @@ pub use tag_aim::tag_aim_modifiers;
 pub(crate) mod semiguided;
 pub(crate) use semiguided::SemiGuidedAim;
 pub use semiguided::toggle_semiguided;
-pub(crate) mod stinger;
-pub use stinger::toggle_stinger;
 pub(crate) mod thunder;
 pub use thunder::{THUNDER_MAXIMUM_STRENGTH, ThunderField, ThunderReport, toggle_thunder};
 pub(crate) mod torpedo;

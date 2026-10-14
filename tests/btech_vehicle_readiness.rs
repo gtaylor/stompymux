@@ -271,121 +271,6 @@ async fn vehicle_failed_streak_locks_recycle_without_expenditure() {
     assert_eq!(world.btech, checkpoint);
 }
 
-/// Vehicle Stinger selection drives matching-bin readiness and survives command/Lua rollback and replay.
-#[tokio::test]
-async fn vehicle_stinger_selection_controls_live_ammunition() {
-    let (_dir, config, mut world, id) =
-        fixture(include_str!("../game/units/RadioTower.toml")).await;
-    let loadout = world.btech.vehicles()[&id].loadout().unwrap();
-    let index = loadout
-        .weapons
-        .iter()
-        .position(|mount| mount.initial_ammunition_mode == AmmunitionMode::Stinger)
-        .unwrap();
-    assert_eq!(
-        world.btech.vehicles()[&id].ammunition_mode(index).unwrap(),
-        AmmunitionMode::Stinger
-    );
-    let checkpoint = world.btech.clone();
-    assert!(toggle_battle_stinger(&mut world, id, ObjectId(2), index).is_err());
-    assert!(toggle_battle_stinger(&mut world, id, ObjectId(1), 99).is_err());
-    assert!(toggle_battle_stinger(&mut world, id, ObjectId(1), 0).is_err());
-    assert_eq!(world.btech, checkpoint);
-    let native = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-    )
-    .unwrap();
-    let lua = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    let text = support::run_text(
-        &native,
-        &config,
-        ObjectId(1),
-        1,
-        &format!("stinger {index}"),
-    );
-    assert!(text.contains("set to fire normal missiles"), "{text}");
-    assert_eq!(
-        lua.eval_callback::<String>(&format!("return btech.unit.stinger({},1,{index})", id.0))
-            .unwrap(),
-        "normal"
-    );
-    assert_eq!(native.world().btech, lua.world().btech);
-    let selected = lua.world().clone();
-    lua.drain_outbox();
-    assert!(
-        lua.eval_callback::<()>(&format!(
-            "btech.unit.stinger({},1,{index}); error('abort')",
-            id.0
-        ))
-        .is_err()
-    );
-    assert_eq!(lua.world().btech, selected.btech);
-    assert!(lua.drain_outbox().is_empty());
-    let mut world = selected;
-    persistence::save(&config.database(), &world).await.unwrap();
-    let loaded = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(loaded.btech, world.btech);
-    let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), index, true).unwrap();
-    assert_eq!(cycle.ammunition_mode, AmmunitionMode::Normal);
-    assert_eq!(
-        loadout.ammunition[cycle.ammunition[0].bin_index].mode,
-        AmmunitionMode::Normal
-    );
-    let checkpoint = world.btech.clone();
-    assert!(toggle_battle_stinger(&mut world, id, ObjectId(1), index).is_err());
-    assert_eq!(world.btech, checkpoint);
-    for _ in 0..cycle.weapon.profile().recycle_seconds {
-        advance_battle_recycle(&mut world);
-    }
-    assert_eq!(
-        toggle_battle_stinger(&mut world, id, ObjectId(1), index).unwrap(),
-        AmmunitionMode::Stinger
-    );
-    let cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), index, true).unwrap();
-    let stinger_bin = cycle.ammunition[0].bin_index;
-    assert_eq!(cycle.ammunition_mode, AmmunitionMode::Stinger);
-    assert_eq!(
-        loadout.ammunition[stinger_bin].mode,
-        AmmunitionMode::Stinger
-    );
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["ammunition"][stinger_bin] = 0.into();
-        })
-        .unwrap();
-    for _ in 0..cycle.weapon.profile().recycle_seconds {
-        advance_battle_recycle(&mut world);
-    }
-    assert!(
-        !world.btech.vehicles()[&id]
-            .weapon_readiness(index)
-            .unwrap()
-            .ready
-    );
-    let checkpoint = world.btech.clone();
-    assert!(reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), index, true).is_err());
-    assert_eq!(world.btech, checkpoint);
-    toggle_battle_stinger(&mut world, id, ObjectId(1), index).unwrap();
-    assert!(
-        world.btech.vehicles()[&id]
-            .weapon_readiness(index)
-            .unwrap()
-            .ready
-    );
-    let original = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
-    for modes in [
-        serde_json::json!({"99":"stinger"}),
-        serde_json::json!({"0":"stinger"}),
-        serde_json::json!({"1":"normal"}),
-    ] {
-        let mut bad = original.clone();
-        bad["ammunition_modes"] = modes;
-        assert!(serde_json::from_value::<Vehicle>(bad).is_err());
-    }
-}
-
 /// Each shared ammunition control updates the same vehicle state through native and Lua adapters.
 #[tokio::test]
 async fn vehicle_ammunition_controls_share_admission_supply_and_transactions() {
@@ -412,12 +297,6 @@ async fn vehicle_ammunition_controls_share_admission_supply_and_transactions() {
             "caseless",
             "Caseless",
             AmmunitionMode::Caseless,
-            Weapon::Ac20,
-        ),
-        (
-            "incendiary",
-            "Incendiary",
-            AmmunitionMode::Incendiary,
             Weapon::Ac20,
         ),
         ("lbx", "LBX/Cluster", AmmunitionMode::Cluster, Weapon::Lbx20),

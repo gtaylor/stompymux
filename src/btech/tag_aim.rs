@@ -77,7 +77,6 @@ pub fn tag_aim_modifiers(
             )
         };
     Ok(AimModifiers {
-        self_target: false,
         indirect: None,
         gunnery,
         distance,

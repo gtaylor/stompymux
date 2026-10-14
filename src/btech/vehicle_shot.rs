@@ -1,5 +1,5 @@
 //! Tactical vehicle shot admission shares geometry and aim without spending ammunition or dice.
-use super::{AimModifiers, ShotRules, Weapon};
+use super::{AimModifiers, ShotRules};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -73,9 +73,8 @@ pub(super) fn check_with_dice(
     attacker.check_spotter_fire(shooter, weapon_index)?;
     let indirect =
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
-    let self_cooling = shooter == target && mount.weapon == Weapon::CoolantGun;
     ensure!(
-        shooter != target || self_cooling,
+        shooter != target,
         "You cannot target yourself with this weapon"
     );
     ensure!(!mount.weapon.is_ams(), "That weapon is defensive only!");
@@ -110,26 +109,14 @@ pub(super) fn check_with_dice(
             .is_some_and(|position| position.map == map),
         "Units must share a battlefield"
     );
-    super::fire_target::check_target_safety_for_source(
-        world,
-        operator.source,
-        target,
-        mount.weapon,
-    )?;
-    if attacker.ammunition_mode(weapon_index)?.munition() == super::AmmunitionMode::Stinger {
-        ensure!(
-            super::stinger::target_airborne(world, target),
-            "Stinger missiles can only engage airborne targets!"
-        );
-    }
+    super::fire_target::check_target_safety_for_source(world, operator.source, target)?;
     ensure!(
         attacker.weapon_readiness(weapon_index)?.ready,
         "Weapon is not ready"
     );
     let range = super::unit_range(world, shooter, target)?;
     ensure!(
-        self_cooling
-            || indirect.is_some()
+        indirect.is_some()
             || rules.aim.override_weapon_arcs
             || attacker.weapon_bears_on(weapon_index, range.bearing.unwrap_or(180.0))?,
         "Target is outside weapon arc"
@@ -144,9 +131,7 @@ pub(super) fn check_with_dice(
         gunnery,
         rules.aim,
     )?;
-    if !self_cooling {
-        super::aim::ensure_perceived(&aim)?;
-    }
+    super::aim::ensure_perceived(&aim)?;
     super::hit_direction::HitDirection::Direct { shooter }.current(world, target)?;
     Ok((aim, prepared))
 }
