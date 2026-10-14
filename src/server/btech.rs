@@ -500,22 +500,6 @@ impl Server {
                 return false;
             }
         }
-        let links = crate::advance_battle_spotter_links(&mut self.scripts.world.borrow_mut());
-        match links {
-            Ok(link_notices) => notices.extend(link_notices),
-            Err(error) => {
-                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
-                *self.scripts.world.borrow_mut() = before;
-                self.scripts
-                    .world
-                    .borrow_mut()
-                    .btech
-                    .autopilot_plans
-                    .clear();
-                self.scripts.effects.rollback();
-                return false;
-            }
-        }
         notices.extend(crate::advance_battle_tags(
             &mut self.scripts.world.borrow_mut(),
         ));

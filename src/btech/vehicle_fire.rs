@@ -112,10 +112,12 @@ fn fire_shot(
         .get(&shooter)
         .context("Vehicle is unavailable")?;
     attacker.check_spotter_fire(shooter, weapon_index)?;
+    let observed =
+        super::spotter::observed_target_for_source(world, operator.source, weapon_index)?;
     let indirect =
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
     let requested = target;
-    let target = indirect.map_or(requested.unit, |link| link.target);
+    let target = observed.map_or(requested.unit, |link| link.target);
     let coordinate = if indirect.is_some() {
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
@@ -128,7 +130,7 @@ fn fire_shot(
         requested.coordinate
     };
     let mut aim_dice = attacker.dice.clone();
-    let (mut aim, prepared) = super::vehicle_shot::check_with_dice(
+    let (aim, prepared) = super::vehicle_shot::check_with_dice(
         world,
         shooter,
         pilot,
@@ -152,7 +154,7 @@ fn fire_shot(
     let mut candidate = super::shot_transaction::ShotCandidate::new(world);
     let launch_measurement = super::autopilot::diagnostics::combat("launch_defenses");
     let experience_messages = if character && let Some(link) = indirect {
-        super::spotter::award_indirect_experience(&mut candidate, shooter, link, &mut aim)?
+        super::spotter::award_indirect_experience(&mut candidate, shooter, link)?
     } else {
         Vec::new()
     };

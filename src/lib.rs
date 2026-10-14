@@ -393,8 +393,8 @@ pub use btech::{
 };
 
 pub use btech::{
-    TagState, advance_tags as advance_battle_tags, select_tag as select_battle_tag,
-    tagged_by as battle_tagged_by,
+    TagRules, TagState, advance_tags as advance_battle_tags, select_tag as select_battle_tag,
+    tag_aim_modifiers as battle_tag_aim_modifiers, tagged_by as battle_tagged_by,
 };
 
 pub use btech::toggle_semiguided as toggle_battle_semiguided;
@@ -695,6 +695,7 @@ pub use btech::{VehicleWeaponUse, reserve_vehicle_weapon as reserve_battle_vehic
 
 /// Read target movement contributions for Mechs and ground vehicles.
 pub use btech::unit_target_movement_modifier as battle_unit_target_movement_modifier;
+pub use btech::{TargetMovement, unit_target_movement as battle_unit_target_movement};
 
 /// Toggle Stinger ammunition on an intact, recycled indirect missile launcher.
 pub use btech::toggle_stinger as toggle_battle_stinger;
@@ -1168,9 +1169,6 @@ pub use btech::{
     AdvantageDefinition, AdvantageKind, BATTLE_ADVANTAGES,
     advantage_definition as battle_advantage_definition,
 };
-
-/// Shared durable forward-observer link clocks.
-pub use btech::{SpotterEvents, advance_spotter_links as advance_battle_spotter_links};
 
 pub use btech::RollStatistics;
 

@@ -148,7 +148,6 @@ fn resolve(
     request: super::fire_target::FireTargetRequest<'_>,
 ) -> Result<SightReport> {
     let operator = super::combat_operator::admit_running(world, shooter, pilot)?;
-    super::spotter::check_firing_role(world, shooter)?;
     let (mechanics, disabled, mode, mut dice) =
         super::with_unit!(world.btech.unit(shooter).expect("admitted unit"), |unit| {
             (

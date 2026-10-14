@@ -15,6 +15,21 @@ use stompymux_rs::{
     set_battle_speed,
 };
 
+/// TAG attack rules matching the conventional shot rules.
+fn tag_rules() -> stompymux_rs::TagRules {
+    stompymux_rs::TagRules {
+        aim: optical_aim_rules(),
+        extended_gunnery: true,
+    }
+}
+
+/// Seed a unit's dice so its next TAG attack rolls a twelve, and give the connected pilot a
+/// gunnery skill, since a player without a character fires at 18 and could never designate.
+fn tag_seed(world: &mut stompymux_rs::World, id: ObjectId) {
+    shot_skill(world, 7);
+    shot_seed(world, id, support::roll_twelve_seed());
+}
+
 /// Add a defense and, for ballistic AMS, a matching bin without replacing the fixture's
 /// offensive mounts.
 fn install_test_ams(
@@ -2973,13 +2988,13 @@ fn install_test_tag(world: &mut stompymux_rs::World, id: ObjectId, target: Objec
     refresh_battle_contacts(world, &[id]).unwrap();
 }
 
-/// TAG lock/recycle timing and unique ownership survive restart without consuming combat dice.
+/// TAG lock/recycle timing and unique ownership survive restart; the attack draws the unit's dice.
 #[tokio::test]
 async fn tag_selection_timers_and_restart() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = shot_fixture().await;
     let before = world.btech.clone();
-    assert!(select_battle_tag(&mut world, id, ObjectId(1), Some(target)).is_err());
+    assert!(select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).is_err());
     assert_eq!(world.btech, before);
     install_test_tag(&mut world, id, target);
     world
@@ -2989,15 +3004,16 @@ async fn tag_selection_timers_and_restart() {
         })
         .unwrap();
     let before = world.btech.clone();
-    assert!(select_battle_tag(&mut world, id, ObjectId(1), Some(target)).is_err());
+    assert!(select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).is_err());
     assert_eq!(world.btech, before);
     refresh_battle_contacts(&mut world, &[id]).unwrap();
 
+    tag_seed(&mut world, id);
     let dice = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"].clone();
-    select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
+    select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
     assert_eq!(battle_tagged_by(&world, target), Some(id));
     let selected = world.btech.clone();
-    assert!(select_battle_tag(&mut world, id, ObjectId(1), None).is_err());
+    assert!(select_battle_tag(&mut world, id, ObjectId(1), None, tag_rules()).is_err());
     assert_eq!(world.btech, selected);
     for _ in 0..29 {
         assert!(advance_battle_tags(&mut world).is_empty());
@@ -3009,7 +3025,7 @@ async fn tag_selection_timers_and_restart() {
     assert_eq!(notices.len(), 1);
     assert!(notices[0].text.contains("stable lock"));
     assert!(advance_battle_tags(&mut loaded).is_empty());
-    select_battle_tag(&mut loaded, id, ObjectId(1), None).unwrap();
+    select_battle_tag(&mut loaded, id, ObjectId(1), None, tag_rules()).unwrap();
     assert_eq!(battle_tagged_by(&loaded, target), None);
     for _ in 0..29 {
         assert!(advance_battle_tags(&mut loaded).is_empty());
@@ -3023,10 +3039,137 @@ async fn tag_selection_timers_and_restart() {
         loaded.btech.constructed_units()[&id].tag(),
         TagState::default()
     );
-    assert_eq!(
+    // The designation was a weapon attack and drew its 2d6 from the unit's dice.
+    assert_ne!(
         serde_json::to_value(&loaded.btech.constructed_units()[&id]).unwrap()["dice"],
         dice
     );
+}
+
+/// A failed TAG roll designates nothing and recycles the TAG as a fired weapon would (TW p. 142).
+#[tokio::test]
+async fn tag_miss_designates_nothing_and_recycles() {
+    use stompymux_rs::*;
+    let (_dir, config, mut world, id, target) = shot_fixture().await;
+    install_test_tag(&mut world, id, target);
+    // Gunnery 4 against a running, unlocked, adjacent target needs a 4; the dice roll a 2.
+    shot_skill(&mut world, 7);
+    shot_seed(&mut world, id, support::roll_two_seed());
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["power"] = serde_json::json!({"state":"running"});
+        })
+        .unwrap();
+    let aim = battle_tag_aim_modifiers(&world, id, target, 4, optical_aim_rules()).unwrap();
+    assert_eq!(aim.subtotal(), Some(4), "{aim:?}");
+    let notices =
+        select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
+    assert_eq!(notices.len(), 1);
+    assert!(
+        notices[0].text.contains("fails to designate"),
+        "{}",
+        notices[0].text
+    );
+    assert_eq!(battle_tagged_by(&world, target), None);
+    assert_eq!(
+        world.btech.constructed_units()[&id].tag(),
+        TagState {
+            target: None,
+            remaining: 30
+        }
+    );
+    let before = world.btech.clone();
+    assert!(select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).is_err());
+    assert_eq!(world.btech, before);
+    for _ in 0..29 {
+        assert!(advance_battle_tags(&mut world).is_empty());
+    }
+    assert!(
+        advance_battle_tags(&mut world)[0]
+            .text
+            .contains("finished recycling")
+    );
+    world.validate(&config).unwrap();
+}
+
+/// TAG aims like a weapon: its own 5/9/15 brackets, the attacker's and target's movement,
+/// the secondary-target penalty without a lock, and a Haywire pod on the designator.
+#[tokio::test]
+async fn tag_aim_uses_weapon_attack_modifiers() {
+    use stompymux_rs::*;
+    let (_dir, _config, mut world, id, target) = long_field_fixture().await;
+    install_test_tag(&mut world, id, target);
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["free_fall"] = serde_json::Value::Null;
+        })
+        .unwrap();
+    // Administrative placement needs the unit shut down; it runs again afterwards so it is
+    // not an immobile target.
+    let relocate = |world: &mut World, x: i64| {
+        world
+            .btech
+            .rewrite_unit_record(target, |record| {
+                record["power"] = serde_json::to_value(Power::Off).unwrap();
+            })
+            .unwrap();
+        place_battle_unit(world, target, map, x, 5).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(target, |record| {
+                record["power"] = serde_json::json!({"state":"running"});
+            })
+            .unwrap();
+        refresh_battle_contacts(world, &[id]).unwrap();
+    };
+    for (x, bracket, modifier) in [
+        (10, RangeBracket::Short, 0),
+        (12, RangeBracket::Medium, 2),
+        (18, RangeBracket::Long, 4),
+    ] {
+        relocate(&mut world, x);
+        let aim = battle_tag_aim_modifiers(&world, id, target, 4, optical_aim_rules()).unwrap();
+        let range = aim.range.unwrap();
+        assert_eq!((range.bracket, range.modifier), (bracket, modifier), "{x}");
+        assert_eq!(aim.gunnery, 4);
+        // With no lock at all there is no secondary-target penalty.
+        assert_eq!(aim.target_lock, 0);
+        assert_eq!(aim.beacon_accuracy, 0);
+        assert_eq!(aim.ammunition_accuracy, 0);
+        assert_eq!(aim.targeting_computer, 0);
+    }
+    relocate(&mut world, 27);
+    assert!(
+        battle_tag_aim_modifiers(&world, id, target, 4, optical_aim_rules())
+            .unwrap()
+            .range
+            .is_none()
+    );
+    relocate(&mut world, 6);
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["target_lock"] = serde_json::json!({"target":target.0});
+            record["beacons"] = serde_json::json!({"CenterTorso":["haywire"]});
+            record["motion"]["speed"] = 43.0.into();
+            record["motion"]["desired_speed"] = 43.0.into();
+        })
+        .unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["motion"]["speed"] = 43.0.into();
+            record["motion"]["desired_speed"] = 43.0.into();
+        })
+        .unwrap();
+    let aim = battle_tag_aim_modifiers(&world, id, target, 4, optical_aim_rules()).unwrap();
+    assert_eq!(aim.target_lock, 0);
+    assert_eq!(aim.beacon_accuracy, 1);
+    assert_eq!(aim.attacker_movement, 1);
+    assert_eq!(aim.target_movement, 1);
 }
 
 /// Geometry, component loss and shutdown invalidate TAG immediately for consumers, then start recycle on the tick.
@@ -3035,9 +3178,10 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = shot_fixture().await;
     install_test_tag(&mut base, id, target);
+    tag_seed(&mut base, id);
     for reason in ["wall", "damage", "shutdown", "missing", "unseen"] {
         let mut world = base.clone();
-        select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
+        select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
         match reason {
             "unseen" => {
                 // An adjacent target is always in sight; only invisibility takes it away.
@@ -3128,6 +3272,7 @@ async fn tag_native_lua_rollback_and_inspection() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = shot_fixture().await;
     install_test_tag(&mut world, id, target);
+    tag_seed(&mut world, id);
     let native = Scripts::new(
         &config,
         std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -3212,7 +3357,8 @@ async fn tag_takeover_and_rejected_targets() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id, target) = long_field_fixture().await;
     install_test_tag(&mut world, id, target);
-    select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
+    tag_seed(&mut world, id);
+    select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
     let definition = world.btech.constructed_units()[&id].definition().clone();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let other = world.create(&config, "Other tagger".into(), Kind::Thing);
@@ -3228,13 +3374,16 @@ async fn tag_takeover_and_rejected_targets() {
         advance_battle_units(&mut world, 0, true);
     }
     refresh_battle_contacts(&mut world, &[other]).unwrap();
+    tag_seed(&mut world, other);
     for rejected in [other, id, ObjectId(999999)] {
         let before = world.btech.clone();
-        assert!(select_battle_tag(&mut world, other, ObjectId(1), Some(rejected)).is_err());
+        assert!(
+            select_battle_tag(&mut world, other, ObjectId(1), Some(rejected), tag_rules()).is_err()
+        );
         assert_eq!(world.btech, before);
     }
     assert_eq!(
-        select_battle_tag(&mut world, other, ObjectId(1), Some(target))
+        select_battle_tag(&mut world, other, ObjectId(1), Some(target), tag_rules())
             .unwrap()
             .len(),
         2
@@ -3261,7 +3410,7 @@ async fn tag_takeover_and_rejected_targets() {
     place_battle_unit(&mut world, target, map, 25, 5).unwrap();
     assert!(battle_unit_range(&world, other, target).unwrap().spatial > 15.0);
     let before = world.btech.clone();
-    assert!(select_battle_tag(&mut world, other, ObjectId(1), Some(target)).is_err());
+    assert!(select_battle_tag(&mut world, other, ObjectId(1), Some(target), tag_rules()).is_err());
     assert_eq!(world.btech, before);
     assert_eq!(battle_tagged_by(&world, target), None);
     assert_eq!(advance_battle_tags(&mut world).len(), 1);
@@ -3285,7 +3434,8 @@ async fn semiguided_fixture() -> (
     state["constructed"][target.0.to_string()]["motion"]["speed"] = 43.0.into();
     state["constructed"][target.0.to_string()]["motion"]["desired_speed"] = 43.0.into();
     world.btech = serde_json::from_value(state).unwrap();
-    select_battle_tag(&mut world, tagger, ObjectId(1), Some(target)).unwrap();
+    tag_seed(&mut world, tagger);
+    select_battle_tag(&mut world, tagger, ObjectId(1), Some(target), tag_rules()).unwrap();
     let mut definition =
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     definition
@@ -3335,7 +3485,8 @@ async fn semiguided_fixture() -> (
     (dir, config, world, shooter, target, tagger, index)
 }
 
-/// TAG assistance is live, applies during settling, and requires a different friendly source.
+/// TAG assistance is live, applies during settling, and comes from any friendly TAG, the
+/// shooter's own included (TW p. 142); an immobile target keeps its -4.
 #[tokio::test]
 async fn semiguided_tag_aim_and_link_loss() {
     use stompymux_rs::*;
@@ -3393,17 +3544,19 @@ async fn semiguided_tag_aim_and_link_loss() {
                 trial.btech = serde_json::from_value(state).unwrap();
                 if case == "self" {
                     install_test_tag(&mut trial, shooter, target);
-                    select_battle_tag(&mut trial, shooter, ObjectId(1), Some(target)).unwrap();
+                    tag_seed(&mut trial, shooter);
+                    select_battle_tag(&mut trial, shooter, ObjectId(1), Some(target), tag_rules())
+                        .unwrap();
                 }
             }
         }
         let movement = battle_aim_modifiers(&trial, shooter, target, index, 4, optical_aim_rules())
             .unwrap()
             .target_movement;
-        if case == "negative" {
-            assert_eq!(movement, -4);
-        } else {
-            assert_eq!(movement, normal.target_movement, "{case}");
+        match case {
+            "negative" => assert_eq!(movement, -4),
+            "self" => assert_eq!(movement, 0),
+            _ => assert_eq!(movement, normal.target_movement, "{case}"),
         }
     }
 }
@@ -3521,12 +3674,66 @@ async fn spotter_fixture() -> (
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-    refresh_battle_contacts(&mut world, &[shooter]).unwrap();
+    // The shooter moves behind a wall: an attacker that can see its target may not fire
+    // indirectly (TW p. 111), so the observer's sight must be the only one.
+    let map = world.btech.constructed_units()[&shooter]
+        .position()
+        .unwrap()
+        .map;
+    world
+        .btech
+        .rewrite_unit_record(shooter, |record| {
+            record["power"] = serde_json::to_value(Power::Off).unwrap();
+        })
+        .unwrap();
+    place_battle_unit(&mut world, shooter, map, 5, 8).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(shooter, |record| {
+            record["power"] = serde_json::to_value(Power::Running).unwrap();
+        })
+        .unwrap();
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["terrain"][SPOTTER_WALL] =
+                serde_json::to_value(Hex::new(Terrain::Wall, 8)).unwrap();
+        })
+        .unwrap();
+    refresh_battle_contacts(&mut world, &[shooter, observer]).unwrap();
     select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
+    assert!(
+        battle_aim_modifiers(&world, shooter, target, index, 6, optical_aim_rules())
+            .unwrap()
+            .indirect
+            .is_some()
+    );
     (dir, config, world, shooter, target, observer, index)
 }
 
-/// Self spotting requires recycled limbs and weapons and prohibits firing before any expenditure.
+/// Terrain index of the wall hex (5,7) between the spotter fixture's shooter and target.
+const SPOTTER_WALL: usize = 7 * 12 + 5;
+
+/// Clear the spotter fixture's wall so the shooter can see its target again.
+fn unblock_spotter_wall(world: &mut stompymux_rs::World, shooter: ObjectId) {
+    use stompymux_rs::*;
+    let map = world.btech.constructed_units()[&shooter]
+        .position()
+        .unwrap()
+        .map;
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["terrain"][SPOTTER_WALL] =
+                serde_json::to_value(Hex::new(Terrain::Clear, 0)).unwrap();
+        })
+        .unwrap();
+    refresh_battle_contacts(world, &[shooter]).unwrap();
+}
+
+/// A spotter may fire (TW p. 111): recycling weapons do not stop the declaration and the
+/// declared spotter keeps shooting. A Haywire pod (TW p. 141) and a charge or death from
+/// above this turn (TW p. 111) are what bar a unit from spotting.
 #[tokio::test]
 async fn spotter_self_declaration_and_fire_guards() {
     use stompymux_rs::*;
@@ -3543,22 +3750,43 @@ async fn spotter_self_declaration_and_fire_guards() {
                 };
             })
             .unwrap();
+        select_battle_spotter(&mut trial, id, ObjectId(1), Some(id)).unwrap();
+        assert_eq!(trial.btech.constructed_units()[&id].spotter(), Some(id));
+    }
+    for prohibition in ["haywire", "charging", "dfa_landed", "charged"] {
+        let mut trial = world.clone();
+        trial
+            .btech
+            .rewrite_unit_record(id, |record| match prohibition {
+                "haywire" => record["beacons"] = serde_json::json!({"CenterTorso":["haywire"]}),
+                "charging" => record["charge"]["target"] = serde_json::json!(target.0),
+                _ => record["physical_assault_time"] = serde_json::json!(0),
+            })
+            .unwrap();
         let before = trial.btech.clone();
-        assert!(select_battle_spotter(&mut trial, id, ObjectId(1), Some(id)).is_err());
+        let error = select_battle_spotter(&mut trial, id, ObjectId(1), Some(id)).unwrap_err();
+        assert!(
+            error.to_string().contains("cannot spot"),
+            "{prohibition}: {error}"
+        );
         assert_eq!(trial.btech, before);
     }
     let mut world = world;
     select_battle_spotter(&mut world, id, ObjectId(1), Some(id)).unwrap();
     let before = world.btech.clone();
-    assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).is_err());
-    assert!(spend_battle_weapon(&mut world, id, ObjectId(1), 0).is_err());
-    assert_eq!(world.btech, before);
+    assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).is_ok());
+    assert_ne!(world.btech, before);
+    assert_eq!(
+        world.btech.constructed_units()[&id].last_weapon_fire(),
+        Some(world.btech.simulation_time())
+    );
     assert!(
         select_battle_spotter(&mut world, id, ObjectId(1), None).unwrap()[0]
             .text
             .contains("spot no longer")
     );
-    assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules()).is_ok());
+    // Weapon 0 is recycling from the shot made while spotting; the next mount fires.
+    assert!(resolve_battle_shot(&mut world, id, ObjectId(1), target, 1, shot_rules()).is_ok());
     world.validate(&config).unwrap();
 }
 
@@ -3717,22 +3945,103 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     let aim = battle_aim_modifiers(&world, shooter, target, index, 6, shot_rules().aim).unwrap();
     assert_eq!(world.btech, before);
     let indirect = aim.indirect.unwrap();
-    assert_eq!(indirect.spotter, observer);
-    assert_eq!(indirect.spotting, 8);
+    assert_eq!(
+        indirect,
+        IndirectAim {
+            spotter: observer,
+            movement: 0,
+            spotter_attacked: false,
+            tag_guided: false,
+        }
+    );
+    assert_eq!(indirect.modifier(), 1);
     assert_eq!(aim.target_lock, 0);
+    assert_eq!(aim.spotting, 0);
     assert!(aim.perception.is_some());
     assert!(aim.subtotal().is_some());
     assert_eq!(
         aim.distance,
         battle_unit_range(&world, shooter, target).unwrap().spatial
     );
+    // A spotter that fired within the turn adds +1 to the shot it spots (TW p. 111), and its
+    // own weapons take +1 while a unit fires through it.
+    let mut attacked = world.clone();
+    let now = attacked.btech.simulation_time();
+    attacked
+        .btech
+        .rewrite_unit_record(observer, |record| {
+            record["last_weapon_fire"] = serde_json::json!(now);
+            record["motion"]["speed"] = 43.0.into();
+            record["motion"]["desired_speed"] = 43.0.into();
+        })
+        .unwrap();
+    let attacked_aim =
+        battle_aim_modifiers(&attacked, shooter, target, index, 6, shot_rules().aim).unwrap();
+    assert_eq!(
+        attacked_aim.indirect.unwrap(),
+        IndirectAim {
+            spotter: observer,
+            movement: 1,
+            spotter_attacked: true,
+            tag_guided: false,
+        }
+    );
+    assert_eq!(
+        attacked_aim.subtotal().unwrap() - aim.subtotal().unwrap(),
+        2
+    );
+    let own = battle_aim_modifiers(&attacked, observer, target, 0, 6, shot_rules().aim).unwrap();
+    assert_eq!(own.spotting, 1);
+    assert_eq!(own.attacker_movement, 1);
+    // A firer that can see the target itself may not fire indirectly (TW p. 111): the
+    // observer still supplies the target, but the shot is direct; without any lock there
+    // is no secondary-target penalty.
+    let mut seen = world.clone();
+    unblock_spotter_wall(&mut seen, shooter);
+    // Direct fire needs the target in the weapon's arc, so the shooter faces it again.
+    seen.btech
+        .rewrite_unit_record(shooter, |record| {
+            record["motion"]["heading"] = 0.into();
+            record["motion"]["desired_heading"] = 0.into();
+        })
+        .unwrap();
+    assert!(
+        visible_battle_contact(&seen, shooter, target)
+            .unwrap()
+            .is_some()
+    );
+    let seen_aim =
+        battle_aim_modifiers(&seen, shooter, target, index, 6, shot_rules().aim).unwrap();
+    assert!(seen_aim.indirect.is_none());
+    assert_eq!(seen_aim.target_lock, 0);
+    assert_eq!(
+        seen_aim.perception,
+        Some(PerceptionAim {
+            channel: Some(DetectionChannel::Sight),
+            direct_fire: true,
+            modifier: 0,
+        })
+    );
+    let seen_report = resolve_battle_shot(
+        &mut seen.clone(),
+        shooter,
+        ObjectId(1),
+        observer,
+        index,
+        shot_rules(),
+    )
+    .unwrap();
+    assert_eq!(seen_report.target, target);
+    assert!(seen_report.aim.indirect.is_none());
     // Selecting a personal target drops the observer's routing: the shot becomes direct, on the
     // shooter's own sight of a target its side has spotted (Tactical Operations p. 191).
     let mut direct = world.clone();
+    unblock_spotter_wall(&mut direct, shooter);
     direct
         .btech
         .rewrite_unit_record(shooter, |record| {
             record["target_lock"] = serde_json::json!({"target":target.0});
+            record["contacts"] = serde_json::json!({});
         })
         .unwrap();
     let direct_aim =
@@ -3955,13 +4264,10 @@ async fn indirect_spotter_experience_eligibility_and_rollback() {
         );
         assert_eq!(scripts.world().btech, trial.btech);
         assert!(scripts.drain_outbox().is_empty());
-        let (count, miss, spotting_target) = scripts.eval_callback::<(usize, bool, i16)>(&format!(
-            "local shot = btech.unit.fire({},1,{index}); return #shot.experience_messages, shot.salvo == nil, shot.aim.indirect.spotting", shooter.0
+        let (count, miss) = scripts.eval_callback::<(usize, bool)>(&format!(
+            "local shot = btech.unit.fire({},1,{index}); return #shot.experience_messages, shot.salvo == nil", shooter.0
         )).unwrap();
         assert!(miss);
-        if exclusion == "level" {
-            assert_eq!(spotting_target, 7);
-        }
         let spotting = !matches!(
             exclusion,
             "target" | "observer" | "disconnected" | "limited"

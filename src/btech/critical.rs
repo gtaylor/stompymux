@@ -483,7 +483,6 @@ impl Mech {
             self.carried_club = None;
         }
         if self.is_destroyed() {
-            super::spotter_events::clear(&mut self.spotter_events);
             self.self_destruct = None;
             self.crew_recovery.clear();
             self.stagger = Default::default();

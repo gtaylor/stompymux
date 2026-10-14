@@ -878,7 +878,7 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
     }
 }
 
-/// An off-screen radio observer feeds the existing artillery launch path after its delay completes.
+/// An observer the launcher cannot see feeds the artillery launch path as soon as it is selected.
 #[tokio::test]
 async fn artillery_fires_after_radio_observer_connection() {
     use std::{cell::RefCell, rc::Rc};
@@ -905,9 +905,6 @@ async fn artillery_fires_after_radio_observer_connection() {
             })
             .unwrap();
         select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
-        for _ in 0..10 {
-            advance_battle_spotter_links(&mut world).unwrap();
-        }
         assert_eq!(
             world.btech.constructed_units()[&shooter].spotter(),
             Some(observer)

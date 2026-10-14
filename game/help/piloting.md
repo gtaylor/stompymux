@@ -412,9 +412,11 @@ selection by rejecting the change. Matching ammunition is required to fire.
 `lbx <selection>` toggles LB-X autocannons between slug and cluster ammunition.
 Use a weapon number, comma-separated numbers or a range, as with `flamerheat`.
 The assigned conscious pilot must have a running unit and an intact, recycled
-weapon. `weapons` marks cluster mode with `[LBX]`. Cluster fire receives a −3
-accuracy modifier against VTOLs (including landed ones), or −1 against other
-units, and resolves each pellet as one damage point. Slugs deal the
+weapon. `weapons` marks cluster mode with `[LBX]`. Cluster fire receives a −1
+accuracy modifier, or −3 against a target in the air: an airborne VTOL
+(hovering included), a jumping Mech or a dropping unit (flak, Total Warfare
+p. 114). A landed VTOL is an ordinary target. Each pellet resolves as one
+damage point. Slugs deal the
 weapon's normal damage in one hit. Only bins matching the selected mode supply
 ammunition; an empty selected bin does not switch to the other kind. The selected
 mode survives shutdown and restart.
@@ -497,7 +499,8 @@ or ammunition spent. The command retains the game's `gattling` spelling.
 
 `precision <selection>` toggles Precision ammunition on conventional and light
 IS autocannons. It uses separate half-capacity bins and reduces the target's
-movement modifier by two, to a minimum of zero. It can be combined with rapid
+movement modifier by two, to a minimum of zero; the −4 for an immobile target
+and the prone adjustments are untouched. It can be combined with rapid
 fire; weapon inspection shows both selections. It does not fall back to normal
 ammunition when Precision bins are empty.
 
@@ -772,34 +775,55 @@ Your unit's radar sweeps with the rest of the suite: 8/16/24 hexes for Mechs,
 ECM and stealth systems add to the sweep roll. It has no special treatment of
 airborne targets.
 
-Use `tag ID` or `tag #unit` to illuminate an enemy within fifteen hexes with
-working TAG hardware and an unobstructed line of sight. Mechs and vehicles
-share this control, including TAG built into C3 master computers. TAG takes thirty seconds to settle;
-you cannot change it during that timer. Use `tag -` after settling to stop.
-Breaking a connection starts thirty seconds of recycling. Moving out of range,
-blocked sight, lost sensor contact, shutdown or lost equipment breaks the connection. Another tagger
-can take over the same target. TAG state appears in unit inspection.
-Lua uses `btech.unit.tag(unit, pilot, target)` and nil to stop.
+Use `tag ID` or `tag #unit` to make a TAG attack on an enemy within fifteen
+hexes with working TAG hardware and an unobstructed line of sight. Designating is
+a weapon attack (Total Warfare p. 142): it rolls 2d6 against your ordinary to-hit
+number with TAG's own range brackets of 5/9/15 hexes and no minimum range. Your
+movement, heat and sensor damage, the target's movement and cover, the light and
+the secondary-target penalty all count, as does a Haywire pod on your unit; TAG
+has no ammunition or targeting-computer terms. A miss designates nothing and the
+TAG recycles for thirty seconds like a fired weapon. Mechs and vehicles share
+this control, including TAG built into C3 master computers. A hit takes thirty
+seconds to settle; you cannot change it during that timer. Use `tag -` after
+settling to stop. Breaking a connection starts thirty seconds of recycling.
+Moving out of range, blocked sight, lost sensor contact, shutdown or lost
+equipment breaks the connection. Another tagger can take over the same target.
+TAG state appears in unit inspection. Lua uses `btech.unit.tag(unit, pilot,
+target)` and nil to stop.
 
 Use `sguided <weapon>` to select semi-guided rounds on a standard LRM launcher
 (IS, Clan or Enhanced) or an MML loaded with long-range rounds (Total Warfare
-p. 142); repeat it for normal rounds. A friendly unit's current TAG removes
-positive target-movement aiming penalties. Your own TAG does not provide this
-benefit, and losing the friendly TAG removes it. Negative movement modifiers
-remain. The launcher needs matching semi-guided ammunition; normal rounds are
-not substituted. Lua uses `btech.unit.sguided(unit, pilot, weapon)`.
+p. 142); repeat it for normal rounds. Against a target a friendly unit's TAG
+designates, your own included, semi-guided missiles ignore the target's
+movement modifier; the −4 for an immobile target and the prone adjustments
+remain. Fired indirectly at such a target, they also ignore the +1 indirect
+modifier, the spotter's movement and the cover the spotter sees. Losing the TAG
+removes the benefit. The launcher needs matching semi-guided ammunition; normal
+rounds are not substituted. Lua uses `btech.unit.sguided(unit, pilot, weapon)`.
 
-Use `spot #your-unit` to declare yourself a spotter after weapons and limbs finish
-recycling. You cannot fire while spotting; `spot -` ends that role. A friendly unit
-can select you with `spot #your-unit` while it has an acquired contact with you.
-Selecting another spotter restricts firing to indirect-capable missiles and artillery
-until `spot -` clears the link. Lua uses `btech.unit.spot(unit, pilot, observer)`.
+Use `spot #your-unit` to declare yourself a spotter; `spot -` ends that role. A
+spotter keeps firing its own weapons (Total Warfare p. 111). While another unit
+fires through you, your own weapon attacks take +1, and an indirect shot you
+spot takes a further +1 if you launched a weapon within the last thirty seconds.
+A unit carrying an iNarc Haywire pod cannot spot, and neither can one that is
+charging or making a death from above attack, or did so within the last thirty
+seconds. A friendly unit selects you with `spot #your-unit`; it needs no sight
+of you, only a declared, running, conscious spotter on its battlefield.
+Selecting another spotter restricts firing to indirect-capable missiles and
+artillery until `spot -` clears the link. Lua uses `btech.unit.spot(unit, pilot,
+observer)`.
 
 For indirect missile fire, select a friendly spotter, clear your own target with
 `lock -`, and use `fire <weapon number>`. Your observer must have an acquired unit
-target. Its movement, sensor view and spotting skill affect aim.
-Keeping your own unit target lock uses direct missile fire. Without that lock,
-your observer supplies the target even when you give `fire` an explicit target ID.
+target. Indirect fire adds +1, your observer's movement modifier (walked +1,
+ran +2, jumped +3, prone +2) and +1 if it also attacked this turn; terrain and
+cover come from the observer's view of the target, while range, including
+minimum range, is measured from you. An attacker that can see its target
+itself may not fire indirectly: with a spotter selected and no target lock,
+the observer still supplies the target, but the shot resolves as direct fire
+from your own sight of it. Keeping your own unit target lock uses direct missile
+fire. Without that lock, your observer supplies the target even when you give
+`fire` an explicit target ID.
 
 For artillery, your observer must select a visible hex. The observer must remain
 running, friendly, conscious and on your battlefield. Artillery uses the observer's
@@ -1150,9 +1174,10 @@ ammunition. The weapon
 must be intact and recycled, and one-shot launchers cannot change modes. Matching
 Stinger ammunition is required to fire; ordinary rounds are not substituted.
 Stinger shots can engage airborne units but cannot target grounded units or hexes.
-They receive a −3 to-hit bonus against flying VTOLs and −1 against units in orbital
-descent, including descent controlled by jump jets after a cocoon opens. Jumping
-Mechs receive no additional Stinger bonus.
+They receive a −3 to-hit bonus against airborne VTOLs (hovering included, never a
+landed one) and −1 against units in orbital descent, including descent controlled
+by jump jets after a cocoon opens. Jumping Mechs receive no additional Stinger
+bonus.
 Their maximum reach is seven hexes longer, with ordinary range penalties. Lua uses
 `btech.unit.stinger(unit, pilot, weapon)`.
 
@@ -1334,6 +1359,12 @@ of effective maximum speed the check is two points harder and failure causes a
 more severe fall. Reverse travel uses the same absolute-speed thresholds.
 Dropping into water can flood exposed compartments.
 The final ground contact also activates stepping mines.
+
+Firing when down adds +2 to your weapon attacks (Total Warfare p. 113); a biped
+propped on its only remaining arm takes +3 instead (Tactical Operations p. 83).
+A four-legged Mech with all four legs intact and no hip critical fires as
+though standing, with no prone modifier. Targets shooting at a prone Mech get
+−2 from an adjacent hex and +1 from farther away.
 
 
 ### Swarm missile ammunition

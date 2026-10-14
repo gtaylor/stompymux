@@ -238,8 +238,8 @@ impl<'a> UnitRef<'a> {
         pub fn signature(&self) -> UnitSignature;
         /// Self-selection declares this unit a spotter; another ID selects a forward observer.
         pub fn spotter(&self) -> Option<ObjectId>;
-        /// Read pending radio connections and periodic checks without advancing their clocks.
-        pub fn spotter_events(&self) -> &'a super::SpotterEvents;
+        /// Simulation time of the last weapon this unit launched, if it ever has.
+        pub fn last_weapon_fire(&self) -> Option<i64>;
         /// Saved TAG selection and countdown; current geometry is checked separately.
         pub fn tag(&self) -> TagState;
         /// Standalone TAG and integrated C3 master equipment share their live damage gate.

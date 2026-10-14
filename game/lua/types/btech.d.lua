@@ -353,7 +353,7 @@ function btech_unit.inspect(dbref) end
 ---@field fired_recently boolean Launched a weapon since the last heartbeat.
 ---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 ---@field artillery_adjustment integer Saved correction for the current artillery target.
----@field spotter_events SpotterEvents Pending radio requests and periodic checks.
+---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
 ---@field tag TagState
 ---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 ---@field scanner_perception integer Perception captured at startup completion.
@@ -474,7 +474,8 @@ function btech_unit.inspect(dbref) end
 ---@field crew_killed boolean Instant crew loss, independent of tactical and character injury counts.
 ---@field electronics Electronics Selected suite modes and last committed field.
 ---@field spotter integer|nil Self declares spotting; another unit selects a forward observer.
----@field spotter_events SpotterEvents Pending radio requests and periodic checks.
+---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
+---@field physical_assault_time integer|nil Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
 ---@field tag TagState Shared TAG selection and lock/recycle countdown.
 ---@field character_pilot {injuries: integer, killed: boolean}? Saved RPG pilot status, independent of tactical injury count.
 ---@field friendly_fire_safety boolean Pilot-selected teammate protection.
@@ -1255,20 +1256,11 @@ function btech_unit.contacts(dbref, preferences) end
 ---@return boolean
 function btech_unit.lock(dbref, pilot, target) end
 
----@class SpotterEvents
----@field events SpotterEvent[] Independent requests in insertion order; detached inspection only.
-
----@class SpotterEvent
----@field order integer Global order among active events.
----@field remaining integer Seconds until connection completion or maintenance.
----@field observer integer Observer unit dbref.
----@field positions Point[]? Captured shooter and observer coordinates during setup; nil for maintenance.
-
 ---@class TagState
 ---@field target integer? Selected target; nil during recycle.
 ---@field remaining integer Lock/recycle seconds, zero through thirty.
 
----Illuminate an enemy within fifteen hexes, or stop with nil; requires working TAG and a ready timer.
+---Make a TAG attack roll at an enemy within fifteen hexes (ranges 5/9/15), or stop with nil; requires working TAG and a ready timer. A miss designates nothing and recycles the TAG.
 ---@param dbref integer
 ---@param pilot integer
 ---@param target integer?
@@ -1398,13 +1390,14 @@ function btech_unit.autoturret(dbref, pilot) end
 
 ---@class AimModifiers
 ---@field self_target boolean Coolant self-application bypasses contact acquisition.
----@field indirect {spotter: integer, spotting: integer, movement: integer, target_lock: integer}|nil Observer contributions; perception then describes the spotter's view.
+---@field indirect {spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
 ---@field gunnery integer
 ---@field distance number
 ---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range; physical limits and firing visibility remain separate.
 ---@field range {bracket: string, modifier: integer}|nil
 ---@field attacker_movement integer
----@field target_movement integer Movement contribution, including +1 for a VTOL with nonzero horizontal or vertical speed.
+---@field spotting integer +1 while this unit spots for another unit's indirect fire.
+---@field target_movement integer Movement contribution, including +1 for a jumping Mech or an airborne VTOL, -4 for an immobile target and the prone adjustments.
 ---@field bogged_down integer Minus two against a target stuck in soft ground.
 ---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
 ---@field light integer Darkness on the target's map, less what searchlights and target heat offset.
@@ -1416,7 +1409,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field targeting_computer integer Eligible computer fire: -1 normally, +3 for a selected section on a mobile target.
 ---@field aimed_section integer Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
 ---@field beacon_accuracy integer Haywire interference and iNarc homing assistance.
----@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -3 versus VTOLs, otherwise -1; Stinger is -3 versus flying VTOLs and -1 during orbital descent.
+---@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -1, -3 against an airborne target (flak); Stinger is -3 versus flying VTOLs and -1 during orbital descent.
 ---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 ---@field target_lock integer
 ---@field perception {channel: DetectionChannel|nil, direct_fire: boolean, modifier: integer}|nil Nil unless the shooter or its side holds the target as a contact; direct_fire is false behind blocking terrain.
@@ -2499,7 +2492,7 @@ function btech_unit.sguided(dbref, pilot, weapon) end
 ---@return AmmunitionMode
 function btech_unit.stinger(dbref, pilot, weapon) end
 
----Select an acquired friendly spotter; use own dbref to declare spotting, or nil to stop.
+---Select a friendly declared spotter on the same battlefield; use own dbref to declare spotting, or nil to stop.
 ---@param dbref integer
 ---@param pilot integer
 ---@param spotter integer?

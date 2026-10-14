@@ -128,8 +128,14 @@ pub struct Mech {
     /// Selected observer, or this unit itself while spotting.
     #[serde(default)]
     pub(super) spotter: Option<crate::ObjectId>,
+    /// Simulation time of the last weapon this unit launched; a spotter that attacked within
+    /// the turn makes the indirect fire it spots harder (Total Warfare p. 111).
     #[serde(default)]
-    pub(super) spotter_events: super::SpotterEvents,
+    pub(super) last_weapon_fire: Option<i64>,
+    /// Simulation time of this unit's last charge or death-from-above attack; it may not
+    /// spot for the rest of that turn (Total Warfare p. 111).
+    #[serde(default)]
+    pub(super) physical_assault_time: Option<i64>,
     /// Saved correction for the current artillery target.
     #[serde(default)]
     pub(super) artillery_adjustment: u8,
@@ -430,7 +436,8 @@ super::saved_parts::saved_parts!(Mech {
         supercharger_scheduled_last,
         dumping,
         unjam,
-        spotter_events,
+        last_weapon_fire,
+        physical_assault_time,
     ],
     // The stagger phase wraps every second on a running unit and is stored as a timer; the
     // object stays in the live part so its blanked text never flips between present and absent.
@@ -924,7 +931,8 @@ impl Mech {
             stagger: Default::default(),
             tag: Default::default(),
             spotter: None,
-            spotter_events: Default::default(),
+            last_weapon_fire: None,
+            physical_assault_time: None,
             artillery_adjustment: 0,
             signature: Default::default(),
             scanner_perception: super::scanner::default_perception(),
@@ -1192,10 +1200,14 @@ impl Mech {
         self.overheat_clock.validate()?;
         self.stagger.validate()?;
         self.tag.validate()?;
-        self.spotter_events.validate()?;
         ensure!(
             self.spotter.is_none_or(|id| id.0 > 0),
             "Invalid spotter identity"
+        );
+        ensure!(
+            self.last_weapon_fire.is_none_or(|time| time >= 0)
+                && self.physical_assault_time.is_none_or(|time| time >= 0),
+            "Invalid attack timestamp"
         );
         ensure!(
             self.jump_stabilization <= 12 && (self.jump_stabilization == 0 || !self.is_destroyed()),

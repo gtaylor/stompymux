@@ -198,6 +198,9 @@ pub(super) fn finish_update(
         charge_profile
     };
     let notices = if mutual {
+        // Either party has charged this turn and may not spot for the rest of it.
+        super::spotter::record_physical_assault(world, id);
+        super::spotter::record_physical_assault(world, target);
         let distance = world.btech.constructed_units()[&target].charge.distance;
         if let Some(reports) = reports.as_deref_mut() {
             let report =
@@ -221,6 +224,7 @@ pub(super) fn finish_update(
             text: format!("{error:#}"),
         }]
     } else {
+        super::spotter::record_physical_assault(world, id);
         if let Some(reports) = reports {
             let report = super::charge::resolve_charge_in_action(world, id, target, rules)?;
             super::piloting::append_feedback(

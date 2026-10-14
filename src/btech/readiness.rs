@@ -284,6 +284,7 @@ pub(super) fn use_weapon(
         draws
     };
     let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
+    let now = world.btech.simulation_time();
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     if fire_mode == super::FireMode::Normal {
         unit.fire_modes.remove(&index);
@@ -296,6 +297,9 @@ pub(super) fn use_weapon(
         unit.spent_launchers.insert(index);
     }
     unit.fired_recently |= launched;
+    if launched {
+        unit.last_weapon_fire = Some(now);
+    }
     unit.heat.stored += f64::from(heat);
     unit.weapon_recycle.insert(index, u16::from(recycle));
     Ok(WeaponUse {

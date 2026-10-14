@@ -82,8 +82,8 @@ mod arcs;
 pub use arcs::MountArcs;
 mod assets;
 pub use aim::{
-    AimModifiers, AimRules, IndirectAim, PerceptionAim, aim_modifiers, pilot_aim_modifiers,
-    unit_target_movement_modifier,
+    AimModifiers, AimRules, IndirectAim, PerceptionAim, TargetMovement, aim_modifiers,
+    pilot_aim_modifiers, unit_target_movement, unit_target_movement_modifier,
 };
 pub use arcs::{ContactArc, Facing, Torso, flip_arms, rotate_torso, weapon_bears_on};
 mod surface_break;
@@ -606,7 +606,9 @@ mod vehicle_timers;
 pub use recent_fire::clear_recent_fire;
 
 mod tag;
-pub use tag::{TagState, advance_tags, select_tag, tagged_by};
+pub use tag::{TagRules, TagState, advance_tags, select_tag, tagged_by};
+mod tag_aim;
+pub use tag_aim::tag_aim_modifiers;
 
 pub(crate) mod semiguided;
 pub(crate) use semiguided::SemiGuidedAim;
@@ -1425,9 +1427,6 @@ mod menu;
 
 mod advantages;
 pub use advantages::{AdvantageDefinition, AdvantageKind, BATTLE_ADVANTAGES, advantage_definition};
-
-mod spotter_events;
-pub use spotter_events::{SpotterEvents, advance_spotter_links};
 
 mod shot_counters;
 

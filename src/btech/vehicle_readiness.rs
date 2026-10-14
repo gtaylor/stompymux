@@ -298,9 +298,13 @@ pub(super) fn reserve_prepared_weapon(
             draws
         };
     let heat = fire_mode.launch_heat(mount.weapon, gatling_damage, launched);
+    let now = world.btech.simulation_time();
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.weapon_heat += f64::from(heat);
     vehicle.fired_recently |= launched;
+    if launched {
+        vehicle.last_weapon_fire = Some(now);
+    }
     for draw in &ammunition {
         vehicle
             .expend_ammunition(draw.bin_index, draw.rounds)

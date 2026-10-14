@@ -102,9 +102,6 @@ impl SavedTimers for Mech {
         if let Some(attempt) = self.unjam {
             list.add(T::Unjam, 0, attempt.remaining, Down);
         }
-        for (index, remaining) in self.spotter_events.countdowns() {
-            list.add(T::SpotterEvent, index as i64, remaining, Down);
-        }
         if let Some(remaining) = self.heat_cutoff.remaining {
             list.add(T::HeatCutoff, 0, remaining, Down);
         }

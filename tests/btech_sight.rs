@@ -167,7 +167,6 @@ async fn sight_rejections_are_atomic_across_chassis() {
             "index",
             "target",
             "friendly",
-            "spotting",
         ] {
             let mut world = base.clone();
             let vehicle = world.btech.vehicles().contains_key(&shooter);
@@ -203,7 +202,6 @@ async fn sight_rejections_are_atomic_across_chassis() {
                         state["weapon_failures"][index.to_string()] = serde_json::json!("disabled")
                     }
                     "friendly" => state["friendly_fire_safety"] = true.into(),
-                    "spotting" => state["spotter"] = shooter.0.into(),
                     _ => (),
                 });
             }

@@ -29,12 +29,14 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     let tag = lua.create_function(move |lua, (unit, pilot, target): (i64, i64, Option<i64>)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;
+        let config = crate::lua::configuration(lua);
         crate::lua::transactions::run(lua, &scripts.world, || {
             let notices = crate::select_battle_tag(
                 &mut scripts.world.borrow_mut(),
                 ObjectId(unit),
                 ObjectId(pilot),
                 target.map(ObjectId),
+                crate::TagRules::configured(&config.battletech),
             )
             .map_err(mlua::Error::external)?;
             for notice in notices {

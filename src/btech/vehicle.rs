@@ -176,7 +176,9 @@ pub struct Vehicle {
     pub(super) network_automation: super::NetworkAutomation,
     pub(super) electronics: super::Electronics,
     pub(super) spotter: Option<crate::ObjectId>,
-    pub(super) spotter_events: super::SpotterEvents,
+    /// Simulation time of the last weapon this vehicle launched; a spotter that attacked
+    /// within the turn makes the indirect fire it spots harder (Total Warfare p. 111).
+    pub(super) last_weapon_fire: Option<i64>,
     pub(super) tag: super::TagState,
     pub(super) contacts: BTreeMap<crate::ObjectId, super::Contact>,
     pub(super) fire_modes: BTreeMap<usize, super::FireMode>,
@@ -372,7 +374,7 @@ struct VehicleRecord {
     electronics: super::Electronics,
     spotter: Option<crate::ObjectId>,
     #[serde(default)]
-    spotter_events: super::SpotterEvents,
+    last_weapon_fire: Option<i64>,
     #[serde(default)]
     tag: super::TagState,
     contacts: BTreeMap<crate::ObjectId, super::Contact>,
@@ -510,7 +512,7 @@ super::saved_parts::saved_parts!(Vehicle {
         inferno_remaining,
         unjam,
         pod_removal,
-        spotter_events,
+        last_weapon_fire,
     ],
     live_always: [
         motion,
@@ -993,7 +995,7 @@ impl Vehicle {
             network_automation: Default::default(),
             electronics: Default::default(),
             spotter: None,
-            spotter_events: Default::default(),
+            last_weapon_fire: None,
             tag: Default::default(),
             contacts: Default::default(),
             fire_modes,
@@ -1097,7 +1099,6 @@ impl Vehicle {
 
     /// Cancel active controls once when a vehicle becomes a wreck, preserving material state.
     pub(super) fn finish_destruction(&mut self) {
-        super::spotter_events::clear(&mut self.spotter_events);
         self.self_destruct = None;
         self.hide_elapsed = None;
         self.lose_vtol_lift();
@@ -1750,7 +1751,7 @@ impl Vehicle {
             network_automation: record.network_automation,
             electronics: record.electronics,
             spotter: record.spotter,
-            spotter_events: record.spotter_events,
+            last_weapon_fire: record.last_weapon_fire,
             tag: record.tag,
             contacts: record.contacts,
             fire_modes: record.fire_modes,
@@ -2131,7 +2132,10 @@ impl Vehicle {
             self.spotter.is_none_or(|id| id.0 > 0),
             "Invalid spotter identity"
         );
-        self.spotter_events.validate()?;
+        ensure!(
+            self.last_weapon_fire.is_none_or(|time| time >= 0),
+            "Invalid attack timestamp"
+        );
         self.tag.validate()?;
         ensure!(
             self.c3_network != Some(0) && self.c3i_network != Some(0),

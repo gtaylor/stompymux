@@ -16,7 +16,6 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
                 })
                 || unit.orbital_drop().is_some()
                 || unit.free_fall().is_some()
-                || unit.spotter_events.pending()
                 || unit.tag().target.is_some()
                 || unit.tag().remaining > 0
                 || unit.searchlight().remaining > 0
@@ -52,7 +51,6 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
             .any(|recovery| recovery.remaining > 0)
         || world.btech.constructed_units().values().any(|unit| {
             unit.radio_experience_remaining() > 0
-                || unit.spotter_events.pending()
                 || unit.tag().target.is_some()
                 || unit.tag().remaining > 0
                 || unit.fired_recently()

@@ -1,8 +1,28 @@
 //! Owned TAG links and thirty-second lock/recycle timers; target ownership is derived rather than stored twice.
+//! Designating is a weapon attack with a to-hit roll (Total Warfare pp. 142-143); a failed
+//! roll designates nothing and recycles the TAG as a fired weapon would.
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
+
+/// Rules behind a TAG designation's to-hit roll.
+#[derive(Debug, Clone, Copy)]
+pub struct TagRules {
+    pub aim: AimRules,
+    /// Per-family gunnery skills, as for weapon fire.
+    pub extended_gunnery: bool,
+}
+
+impl TagRules {
+    /// Translate server configuration once for native and Lua TAG commands.
+    pub fn configured(config: &crate::config::BattleTechConfig) -> Self {
+        Self {
+            aim: AimRules::configured(config),
+            extended_gunnery: config.extended_gunnery != 0,
+        }
+    }
+}
 
 /// A target with a positive timer is settling; a timer without a target is recycling.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -173,12 +193,16 @@ pub fn tagged_by(world: &World, target: ObjectId) -> Option<ObjectId> {
     })
 }
 
-/// Start or stop a controlled TAG connection; all admission checks precede mutation.
+/// Make a TAG attack at `target`, or stop designating with `None`; all admission checks
+/// precede mutation. The attack rolls 2d6 from the unit's dice against the standard to-hit
+/// number with TAG's 5/9/15 ranges (TW p. 142). A miss designates nothing and starts the
+/// thirty-second recycle; a hit starts the maintained designation.
 pub fn select_tag(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
     target: Option<ObjectId>,
+    rules: TagRules,
 ) -> Result<Vec<Notice>> {
     admission(world, id, pilot)?;
     let current = state(world, id).context("Unit is unavailable")?;
@@ -215,15 +239,37 @@ pub fn select_tag(
         "You can't TAG friendly units!"
     );
     ensure!(target != id, "You can't TAG yourself!");
-    ensure!(
-        unit_range(world, id, target)?.spatial <= 15.0,
-        "Out of range! TAG ranges are 5/10/15"
-    );
+    let gunnery = super::skills::unit_tag_gunnery_target(world, id, rules.extended_gunnery)?;
+    let aim = super::tag_aim::tag_aim_modifiers(world, id, target, gunnery, rules.aim)?;
+    ensure!(aim.range.is_some(), "Out of range! TAG ranges are 5/9/15");
+    let target_number = aim
+        .subtotal()
+        .context("That is not a valid TAG targetID. Try again.")?;
     let target_name = format!(
         "{} [{}]",
         crate::text::escape(&visible.name),
         victim.label().unwrap_or_else(|| "??".into())
     );
+    let roll = crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
+        unit.dice.two_d6()
+    });
+    if i32::from(roll) < target_number {
+        set_state(
+            world,
+            id,
+            TagState {
+                target: None,
+                remaining: 30,
+            },
+        );
+        notices.push(Notice {
+            unit: id,
+            text: format!(
+                "Your TAG fails to designate {target_name} (rolled {roll}, needed {target_number})."
+            ),
+        });
+        return Ok(notices);
+    }
     let displaced: Vec<_> = super::scanner::scanner_ids(world)
         .into_iter()
         .filter(|&other| {
@@ -254,7 +300,9 @@ pub fn select_tag(
     );
     notices.push(Notice {
         unit: id,
-        text: format!("You light up {target_name} with your TAG."),
+        text: format!(
+            "You light up {target_name} with your TAG (rolled {roll}, needed {target_number})."
+        ),
     });
     Ok(notices)
 }

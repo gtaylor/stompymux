@@ -1,4 +1,5 @@
-//! Transient "fired this heartbeat" marks used by status bits and the simulation scheduler.
+//! Transient "fired this heartbeat" marks used by status bits and the simulation scheduler,
+//! and the durable time of each unit's last launch.
 use super::{Mech, Vehicle};
 use crate::{Flag, World};
 
@@ -7,12 +8,27 @@ impl Mech {
     pub fn fired_recently(&self) -> bool {
         self.fired_recently
     }
+
+    /// Simulation time of the last weapon this unit launched, if it ever has.
+    pub fn last_weapon_fire(&self) -> Option<i64> {
+        self.last_weapon_fire
+    }
+
+    /// Simulation time of this unit's last charge or death-from-above attack, if any.
+    pub fn physical_assault_time(&self) -> Option<i64> {
+        self.physical_assault_time
+    }
 }
 
 impl Vehicle {
     /// A completed launch marks this vehicle until the next committed heartbeat, including misses.
     pub fn fired_recently(&self) -> bool {
         self.fired_recently
+    }
+
+    /// Simulation time of the last weapon this vehicle launched, if it ever has.
+    pub fn last_weapon_fire(&self) -> Option<i64> {
+        self.last_weapon_fire
     }
 }
 

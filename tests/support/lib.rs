@@ -21,7 +21,9 @@ mod traces;
 pub use client::Client;
 pub use commands::{run_text, run_text_for_player};
 pub use database::{stable_world, store_unit_record, unit_record};
-pub use dice::{FIXTURE_DICE_SEED, seed_object_dice, seed_world_dice};
+pub use dice::{
+    FIXTURE_DICE_SEED, roll_twelve_seed, roll_two_seed, seed_object_dice, seed_world_dice,
+};
 pub use fixtures::{
     copy, isolated_scripts, isolated_world, repository_root, with_clock_save_interval,
 };

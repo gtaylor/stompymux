@@ -37,18 +37,30 @@ pub struct PerceptionAim {
     pub modifier: i16,
 }
 
-/// Additional observer contributions to a conventional indirect shot.
+/// Observer contributions to an LRM indirect shot (Total Warfare p. 111): +1 for firing
+/// indirectly, the spotter's own attacker-movement modifier, and +1 more when the spotter
+/// also attacked this turn. Semi-guided missiles at a TAG-designated target ignore all of it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct IndirectAim {
     pub spotter: ObjectId,
-    pub spotting: i16,
+    /// The spotter's attacker-movement modifier: walked +1, ran +2, jumped +3, prone +2.
     pub movement: u8,
+    /// The spotter launched a weapon within the last turn, so it is attacking as well as
+    /// spotting (TW p. 111).
+    pub spotter_attacked: bool,
+    /// Semi-guided missiles at a target a friendly TAG designates ignore the indirect-fire,
+    /// spotter-movement and spotter-terrain modifiers (TW p. 142).
+    pub tag_guided: bool,
 }
 
 impl IndirectAim {
-    /// Coordination costs one, with the observer's skill measured against target four.
+    /// The indirect-fire part of the to-hit number: +1, plus the spotter's movement, plus +1
+    /// when the spotter attacked this turn; nothing for TAG-guided semi-guided missiles.
     pub fn modifier(self) -> i32 {
-        1 + i32::from(self.spotting) - 4 + i32::from(self.movement)
+        if self.tag_guided {
+            return 0;
+        }
+        1 + i32::from(self.movement) + i32::from(self.spotter_attacked)
     }
 }
 
@@ -65,6 +77,11 @@ pub struct AimModifiers {
     pub network_range: Option<super::NetworkRange>,
     pub range: Option<WeaponRange>,
     pub attacker_movement: u8,
+    /// +1 while this unit spots for another unit's indirect fire (TW p. 111): a spotter that
+    /// also attacks pays on its own attacks.
+    pub spotting: u8,
+    /// Target movement, immobility and prone posture together; [`unit_target_movement`]
+    /// gives the parts.
     pub target_movement: i8,
     /// Minus two against a target stuck in soft ground.
     pub bogged_down: i8,
@@ -112,6 +129,7 @@ impl AimModifiers {
             i32::from(self.gunnery)
                 + i32::from(self.range?.modifier)
                 + i32::from(self.attacker_movement)
+                + i32::from(self.spotting)
                 + i32::from(self.target_movement)
                 + i32::from(self.bogged_down)
                 + i32::from(self.orbital_drop)
@@ -142,10 +160,11 @@ impl Mech {
         if self.jump_stabilization() > 0 {
             return 2;
         }
-        if self.posture() == super::Posture::Prone
-            || matches!(self.stand_timer(), Some(super::StandTimer::Rising { .. }))
+        if (self.posture() == super::Posture::Prone
+            || matches!(self.stand_timer(), Some(super::StandTimer::Rising { .. })))
+            && let Some(penalty) = self.prone_fire_modifier()
         {
-            return 2;
+            return penalty;
         }
         let maximum = self.template_speed()
             + if self.triple_myomer_active() {
@@ -154,6 +173,39 @@ impl Mech {
                 0.0
             };
         ground_attacker_movement(self.motion(), maximum)
+    }
+
+    /// Firing when down (Total Warfare p. 113; Tactical Operations p. 83): +2 for a prone
+    /// Mech, +3 for a prone biped propped on its only remaining arm, and nothing for a
+    /// four-legged Mech that still has all four legs and no hip critical, which fires as
+    /// though standing. `None` means the ordinary ground-movement arithmetic applies.
+    fn prone_fire_modifier(&self) -> Option<u8> {
+        let chassis = self.chassis();
+        if chassis == super::MechChassis::Quad
+            && self.unavailable_legs() == 0
+            && !chassis.legs().iter().any(|leg| self.hip_destroyed(*leg))
+        {
+            return None;
+        }
+        let arms_destroyed = [MechSection::LeftArm, MechSection::RightArm]
+            .into_iter()
+            .filter(|arm| !chassis.is_leg(*arm) && self.sections()[arm].internal == 0)
+            .count();
+        Some(if arms_destroyed == 1 { 3 } else { 2 })
+    }
+
+    /// Whether the hip actuator of `leg` has been destroyed.
+    fn hip_destroyed(&self, leg: MechSection) -> bool {
+        self.definition().sections[&leg]
+            .criticals
+            .iter()
+            .any(|(slot, critical)| {
+                System::named(&critical.equipment) == Some(System::ShoulderOrHip)
+                    && self.critical_destroyed(CriticalLocation {
+                        section: leg,
+                        slot: *slot,
+                    })
+            })
     }
 
     /// Destroyed leg actuators in one leg, for the bootlegger manoeuvre's difficulty: a
@@ -239,9 +291,39 @@ impl super::Vehicle {
     }
 }
 
+/// The parts of the target movement modifier (Total Warfare p. 117), kept apart because
+/// precision ammunition and TAG guidance touch only the movement itself.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TargetMovement {
+    /// Hexes moved this turn, plus one for a jumping Mech or an airborne VTOL.
+    pub motion: i8,
+    /// -4 against an immobile target.
+    pub immobile: i8,
+    /// -2 against a prone Mech from an adjacent hex, +1 from any other.
+    pub prone: i8,
+}
+
+impl TargetMovement {
+    /// The complete target movement modifier.
+    pub fn total(self) -> i8 {
+        self.motion + self.immobile + self.prone
+    }
+}
+
 /// Target movement before ammunition or sensor adjustments, for Mechs and ground vehicles.
 /// This read-only subtotal does not grant contact, range or firing permission.
 pub fn unit_target_movement_modifier(world: &World, target: ObjectId, distance: f64) -> Result<i8> {
+    unit_target_movement(world, target, distance).map(TargetMovement::total)
+}
+
+/// The target movement modifier in its parts (TW p. 117, p. 197): the movement band, +1
+/// for a jumping Mech or an airborne VTOL (hovering included), -4 for an immobile target
+/// and the prone adjustments.
+pub fn unit_target_movement(
+    world: &World,
+    target: ObjectId,
+    distance: f64,
+) -> Result<TargetMovement> {
     ensure!(
         distance.is_finite() && distance >= 0.0,
         "Invalid target range"
@@ -255,10 +337,12 @@ pub fn unit_target_movement_modifier(world: &World, target: ObjectId, distance: 
     );
     if let Some(vehicle) = world.btech.vehicles().get(&target) {
         let immobile = super::aimed_target::immobile(world, target)?;
-        return Ok(
-            target_motion(vehicle.motion().map_or(0.0, |motion| motion.speed))
-                - if immobile { 4 } else { 0 },
-        );
+        return Ok(TargetMovement {
+            motion: target_motion(vehicle.motion().map_or(0.0, |motion| motion.speed))
+                + i8::from(vtol_airborne(vehicle)),
+            immobile: if immobile { -4 } else { 0 },
+            prone: 0,
+        });
     }
     let defender = world
         .btech
@@ -279,14 +363,26 @@ pub fn unit_target_movement_modifier(world: &World, target: ObjectId, distance: 
     } else {
         defender.motion().map_or(0.0, |motion| motion.speed)
     };
-    Ok(
-        target_motion(speed) + i8::from(defender.airborne()) - if immobile { 4 } else { 0 }
-            + if defender.posture() == super::Posture::Prone {
-                if distance <= 1.0 { -2 } else { 1 }
-            } else {
-                0
-            },
-    )
+    Ok(TargetMovement {
+        motion: target_motion(speed) + i8::from(defender.airborne()),
+        immobile: if immobile { -4 } else { 0 },
+        prone: if defender.posture() == super::Posture::Prone {
+            if distance <= 1.0 { -2 } else { 1 }
+        } else {
+            0
+        },
+    })
+}
+
+/// A VTOL in the air, hovering or not (TW p. 197); a landed one rolling on the ground is an
+/// ordinary ground target.
+pub(super) fn vtol_airborne(vehicle: &super::Vehicle) -> bool {
+    vehicle.vtol_flight().is_some_and(|flight| {
+        matches!(
+            flight.phase,
+            super::VtolFlightPhase::Airborne | super::VtolFlightPhase::Falling
+        )
+    })
 }
 
 /// Target Movement Modifier (Total Warfare p. 117) by hexes moved per turn at 10.75 kph per
@@ -505,8 +601,13 @@ pub(super) fn aim_modifiers_for_source(
         &mut modifiers,
     )?;
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut modifiers)?;
+    let indirect = indirect.map(|aim| IndirectAim {
+        tag_guided: target_terms.tag_guided,
+        ..aim
+    });
     modifiers.self_target = shooter == target && mount.weapon == Weapon::CoolantGun;
     modifiers.indirect = indirect;
+    modifiers.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     modifiers.range = modifiers
         .range
         .map(|range| range.against_stealth(target_terms.concealed));
@@ -526,7 +627,9 @@ pub(super) fn aim_modifiers_for_source(
         world,
         indirect.map_or(shooter, |aim| aim.spotter),
         target,
-        indirect.is_some_and(|aim| super::spotter::coordinate_target(world, aim.spotter)),
+        indirect.is_some_and(|aim| {
+            aim.tag_guided || super::spotter::coordinate_target(world, aim.spotter)
+        }),
     )?;
     Ok(modifiers)
 }
@@ -586,6 +689,7 @@ pub(super) fn weapon_base(
         network_range: None,
         range: weapon.range_modifier_for_ammunition(distance, fire_mode, ammunition)?,
         attacker_movement: 0,
+        spotting: 0,
         target_movement: 0,
         bogged_down: 0,
         orbital_drop: 0,
@@ -649,6 +753,8 @@ pub(super) struct TargetAimModifiers {
     pub movement: i8,
     pub beacon_accuracy: i8,
     pub concealed: bool,
+    /// Semi-guided missiles at a target a friendly TAG designates (TW p. 142).
+    pub tag_guided: bool,
 }
 
 /// Apply target movement, friendly TAG assistance, concealment and homing pods identically for every shooter.
@@ -664,45 +770,38 @@ pub(super) fn target_modifiers(
         .context("Shooter construction is unavailable")?;
     let defender = super::scanner::scanner_unit(world, target)
         .context("Target construction is unavailable")?;
-    let movement = ammunition
-        .target_movement_modifier(unit_target_movement_modifier(world, target, distance)?);
+    let movement = unit_target_movement(world, target, distance)?;
     let artemis_v_guided = ammunition.munition() == super::AmmunitionMode::Artemis
         && super::artemis::artemis_v(world, shooter)
         && !super::electronic_field(world, shooter)?.blocks_outgoing_guidance()
         && !super::electronic_field(world, target)?.blocks_incoming_guidance();
-    let friendly_tag = ammunition.munition() == super::AmmunitionMode::SemiGuided
+    // The shooter's own TAG designates as well as any other friendly unit's (TW p. 142).
+    let tag_guided = ammunition.munition() == super::AmmunitionMode::SemiGuided
         && super::tagged_by(world, target).is_some_and(|tagger| {
-            tagger != shooter
-                && super::scanner::scanner_unit(world, tagger)
-                    .is_some_and(|unit| unit.signature.team == attacker.signature.team)
+            super::scanner::scanner_unit(world, tagger)
+                .is_some_and(|unit| unit.signature.team == attacker.signature.team)
         });
-    let aircraft = world
+    let flying_vtol = world
         .btech
         .vehicles()
         .get(&target)
-        .and_then(|unit| unit.vtol_flight());
-    let flying = aircraft.is_some_and(|flight| {
-        matches!(
-            flight.phase,
-            super::VtolFlightPhase::Airborne | super::VtolFlightPhase::Falling
-        )
-    });
-    let moving_aircraft =
-        aircraft.is_some_and(|flight| defender.speed != 0.0 || flight.vertical_speed != 0.0);
+        .is_some_and(vtol_airborne);
+    let airborne = super::stinger::target_airborne(world, target);
     let cocoon = super::orbital_drop_state::current(world, target).is_some();
     Ok(TargetAimModifiers {
         ammunition_accuracy: airborne_ammunition_adjustment(
             ammunition,
-            aircraft.is_some(),
-            flying,
+            airborne,
+            flying_vtol,
             cocoon,
         ),
         bogged_down: super::bog_down::target_modifier(world, target),
         orbital_drop: super::orbital_drop_state::current(world, target)
             .map_or(0, super::OrbitalDrop::target_modifier),
         light: super::light_aim::modifier(world, target, false)?,
-        movement: ammunition.tag_movement_modifier(movement, friendly_tag)
-            + i8::from(moving_aircraft),
+        movement: ammunition
+            .tag_movement_modifier(ammunition.precision_movement(movement), tag_guided)
+            .total(),
         // Homing beacons and Artemis V guidance each make the shot one easier.
         beacon_accuracy: -i8::from(
             super::narc::has_beacon(world, target, super::BeaconKind::Homing)
@@ -710,19 +809,23 @@ pub(super) fn target_modifiers(
                 && !weapon.is_narc(),
         ) - i8::from(artemis_v_guided),
         concealed: defender.concealed,
+        tag_guided,
     })
 }
 
-/// LBX gains two more points against rotorcraft; Stinger distinguishes flight from orbital orbital descents.
+/// Flak (TW p. 114, p. 141): LB-X cluster rounds take -2 against any target in the air, an
+/// airborne VTOL, a jumping Mech or a dropping unit, and nothing against a parked VTOL.
+/// Stinger rounds, a house munition, take -3 against a flying VTOL and -1 against an orbital
+/// descent, keyed on the same airborne states.
 fn airborne_ammunition_adjustment(
     ammunition: super::AmmunitionMode,
-    rotorcraft: bool,
-    flying: bool,
+    airborne: bool,
+    flying_vtol: bool,
     cocoon: bool,
 ) -> i8 {
     match ammunition.munition() {
-        super::AmmunitionMode::Cluster if rotorcraft => -2,
-        super::AmmunitionMode::Stinger if flying => -3,
+        super::AmmunitionMode::Cluster if airborne => -2,
+        super::AmmunitionMode::Stinger if flying_vtol => -3,
         super::AmmunitionMode::Stinger if cocoon => -1,
         _ => 0,
     }
@@ -731,30 +834,84 @@ fn airborne_ammunition_adjustment(
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// Cluster keeps its base -1 and Stinger has no extra bonus against a jumping Mech.
+
+    /// Flak applies to every airborne target; Stinger tells a flying VTOL from a descent and
+    /// gets nothing extra against a jumping Mech.
     #[test]
-    fn airborne_ammunition_distinguishes_rotorcraft_orbital_descents_and_jumps() {
+    fn airborne_ammunition_distinguishes_flak_flying_vtols_and_descents() {
         use super::super::AmmunitionMode as Mode;
-        for (rotorcraft, flying, cocoon, cluster, stinger) in [
+        for (airborne, flying_vtol, cocoon, cluster, stinger) in [
             (false, false, false, 0, 0),
             (true, false, false, -2, 0),
             (true, true, false, -2, -3),
-            (false, false, true, 0, -1),
+            (true, false, true, -2, -1),
             (true, true, true, -2, -3),
         ] {
             assert_eq!(
-                airborne_ammunition_adjustment(Mode::Cluster, rotorcraft, flying, cocoon),
+                airborne_ammunition_adjustment(Mode::Cluster, airborne, flying_vtol, cocoon),
                 cluster
             );
             assert_eq!(
-                airborne_ammunition_adjustment(Mode::Stinger, rotorcraft, flying, cocoon),
+                airborne_ammunition_adjustment(Mode::Stinger, airborne, flying_vtol, cocoon),
                 stinger
             );
             assert_eq!(
-                airborne_ammunition_adjustment(Mode::Normal, rotorcraft, flying, cocoon),
+                airborne_ammunition_adjustment(Mode::Normal, airborne, flying_vtol, cocoon),
                 0
             );
         }
+    }
+
+    /// The indirect term is +1, the spotter's movement and +1 for a spotter that attacked;
+    /// TAG guidance removes all of it (TW p. 111, p. 142).
+    #[test]
+    fn indirect_modifier_adds_spotter_movement_and_attack() {
+        let base = IndirectAim {
+            spotter: ObjectId(5),
+            movement: 0,
+            spotter_attacked: false,
+            tag_guided: false,
+        };
+        assert_eq!(base.modifier(), 1);
+        assert_eq!(
+            IndirectAim {
+                movement: 2,
+                ..base
+            }
+            .modifier(),
+            3
+        );
+        assert_eq!(
+            IndirectAim {
+                movement: 3,
+                spotter_attacked: true,
+                ..base
+            }
+            .modifier(),
+            5
+        );
+        assert_eq!(
+            IndirectAim {
+                movement: 3,
+                spotter_attacked: true,
+                tag_guided: true,
+                ..base
+            }
+            .modifier(),
+            0
+        );
+    }
+
+    /// The parts of the target movement modifier add up to the whole.
+    #[test]
+    fn target_movement_parts_sum() {
+        let movement = TargetMovement {
+            motion: 3,
+            immobile: -4,
+            prone: 1,
+        };
+        assert_eq!(movement.total(), 0);
+        assert_eq!(TargetMovement::default().total(), 0);
     }
 
     #[test]

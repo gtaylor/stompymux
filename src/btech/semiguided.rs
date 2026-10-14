@@ -1,20 +1,24 @@
 //! Semi-guided missile ammunition controls and friendly TAG target-movement assistance.
-use super::{AmmunitionFeedback, AmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode, TargetMovement};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
-/// Semi-guided ammunition's use of friendly TAG designation.
+/// Semi-guided ammunition's use of friendly TAG designation (Total Warfare p. 142).
 pub(crate) trait SemiGuidedAim {
-    /// Friendly TAG from another unit removes positive movement penalties but preserves negative modifiers.
-    fn tag_movement_modifier(self, movement: i8, friendly_other_tag: bool) -> i8;
+    /// A friendly TAG on the target, the shooter's own included, removes the target's
+    /// movement modifier; the immobile and prone adjustments remain.
+    fn tag_movement_modifier(self, movement: TargetMovement, tag_guided: bool) -> TargetMovement;
 }
 
 impl SemiGuidedAim for AmmunitionMode {
-    fn tag_movement_modifier(self, movement: i8, friendly_other_tag: bool) -> i8 {
-        if self.munition() == Self::SemiGuided && friendly_other_tag {
-            return movement.min(0);
+    fn tag_movement_modifier(self, movement: TargetMovement, tag_guided: bool) -> TargetMovement {
+        if self.munition() != Self::SemiGuided || !tag_guided {
+            return movement;
         }
-        movement
+        TargetMovement {
+            motion: 0,
+            ..movement
+        }
     }
 }
 
@@ -52,22 +56,34 @@ pub(crate) fn command(
 mod tests {
     use super::*;
 
-    /// TAG assistance is specific to this ammunition and never removes a negative target modifier.
+    /// TAG assistance is specific to this ammunition and never removes an immobile or prone
+    /// adjustment.
     #[test]
-    fn semiguided_tag_movement_preserves_negative_modifiers() {
-        for movement in [-4, -2, 0, 1, 3, 7] {
-            assert_eq!(
-                AmmunitionMode::SemiGuided.tag_movement_modifier(movement, true),
-                movement.min(0)
-            );
-            assert_eq!(
-                AmmunitionMode::SemiGuided.tag_movement_modifier(movement, false),
-                movement
-            );
-            assert_eq!(
-                AmmunitionMode::Normal.tag_movement_modifier(movement, true),
-                movement
-            );
+    fn semiguided_tag_movement_preserves_immobile_and_prone_terms() {
+        for motion in [0, 1, 3, 7] {
+            for (immobile, prone) in [(0, 0), (-4, 0), (0, 1), (-4, -2)] {
+                let movement = TargetMovement {
+                    motion,
+                    immobile,
+                    prone,
+                };
+                assert_eq!(
+                    AmmunitionMode::SemiGuided.tag_movement_modifier(movement, true),
+                    TargetMovement {
+                        motion: 0,
+                        immobile,
+                        prone,
+                    }
+                );
+                assert_eq!(
+                    AmmunitionMode::SemiGuided.tag_movement_modifier(movement, false),
+                    movement
+                );
+                assert_eq!(
+                    AmmunitionMode::Normal.tag_movement_modifier(movement, true),
+                    movement
+                );
+            }
         }
     }
 }

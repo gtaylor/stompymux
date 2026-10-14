@@ -123,6 +123,21 @@ fn mix(value: u64) -> u64 {
     z ^ (z >> 31)
 }
 
+/// A byte seed whose stream opens with a 2d6 of twelve, so a unit seeded with it hits its
+/// next attack roll whatever the target number; TAG scenarios use it to designate for sure.
+pub fn roll_twelve_seed() -> u8 {
+    (0..=255u8)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
+        .expect("some byte seed rolls a twelve")
+}
+
+/// A byte seed whose stream opens with a 2d6 of two, so the next attack roll misses.
+pub fn roll_two_seed() -> u8 {
+    (0..=255u8)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+        .expect("some byte seed rolls a two")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

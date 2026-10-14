@@ -39,8 +39,13 @@ pub(super) fn modifiers(
         super::aim::target_modifiers(world, shooter, target, mount.weapon, ammunition, distance)?;
     let mut aim = weapon_modifiers(attacker, weapon_index, distance, gunnery)?;
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut aim)?;
+    let indirect = indirect.map(|aim| super::IndirectAim {
+        tag_guided: target_terms.tag_guided,
+        ..aim
+    });
     aim.self_target = shooter == target && mount.weapon == super::Weapon::CoolantGun;
     aim.indirect = indirect;
+    aim.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     aim.ammunition_accuracy += target_terms.ammunition_accuracy;
     aim.target_movement = target_terms.movement;
     aim.bogged_down = target_terms.bogged_down;
@@ -57,7 +62,9 @@ pub(super) fn modifiers(
         world,
         indirect.map_or(shooter, |aim| aim.spotter),
         target,
-        indirect.is_some_and(|aim| super::spotter::coordinate_target(world, aim.spotter)),
+        indirect.is_some_and(|aim| {
+            aim.tag_guided || super::spotter::coordinate_target(world, aim.spotter)
+        }),
     )?;
     let submerged = super::weapon_geometry::apply_water_range(
         world,

@@ -402,22 +402,6 @@ async fn weapon_mechanics_precede_targets_across_chassis_and_restart() {
             "cannot take actions while stunned",
         );
 
-        let mut spotting = stunned.clone();
-        edit_shooter(&mut spotting, shooter, |unit| {
-            unit["spotter"] = serde_json::json!(shooter.0)
-        });
-        assert_mechanical_rejection(&config, &spotting, shooter, "cannot fire while spotting");
-        let native = scripts(&config, &spotting);
-        let text = support::run_text(
-            &native,
-            &config,
-            ObjectId(1),
-            1,
-            "fire 999999 bad coordinates",
-        );
-        assert!(text.contains("cannot fire while spotting"), "{text}");
-        assert_eq!(native.world().btech, spotting.btech);
-
         if vehicle {
             let mut failed = recycling.clone();
             edit_shooter(&mut failed, shooter, |unit| {

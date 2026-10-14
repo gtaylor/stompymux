@@ -346,7 +346,6 @@ pub(super) fn resolve_in_action(
 ) -> Result<FiringAction> {
     let operator = super::combat_operator::admit(world, shooter, pilot)?;
     let shooter = operator.source.unit;
-    super::spotter::check_firing_role(world, shooter)?;
     let mechanics = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
         unit.weapon_mechanics(index)?
     });

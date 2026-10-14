@@ -312,10 +312,12 @@ fn resolve_shot_inner(
         .context("Weapon index out of bounds")?
         .weapon;
     attacker.check_spotter_fire(shooter, weapon_index)?;
+    let observed =
+        super::spotter::observed_target_for_source(world, operator.source, weapon_index)?;
     let indirect =
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
 
-    let target = indirect.map_or(target, |link| link.target);
+    let target = observed.map_or(target, |link| link.target);
     let coolant = selected_weapon == super::Weapon::CoolantGun;
     let coordinate = if indirect.is_some() {
         let position = super::scanner::scanner_unit(world, target)
@@ -388,7 +390,7 @@ fn resolve_shot_inner(
     let mut aim_dice = attacker.dice.clone();
     let prepared = super::gatling::prepare(world, shooter, weapon_index, &mut aim_dice)?;
     let gunnery = super::unit_gunnery_target(world, shooter, weapon_index, rules.extended_gunnery)?;
-    let mut aim = super::aim::aim_modifiers_for_source(
+    let aim = super::aim::aim_modifiers_for_source(
         world,
         operator.source,
         target,
@@ -405,7 +407,7 @@ fn resolve_shot_inner(
     let mut candidate = super::shot_transaction::ShotCandidate::new(world);
     let launch_measurement = super::autopilot::diagnostics::combat("launch_defenses");
     let experience_messages = if character && let Some(link) = indirect {
-        super::spotter::award_indirect_experience(&mut candidate, shooter, link, &mut aim)?
+        super::spotter::award_indirect_experience(&mut candidate, shooter, link)?
     } else {
         Vec::new()
     };

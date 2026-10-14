@@ -69,7 +69,7 @@ impl FireTargetRequest<'_> {
             unit.check_spotter_fire(shooter, index)?;
         });
         let observed = (weapon.supports_indirect_ammunition(ammunition) || weapon.is_artillery())
-            && super::spotter::selected(world, shooter).is_some()
+            && super::spotter::selected(world, shooter).is_some_and(|spotter| spotter != shooter)
             && !matches!(
                 source.selection(world),
                 Some(super::TargetSelection::Unit(_))
@@ -130,7 +130,7 @@ pub(super) fn resolve_conventional_for_source(
         Some(super::TargetSelection::Hex(lock)) => (None, Some(lock)),
         None => (None, None),
     };
-    if let Some((_, hex)) = super::spotter::indirect_hex_for_source(world, source, index)? {
+    if let Some((_, hex)) = super::spotter::observed_hex_for_source(world, source, index)? {
         return Ok(ResolvedFireTarget::Hex(hex));
     }
     let (explicit, mut coordinate) = match requested {
@@ -143,9 +143,12 @@ pub(super) fn resolve_conventional_for_source(
             (Some(unit), Some(coordinate))
         }
     };
+    // The observer supplies the target either way; the shot is only indirect when the
+    // firer cannot see that target itself (Total Warfare p. 111).
+    let observed = super::spotter::observed_target_for_source(world, source, index)?;
     let indirect = super::spotter::indirect_target_for_source(world, source, index)?;
     let self_cooling = requested == FireTarget::Selected && mode.self_cooling(weapon);
-    if indirect.is_none()
+    if observed.is_none()
         && requested == FireTarget::Selected
         && !self_cooling
         && let Some(lock) = hex_lock
@@ -157,7 +160,7 @@ pub(super) fn resolve_conventional_for_source(
             return Ok(ResolvedFireTarget::Hex(lock.hex));
         }
     }
-    let unit = if let Some(link) = indirect {
+    let unit = if let Some(link) = observed {
         link.target
     } else if self_cooling {
         shooter

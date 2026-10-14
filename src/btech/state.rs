@@ -705,7 +705,6 @@ impl BtechState {
             )?;
         }
         super::tag::validate(self)?;
-        super::spotter_events::validate(self)?;
         for (id, unit) in self.constructed.iter() {
             self.validate_unit(
                 world,

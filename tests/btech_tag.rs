@@ -23,6 +23,22 @@ fn install(world: &mut World, id: ObjectId, computer: bool) {
     });
 }
 
+/// TAG attack rules without optional variants.
+fn tag_rules() -> TagRules {
+    TagRules {
+        aim: AimRules::STANDARD,
+        extended_gunnery: true,
+    }
+}
+
+/// Seed a unit's dice so its next TAG attack rolls a twelve.
+fn tag_seed(world: &mut World, id: ObjectId) {
+    world
+        .btech
+        .set_unit_dice(id, Dice::seeded([support::roll_twelve_seed(); 32]))
+        .unwrap();
+}
+
 /// Uniform state inspection deliberately reads the public chassis adapters.
 fn tag(world: &World, id: ObjectId) -> TagState {
     world
@@ -45,6 +61,7 @@ async fn fixture(
         state["signature"]["team"] = 2.into()
     });
     refresh_battle_contacts(&mut world, &[id]).unwrap();
+    tag_seed(&mut world, id);
     world.validate(&config).unwrap();
     (dir, config, world, id, target)
 }
@@ -83,7 +100,7 @@ async fn tag_across_chassis_native_lua_rollback_and_restart() {
                 .unwrap();
             let reply =
                 support::run_text(&native, &config, ObjectId(1), 1, &format!("tag {label}"));
-            assert!(reply.contains("with your TAG."), "{reply}");
+            assert!(reply.contains("with your TAG"), "{reply}");
             assert_eq!(native.world().btech, expected);
             let mut active = native.world().clone();
             assert_eq!(battle_tagged_by(&active, target), Some(id));
@@ -106,7 +123,7 @@ async fn tag_across_chassis_native_lua_rollback_and_restart() {
                     .contains("stable lock")
             );
             assert_eq!(tag(&restored, id).remaining, 0);
-            select_battle_tag(&mut restored, id, ObjectId(1), None).unwrap();
+            select_battle_tag(&mut restored, id, ObjectId(1), None, tag_rules()).unwrap();
             for _ in 0..29 {
                 assert!(advance_battle_tags(&mut restored).is_empty());
             }
@@ -121,7 +138,8 @@ async fn tag_across_chassis_native_lua_rollback_and_restart() {
             } else {
                 "constructed"
             };
-            assert_eq!(
+            // The TAG attack drew its own 2d6 from the unit's dice.
+            assert_ne!(
                 serde_json::to_value(&restored.btech).unwrap()[key][id.0.to_string()]["dice"],
                 serde_json::to_value(&world.btech).unwrap()[key][id.0.to_string()]["dice"]
             );
@@ -147,7 +165,8 @@ async fn tag_equipment_and_damage_have_distinct_replies() {
         edit(&mut world, target, |state| {
             state["signature"]["team"] = 2.into()
         });
-        select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
+        tag_seed(&mut world, id);
+        select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
         assert_eq!(battle_tagged_by(&world, target), Some(id));
         if world.btech.vehicles().contains_key(&id) {
             destroy_battle_vehicle_critical(
@@ -224,7 +243,7 @@ async fn tag_range_visibility_and_syntax_fail_without_mutation() {
         for (command, expected) in [
             (
                 format!("tag #{}", target.0),
-                "Out of range! TAG ranges are 5/10/15",
+                "Out of range! TAG ranges are 5/9/15",
             ),
             (
                 "tag ZZ".into(),
@@ -250,13 +269,13 @@ async fn tag_range_visibility_and_syntax_fail_without_mutation() {
         });
         let before = beyond.btech.clone();
         assert_eq!(
-            select_battle_tag(&mut beyond, id, ObjectId(1), Some(target))
+            select_battle_tag(&mut beyond, id, ObjectId(1), Some(target), tag_rules())
                 .unwrap_err()
                 .to_string(),
-            "Out of range! TAG ranges are 5/10/15"
+            "Out of range! TAG ranges are 5/9/15"
         );
         assert_eq!(beyond.btech, before);
-        select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
+        select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
         assert_eq!(battle_tagged_by(&world, target), Some(id));
     }
 }
@@ -267,7 +286,7 @@ async fn tag_takeover_crosses_chassis_and_rejects_corrupt_saved_ownership() {
     let sources = templates();
     for (source, replacement) in [(&sources[0], &sources[2]), (&sources[2], &sources[0])] {
         let (_dir, config, mut world, id, target) = fixture(source, &sources[2], false).await;
-        select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
+        select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
         let map = world.btech.units()[&id].map.unwrap();
         let other = world.create(&config, "Replacement TAG".into(), Kind::Thing);
         UnitTemplate::parse("test", replacement)
@@ -283,7 +302,9 @@ async fn tag_takeover_crosses_chassis_and_rejects_corrupt_saved_ownership() {
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(other);
         assign_battle_pilot(&mut world, other, ObjectId(1)).unwrap();
         refresh_battle_contacts(&mut world, &[other]).unwrap();
-        let notices = select_battle_tag(&mut world, other, ObjectId(1), Some(target)).unwrap();
+        tag_seed(&mut world, other);
+        let notices =
+            select_battle_tag(&mut world, other, ObjectId(1), Some(target), tag_rules()).unwrap();
         assert_eq!(notices.len(), 2);
         assert_eq!(
             tag(&world, id),
@@ -317,7 +338,7 @@ async fn tag_takeover_crosses_chassis_and_rejects_corrupt_saved_ownership() {
 async fn vehicle_tag_shutdown_recycles_and_inspection_exposes_state() {
     for source in templates().iter().skip(2) {
         let (_dir, config, mut world, id, target) = fixture(source, &templates()[0], false).await;
-        select_battle_tag(&mut world, id, ObjectId(1), Some(target)).unwrap();
+        select_battle_tag(&mut world, id, ObjectId(1), Some(target), tag_rules()).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let selected: i64 = scripts
             .eval_callback(&format!("return btech.unit.state({}).tag.target", id.0))
@@ -393,7 +414,8 @@ async fn vehicle_tag_guides_mech_and_vehicle_missiles() {
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(tagger);
         assign_battle_pilot(&mut world, tagger, ObjectId(1)).unwrap();
         refresh_battle_contacts(&mut world, &[tagger]).unwrap();
-        select_battle_tag(&mut world, tagger, ObjectId(1), Some(target)).unwrap();
+        tag_seed(&mut world, tagger);
+        select_battle_tag(&mut world, tagger, ObjectId(1), Some(target), tag_rules()).unwrap();
         release_battle_pilot(&mut world, tagger, ObjectId(1)).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
         assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();

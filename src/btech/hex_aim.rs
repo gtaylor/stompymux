@@ -99,6 +99,7 @@ pub(super) fn modifiers_for_source(
         );
         modifiers.indirect = Some(super::spotter::observer_aim(world, observer)?);
     }
+    modifiers.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     let submerged = super::weapon_geometry::apply_water_range(
         world,
         shooter,

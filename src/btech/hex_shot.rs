@@ -137,9 +137,9 @@ fn resolve_hex_shot_inner(
         bears,
     } = super::weapon_geometry::geometry(world, shooter, weapon_index, coordinate.center())?;
     let indirect = super::spotter::indirect_hex_for_source(world, operator.source, weapon_index)?;
-    if indirect.is_none() {
+    if super::spotter::observed_hex_for_source(world, operator.source, weapon_index)?.is_none() {
         ensure!(
-            super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?
+            super::spotter::observed_target_for_source(world, operator.source, weapon_index)?
                 .is_none(),
             "Occupied observer target requires a unit shot"
         );

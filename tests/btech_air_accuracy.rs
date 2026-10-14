@@ -47,16 +47,22 @@ async fn rotorcraft_modifiers_match_preview_and_firing_for_every_shooter() {
                 let aim =
                     battle_pilot_aim_modifiers(&world, shooter, target, index, false, rules())
                         .unwrap();
-                let expected_ammo = if weapon == Weapon::Lbx10 || flying {
-                    -3
-                } else {
-                    0
+                // Flak and Stinger key on the VTOL being airborne, hovering or not; a parked
+                // VTOL is an ordinary ground target (TW p. 114, p. 197).
+                let expected_ammo = match (weapon, flying) {
+                    (Weapon::Lbx10, true) => -3,
+                    (Weapon::Lbx10, false) => -1,
+                    (_, true) => -3,
+                    (_, false) => 0,
                 };
                 assert_eq!(aim.ammunition_accuracy, expected_ammo);
+                let movement = battle_unit_target_movement(&world, target, aim.distance).unwrap();
+                assert_eq!(aim.target_movement, movement.total());
+                // Ten kph is still the stationary band; only being airborne adds a point.
                 assert_eq!(
-                    aim.target_movement,
-                    battle_unit_target_movement_modifier(&world, target, aim.distance).unwrap()
-                        + i8::from(horizontal != 0.0 || vertical != 0.0)
+                    movement.motion,
+                    i8::from(flying),
+                    "{flying} {horizontal} {vertical}"
                 );
                 assert_eq!(world.btech, before);
                 world.validate(&config).unwrap();

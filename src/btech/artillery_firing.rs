@@ -254,8 +254,9 @@ pub(super) fn prepare(
         explicit_hex.is_some() || target_lock.is_none(),
         "You can only target hexes with this kind of artillery."
     );
+    // A launcher that is itself a declared spotter fires at its own hex lock.
     let observer = spotter
-        .filter(|_| explicit_hex.is_none())
+        .filter(|observer| *observer != shooter && explicit_hex.is_none())
         .map(|_| super::spotter::active_observer(world, shooter))
         .transpose()?;
     let coordinate = if let Some(hex) = explicit_hex {

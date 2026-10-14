@@ -328,7 +328,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00162
-//|---Illuminate an enemy within fifteen hexes, or stop with nil; requires working TAG and a ready timer.
+//|---Make a TAG attack roll at an enemy within fifteen hexes (ranges 5/9/15), or stop with nil; requires working TAG and a ready timer. A miss designates nothing and recycles the TAG.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param target integer?
@@ -1112,7 +1112,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00316
-//|---Select an acquired friendly spotter; use own dbref to declare spotting, or nil to stop.
+//|---Select a friendly declared spotter on the same battlefield; use own dbref to declare spotting, or nil to stop.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param spotter integer?
