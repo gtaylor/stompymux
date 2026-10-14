@@ -299,7 +299,7 @@ pub use stompymux_unit_construction::{
 };
 
 pub(crate) use motion::set_speed_autopilot;
-pub use motion::{Motion, MovementRules, advance_motion, set_heading, set_speed};
+pub use motion::{LevelEntry, Motion, MovementRules, advance_motion, set_heading, set_speed};
 
 /// Stage a player-owned condition notice through the normal notification boundary.
 pub(crate) fn notify_character(

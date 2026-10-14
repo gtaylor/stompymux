@@ -64,10 +64,12 @@ pub fn propose_mech_ground_motion(
     }
     let old_heading = motion.heading;
     motion.turn_toward(envelope.running, envelope.walking);
-    // Fog adds to the cost of every hex a walker enters (Tactical Operations p. 55), and so
-    // does the building it walks through (Total Warfare p. 167).
+    // Fog adds to the cost of every hex a walker enters (Tactical Operations p. 55), so does
+    // the building it walks through (Total Warfare p. 167), and so does every level it
+    // climbed or descended to get in (TW pp. 48 and 52).
     let divisor = current.ground_speed_divisor(super::GroundMovement::Legged)
         + f64::from(map.weather_condition()?.movement_cost())
+        + f64::from(unit.level_entry_cost())
         + f64::from(super::building_interior::floor_cost_at(
             current,
             unit.elevation_level(current),

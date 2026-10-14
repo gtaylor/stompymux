@@ -91,6 +91,9 @@ pub struct Mech {
     /// Movement seen since the last turn-clock boundary, for the once-a-turn checks.
     #[serde(default)]
     pub(super) turn_movement: super::TurnMovement,
+    /// Levels climbed or descended into the current hex, charged while crossing it.
+    #[serde(default)]
+    pub(super) level_entry: Option<super::LevelEntry>,
     #[serde(default)]
     pub(super) masc: super::BoosterState,
     /// Shared identity of a C3i network; peers are derived from world membership.
@@ -358,6 +361,7 @@ super::saved_parts::saved_parts!(Mech {
         bogged_down,
         slick,
         turn_movement,
+        level_entry,
         c3i_network,
         c3_network,
         network_automation,
@@ -912,6 +916,7 @@ impl Mech {
             bogged_down: false,
             slick: Default::default(),
             turn_movement: Default::default(),
+            level_entry: None,
             masc: Default::default(),
             c3i_network: None,
             c3_network: None,

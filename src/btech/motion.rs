@@ -189,6 +189,38 @@ impl MovementRules {
     };
 }
 
+/// The levels a Mech climbed or descended to enter the hex it stands in. Each level costs
+/// one MP (Total Warfare pp. 48 and 52), charged like the hex's own terrain cost: the
+/// unit crosses the hex that many hex-widths slower (see `ground_proposal`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LevelEntry {
+    pub x: u16,
+    pub y: u16,
+    pub levels: u8,
+}
+
+impl LevelEntry {
+    /// The extra movement cost this record adds while the unit stands at `position`.
+    pub(super) fn cost_at(self, position: super::Position) -> u8 {
+        if self.x == position.x && self.y == position.y {
+            self.levels
+        } else {
+            0
+        }
+    }
+}
+
+impl super::Mech {
+    /// Levels climbed or descended into the current hex, still being paid for.
+    pub fn level_entry_cost(&self) -> u8 {
+        match (self.level_entry, self.position()) {
+            (Some(entry), Some(position)) => entry.cost_at(position),
+            _ => 0,
+        }
+    }
+}
+
 /// A checked crossing carries both map elevation and the selected physical bridge surface.
 struct GroundStep {
     hex: super::HexCoordinate,
@@ -197,6 +229,8 @@ struct GroundStep {
     old_point: Point,
     elevation: Option<f64>,
     old_elevation: Option<f64>,
+    /// Levels climbed or descended to enter this hex, charged while crossing it.
+    levels: u8,
     ice_check: bool,
     /// Why the unit must stop at this hex's edge instead of entering it: terrain it cannot
     /// enter, a slope too steep to climb or descend, or water it is running at.
@@ -799,7 +833,8 @@ fn resolve_ground_segment(
     let mut previous_tile = current;
     let mut actual_height = unit.elevation_level(current) as i16;
     let mut ground_elevation = unit.ground_elevation;
-    let mut elevation_cost = 0.0;
+    let old_entry = unit.level_entry;
+    let mut entry = old_entry;
     let mut checked_steps = Vec::new();
     let mut previous_position = position;
     let mut previous_point = motion.point;
@@ -906,6 +941,22 @@ fn resolve_ground_segment(
             // Backing across a level change takes the reverse-slope check, a kept house rule:
             // Total Warfare p. 49 forbids backward level changes outright.
             let checked_height = stop.is_some() || (change != 0 && motion.speed < 0.0);
+            // Inside a building the floor entered is the level climbed to, not the roof.
+            let climbed = if enters_building {
+                next_height
+            } else if next_height == tile.surface_height() {
+                tile.surface_height()
+            } else {
+                last_surface
+            };
+            let levels = (climbed - last_surface)
+                .unsigned_abs()
+                .min(u16::from(u8::MAX)) as u8;
+            entry = Some(LevelEntry {
+                x: hex.x as u16,
+                y: hex.y as u16,
+                levels,
+            });
             let hazardous_ground = tile
                 .entry_piloting_modifier(super::GroundMovement::Legged)
                 .is_some()
@@ -927,18 +978,10 @@ fn resolve_ground_segment(
                     old_point: previous_point,
                     elevation: next_elevation,
                     old_elevation: ground_elevation,
+                    levels,
                     ice_check,
                     stop,
                 });
-            }
-            if !checked_height && (next_height == tile.surface_height() || enters_building) {
-                // Inside a building the floor entered is the level climbed to, not the roof.
-                let climbed = if enters_building {
-                    next_height
-                } else {
-                    tile.surface_height()
-                };
-                elevation_cost += f64::from((climbed - last_surface).unsigned_abs()) * 10.75;
             }
             actual_height = next_height;
             ground_elevation = next_elevation;
@@ -968,7 +1011,6 @@ fn resolve_ground_segment(
             text: text.to_owned(),
         });
     } else {
-        motion.speed = motion.speed.signum() * (motion.speed.abs() - elevation_cost).max(0.0);
         motion.point = proposed;
         let hex = destination.unwrap();
         position.x = hex.x as u16;
@@ -995,6 +1037,7 @@ fn resolve_ground_segment(
     }
     if blocked.is_none() {
         unit.hex_sync_pending = false;
+        unit.level_entry = entry;
     }
     unit.motion = Some(motion);
     unit.position = Some(position);
@@ -1027,6 +1070,7 @@ fn resolve_ground_segment(
         old_point,
         elevation,
         old_elevation,
+        levels,
         ice_check,
         stop,
     } in checked_steps
@@ -1038,6 +1082,11 @@ fn resolve_ground_segment(
             y: hex.y as u16,
         });
         unit.ground_elevation = elevation;
+        unit.level_entry = Some(LevelEntry {
+            x: hex.x as u16,
+            y: hex.y as u16,
+            levels,
+        });
         unit.motion.as_mut().unwrap().point = if hex == destination.unwrap() {
             proposed
         } else {
@@ -1073,7 +1122,7 @@ fn resolve_ground_segment(
         }
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         if let Some(text) = stop {
-            restore_ground_position(unit, old_position, old_point, old_elevation);
+            restore_ground_position(unit, old_position, old_point, old_elevation, old_entry);
             let motion = unit.motion.as_mut().unwrap();
             motion.speed = 0.0;
             motion.desired_speed = 0.0;
@@ -1232,7 +1281,7 @@ fn resolve_ground_segment(
         }
         if change > 0 {
             let unit = world.btech.constructed.get_mut(&id).unwrap();
-            restore_ground_position(unit, old_position, old_point, old_elevation);
+            restore_ground_position(unit, old_position, old_point, old_elevation, old_entry);
         }
         stopped = true;
         break;
@@ -1241,6 +1290,7 @@ fn resolve_ground_segment(
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.position = Some(position);
         unit.ground_elevation = ground_elevation;
+        unit.level_entry = entry;
         motion.point = proposed;
         unit.motion = Some(motion);
     }
@@ -1274,9 +1324,11 @@ fn restore_ground_position(
     position: super::Position,
     point: Point,
     elevation: Option<f64>,
+    entry: Option<LevelEntry>,
 ) {
     unit.position = Some(position);
     unit.ground_elevation = elevation;
+    unit.level_entry = entry;
     unit.hex_sync_pending = point.containing_hex().ok()
         != Some(super::HexCoordinate {
             x: i32::from(position.x),

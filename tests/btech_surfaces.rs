@@ -1633,9 +1633,12 @@ async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
                 );
                 let unit = &world.btech.constructed_units()[&id];
                 if unit.position().unwrap().y != before {
+                    // One level costs one MP, charged like the hex's own terrain cost: the
+                    // unit keeps its speed and crosses the hex a hex-width slower.
                     assert_eq!(unit.position().unwrap().y, 2);
-                    assert_eq!(unit.motion().unwrap().speed, 10.75);
+                    assert_eq!(unit.motion().unwrap().speed, 21.5);
                     assert_eq!(unit.motion().unwrap().desired_speed, 21.5);
+                    assert_eq!(unit.level_entry_cost(), 1);
                     crossed_first = true;
                 }
             }
@@ -1653,8 +1656,19 @@ async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
                 let unit = &world.btech.constructed_units()[&id];
                 if unit.position().unwrap().y != before {
                     assert_eq!(unit.position().unwrap().y, 3);
-                    assert_eq!(unit.motion().unwrap().speed, 0.0);
                     assert_eq!(unit.motion().unwrap().desired_speed, 21.5);
+                    assert_eq!(unit.level_entry_cost(), 2);
+                    // The two-level step costs two hex-widths of travel: a third of the
+                    // throttle through a clear hex.
+                    let proposal = propose_battle_mech_ground_motion(
+                        &world,
+                        id,
+                        unit.motion().unwrap(),
+                        HexCoordinate { x: 1, y: 3 },
+                        motion_rules,
+                    )
+                    .unwrap();
+                    assert!(proposal.motion.speed < unit.motion().unwrap().speed);
                     crossed_second = true;
                     break;
                 }
@@ -2453,7 +2467,7 @@ async fn leaving_shallow_water_restores_land_height_and_charges_the_upward_step(
     assert_eq!(unit.position().unwrap().y, 2);
     assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(0));
     assert_eq!(unit.motion().unwrap().desired_speed, 21.5);
-    // The water hex's cost slows the step and the climb out costs a level.
+    // The water hex's cost slows the step; the climb out is a level charged on the new hex.
     let proposed = propose_battle_mech_ground_motion(
         &before,
         id,
@@ -2462,9 +2476,8 @@ async fn leaving_shallow_water_restores_land_height_and_charges_the_upward_step(
         MovementRules::STANDARD,
     )
     .unwrap();
-    assert!(
-        (unit.motion().unwrap().speed - (proposed.motion.speed - 10.75).max(0.0)).abs() < 1e-10
-    );
+    assert!((unit.motion().unwrap().speed - proposed.motion.speed).abs() < 1e-10);
+    assert_eq!(unit.level_entry_cost(), 1);
     assert_eq!(
         serde_json::to_value(unit).unwrap()["dice"],
         serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"]
@@ -2552,16 +2565,15 @@ async fn bridge_ground_routes_select_lower_or_deck_surface_and_replay() {
                 serde_json::to_value(unit).unwrap()["dice"],
                 serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
             );
-            let cost = if !reverse_check && height == map_height {
-                f64::from(change.abs()) * 10.75
+            // Levels climbed to the hex surface are charged on the new hex, forward or backward;
+            // a change of river-bed height beneath a span is not a level change of the hex.
+            let levels = if height == map_height {
+                change.unsigned_abs() as u8
             } else {
-                0.0
+                0
             };
-            assert_eq!(
-                unit.motion().unwrap().speed.abs(),
-                (21.5 - cost).max(0.0),
-                "{row}"
-            );
+            assert_eq!(unit.motion().unwrap().speed.abs(), 21.5, "{row}");
+            assert_eq!(unit.level_entry_cost(), levels, "{row}");
             world.validate(&config).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
             assert_eq!(
@@ -2791,15 +2803,19 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
             MovementRules::STANDARD,
         )
         .unwrap();
-        // The speed column holds the level cost alone; ice and water costs come from the
-        // proposal.
-        let level_cost = 21.5 - speed;
+        // The speed column encodes the levels climbed between beds, charged on the new hex;
+        // ice and water costs come from the proposal.
+        let levels = ((21.5 - speed) / 10.75_f64).round() as u8;
         let tile = world.btech.maps()[&map].base_hex(1, 2).unwrap();
         assert!(
-            (world.btech.constructed_units()[&id].motion().unwrap().speed
-                - (proposed.motion.speed - level_cost).max(0.0))
-            .abs()
+            (world.btech.constructed_units()[&id].motion().unwrap().speed - proposed.motion.speed)
+                .abs()
                 < 1e-10,
+            "{old_terrain:?}{old_depth} -> {new_terrain:?}{new_depth}"
+        );
+        assert_eq!(
+            world.btech.constructed_units()[&id].level_entry_cost(),
+            levels,
             "{old_terrain:?}{old_depth} -> {new_terrain:?}{new_depth}"
         );
         let mut expected = before;

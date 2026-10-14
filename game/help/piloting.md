@@ -42,11 +42,12 @@ three; rapids add one more and torrents two. Fire slows every ground unit at lea
 much as rough ground; smoke does not. Standing in flames at the turn boundary adds five
 outside heat to a Mech, counted against the fifteen-point outside-heat cap, unless it is
 under the water or beneath the bridge deck the fire burns on.
-Forward steps reduce speed by 10.75 kph per level while preserving your requested
-throttle. Backing across a step normally requires a piloting check: failure causes a
-fall, with an uphill fall returning you to the previous position. When reverse-step
-checks are disabled, backing uses the same speed costs as forward movement. Map edges
-and unresolved altitude transitions stop the unit. Buildings and walls use their
+Each level climbed or descended to enter a hex costs one MP (Total Warfare p. 52),
+charged like the hex's own terrain cost: you keep your throttle and cross the hex
+that many hex-widths slower. Backing across a step also requires a piloting check (a
+house rule; the book forbids backward level changes): failure causes a fall, with an
+uphill fall returning you to the previous position. Map edges and unresolved altitude
+transitions stop the unit. Buildings and walls use their
 mapped heights.
 
 Some terrain cannot be entered at all, and a unit that reaches its edge simply
