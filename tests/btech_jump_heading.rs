@@ -7,7 +7,7 @@ use stompymux_rs::*;
 async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
     for quad in [false, true] {
         for gravity in [50, 100, 200] {
-            for fasa in [false, true] {
+            {
                 let (_dir, config, mut world) = support::isolated_world().await;
                 let map = world.create(&config, "Jump field".into(), Kind::Room);
                 create_battle_map(
@@ -52,11 +52,7 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                 world.btech = serde_json::from_value(saved).unwrap();
                 launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
                 let mut straight = world.clone();
-                let rate = if fasa {
-                    18.0
-                } else {
-                    3.0 * (500 / gravity) as f64 * if quad { 2.0 } else { 1.0 }
-                };
+                let rate = 3.0 * (500 / gravity) as f64;
                 let desired = (350.0 + rate * 2.0 + 3.0) % 360.0;
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
                 let native = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -89,10 +85,7 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                     .await
                     .unwrap();
                 let mut replay = persistence::load(&config.database()).await.unwrap();
-                let rules = MovementRules {
-                    fasa_turning: fasa,
-                    ..MovementRules::STANDARD
-                };
+                let rules = MovementRules::STANDARD;
                 for tick in 1..=4 {
                     let before = turning.btech.constructed_units()[&id].clone();
                     advance_battle_motion(&mut turning, rules).unwrap();
@@ -136,11 +129,7 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                         .jump_capacity(gravity)
                         .unwrap();
                     advance_battle_motion(&mut damaged, rules).unwrap();
-                    let rate = if fasa {
-                        18.0
-                    } else {
-                        3.0 * f64::from(capacity.movement_points)
-                    };
+                    let rate = 3.0 * f64::from(capacity.movement_points);
                     assert!(
                         (damaged.btech.constructed_units()[&id]
                             .motion()

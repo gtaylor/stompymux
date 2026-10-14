@@ -20,8 +20,6 @@ pub fn snipe_action(
         super::targeting::controlled(before, shooter, pilot)?;
         let weapons = super::tic::selection(selection, 96)?;
         let rules = super::MovementRules {
-            fasa_turning: config.battletech.fasaturn != 0,
-            slowdown: config.battletech.slowdown,
             tsm_tow_bonus: config.battletech.tsm_tow_bonus != 0,
             ..super::MovementRules::STANDARD
         };

@@ -52,28 +52,24 @@ impl Motion {
         self.desired_speed = 0.0;
     }
 
-    /// Advance heading toward the commanded bearing with the configured ground-turn model.
-    pub(super) fn turn_toward(&mut self, maximum: f64, fasa_turning: bool, multiplier: f64) {
+    /// Advance heading toward the commanded bearing. Facing changes are continuous: a unit
+    /// turns through as many degrees a second as it has running MP, half again as fast from
+    /// a standstill, and more slowly while running hard through a wide turn. Total Warfare
+    /// p. 50 charges 1 MP per hexside instead; this rate-limited turn with the throttle cut in
+    /// `motion_controls::turning_throttle` is the realtime adaptation of that cost, and it is
+    /// the same for bipeds and quads.
+    pub(super) fn turn_toward(&mut self, maximum: f64) {
         if maximum <= 0.0 {
             return;
         }
         let difference = (self.desired_heading - self.heading + 180.0).rem_euclid(360.0) - 180.0;
-        let turn = if fasa_turning {
-            let cap = if self.speed < 0.0 {
-                maximum * 2.0 / 3.0
-            } else {
-                maximum
-            };
-            (1.5 * (cap - self.speed.abs()).max(0.0) * (maximum / cap) / 10.75).max(0.0)
+        let base = if self.speed.abs() < 1.0 { 1.5 } else { 1.0 } * maximum / 10.75;
+        let turn = if difference.abs() > base && self.speed > maximum * 2.0 / 3.0 + 0.1 {
+            base * (2.0 - 1.5 * self.speed / maximum)
         } else {
-            let base = if self.speed.abs() < 1.0 { 1.5 } else { 1.0 } * maximum / 10.75;
-            if difference.abs() > base && self.speed > maximum * 2.0 / 3.0 + 0.1 {
-                base * (2.0 - 1.5 * self.speed / maximum)
-            } else {
-                base
-            }
+            base
         };
-        self.turn_by(turn * multiplier);
+        self.turn_by(turn);
     }
 
     /// Rotate along the shortest arc without overshooting the commanded bearing.
@@ -142,11 +138,6 @@ impl Motion {
 pub struct MovementRules {
     /// Enable hot-myomer assistance when calculating towing load.
     pub tsm_tow_bonus: bool,
-    /// Use pilot-based aim for DFA landing attacks.
-    pub fasa_turning: bool,
-    pub slowdown: i64,
-    /// Require a control check when backing across an elevation change.
-    pub roll_on_backwalk: bool,
     /// Damage and pilot protection rules for failed movement checks.
     pub fall: super::FallRules,
 }
@@ -160,9 +151,6 @@ impl MovementRules {
     /// Conventional movement and fall settings, suitable for an isolated simulation.
     pub const STANDARD: Self = Self {
         tsm_tow_bonus: true,
-        fasa_turning: false,
-        slowdown: 2,
-        roll_on_backwalk: true,
         fall: super::FallRules {
             vehicle_impact: crate::VehicleImpactRules::STANDARD,
             extended_piloting: true,
@@ -463,12 +451,7 @@ fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<
         let maximum = world.btech.unit(id).expect("moving unit").maximum_speed();
         let maximum = super::load::movement_maximum(world, id, maximum, rules.tsm_tow_bonus)?;
         let maximum = if let Some(unit) = world.btech.constructed_units().get(&id) {
-            let effective = super::speed_bonus::on_map(
-                world,
-                unit.position(),
-                unit.movement_maximum_at(maximum),
-            )?;
-            unit.turning_from_maximum(effective)
+            super::speed_bonus::on_map(world, unit.position(), unit.movement_maximum_at(maximum))?
         } else {
             super::speed_bonus::vehicle_on_map(
                 world,
@@ -476,12 +459,7 @@ fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<
                 maximum,
             )?
         };
-        let multiplier = world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .map_or(1.0, |unit| unit.chassis().turn_multiplier());
-        motion.turn_toward(maximum, rules.fasa_turning, multiplier);
+        motion.turn_toward(maximum);
         crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.motion = Some(motion);
         })
@@ -538,12 +516,8 @@ fn advance_motion_inner(
             continue;
         };
         if unit.flight().is_some() {
-            let turn = if rules.fasa_turning {
-                18.0
-            } else {
-                let chassis = unit.chassis().turn_multiplier();
-                3.0 * f64::from(unit.jump_capacity(map.gravity)?.movement_points) * chassis
-            };
+            // An airborne Mech turns three degrees a second per jumping MP, whatever its chassis.
+            let turn = 3.0 * f64::from(unit.jump_capacity(map.gravity)?.movement_points);
             motion.turn_by(turn);
             world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
             continue;
@@ -878,8 +852,9 @@ fn resolve_ground_segment(
             } else {
                 None
             };
-            let checked_height =
-                stop.is_some() || (change != 0 && motion.speed < 0.0 && rules.roll_on_backwalk);
+            // Backing across a level change takes the reverse-slope check, a kept house rule:
+            // Total Warfare p. 49 forbids backward level changes outright.
+            let checked_height = stop.is_some() || (change != 0 && motion.speed < 0.0);
             let hazardous_ground = tile
                 .entry_piloting_modifier(super::GroundMovement::Legged)
                 .is_some()
@@ -1055,7 +1030,7 @@ fn resolve_ground_segment(
             stopped = true;
             break;
         }
-        if change == 0 || motion.speed >= 0.0 || !rules.roll_on_backwalk {
+        if change == 0 || motion.speed >= 0.0 {
             let entry = super::water_movement::enter_water(
                 world,
                 id,

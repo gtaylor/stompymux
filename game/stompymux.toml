@@ -123,10 +123,6 @@ allow_cargo_commands = true
 techtime_multiplier = 1.0
 # Enable MechWarrior embark/disembark behavior and experience loss.
 ic = 0
-# Speed-reduction rules while turning: 0 disables them, 1 is legacy, 2 is facing-based.
-slowdown = 2
-# Apply FASA turning rules and their associated to-hit modifier.
-fasaturn = 0
 # Require units to be stalled before non-wizard players can perform serious repairs.
 limitedrepairs = 1
 # Database object that stores destroyed units.

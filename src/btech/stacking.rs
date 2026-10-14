@@ -106,7 +106,6 @@ pub(super) fn resolve_pure_with_feedback(
 }
 
 /// Occupancy counts include shut-down bipeds but target selection requires running power.
-/// Maps with the `no_stacking` flag never collide.
 fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
@@ -122,14 +121,6 @@ fn resolve_in_candidate(
         .get(&id)
         .context("Unit is unavailable")?;
     let position = unit.position().context("Collision requires placement")?;
-    if world
-        .btech
-        .maps()
-        .get(&position.map)
-        .is_some_and(|map| map.has_flag(super::MapFlag::NoStacking))
-    {
-        return Ok(Vec::new());
-    }
     let team = unit.signature().team;
     let occupants: Vec<_> = world
         .btech

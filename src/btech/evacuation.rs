@@ -982,7 +982,6 @@ pub fn stand_action(
     id: ObjectId,
     pilot: ObjectId,
     mode: super::StandMode,
-    careful_enabled: bool,
     rules: super::FallRules,
 ) -> Result<super::StandAttempt> {
     scripts.atomic(|before| {
@@ -991,7 +990,6 @@ pub fn stand_action(
             id,
             pilot,
             mode,
-            careful_enabled,
             rules,
         )?;
         super::piloting::publish_maneuver_feedback(

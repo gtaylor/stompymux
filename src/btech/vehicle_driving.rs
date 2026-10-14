@@ -238,9 +238,8 @@ pub(super) fn advance(
         let mut previous_height = vehicle.elevation_level(current);
         let mut previous_tile = current;
         let mut under_bridge = vehicle.under_bridge();
-        let reverse_checks = next.speed < 0.0
-            && rules.roll_on_backwalk
-            && vehicle.definition().movement != VehicleMovement::Tracked;
+        let reverse_checks =
+            next.speed < 0.0 && vehicle.definition().movement != VehicleMovement::Tracked;
         let mut entries = Vec::new();
         let traversed = old.point.trace_positions(next.point)?;
         for (hex, point) in traversed {

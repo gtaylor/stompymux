@@ -77,15 +77,6 @@ impl Mech {
         maximum
     }
 
-    /// Turning keeps its own hot-myomer adjustment after the shared effective ceiling.
-    pub(super) fn turning_from_maximum(&self, maximum: f64) -> f64 {
-        if self.triple_myomer_active() && maximum > 0.0 {
-            maximum + 1.5 * 10.75
-        } else {
-            maximum
-        }
-    }
-
     /// At nine heat TSM suppresses the first heat penalty; higher heat bands still apply normally.
     pub(super) fn movement_heat_multiplier(&self, maximum: f64) -> f64 {
         if self.triple_myomer_active() && self.heat().excess < 10.0 {

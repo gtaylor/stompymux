@@ -6,7 +6,7 @@ use stompymux_rs::*;
 #[tokio::test]
 async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates() {
     for chassis in ["biped", "quad", "tracked", "wheeled", "hover", "vtol"] {
-        for fasa in [false, true] {
+        {
             let (_dir, config, mut world) = support::isolated_world().await;
             let map = world.create(&config, "Facing field".into(), Kind::Room);
             create_battle_map(
@@ -68,7 +68,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
             } else {
                 world.btech.vehicles()[&id].maximum_speed()
             };
-            let rate = 1.5 * maximum / 10.75 * if chassis == "quad" { 2.0 } else { 1.0 };
+            let rate = 1.5 * maximum / 10.75;
             let desired = (350.0 + 2.0 * rate + 1.0) % 360.0;
             let key = if mech { "constructed" } else { "vehicles" };
             let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -92,11 +92,8 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
             }
             world.btech = serde_json::from_value(state).unwrap();
             world.validate(&config).unwrap();
-            let rules = MovementRules {
-                fasa_turning: fasa,
-                ..MovementRules::STANDARD
-            };
-            // The same zero-speed ground turn includes the quad multiplier.
+            let rules = MovementRules::STANDARD;
+            // The same zero-speed ground turn applies to every chassis.
             if chassis != "vtol" {
                 let mut trial = world.clone();
                 trial.btech = serde_json::from_value(ground).unwrap();
@@ -105,7 +102,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 let heading = serde_json::to_value(&trial.btech).unwrap()[key][id.0.to_string()]["motion"]["heading"].as_f64().unwrap();
                 assert!(
                     (heading - (350.0 + rate) % 360.0).abs() < 1e-8,
-                    "{chassis} {fasa} {heading} {rate}"
+                    "{chassis} {heading} {rate}"
                 );
             }
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
@@ -200,7 +197,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                 advance_battle_motion(&mut restored, rules).unwrap();
                 assert_eq!(world.btech, restored.btech);
                 let actual = serde_json::to_value(&world.btech).unwrap();
-                assert_eq!(actual, expected, "{chassis} {fasa} tick {tick}");
+                assert_eq!(actual, expected, "{chassis} tick {tick}");
                 world.validate(&config).unwrap();
             }
         }

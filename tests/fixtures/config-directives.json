@@ -55,16 +55,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_slowdown",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "btech_fasaturn",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_xploss",
     "parser": "cf_int",
     "permission": "CA_GOD"
@@ -125,11 +115,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_roll_on_backwalk",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_usedunitstore",
     "parser": "cf_int",
     "permission": "CA_GOD"
@@ -181,11 +166,6 @@
   },
   {
     "name": "btech_mwpickup_action",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "btech_standcareful",
     "parser": "cf_int",
     "permission": "CA_GOD"
   },

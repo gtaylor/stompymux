@@ -649,7 +649,7 @@ async fn hot_myomer_replaces_the_extra_movement_boost_and_preserves_turning() {
                 .motion()
                 .unwrap()
                 .heading
-                - 1.5 * (control + 16.125) / 10.75)
+                - 1.5 * control / 10.75)
                 .abs()
                 < 1e-9
         );

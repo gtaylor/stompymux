@@ -94,17 +94,6 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         )
         .unwrap();
     assert!((road.heading - (5.0 * (1.0 - 53.75 / 64.5 / 2.0))).abs() < 1e-12);
-    let fasa = template
-        .ground_motion_step(
-            motion,
-            Hex::new(Terrain::Road, 0),
-            VehicleMotionRules {
-                fasa_turning: true,
-                ..VehicleMotionRules::STANDARD
-            },
-        )
-        .unwrap();
-    assert_eq!(fasa.heading, 0.0);
     template.movement = VehicleMovement::Hover;
     motion.heading = 0.0;
     motion.desired_heading = 0.0;

@@ -114,8 +114,6 @@ pub(super) fn advance_all(
             .pilot()
             .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
         let movement = VehicleMotionRules {
-            fasa_turning: rules.fasa_turning,
-            slowdown: rules.slowdown,
             speed_demon,
             movement_modifier: map.movement_modifier,
             // Fog and buildings slow ground movement, not rotorcraft in flight.

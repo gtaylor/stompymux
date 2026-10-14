@@ -144,7 +144,6 @@ pub(crate) fn configured_land(
         pilot,
         MovementRules {
             tsm_tow_bonus: settings.tsm_tow_bonus != 0,
-            fasa_turning: settings.fasaturn != 0,
             fall: super::FallRules::configured(config),
             ..MovementRules::STANDARD
         },

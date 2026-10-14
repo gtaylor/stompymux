@@ -164,20 +164,6 @@
     "default": 5
   },
   {
-    "path": "battletech.slowdown",
-    "legacy_name": "btech_slowdown",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 2
-  },
-  {
-    "path": "battletech.fasaturn",
-    "legacy_name": "btech_fasaturn",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
     "path": "battletech.xploss",
     "legacy_name": "btech_xploss",
     "registry_type": "cf_int",
@@ -187,13 +173,6 @@
   {
     "path": "battletech.mw_losmap",
     "legacy_name": "btech_mw_losmap",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
-    "path": "battletech.roll_on_backwalk",
-    "legacy_name": "btech_roll_on_backwalk",
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 1
@@ -250,13 +229,6 @@
   {
     "path": "battletech.mwpickup_action",
     "legacy_name": "btech_mwpickup_action",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
-    "path": "battletech.standcareful",
-    "legacy_name": "btech_standcareful",
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 1

@@ -65,16 +65,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_slowdown",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_fasaturn",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_xploss",
         parser: "cf_int",
         permission: P::GOD,
@@ -135,11 +125,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_roll_on_backwalk",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_usedunitstore",
         parser: "cf_int",
         permission: P::GOD,
@@ -191,11 +176,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "btech_mwpickup_action",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_standcareful",
         parser: "cf_int",
         permission: P::GOD,
     },

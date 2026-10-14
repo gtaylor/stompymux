@@ -681,7 +681,6 @@ names. Map `flags` are:
 | `indestructible_structures` | Weapon fire cannot damage buildings, walls or bridges. |
 | `no_friendly_fire` | Teammates cannot damage each other with weapons. |
 | `no_physical_attacks` | Physical attacks are not allowed. |
-| `no_stacking` | Units share crowded hexes without stacking collisions, and autopilots do not route around them. |
 
 `sensorflags` switches perception off for everyone on the map: `sensors`
 disables the built-in sensors, `radar` the radar system alone and `probes`

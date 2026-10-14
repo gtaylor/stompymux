@@ -955,7 +955,6 @@ async fn hardened_gyro_critical_checks_and_restart() {
                     id,
                     ObjectId(1),
                     StandMode::Normal,
-                    false,
                     fall_rules(),
                 )
                 .unwrap_err();

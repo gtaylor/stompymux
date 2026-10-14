@@ -5,8 +5,6 @@ use anyhow::{Result, ensure};
 /// Inputs independent of vehicle construction, supplied by world configuration and pilot state.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VehicleMotionRules {
-    pub fasa_turning: bool,
-    pub slowdown: i64,
     pub speed_demon: bool,
     /// Positive map movement percentage; nonpositive values use the ordinary rate.
     pub movement_modifier: i64,
@@ -19,8 +17,6 @@ pub struct VehicleMotionRules {
 impl VehicleMotionRules {
     /// Ordinary ground rules without pilot advantages or map rate changes.
     pub const STANDARD: Self = Self {
-        fasa_turning: false,
-        slowdown: 2,
         speed_demon: false,
         movement_modifier: 0,
         extra_cost: 0,
@@ -117,7 +113,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
         }
         let old_heading = motion.heading;
         // Paved-surface speed can exceed the turning maximum. Preserve the high-speed turn rule.
-        if !rules.fasa_turning && motion.speed > maximum {
+        if motion.speed > maximum {
             let difference =
                 (motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0;
             let base = maximum / 10.75;
@@ -128,7 +124,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
             };
             motion.heading = (motion.heading + difference.clamp(-turn, turn)).rem_euclid(360.0);
         } else {
-            motion.turn_toward(maximum, rules.fasa_turning, 1.0);
+            motion.turn_toward(maximum);
         }
         let mut target = motion.desired_speed.abs()
             / (terrain_divisor(hex, self.movement, self.has_special("Waterproof_Tech"))
@@ -141,7 +137,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
         if motion.heading != old_heading {
             let remaining =
                 ((motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0).abs();
-            target = super::motion_controls::turning_throttle(target, remaining, rules.slowdown);
+            target = super::motion_controls::turning_throttle(target, remaining);
         }
         target *= motion.desired_speed.signum();
         let acceleration = maximum / 20.0 * if rules.speed_demon { 1.25 } else { 1.0 };

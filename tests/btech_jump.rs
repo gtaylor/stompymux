@@ -325,16 +325,9 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     );
     let launch = world.btech.clone();
     assert!(
-        advance_battle_motion(
-            &mut world,
-            MovementRules {
-                fasa_turning: false,
-                slowdown: 2,
-                ..stompymux_rs::MovementRules::STANDARD
-            }
-        )
-        .unwrap()
-        .is_empty()
+        advance_battle_motion(&mut world, MovementRules::STANDARD)
+            .unwrap()
+            .is_empty()
     );
     assert_eq!(world.btech, launch);
     assert_eq!(

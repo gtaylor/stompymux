@@ -1525,11 +1525,7 @@ async fn level_bridge_deck_motion_matches_native_lua_and_replays_both_directions
                 .unwrap();
             assert_eq!(native.world().btech, lua.world().btech, "{text}");
             let mut expected = native.world().clone();
-            let motion_rules = MovementRules {
-                fasa_turning: false,
-                slowdown: 0,
-                ..stompymux_rs::MovementRules::STANDARD
-            };
+            let motion_rules = MovementRules::STANDARD;
             for _ in 0..30 {
                 assert!(
                     advance_battle_motion(&mut expected, motion_rules)
@@ -1585,15 +1581,7 @@ async fn bridge_motion_does_not_replace_a_retained_lower_altitude_with_deck_heig
         .unwrap();
     let point = world.btech.constructed_units()[&id].motion().unwrap().point;
     set_battle_speed(&mut world, id, ObjectId(1), 21.5).unwrap();
-    let notices = advance_battle_motion(
-        &mut world,
-        MovementRules {
-            fasa_turning: false,
-            slowdown: 0,
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
+    let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     assert!(notices.is_empty());
     assert_ne!(
         world.btech.constructed_units()[&id].motion().unwrap().point,
@@ -1634,11 +1622,7 @@ async fn forward_ground_steps_charge_each_height_change_and_replay_mid_slope() {
             set_battle_speed(&mut world, id, ObjectId(1), 21.5).unwrap();
             let dice = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"]
                 .clone();
-            let motion_rules = MovementRules {
-                fasa_turning: false,
-                slowdown: 0,
-                ..stompymux_rs::MovementRules::STANDARD
-            };
+            let motion_rules = MovementRules::STANDARD;
             let mut crossed_first = false;
             for _ in 0..30 {
                 let before = world.btech.constructed_units()[&id].position().unwrap().y;
@@ -1715,16 +1699,9 @@ async fn pending_hex_sync_completes_an_allowed_step_without_retaining_the_old_he
     world.validate(&config).unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
     assert!(
-        advance_battle_motion(
-            &mut world,
-            MovementRules {
-                fasa_turning: false,
-                slowdown: 0,
-                ..stompymux_rs::MovementRules::STANDARD
-            }
-        )
-        .unwrap()
-        .is_empty()
+        advance_battle_motion(&mut world, MovementRules::STANDARD)
+            .unwrap()
+            .is_empty()
     );
     assert!(!world.btech.constructed_units()[&id].hex_sync_pending());
     assert_eq!(
@@ -1766,11 +1743,8 @@ async fn reverse_ground_steps_matrix(symbol: char) {
         let (_dir, config, base, _, units) =
             fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
-        let mut probed_fidelity = [false; 3];
-        for (shape, (enabled, success)) in [(false, true), (true, true), (true, false)]
-            .into_iter()
-            .enumerate()
-        {
+        let mut probed_fidelity = [false; 2];
+        for (shape, success) in [true, false].into_iter().enumerate() {
             let mut world = base.clone();
             let target = 6 + change.unsigned_abs() as u8 - 1;
             prepare_reverse_step(&mut world, id, if success { target } else { target - 1 });
@@ -1778,10 +1752,7 @@ async fn reverse_ground_steps_matrix(symbol: char) {
             let before = world.clone();
             persistence::save(&config.database(), &world).await.unwrap();
             let mut loaded = persistence::load(&config.database()).await.unwrap();
-            let movement = MovementRules {
-                roll_on_backwalk: enabled,
-                ..MovementRules::STANDARD
-            };
+            let movement = MovementRules::STANDARD;
             let notices = advance_battle_motion(&mut world, movement).unwrap();
             assert_eq!(
                 notices,
@@ -1789,40 +1760,25 @@ async fn reverse_ground_steps_matrix(symbol: char) {
             );
             assert_eq!(world.btech, loaded.btech);
             let unit = &world.btech.constructed_units()[&id];
-            if !enabled || success {
+            if success {
                 assert_eq!(unit.position().unwrap().y, 2);
                 assert_eq!(unit.posture(), Posture::Standing);
                 assert_eq!(unit.motion().unwrap().desired_speed, -21.5);
-                assert_eq!(
-                    unit.motion().unwrap().speed,
-                    if enabled {
-                        -21.5
-                    } else {
-                        -(21.5 - f64::from(change.unsigned_abs()) * 10.75)
-                    }
+                assert_eq!(unit.motion().unwrap().speed, -21.5);
+                assert!(
+                    notices
+                        .iter()
+                        .any(|notice| notice.text == "You manage to overcome the obstacle.")
                 );
-                if enabled {
-                    assert!(
-                        notices
-                            .iter()
-                            .any(|notice| notice.text == "You manage to overcome the obstacle.")
-                    );
-                    let mut expected = before.clone();
-                    let check =
-                        roll_battle_piloting(&mut expected, id, change.abs() - 1, true).unwrap();
-                    assert_eq!(check.target, i32::from(target));
-                    assert!(check.success);
-                    assert_eq!(
-                        serde_json::to_value(unit).unwrap()["dice"],
-                        serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
-                    );
-                } else {
-                    assert!(notices.is_empty());
-                    assert_eq!(
-                        serde_json::to_value(unit).unwrap()["dice"],
-                        serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"]
-                    );
-                }
+                let mut expected = before.clone();
+                let check =
+                    roll_battle_piloting(&mut expected, id, change.abs() - 1, true).unwrap();
+                assert_eq!(check.target, i32::from(target));
+                assert!(check.success);
+                assert_eq!(
+                    serde_json::to_value(unit).unwrap()["dice"],
+                    serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
+                );
             } else {
                 assert_eq!(unit.posture(), Posture::Prone);
                 let protection = |unit: &Mech| {
@@ -2910,15 +2866,8 @@ async fn failed_under_ice_control_keeps_the_bottom_and_allows_standing() {
         .btech
         .set_unit_dice(id, Dice::seeded([seed; 32]))
         .unwrap();
-    let report = begin_battle_stand(
-        &mut world,
-        id,
-        ObjectId(1),
-        StandMode::Normal,
-        false,
-        rules(),
-    )
-    .unwrap();
+    let report =
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, rules()).unwrap();
     assert!(report.check.success);
     for _ in 0..60 {
         advance_battle_standing(&mut world);

@@ -23,7 +23,6 @@ fn attempt(
                 unit,
                 ObjectId(1),
                 StandMode::Anyway,
-                false,
                 FallRules::configured(config),
             )?
             .check,

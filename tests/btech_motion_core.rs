@@ -38,24 +38,6 @@ async fn acceleration_crosses_hexes_and_restart_preserves_fractional_motion() {
         world.btech.constructed_units()[&id].position().unwrap().y,
         3
     );
-    let mut fasa = world.clone();
-    set_battle_heading(&mut fasa, id, ObjectId(1), 90.0).unwrap();
-    advance_battle_motion(
-        &mut fasa,
-        MovementRules {
-            fasa_turning: true,
-            slowdown: 2,
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
-    assert_eq!(
-        fasa.btech.constructed_units()[&id]
-            .motion()
-            .unwrap()
-            .heading,
-        0.0
-    );
     let mut turning = world.clone();
     set_battle_heading(&mut turning, id, ObjectId(1), 90.0).unwrap();
     advance_battle_motion(&mut turning, RULES).unwrap();
@@ -3096,8 +3078,7 @@ async fn successful_stand_is_upright_immediately_and_finishes_after_durable_dela
         stompymux_rs::battle_stand_target(&world, id, ObjectId(1), true).unwrap(),
         6
     );
-    let attempt =
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, true, fall_rules()).unwrap();
+    let attempt = begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, fall_rules()).unwrap();
     assert!(attempt.check.success);
     assert!(attempt.fall.is_none());
     assert_eq!(attempt.timer, Some(T::Rising { remaining: 5 }));
@@ -3111,9 +3092,7 @@ async fn successful_stand_is_upright_immediately_and_finishes_after_durable_dela
     );
     let before = world.btech.clone();
     assert!(set_battle_speed(&mut world, id, ObjectId(1), 10.0).is_err());
-    assert!(
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, true, fall_rules()).is_err()
-    );
+    assert!(begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, fall_rules()).is_err());
     assert_eq!(world.btech, before);
     for _ in 0..2 {
         assert!(advance_battle_standing(&mut world).is_empty());
@@ -3141,12 +3120,10 @@ async fn careful_stand_failure_falls_again_and_requires_thirty_second_recovery()
         .unwrap();
     shot_seed(&mut world, id, seed);
     let before = world.btech.clone();
-    assert!(
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, false, fall_rules()).is_err()
-    );
+    assert!(begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, fall_rules()).is_err());
     assert_eq!(world.btech, before);
     let attempt =
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, true, fall_rules()).unwrap();
+        begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, fall_rules()).unwrap();
     assert!(!attempt.check.success);
     assert_eq!(attempt.check.target, 4);
     let fall = attempt.fall.unwrap();
@@ -3158,9 +3135,7 @@ async fn careful_stand_failure_falls_again_and_requires_thirty_second_recovery()
         Posture::Prone
     );
     let before = world.btech.clone();
-    assert!(
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Anyway, true, fall_rules()).is_err()
-    );
+    assert!(begin_battle_stand(&mut world, id, ObjectId(1), M::Anyway, fall_rules()).is_err());
     assert_eq!(world.btech, before);
     for _ in 0..29 {
         assert!(advance_battle_standing(&mut world).is_empty());
@@ -3226,7 +3201,7 @@ async fn stand_command_inspection_and_impossible_target_guards_are_atomic() {
         stompymux_rs::StandMode::Careful,
     ] {
         assert!(
-            stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), mode, true, fall_rules())
+            stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), mode, fall_rules())
                 .is_err()
         );
         assert_eq!(world.btech, before);
@@ -3236,7 +3211,6 @@ async fn stand_command_inspection_and_impossible_target_guards_are_atomic() {
         id,
         ObjectId(1),
         stompymux_rs::StandMode::Anyway,
-        true,
         fall_rules(),
     )
     .unwrap();
@@ -3251,7 +3225,7 @@ async fn stand_completion_retries_failed_server_save_without_losing_timer() {
         let (_dir, config, mut world, id) = stand_fixture().await;
         let seed = (0..=255).find(|seed| stompymux_rs::Dice::seeded([*seed;32]).two_d6() >= 6).unwrap();
         shot_seed(&mut world, id, seed);
-        let _attempt = stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), stompymux_rs::StandMode::Normal, true, fall_rules()).unwrap();
+        let _attempt = stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), stompymux_rs::StandMode::Normal, fall_rules()).unwrap();
         for _ in 0..4 { stompymux_rs::advance_battle_standing(&mut world); }
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
@@ -3306,7 +3280,6 @@ async fn stand_timer_corruption_and_destroyed_gyro_are_rejected_without_rolls() 
             id,
             ObjectId(1),
             stompymux_rs::StandMode::Anyway,
-            true,
             fall_rules()
         )
         .unwrap_err()
@@ -3894,7 +3867,7 @@ async fn prone_pivots_and_stand_countdown_turns_preserve_position_and_restart() 
     use stompymux_rs::{Dice, StandMode, StandTimer, begin_battle_stand};
     let (_dir, config, base, id) = stand_fixture().await;
     for mode in [None, Some(true), Some(false)] {
-        for fasa_turning in [false, true] {
+        {
             let mut world = base.clone();
             if let Some(success) = mode {
                 let seed = (0..=255)
@@ -3909,7 +3882,6 @@ async fn prone_pivots_and_stand_countdown_turns_preserve_position_and_restart() 
                     id,
                     ObjectId(1),
                     StandMode::Normal,
-                    true,
                     fall_rules(),
                 )
                 .unwrap();
@@ -3935,11 +3907,7 @@ async fn prone_pivots_and_stand_countdown_turns_preserve_position_and_restart() 
             let desired = (old.heading + 90.0).rem_euclid(360.0);
             set_battle_heading(&mut world, id, ObjectId(1), desired).unwrap();
             world.validate(&config).unwrap();
-            let rules = MovementRules {
-                fasa_turning,
-                slowdown: 2,
-                ..stompymux_rs::MovementRules::STANDARD
-            };
+            let rules = MovementRules::STANDARD;
             assert!(advance_battle_motion(&mut world, rules).unwrap().is_empty());
             let unit = &world.btech.constructed_units()[&id];
             assert!(
@@ -4181,15 +4149,8 @@ async fn prone_fire_forbids_leg_mounts_until_upright() {
     let before = world.btech.clone();
     assert!(stompymux_rs::spend_battle_weapon(&mut world, id, ObjectId(1), index).is_err());
     assert_eq!(world.btech, before);
-    let _stand = begin_battle_stand(
-        &mut world,
-        id,
-        ObjectId(1),
-        StandMode::Normal,
-        true,
-        fall_rules(),
-    )
-    .unwrap();
+    let _stand =
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules()).unwrap();
     assert!(
         world.btech.constructed_units()[&id]
             .weapon_readiness(index)
@@ -4490,15 +4451,9 @@ async fn water_falls_scale_damage_and_replay_before_standing() {
             fall
         );
         assert_eq!(loaded.btech, world.btech);
-        let stand = begin_battle_stand(
-            &mut world,
-            id,
-            ObjectId(1),
-            StandMode::Normal,
-            true,
-            fall_rules(),
-        )
-        .unwrap();
+        let stand =
+            begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules())
+                .unwrap();
         assert!(stand.check.success);
         world.validate(&config).unwrap();
     }
@@ -4534,15 +4489,8 @@ async fn water_leg_breaches_force_falls_without_destroying_structure() {
     }));
     assert_eq!(unit.mobility().maximum_speed, 10.75);
     assert_eq!(unit.mobility().piloting_modifier, 5);
-    let stand = begin_battle_stand(
-        &mut world,
-        id,
-        ObjectId(1),
-        StandMode::Normal,
-        true,
-        fall_rules(),
-    )
-    .unwrap();
+    let stand =
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules()).unwrap();
     assert!(stand.check.success);
     for _ in 0..30 {
         stompymux_rs::advance_battle_standing(&mut world);
@@ -4585,17 +4533,10 @@ async fn water_leg_breaches_force_falls_without_destroying_structure() {
         0.0
     );
     assert!(
-        begin_battle_stand(
-            &mut world,
-            id,
-            ObjectId(1),
-            StandMode::Normal,
-            true,
-            fall_rules()
-        )
-        .unwrap_err()
-        .to_string()
-        .contains("No legs")
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules())
+            .unwrap_err()
+            .to_string()
+            .contains("No legs")
     );
     world.validate(&config).unwrap();
 }

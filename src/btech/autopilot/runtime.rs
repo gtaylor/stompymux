@@ -541,7 +541,6 @@ fn advance_controller(
             world,
             id,
             crate::btech::StandMode::Normal,
-            false,
             crate::btech::FallRules::configured(config),
         ) {
             Ok(attempt) => attempt,

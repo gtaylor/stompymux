@@ -124,18 +124,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.slowdown",
-        legacy: "btech_slowdown",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.fasaturn",
-        legacy: "btech_fasaturn",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.xploss",
         legacy: "btech_xploss",
         kind: "i64",
@@ -144,12 +132,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.mw_losmap",
         legacy: "btech_mw_losmap",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.roll_on_backwalk",
-        legacy: "btech_roll_on_backwalk",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
@@ -198,12 +180,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.mwpickup_action",
         legacy: "btech_mwpickup_action",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.standcareful",
-        legacy: "btech_standcareful",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },

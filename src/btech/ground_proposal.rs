@@ -66,13 +66,8 @@ pub fn propose_mech_ground_motion(
             immobilized: true,
         });
     }
-    let turning_maximum = unit.turning_from_maximum(effective);
     let old_heading = motion.heading;
-    motion.turn_toward(
-        turning_maximum,
-        rules.fasa_turning,
-        unit.chassis().turn_multiplier(),
-    );
+    motion.turn_toward(maximum);
     // Fog adds to the cost of every hex a walker enters (Tactical Operations p. 55), and so
     // does the building it walks through (Total Warfare p. 167).
     let divisor = current.ground_speed_divisor(super::GroundMovement::Legged)
@@ -88,7 +83,7 @@ pub fn propose_mech_ground_motion(
     let mut target = desired * unit.movement_heat_multiplier(maximum) / divisor;
     if motion.heading != old_heading {
         let remaining = (motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0;
-        target = super::motion_controls::turning_throttle(target, remaining, rules.slowdown);
+        target = super::motion_controls::turning_throttle(target, remaining);
     }
     target = unit.lateral_speed_at(target, maximum);
     let acceleration = unit.ground_acceleration_at(world, maximum);
@@ -159,8 +154,6 @@ pub fn propose_vehicle_ground_motion(
             map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?
         },
         super::VehicleMotionRules {
-            fasa_turning: rules.fasa_turning,
-            slowdown: rules.slowdown,
             speed_demon: advantage,
             movement_modifier: map.movement_modifier,
             extra_cost: map.weather_condition()?.movement_cost()

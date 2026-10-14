@@ -92,14 +92,14 @@ pub(crate) fn throttle_configured(
     super::speed_bonus::on_map(world, unit.position(), unit.movement_maximum_at(base))
 }
 
-/// Apply the configured speed reduction during an ordinary heading change.
-pub(super) fn turning_throttle(target: f64, remaining: f64, slowdown: i64) -> f64 {
+/// Cut the throttle target while a heading change is under way: 80 % of the request with
+/// less than 31 degrees still to turn, one tenth less for every further 30 degrees, down to
+/// 30 % for a full reversal. Together with the rate-limited turn this stands in for the
+/// 1 MP per hexside that Total Warfare p. 50 charges for facing changes.
+pub(super) fn turning_throttle(target: f64, remaining: f64) -> f64 {
     let remaining = remaining.abs();
-    let factor = match slowdown {
-        1 if remaining != 0.0 => 2.0 / 3.0,
-        1 => 0.75,
-        2 if remaining >= 1.0 => (8.0 - ((remaining - 1.0) / 30.0).floor()) / 10.0,
-        _ => 1.0,
-    };
-    target * factor
+    if remaining < 1.0 {
+        return target;
+    }
+    target * (8.0 - ((remaining - 1.0) / 30.0).floor()) / 10.0
 }

@@ -20,7 +20,8 @@ impl StandTimer {
     }
 }
 
-/// Normal refuses impossible base targets; anyway overrides that refusal; careful uses -2.
+/// Normal refuses impossible base targets; anyway overrides that refusal; careful spends the
+/// whole turn standing for -2 on the roll (Tactical Operations p. 20) and is always available.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StandMode {
     Normal,
@@ -103,18 +104,9 @@ pub fn begin_stand(
     id: ObjectId,
     pilot: ObjectId,
     mode: StandMode,
-    careful_enabled: bool,
     rules: FallRules,
 ) -> Result<StandAttempt> {
-    begin_stand_inner(
-        world,
-        id,
-        StandActor::Player(pilot),
-        mode,
-        careful_enabled,
-        rules,
-        false,
-    )
+    begin_stand_inner(world, id, StandActor::Player(pilot), mode, rules, false)
 }
 
 /// Begin a normal standing attempt for an attached ground autopilot.  The
@@ -124,18 +116,9 @@ pub(crate) fn begin_stand_autopilot(
     world: &mut World,
     id: ObjectId,
     mode: StandMode,
-    careful_enabled: bool,
     rules: FallRules,
 ) -> Result<StandAttempt> {
-    begin_stand_inner(
-        world,
-        id,
-        StandActor::Autopilot,
-        mode,
-        careful_enabled,
-        rules,
-        false,
-    )
+    begin_stand_inner(world, id, StandActor::Autopilot, mode, rules, false)
 }
 
 /// Resolve a stand attempt inside a host action that publishes character consequences.
@@ -144,18 +127,9 @@ pub(super) fn begin_stand_in_action(
     id: ObjectId,
     pilot: ObjectId,
     mode: StandMode,
-    careful_enabled: bool,
     rules: FallRules,
 ) -> Result<StandAttempt> {
-    begin_stand_inner(
-        world,
-        id,
-        StandActor::Player(pilot),
-        mode,
-        careful_enabled,
-        rules,
-        true,
-    )
+    begin_stand_inner(world, id, StandActor::Player(pilot), mode, rules, true)
 }
 
 /// Shared stand eligibility, control roll, fall and recovery scheduling.
@@ -164,15 +138,10 @@ fn begin_stand_inner(
     id: ObjectId,
     actor: StandActor,
     mode: StandMode,
-    careful_enabled: bool,
     rules: FallRules,
     character: bool,
 ) -> Result<StandAttempt> {
     let target = stand_target_by_actor(world, id, actor, rules.extended_piloting)?;
-    ensure!(
-        mode != StandMode::Careful || careful_enabled,
-        "Careful standing is disabled"
-    );
     ensure!(
         mode == StandMode::Anyway || target <= 12,
         "You would fail; use stand anyway"
@@ -315,7 +284,6 @@ pub(crate) fn configured_stand(
         id,
         pilot,
         mode,
-        settings.standcareful != 0,
         FallRules {
             vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
             extended_piloting: settings.extended_piloting != 0,
