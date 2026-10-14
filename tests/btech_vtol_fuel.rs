@@ -34,7 +34,7 @@ fn fuel_reaches_zero_before_announcing_exhaustion_and_preserves_material() {
     let original = unit.clone();
     for remaining in [1, 0] {
         assert_eq!(
-            unit.consume_vtol_fuel(21.5, 1, false, false).unwrap(),
+            unit.consume_vtol_fuel(21.5, 1, false).unwrap(),
             VtolFuelUse::Consumed {
                 amount: 1,
                 remaining
@@ -42,7 +42,7 @@ fn fuel_reaches_zero_before_announcing_exhaustion_and_preserves_material() {
         );
     }
     assert_eq!(
-        unit.consume_vtol_fuel(21.5, 1, false, false).unwrap(),
+        unit.consume_vtol_fuel(21.5, 1, false).unwrap(),
         VtolFuelUse::Exhausted { newly: true }
     );
     assert_eq!(unit.vtol_fuel().unwrap().remaining(), -1);
@@ -50,7 +50,7 @@ fn fuel_reaches_zero_before_announcing_exhaustion_and_preserves_material() {
     assert!(!unit.rotor_destroyed() && !unit.is_destroyed());
     assert_eq!(unit.sections(), original.sections());
     assert_eq!(
-        unit.consume_vtol_fuel(21.5, 1, false, false).unwrap(),
+        unit.consume_vtol_fuel(21.5, 1, false).unwrap(),
         VtolFuelUse::Exhausted { newly: false }
     );
     assert_eq!(
@@ -67,7 +67,7 @@ fn low_speed_fuel_checks_and_exemptions_replay_the_same_saved_dice() {
             .unwrap();
         let base = aircraft(true, 10, 0.0, seed);
         let mut unit = base.clone();
-        let report = unit.consume_vtol_fuel(0.0, 0, false, true).unwrap();
+        let report = unit.consume_vtol_fuel(0.0, 0, false).unwrap();
         assert_eq!(
             report,
             if skip {
@@ -87,25 +87,22 @@ fn low_speed_fuel_checks_and_exemptions_replay_the_same_saved_dice() {
         );
         let mut replay: Vehicle =
             serde_json::from_value(serde_json::to_value(&base).unwrap()).unwrap();
-        assert_eq!(
-            replay.consume_vtol_fuel(0.0, 0, false, true).unwrap(),
-            report
-        );
+        assert_eq!(replay.consume_vtol_fuel(0.0, 0, false).unwrap(), report);
         assert_eq!(replay, unit);
     }
     let mut fusion = aircraft(false, 10, 0.0, 0);
     let before = fusion.clone();
     assert_eq!(
-        fusion.consume_vtol_fuel(0.0, 0, false, true).unwrap(),
+        fusion.consume_vtol_fuel(0.0, 0, false).unwrap(),
         VtolFuelUse::Skipped
     );
     assert_eq!(fusion, before);
     assert_eq!(
-        fusion.consume_vtol_fuel(0.0, 0, true, false).unwrap(),
+        fusion.consume_vtol_fuel(0.0, 0, true).unwrap(),
         VtolFuelUse::Skipped
     );
     assert_eq!(fusion, before);
-    assert!(fusion.consume_vtol_fuel(f64::NAN, 0, false, false).is_err());
+    assert!(fusion.consume_vtol_fuel(f64::NAN, 0, false).is_err());
     assert_eq!(fusion, before);
 }
 
@@ -145,7 +142,7 @@ fn overspeed_fuel_cost_depends_on_altitude_and_shutdown_does_not_draw_dice() {
     for (altitude, amount) in [(99, 2), (100, 1)] {
         let mut unit = base.clone();
         assert_eq!(
-            unit.consume_vtol_fuel(0.0, altitude, false, false).unwrap(),
+            unit.consume_vtol_fuel(0.0, altitude, false).unwrap(),
             VtolFuelUse::Consumed {
                 amount,
                 remaining: 5 - amount
@@ -162,7 +159,7 @@ fn overspeed_fuel_cost_depends_on_altitude_and_shutdown_does_not_draw_dice() {
     .unwrap();
     let before = unit.clone();
     assert_eq!(
-        unit.consume_vtol_fuel(0.0, 0, false, false).unwrap(),
+        unit.consume_vtol_fuel(0.0, 0, false).unwrap(),
         VtolFuelUse::Skipped
     );
     assert_eq!(unit, before);

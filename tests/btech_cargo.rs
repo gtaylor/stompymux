@@ -555,7 +555,7 @@ async fn vtol_auxiliary_tanks_share_capacity_mass_and_saved_surplus_fuel() {
     assert_eq!(battle_vtol_fuel_status(&loaded, unit).unwrap(), fuel);
     let mut aircraft = loaded.btech.vehicles()[&unit].clone();
     assert_eq!(
-        aircraft.consume_vtol_fuel(21.5, 1, false, false).unwrap(),
+        aircraft.consume_vtol_fuel(21.5, 1, false).unwrap(),
         VtolFuelUse::Consumed {
             amount: 1,
             remaining: 8999

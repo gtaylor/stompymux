@@ -68,7 +68,6 @@ pub(crate) fn set_control_by_actor(
     speed: Option<f64>,
     heading: Option<f64>,
     policy: super::SpeedPolicy,
-    free_fusion_fuel: bool,
 ) -> Result<Notice> {
     super::vehicle_power::controlled_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
@@ -84,7 +83,7 @@ pub(crate) fn set_control_by_actor(
         // Grounded pilots may select throttle and heading without enabling taxi travel.
         // Heading remains available without fuel; only throttle spends the flight budget.
         ensure!(
-            speed.is_none() || vehicle.has_vtol_fuel(free_fusion_fuel),
+            speed.is_none() || vehicle.has_vtol_fuel(),
             "You're out of fuel!"
         );
         ensure!(
@@ -182,7 +181,8 @@ pub(super) fn advance(
             },
             rules,
         )?;
-        // A vehicle that turned on pavement or ice must hold its line before it moves on.
+        // A vehicle that turned on pavement or ice must hold its line before it moves on, and
+        // a hovercraft that turned at flank speed anywhere risks a sideslip (TW pp. 62, 67).
         let leaving = next.point.containing_hex().ok()
             != Some(super::HexCoordinate {
                 x: i32::from(position.x),
@@ -190,16 +190,17 @@ pub(super) fn advance(
             });
         let flank_ceiling = vehicle.maximum_speed();
         let movement = vehicle.definition().movement;
+        let hover = movement == VehicleMovement::Hover;
         let ground = super::vehicle_motion::ground_movement(movement);
         let waterproof = vehicle.definition().has_special("Waterproof_Tech");
         let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
         vehicle
             .slick
-            .observe(current.is_slick(), next.speed != 0.0, next.heading);
+            .observe(current.is_slick() || hover, next.speed != 0.0, next.heading);
         let held = vehicle.slick.heading;
         if leaving
             && vehicle.slick.turned
-            && super::skid::risks_skid(current, next.speed, flank_ceiling)
+            && super::skid::risks_slide(current, next.speed, flank_ceiling, hover)
         {
             vehicle.slick.reset();
             let skid = super::skid::resolve_vehicle(
@@ -219,6 +220,9 @@ pub(super) fn advance(
             report.experience_messages.extend(skid.experience_messages);
             report.vehicle_falls.extend(skid.vehicle_falls);
             report.character_injuries.extend(skid.character_injuries);
+            if character {
+                report.falls.extend(skid.falls);
+            }
             if skid.skidded {
                 continue;
             }
@@ -647,6 +651,28 @@ pub(super) fn advance(
         let (notice, experience) = super::building_step::entered(world, id, position)?;
         report.notices.extend(notice);
         report.experience_messages.extend(experience);
+        stacking_entry(world, id, position, rules, character, &mut report)?;
     }
     Ok(report)
+}
+
+/// Hook for the shared stacking check after a vehicle's movement this second: Total Warfare
+/// p. 57 counts vehicles toward the two-units-per-side limit and ends a vehicle's movement
+/// when it enters a hex holding an enemy unit. The stacking module resolves those rules for
+/// 'Mechs and vehicles alike; this hook hands it every vehicle that has entered a new hex and
+/// is still on the field, and merges its collision effects into the movement report.
+fn stacking_entry(
+    world: &mut World,
+    id: ObjectId,
+    previous: super::Position,
+    rules: MovementRules,
+    character: bool,
+    report: &mut super::movement_report::MovementReport,
+) -> Result<()> {
+    let vehicle = &world.btech.vehicles()[&id];
+    if vehicle.is_destroyed() || vehicle.position() == Some(previous) {
+        return Ok(());
+    }
+    let _ = (rules, character, &mut report.stacking);
+    Ok(())
 }

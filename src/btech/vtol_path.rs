@@ -1,5 +1,7 @@
-//! Ordered aircraft terrain traversal and atomic clear-path movement commits.
-use super::{HexCoordinate, MapAsset, Point, Vehicle, VtolMotionStep, VtolSurfaceContact};
+//! Ordered aircraft terrain traversal and atomic clear-path movement commits. Horizontal
+//! entry follows Total Warfare p. 54: a VTOL that enters a hex at or below the level of its
+//! terrain, a building in it or the treetops of its woods crashes there.
+use super::{Hex, HexCoordinate, MapAsset, Point, Vehicle, VtolMotionStep, VtolSurfaceContact};
 use anyhow::{Context, Result};
 use serde::Serialize;
 
@@ -27,6 +29,33 @@ pub enum VtolPath {
     },
 }
 
+/// What a VTOL entering `tile` horizontally at `altitude` runs into, if anything (Total
+/// Warfare p. 54): the water at or below its surface, the ground, a building or an ice sheet
+/// at or below its level, the underside or deck of a bridge, or the treetops of woods (two
+/// levels, three for ultra-heavy growth) unless a road carries the VTOL through them.
+pub(super) fn horizontal_entry_contact(tile: Hex, altitude: i32) -> Option<VtolSurfaceContact> {
+    let level = i32::from(tile.water_line());
+    if tile.is_open_water() {
+        return (altitude <= level).then_some(VtolSurfaceContact::Water);
+    }
+    if tile.is_ice() {
+        return (altitude <= level).then_some(VtolSurfaceContact::Elevation);
+    }
+    if let Some(deck) = tile.deck_height() {
+        // The open band under the span is clear; the ground beneath it, the underside
+        // and the deck itself are not.
+        let under_span = altitude > level && altitude < i32::from(deck) - 1;
+        return (!under_span && altitude <= i32::from(deck))
+            .then_some(VtolSurfaceContact::Elevation);
+    }
+    let surface = i32::from(tile.surface_height());
+    if tile.is_woods() && !tile.is_road() {
+        return (altitude <= surface + i32::from(tile.foliage_height()))
+            .then_some(VtolSurfaceContact::Forest);
+    }
+    (altitude <= surface).then_some(VtolSurfaceContact::Elevation)
+}
+
 impl VtolMotionStep {
     /// Find the first map edge or terrain contact, including altitude changes within a hex.
     /// Integer-altitude boundaries are sampled on both sides to retain truncation semantics.
@@ -50,20 +79,7 @@ impl VtolMotionStep {
             let entered = last.is_some_and(|previous| previous != hex);
             last = Some(hex);
             let entry_altitude = initial + change * from;
-            let blocks_elevation = if tile.is_ice() {
-                (entry_altitude as i32) < i32::from(tile.water_line())
-            } else {
-                tile.blocks_jump_entry(entry_altitude as i32)
-            };
-            let entry_contact = if tile.is_woods()
-                && (entry_altitude as i32) < i32::from(tile.surface_height()) + 2
-            {
-                Some(VtolSurfaceContact::Forest)
-            } else if blocks_elevation {
-                Some(VtolSurfaceContact::Elevation)
-            } else {
-                None
-            };
+            let entry_contact = horizontal_entry_contact(tile, entry_altitude as i32);
             if let Some(contact) = entry_contact.filter(|_| entered) {
                 return Ok(Some(VtolPath::Contact {
                     hex,
@@ -79,12 +95,17 @@ impl VtolMotionStep {
             if change != 0.0 {
                 let surface = f64::from(tile.surface_height());
                 let water_line = f64::from(tile.water_line());
+                let canopy = surface + f64::from(tile.foliage_height());
                 for height in [
                     water_line - 1.0,
                     water_line,
+                    water_line + 1.0,
                     surface,
+                    surface + 1.0,
                     surface - 1.0,
                     surface - 2.0,
+                    canopy,
+                    canopy + 1.0,
                 ] {
                     let t = (height - initial) / change;
                     // Work in parameter space: a next-representable height may round away

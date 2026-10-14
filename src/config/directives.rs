@@ -75,11 +75,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_nofusionvtolfuel",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_xploss",
         parser: "cf_int",
         permission: P::GOD,
@@ -206,11 +201,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "btech_maxtechtime",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_vtol_ice_causes_fire",
         parser: "cf_int",
         permission: P::GOD,
     },

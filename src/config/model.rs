@@ -137,8 +137,6 @@ pub struct BattleTechConfig {
     pub slowdown: i64,
     /// Configuration value for `fasaturn`; defaults are centralized below.
     pub fasaturn: i64,
-    /// Configuration value for `nofusionvtolfuel`; defaults are centralized below.
-    pub nofusionvtolfuel: i64,
     /// Configuration value for `xploss`; defaults are centralized below.
     pub xploss: i64,
     /// Configuration value for `mw_losmap`; defaults are centralized below.
@@ -165,8 +163,6 @@ pub struct BattleTechConfig {
     pub standcareful: i64,
     /// Configuration value for `maxtechtime`; defaults are centralized below.
     pub maxtechtime: i64,
-    /// Configuration value for `vtol_ice_causes_fire`; defaults are centralized below.
-    pub vtol_ice_causes_fire: i64,
     /// Configuration value for `blzmapmode`; defaults are centralized below.
     pub blzmapmode: i64,
     /// Configuration value for `extended_piloting`; defaults are centralized below.
@@ -196,7 +192,6 @@ impl Default for BattleTechConfig {
             afterlife_dbref: 5,
             slowdown: 2,
             fasaturn: 1,
-            nofusionvtolfuel: 0,
             xploss: 666,
             mw_losmap: 1,
             roll_on_backwalk: 1,
@@ -210,7 +205,6 @@ impl Default for BattleTechConfig {
             mwpickup_action: 1,
             standcareful: 1,
             maxtechtime: 600,
-            vtol_ice_causes_fire: 1,
             blzmapmode: 0,
             extended_piloting: 1,
             extended_gunnery: 1,

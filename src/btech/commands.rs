@@ -949,7 +949,6 @@ pub(crate) fn motion_command(
                 ctx.player,
                 speed,
                 super::SpeedPolicy::configured(ctx.config),
-                ctx.config.battletech.nofusionvtolfuel != 0,
             )
         })()
         .and_then(|notice| super::notify_unit(ctx.scripts, notice))

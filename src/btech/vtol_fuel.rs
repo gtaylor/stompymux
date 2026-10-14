@@ -116,19 +116,17 @@ impl Vehicle {
 
     /// Consume one flight movement event, preserving the low-speed chance and delayed exhaustion.
     /// The flight owner supplies altitude/vertical motion and schedules a crash after exhaustion.
+    /// Fusion-powered VTOLs burn nothing: the fuel model applies only to internal-combustion
+    /// rotorcraft.
     pub fn consume_vtol_fuel(
         &mut self,
         vertical_speed: f64,
         elevation: i32,
         landed: bool,
-        free_fusion_fuel: bool,
     ) -> Result<VtolFuelUse> {
         ensure!(self.definition().is_vtol(), "Flight fuel requires a VTOL");
         ensure!(vertical_speed.is_finite(), "Invalid vertical speed");
-        if landed
-            || self.power() != Power::Running
-            || (free_fusion_fuel && !self.definition().has_special("ICEEngine_Tech"))
-        {
+        if landed || self.power() != Power::Running || !self.burns_vtol_fuel() {
             return Ok(VtolFuelUse::Skipped);
         }
         let speed = self.motion().map_or(0.0, |motion| motion.speed.abs());

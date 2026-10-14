@@ -188,12 +188,7 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                     let mut aircraft = straight.btech.vehicles()[&id].clone();
                     let flight = aircraft.vtol_flight().unwrap();
                     let fuel = aircraft
-                        .consume_vtol_fuel(
-                            flight.vertical_speed,
-                            flight.altitude as i32,
-                            false,
-                            rules.free_fusion_vtol_fuel,
-                        )
+                        .consume_vtol_fuel(flight.vertical_speed, flight.altitude as i32, false)
                         .unwrap();
                     assert!(!matches!(fuel, VtolFuelUse::Exhausted { .. }));
                     expected[key][id.0.to_string()] = serde_json::to_value(aircraft).unwrap();

@@ -3,9 +3,10 @@
 //! and then moves on rolls to keep its footing; when it fails it drops and slides along its old
 //! course, taking half a fall's damage for every hex it slides. The slide ends in water a level
 //! deep, drops it over any edge steeper than it could step down, crashes it into higher ground
-//! or a building, and throws a sliding 'Mech into another 'Mech as an unintentional charge. A
-//! hovercraft that fails instead sideslips: it drifts along its old course for as many hexes as
-//! it missed the roll by, without damage unless it drifts into something.
+//! or a building, leaves a vehicle immobile in terrain it could never enter, and throws the
+//! sliding unit into any unit in its path as an unintentional charge. A hovercraft that turns at
+//! flank speed on any ground and fails instead sideslips: it drifts along its old course for as
+//! many hexes as it missed the roll by, without damage unless it drifts into something.
 use super::{
     FallRules, GroundMovement, Hex, HexCoordinate, HitArc, HitTable, MechFallReport, Notice,
     PilotNotice, Point, SalvoGroup, VehicleMovement,
@@ -102,6 +103,16 @@ pub(super) fn risks_skid(tile: Hex, speed: f64, maximum: f64) -> bool {
     tile.is_slick() && (tile.is_icy() || speed.abs() > maximum * 2.0 / 3.0 + 0.1)
 }
 
+/// Whether a vehicle moving off `tile` after turning on it risks losing its line: a hovercraft
+/// sideslips at flank speed whatever the ground under it (Total Warfare pp. 62, 67); any other
+/// vehicle skids as [`risks_skid`] says.
+pub(super) fn risks_slide(tile: Hex, speed: f64, maximum: f64, hover: bool) -> bool {
+    if hover {
+        return speed.abs() > maximum * 2.0 / 3.0 + 0.1;
+    }
+    risks_skid(tile, speed, maximum)
+}
+
 /// What a skid or sideslip check produced; the caller publishes notices and nested falls.
 #[derive(Default)]
 pub(super) struct SkidReport {
@@ -121,7 +132,7 @@ pub(super) struct SkidReport {
 
 /// What a sliding unit meets in the next hex.
 enum Obstacle {
-    /// Another unit stands there: a sliding 'Mech charges it, anything else stops short.
+    /// Another unit stands there: the sliding unit charges it (Total Warfare p. 63).
     Unit(ObjectId),
     /// A building the unit slides into for a tenth of its construction factor.
     Building,
@@ -132,7 +143,7 @@ enum Obstacle {
 }
 
 /// The hexes a unit sliding `hexes` cells along `heading` from `point` would pass through.
-fn path(point: Point, heading: f64, hexes: u8) -> Result<Vec<(HexCoordinate, Point)>> {
+pub(super) fn path(point: Point, heading: f64, hexes: u8) -> Result<Vec<(HexCoordinate, Point)>> {
     let end = point.project(heading, f64::from(hexes))?;
     let mut cells = point.trace_positions(end)?;
     cells.remove(0);
@@ -157,7 +168,17 @@ fn occupant(
         }))
 }
 
-/// Classify the next hex of a slide for a unit at `height` that can step down `allowed` levels.
+/// The level a sliding unit would rest at in `tile`: the water surface for a hovercraft or
+/// amphibious vehicle, otherwise the ground, ice or structure it stands on.
+fn resting_height(tile: Hex, surface_rider: bool) -> i32 {
+    if surface_rider && tile.is_water_surface() {
+        return i32::from(tile.water_line());
+    }
+    i32::from(tile.standing_height())
+}
+
+/// Classify the next hex of a slide for a unit at `height`; `surface_rider` units cross water
+/// on its surface instead of dropping to the bed.
 fn obstacle(
     world: &World,
     id: ObjectId,
@@ -166,15 +187,12 @@ fn obstacle(
     tile: Hex,
     height: i32,
     movement: GroundMovement,
+    surface_rider: bool,
 ) -> Result<Option<Obstacle>> {
     if let Some(other) = occupant(world, id, map, hex)? {
         return Ok(Some(Obstacle::Unit(other)));
     }
-    let surface = if movement == GroundMovement::Hover && tile.is_water_surface() {
-        i32::from(tile.water_line())
-    } else {
-        i32::from(tile.standing_height())
-    };
+    let surface = resting_height(tile, surface_rider);
     if surface > height && tile.has_standing_structure() {
         return Ok(Some(Obstacle::Building));
     }
@@ -274,6 +292,7 @@ pub(super) fn resolve_mech(
             next,
             height,
             GroundMovement::Legged,
+            false,
         )? {
             Some(Obstacle::Unit(other)) => {
                 // An unintentional charge; a hit ends the skid with one more hex of damage,
@@ -539,7 +558,7 @@ pub(super) fn resolve_vehicle(
     character: bool,
 ) -> Result<SkidReport> {
     let mut report = SkidReport::default();
-    let (movement, position, tons, point) = {
+    let (movement, position, tons, point, surface_rider) = {
         let vehicle = &world.btech.vehicles()[&id];
         (
             vehicle.definition().movement,
@@ -551,9 +570,12 @@ pub(super) fn resolve_vehicle(
                 .motion()
                 .context("Skidding vehicle has no motion")?
                 .point,
+            vehicle.rides_water_surface(),
         )
     };
     let hover = movement == VehicleMovement::Hover;
+    // Collisions use only the hexes moved before the skid, never the hexes slid.
+    let hexes_moved = (speed.abs() / 10.75) as u32;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
     report.notices.push(Notice {
@@ -624,8 +646,31 @@ pub(super) fn resolve_vehicle(
         let current =
             world.btech.maps()[&position.map].base_hex(i64::from(here.x), i64::from(here.y))?;
         let height = vehicle.elevation_level(current);
-        match obstacle(world, id, position.map, hex, next, height, ground)? {
-            Some(Obstacle::Unit(_)) => break,
+        match obstacle(
+            world,
+            id,
+            position.map,
+            hex,
+            next,
+            height,
+            ground,
+            surface_rider,
+        )? {
+            Some(Obstacle::Unit(other)) => {
+                // An unintentional charge (Total Warfare p. 63): a hit ends the slide with
+                // one more hex of damage, a miss carries the vehicle on through the hex.
+                let Some(hit) =
+                    vehicle_charge(world, id, other, hexes_moved, rules, character, &mut report)?
+                else {
+                    break;
+                };
+                if hit {
+                    if per_hex > 0 {
+                        vehicle_damage(world, id, per_hex, rules, character, &mut report)?;
+                    }
+                    break;
+                }
+            }
             Some(Obstacle::Building) => {
                 // A vehicle sliding into a building takes a tenth of its construction factor
                 // and stops there (Total Warfare p. 63).
@@ -657,6 +702,8 @@ pub(super) fn resolve_vehicle(
                 break;
             }
             Some(Obstacle::Prohibited) => {
+                // Terrain the drive could never enter: a point per five tons, and the vehicle
+                // is immobile there for the rest of the game (Total Warfare p. 63).
                 move_vehicle(world, id, hex, next);
                 report.notices.push(Notice {
                     unit: id,
@@ -666,6 +713,15 @@ pub(super) fn resolve_vehicle(
                     ),
                 });
                 vehicle_damage(world, id, tons.div_ceil(5), rules, character, &mut report)?;
+                let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
+                if !vehicle.is_destroyed() && !vehicle.immobilized() {
+                    vehicle.apply_motive_hit(super::VehicleMotiveHit::Immobilize);
+                    report.notices.push(Notice {
+                        unit: id,
+                        text: "[fg=red bold]Your vehicle is stuck fast and will not move again![reset]"
+                            .into(),
+                    });
+                }
                 break;
             }
             None => {}
@@ -701,7 +757,7 @@ pub(super) fn resolve_vehicle(
             });
             break;
         }
-        let drop = height - i32::from(next.standing_height());
+        let drop = height - resting_height(next, surface_rider);
         if !hover && drop > 1 {
             report.notices.push(Notice {
                 unit: id,
@@ -733,6 +789,192 @@ pub(super) fn resolve_vehicle(
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.halt();
     Ok(report)
+}
+
+/// A skidding or sideslipping vehicle's unintentional charge into `target` (Total Warfare
+/// p. 63, charge rules p. 148): the driver rolls against the driving target number with the +3
+/// unintentional modifier, the target's movement and the woods and smoke over it, ignoring the
+/// skill difference. A hit deals the vehicle's charge damage (tons/10 per hex moved before the
+/// skid) in five-point groups, the vehicle takes a point per ten tons of its target, and a
+/// 'Mech it hit rolls at +2 to stay standing. `None` means the target could not be charged and
+/// the slide stops short of it; otherwise whether the charge hit.
+fn vehicle_charge(
+    world: &mut World,
+    id: ObjectId,
+    target: ObjectId,
+    hexes_moved: u32,
+    rules: FallRules,
+    character: bool,
+    report: &mut SkidReport,
+) -> Result<Option<bool>> {
+    if world
+        .objects
+        .get(&target)
+        .is_none_or(|object| object.flags.contains(Flag::Going))
+        || (!character && world.objects[&target].flags.contains(Flag::InCharacter))
+    {
+        return Ok(None);
+    }
+    let Some(victim) = world.btech.unit(target) else {
+        return Ok(None);
+    };
+    let mech = matches!(victim, super::UnitRef::Mech(_));
+    let (chargeable, victim_tons, victim_heading, victim_position) =
+        super::with_unit!(victim, |unit| {
+            (
+                !unit.is_destroyed() && unit.free_fall().is_none(),
+                unit.definition().tons,
+                unit.motion().map_or(0.0, |motion| motion.heading),
+                unit.position(),
+            )
+        });
+    let airborne = match victim {
+        super::UnitRef::Mech(unit) => unit.airborne(),
+        super::UnitRef::Vehicle(unit) => unit
+            .vtol_flight()
+            .is_some_and(|flight| flight.phase != super::VtolFlightPhase::Landed),
+    };
+    let prone = match victim {
+        super::UnitRef::Mech(unit) => unit.posture() == super::Posture::Prone,
+        super::UnitRef::Vehicle(_) => false,
+    };
+    let Some(victim_position) = victim_position.filter(|_| chargeable && !airborne) else {
+        return Ok(None);
+    };
+    let tons = world.btech.vehicles()[&id].definition().tons;
+    let cover = world
+        .btech
+        .maps()
+        .get(&victim_position.map)
+        .context("Map not found")?
+        .hex(i64::from(victim_position.x), i64::from(victim_position.y))?;
+    let range = super::geometry::unit_range(world, id, target)?;
+    let target_number = i32::from(super::skills::unit_piloting_target(
+        world,
+        id,
+        rules.extended_piloting,
+    )?) + super::charge::UNINTENTIONAL_CHARGE_MODIFIER
+        + i32::from(super::aim::unit_target_movement_modifier(
+            world,
+            target,
+            range.horizontal,
+        )?)
+        + i32::from(cover.woods_density() + cover.smoke_density());
+    let roll = world
+        .btech
+        .vehicles
+        .get_mut(&id)
+        .unwrap()
+        .dice
+        .generic_roll();
+    let hit = i32::from(roll) >= target_number;
+    report.notices.push(Notice {
+        unit: id,
+        text: format!("Charge: BTH {target_number}\tRoll: {roll}"),
+    });
+    if !hit {
+        report.notices.push(Notice {
+            unit: id,
+            text: "You slide past your target!".into(),
+        });
+        return Ok(Some(false));
+    }
+    report.notices.extend(super::broadcast::interaction_notices(
+        world,
+        id,
+        target,
+        "slides into",
+    ));
+    report.notices.push(Notice {
+        unit: id,
+        text: "SMASH!!! You crash into your target!".into(),
+    });
+    report.notices.push(Notice {
+        unit: target,
+        text: format!("CRASH!!!\n#{} slides into you!", id.0),
+    });
+    let reverse = super::geometry::unit_range(world, target, id)?;
+    let arc = HitArc::from_bearing(reverse.bearing.unwrap_or(180.0), victim_heading)?;
+    let table = if mech && !prone {
+        HitTable::Kick
+    } else {
+        HitTable::Weapon
+    };
+    let mut remaining = super::charge::charge_damage(tons, hexes_moved)?;
+    while remaining > 0 {
+        if super::with_unit!(world.btech.unit(target).unwrap(), |unit| unit
+            .is_destroyed())
+        {
+            break;
+        }
+        let group = remaining.min(5);
+        remaining -= group;
+        let (impact, notices) = super::blast_damage::resolve_packet(
+            world,
+            target,
+            super::blast_damage::MaterialPacket {
+                amount: group,
+                table,
+                arc,
+                character,
+                attacker: Some(id),
+                class: super::DamageClass::Ordinary,
+            },
+            arc == HitArc::Rear,
+            rules,
+        )?;
+        impact.append_feedback(&mut report.pilot_notices, report.notices.len());
+        report.notices.extend(notices);
+        if let super::blast_damage::BlastImpact::Vehicle(impact) = &impact
+            && let Some(damage) = &impact.damage
+        {
+            super::vehicle_injuries::collect_armor(damage, &mut report.character_injuries);
+        }
+    }
+    vehicle_damage(
+        world,
+        id,
+        u32::from(victim_tons.div_ceil(10)),
+        rules,
+        character,
+        report,
+    )?;
+    if !mech
+        || prone
+        || super::with_unit!(world.btech.unit(target).unwrap(), |unit| unit
+            .is_destroyed())
+    {
+        return Ok(Some(true));
+    }
+    // A charged 'Mech rolls at +2 to keep its feet (Total Warfare p. 148).
+    let check = super::roll_piloting(world, target, 2, rules.extended_piloting)?;
+    super::piloting::capture_feedback(
+        target,
+        world.btech.constructed_units()[&target].pilot(),
+        &check,
+        &mut report.notices,
+        &mut report.pilot_notices,
+    );
+    if check.success {
+        return Ok(Some(true));
+    }
+    report.notices.push(Notice {
+        unit: target,
+        text: "Your piloting skill fails and you fall over!!".into(),
+    });
+    report.notices.extend(super::broadcast::observer_notices(
+        world,
+        target,
+        "falls down!",
+    ));
+    let fall = if character && world.objects[&target].flags.contains(Flag::InCharacter) {
+        super::fall::resolve_character_fall(world, target, 1, rules)?
+    } else {
+        super::resolve_fall(world, target, 1, rules)?
+    };
+    fall.append_notices(target, &mut report.notices, &mut report.pilot_notices);
+    report.falls.push(fall);
+    Ok(Some(true))
 }
 
 /// A vehicle's driving roll to step onto ice (Tactical Operations p. 48). Failure is a loss of
@@ -911,6 +1153,18 @@ mod tests {
         assert!(risks_skid(pavement, -61.0, 90.0));
         assert!(risks_skid(ice, 1.0, 90.0));
         assert!(!risks_skid(clear, 90.0, 90.0));
+    }
+
+    /// A hovercraft at flank speed risks a sideslip on any ground, and never below flank.
+    #[test]
+    fn hovercraft_sideslip_at_flank_speed_regardless_of_terrain() {
+        let clear = Hex::new(Terrain::Clear, 0);
+        let ice = Hex::new(Terrain::Ice, 1);
+        assert!(risks_slide(clear, 61.0, 90.0, true));
+        assert!(!risks_slide(clear, 60.0, 90.0, true));
+        assert!(!risks_slide(ice, 30.0, 90.0, true));
+        assert!(!risks_slide(clear, 90.0, 90.0, false));
+        assert!(risks_slide(ice, 1.0, 90.0, false));
     }
 
     /// Tracking starts on a slick hex, notes a turn there and forgets elsewhere.

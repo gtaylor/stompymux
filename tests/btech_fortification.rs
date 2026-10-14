@@ -266,14 +266,14 @@ async fn enabling_requires_settled_motion_and_a_landed_aircraft() {
     let mut vehicle = world.btech.vehicles()[&id].clone();
     assert!(
         vehicle
-            .begin_vtol_takeoff(false, true, 0)
+            .begin_vtol_takeoff(false, 0)
             .unwrap_err()
             .to_string()
             .contains("fortified")
     );
     set_battle_fortified(&mut world, id, false).unwrap();
     let mut vehicle = world.btech.vehicles()[&id].clone();
-    vehicle.begin_vtol_takeoff(false, true, 0).unwrap();
+    vehicle.begin_vtol_takeoff(false, 0).unwrap();
     saved["vehicles"][id.0.to_string()] = serde_json::to_value(vehicle).unwrap();
     world.btech = serde_json::from_value(saved).unwrap();
     let before = world.btech.clone();

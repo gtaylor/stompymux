@@ -1008,8 +1008,11 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
     }
 }
 
+/// An amphibious vehicle crosses deep water on the surface at two points per hex (Total
+/// Warfare p. 52 note 7, p. 56): it rides at the water line, is never immersed, and moves at
+/// half speed, so it steps onto an ice sheet from the surface like any other vehicle.
 #[tokio::test]
-async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
+async fn amphibious_vehicle_rides_the_water_surface_at_half_speed() {
     let (_dir, config, mut world, id, map) = fixture_movement(VehicleMovement::Tracked).await;
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     let unit = &mut saved["vehicles"][id.0.to_string()];
@@ -1022,7 +1025,7 @@ async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
     for row in 0..3 {
         for x in 0..20 {
             saved["maps"][map.0.to_string()]["terrain"][row * 20 + x] = serde_json::to_value(
-                Hex::new(if x < 3 { Terrain::Water } else { Terrain::Ice }, 2),
+                Hex::new(if x < 6 { Terrain::Water } else { Terrain::Ice }, 2),
             )
             .unwrap();
         }
@@ -1030,20 +1033,24 @@ async fn waterproof_vehicle_stays_below_ice_without_a_surface_fracture_roll() {
     world.btech = serde_json::from_value(saved).unwrap();
     let mut entered = false;
     for _ in 0..100 {
-        assert!(
-            advance_battle_motion(&mut world, MovementRules::STANDARD)
-                .unwrap()
-                .is_empty()
-        );
-        if world.btech.vehicles()[&id].position().unwrap().x < 3 {
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        let unit = &world.btech.vehicles()[&id];
+        if unit.position().unwrap().x < 6 {
+            assert!(notices.is_empty(), "{notices:?}");
+            assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(0));
+            assert!(!unit.flooded());
+            // Two points per water hex: the throttle settles at half the 86 kph requested.
+            if unit.position().unwrap().x >= 4 {
+                assert!((unit.motion().unwrap().speed - 43.0).abs() < 1e-9);
+            }
+            assert_eq!(serde_json::to_value(unit).unwrap()["dice"], dice);
             continue;
         }
         entered = true;
-        assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-2));
-        assert_eq!(
-            serde_json::to_value(&world.btech.vehicles()[&id]).unwrap()["dice"],
-            dice
-        );
+        // Stepping from the surface onto the ice sheet takes the ordinary fracture and
+        // driving rolls, so the dice have moved on.
+        assert_ne!(serde_json::to_value(unit).unwrap()["dice"], dice);
+        assert!(notices.iter().any(|n| n.text.contains("ease onto the ice")));
         persistence::save(&config.database(), &world).await.unwrap();
         assert_eq!(
             persistence::load(&config.database()).await.unwrap().btech,
@@ -1322,5 +1329,203 @@ async fn character_vehicles_stop_at_deep_water_without_a_roll() {
             break;
         }
         assert!(encountered, "{movement:?}");
+    }
+}
+
+/// A hovercraft that changes facing at flank speed risks a sideslip on any ground, not only
+/// on pavement (Total Warfare pp. 62, 67): an unmodified driving roll, and on a failure a drift
+/// along its old course for as many hexes as it missed by; at cruising speed there is no roll.
+#[tokio::test]
+async fn hovercraft_sideslips_after_a_flank_speed_turn_on_clear_ground() {
+    for (roll, flank) in [(2, true), (12, true), (12, false)] {
+        let (_dir, config, mut world, id, _map) = fixture_movement(VehicleMovement::Hover).await;
+        let maximum = world.btech.vehicles()[&id].maximum_speed();
+        let speed = if flank { maximum } else { maximum * 2.0 / 3.0 };
+        let seed = (0..=255)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
+            .unwrap();
+        let mut saved = serde_json::to_value(&world.btech).unwrap();
+        let unit = &mut saved["vehicles"][id.0.to_string()];
+        unit["motion"]["heading"] = 90.0.into();
+        unit["motion"]["desired_heading"] = 150.0.into();
+        unit["motion"]["speed"] = speed.into();
+        unit["motion"]["desired_speed"] = speed.into();
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+        world.btech = serde_json::from_value(saved).unwrap();
+        let start = world.btech.vehicles()[&id].position().unwrap();
+        let mut checked = false;
+        for _ in 0..40 {
+            let before = world.clone();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+            if !notices.iter().any(|n| n.text.contains("hold your line")) {
+                continue;
+            }
+            checked = true;
+            let unit = &world.btech.vehicles()[&id];
+            assert_ne!(unit.motion().unwrap().heading, 90.0);
+            if roll == 12 {
+                assert!(notices.iter().any(|n| n.text == "You hold your course."));
+                assert!(unit.motion().unwrap().active());
+                assert_eq!(unit.sections(), before.btech.vehicles()[&id].sections());
+            } else {
+                assert!(
+                    notices
+                        .iter()
+                        .any(|n| n.text == "You lose your line and sideslip!")
+                );
+                assert!(notices.iter().any(|n| n.text.starts_with("You drift into")));
+                // The drift carries it on along its old eastward course, undamaged.
+                assert!(unit.position().unwrap().x > start.x);
+                assert_eq!(unit.position().unwrap().y, start.y);
+                assert_eq!(unit.motion().unwrap().speed, 0.0);
+                assert_eq!(unit.sections(), before.btech.vehicles()[&id].sections());
+                assert!(!unit.immobilized());
+            }
+            persistence::save(&config.database(), &before)
+                .await
+                .unwrap();
+            let mut restored = persistence::load(&config.database()).await.unwrap();
+            assert_eq!(
+                notices,
+                advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap()
+            );
+            assert_eq!(world.btech, restored.btech);
+            break;
+        }
+        assert_eq!(checked, flank, "roll {roll} flank {flank}");
+        world.validate(&config).unwrap();
+    }
+}
+
+/// A wheeled vehicle that skids on pavement charges any unit in its path (Total Warfare
+/// p. 63, with the +3 unintentional-charge modifier) and is left immobile in terrain its
+/// drive could never enter.
+#[tokio::test]
+async fn a_skidding_vehicle_charges_units_and_is_stuck_by_prohibited_terrain() {
+    for obstacle in ["unit", "rough"] {
+        let (_dir, config, mut world, id, map) = fixture_movement(VehicleMovement::Wheeled).await;
+        // Parked Mechs fill the column the skid slides into, whichever row it takes.
+        let mut mechs = Vec::new();
+        for y in 0..3 {
+            let mech = world.create(&config, format!("Parked Mech {y}"), Kind::Thing);
+            world.objects.get_mut(&mech).unwrap().home = Some(ObjectId(config.home()));
+            create_battle_unit(
+                &mut world,
+                mech,
+                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
+                    .unwrap(),
+            )
+            .unwrap();
+            support::seed_object_dice(&mut world, mech, support::FIXTURE_DICE_SEED);
+            place_battle_unit(
+                &mut world,
+                mech,
+                map,
+                if obstacle == "unit" { 3 } else { 15 },
+                y,
+            )
+            .unwrap();
+            mechs.push(mech);
+        }
+        let maximum = world.btech.vehicles()[&id].maximum_speed();
+        // The first roll is the skid check: a two always fails it.
+        let seed = (0..=255)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+            .unwrap();
+        let mut saved = serde_json::to_value(&world.btech).unwrap();
+        let unit = &mut saved["vehicles"][id.0.to_string()];
+        unit["motion"]["heading"] = 90.0.into();
+        unit["motion"]["desired_heading"] = 150.0.into();
+        unit["motion"]["speed"] = maximum.into();
+        unit["motion"]["desired_speed"] = maximum.into();
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+        for row in 0..3 {
+            for x in 0..20 {
+                let terrain = if x < 3 {
+                    Terrain::Pavement
+                } else if obstacle == "rough" {
+                    Terrain::Rough
+                } else {
+                    Terrain::Clear
+                };
+                crate::support::set_hex(
+                    &mut saved["maps"][map.0.to_string()]["terrain"][row * 20 + x],
+                    terrain,
+                    0,
+                );
+            }
+        }
+        world.btech = serde_json::from_value(saved).unwrap();
+        let mut skidded = false;
+        for _ in 0..40 {
+            let before = world.clone();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+            if !notices
+                .iter()
+                .any(|n| n.text == "You lose control and skid!")
+            {
+                continue;
+            }
+            skidded = true;
+            let unit = &world.btech.vehicles()[&id];
+            assert_eq!(unit.motion().unwrap().speed, 0.0);
+            if obstacle == "rough" {
+                assert!(
+                    notices
+                        .iter()
+                        .any(|n| n.text == "You crash into the rough!")
+                );
+                assert!(notices.iter().any(|n| n.text.contains("stuck fast")));
+                assert!(unit.immobilized());
+                assert_eq!(unit.maximum_speed(), 0.0);
+                assert_eq!(unit.position().unwrap().x, 3);
+            } else {
+                let charge = notices
+                    .iter()
+                    .find(|n| n.unit == id && n.text.starts_with("Charge: BTH "))
+                    .unwrap_or_else(|| panic!("the skid should charge the Mech: {notices:?}"));
+                let (bth, roll) = charge.text["Charge: BTH ".len()..]
+                    .split_once("\tRoll: ")
+                    .unwrap();
+                let hit = roll.parse::<i32>().unwrap() >= bth.parse::<i32>().unwrap();
+                let struck = mechs
+                    .iter()
+                    .filter(|mech| {
+                        world.btech.constructed_units()[mech].sections()
+                            != before.btech.constructed_units()[mech].sections()
+                    })
+                    .count();
+                if hit {
+                    assert!(
+                        notices
+                            .iter()
+                            .any(|n| n.text == "SMASH!!! You crash into your target!")
+                    );
+                    assert_eq!(struck, 1);
+                    assert_ne!(unit.sections(), before.btech.vehicles()[&id].sections());
+                    assert_eq!(unit.position().unwrap().x, 2);
+                } else {
+                    assert!(
+                        notices
+                            .iter()
+                            .any(|n| n.text == "You slide past your target!")
+                    );
+                    assert_eq!(struck, 0);
+                    assert!(unit.position().unwrap().x >= 3);
+                }
+            }
+            persistence::save(&config.database(), &before)
+                .await
+                .unwrap();
+            let mut restored = persistence::load(&config.database()).await.unwrap();
+            assert_eq!(
+                notices,
+                advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap()
+            );
+            assert_eq!(world.btech, restored.btech);
+            break;
+        }
+        assert!(skidded, "{obstacle}");
+        world.validate(&config).unwrap();
     }
 }

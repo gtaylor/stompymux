@@ -178,13 +178,6 @@
     "default": 1
   },
   {
-    "path": "battletech.nofusionvtolfuel",
-    "legacy_name": "btech_nofusionvtolfuel",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 0
-  },
-  {
     "path": "battletech.xploss",
     "legacy_name": "btech_xploss",
     "registry_type": "cf_int",
@@ -274,13 +267,6 @@
     "registry_type": "cf_int",
     "rust_type": "i64",
     "default": 600
-  },
-  {
-    "path": "battletech.vtol_ice_causes_fire",
-    "legacy_name": "btech_vtol_ice_causes_fire",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
   },
   {
     "path": "battletech.blzmapmode",

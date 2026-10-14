@@ -77,10 +77,15 @@ pub enum VtolTakeoff {
 }
 
 impl Vehicle {
+    /// Whether the VTOL burns fuel at all: only internal-combustion VTOLs carry the fuel
+    /// model (a Tactical Operations adaptation); a fusion-powered VTOL never runs dry.
+    pub fn burns_vtol_fuel(&self) -> bool {
+        self.definition().has_special("ICEEngine_Tech")
+    }
+
     /// Fuel admission shared by deliberate takeoff and landing maneuvers.
-    pub(super) fn has_vtol_fuel(&self, free_fusion_fuel: bool) -> bool {
-        (free_fusion_fuel && !self.definition().has_special("ICEEngine_Tech"))
-            || self.vtol_fuel().is_some_and(|fuel| fuel.remaining() > 0)
+    pub(super) fn has_vtol_fuel(&self) -> bool {
+        !self.burns_vtol_fuel() || self.vtol_fuel().is_some_and(|fuel| fuel.remaining() > 0)
     }
 
     /// Saved aircraft mode; absent for ground vehicles.
@@ -89,7 +94,7 @@ impl Vehicle {
     }
 
     /// Shared admission checks run both at request time and before committing liftoff.
-    fn check_vtol_takeoff(&self, underground: bool, free_fusion_fuel: bool) -> Result<()> {
+    fn check_vtol_takeoff(&self, underground: bool) -> Result<()> {
         ensure!(
             self.definition().is_vtol() && self.definition().movement == VehicleMovement::Vtol,
             "Only flying VTOLs can take off"
@@ -103,23 +108,15 @@ impl Vehicle {
             "The rotor cannot provide lift"
         );
         ensure!(!underground, "The ceiling is too low for takeoff");
-        ensure!(
-            self.has_vtol_fuel(free_fusion_fuel),
-            "The VTOL is out of fuel"
-        );
+        ensure!(self.has_vtol_fuel(), "The VTOL is out of fuel");
         Ok(())
     }
 
     /// Queue takeoff; zero delay still lifts off on the next one-second event.
     /// The host owns pilot authority and permission to override the ordinary zero delay.
-    pub fn begin_vtol_takeoff(
-        &mut self,
-        underground: bool,
-        free_fusion_fuel: bool,
-        delay: u16,
-    ) -> Result<()> {
+    pub fn begin_vtol_takeoff(&mut self, underground: bool, delay: u16) -> Result<()> {
         super::fortification::require_unfortified(self.fortified)?;
-        self.check_vtol_takeoff(underground, free_fusion_fuel)?;
+        self.check_vtol_takeoff(underground)?;
         ensure!(
             self.vtol_flight
                 .is_some_and(|flight| flight.phase == VtolFlightPhase::Landed),
@@ -137,11 +134,7 @@ impl Vehicle {
     }
 
     /// Advance a queued launch, revalidating conditions before producing vertical motion.
-    pub fn advance_vtol_takeoff(
-        &mut self,
-        underground: bool,
-        free_fusion_fuel: bool,
-    ) -> Result<VtolTakeoff> {
+    pub fn advance_vtol_takeoff(&mut self, underground: bool) -> Result<VtolTakeoff> {
         ensure!(self.definition().is_vtol(), "Takeoff requires a VTOL");
         let Some(VtolFlight {
             fall: None,
@@ -151,7 +144,7 @@ impl Vehicle {
         else {
             return Ok(VtolTakeoff::Idle);
         };
-        if let Err(error) = self.check_vtol_takeoff(underground, free_fusion_fuel) {
+        if let Err(error) = self.check_vtol_takeoff(underground) {
             self.vtol_flight = Some(VtolFlight {
                 altitude: self.vtol_flight.unwrap().altitude,
                 ..VtolFlight::default()
@@ -221,11 +214,7 @@ impl Vehicle {
 impl Vehicle {
     /// Advance the shared descent clock, braking when power, rotor and fuel provide lift.
     /// Recovery clears the cursor; impact leaves state unchanged until host damage commits.
-    pub fn advance_vtol_fall(
-        &mut self,
-        surface: i32,
-        free_fusion_fuel: bool,
-    ) -> Result<super::FreeFallStep> {
+    pub fn advance_vtol_fall(&mut self, surface: i32) -> Result<super::FreeFallStep> {
         let mut flight = self
             .vtol_flight
             .ok_or_else(|| anyhow::anyhow!("Falling requires a VTOL"))?;
@@ -239,7 +228,7 @@ impl Vehicle {
         let lift = !self.is_destroyed()
             && self.power() == super::Power::Running
             && !self.rotor_destroyed()
-            && self.has_vtol_fuel(free_fusion_fuel);
+            && self.has_vtol_fuel();
         let step = fall.advance_with_lift(surface, lift)?;
         if step == super::FreeFallStep::Recovered {
             flight.phase = VtolFlightPhase::Airborne;

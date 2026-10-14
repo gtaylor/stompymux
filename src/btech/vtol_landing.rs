@@ -1,5 +1,5 @@
 //! Deliberate rotorcraft landing checks and material touchdown, separate from crash damage.
-use super::{Hex, StructureKind, Vehicle, VtolFlight, VtolFlightPhase};
+use super::{Ground, Hex, StructureKind, Vehicle, VtolFlight, VtolFlightPhase};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
@@ -16,10 +16,10 @@ impl Vehicle {
     /// Land on the supplied current map surface, or cancel an outstanding launch.
     /// The host owns map lookup, cockpit authority, messages, callbacks and landing mines.
     /// Failed admission does not spend fuel, draw dice, or alter motion.
-    pub fn land_vtol(&mut self, hex: Hex, free_fusion_fuel: bool) -> Result<VtolLanding> {
+    pub fn land_vtol(&mut self, hex: Hex) -> Result<VtolLanding> {
         ensure!(self.definition().is_vtol(), "Landing requires a VTOL");
         ensure!(
-            self.has_vtol_fuel(free_fusion_fuel),
+            self.has_vtol_fuel(),
             "You lack fuel to maneuver for landing!"
         );
         let flight = self
@@ -72,14 +72,23 @@ impl Vehicle {
     }
 }
 
-/// Both deliberate and emergency landings require a supported surface: open ground or a
-/// building roof, with no fire or smoke over it.
+/// Where a VTOL may land (Total Warfare p. 54): open ground or a building roof, with no fire
+/// or smoke over it.
 pub(super) fn supported_surface(hex: Hex) -> bool {
     hex.is_open_ground()
         || (hex.overlay().is_none()
             && hex
                 .structure()
                 .is_some_and(|structure| structure.kind == StructureKind::Building))
+}
+
+/// Where a VTOL with Engine Damage may attempt its emergency landing (Total Warfare p. 197):
+/// anywhere it could land normally, or bare rough ground clear of fire and smoke.
+pub(super) fn engine_landing_surface(hex: Hex) -> bool {
+    supported_surface(hex)
+        || (hex.is_bare()
+            && hex.overlay().is_none()
+            && matches!(hex.ground(), Ground::Rough | Ground::UltraRough))
 }
 
 #[cfg(test)]
@@ -100,5 +109,19 @@ mod tests {
             }
         }
         assert!(!supported_surface(Hex::new(Terrain::LightWoods, 0)));
+    }
+
+    /// Engine Damage adds rough ground to the landing surfaces (Total Warfare p. 197).
+    #[test]
+    fn engine_damage_may_land_on_rough_ground_but_not_in_woods_or_water() {
+        let rough = Hex::new(Terrain::Rough, 1);
+        assert!(!supported_surface(rough));
+        assert!(engine_landing_surface(rough));
+        assert!(!engine_landing_surface(
+            rough.with_overlay(Some(DecorationKind::Fire))
+        ));
+        assert!(engine_landing_surface(Hex::new(Terrain::Clear, 0)));
+        assert!(!engine_landing_surface(Hex::new(Terrain::LightWoods, 0)));
+        assert!(!engine_landing_surface(Hex::new(Terrain::Water, 1)));
     }
 }

@@ -131,7 +131,8 @@ impl VehicleTemplateMotion for VehicleTemplate {
             motion.turn_toward(maximum, rules.fasa_turning, 1.0);
         }
         let mut target = motion.desired_speed.abs()
-            / (terrain_divisor(hex, self.movement) + f64::from(rules.extra_cost));
+            / (terrain_divisor(hex, self.movement, self.has_special("Waterproof_Tech"))
+                + f64::from(rules.extra_cost));
         // Ground vehicles on pavement, a road or a bridge deck gain a point of movement
         // (Total Warfare p. 61).
         if hex.is_paved() && self.movement != VehicleMovement::Vtol {
@@ -166,8 +167,23 @@ impl super::Vehicle {
     }
 }
 
-/// Speed divisor a vehicle's hex imposes on its desired throttle.
-fn terrain_divisor(hex: Hex, movement: VehicleMovement) -> f64 {
+/// Movement points an amphibious vehicle spends to enter any water hex, which it crosses on
+/// the surface whatever the depth (Total Warfare p. 52 note 7, p. 56).
+const AMPHIBIOUS_WATER_COST: f64 = 2.0;
+
+/// Speed divisor a vehicle's hex imposes on its desired throttle. An amphibious tracked or
+/// wheeled vehicle rides the surface of open water at a flat two points per hex instead of
+/// wading or crawling along the bed.
+fn terrain_divisor(hex: Hex, movement: VehicleMovement, amphibious: bool) -> f64 {
+    if amphibious
+        && hex.is_open_water()
+        && matches!(
+            movement,
+            VehicleMovement::Tracked | VehicleMovement::Wheeled
+        )
+    {
+        return AMPHIBIOUS_WATER_COST;
+    }
     hex.ground_speed_divisor(ground_movement(movement))
 }
 
@@ -192,15 +208,38 @@ mod tests {
     #[test]
     fn sand_slows_only_wheeled_vehicles() {
         assert_eq!(
-            terrain_divisor(Hex::new(Terrain::Sand, 0), VehicleMovement::Wheeled),
+            terrain_divisor(Hex::new(Terrain::Sand, 0), VehicleMovement::Wheeled, false),
             2.0
         );
         for movement in [VehicleMovement::Tracked, VehicleMovement::Hover] {
-            assert_eq!(terrain_divisor(Hex::new(Terrain::Sand, 0), movement), 1.0);
+            assert_eq!(
+                terrain_divisor(Hex::new(Terrain::Sand, 0), movement, false),
+                1.0
+            );
         }
         assert_eq!(
-            terrain_divisor(Hex::new(Terrain::Rough, 0), VehicleMovement::Tracked),
+            terrain_divisor(Hex::new(Terrain::Rough, 0), VehicleMovement::Tracked, false),
             2.0
+        );
+    }
+
+    /// An amphibious tank crosses any depth of water on the surface at two points per hex
+    /// (Total Warfare p. 52 note 7); a hovercraft already skims it for one.
+    #[test]
+    fn amphibious_vehicles_cross_water_on_the_surface_at_two_points() {
+        for depth in [1, 2, 4] {
+            let water = Hex::new(Terrain::Water, depth);
+            assert_eq!(terrain_divisor(water, VehicleMovement::Tracked, true), 2.0);
+            assert_eq!(terrain_divisor(water, VehicleMovement::Wheeled, true), 2.0);
+            assert_eq!(terrain_divisor(water, VehicleMovement::Hover, true), 1.0);
+            assert_eq!(
+                terrain_divisor(water, VehicleMovement::Tracked, false),
+                if depth == 1 { 2.0 } else { 4.0 }
+            );
+        }
+        assert_eq!(
+            terrain_divisor(Hex::new(Terrain::Clear, 0), VehicleMovement::Tracked, true),
+            1.0
         );
     }
 }

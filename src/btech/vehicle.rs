@@ -1252,7 +1252,8 @@ impl Vehicle {
             .or_else(|| self.vtol_flight.and_then(|flight| flight.fall))
     }
 
-    /// Ground support height; hovercraft float at water level rather than on the bed.
+    /// Ground support height; hovercraft and amphibious vehicles float at water level rather
+    /// than resting on the bed.
     pub fn elevation_level(&self, tile: super::Hex) -> i32 {
         if let Some(drop) = self.orbital_drop {
             return drop.elevation();
@@ -1270,14 +1271,23 @@ impl Vehicle {
     }
 
     /// Support height at a destination, independent of retained altitude on the current hex.
+    /// Hovercraft skim the water, and an amphibious vehicle crosses it on the surface too
+    /// (Total Warfare p. 52 note 7, p. 56), so neither is immersed in it.
     pub(super) fn terrain_elevation(&self, tile: super::Hex, under_bridge: bool) -> i32 {
         if under_bridge && tile.has_bridge() {
             return i32::from(tile.water_line());
         }
-        if self.definition.movement == super::VehicleMovement::Hover && tile.is_water_surface() {
+        if self.rides_water_surface() && tile.is_water_surface() {
             return i32::from(tile.water_line());
         }
         i32::from(tile.standing_height())
+    }
+
+    /// Whether this vehicle crosses water on its surface: a hovercraft, or an amphibious
+    /// (waterproofed) tracked or wheeled vehicle.
+    pub fn rides_water_surface(&self) -> bool {
+        self.definition.movement == super::VehicleMovement::Hover
+            || self.definition.has_special("Waterproof_Tech")
     }
 
     /// Current continuous position and commanded motion.

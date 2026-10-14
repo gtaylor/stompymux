@@ -53,7 +53,9 @@ impl Vehicle {
             .unwrap_or(self.crew_stun_remaining > 0)
     }
 
-    /// Limit forward throttle to cruising speed without instantly changing actual velocity.
+    /// Stun the crew: for the next turn the vehicle may move no faster than cruising speed
+    /// (Total Warfare p. 194), so a standing flank command is cut back to cruise at once,
+    /// without instantly changing actual velocity.
     fn stun_crew(&mut self) {
         self.crew_stun_remaining = CREW_STUN_SECONDS;
         self.crew_stun_condition = None;

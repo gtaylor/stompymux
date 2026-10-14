@@ -5,7 +5,7 @@ linkTitle: "vertical"
 manualLinkTitle: "vertical"
 ---
 
-Read or set VTOL vertical speed using configured fuel rules and the shared velocity budget.
+Read or set VTOL vertical speed; climb and horizontal travel share one movement budget.
 
 ## Signature
 

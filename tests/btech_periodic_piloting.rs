@@ -334,13 +334,16 @@ async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
                 let mut world = ready.clone();
                 phase(&mut world, tick);
                 let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
-                let expected = unconscious && [29, 0].contains(&tick);
+                // A vehicle neither rolls nor falls (Total Warfare p. 68); only a 'Mech does.
+                let expected = unconscious
+                    && [29, 0].contains(&tick)
+                    && world.btech.constructed_units().contains_key(&unit);
                 assert_eq!(reports.len(), usize::from(expected));
                 if expected {
                     assert_eq!(reports[0].check.roll, None);
                     assert_eq!(reports[0].check.situational, 3);
                     assert!(!reports[0].check.success);
-                    assert!(reports[0].fall.is_some() || reports[0].vehicle_fall.is_some());
+                    assert!(reports[0].fall.is_some());
                 }
             }
         }

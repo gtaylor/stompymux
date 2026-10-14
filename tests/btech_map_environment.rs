@@ -158,7 +158,7 @@ async fn changed_environment_reaches_live_movement_heat_and_flight() {
             .is_some_and(|unit| unit.definition().is_vtol())
         {
             let before = world.btech.clone();
-            assert!(begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 5, false).is_err());
+            assert!(begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 5).is_err());
             assert_eq!(world.btech, before);
         }
         world.validate(&config).unwrap();

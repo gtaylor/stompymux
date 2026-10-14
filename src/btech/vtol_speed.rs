@@ -1,38 +1,29 @@
-//! One velocity budget for rotorcraft horizontal controls, climb/descent and cruise restrictions.
+//! One movement budget for rotorcraft horizontal controls, climb/descent and cruise
+//! restrictions. Total Warfare p. 54 charges a VTOL 1 MP per hex entered and 1 MP per level
+//! climbed or descended from the same pool, so horizontal and vertical speed add up to the
+//! VTOL's maximum rather than combining as a vector.
 use super::Vehicle;
 use anyhow::{Result, ensure};
 
-/// Remaining perpendicular velocity; overspeed after damage leaves no additional capacity.
+/// Speed left for the other axis after `component` is spent: the two share one additive
+/// budget (hexes plus levels per turn, TW p. 54). Overspeed after damage leaves no capacity.
 pub(super) fn remaining_speed(maximum: f64, component: f64) -> Result<f64> {
     ensure!(
         maximum.is_finite() && maximum >= 0.0 && component.is_finite(),
         "Invalid flight speed"
     );
-    if maximum == 0.0 || component.abs() >= maximum {
-        return Ok(0.0);
-    }
-    let ratio = component.abs() / maximum;
-    Ok(maximum * ((1.0 - ratio) * (1.0 + ratio)).sqrt())
+    Ok((maximum - component.abs()).max(0.0))
 }
 
 impl Vehicle {
-    /// Change climb or descent within the velocity budget of the current horizontal command.
-    /// The enclosing action owns operator authority and flight-event scheduling.
-    pub fn set_vtol_vertical_speed(
-        &mut self,
-        requested: f64,
-        free_fusion_fuel: bool,
-    ) -> Result<()> {
-        self.set_vtol_vertical_at(requested, free_fusion_fuel, self.maximum_speed())
+    /// Change climb or descent within the movement budget left by the current horizontal
+    /// command. The enclosing action owns operator authority and flight-event scheduling.
+    pub fn set_vtol_vertical_speed(&mut self, requested: f64) -> Result<()> {
+        self.set_vtol_vertical_at(requested, self.maximum_speed())
     }
 
-    /// Apply the shared perpendicular-speed budget to a world-supplied loaded ceiling.
-    pub(super) fn set_vtol_vertical_at(
-        &mut self,
-        requested: f64,
-        free_fusion_fuel: bool,
-        maximum: f64,
-    ) -> Result<()> {
+    /// Apply the shared additive budget to a world-supplied loaded ceiling.
+    pub(super) fn set_vtol_vertical_at(&mut self, requested: f64, maximum: f64) -> Result<()> {
         super::fortification::require_unfortified(self.fortified)?;
         ensure!(requested.is_finite(), "Invalid vertical speed");
         ensure!(
@@ -48,10 +39,7 @@ impl Vehicle {
                     .is_some_and(|flight| flight.phase == super::VtolFlightPhase::Airborne),
             "Vertical control requires an airborne, running VTOL with lift"
         );
-        ensure!(
-            self.has_vtol_fuel(free_fusion_fuel),
-            "The VTOL is out of fuel"
-        );
+        ensure!(self.has_vtol_fuel(), "The VTOL is out of fuel");
         let motion = self
             .motion
             .as_ref()
@@ -59,13 +47,13 @@ impl Vehicle {
         let maximum = remaining_speed(maximum, motion.desired_speed)?;
         ensure!(
             requested.abs() <= maximum,
-            "Vertical speed exceeds the remaining velocity budget"
+            "Vertical speed exceeds the remaining movement budget"
         );
         self.vtol_flight.as_mut().unwrap().vertical_speed = requested;
         Ok(())
     }
 
-    /// Maximum horizontal speed after spending part of the velocity budget on climb or descent.
+    /// Maximum horizontal speed after spending part of the movement budget on climb or descent.
     pub fn vtol_horizontal_limit(&self, vertical_speed: f64) -> Result<f64> {
         ensure!(self.definition().is_vtol(), "Flight speed requires a VTOL");
         remaining_speed(self.maximum_speed(), vertical_speed)
@@ -83,7 +71,7 @@ impl Vehicle {
         self.vtol_throttle_at(requested, vertical_speed, self.maximum_speed())
     }
 
-    /// Share tail-rotor and vector-budget checks with world-owned towing loads.
+    /// Share tail-rotor and movement-budget checks with world-owned towing loads.
     pub(super) fn vtol_throttle_at(
         &self,
         requested: f64,
@@ -121,5 +109,22 @@ impl Vehicle {
             motion.desired_speed = (cruise - 0.1).max(0.0);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::remaining_speed;
+
+    /// Hexes and levels come from one pool: 12 MP of flight spent 4 MP on climbing leaves 8.
+    #[test]
+    fn horizontal_and_vertical_speed_share_one_additive_budget() {
+        assert_eq!(remaining_speed(129.0, 43.0).unwrap(), 86.0);
+        assert_eq!(remaining_speed(129.0, -43.0).unwrap(), 86.0);
+        assert_eq!(remaining_speed(129.0, 129.0).unwrap(), 0.0);
+        assert_eq!(remaining_speed(129.0, 200.0).unwrap(), 0.0);
+        assert_eq!(remaining_speed(0.0, 0.0).unwrap(), 0.0);
+        assert!(remaining_speed(f64::NAN, 0.0).is_err());
+        assert!(remaining_speed(-1.0, 0.0).is_err());
     }
 }
