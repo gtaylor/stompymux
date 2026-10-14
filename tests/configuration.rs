@@ -41,7 +41,7 @@ async fn complete_legacy_catalog_and_compiled_defaults() {
     let (_d, c) = config("");
     let inventory: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config/legacy-catalog.json")).unwrap();
-    assert_eq!(inventory.len(), 119);
+    assert_eq!(inventory.len(), 118);
     let expected: BTreeSet<_> = inventory
         .iter()
         .map(|v| v["path"].as_str().unwrap())
@@ -202,10 +202,8 @@ async fn listener_precedence_and_effective_lua_values() {
     assert_eq!(c.listener().to_string(), "127.0.0.2:0");
     assert_eq!(c.effective_value("port").unwrap().as_integer(), Some(0));
     assert_eq!(
-        c.effective_value("btech_xp_usePilotBVMod")
-            .unwrap()
-            .as_integer(),
-        Some(1)
+        c.effective_value("btech_xp_modifier").unwrap().as_integer(),
+        Some(100)
     );
 }
 #[tokio::test(flavor = "current_thread")]
@@ -274,7 +272,7 @@ async fn lua_sees_defaults_overrides_and_legacy_aliases() {
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     // C's registry resolves exact legacy pnames only: dotted TOML paths and
     // Rust-only settings are unknown directives (mux_config_bindings.c:49).
-    assert!(scripts.inspect_lua().load("return mux.config.get('port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and not pcall(mux.config.get,'server.port') and not pcall(mux.config.get,'runtime.input_line_limit') and not pcall(mux.config.get,'runtime.find_page_size')").eval::<bool>().unwrap());
+    assert!(scripts.inspect_lua().load("return mux.config.get('port')==8765 and mux.config.get('btech_xp_modifier')==100 and not pcall(mux.config.get,'server.port') and not pcall(mux.config.get,'runtime.input_line_limit') and not pcall(mux.config.get,'runtime.find_page_size')").eval::<bool>().unwrap());
 }
 #[tokio::test(flavor = "current_thread")]
 async fn configured_decoding_hashing_and_sqlite_timeouts_take_effect() {
@@ -429,7 +427,7 @@ async fn supplied_configuration_parses_without_unknown_keys() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(KEYS.len(), 143);
+    assert_eq!(KEYS.len(), 142);
     assert_eq!(c.server.port, 5555);
     assert!(
         !c.warnings.iter().any(|w| w.contains("unknown")),

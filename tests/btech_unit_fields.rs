@@ -1269,9 +1269,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
     let config = &f.config;
     for source in firing::templates() {
         let (mut world, id, _, _) = f.supply(&source, Some(Weapon::MediumLaser), &source, None);
-        let baseline = battle_unit_value(&world, id, config.battletech.tsm_tow_bonus != 0)
-            .unwrap()
-            .total;
+        let baseline = battle_unit_value(&world, id).unwrap().total;
         firing::edit(&mut world, id, |unit| {
             let section = if unit["sections"].get("CenterTorso").is_some() {
                 "CenterTorso"
@@ -1280,14 +1278,10 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
             };
             unit["sections"][section]["armor"] = 0.into();
         });
-        let damaged = battle_unit_value(&world, id, config.battletech.tsm_tow_bonus != 0)
-            .unwrap()
-            .total;
+        let damaged = battle_unit_value(&world, id).unwrap().total;
         assert!(damaged < baseline);
         set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.MediumLaser", 1000).unwrap();
-        let increased = battle_unit_value(&world, id, config.battletech.tsm_tow_bonus != 0)
-            .unwrap()
-            .total;
+        let increased = battle_unit_value(&world, id).unwrap().total;
         assert!(increased > damaged);
         let expected = format!("{increased:.2}");
         let before = world.btech.clone();

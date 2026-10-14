@@ -95,11 +95,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_xp_usePilotBVMod",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_oldxpsystem",
     "parser": "cf_int",
     "permission": "CA_GOD"

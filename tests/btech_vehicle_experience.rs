@@ -270,91 +270,88 @@ async fn classic_vehicle_difficulty_uses_current_motive_damage() {
 async fn battle_value_awards_share_mixed_participants_and_preserve_dice() {
     for vehicle_attacker in [false, true] {
         for vehicle_target in [false, true] {
-            for pilot_modifier in [0, 1] {
-                let (_dir, config, mut world, attacker, target) =
-                    fixture(vehicle_attacker, vehicle_target).await;
-                for skill in [
-                    "Gunnery-Laser",
-                    "Piloting-Biped",
-                    "Piloting-Battlemech",
-                    "Piloting-Tracked",
-                    "Drive",
-                ] {
-                    set_battle_character_value(
-                        &mut world,
-                        ObjectId(1),
-                        skill,
-                        CharacterValue {
-                            value: 5,
-                            ..Default::default()
-                        },
-                    )
-                    .unwrap();
-                }
-                let request = GunneryAwardRequest {
-                    tsm_tow_bonus: true,
-
-                    attacker,
-                    pilot: ObjectId(1),
-                    target,
-                    weapon: Weapon::MediumLaser,
-                    damage: 5,
-                    base_to_hit: 7,
-                    extended_gunnery: true,
-                    extended_piloting: true,
-                    use_unit_modifier: true,
-                    now: 100,
-                };
-                let xp = config::XpConfig {
-                    oldxpsystem: 0,
-                    use_pilot_bv_mod: pilot_modifier,
-                    ..Default::default()
-                };
-                let before = world.clone();
-                let report = award_battle_gunnery_experience(&mut world, request, &xp)
-                    .unwrap()
-                    .unwrap();
-                let ShotExperienceAward::BattleValue(report) = report else {
-                    panic!("wrong formula")
-                };
-                assert!(report.award.accepted);
-                assert!(report.amount > 0);
-                assert!(report.calculation.difficulty.is_some());
-                let mut replay = before.clone();
-                assert_eq!(
-                    award_battle_value_gunnery_experience(&mut replay, request, &xp).unwrap(),
-                    Some(report)
-                );
-                assert_eq!(replay.btech, world.btech);
-                for (id, vehicle) in [(attacker, vehicle_attacker), (target, vehicle_target)] {
-                    let class = if vehicle { "vehicles" } else { "constructed" };
-                    assert_eq!(
-                        serde_json::to_value(&world.btech).unwrap()[class][id.0.to_string()]["dice"],
-                        serde_json::to_value(&before.btech).unwrap()[class][id.0.to_string()]["dice"]
-                    );
-                }
-                persistence::save(&config.database(), &world).await.unwrap();
-                assert_eq!(
-                    persistence::load(&config.database()).await.unwrap().btech,
-                    world.btech
-                );
-                set_battle_unit_experience(
+            let (_dir, config, mut world, attacker, target) =
+                fixture(vehicle_attacker, vehicle_target).await;
+            for skill in [
+                "Gunnery-Laser",
+                "Piloting-Biped",
+                "Piloting-Battlemech",
+                "Piloting-Tracked",
+                "Drive",
+            ] {
+                set_battle_character_value(
                     &mut world,
-                    target,
-                    UnitExperience {
-                        suppress_gunnery: true,
+                    ObjectId(1),
+                    skill,
+                    CharacterValue {
+                        value: 5,
                         ..Default::default()
                     },
                 )
                 .unwrap();
-                let before = world.btech.clone();
-                assert!(
-                    award_battle_gunnery_experience(&mut world, request, &xp)
-                        .unwrap()
-                        .is_none()
-                );
-                assert_eq!(world.btech, before);
             }
+            let request = GunneryAwardRequest {
+                tsm_tow_bonus: true,
+
+                attacker,
+                pilot: ObjectId(1),
+                target,
+                weapon: Weapon::MediumLaser,
+                damage: 5,
+                base_to_hit: 7,
+                extended_gunnery: true,
+                extended_piloting: true,
+                use_unit_modifier: true,
+                now: 100,
+            };
+            let xp = config::XpConfig {
+                oldxpsystem: 0,
+                ..Default::default()
+            };
+            let before = world.clone();
+            let report = award_battle_gunnery_experience(&mut world, request, &xp)
+                .unwrap()
+                .unwrap();
+            let ShotExperienceAward::BattleValue(report) = report else {
+                panic!("wrong formula")
+            };
+            assert!(report.award.accepted);
+            assert!(report.amount > 0);
+            assert!(report.calculation.difficulty.is_some());
+            let mut replay = before.clone();
+            assert_eq!(
+                award_battle_value_gunnery_experience(&mut replay, request, &xp).unwrap(),
+                Some(report)
+            );
+            assert_eq!(replay.btech, world.btech);
+            for (id, vehicle) in [(attacker, vehicle_attacker), (target, vehicle_target)] {
+                let class = if vehicle { "vehicles" } else { "constructed" };
+                assert_eq!(
+                    serde_json::to_value(&world.btech).unwrap()[class][id.0.to_string()]["dice"],
+                    serde_json::to_value(&before.btech).unwrap()[class][id.0.to_string()]["dice"]
+                );
+            }
+            persistence::save(&config.database(), &world).await.unwrap();
+            assert_eq!(
+                persistence::load(&config.database()).await.unwrap().btech,
+                world.btech
+            );
+            set_battle_unit_experience(
+                &mut world,
+                target,
+                UnitExperience {
+                    suppress_gunnery: true,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            let before = world.btech.clone();
+            assert!(
+                award_battle_gunnery_experience(&mut world, request, &xp)
+                    .unwrap()
+                    .is_none()
+            );
+            assert_eq!(world.btech, before);
         }
     }
 }
@@ -363,12 +360,14 @@ async fn battle_value_awards_share_mixed_participants_and_preserve_dice() {
 async fn vehicle_battle_value_uses_live_protection_and_installed_weapons() {
     let (_dir, _config, mut world, attacker, _target) = fixture(true, true).await;
     let value = world.btech.vehicles()[&attacker].battle_value().unwrap();
-    // 160 armor, 40 structure, tracked discount, then the five-MP movement band.
-    assert_eq!(value.defensive, f64::from(496.8_f32));
-    // Combustion cooling is zero; both installed AC/20s exceed heat capacity.
-    assert_eq!(
-        value.offensive,
-        80.0 + f64::from(Weapon::parse("IS.AC/20").unwrap().battle_value() / 2) * 2.0
+    // 160 armor and 40 structure, the tracked 0.9, then the five-MP +2 Defensive Factor.
+    assert!((value.defensive - 496.8).abs() < 1e-9, "{value:?}");
+    // Vehicles never halve for heat: both AC/20s, four tons of ammunition and half the
+    // tonnage, at a five-MP Speed Factor of 1.00 (TechManual p. 306).
+    let ac20 = f64::from(Weapon::parse("IS.AC/20").unwrap().battle_value());
+    assert!(
+        (value.offensive - (ac20 * 2.0 + 88.0 + 40.0)).abs() < 1e-9,
+        "{value:?}"
     );
     world
         .btech
@@ -379,23 +378,27 @@ async fn vehicle_battle_value_uses_live_protection_and_installed_weapons() {
         .unwrap();
     let damaged = world.btech.vehicles()[&attacker].battle_value().unwrap();
     assert_eq!(damaged.offensive, value.offensive);
-    assert_eq!(damaged.defensive, f64::from(388.8_f32));
+    assert!((damaged.defensive - 388.8).abs() < 1e-9, "{damaged:?}");
 }
 
 #[test]
 fn vehicle_battle_value_applies_each_ground_movement_discount() {
     for (movement, defensive) in [
-        (VehicleMovement::Tracked, 496.8_f32),
-        (VehicleMovement::Wheeled, 441.6_f32),
-        (VehicleMovement::Hover, 386.4_f32),
-        (VehicleMovement::Stationary, 460.0_f32),
+        (VehicleMovement::Tracked, 496.8),
+        (VehicleMovement::Wheeled, 441.6),
+        (VehicleMovement::Hover, 386.4),
+        (VehicleMovement::Stationary, 460.0),
     ] {
         let mut definition =
             VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
                 .unwrap();
         definition.movement = movement;
         let unit = Vehicle::new(definition).unwrap();
-        assert_eq!(unit.battle_value().unwrap().defensive, f64::from(defensive));
+        let value = unit.battle_value().unwrap();
+        assert!(
+            (value.defensive - defensive).abs() < 1e-9,
+            "{movement:?} {value:?}"
+        );
     }
 }
 
@@ -420,11 +423,7 @@ fn shipped_vehicles_and_vtols_have_finite_battle_values() {
         let value = unit
             .battle_value()
             .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
-        assert!(
-            value.total.is_finite() && value.total > 0.0,
-            "{}",
-            path.display()
-        );
+        assert!(value.total > 0, "{}", path.display());
         assert!(value.defensive >= 0.0 && value.offensive >= 0.0);
         count += 1;
     }
@@ -490,7 +489,6 @@ async fn experience_and_battle_value_use_live_load_for_either_participant() {
                 };
                 let xp = config::XpConfig {
                     oldxpsystem: 0,
-                    use_pilot_bv_mod: 0,
                     ..Default::default()
                 };
                 let classic_before =
@@ -502,12 +500,12 @@ async fn experience_and_battle_value_use_live_load_for_either_participant() {
                         .unwrap()
                         .unwrap();
                 let carrier = if load_attacker { attacker } else { target };
-                let value_before = battle_unit_value(&world, carrier, true).unwrap();
+                let value_before = battle_unit_value(&world, carrier).unwrap();
                 tow_fixture(&mut world, &config, attacker, target, carrier);
                 let unchanged = world.btech.clone();
-                let value = battle_unit_value(&world, carrier, true).unwrap();
-                assert_eq!(value.offensive, value_before.offensive);
-                assert!(value.defensive < value_before.defensive);
+                let value = battle_unit_value(&world, carrier).unwrap();
+                // Battle Value is a design value: carried load does not change it.
+                assert_eq!(value, value_before);
                 assert_eq!(world.btech, unchanged);
                 let classic = award_battle_classic_gunnery_experience(&mut world.clone(), request)
                     .unwrap()
@@ -517,17 +515,10 @@ async fn experience_and_battle_value_use_live_load_for_either_participant() {
                     .unwrap();
                 if load_attacker {
                     assert!(classic.chance.difficulty > classic_before.chance.difficulty);
-                    assert!(
-                        bv.calculation.difficulty.unwrap()
-                            > bv_before.calculation.difficulty.unwrap()
-                    );
                 } else {
                     assert!(classic.chance.difficulty < classic_before.chance.difficulty);
-                    assert!(
-                        bv.calculation.difficulty.unwrap()
-                            < bv_before.calculation.difficulty.unwrap()
-                    );
                 }
+                assert_eq!(bv.calculation, bv_before.calculation);
                 persistence::save(&config.database(), &world).await.unwrap();
                 let mut restored = persistence::load(&config.database()).await.unwrap();
                 // Connection state is transient; reconnect the pilot before comparing award eligibility.
@@ -589,7 +580,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
         })
         .unwrap();
     tow_fixture(&mut world, &config, attacker, target, attacker);
-    // Use a Mech-sized load so enabled assistance crosses both XP and BV movement bands.
+    // Use a Mech-sized load so enabled assistance crosses an XP movement band.
     set_battle_tow(&mut world, attacker, None).unwrap();
     let map = world.btech.constructed_units()[&attacker]
         .position()
@@ -633,15 +624,8 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
     .unwrap()
     .unwrap();
     assert!(enabled.chance.difficulty < disabled.chance.difficulty);
-    assert!(
-        battle_unit_value(&world, attacker, true).unwrap().defensive
-            > battle_unit_value(&world, attacker, false)
-                .unwrap()
-                .defensive
-    );
     let xp = config::XpConfig {
         oldxpsystem: 0,
-        use_pilot_bv_mod: 0,
         ..Default::default()
     };
     let disabled = award_battle_value_gunnery_experience(&mut world.clone(), request, &xp)
@@ -658,7 +642,8 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
     )
     .unwrap()
     .unwrap();
-    assert!(enabled.calculation.difficulty.unwrap() < disabled.calculation.difficulty.unwrap());
+    // The towing assistance setting changes the classic award's speed but not Battle Value.
+    assert_eq!(enabled.calculation, disabled.calculation);
 }
 
 #[tokio::test]
@@ -666,12 +651,14 @@ async fn vtol_value_shares_vehicle_accounting_and_has_its_class_movement_bonus()
     let (_dir, config, mut world, id, _) =
         fixture_sources([include_str!("../game/units/Kestrel.toml"); 2]).await;
     let before = world.btech.clone();
-    let initial = battle_unit_value(&world, id, true).unwrap();
-    // 24 armor and 15 structure: 82.5, less 30%, then 18 MP (+5) plus VTOL (+1).
-    assert_eq!(initial.defensive, f64::from(92.4_f32));
-    assert_eq!(
-        initial.offensive,
-        25.0 + 2.0 * f64::from(Weapon::MachineGun.battle_value())
+    let initial = battle_unit_value(&world, id).unwrap();
+    // 24 armor and 15 structure: 82.5, times the VTOL 0.7, then 18 MP (+5) plus VTOL (+1).
+    assert!((initial.defensive - 92.4).abs() < 1e-9, "{initial:?}");
+    // Two machine guns, a ton of ammunition and half of 25 tons at 18 MP's 2.72 Speed Factor.
+    let machine_guns = 2.0 * f64::from(Weapon::MachineGun.battle_value());
+    assert!(
+        (initial.offensive - (machine_guns + 1.0 + 12.5) * 2.72).abs() < 1e-9,
+        "{initial:?}"
     );
     assert_eq!(world.btech, before);
     world
@@ -680,7 +667,7 @@ async fn vtol_value_shares_vehicle_accounting_and_has_its_class_movement_bonus()
             record["ammunition"] = serde_json::json!([0]);
         })
         .unwrap();
-    assert_eq!(battle_unit_value(&world, id, true).unwrap(), initial);
+    assert_eq!(battle_unit_value(&world, id).unwrap(), initial);
     // A surviving but unarmored rotor changes only protection, not installed weapons or movement.
     world
         .btech
@@ -688,23 +675,20 @@ async fn vtol_value_shares_vehicle_accounting_and_has_its_class_movement_bonus()
             record["sections"]["rotor"]["armor"] = 0.into();
         })
         .unwrap();
-    assert_eq!(
-        battle_unit_value(&world, id, true).unwrap().defensive,
-        f64::from(86.8_f32)
-    );
-    // Destroying the rotor also removes three internal points and drops speed to zero; +1 remains.
+    assert!((battle_unit_value(&world, id).unwrap().defensive - 86.8).abs() < 1e-9);
+    // Destroying the rotor removes three internal points; movement keeps its design value.
     world
         .btech
         .rewrite_unit_record(id, |record| {
             record["sections"]["rotor"]["internal"] = 0.into();
         })
         .unwrap();
-    let stopped = battle_unit_value(&world, id, true).unwrap();
+    let stopped = battle_unit_value(&world, id).unwrap();
     assert_eq!(stopped.offensive, initial.offensive);
-    assert_eq!(stopped.defensive, f64::from(56.21_f32));
+    assert!((stopped.defensive - 81.76).abs() < 1e-9, "{stopped:?}");
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(battle_unit_value(&restored, id, true).unwrap(), stopped);
+    assert_eq!(battle_unit_value(&restored, id).unwrap(), stopped);
 }
 
 #[tokio::test]
@@ -737,31 +721,22 @@ async fn vtol_battle_value_experience_supports_mixed_pairs_load_and_replay() {
             };
             let xp = config::XpConfig {
                 oldxpsystem: 0,
-                use_pilot_bv_mod: 0,
                 ..Default::default()
             };
             let unloaded = award_battle_gunnery_experience(&mut world.clone(), request, &xp)
                 .unwrap()
                 .unwrap();
             assert!(matches!(unloaded, ShotExperienceAward::BattleValue(_)));
-            let with_pilot = config::XpConfig {
-                use_pilot_bv_mod: 1,
-                ..xp.clone()
-            };
-            assert!(
-                award_battle_gunnery_experience(&mut world.clone(), request, &with_pilot)
-                    .unwrap()
-                    .is_some()
-            );
 
             let carrier = if a == 2 { attacker } else { target };
+            let unloaded_value = battle_unit_value(&world, carrier).unwrap();
             tow_fixture(&mut world, &config, attacker, target, carrier);
-            let loaded = battle_unit_value(&world, carrier, true).unwrap();
-            assert!(loaded.defensive < 92.4);
+            // Battle Value is a design value, so towing changes neither it nor the award.
+            assert_eq!(battle_unit_value(&world, carrier).unwrap(), unloaded_value);
             let live = award_battle_gunnery_experience(&mut world.clone(), request, &xp)
                 .unwrap()
                 .unwrap();
-            assert_ne!(live, unloaded);
+            assert_eq!(live, unloaded);
             persistence::save(&config.database(), &world).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
             replay
@@ -792,9 +767,9 @@ async fn authored_vtol_without_catalogued_engine_mass_survives_restart() {
     assert_eq!(engine.standard_mass, None);
     assert_eq!(unit.mass().unwrap().engine, 0);
     assert_eq!(unit.maximum_speed(), 161.25);
-    let value = battle_unit_value(&world, id, true).unwrap();
+    let value = battle_unit_value(&world, id).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, world.btech);
-    assert_eq!(battle_unit_value(&restored, id, true).unwrap(), value);
+    assert_eq!(battle_unit_value(&restored, id).unwrap(), value);
 }

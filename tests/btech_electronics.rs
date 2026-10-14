@@ -28,7 +28,8 @@ fn installed(name: &str, slots: u8, clan: bool) -> Mech {
     Mech::from_template(template).unwrap()
 }
 
-/// Guardian mass differs by technology; Angel mass is one ton per slot and has no intrinsic defensive BV.
+/// Guardian mass differs by technology; Angel mass is one ton per slot. Complete suites add
+/// their defensive BV (Guardian 61, Angel 100) times the Jenner's 1.4 Defensive Factor.
 #[test]
 fn electronics_construction_mass_value_and_damage() {
     use ElectronicSuite::{Angel, Guardian};
@@ -37,8 +38,8 @@ fn electronics_construction_mass_value_and_damage() {
         ("Ecm", 2, false, Guardian, true, 1536, 85.4),
         ("Ecm", 1, true, Guardian, true, 1024, 85.4),
         ("AngelEcm", 1, false, Angel, false, 1024, 0.0),
-        ("AngelEcm", 2, false, Angel, true, 2048, 0.0),
-        ("AngelEcm", 2, true, Angel, true, 2048, 0.0),
+        ("AngelEcm", 2, false, Angel, true, 2048, 140.0),
+        ("AngelEcm", 2, true, Angel, true, 2048, 140.0),
     ] {
         let base = installed(name, 0, clan);
         let mut unit = installed(name, slots, clan);
@@ -49,9 +50,7 @@ fn electronics_construction_mass_value_and_damage() {
             mass
         );
         assert!(
-            (unit.battle_value(None).unwrap().defensive
-                - base.battle_value(None).unwrap().defensive
-                - bv)
+            (unit.battle_value().unwrap().defensive - base.battle_value().unwrap().defensive - bv)
                 .abs()
                 < 0.001
         );

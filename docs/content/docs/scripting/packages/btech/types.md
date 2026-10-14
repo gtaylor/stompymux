@@ -1667,9 +1667,9 @@ Alias: `PartDefinition|{id: integer}|integer|string`
 
 ## BattleValue
 
-- `total`: `number`
-- `offensive`: `number`
-- `defensive`: `number`
+- `total`: `integer` — Final Battle Value for a Gunnery 4 / Piloting 5 crew, rounded to the nearest whole number.
+- `offensive`: `number` — Offensive Battle Rating, with fractions.
+- `defensive`: `number` — Defensive Battle Rating, with fractions.
 
 ## Technology
 

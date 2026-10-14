@@ -105,11 +105,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_xp_usePilotBVMod",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_oldxpsystem",
         parser: "cf_int",
         permission: P::GOD,

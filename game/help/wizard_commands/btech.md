@@ -1055,9 +1055,11 @@ stops at blocking terrain or the map edge; it does not anticipate new orders,
 future damage, vertical movement, or map transfers. Each weapon still needs its
 usual ammunition and readiness. Queued artillery survives a server restart.
 
-`@viewunit bv` reports current Battle Value to two decimal places. It uses live
-armor, equipment, load and configured weapon values. The field is read-only;
-`setwbv` changes the weapon values used by the calculation.
+`@viewunit bv` reports the unit's Battle Value (TechManual BV 2.0) as a whole
+number for a Gunnery 4 / Piloting 5 crew. It uses current armor and internal
+structure, the installed equipment and the design's maximum movement; towing and
+carried load do not change it. The field is read-only; `setwbv` changes the
+weapon values used by the calculation.
 
 `@viewunit unitdamage` reads a compact damage report: `A:section/loss` for armor,
 `A(R):section/loss` for rear armor, `I:section/loss` for internal structure,

@@ -208,10 +208,10 @@ async fn defensive_recycle_and_battle_value_use_shared_settings() {
                 .find(|row| row.weapon.is_ams())
                 .unwrap()
                 .weapon;
-            let before = battle_unit_value(&world, target, true).unwrap();
+            let before = battle_unit_value(&world, target).unwrap();
             set_battle_weapon_recycle(&mut world, ObjectId(1), weapon.name(), 127).unwrap();
             set_battle_weapon_battle_value(&mut world, ObjectId(1), weapon.name(), 2001).unwrap();
-            let after = battle_unit_value(&world, target, true).unwrap();
+            let after = battle_unit_value(&world, target).unwrap();
             assert_eq!(after.offensive, before.offensive);
             assert!(after.defensive > before.defensive);
             hit_seed(&mut world, shooter);
@@ -256,10 +256,16 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
         )
         .await;
         set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.SmallLaser", 1001).unwrap();
-        let before = battle_unit_value(&world, shooter, true).unwrap();
+        let before = battle_unit_value(&world, shooter).unwrap();
         set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.SmallLaser", 2001).unwrap();
-        let after = battle_unit_value(&world, shooter, true).unwrap();
-        assert_eq!(after.offensive - before.offensive, 1000.0);
+        let after = battle_unit_value(&world, shooter).unwrap();
+        // The overridden laser is the most valuable weapon, so it keeps its full value and
+        // the gain is 1,000 times the unit's Speed Factor.
+        let gain = after.offensive - before.offensive;
+        assert!(
+            (0..=30).any(|mp| (gain - 1000.0 * battle_speed_factor(mp)).abs() < 1e-6),
+            "{gain}"
+        );
         assert_eq!(after.defensive, before.defensive);
         let input = BattleValueExperienceInput {
             attacker_value: 700.0,
@@ -275,7 +281,6 @@ async fn offensive_value_and_experience_follow_runtime_overrides() {
         };
         let mut xp = config.battletech.xp.clone();
         xp.vrtmod = 1;
-        xp.use_pilot_bv_mod = 0;
         set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.SmallLaser", 100).unwrap();
         set_battle_weapon_recycle(&mut world, ObjectId(1), "IS.SmallLaser", 30).unwrap();
         let original = input

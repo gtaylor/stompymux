@@ -460,11 +460,10 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             crate::lua::transactions::require(lua)?;
             let id = require_unit_runtime(lua, &world, value(&args, 0))?;
             let borrowed = world.borrow();
-            let config = crate::lua::configuration(lua);
             let bv = if borrowed.btech.constructed_units().contains_key(&id)
                 || borrowed.btech.vehicles().contains_key(&id)
             {
-                crate::btech::inspection_battle_value(&borrowed, id, &config)
+                crate::btech::inspection_battle_value(&borrowed, id)
             } else {
                 crate::btech::inspection_template_battle_value(
                     &crate::btech::registered_unit_default_template(&borrowed, id).unwrap(),

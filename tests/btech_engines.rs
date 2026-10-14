@@ -162,15 +162,17 @@ fn clan_engine_layouts_mass_and_side_loss() {
 fn battle_value_engine_factors() {
     for (center, left, right, defensive) in [
         (6, 0, 0, 324.35),
-        (8, 2, 0, 296.08),
+        (8, 2, 0, 296.075),
         (8, 3, 1, 267.8),
         (7, 2, 1, 267.8),
         (7, 3, 2, 267.8),
-        (7, 5, 6, 267.8),
+        // An Inner Sphere XXL engine keeps a quarter of the structure value (TO:AUE p. 193).
+        (7, 5, 6, 239.525),
     ] {
         let unit = Mech::from_template(definition(center, left, right)).unwrap();
-        let value = unit.battle_value(None).unwrap();
-        assert_eq!(value.offensive, 196.0);
+        let value = unit.battle_value().unwrap();
+        // Four medium lasers and 35 tons at 9 running and 5 jumping MP (Speed Factor 1.89).
+        assert!((value.offensive - 413.91).abs() < 0.0001, "{value:?}");
         assert!((value.defensive - defensive).abs() < 0.0001, "{value:?}");
     }
 }
@@ -188,10 +190,10 @@ fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
         assert_eq!(unit.engine().unwrap(), expected);
         let original_mass = unit.mass().unwrap();
         assert!(original_mass.engine > 0);
-        let original_bv = unit.battle_value(None).unwrap();
+        let original_bv = unit.battle_value().unwrap();
         let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(restored.mass().unwrap(), original_mass);
-        assert_eq!(restored.battle_value(None).unwrap(), original_bv);
+        assert_eq!(restored.battle_value().unwrap(), original_bv);
         let slots: Vec<_> = unit
             .loadout()
             .unwrap()

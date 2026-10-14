@@ -1808,9 +1808,9 @@
 
 // lua-types-begin btech 00437
 //|---@class BattleValue
-//|---@field total number
-//|---@field offensive number
-//|---@field defensive number
+//|---@field total integer Final Battle Value for a Gunnery 4 / Piloting 5 crew, rounded to the nearest whole number.
+//|---@field offensive number Offensive Battle Rating, with fractions.
+//|---@field defensive number Defensive Battle Rating, with fractions.
 // lua-types-end
 
 // lua-types-begin btech 00438

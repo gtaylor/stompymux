@@ -222,8 +222,6 @@ pub struct XpConfig {
     pub modifier: i64,
     /// Configuration value for `defaultweapbv`; defaults are centralized below.
     pub defaultweapbv: i64,
-    /// Configuration value for `use_pilot_bv_mod`; defaults are centralized below.
-    pub use_pilot_bv_mod: i64,
     /// Configuration value for `oldxpsystem`; defaults are centralized below.
     pub oldxpsystem: i64,
     /// Configuration value for `vrtmod`; defaults are centralized below.
@@ -244,7 +242,6 @@ impl Default for XpConfig {
             defaultweapdam: 5,
             modifier: 100,
             defaultweapbv: 120,
-            use_pilot_bv_mod: 1,
             oldxpsystem: 1,
             vrtmod: 0,
             perunit_xpmod: 1,

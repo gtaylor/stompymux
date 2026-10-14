@@ -346,13 +346,6 @@
     "default": 120
   },
   {
-    "path": "battletech.xp.use_pilot_bv_mod",
-    "legacy_name": "btech_xp_usePilotBVMod",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
     "path": "battletech.xp.oldxpsystem",
     "legacy_name": "btech_oldxpsystem",
     "registry_type": "cf_int",

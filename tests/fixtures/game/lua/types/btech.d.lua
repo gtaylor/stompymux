@@ -3311,9 +3311,9 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@field modes string[] Active mode names: digital, mute, relay, information, scan.
 
 ---@class BattleValue
----@field total number
----@field offensive number
----@field defensive number
+---@field total integer Final Battle Value for a Gunnery 4 / Piloting 5 crew, rounded to the nearest whole number.
+---@field offensive number Offensive Battle Rating, with fractions.
+---@field defensive number Defensive Battle Rating, with fractions.
 
 ---@class Technology
 ---@field code TechnologyCode
@@ -3451,7 +3451,7 @@ function btech_template.armor(reference, section) end
 ---@return integer cost
 function btech_template.base_cost(reference) end
 
----Read offensive, defensive and total Battle Value.
+---Read offensive, defensive and total Battle Value (TechManual BV 2.0) of the pristine design.
 ---@param reference string
 ---@return BattleValue value
 function btech_template.battle_value(reference) end
@@ -3547,7 +3547,8 @@ function btech_unit.armor(unit, section) end
 ---@return Object|nil pilot
 function btech_unit.assigned_pilot(unit) end
 
----Read offensive, defensive and total Battle Value.
+---Read offensive, defensive and total Battle Value (TechManual BV 2.0). Current armor and
+---internal structure count; installed equipment and movement keep their design value.
 ---@param unit DbRef|Object
 ---@return BattleValue value
 function btech_unit.battle_value(unit) end

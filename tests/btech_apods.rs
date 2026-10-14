@@ -26,8 +26,8 @@ fn apod_assets_construct_and_round_trip() {
         assert_eq!(restored, unit);
         assert_eq!(restored.mass().unwrap(), unit.mass().unwrap());
         assert_eq!(
-            restored.battle_value(None).unwrap().total,
-            unit.battle_value(None).unwrap().total
+            restored.battle_value().unwrap().total,
+            unit.battle_value().unwrap().total
         );
     }
 }
@@ -62,9 +62,11 @@ fn apod_mass_and_battle_value() {
             unit.mass().unwrap().equipment,
             baseline.mass().unwrap().equipment + 512
         );
-        let before = baseline.battle_value(None).unwrap();
-        let after = unit.battle_value(None).unwrap();
-        assert_eq!(after.offensive - before.offensive, 1.0);
+        let before = baseline.battle_value().unwrap();
+        let after = unit.battle_value().unwrap();
+        // A-Pods are defensive equipment (TechManual p. 317): worth 1 before the
+        // Jenner's 1.4 Defensive Factor and nothing offensively.
+        assert_eq!(after.offensive, before.offensive);
         assert!((after.defensive - before.defensive - 1.4).abs() < 0.001);
     }
 }

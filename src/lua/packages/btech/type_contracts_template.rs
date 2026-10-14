@@ -38,7 +38,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00463
-//|---Read offensive, defensive and total Battle Value.
+//|---Read offensive, defensive and total Battle Value (TechManual BV 2.0) of the pristine design.
 //|---@param reference string
 //|---@return BattleValue value
 //|function btech_template.battle_value(reference) end

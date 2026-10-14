@@ -58,10 +58,12 @@ fn stealth_equipment_layout_and_accounting() {
     }
     let base = Mech::from_template(stripped).unwrap();
     assert_eq!(unit.mass().unwrap(), base.mass().unwrap());
-    assert_eq!(
-        unit.battle_value(None).unwrap(),
-        base.battle_value(None).unwrap()
-    );
+    // Stealth armor adds its +2 long-range modifier to the Defensive Factor (1.4 to 1.6) and
+    // ten points of movement heat, which halves more weapons (TechManual p. 302).
+    let stealthy = unit.battle_value().unwrap();
+    let plain = base.battle_value().unwrap();
+    assert!((stealthy.defensive - plain.defensive / 1.4 * 1.6).abs() < 1e-9);
+    assert!(stealthy.offensive < plain.offensive);
     for section in MechSection::ALL {
         assert!(unit.critical_candidates(section).iter().all(|location| {
             unit.definition().sections[&section].criticals[&location.slot].equipment

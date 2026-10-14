@@ -6986,15 +6986,9 @@ async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
                 .unwrap(),
             expected
         );
-        let value = unit.battle_value(world.btech.maps().get(&map_id)).unwrap();
-        let defensive = if expected == 258.0 {
-            399.2
-        } else if gravity == 200 {
-            324.35
-        } else {
-            349.3
-        };
-        assert!((value.defensive - defensive).abs() < 0.0001, "{value:?}");
+        // Battle Value reads the design: heat, active myomer and gravity leave it unchanged.
+        let value = unit.battle_value().unwrap();
+        assert!((value.defensive - 349.3).abs() < 0.0001, "{value:?}");
         assert_eq!(world.btech, before);
     }
     // Underweight damage and ammunition loss do not raise the template speed ceiling.
@@ -7172,7 +7166,7 @@ async fn battle_value_gunnery_awards_are_atomic_without_dice() {
     let ShotExperienceAward::BattleValue(report) = report else {
         panic!("Wrong formula")
     };
-    assert_eq!(report.amount, 6);
+    assert_eq!(report.amount, 7);
     assert!(report.calculation.difficulty.unwrap() > 100.0);
     assert!(report.award.accepted);
     assert_eq!(report.award.after.last_used, 100);

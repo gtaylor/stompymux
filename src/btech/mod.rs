@@ -568,13 +568,12 @@ mod effective_speed;
 pub use effective_speed::unit_effective_maximum_speed;
 
 mod battle_value;
-pub use battle_value::BattleValue;
-pub use battle_value::unit_battle_value;
+pub use battle_value::{BattleValue, skill_multiplier, speed_factor, unit_battle_value};
 
 mod battle_value_experience;
 pub use battle_value_experience::{
     BattleValueExperienceAward, BattleValueExperienceCalculation, BattleValueExperienceInput,
-    award_battle_value_gunnery_experience, pilot_battle_value_modifier,
+    award_battle_value_gunnery_experience,
 };
 
 pub use gunnery_experience::{ShotExperienceAward, award_gunnery_experience};

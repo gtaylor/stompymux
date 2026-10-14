@@ -355,11 +355,13 @@ pub use btech::{
     award_classic_gunnery_experience as award_battle_classic_gunnery_experience,
 };
 
-pub use btech::BattleValue;
+pub use btech::{
+    BattleValue, skill_multiplier as battle_skill_multiplier, speed_factor as battle_speed_factor,
+};
 
 pub use btech::{
     BattleValueExperienceAward, BattleValueExperienceCalculation, BattleValueExperienceInput,
-    award_battle_value_gunnery_experience, pilot_battle_value_modifier,
+    award_battle_value_gunnery_experience,
 };
 
 pub use btech::{ShotExperienceAward, award_gunnery_experience as award_battle_gunnery_experience};
@@ -865,7 +867,7 @@ pub use btech::throttle_maximum as battle_throttle_maximum;
 /// World-aware transfer speed derived from live mass and external tow load.
 pub use btech::unit_effective_maximum_speed as battle_effective_maximum_speed;
 
-/// Battle value using live external load and configured myomer towing assistance.
+/// Battle Value of a live unit with the world's runtime weapon values.
 pub use btech::unit_battle_value as battle_unit_value;
 
 /// Shared pickup eligibility and persisted scenario towing permission.

@@ -11,7 +11,9 @@ pub struct BattleValueExperienceInput {
     pub target_value: f64,
     pub attacker_speed: f64,
     pub target_speed: f64,
+    /// BV Skill Multiplier for the attacking crew (TechManual p. 314).
     pub attacker_pilot_modifier: f64,
+    /// BV Skill Multiplier for the target's crew (TechManual p. 314).
     pub target_pilot_modifier: f64,
     pub weapon: Weapon,
     pub damage: u16,
@@ -25,23 +27,6 @@ pub struct BattleValueExperienceCalculation {
     /// None explicitly records an out-of-domain pilot adjustment or nonfinite arithmetic.
     pub difficulty: Option<f64>,
     pub amount: u32,
-}
-
-/// Skill targets are lower for better pilots; values above seven retain their distinct slope.
-pub fn pilot_battle_value_modifier(gunnery: i16, piloting: i16) -> f64 {
-    let base = match gunnery {
-        ..=-1 => 2.05 - f64::from(gunnery) * 0.20,
-        0 => 2.05,
-        1 => 1.85,
-        2 => 1.65,
-        3 => 1.45,
-        4 => 1.25,
-        5 => 1.15,
-        6 => 1.05,
-        7 => 0.95,
-        _ => 0.95 - f64::from(gunnery) * 0.10,
-    };
-    base - f64::from(piloting) * 0.05
 }
 
 impl BattleValueExperienceInput {
@@ -86,14 +71,8 @@ impl BattleValueExperienceInput {
             self.attacker_pilot_modifier.is_finite() && self.target_pilot_modifier.is_finite(),
             "Invalid pilot BV modifier"
         );
-        let (source, target) = if config.use_pilot_bv_mod != 0 {
-            (
-                self.attacker_value * self.attacker_pilot_modifier,
-                self.target_value * self.target_pilot_modifier,
-            )
-        } else {
-            (self.attacker_value, self.target_value)
-        };
+        let source = self.attacker_value * self.attacker_pilot_modifier;
+        let target = self.target_value * self.target_pilot_modifier;
         let mut multiplier = config.modifier as f64;
         if config.bthmod != 0 {
             let failures = (1..=6)
@@ -176,7 +155,7 @@ pub fn award_battle_value_gunnery_experience(
         return Ok(None);
     }
     let value = |id| -> Result<_> {
-        let battle_value = super::battle_value::configured(world, id, request.speed_policy())?;
+        let battle_value = super::battle_value::unit_battle_value(world, id)?;
         crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
             Ok((
                 battle_value,
@@ -187,11 +166,9 @@ pub fn award_battle_value_gunnery_experience(
     };
     let (source_value, source_speed, source_settings) = value(request.attacker)?;
     let (target_value, target_speed, _) = value(request.target)?;
+    // Each crew's value carries its BV Skill Multiplier (TechManual p. 314).
     let pilot_modifier = |id| -> Result<f64> {
-        if config.use_pilot_bv_mod == 0 {
-            return Ok(1.0);
-        }
-        Ok(pilot_battle_value_modifier(
+        Ok(super::skill_multiplier(
             super::skills::unit_weapon_gunnery_target(
                 world,
                 id,
@@ -202,8 +179,8 @@ pub fn award_battle_value_gunnery_experience(
         ))
     };
     let calculation = BattleValueExperienceInput {
-        attacker_value: source_value.total,
-        target_value: target_value.total,
+        attacker_value: f64::from(source_value.total),
+        target_value: f64::from(target_value.total),
         attacker_speed: source_speed,
         target_speed,
         attacker_pilot_modifier: pilot_modifier(request.attacker)?,
@@ -444,19 +421,26 @@ mod tests {
         );
     }
 
-    /// Poor-skill extrapolation can leave the square-root domain; record that case and award the minimum.
+    /// Crew skill scales each side's value; a multiplier outside the square-root domain is
+    /// recorded and receives the minimum award.
     #[test]
     fn pilot_adjustment_and_defined_minimum() {
-        for (gun, pilot, expected) in [
-            (-1, 0, 2.25),
-            (0, 0, 2.05),
-            (4, 5, 1.0),
-            (6, 6, 0.75),
-            (7, 0, 0.95),
-            (8, 6, -0.15),
-        ] {
-            assert!((pilot_battle_value_modifier(gun, pilot) - expected).abs() < 1e-10);
-        }
+        let skilled = BattleValueExperienceInput {
+            target_pilot_modifier: super::super::skill_multiplier(2, 3),
+            ..input()
+        };
+        assert!(
+            skilled
+                .calculate(&XpConfig::default())
+                .unwrap()
+                .unwrap()
+                .amount
+                > input()
+                    .calculate(&XpConfig::default())
+                    .unwrap()
+                    .unwrap()
+                    .amount
+        );
         let bad = BattleValueExperienceInput {
             attacker_pilot_modifier: -1.0,
             ..input()
@@ -468,16 +452,6 @@ mod tests {
                 difficulty: None,
                 amount: 1
             }
-        );
-        assert!(
-            bad.calculate(&XpConfig {
-                use_pilot_bv_mod: 0,
-                ..Default::default()
-            })
-            .unwrap()
-            .unwrap()
-            .difficulty
-            .is_some()
         );
     }
 }

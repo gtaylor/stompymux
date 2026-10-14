@@ -5,7 +5,7 @@ linkTitle: "battle_value"
 manualLinkTitle: "battle_value"
 ---
 
-Read offensive, defensive and total Battle Value.
+Read offensive, defensive and total Battle Value (TechManual BV 2.0) of the pristine design.
 
 ## Signature
 

@@ -334,7 +334,7 @@ impl ArmAttack {
     }
 
     /// Base damage for an attacker of this mass before myomer and actuator effects.
-    fn damage(self, tons: u16) -> u16 {
+    pub(super) fn damage(self, tons: u16) -> u16 {
         match self {
             Self::Punch => tons.div_ceil(10),
             Self::Axe | Self::Lance => tons / 5,
@@ -353,7 +353,7 @@ impl ArmAttack {
     }
 
     /// Whether active triple-strength myomer doubles this weapon's damage.
-    fn myomer_doubles(self) -> bool {
+    pub(super) fn myomer_doubles(self) -> bool {
         !matches!(
             self,
             Self::Saw
