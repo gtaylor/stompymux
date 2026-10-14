@@ -153,8 +153,6 @@ pub struct BattleTechConfig {
     pub idf_requires_spotter: i64,
     /// Configuration value for `tsm_tow_bonus`; defaults are centralized below.
     pub tsm_tow_bonus: i64,
-    /// Configuration value for `heatcutoff`; defaults are centralized below.
-    pub heatcutoff: i64,
     /// Configuration value for `cost_debug`; defaults are centralized below.
     pub cost_debug: i64,
     /// Configuration value for `allow_cargo_commands`; defaults are centralized below.
@@ -206,7 +204,6 @@ impl Default for BattleTechConfig {
             ooc_comsys: 0,
             idf_requires_spotter: 1,
             tsm_tow_bonus: 1,
-            heatcutoff: 1,
             cost_debug: 0,
             allow_cargo_commands: true,
             transported_unit_death: 1,

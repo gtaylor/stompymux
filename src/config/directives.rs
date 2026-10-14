@@ -170,11 +170,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_heatcutoff",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_cost_debug",
         parser: "cf_int",
         permission: P::GOD,

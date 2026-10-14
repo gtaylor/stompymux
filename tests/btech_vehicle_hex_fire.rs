@@ -115,10 +115,6 @@ async fn vehicle_coordinate_modes_share_native_lua_expenditure_and_restart() {
             original.ammunition().iter().sum::<u16>() - vehicle.ammunition().iter().sum::<u16>(),
             1
         );
-        assert_eq!(
-            vehicle.weapon_heat(),
-            f64::from(Weapon::Ac20.profile().heat)
-        );
         assert!(vehicle.weapon_recycle()[&index] > 0);
         assert!(
             lua.eval_callback::<()>(&format!("btech.unit.fire({},1,{index})", shooter.0))

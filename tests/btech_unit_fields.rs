@@ -1638,7 +1638,7 @@ async fn readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis_scen
         let (mut world, id, _, _) = f.pair(&source, &source);
         if world.btech.constructed_units().contains_key(&id) {
             firing::edit(&mut world, id, |unit| {
-                unit["heat_cutoff"]["disabled"] = 3.into()
+                unit["heat_cutoff"]["shut_off"] = 3.into()
             });
         }
         let before = world.btech.clone();

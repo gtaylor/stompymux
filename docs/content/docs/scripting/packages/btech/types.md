@@ -346,7 +346,9 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `hide_elapsed`: `integer|nil` — Elapsed camouflage checks; nil when no hide event is pending.
 - `crew_recovery_remaining`: `integer` — Empty-crew consciousness countdown; random state stays private.
 - `character_pilot`: `{injuries: integer, killed: boolean}?` — Saved character-mode injury status; character health determines death.
-- `heat_cutoff`: `{enabled: boolean, disabled: integer, remaining: integer|nil}` — Intentional cooling suppression and seconds until the toggle completes.
+- `heat_cutoff`: `{requested: integer, shut_off: integer}` — Heat sinks shut off this turn and the count requested for the next.
+- `heat_shutdown`: `boolean` — Reactor down from a heat shutdown; it restarts by itself below 14 heat.
+- `restart_denied`: `boolean` — A failed restart Avoid Roll keeps the reactor down until the next turn.
 - `last_jump`: `{heading: integer, length: integer}` — Current course bearing and signed length in field units, retained after landing.
 - `heat_sample`: `{production: number, dissipation: number}` — Last committed thermal sample; production includes stored weapon heat.
 - `heat`: `{stored: number, excess: number}` — Weapon heat and sampled excess heat.
@@ -438,7 +440,6 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `self_destruct_safe`: `boolean` — Scenario protection from new self-destruct requests.
 - `hide_elapsed`: `integer|nil` — Elapsed camouflage checks; nil when no hide event is pending.
 - `crew_recovery_remaining`: `integer` — Empty-crew consciousness countdown, separate from crew stun.
-- `weapon_heat`: `number` — Passive weapon heat; ground vehicles do not overheat.
 - `gunnery_damage`: `integer` — Cumulative firing penalty from sensor and commander damage.
 - `lost_stabilizers`: `string[]` — Sections with destroyed weapon stabilizers.
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
@@ -1006,7 +1007,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `hit`: `boolean` — Launch classification; missile near misses may have no target effects.
 - `expenditure`: `WeaponUse`
 - `salvo`: `{kind: 'mech'|'vehicle'|'swarm', report: table}|nil` — Target-specific damage; nil on a miss or a heat-mode hit.
-- `heat_transfer`: `integer` — Heat already added to the target, zero unless a heat-mode shot hits.
+- `heat_transfer`: `integer|nil` — Outside heat a heat-mode hit added to a Mech target (zero once the turn's outside-heat cap is full); nil for any other shot.
 - `missed_terrain`: `WoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 - `missed_building`: `StrayHit|nil` — A miss from the next hex that struck the building around a target inside one.
 
@@ -1035,7 +1036,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `expenditure`: `VehicleWeaponUse`
 - `ams`: `AmsReport|nil`
 - `narc`: `NarcReport|nil` — Beacon attachment or interception; vehicle sections use their own names.
-- `heat_transfer`: `integer` — Direct flamer heat added to the target, otherwise zero.
+- `heat_transfer`: `integer|nil` — Outside heat a heat-mode hit added to a Mech target (zero once the turn's outside-heat cap is full); nil for any other shot.
 - `missed_terrain`: `WoodlandImpact|nil` — Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 - `missed_building`: `StrayHit|nil` — A miss from the next hex that struck the building around a target inside one.
 - `salvo`: `{kind: 'mech'|'vehicle'|'swarm', report: table}|nil` — Target-specific ordered damage groups.

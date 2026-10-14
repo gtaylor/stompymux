@@ -23,7 +23,9 @@ pub(super) struct DirectEffectRequest {
 #[derive(Default)]
 pub(super) struct DirectEffects {
     pub narc: Option<NarcReport<UnitSection>>,
-    pub heat_transfer: u8,
+    /// Outside heat a heat-mode hit added to a heat-tracking target, in place of damage;
+    /// zero when the turn's outside-heat cap was already full. `None` for any other shot.
+    pub heat_transfer: Option<u8>,
     pub missed_terrain: Option<WoodlandImpact>,
     /// A miss from the next hex striking the building around a target inside one.
     pub missed_building: Option<super::StrayHit>,
@@ -115,9 +117,14 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
     if request.fire_mode != FireMode::Heat {
         return Ok(report);
     }
-    let heat = stored_heat_mut(world, request.target)?;
-    report.heat_transfer = request.weapon.profile().damage;
-    *heat += f64::from(report.heat_transfer);
+    // A heat-causing weapon's heat applies to Mechs (and aerospace units) only; a vehicle
+    // tracks no heat, so the flamer's Damage Value lands as ordinary damage instead (Total
+    // Warfare p. 113, Heat-Causing Weapon; p. 303 note). On a Mech the heat is outside heat,
+    // counted against the fifteen-point cap a turn (Total Warfare p. 159).
+    let Some(target) = world.btech.constructed.get_mut(&request.target) else {
+        return Ok(report);
+    };
+    report.heat_transfer = Some(target.absorb_outside_heat(request.weapon.profile().damage));
     Ok(report)
 }
 
@@ -152,10 +159,10 @@ fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u1
 pub(super) fn thermal_notices(
     shooter: ObjectId,
     target: ObjectId,
-    heat_transfer: u8,
+    heat_transfer: Option<u8>,
 ) -> Vec<Notice> {
     let mut notices = Vec::new();
-    if heat_transfer > 0 {
+    if heat_transfer.is_some() {
         notices.push(Notice {
             unit: target,
             text: "The flaming plasma sprays all over you!".into(),
@@ -166,18 +173,4 @@ pub(super) fn thermal_notices(
         });
     }
     notices
-}
-
-/// Adapt heat storage without imposing a Mech thermal lifecycle on other unit classes.
-fn stored_heat_mut(world: &mut World, target: ObjectId) -> Result<&mut f64> {
-    if let Some(vehicle) = world.btech.vehicles.get_mut(&target) {
-        return Ok(&mut vehicle.weapon_heat);
-    }
-    Ok(&mut world
-        .btech
-        .constructed
-        .get_mut(&target)
-        .context("Target has no heat storage")?
-        .heat
-        .stored)
 }

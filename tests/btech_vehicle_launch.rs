@@ -131,10 +131,6 @@ async fn vehicle_launch_glancing_misses_and_out_of_range_attempts_replay_expendi
             report.expenditure.weapon.profile().heat
         );
         assert_eq!(
-            world.btech.vehicles()[&id].weapon_heat(),
-            f64::from(report.expenditure.heat)
-        );
-        assert_eq!(
             report
                 .expenditure
                 .ammunition
@@ -197,7 +193,6 @@ async fn vehicle_streak_failure_recycles_without_ammunition_even_when_confused()
             0
         };
         assert_eq!(report.expenditure.heat, heat);
-        assert_eq!(world.btech.vehicles()[&id].weapon_heat(), f64::from(heat));
         // A confused launcher resolves as a standard launcher, so its boundary roll glances.
         assert_eq!(report.glancing, confused && hit);
         assert!(
@@ -234,7 +229,6 @@ async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back
     assert_eq!(report.roll, expected_roll);
     assert_eq!(report.expenditure.gatling_damage, Some(1));
     assert_eq!(report.expenditure.heat, 1);
-    assert_eq!(world.btech.vehicles()[&id].weapon_heat(), 1.0);
     assert_eq!(
         report
             .expenditure
@@ -508,7 +502,6 @@ async fn vehicle_rapid_fire_explosions_and_caseless_breakdowns_fire_first() {
             assert!(report.expenditure.launched);
             let heat = if rapid { 2 } else { 1 };
             assert_eq!(report.expenditure.heat, heat);
-            assert_eq!(world.btech.vehicles()[&id].weapon_heat(), f64::from(heat));
             assert_eq!(report.hit, !breakdown && roll >= 6);
             assert_eq!(report.misload.is_some(), exploded);
             if let Some(damage) = report.misload {

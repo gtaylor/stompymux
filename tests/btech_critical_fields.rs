@@ -586,7 +586,7 @@ async fn primary_critical_fields_project_shared_conditions_and_mech_damage() {
         }
         let mut candidate = world;
         firing::edit(&mut candidate, id, |unit| {
-            unit["heat_cutoff"]["enabled"] = true.into();
+            unit["heat_cutoff"]["shut_off"] = 1.into();
             unit["stun_remaining"] = 10.into();
         });
         fields.verify(candidate, id, "critstatus", "pE").await;

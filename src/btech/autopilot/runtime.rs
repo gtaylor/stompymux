@@ -2004,19 +2004,11 @@ fn fire_target_if_ready(
             let Ok(loadout) = unit.loadout() else {
                 continue;
             };
-            let Some(readiness) = unit
+            // Vehicles track no heat (Total Warfare p. 158), so the heat ceiling never
+            // holds a vehicle's fire; readiness alone admits the mount.
+            if !unit
                 .weapon_readiness_with_loadout(&loadout, index)
-                .ok()
-                .filter(|readiness| readiness.ready)
-            else {
-                continue;
-            };
-            let unit = &world.btech.vehicles()[&shooter];
-            let Ok(mode) = unit.effective_fire_mode_with_loadout(&loadout, index) else {
-                continue;
-            };
-            let projected = projected_launch_heat(readiness.weapon, mode);
-            if unit.weapon_heat() + f64::from(projected) > f64::from(controller_config.heat_ceiling)
+                .is_ok_and(|readiness| readiness.ready)
             {
                 continue;
             }

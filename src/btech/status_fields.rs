@@ -241,7 +241,7 @@ pub(super) fn primary_criticals(world: &World, id: ObjectId) -> Result<u32> {
             unit.gyro_damage(),
             hips,
             unit.chassis() == super::MechChassis::Biped,
-            unit.heat_cutoff().enabled,
+            unit.heat_cutoff().shut_off > 0,
             unit.towable,
             unit.searchlight().destroyed,
             unit.illumination_observed,

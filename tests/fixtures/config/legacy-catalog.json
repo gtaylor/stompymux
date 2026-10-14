@@ -234,13 +234,6 @@
     "default": 1
   },
   {
-    "path": "battletech.heatcutoff",
-    "legacy_name": "btech_heatcutoff",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
     "path": "battletech.cost_debug",
     "legacy_name": "btech_cost_debug",
     "registry_type": "cf_int",

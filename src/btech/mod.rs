@@ -1110,7 +1110,7 @@ pub use tic::{TicEdit, Tics, edit_battle_tic, tic};
 pub use tic::{TicShot, fire_battle_tics};
 
 pub(crate) mod heat_cutoff;
-pub use heat_cutoff::{HeatCutoff, toggle_battle_heat_cutoff};
+pub use heat_cutoff::{HeatCutoff, set_battle_heat_cutoff};
 
 pub(crate) mod ammunition_preference;
 pub use ammunition_preference::set_battle_ammunition_section;

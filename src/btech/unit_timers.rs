@@ -102,9 +102,6 @@ impl SavedTimers for Mech {
         if let Some(attempt) = self.unjam {
             list.add(T::Unjam, 0, attempt.remaining, Down);
         }
-        if let Some(remaining) = self.heat_cutoff.remaining {
-            list.add(T::HeatCutoff, 0, remaining, Down);
-        }
         list.add(T::HullDown, 0, self.hull_down.remaining, Down);
         list.add(T::Lateral, 0, self.lateral.remaining, Down);
         list.add(T::Searchlight, 0, self.searchlight.remaining, Down);

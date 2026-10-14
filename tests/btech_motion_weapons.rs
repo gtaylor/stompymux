@@ -5057,8 +5057,8 @@ async fn thermal_shutdown_observers_cover_speed_overrides_visibility_and_replay(
             .unwrap()
             .is_some()
     );
-    // The Shutdown Avoid Roll at 14 heat needs a 4 (Total Warfare p. 159); the moving unit's
-    // balance check then rolls a 2 and falls.
+    // The Shutdown Avoid Roll at 14 heat needs a 4 (Total Warfare p. 159); the involuntary
+    // shutdown's balance check, due at any speed (Total Warfare p. 60), then rolls a 2 and falls.
     let seeded = |accept: fn(&mut Dice) -> bool| {
         (0u32..100_000)
             .map(|value| {
@@ -5089,10 +5089,12 @@ async fn thermal_shutdown_observers_cover_speed_overrides_visibility_and_replay(
                 world.btech.set_unit_dice(subject, seed.clone()).unwrap();
                 let mut expected = if avoid {
                     Vec::new()
+                } else if speed == 0.0 {
+                    battle_observer_messages(&world, subject, "shuts down!")
                 } else {
                     battle_observer_messages(&world, subject, "stops in mid-motion!")
                 };
-                if !avoid && speed.abs() > 10.75 {
+                if !avoid {
                     expected.extend(battle_observer_messages(&world, subject, "falls down!"));
                 }
                 persistence::save(&config.database(), &world).await.unwrap();
@@ -5113,7 +5115,7 @@ async fn thermal_shutdown_observers_cover_speed_overrides_visibility_and_replay(
                 assert_eq!(world.btech, restored.btech);
                 assert_eq!(reports.len(), 1);
                 assert_eq!(reports[0].shutdown, !avoid);
-                assert_eq!(reports[0].fall.is_some(), !avoid && speed.abs() > 10.75);
+                assert_eq!(reports[0].fall.is_some(), !avoid);
                 let observed: Vec<_> = reports[0]
                     .messages()
                     .into_iter()
@@ -6733,8 +6735,8 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
                     profile.recycle_seconds
                 );
                 assert_eq!(
-                    result.get::<u8>("heat_transfer").unwrap(),
-                    if heat { profile.damage } else { 0 }
+                    result.get::<Option<u8>>("heat_transfer").unwrap(),
+                    heat.then_some(profile.damage)
                 );
                 if heat {
                     assert_eq!(
@@ -6817,7 +6819,7 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
             .unwrap();
         shot_seed(&mut world, id, seed);
         let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
-        assert_eq!(report.heat_transfer, 0);
+        assert_eq!(report.heat_transfer, None);
         assert_eq!(report.glancing, roll == number);
         assert_eq!(world.btech.constructed_units()[&id].ammunition()[0], 9);
         assert_eq!(world.btech.constructed_units()[&id].heat().stored, 10.0);

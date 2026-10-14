@@ -2135,11 +2135,13 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
         );
         assert_eq!(native.world().btech, lua.world().btech);
         let mut flight_world = native.world().clone();
+        // Jump heat is charged once at launch; a burning hex adds its five points at the turn
+        // boundary instead, so nothing accrues as a rate in flight.
         assert_eq!(
             flight_world.btech.constructed_units()[&id]
                 .heat_rates(&flight_world)
                 .production,
-            if terrain == Terrain::Fire { 5.0 } else { 0.0 }
+            0.0
         );
         assert_eq!(
             flight_world.btech.constructed_units()[&id].heat().stored,
@@ -2193,10 +2195,8 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
             serde_json::to_value(unit).unwrap()["dice"],
             serde_json::to_value(expected).unwrap()
         );
-        assert_eq!(
-            unit.heat_rates(&flight_world).production,
-            if terrain == Terrain::Fire { 5.0 } else { 0.0 }
-        );
+        assert_eq!(unit.heat_rates(&flight_world).production, 0.0);
+        assert_eq!(unit.in_flames(&flight_world), terrain == Terrain::Fire);
         flight_world.validate(&config).unwrap();
     }
 }

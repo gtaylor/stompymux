@@ -1,119 +1,157 @@
-//! Pilot-selected thermal regulation and its durable four-second cockpit transition.
+//! Pilot-chosen heat-sink cutoff: shutting off any number of heat sinks to build up heat
+//! (Total Warfare p. 159, Shutting Off Heat Sinks).
 use crate::{CommandAction, CommandContext, CommandInput, CommandReport, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
-/// Disabled cooling is measured in heat points, independently of physical heat sink damage.
+/// Heat sinks the pilot has shut off, counted in sinks rather than heat points so that a
+/// double heat sink is one sink.
+///
+/// The book lets a MechWarrior shut off as many heat sinks as desired during the End Phase;
+/// they dissipate nothing in the following Heat Phase and may only be switched back on in a
+/// later End Phase (Total Warfare p. 159). Here the request is recorded at once and both
+/// shutting off and switching back on take effect at the unit's next thirty-second turn
+/// boundary.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HeatCutoff {
-    pub enabled: bool,
-    pub disabled: u16,
-    /// Committed seconds until the current setting flips; further toggles are rejected meanwhile.
-    pub remaining: Option<u8>,
+    /// Sinks the pilot asked to shut off, applied at the next turn boundary.
+    pub requested: u16,
+    /// Sinks shut off for the current turn, dissipating no heat.
+    pub shut_off: u16,
 }
 
 impl HeatCutoff {
-    /// Damage can reduce usable capacity before the next sample clamps disabled cooling.
+    /// Neither count may exceed the sinks the Mech carries; damage clamps both later.
     pub(super) fn validate(self, installed: u16) -> Result<()> {
         ensure!(
-            self.disabled <= installed,
-            "Invalid disabled cooling capacity"
-        );
-        ensure!(
-            self.remaining.is_none_or(|n| (1..=4).contains(&n)),
-            "Invalid heat cutoff transition"
+            self.requested <= installed && self.shut_off <= installed,
+            "Invalid heat sink cutoff"
         );
         Ok(())
     }
 
-    /// Advance the toggle without imposing startup or map requirements on an admitted command.
-    pub(super) fn tick(&mut self) {
-        let Some(remaining) = self.remaining else {
-            return;
-        };
-        if remaining > 1 {
-            self.remaining = Some(remaining - 1);
-            return;
-        }
-        self.remaining = None;
-        self.enabled = !self.enabled;
+    /// Whether a request waits for the next turn boundary.
+    pub fn pending(self) -> bool {
+        self.requested != self.shut_off
     }
 
-    /// Adjust the current environment sample, retaining its water bonus until the next sample.
-    pub(super) fn regulate(&mut self, excess: f64, capacity: u16, maximum: u16) -> f64 {
-        self.disabled = self.disabled.min(capacity);
-        let previous = self.disabled;
-        if !self.enabled || excess >= 10.0 {
-            let requested = if self.enabled {
-                (excess - 10.0).floor() + 1.0
-            } else {
-                f64::from(maximum)
-            };
-            self.disabled -= (requested.min(f64::from(maximum)) as u16).min(self.disabled);
-        } else if excess < 9.0 {
-            let requested = (9.0 - excess).floor() + 1.0;
-            self.disabled +=
-                (requested.min(f64::from(maximum)) as u16).min(capacity - self.disabled);
-        }
-        f64::from(previous) - f64::from(self.disabled)
+    /// Make the request the current setting, as the turn boundary does.
+    pub(super) fn apply(&mut self) {
+        self.shut_off = self.requested;
+    }
+
+    /// Keep both counts within the sinks that still work after damage.
+    pub(super) fn clamp(&mut self, working: u16) {
+        self.requested = self.requested.min(working);
+        self.shut_off = self.shut_off.min(working);
+    }
+
+    /// Heat points the shut-off sinks would otherwise dissipate, bounded by surviving cooling.
+    pub(super) fn disabled_points(self, points_each: u16, capacity: u16) -> u16 {
+        self.shut_off.saturating_mul(points_each).min(capacity)
     }
 }
 
-/// Begin a pilot-owned toggle; configuration gates commands, not already admitted transitions.
-pub fn toggle_battle_heat_cutoff(
+/// Ask to shut off `sinks` heat sinks (zero switches every sink back on). The change takes
+/// effect at the unit's next turn boundary; asking again before then replaces the request.
+pub fn set_battle_heat_cutoff(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
-    allowed: bool,
+    sinks: u16,
 ) -> Result<super::Notice> {
-    ensure!(allowed, "This command has been disabled.");
     super::power::controlled_unit(world, id, pilot)?;
     let unit = world
         .btech
         .constructed
         .get_mut(&id)
         .context("Unit does not use Mech heat accounting")?;
+    let working = unit.working_heat_sinks();
     ensure!(
-        unit.heat_cutoff.remaining.is_none(),
-        "You are already toggling heat cutoff status. Please be patient."
+        sinks <= working,
+        "Only {working} heat sinks are working on this 'Mech"
     );
-    unit.heat_cutoff.remaining = Some(4);
+    unit.heat_cutoff.requested = sinks;
     Ok(super::Notice {
         unit: id,
-        text: if unit.heat_cutoff.enabled {
-            "Disengaging heat dissipation cutoff..."
-        } else {
-            "Engaging heat dissipation cutoff..."
-        }
-        .into(),
+        text: describe(unit.heat_cutoff, working),
     })
 }
 
+/// Describe the current cutoff and any request still waiting for the turn boundary.
+fn describe(cutoff: HeatCutoff, working: u16) -> String {
+    let current = format!("{} of {working} heat sinks shut off", cutoff.shut_off);
+    if !cutoff.pending() {
+        return format!("{current}.");
+    }
+    format!(
+        "{current}; {} will be shut off from the next turn.",
+        cutoff.requested
+    )
+}
+
 impl super::Mech {
-    /// Current regulation and transition state, including intentionally disabled cooling points.
+    /// Current and requested shut-off heat sinks.
     pub fn heat_cutoff(&self) -> HeatCutoff {
         self.heat_cutoff
     }
+
+    /// Heat points one heat sink dissipates a turn: two for double heat sinks.
+    pub(super) fn heat_sink_points_each(&self) -> u16 {
+        if self.definition().has_double_heat_sinks() {
+            2
+        } else {
+            1
+        }
+    }
+
+    /// Heat sinks that still work, whether or not the pilot has shut any off.
+    pub fn working_heat_sinks(&self) -> u16 {
+        self.cooling_capacity() / self.heat_sink_points_each()
+    }
 }
 
-/// Cockpit control uses the same toggle and notice boundary as trusted Lua callbacks.
-pub(crate) fn command(ctx: &CommandContext<'_>, _input: &CommandInput) -> Result<CommandAction> {
-    let result = (|| {
+/// `heatcutoff <sinks|all>` shuts off that many heat sinks from the next turn; `heatcutoff`
+/// alone reports the current setting.
+pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<CommandAction> {
+    let result: Result<(bool, String)> = (|| {
         let mut world = ctx.scripts.world.borrow_mut();
         let id = world
             .objects
             .get(&ctx.player)
             .and_then(|p| p.location)
             .context("Enter a unit first")?;
-        toggle_battle_heat_cutoff(
-            &mut world,
-            id,
-            ctx.player,
-            ctx.config.battletech.heatcutoff > 0,
-        )
+        let argument = input.args.trim();
+        if argument.is_empty() {
+            super::power::controlled_unit(&world, id, ctx.player)?;
+            let unit = world
+                .btech
+                .constructed_units()
+                .get(&id)
+                .context("Unit does not use Mech heat accounting")?;
+            return Ok((
+                false,
+                describe(unit.heat_cutoff(), unit.working_heat_sinks()),
+            ));
+        }
+        let sinks = if argument.eq_ignore_ascii_case("all") {
+            world
+                .btech
+                .constructed_units()
+                .get(&id)
+                .context("Unit does not use Mech heat accounting")?
+                .working_heat_sinks()
+        } else {
+            argument
+                .parse::<u16>()
+                .context("Give the number of heat sinks to shut off, or 'all'")?
+        };
+        let notice = set_battle_heat_cutoff(&mut world, id, ctx.player, sinks)?;
+        Ok((true, notice.text))
     })();
     Ok(match result {
-        Ok(notice) => CommandAction::CommitReply(notice.text),
+        Ok((true, text)) => CommandAction::CommitReply(text),
+        Ok((false, text)) => CommandAction::Report(CommandReport::Reply(text)),
         Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
 }
@@ -122,43 +160,35 @@ pub(crate) fn command(ctx: &CommandContext<'_>, _input: &CommandInput) -> Result
 mod tests {
     use super::*;
 
-    /// Fractional boundaries, capacity bounds and both technology rates follow the same rule.
+    /// Requests wait for the boundary, damage clamps both counts and doubles count twice.
     #[test]
-    fn regulation_boundaries_and_gradual_restoration() {
-        for maximum in [2, 4] {
-            for (excess, delta) in [
-                (8.9, -1.0),
-                (8.0, -2.0),
-                (9.0, 0.0),
-                (9.999, 0.0),
-                (10.0, 1.0),
-                (11.0, 2.0),
-            ] {
-                let mut state = HeatCutoff {
-                    enabled: true,
-                    disabled: 5,
-                    remaining: None,
-                };
-                assert_eq!(state.regulate(excess, 10, maximum), delta);
+    fn requests_apply_at_the_boundary_and_stay_within_working_sinks() {
+        let mut cutoff = HeatCutoff {
+            requested: 4,
+            shut_off: 0,
+        };
+        assert!(cutoff.pending());
+        assert_eq!(cutoff.disabled_points(1, 10), 0);
+        cutoff.apply();
+        assert!(!cutoff.pending());
+        assert_eq!(cutoff.disabled_points(1, 10), 4);
+        assert_eq!(cutoff.disabled_points(2, 10), 8);
+        assert_eq!(cutoff.disabled_points(2, 6), 6);
+        cutoff.clamp(3);
+        assert_eq!(
+            cutoff,
+            HeatCutoff {
+                requested: 3,
+                shut_off: 3
             }
-            let mut state = HeatCutoff {
-                enabled: true,
-                disabled: 0,
-                remaining: None,
-            };
-            assert_eq!(state.regulate(-100.0, 10, maximum), -f64::from(maximum));
-            state.disabled = 9;
-            assert_eq!(state.regulate(-100.0, 10, maximum), -1.0);
-            state.enabled = false;
-            assert_eq!(state.regulate(0.0, 10, maximum), f64::from(maximum));
-            while state.disabled != 0 {
-                state.regulate(0.0, 10, maximum);
-            }
-            assert_eq!(state.regulate(100.0, 10, maximum), 0.0);
-            state.disabled = 10;
-            state.enabled = true;
-            assert_eq!(state.regulate(9.5, 3, maximum), 0.0);
-            assert_eq!(state.disabled, 3);
-        }
+        );
+        assert!(cutoff.validate(3).is_ok());
+        assert!(cutoff.validate(2).is_err());
+        assert_eq!(describe(cutoff, 3), "3 of 3 heat sinks shut off.");
+        cutoff.requested = 0;
+        assert_eq!(
+            describe(cutoff, 3),
+            "3 of 3 heat sinks shut off; 0 will be shut off from the next turn."
+        );
     }
 }

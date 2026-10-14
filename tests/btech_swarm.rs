@@ -665,14 +665,15 @@ async fn swarm_skips_installed_ams_on_hits_and_misses() {
                 } else {
                     serde_json::to_value(&world.btech.constructed_units()[&target]).unwrap()
                 };
-                let heat = if world.btech.vehicles().contains_key(&target) {
-                    "weapon_heat"
+                // Vehicles track no heat (Total Warfare p. 158), so only Mechs carry a heat field.
+                let fields: &[&str] = if world.btech.vehicles().contains_key(&target) {
+                    &["ammunition", "weapon_recycle"]
                 } else {
-                    "heat"
+                    &["ammunition", "heat", "weapon_recycle"]
                 };
-                for field in ["ammunition", heat, "weapon_recycle"] {
-                    assert!(!before[field].is_null(), "Missing defense field {field}");
-                    assert_eq!(before[field], after[field], "{field}");
+                for field in fields {
+                    assert!(!before[*field].is_null(), "Missing defense field {field}");
+                    assert_eq!(before[*field], after[*field], "{field}");
                 }
             }
         }

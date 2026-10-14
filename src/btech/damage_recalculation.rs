@@ -6,7 +6,7 @@ use anyhow::Result;
 pub(super) fn recalculate(unit: &mut Mech, gyro_protection_used: bool) -> Result<()> {
     let loadout = unit.loadout()?;
     unit.reconstructed_cooling = Some(super::engine_sink_capacity::reconstructed_capacity(unit)?);
-    unit.heat_cutoff.disabled = unit.heat_cutoff.disabled.min(unit.cooling_capacity());
+    unit.heat_cutoff.clamp(unit.working_heat_sinks());
     let improved = unit.definition().has_special("ImprovedJJ_Tech");
     let installed = loadout.jump_jet_groups(improved)?.len();
     let maximum = (unit.template_speed() / 10.75 * if improved { 1.0 } else { 2.0 / 3.0 }).floor();
