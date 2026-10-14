@@ -184,12 +184,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.heatcutoff",
-        legacy: "btech_heatcutoff",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.cost_debug",
         legacy: "btech_cost_debug",
         kind: "i64",

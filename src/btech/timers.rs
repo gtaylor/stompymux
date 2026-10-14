@@ -114,8 +114,6 @@ pub(crate) enum Timer {
     Dump = 19,
     /// `unjam.remaining`.
     Unjam = 20,
-    /// `heat_cutoff.remaining`.
-    HeatCutoff = 22,
     /// `hull_down.remaining`.
     HullDown = 23,
     /// `lateral.remaining`.
@@ -148,7 +146,7 @@ pub(crate) enum Timer {
 
 impl Timer {
     /// Every timer, in code order.
-    pub(crate) const ALL: [Self; 32] = [
+    pub(crate) const ALL: [Self; 31] = [
         Self::Startup,
         Self::OverheatElapsed,
         Self::OverheatPhase,
@@ -166,7 +164,6 @@ impl Timer {
         Self::Supercharger,
         Self::Dump,
         Self::Unjam,
-        Self::HeatCutoff,
         Self::HullDown,
         Self::Lateral,
         Self::Searchlight,
@@ -239,7 +236,6 @@ impl Timer {
             Self::Supercharger => fixed("/supercharger/remaining"),
             Self::Dump => fixed("/dumping/phase"),
             Self::Unjam => fixed("/unjam/remaining"),
-            Self::HeatCutoff => fixed("/heat_cutoff/remaining"),
             Self::HullDown => fixed("/hull_down/remaining"),
             Self::Lateral => fixed("/lateral/remaining"),
             Self::Searchlight => fixed("/searchlight/remaining"),

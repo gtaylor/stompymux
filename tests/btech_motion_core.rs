@@ -560,8 +560,9 @@ async fn heat_slows_motion_gradually_preserves_throttle_and_recovers_after_cooli
 
 #[tokio::test]
 async fn occupied_environment_changes_heat_and_survives_restart() {
+    // Fire adds its five points at the turn boundary, not to the continuous rates.
     for (tile, temperature, production, dissipation) in [
-        ("&0", 20, 5.0, 10.0),
+        ("&0", 20, 0.0, 10.0),
         ("~1", 20, 0.0, 10.0),
         ("~2", 20, 0.0, 16.0),
         (".0", 100, 0.0, 5.0),
@@ -5392,6 +5393,11 @@ async fn overheat_avoid_rolls_match_heat_bands_for_every_pilot() {
                 shutdown_roll.is_some_and(|roll| i16::from(roll) >= check.target)
             );
             assert_eq!(report.shutdown, !check.success);
+            if report.shutdown {
+                // The involuntary shutdown's +3 Piloting Skill Roll is due at any speed
+                // (Total Warfare p. 60).
+                dice.two_d6();
+            }
             assert_eq!(
                 serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
                 serde_json::to_value(dice).unwrap()
@@ -5429,10 +5435,14 @@ async fn overheat_unconscious_pilot_cannot_avoid_shutdown() {
     assert_eq!((check.target, check.roll, check.success), (4, None, false));
     assert!(report.shutdown);
     assert_eq!(world.btech.constructed_units()[&id].power(), Power::Off);
-    // No dice were consumed: the shutdown was automatic.
+    // The shutdown was automatic, and the involuntary shutdown's Piloting Skill Roll fails
+    // without dice for an unconscious MechWarrior (Total Warfare p. 60), so the Mech falls.
+    let balance = report.balance.unwrap();
+    assert_eq!((balance.roll, balance.success), (None, false));
+    assert!(report.fall.is_some());
     assert_eq!(
-        serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
-        serde_json::to_value(Dice::seeded([32; 32])).unwrap()
+        world.btech.constructed_units()[&id].posture(),
+        stompymux_rs::Posture::Prone
     );
     world.validate(&config).unwrap();
 }
@@ -5517,8 +5527,10 @@ async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown
     world.validate(&config).unwrap();
 }
 
+/// An involuntary shutdown forces a +3 Piloting Skill Roll whatever the speed (Total Warfare
+/// p. 60); the fall it causes does no structural damage, and the MechWarrior keeps the cockpit.
 #[tokio::test]
-async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() {
+async fn overheat_shutdown_forces_a_balance_roll_at_any_speed_without_structural_fall_damage() {
     use stompymux_rs::advance_battle_overheat;
     let seed = {
         let (_dir, _config, mut probe, id) = fixture('.').await;
@@ -5542,7 +5554,8 @@ async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() 
             .expect("a seed that fails the shutdown and balance rolls")
     };
     for (terrain, speed) in [
-        ('.', 10.75_f64),
+        ('.', 0.0_f64),
+        ('.', 10.75),
         ('.', -10.75),
         ('.', 10.8),
         ('.', -10.8),
@@ -5562,16 +5575,18 @@ async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() 
         let result = advance_battle_overheat(&mut world, overheat_rules());
         let report = result.unwrap().remove(0);
         assert!(report.shutdown);
-        assert_eq!(report.fall.is_some(), speed.abs() > 10.75);
-        if let Some(fall) = report.fall {
-            assert_eq!(fall.damage, 0);
-            assert!(fall.groups.is_empty());
-            assert!(fall.pilot_injury.is_none());
-        }
+        assert!(report.balance.is_some_and(|balance| !balance.success));
+        let fall = report
+            .fall
+            .expect("a failed balance roll topples the Mech at any speed");
+        assert_eq!(fall.damage, 0);
+        assert!(fall.groups.is_empty());
+        assert!(fall.pilot_injury.is_none());
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.sections(), before.constructed_units()[&id].sections());
         assert_eq!(unit.power(), Power::Off);
-        assert!(unit.pilot().is_none());
+        assert_eq!(unit.pilot(), Some(ObjectId(1)));
+        assert_eq!(unit.posture(), stompymux_rs::Posture::Prone);
         assert_eq!(unit.motion().unwrap().speed, 0.0);
         world.validate(&config).unwrap();
     }
@@ -5601,10 +5616,11 @@ async fn overheat_intact_life_support_never_injures_and_thirty_heat_shuts_down_u
             (13, None, false)
         );
         assert!(report.shutdown);
-        assert_eq!(
-            serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
-            serde_json::to_value(dice).unwrap()
-        );
+        // No Avoid Roll was made: the next roll is the involuntary shutdown's +3 Piloting
+        // Skill Roll (Total Warfare p. 60), and a fall after it draws further dice.
+        let balance = report.balance.unwrap();
+        assert_eq!(balance.roll, Some(dice.two_d6()));
+        assert_eq!(report.fall.is_some(), !balance.success);
         world.validate(&config).unwrap();
     }
     for clock in [
@@ -6274,6 +6290,8 @@ async fn flamer_heat_mode_native_lua_persistence_and_recycle_guards() {
     assert_eq!(native.world().btech, lua.world().btech);
     let mut expected_target = target_before;
     expected_target["heat"]["stored"] = serde_json::json!(2.0);
+    // Flamer heat is outside heat, counted against the turn's cap (Total Warfare p. 159).
+    expected_target["overheat_clock"]["outside_heat"] = serde_json::json!(2);
     assert_eq!(
         serde_json::to_value(&lua.world().btech.constructed_units()[&target]).unwrap(),
         expected_target
@@ -6379,11 +6397,7 @@ async fn flamer_heat_hits_glances_and_misses_do_not_roll_target_damage() {
                 resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
             assert_eq!(
                 report.heat_transfer,
-                if roll >= target_number {
-                    weapon.profile().damage
-                } else {
-                    0
-                }
+                (roll >= target_number).then_some(weapon.profile().damage)
             );
             assert_eq!(report.glancing, roll == target_number);
             assert!(report.salvo.is_none());

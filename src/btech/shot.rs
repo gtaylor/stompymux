@@ -71,8 +71,9 @@ pub struct ShotReport<U, M> {
     pub launch_notices: Vec<super::Notice>,
     /// Present only on a hit; a miss consumes no target damage dice.
     pub salvo: Option<super::TargetSalvo>,
-    /// Heat transferred to the target in place of material damage.
-    pub heat_transfer: u8,
+    /// Heat transferred to a Mech target in place of material damage: zero when the turn's
+    /// outside-heat cap was already full, `None` unless a heat-mode shot hit.
+    pub heat_transfer: Option<u8>,
     /// Incidental terrain check from a launched non-missile miss.
     pub missed_terrain: Option<super::WoodlandImpact>,
     /// A miss from the next hex striking the building around a target inside one.
@@ -517,7 +518,7 @@ fn resolve_shot_inner(
                 ams_engaged,
             },
         )?))
-    } else if missile_destroyed || !resolved.hit || pod || heat_transfer > 0 {
+    } else if missile_destroyed || !resolved.hit || pod || heat_transfer.is_some() {
         None
     } else if vehicle_target {
         Some(super::target_salvo::resolve_vehicle_target_in_candidate(

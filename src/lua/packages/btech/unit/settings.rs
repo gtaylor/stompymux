@@ -130,16 +130,15 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         "player_view_dimensions",
         error::wrap(lua, view_dimensions, "btech.operation.failed")?,
     )?;
-    let heat_cutoff = lua.create_function(move |lua, (unit, pilot): (i64, i64)| {
+    let heat_cutoff = lua.create_function(move |lua, (unit, pilot, sinks): (i64, i64, u16)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;
         crate::lua::transactions::run(lua, &scripts.world, || {
-            let config = crate::lua::configuration(lua);
-            let notice = crate::toggle_battle_heat_cutoff(
+            let notice = crate::set_battle_heat_cutoff(
                 &mut scripts.world.borrow_mut(),
                 ObjectId(unit),
                 ObjectId(pilot),
-                config.battletech.heatcutoff > 0,
+                sinks,
             )
             .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
             crate::btech::notify_unit(&scripts, notice)

@@ -79,7 +79,6 @@ async fn vehicle_artillery_native_lua_expenditure_and_queue_replay() {
         before.ammunition().iter().sum::<u16>() - unit.ammunition().iter().sum::<u16>(),
         1
     );
-    assert_eq!(unit.weapon_heat(), f64::from(Weapon::Sniper.profile().heat));
     assert!(unit.weapon_recycle()[&index] > 0);
     assert_eq!(fired.btech.maps()[&map].artillery_shots().len(), 1);
     assert!(

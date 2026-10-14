@@ -764,7 +764,9 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
         );
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.power(), Power::Off);
-        assert!(unit.pilot().is_none());
+        // A heat shutdown leaves the MechWarrior in the cockpit (Total Warfare p. 160).
+        assert_eq!(unit.pilot(), Some(ObjectId(1)));
+        assert!(unit.heat_shutdown());
         assert!(unit.flight().is_none());
         assert_eq!(unit.jump_stabilization(), 0);
         persistence::save(&config.database(), &world).await.unwrap();

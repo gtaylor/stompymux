@@ -104,6 +104,9 @@ pub struct OverheatReport {
     /// The Shutdown Avoid Roll at 14+ heat.
     pub shutdown_check: Option<HeatCheck>,
     pub shutdown: bool,
+    /// Whether a heat-shutdown reactor restarted by itself this turn, heat having fallen
+    /// below 14 (Total Warfare p. 160).
+    pub restart: bool,
     pub balance: Option<super::PilotingCheck>,
     /// Accepted shutdown balance XP captured before publication.
     pub experience_messages: Vec<super::DiagnosticMessage>,
@@ -138,6 +141,7 @@ impl OverheatReport {
             || self.inferno_check.is_some()
             || self.ammunition_check.is_some()
             || self.shutdown_check.is_some()
+            || self.restart
     }
 }
 
@@ -198,6 +202,7 @@ fn advance_overheat_inner(
                 explosion: None,
                 shutdown_check: None,
                 shutdown: false,
+                restart: false,
                 balance: None,
                 experience_messages: Vec::new(),
                 fall: None,
@@ -208,6 +213,25 @@ fn advance_overheat_inner(
             let heat = unit.heat().excess;
             let injury_due = std::mem::take(&mut unit.overheat_clock.injury_due);
             if injury_due {
+                // A new turn: a failed restart Avoid Roll no longer binds, and a reactor shut
+                // down by heat restarts by itself below 14 heat, even with the pilot out of
+                // action (Total Warfare p. 160).
+                unit.restart_denied = false;
+                if unit.power() == Power::Off
+                    && unit.heat_shutdown
+                    && heat < 14.0
+                    && unit.position().is_some()
+                {
+                    unit.heat_shutdown = false;
+                    unit.power = Power::Starting { remaining: 30 };
+                    unit.limb_recycle.clear();
+                    report.restart = true;
+                    report.notices.push(Notice {
+                        unit: id,
+                        text: "Heat has fallen below 14: the reactor restarts automatically."
+                            .to_owned(),
+                    });
+                }
                 let hits =
                     life_support_injury(heat, unit.system_hits(super::System::LifeSupport) > 0);
                 if hits > 0 && unit.pilot().is_some() {
@@ -328,7 +352,7 @@ fn explode(
 }
 
 /// Roll 2d6 from the unit's dice against an Avoid Number.
-fn avoid_roll(world: &mut World, id: ObjectId, target: i16) -> HeatCheck {
+pub(super) fn avoid_roll(world: &mut World, id: ObjectId, target: i16) -> HeatCheck {
     let roll = unit_mut(world, id).dice.generic_roll();
     HeatCheck {
         target,
@@ -337,8 +361,11 @@ fn avoid_roll(world: &mut World, id: ObjectId, target: i16) -> HeatCheck {
     }
 }
 
-/// Shut the reactor down after a failed or impossible Shutdown Avoid Roll, with the fall and
-/// balance consequences of stopping in mid-motion.
+/// Shut the reactor down after a failed or impossible Shutdown Avoid Roll. An involuntary
+/// shutdown forces a Piloting Skill Roll at +3 whatever the Mech's speed (Total Warfare
+/// p. 60, Piloting/Driving Skill Roll Table), and a standing Mech that fails it falls. The
+/// MechWarrior stays in the cockpit: the reactor restarts by itself once heat falls below 14
+/// (Total Warfare p. 160).
 fn resolve_shutdown(
     world: &mut World,
     id: ObjectId,
@@ -360,7 +387,9 @@ fn resolve_shutdown(
         unit: id,
         text: "Reactor shutting down...".to_owned(),
     });
-    let airborne = world.btech.constructed_units()[&id].airborne();
+    let unit = &world.btech.constructed_units()[&id];
+    let airborne = unit.airborne();
+    let moving = unit.motion().is_some_and(|motion| motion.speed != 0.0);
     if airborne {
         report.notices.push(Notice {
             unit: id,
@@ -372,8 +401,10 @@ fn resolve_shutdown(
         id,
         if airborne {
             "falls from the sky!"
-        } else {
+        } else if moving {
             "stops in mid-motion!"
+        } else {
+            "shuts down!"
         },
     ));
     if airborne {
@@ -414,12 +445,7 @@ fn resolve_shutdown(
                 .extend(super::resolve_stacking(world, id, input, fall_rules)?);
         }
     }
-    let unit = &world.btech.constructed_units()[&id];
-    if unit.posture() != super::Posture::Prone
-        && unit
-            .motion()
-            .is_some_and(|motion| motion.speed.abs() > 10.75)
-    {
+    if world.btech.constructed_units()[&id].posture() != super::Posture::Prone {
         let mut balance = super::roll_piloting(world, id, 3, rules.extended_piloting)?;
         super::piloting::capture_feedback(
             id,
@@ -459,13 +485,13 @@ fn resolve_shutdown(
     let unit = unit_mut(world, id);
     let dropped = unit.carried_club.take().is_some();
     unit.power = Power::Off;
+    unit.heat_shutdown = true;
     unit.hide_elapsed = None;
     unit.masc.shutdown();
     unit.supercharger.shutdown();
     unit.reconcile_electronics();
     unit.charge.target = None;
     unit.jump_stabilization = 0;
-    unit.pilot = None;
     unit.target_lock = None;
     unit.stand_timer = None;
     if let Some(motion) = &mut unit.motion {
@@ -528,7 +554,7 @@ fn inferno_ammunition_target(heat: f64) -> Option<i16> {
 
 /// Shutdown Avoid Numbers (Total Warfare p. 159): 4 at 14, 6 at 18, 8 at 22, 10 at 26; at 30
 /// no roll can avoid shutdown, so the target is 13.
-fn shutdown_target(heat: f64) -> Option<i16> {
+pub(super) fn shutdown_target(heat: f64) -> Option<i16> {
     if heat >= 30.0 {
         Some(13)
     } else if heat >= 26.0 {

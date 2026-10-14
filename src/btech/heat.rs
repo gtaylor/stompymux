@@ -109,10 +109,13 @@ impl Mech {
 
     /// Derive rates from surviving equipment, motion and the occupied map tile.
     pub fn heat_rates(&self, world: &World) -> HeatRates {
-        self.heat_rates_with_disabled(
-            world,
-            self.heat_cutoff.disabled.min(self.cooling_capacity()),
-        )
+        self.heat_rates_with_disabled(world, self.disabled_cooling())
+    }
+
+    /// Heat points the shut-off heat sinks would otherwise dissipate this turn.
+    fn disabled_cooling(&self) -> u16 {
+        self.heat_cutoff
+            .disabled_points(self.heat_sink_points_each(), self.cooling_capacity())
     }
 
     /// Surviving physical cooling before intentionally disabling any heat points.
@@ -122,7 +125,7 @@ impl Mech {
             .saturating_sub(u16::from(self.system_hits(System::HeatSink)))
     }
 
-    /// Derive environment cooling from active capacity before applying this sample's regulation.
+    /// Derive environment cooling from the capacity left after the shut-off sinks.
     fn heat_rates_with_disabled(&self, world: &World, disabled: u16) -> HeatRates {
         let mut production = 10.0
             * f64::from(u8::from(self.stealth().enabled) + u8::from(self.null_signature().enabled));
@@ -158,12 +161,8 @@ impl Mech {
             .hex(i64::from(position.x), i64::from(position.y))
             .expect("validated placed unit terrain");
         let elevation = self.elevation_level(tile);
-        // A Mech standing in a burning hex absorbs five heat points a turn (Tactical
-        // Operations: Advanced Rules p. 42); the two points for each burning hex it leaves
-        // arrive through `absorb_outside_heat`. Magma heat comes from the hex itself.
-        if tile.is_burning() && self.reaches_flames(tile, elevation) {
-            rates.production += 5.0;
-        }
+        // Fire heat arrives once a turn through `absorb_outside_heat` (see `advance_heat`);
+        // magma heat comes from the hex itself and no cap limits it.
         rates.production += f64::from(tile.ground_heat(elevation));
         if tile.immerses(elevation) {
             // Heat sinks under water dissipate twice as much, up to six extra points a turn
@@ -203,6 +202,21 @@ impl Mech {
             .count()
     }
 
+    /// Whether the Mech stands in the flames of a burning hex and so absorbs five heat points
+    /// at the turn boundary (Tactical Operations: Advanced Rules p. 42, Effects of Fire).
+    pub fn in_flames(&self, world: &World) -> bool {
+        let Some(position) = self.position() else {
+            return false;
+        };
+        let Some(map) = world.btech.maps().get(&position.map) else {
+            return false;
+        };
+        let tile = map
+            .hex(i64::from(position.x), i64::from(position.y))
+            .expect("validated placed unit terrain");
+        tile.is_burning() && self.reaches_flames(tile, self.elevation_level(tile))
+    }
+
     /// Whether a Mech at `elevation` in a burning hex stands in the flames, which burn on the
     /// hex's topmost surface: water, a bridge deck, a roof or the ground. A Mech under the
     /// water, beneath a bridge deck or flying above the flames is clear of them.
@@ -217,41 +231,48 @@ impl Mech {
     }
 
     /// Predict a committed thermal sample without mutating inspection state or consuming dice.
+    /// The returned cutoff is the setting after this second: a pending sink request takes
+    /// effect when the unit's turn clock wraps. Idle units (reactor off, no heat, no request,
+    /// not in flames) have no sample and their turn clock stands still.
     fn thermal_sample(&self, world: &World) -> (super::HeatCutoff, Option<HeatRates>) {
         let mut cutoff = self.heat_cutoff;
-        cutoff.tick();
-        if self.power() != Power::Running && self.heat == Heat::default() {
+        cutoff.clamp(self.working_heat_sinks());
+        if self.power() != Power::Running
+            && self.heat == Heat::default()
+            && !cutoff.pending()
+            && !self.in_flames(world)
+        {
             return (cutoff, None);
         }
-        let capacity = self.cooling_capacity();
-        cutoff.disabled = cutoff.disabled.min(capacity);
-        let mut rates = self.heat_rates_with_disabled(world, cutoff.disabled);
-        rates.dissipation += cutoff.regulate(
-            self.heat.stored + rates.production - rates.dissipation,
-            capacity,
-            if self.definition().has_double_heat_sinks() {
-                4
-            } else {
-                2
-            },
-        );
+        let rates = self.heat_rates_with_disabled(world, self.disabled_cooling());
+        if self.overheat_clock.phase == 29 {
+            cutoff.apply();
+        }
         (cutoff, Some(rates))
     }
 
-    /// Include idle transitions and gradual cooling restoration in heartbeat admission.
+    /// Include idle transitions, pending sink requests and fire exposure in heartbeat admission.
     pub fn heat_active(&self, world: &World) -> bool {
         let (cutoff, rates) = self.thermal_sample(world);
         let Some(rates) = rates else {
             return cutoff != self.heat_cutoff;
         };
+        if cutoff != self.heat_cutoff || cutoff.pending() || self.in_flames(world) {
+            return true;
+        }
         let mut next = self.heat;
         next.advance(rates);
-        cutoff != self.heat_cutoff || next != self.heat
+        next != self.heat
     }
 }
 
 /// Update thermal accounting, including cooling after shutdown, in the caller's world transaction.
 /// The same transaction must call advance_overheat after this sample to apply due thermal hazards.
+///
+/// At each unit's turn boundary a pending heat-sink request takes effect (Total Warfare
+/// p. 159) and a Mech standing in flames absorbs five points of outside heat, counted against
+/// the fifteen-point outside-heat cap like infernos and heat-causing weapons (Total Warfare
+/// p. 159; Tactical Operations: Advanced Rules p. 42).
 pub fn advance_heat(world: &mut World) -> Vec<Notice> {
     let ids: Vec<_> = world
         .btech
@@ -264,24 +285,13 @@ pub fn advance_heat(world: &mut World) -> Vec<Notice> {
                     .get(id)
                     .is_some_and(|object| !object.flags.contains(Flag::Going))
         })
-        .map(|(&id, unit)| (id, unit.thermal_sample(world)))
+        .map(|(&id, unit)| (id, unit.thermal_sample(world), unit.in_flames(world)))
         .collect();
     let mut notices = Vec::new();
-    for (id, (cutoff, rates)) in ids {
+    for (id, (cutoff, rates), in_flames) in ids {
         let unit = world.btech.constructed.get_mut(&id).unwrap();
-        if cutoff.enabled != unit.heat_cutoff.enabled {
-            notices.push(Notice {
-                unit: id,
-                text: if cutoff.enabled {
-                    "[fg=yellow]Heat dissipation cutoff engaged![reset]"
-                } else {
-                    "[fg=green]Heat dissipation cutoff disengaged![reset]"
-                }
-                .into(),
-            });
-        }
-        unit.heat_cutoff = cutoff;
         let Some(rates) = rates else {
+            unit.heat_cutoff = cutoff;
             continue;
         };
         let previous = indicator(unit.heat.excess);
@@ -290,8 +300,29 @@ pub fn advance_heat(world: &mut World) -> Vec<Notice> {
             dissipation: rates.dissipation,
         };
         unit.heat.advance(rates);
-        if !unit.is_destroyed() {
+        let turn_boundary = !unit.is_destroyed() && {
             unit.overheat_clock.tick();
+            unit.overheat_clock.phase == 0
+        };
+        if cutoff.shut_off != unit.heat_cutoff.shut_off {
+            notices.push(Notice {
+                unit: id,
+                text: if cutoff.shut_off == 0 {
+                    "[fg=green]All heat sinks are back on.[reset]".to_owned()
+                } else {
+                    format!(
+                        "[fg=yellow]{} heat sinks are now shut off.[reset]",
+                        cutoff.shut_off
+                    )
+                },
+            });
+        }
+        unit.heat_cutoff = cutoff;
+        if in_flames && turn_boundary && unit.absorb_outside_heat(5) > 0 {
+            notices.push(Notice {
+                unit: id,
+                text: "The flames around you heat your 'Mech.".to_owned(),
+            });
         }
         let current = indicator(unit.heat.excess);
         if previous != current {

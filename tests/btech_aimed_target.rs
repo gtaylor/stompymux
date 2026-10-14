@@ -572,6 +572,12 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                     state["dice"] = serde_json::to_value(dice).unwrap()
                 });
                 let vehicle = world.btech.vehicles().contains_key(&target);
+                // A vehicle tracks no heat, so a heat-mode flamer hitting one is an ordinary
+                // damaging shot (Total Warfare p. 113) and takes the aimed section like any
+                // direct-fire weapon.
+                if vehicle && mode == FireMode::Heat {
+                    continue;
+                }
                 set_battle_aimed_section(
                     &mut world,
                     shooter,

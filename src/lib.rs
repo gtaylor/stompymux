@@ -906,7 +906,7 @@ pub use btech::{TicEdit, Tics, edit_battle_tic, tic};
 
 pub use btech::{FireTarget, TicShot, fire_battle_tics};
 
-pub use btech::{HeatCutoff, toggle_battle_heat_cutoff};
+pub use btech::{HeatCutoff, set_battle_heat_cutoff};
 
 pub use btech::set_battle_ammunition_section;
 

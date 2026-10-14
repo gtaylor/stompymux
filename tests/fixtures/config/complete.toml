@@ -28,7 +28,6 @@ battletech.usedunitstore = 3
 battletech.ooc_comsys = 0
 battletech.idf_requires_spotter = 1
 battletech.tsm_tow_bonus = 1
-battletech.heatcutoff = 1
 battletech.cost_debug = 0
 battletech.allow_cargo_commands = true
 battletech.transported_unit_death = 1

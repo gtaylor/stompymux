@@ -20,6 +20,9 @@ mod btech_forms;
 #[path = "../btech_heat_cutoff.rs"]
 mod btech_heat_cutoff;
 
+#[path = "../btech_heat_restart.rs"]
+mod btech_heat_restart;
+
 #[path = "../btech_hit.rs"]
 mod btech_hit;
 

@@ -99,7 +99,7 @@ pub(super) fn resolve_in_action(
             target_number: report.aim.subtotal(),
             glancing: report.glancing,
             hit: report.hit,
-            observer_hit: report.salvo.is_some() || report.heat_transfer > 0,
+            observer_hit: report.salvo.is_some() || report.heat_transfer.is_some(),
             coordinate,
             notices,
             pilot_notices,

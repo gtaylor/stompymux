@@ -19,8 +19,10 @@ After taking the cockpit on a battlefield, use `startup`. The startup cycle
 runs for 30 simulation seconds and reports six stages. Wizards can use
 `startup override` for a five-second cycle. `shutdown` stops the engine or aborts
 startup, and releases the cockpit. Use `pilot` again before restarting.
-Excess heat above 30 prevents startup, including the operator override; let the
-unit cool before retrying.
+A reactor cannot restart at 30 or more heat, the operator override included.
+From 14 to 29 heat, `startup` rolls 2d6 against the highest current shutdown
+avoid number (4 at 14, 6 at 18, 8 at 22, 10 at 26); a failed roll keeps the
+reactor down until the next 30-second turn (Total Warfare p. 160).
 
 Startup progress survives restart. It pauses while the server is offline or
 unable to save progress. A running unit accepts `heading <degrees>` and
@@ -37,8 +39,9 @@ ground one extra for Mechs. Sand and thin snow slow only wheeled
 vehicles. Deep snow, mud and ice cost one extra, except for hovercraft, and ice costs
 that over water as on land. Water one level deep costs one extra and deeper water
 three; rapids add one more and torrents two. Fire slows every ground unit at least as
-much as rough ground; smoke does not. Standing in flames adds five to a Mech's heat
-production, unless it is under the water or beneath the bridge deck the fire burns on.
+much as rough ground; smoke does not. Standing in flames at the turn boundary adds five
+outside heat to a Mech, counted against the fifteen-point outside-heat cap, unless it is
+under the water or beneath the bridge deck the fire burns on.
 Forward steps reduce speed by 10.75 kph per level while preserving your requested
 throttle. Backing across a step normally requires a piloting check: failure causes a
 fall, with an uphill fall returning you to the previous position. When reverse-step
@@ -282,8 +285,11 @@ the coordinate and queues its impact. Lua accepts `{x=1, y=2}` as the target in
 `btech.unit.fire(unit, pilot, weapon, target)`.
 
 `heat <selection>` (also `flamerheat`) toggles ready flamers between normal damage and heat
-transfer. Heat mode adds two heat to the target on a hit, including a glancing hit,
-instead of damaging armor. It still costs you three heat and ten seconds of
+transfer. Heat mode adds two outside heat to a Mech target on a hit, including a
+glancing hit, instead of damaging armor; outside heat from flamers, infernos,
+plasma and fire together cannot exceed fifteen points a turn (Total Warfare
+p. 159). A vehicle tracks no heat, so a heat-mode hit on one does its normal
+damage instead (Total Warfare p. 113). It still costs you three heat and ten seconds of
 recycle. `weapons` marks heat mode with `[HEAT]`. Modes survive shutdown and restart.
 Select numbers and ranges separated by commas without spaces, such as `0,2-4`.
 Reversed ranges work; repeated numbers toggle again. An invalid selection clause
@@ -345,10 +351,14 @@ timers using the Total Warfare heat scale: at high heat, ammunition can explode
 before the reactor attempts to shut down, and each check is a 2d6 avoid roll
 whose target rises with heat. Shutdown at 30 heat cannot be avoided. Carrying
 inferno ammunition adds its own, earlier ammunition avoid rolls. Heat can also
-injure the pilot once life support is destroyed. A reactor shutdown clears your
-cockpit assignment and target and stops the unit. If you were moving faster than 10.75 kph, a failed piloting check can
-also knock the unit prone. Take the cockpit again and wait for safe startup heat
-before restarting. These checks currently cover supported tactical units.
+injure the pilot once life support is destroyed. A heat shutdown clears your
+target and stops the unit, but you keep the cockpit. The involuntary shutdown
+forces a piloting check at +3 whatever your speed, and failing it knocks the unit
+prone (Total Warfare p. 60). The reactor restarts by itself at the next turn
+boundary once heat falls below 14, even if you are unconscious; from 14 to 29
+`startup` needs the avoid roll described above, and at 30 or more nothing
+restarts it (Total Warfare p. 160). These checks currently cover supported
+tactical units.
 
 A reactor shutdown during flight causes a fall scaled by remaining jump thrust.
 Falling after a jump obstacle or airborne shutdown can also cause a collision
@@ -1297,18 +1307,19 @@ groups is attempted again, subject to ordinary recycling restrictions. Lua
 
 ## Heat cutoff
 
-`heatcutoff` toggles a Mech's automatic cooling regulator after four seconds.
-It needs the conscious assigned pilot; the reactor may be off. Wait for the
-current toggle to finish before issuing another. The server may disable new
-toggles with `battletech.heatcutoff`.
+`heatcutoff <sinks>` shuts off that many of a Mech's heat sinks, most often to
+build up heat for triple-strength myomer; `heatcutoff all` shuts off every
+working sink and `heatcutoff 0` switches them all back on (Total Warfare p. 159,
+Shutting Off Heat Sinks). `heatcutoff` alone reports the current setting. It
+needs the conscious assigned pilot; the reactor may be off.
 
-When enabled, the regulator adjusts active cooling toward the 9–10 heat band.
-It changes at most two cooling points per second, or four with double/Clan heat
-sinks. It cannot create heat on its own. Turning it off restores disabled
-cooling at the same gradual rate while thermal accounting is active. An idle,
-stopped Mech finishes the toggle but leaves cooling capacity unchanged until
-heat accounting resumes. Water and other environmental effects still
-apply. `status` shows the resulting heat production, heat sinks and dissipation.
+The count is in sinks, so a double heat sink is one sink worth two points of
+cooling. A request takes effect at the unit's next 30-second turn boundary,
+whether it shuts sinks off or switches them back on, and a newer request
+replaces one still waiting. Losing a heat sink to damage lowers the count to
+the sinks that still work. Water doubles only the sinks left on, and other
+environmental effects still apply. `status` shows the resulting heat
+production, heat sinks and dissipation.
 
 
 ## Preferred ammunition sections

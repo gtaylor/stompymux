@@ -253,6 +253,13 @@ pub struct Mech {
     pub(super) heat_sample: super::HeatRates,
     #[serde(default)]
     pub(super) heat_cutoff: super::HeatCutoff,
+    /// Set while the reactor is down from a heat shutdown, which restarts by itself once heat
+    /// falls below 14 (Total Warfare p. 160).
+    #[serde(default)]
+    pub(super) heat_shutdown: bool,
+    /// Set by a failed restart Avoid Roll; the reactor stays down until the next turn.
+    #[serde(default)]
+    pub(super) restart_denied: bool,
     /// Total cooling adopted at the last material reconstruction, before physical sink losses.
     #[serde(default)]
     pub(super) reconstructed_cooling: Option<u16>,
@@ -415,6 +422,8 @@ super::saved_parts::saved_parts!(Mech {
         position,
         facing,
         power,
+        heat_shutdown,
+        restart_denied,
         heat,
         heat_sample,
         overheat_clock,
@@ -963,6 +972,8 @@ impl Mech {
             heat: Default::default(),
             heat_sample: Default::default(),
             heat_cutoff: Default::default(),
+            heat_shutdown: false,
+            restart_denied: false,
             reconstructed_cooling: None,
             hide_elapsed: None,
             self_destruct: None,
@@ -1175,8 +1186,13 @@ impl Mech {
         }
         self.heat_cutoff.validate(
             self.reconstructed_cooling
-                .unwrap_or(self.definition.heat_sinks),
+                .unwrap_or(self.definition.heat_sinks)
+                / self.heat_sink_points_each(),
         )?;
+        ensure!(
+            self.power == super::Power::Off || !(self.heat_shutdown || self.restart_denied),
+            "Heat shutdown state on a powered unit"
+        );
         ensure!(
             self.hide_elapsed.is_none_or(|elapsed| elapsed <= 100),
             "Invalid hiding timer"

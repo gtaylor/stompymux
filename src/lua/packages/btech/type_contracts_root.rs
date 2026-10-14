@@ -379,7 +379,9 @@
 //|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown; random state stays private.
 //|---@field character_pilot {injuries: integer, killed: boolean}? Saved character-mode injury status; character health determines death.
-//|---@field heat_cutoff {enabled: boolean, disabled: integer, remaining: integer|nil} Intentional cooling suppression and seconds until the toggle completes.
+//|---@field heat_cutoff {requested: integer, shut_off: integer} Heat sinks shut off this turn and the count requested for the next.
+//|---@field heat_shutdown boolean Reactor down from a heat shutdown; it restarts by itself below 14 heat.
+//|---@field restart_denied boolean A failed restart Avoid Roll keeps the reactor down until the next turn.
 //|---@field last_jump {heading: integer, length: integer} Current course bearing and signed length in field units, retained after landing.
 //|---@field heat_sample {production: number, dissipation: number} Last committed thermal sample; production includes stored weapon heat.
 //|---@field heat {stored: number, excess: number} Weapon heat and sampled excess heat.
@@ -473,7 +475,6 @@
 //|---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
 //|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
-//|---@field weapon_heat number Passive weapon heat; ground vehicles do not overheat.
 //|---@field gunnery_damage integer Cumulative firing penalty from sensor and commander damage.
 //|---@field lost_stabilizers string[] Sections with destroyed weapon stabilizers.
 //|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
@@ -1025,7 +1026,7 @@
 //|---@field hit boolean Launch classification; missile near misses may have no target effects.
 //|---@field expenditure WeaponUse
 //|---@field salvo {kind: 'mech'|'vehicle'|'swarm', report: table}|nil Target-specific damage; nil on a miss or a heat-mode hit.
-//|---@field heat_transfer integer Heat already added to the target, zero unless a heat-mode shot hits.
+//|---@field heat_transfer integer|nil Outside heat a heat-mode hit added to a Mech target (zero once the turn's outside-heat cap is full); nil for any other shot.
 //|---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 //|---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
 // lua-types-end
@@ -1055,7 +1056,7 @@
 //|---@field expenditure VehicleWeaponUse
 //|---@field ams AmsReport|nil
 //|---@field narc NarcReport|nil Beacon attachment or interception; vehicle sections use their own names.
-//|---@field heat_transfer integer Direct flamer heat added to the target, otherwise zero.
+//|---@field heat_transfer integer|nil Outside heat a heat-mode hit added to a Mech target (zero once the turn's outside-heat cap is full); nil for any other shot.
 //|---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 //|---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
 //|---@field salvo {kind: 'mech'|'vehicle'|'swarm', report: table}|nil Target-specific ordered damage groups.

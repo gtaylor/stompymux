@@ -160,11 +160,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_heatcutoff",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_cost_debug",
     "parser": "cf_int",
     "permission": "CA_GOD"

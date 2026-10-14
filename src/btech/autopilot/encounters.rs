@@ -323,21 +323,22 @@ pub(crate) fn opportunity(
         };
         if bears && !los.blocked && contact.range <= f64::from(profile.long_range) {
             aligned += weight;
-            let (mode, stored) = if let Some(unit) = world.btech.constructed_units().get(&shooter) {
-                (unit.effective_fire_mode(index)?, unit.heat().stored)
-            } else {
-                let unit = &world.btech.vehicles()[&shooter];
-                (unit.effective_fire_mode(index)?, unit.weapon_heat())
+            // Only a Mech's projected heat is held under the ceiling; vehicles track no heat
+            // (Total Warfare p. 158).
+            let within_ceiling = match world.btech.constructed_units().get(&shooter) {
+                Some(unit) => {
+                    let mode = unit.effective_fire_mode(index)?;
+                    let projected = u16::from(mode.launch_heat(
+                        weapon.weapon,
+                        (mode == crate::FireMode::Gatling).then_some(6),
+                        true,
+                    ));
+                    let ceiling = world.btech.controllers()[&shooter].config().heat_ceiling;
+                    unit.heat().stored + f64::from(projected) <= f64::from(ceiling)
+                }
+                None => true,
             };
-            let projected = u16::from(mode.launch_heat(
-                weapon.weapon,
-                (mode == crate::FireMode::Gatling).then_some(6),
-                true,
-            ));
-            let ceiling = world.btech.controllers()[&shooter].config().heat_ceiling;
-            ready |= weapon.ready
-                && observation.own.power == Power::Running
-                && stored + f64::from(projected) <= f64::from(ceiling);
+            ready |= weapon.ready && observation.own.power == Power::Running && within_ceiling;
         }
     }
     Ok((

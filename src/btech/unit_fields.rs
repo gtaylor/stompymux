@@ -253,7 +253,7 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
         "dissheat" => float(mech.map_or(0.0, |unit| unit.sampled_heat_rates().dissipation)),
         "overheat" => float(mech.map_or(0.0, |unit| unit.heat().excess)),
         "disabled_hs" => integer(i64::from(
-            mech.map_or(0, |unit| unit.heat_cutoff().disabled),
+            mech.map_or(0, |unit| unit.heat_cutoff().shut_off),
         )),
         "heatsinks" => integer(i64::from(if let Some(unit) = mech {
             unit.cooling_capacity()

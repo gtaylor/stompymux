@@ -41,7 +41,7 @@ async fn complete_legacy_catalog_and_compiled_defaults() {
     let (_d, c) = config("");
     let inventory: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config/legacy-catalog.json")).unwrap();
-    assert_eq!(inventory.len(), 126);
+    assert_eq!(inventory.len(), 125);
     let expected: BTreeSet<_> = inventory
         .iter()
         .map(|v| v["path"].as_str().unwrap())
@@ -429,7 +429,7 @@ async fn supplied_configuration_parses_without_unknown_keys() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(KEYS.len(), 150);
+    assert_eq!(KEYS.len(), 149);
     assert_eq!(c.server.port, 5555);
     assert!(
         !c.warnings.iter().any(|w| w.contains("unknown")),
