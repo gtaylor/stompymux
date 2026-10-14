@@ -1003,7 +1003,7 @@ async fn hardened_gyro_critical_checks_and_restart() {
 #[tokio::test(flavor = "current_thread")]
 async fn half_ton_native_lua_fire_capacity_and_restart() {
     use stompymux_rs::*;
-    for weapon in [Weapon::MachineGun, Weapon::Lbx2] {
+    for weapon in [Weapon::MachineGun, Weapon::HeavyMachineGun] {
         let (_dir, config, mut base, id, target) = shot_fixture().await;
         shot_skill(&mut base, 30);
         set_battle_character_value(
@@ -1041,9 +1041,6 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
         bin.equipment = format!("Ammo_{}", weapon.name());
         bin.data = capacity.to_string();
         bin.modes = vec!["Halfton".into()];
-        if weapon.is_lbx() {
-            bin.modes.push("LBX/Cluster".into());
-        }
         base.btech
             .rewrite_unit_record(id, |record| {
                 record["definition"] = serde_json::to_value(template).unwrap();
@@ -1057,9 +1054,6 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
             .iter()
             .position(|m| m.weapon == weapon)
             .unwrap();
-        if weapon.is_lbx() {
-            toggle_battle_lbx(&mut base, id, ObjectId(1), index).unwrap();
-        }
         base.validate(&config).unwrap();
         let mut invalid = base.clone();
         // Overfill the bin through the raw record, which skips validation.

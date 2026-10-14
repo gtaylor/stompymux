@@ -2,7 +2,8 @@
 use crate::support;
 use stompymux_rs::*;
 
-/// Template checks share construction rejection and retain the original source facts.
+/// Template checks share construction rejection and retain the original source facts. A short
+/// SRM bin fills to its full ton rather than becoming a half-ton lot (TechManual p. 48).
 #[test]
 fn template_check_reports_normalization_and_construction_failures() {
     let source = include_str!("fixtures/btech/units/JR7-D.toml").replace(
@@ -23,8 +24,8 @@ fn template_check_reports_normalization_and_construction_failures() {
                 slot: 0
             },
             supplied: 7,
-            normalized: 12,
-            inferred_half_ton: true,
+            normalized: 25,
+            inferred_half_ton: false,
         }]
     );
     assert_eq!(template, original);
@@ -89,7 +90,8 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
         text.contains("constructible under current biped rules"),
         "{text}"
     );
-    assert!(text.contains("7 -> 12 (inferred half-ton bin)"), "{text}");
+    assert!(text.contains("7 -> 25"), "{text}");
+    assert!(!text.contains("inferred half-ton bin"), "{text}");
     let report: mlua::Table = scripts
         .eval_callback("return btech.template.check('partial')")
         .unwrap();
@@ -99,7 +101,7 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
         .unwrap()
         .get(1)
         .unwrap();
-    assert_eq!(adjustment.get::<u16>("normalized").unwrap(), 12);
+    assert_eq!(adjustment.get::<u16>("normalized").unwrap(), 25);
     report.set("constructible", false).unwrap();
     assert!(
         scripts

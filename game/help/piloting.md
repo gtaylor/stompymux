@@ -339,7 +339,10 @@ it also uses water ranges.
 
 
 `inferno <selection>` toggles a ready missile launcher between normal and inferno
-ammunition. It requires a matching bin to fire. Surviving inferno missiles add
+ammunition. Inferno rounds are an SRM munition (Total Warfare p. 141): only standard
+SRM launchers and MMLs loaded with SRM rounds carry them; LRM, Streak, MRM, rocket,
+ATM, Thunderbolt, Narc and dead-fire launchers do not. A matching bin is required to
+fire. Surviving inferno missiles add
 two heat points each to a Mech instead of armor damage, as in Total Warfare;
 outside heat is capped at fifteen points per turn. AMS can intercept them.
 One-shot launchers cannot change ammunition modes. `weapons` marks selected
@@ -438,8 +441,12 @@ preserves an active jump. Heavy-duty gyros weigh twice as much as standard gyros
 
 `artemis <selection>` toggles compatible missile ammunition on a recycled
 launcher with a working linked Artemis IV controller. Selection accepts weapon
-numbers, comma-separated numbers and ranges. One-shot and rocket launchers
-cannot change modes. Compatible rounds use their own bins; ordinary ammunition
+numbers, comma-separated numbers and ranges. Artemis rounds exist for standard
+LRM (including Enhanced LRM), SRM, MML and torpedo launchers only (Total Warfare
+p. 131); Streak, MRM, rocket, ATM, Thunderbolt, extended LRM, Narc and dead-fire
+launchers cannot use them, and an ATM's built-in guidance never stacks with
+Artemis. One-shot launchers cannot change modes. Compatible rounds use their own
+bins; ordinary ammunition
 is not substituted when those bins are empty. Artemis adds two to the missile
 hit-table roll, combined with the glancing-hit adjustment and capped at twelve.
 Controllers link within their own section. Mechs can also use a head controller
@@ -632,8 +639,10 @@ IS and Clan Narc launchers fire homing pods. A pod attaches to a surviving secti
 without damaging armor or structure. AMS can shoot it down. Destroying the marked
 section removes its beacon; otherwise the mark persists across shutdowns and restarts.
 
-`narc <weapon>` toggles Narc-compatible ammunition on a missile launcher. Compatible
-missiles gain a cluster bonus against a marked target and require a matching bin.
+`narc <weapon>` toggles Narc-compatible ammunition on a standard LRM, SRM or MML
+launcher (Total Warfare pp. 141-142); Streak, MRM, rocket, ATM, Thunderbolt, extended
+LRM and dead-fire launchers fire only ordinary rounds. Compatible missiles gain a
+cluster bonus against a marked target and require a matching bin.
 `explosive <weapon>` toggles explosive ammunition on a Narc launcher: these rounds
 inflict damage instead of attaching a beacon. Narc launchers display explosive mode
 as `E`, while other launchers display compatible ammunition as `N`.
@@ -772,8 +781,9 @@ blocked sight, lost sensor contact, shutdown or lost equipment breaks the connec
 can take over the same target. TAG state appears in unit inspection.
 Lua uses `btech.unit.tag(unit, pilot, target)` and nil to stop.
 
-Use `sguided <weapon>` to select semi-guided rounds on a supported missile
-launcher; repeat it for normal rounds. A friendly unit's current TAG removes
+Use `sguided <weapon>` to select semi-guided rounds on a standard LRM launcher
+(IS, Clan or Enhanced) or an MML loaded with long-range rounds (Total Warfare
+p. 142); repeat it for normal rounds. A friendly unit's current TAG removes
 positive target-movement aiming penalties. Your own TAG does not provide this
 benefit, and losing the friendly TAG removes it. Negative movement modifiers
 remain. The launcher needs matching semi-guided ammunition; normal rounds are
@@ -795,6 +805,9 @@ For artillery, your observer must select a visible hex. The observer must remain
 running, friendly, conscious and on your battlefield. Artillery uses the observer's
 hex and indirect aim, even if you can also see that hex. Clear any unit target lock
 before firing artillery. Retargeting the observer resets accumulated correction.
+Artillery reach follows Tactical Operations (p. 149): Arrow IV 8 mapsheets (Clan 9),
+Thumper 21, Sniper 18 and Long Tom 30, at seventeen hexes per mapsheet. Artillery
+cannons are direct-fire weapons with ordinary hex ranges.
 
 Use `lock x y` to select coordinates, or append H (hex), B (building), I (ignite),
 or C (clear). Coordinate locks take effect at once, even outside visibility.
@@ -1131,8 +1144,9 @@ low firing roll; a jammed launch spends no ammunition or heat. An intact hotload
 launcher can explode if critically hit while ordinary ammunition remains aboard.
 Hotloading leaves the selected artillery payload and its aiming rules unchanged.
 
-Use `stinger <weapon>` to select anti-air Stinger rounds on a supported indirect
-missile launcher. Repeat the command to return to normal ammunition. The weapon
+Use `stinger <weapon>` to select anti-air Stinger rounds on a standard LRM launcher
+or an MML loaded with long-range rounds. Repeat the command to return to normal
+ammunition. The weapon
 must be intact and recycled, and one-shot launchers cannot change modes. Matching
 Stinger ammunition is required to fire; ordinary rounds are not substituted.
 Stinger shots can engage airborne units but cannot target grounded units or hexes.
@@ -1327,8 +1341,8 @@ The final ground contact also activates stepping mines.
 `fireswarm <weapon>` selects Swarm rounds; `fireswarm1 <weapon>` selects Swarm-1.
 Repeat the same command to return to normal rounds. These commands accept the
 usual weapon selections and work on Mechs, ground vehicles and VTOLs. A matching
-ammunition bin is required to fire. Rockets and dead-fire launchers cannot use
-these modes.
+ammunition bin is required to fire. Swarm rounds are LRM munitions: only standard
+LRM launchers and MMLs loaded with long-range rounds can use these modes.
 
 After an initial hit, unused missiles can attack nearby units in map order.
 Ordinary Swarm can hit friends and return to its launcher. Swarm-1 excludes
@@ -1347,9 +1361,11 @@ Lua provides `btech.unit.fireswarm(unit, pilot, weapon)` and
 ### Smoke and mine missile modes
 
 `firesmoke <selection>` and `firemine <selection>` select Smoke or Mine ammunition
-on missile launchers. Repeat the selected command to return to normal ammunition.
-Matching supplies are required to fire. Both controls work on Mechs and vehicles;
-rockets, one-shot launchers and artillery are rejected.
+on missile launchers. Smoke rounds load in standard SRM, LRM and MML launchers;
+Mine (Thunder) rounds load in standard LRM launchers only. Repeat the selected
+command to return to normal ammunition. Matching supplies are required to fire.
+Both controls work on Mechs and vehicles; other launchers, one-shot launchers and
+artillery are rejected.
 
 These missile modes retain ordinary missile damage. Mine rounds bypass AMS;
 Smoke rounds can be intercepted. They do not create smoke clouds or minefields.
@@ -1452,7 +1468,9 @@ unless ECM interferes, and damage lands in five-point groups.
 9/18/27 hexes with a four-hex minimum. `atmexplosive <selection>` toggles High
 Explosive bins: three damage per missile at 3/6/9 hexes with no minimum range.
 A matching bin is required; toggle the command again to return to normal
-ammunition. Templates use the `ExtendedRange` and `HighExplosive` flags.
+ammunition. Templates use the `ExtendedRange` and `HighExplosive` flags. ATMs
+fire directly only: they cannot fire indirectly or hotload (Total Warfare p. 141),
+and they take no other special rounds.
 
 MML-3/5/7/9 launchers use dedicated MML ammunition. `mml <selection>` toggles
 between SRM and LRM supplies. SRMs use 3/6/9 range bands, no minimum range, and

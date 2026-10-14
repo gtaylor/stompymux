@@ -58,9 +58,9 @@ fn bin_hotload_does_not_change_supply_or_launcher_behavior() {
     }
 }
 
-/// Fire metadata composes with half-ton sizing and compatible rounds, without bypassing validation.
+/// Fire metadata composes with bin filling and compatible rounds, without bypassing validation.
 #[test]
-fn bin_hotload_half_ton_and_artemis_remain_independent() {
+fn bin_hotload_filling_and_artemis_remain_independent() {
     let mut template =
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     let part = template
@@ -74,9 +74,9 @@ fn bin_hotload_half_ton_and_artemis_remain_independent() {
     part.modes = vec!["Hotload".into(), "Artemis/Mine".into()];
     let unit = Mech::from_template(template.clone()).unwrap();
     let bin = &unit.loadout().unwrap().ammunition[0];
-    assert!(bin.hotload && bin.half_ton);
-    assert_eq!(bin.capacity, 12);
-    assert_eq!(bin.rounds, 12);
+    assert!(bin.hotload && !bin.half_ton);
+    assert_eq!(bin.capacity, 25);
+    assert_eq!(bin.rounds, 25);
     assert_eq!(bin.mode, AmmunitionMode::Artemis);
     template
         .sections

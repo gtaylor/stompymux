@@ -59,8 +59,10 @@ impl Weapon {
         profile
     }
 
-    /// LRM launchers that accept the specialized Thunder rounds.
-    pub fn supports_thunder(self) -> bool {
+    /// Standard LRM launchers: Inner Sphere, Clan and Enhanced (NLRM) racks, which share every
+    /// LRM munition (Tactical Operations: Advanced Units & Equipment p. 139). Extended, Streak and
+    /// dead-fire racks, Thunderbolts, MRMs, rockets and ATMs are not standard LRM launchers.
+    pub fn is_standard_lrm(self) -> bool {
         matches!(
             self,
             Self::Lrm5
@@ -75,6 +77,48 @@ impl Weapon {
                 | Self::ClanLrm10
                 | Self::ClanLrm15
                 | Self::ClanLrm20
+        )
+    }
+
+    /// Standard Inner Sphere and Clan SRM launchers, which take the SRM munitions.
+    pub fn is_standard_srm(self) -> bool {
+        matches!(
+            self,
+            Self::Srm2 | Self::Srm4 | Self::Srm6 | Self::ClanSrm2 | Self::ClanSrm4 | Self::ClanSrm6
+        )
+    }
+
+    /// LRM launchers that accept the specialized Thunder rounds: Total Warfare p. 141 limits
+    /// Thunder (FASCAM) rounds to standard LRM launchers.
+    pub fn supports_thunder(self) -> bool {
+        self.is_standard_lrm()
+    }
+
+    /// Launchers whose rounds may carry Artemis IV or V guidance: standard LRM and SRM racks, MMLs
+    /// and torpedo launchers (Total Warfare p. 131, TechManual p. 206). Streak, MRM, rocket, ATM,
+    /// Thunderbolt, Extended LRM, Narc and dead-fire launchers are excluded.
+    pub fn accepts_artemis(self) -> bool {
+        self.is_standard_lrm() || self.is_standard_srm() || self.is_mml() || self.is_torpedo()
+    }
+
+    /// Launchers that load Narc-capable missiles: standard LRM and SRM racks and MMLs
+    /// (Total Warfare pp. 141-142).
+    pub fn accepts_narc_rounds(self) -> bool {
+        self.is_standard_lrm() || self.is_standard_srm() || self.is_mml()
+    }
+
+    /// Machine guns, including their light and heavy versions, are the only weapons that may
+    /// carry ammunition in half-ton lots (TechManual p. 48).
+    pub fn allows_half_ton_bins(self) -> bool {
+        self.supports_gatling()
+    }
+
+    /// Arrow IV, Long Tom, Sniper and Thumper pieces, whose catalogue reach is in mapsheets.
+    /// Artillery cannons are direct-fire weapons with ordinary hex ranges.
+    pub fn is_indirect_artillery(self) -> bool {
+        matches!(
+            self,
+            Self::ArrowIv | Self::ClanArrowIv | Self::LongTom | Self::Sniper | Self::Thumper
         )
     }
 
@@ -134,9 +178,11 @@ impl Weapon {
         matches!(self, Self::NarcBeacon | Self::ClanNarcBeacon)
     }
 
-    /// Supported indirect-fire missile profiles accept semi-guided ammunition; rockets and artillery do not.
+    /// Standard LRM launchers take semi-guided, Swarm and Stinger rounds (Total Warfare p. 142;
+    /// Tactical Operations: Advanced Units & Equipment p. 228). MML long-range bins carry their own
+    /// family variants of these rounds instead.
     pub fn supports_semiguided(self) -> bool {
-        self.supports_indirect_fire() && !self.is_rocket() && !self.is_mml()
+        self.is_standard_lrm()
     }
 
     /// Weapons whose impacts use delayed artillery area effects rather than conventional salvos.

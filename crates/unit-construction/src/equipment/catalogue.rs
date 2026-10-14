@@ -78,17 +78,19 @@ macro_rules! weapon_catalogue {
 }
 
 // Profile columns: heat, damage, missiles, minimum, [short, medium, long], slots, ammo/ton, recycle.
+// Indirect artillery (Arrow IV, Long Tom, Sniper, Thumper) lists its long range in mapsheets, as
+// Tactical Operations p. 149 does; `Weapon::effective_range` converts it to hexes.
 weapon_catalogue! {
     ArrowIv { name: ("IS", "ArrowIVSystem"), part_id: 115, mass: 15360, bv: 171, skill: "Gunnery-Artillery",
-        profile: (10, 20, 0, 0, [0, 0, 5], 15, 5, 60) },
+        profile: (10, 20, 0, 0, [0, 0, 8], 15, 5, 60) },
     ClanArrowIv { name: ("CL", "ArrowIVSystem"), part_id: 64, mass: 12288, bv: 171, skill: "Gunnery-Artillery",
-        profile: (10, 20, 0, 0, [0, 0, 6], 12, 5, 60) },
+        profile: (10, 20, 0, 0, [0, 0, 9], 12, 5, 60) },
     LongTom { name: ("IS", "LongTom"), part_id: 5, mass: 30720, bv: 171, skill: "Gunnery-Artillery",
-        profile: (20, 25, 0, 0, [0, 0, 20], 30, 5, 60) },
+        profile: (20, 25, 0, 0, [0, 0, 30], 30, 5, 60) },
     Sniper { name: ("IS", "Sniper"), part_id: 116, mass: 20480, bv: 86, skill: "Gunnery-Artillery",
-        profile: (10, 20, 0, 0, [0, 0, 12], 20, 10, 60) },
+        profile: (10, 20, 0, 0, [0, 0, 18], 20, 10, 60) },
     Thumper { name: ("IS", "Thumper"), part_id: 117, mass: 15360, bv: 40, skill: "Gunnery-Artillery",
-        profile: (5, 15, 0, 0, [0, 0, 14], 15, 20, 60) },
+        profile: (6, 15, 0, 0, [0, 0, 21], 15, 20, 60) },
     LongTomCannon { name: ("IS", "LongTomCannon"), part_id: 121, mass: 20480, bv: 348, skill: "Gunnery-Artillery",
         profile: (20, 20, 0, 4, [6, 13, 20], 15, 5, 30) },
     SniperCannon { name: ("IS", "SniperCannon"), part_id: 122, mass: 15360, bv: 115, skill: "Gunnery-Artillery",

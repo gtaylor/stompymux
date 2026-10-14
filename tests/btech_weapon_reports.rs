@@ -165,9 +165,13 @@ async fn report_access_and_artillery_ranges() {
         assert!(output.contains("Weapons statistics for"));
         for row in battle_weapon_specifications(&scripts.world(), id).unwrap() {
             let profile = row.weapon.profile();
-            let normal =
-                u16::from(profile.long_range) * if row.weapon.is_artillery() { 20 } else { 1 };
-            assert_eq!(row.long_range, normal);
+            // Indirect artillery reports its mapsheet reach in hexes.
+            let sheet = if row.weapon.is_indirect_artillery() {
+                ARTILLERY_MAPSHEET_HEXES
+            } else {
+                1
+            };
+            assert_eq!(row.long_range, u16::from(profile.long_range) * sheet);
         }
     }
 }

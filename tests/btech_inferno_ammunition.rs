@@ -3,17 +3,13 @@ use stompymux_rs::*;
 
 #[test]
 fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
+    // Inferno rounds are an SRM munition (Total Warfare p. 141): standard SRM launchers only.
     for weapon in [
         Weapon::Srm2,
         Weapon::Srm4,
         Weapon::Srm6,
-        Weapon::StreakSrm2,
-        Weapon::StreakSrm4,
-        Weapon::StreakSrm6,
         Weapon::ClanSrm4,
-        Weapon::ClanStreakSrm6,
-        Weapon::Lrm20,
-        Weapon::NarcBeacon,
+        Weapon::ClanSrm6,
     ] {
         for half in [false, true] {
             let mut definition =
@@ -38,7 +34,10 @@ fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             bin.modes = vec!["Inferno".into()];
             if half {
+                // Half-ton lots are a machine-gun privilege (TechManual p. 48).
                 bin.modes.push("Halfton".into());
+                assert!(Mech::from_template(definition).is_err(), "{weapon:?}");
+                continue;
             }
             let unit = Mech::from_template(definition).unwrap();
             let loadout = unit.loadout().unwrap();
@@ -63,6 +62,30 @@ fn inferno_ammunition_templates_preserve_capacity_modes_and_mass() {
                 unit
             );
         }
+    }
+    // LRM, Streak, Narc and Thunderbolt launchers never load Inferno rounds.
+    for weapon in [
+        Weapon::Lrm20,
+        Weapon::StreakSrm6,
+        Weapon::ClanStreakSrm6,
+        Weapon::NarcBeacon,
+        Weapon::Thunderbolt5,
+        Weapon::Mrm10,
+    ] {
+        assert!(!AmmunitionMode::Inferno.supports(weapon), "{weapon:?}");
+        let mut definition =
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
+        let bin = definition
+            .sections
+            .get_mut(&MechSection::RightTorso)
+            .unwrap()
+            .criticals
+            .get_mut(&0)
+            .unwrap();
+        bin.equipment = format!("Ammo_{}", weapon.name());
+        bin.data = weapon.profile().ammunition_per_ton.to_string();
+        bin.modes = vec!["Inferno".into()];
+        assert!(Mech::from_template(definition).is_err(), "{weapon:?}");
     }
 }
 

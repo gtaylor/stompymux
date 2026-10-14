@@ -37,7 +37,7 @@ mod tests {
     use crate::btech::weapon_groups::{WeaponGroupRequest, roll_weapon_groups};
     use crate::btech::{AmmunitionBin, Dice, FireMode, Weapon};
 
-    /// Capacity normalization uses the selected family before half-ton rounding.
+    /// Capacity normalization uses the selected family; MMLs refuse half-ton lots.
     #[test]
     fn bins_size_each_family_and_reject_conflicting_modes() {
         for (weapon, srm, lrm) in [
@@ -56,10 +56,7 @@ mod tests {
                 );
                 let mut half = flags.clone();
                 half.push("Halfton".into());
-                assert_eq!(
-                    AmmunitionBin::configuration(weapon, &half).unwrap(),
-                    (full / 2, true, mode)
-                );
+                assert!(AmmunitionBin::configuration(weapon, &half).is_err());
                 assert_eq!(AmmunitionMode::initial_selection(weapon, &flags), mode);
             }
             assert!(

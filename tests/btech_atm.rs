@@ -81,8 +81,17 @@ fn atm_profiles_tables_and_ammunition_markers() {
             Part::from_id(id + AMMUNITION_PART_OFFSET).unwrap().name,
             format!("Ammo_{}", weapon.name())
         );
-        assert!(weapon.supports_hotload());
-        assert!(weapon.supports_indirect_fire());
+        // ATMs fire only directly (Total Warfare p. 141), so they cannot hotload either.
+        assert!(!weapon.supports_hotload());
+        assert!(!weapon.supports_indirect_fire());
+        for mode in [
+            AmmunitionMode::Artemis,
+            AmmunitionMode::Narc,
+            AmmunitionMode::Inferno,
+            AmmunitionMode::SemiGuided,
+        ] {
+            assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
+        }
         for (roll, count) in (2..=12).zip(hits) {
             assert_eq!(weapon.missile_hits(roll).unwrap(), count);
         }
