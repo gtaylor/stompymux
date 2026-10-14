@@ -106,10 +106,6 @@ pub(crate) enum Timer {
     JumpStabilization = 15,
     /// `hide_elapsed`.
     Hide = 16,
-    /// `masc.remaining`.
-    Masc = 17,
-    /// `supercharger.remaining`.
-    Supercharger = 18,
     /// `dumping.phase`.
     Dump = 19,
     /// `unjam.remaining`.
@@ -146,7 +142,7 @@ pub(crate) enum Timer {
 
 impl Timer {
     /// Every timer, in code order.
-    pub(crate) const ALL: [Self; 31] = [
+    pub(crate) const ALL: [Self; 29] = [
         Self::Startup,
         Self::OverheatElapsed,
         Self::OverheatPhase,
@@ -160,8 +156,6 @@ impl Timer {
         Self::Charge,
         Self::JumpStabilization,
         Self::Hide,
-        Self::Masc,
-        Self::Supercharger,
         Self::Dump,
         Self::Unjam,
         Self::HullDown,
@@ -232,8 +226,6 @@ impl Timer {
             Self::Charge => fixed("/charge/elapsed"),
             Self::JumpStabilization => fixed("/jump_stabilization"),
             Self::Hide => fixed("/hide_elapsed"),
-            Self::Masc => fixed("/masc/remaining"),
-            Self::Supercharger => fixed("/supercharger/remaining"),
             Self::Dump => fixed("/dumping/phase"),
             Self::Unjam => fixed("/unjam/remaining"),
             Self::HullDown => fixed("/hull_down/remaining"),

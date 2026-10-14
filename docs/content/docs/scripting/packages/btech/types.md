@@ -1513,9 +1513,10 @@ Alias: `"follow_brief" | "include" | "exclude"`
 ## BoosterState
 
 - `enabled`: `boolean`
-- `counter`: `integer`
-- `remaining`: `integer` — Seconds until the next overload/recovery check.
-- `failed`: `boolean` — Hardware failure persists through shutdown.
+- `counter`: `integer` — Interval of the last activation check still in effect, 1-5.
+- `used`: `boolean` — The booster was active at some point this turn.
+- `rested`: `boolean` — The last turn passed without using the booster.
+- `failed`: `boolean` — A failed supercharger stays out of service through shutdown.
 
 ## NetworkStatusRow
 

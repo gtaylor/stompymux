@@ -60,8 +60,10 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
                 || unit.crew_recovery().remaining > 0
                 || unit.unjam().is_some()
                 || unit.dumping().is_some()
-                || unit.masc().remaining > 0
-                || unit.supercharger().remaining > 0
+                || unit.masc().enabled
+                || unit.masc().counter > 0
+                || unit.supercharger().enabled
+                || unit.supercharger().counter > 0
                 || unit.airborne()
                 || unit.orbital_drop().is_some()
                 || unit.free_fall().is_some()

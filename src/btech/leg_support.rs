@@ -55,9 +55,6 @@ impl Mech {
     /// Quads lose support with three unavailable legs; repeated hip hits alone do not force it.
     pub fn airborne_support_lost(&self) -> bool {
         let chassis = self.chassis();
-        if self.masc_seized() {
-            return true;
-        }
         if chassis == MechChassis::Quad {
             return self.unavailable_legs() >= 3;
         }

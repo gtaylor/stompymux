@@ -1607,9 +1607,10 @@
 // lua-types-begin btech 00377
 //|---@class BoosterState
 //|---@field enabled boolean
-//|---@field counter integer
-//|---@field remaining integer Seconds until the next overload/recovery check.
-//|---@field failed boolean Hardware failure persists through shutdown.
+//|---@field counter integer Interval of the last activation check still in effect, 1-5.
+//|---@field used boolean The booster was active at some point this turn.
+//|---@field rested boolean The last turn passed without using the booster.
+//|---@field failed boolean A failed supercharger stays out of service through shutdown.
 // lua-types-end
 
 // lua-types-begin btech 00382

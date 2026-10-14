@@ -114,7 +114,6 @@ impl Mech {
             || missing >= if chassis == MechChassis::Quad { 3 } else { 2 }
             || gyro >= 2
             || self.is_destroyed()
-            || self.masc_seized()
         {
             envelope = SpeedEnvelope::STOPPED;
         }

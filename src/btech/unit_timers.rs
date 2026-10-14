@@ -89,8 +89,6 @@ impl SavedTimers for Mech {
         if let Some(elapsed) = self.hide_elapsed {
             list.add(T::Hide, 0, elapsed, Up);
         }
-        list.add(T::Masc, 0, self.masc.remaining, Down);
-        list.add(T::Supercharger, 0, self.supercharger.remaining, Down);
         if let Some(dump) = self.dumping {
             list.add(
                 T::Dump,

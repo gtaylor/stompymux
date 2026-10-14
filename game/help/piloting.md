@@ -1200,15 +1200,22 @@ Use `dump all`, `dump <weapon number>`, `dump <section>`, or
 critical slots start at one. For example, `dump RT 1` selects the first right-torso
 slot. `dump stop` cancels. Dumping takes time and prevents running and jumping.
 
-`masc` toggles an installed MASC booster. It increases speed but makes progressively
-harder failure checks while active. Switch it off to recover between uses. A
-failure disables MASC and destroys both hip actuators; moving faster than one MP
-also causes a fall. `weapons` and `status` show the current MASC counter.
+`masc` toggles an installed MASC booster, which lets you run at twice your walking
+MP (Total Warfare p. 137). Every thirty-second turn in which it was switched on ends
+with a 2d6 activation check: the first such turn fails on a 2, the second on 4 or
+less, the third on 6 or less, the fourth on 10 or less, and a fifth consecutive turn
+fails automatically. Each turn you leave it off steps the interval back down, never
+below the first. A failure puts one critical hit on each surviving leg, located as a
+normal critical, and the MASC keeps working. `weapons` and `status` show the
+current interval.
 
-`scharge` toggles a supercharger. Its overload checks grow harder with use and
-recover while switched off. Failure can destroy the engine. Using it with MASC
-increases speed further and makes both devices' checks harder. `weapons` and
-`status` show the separate counters.
+`scharge` toggles a supercharger, which follows the same activation checks (Tactical
+Operations: Advanced Units and Equipment p. 345). A failure rolls on the Determining
+Critical Hits Table, applies the result to the upper-most undamaged center torso
+slots, and destroys the supercharger for the rest of the scenario. With both engaged
+you run at two and a half times your walking MP, rounded up, and each device makes
+its own check with no extra penalty. `weapons` and `status` show the separate
+intervals.
 
 
 Artillery also supports `hotload <selection>`. Hotloaded launchers never jam. An
