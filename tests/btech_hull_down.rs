@@ -289,6 +289,72 @@ async fn hull_down_cover_is_shared_between_attackers_by_sensors_and_sight() {
     }
 }
 
+/// Leg-mounted weapons, including a quad's front legs, cannot fire while hull-down
+/// (Tactical Operations p. 19); they return once the unit has raised itself.
+#[tokio::test]
+async fn hull_down_blocks_leg_mounted_weapons_until_raised() {
+    let (_dir, config, mut world, id, _) =
+        fixture(include_str!("../game/units/GOL-3S.toml"), MECH).await;
+    let (legs, torso) = {
+        let unit = &world.btech.constructed_units()[&id];
+        let loadout = unit.loadout().unwrap();
+        let legs: Vec<usize> = (0..loadout.weapons.len())
+            .filter(|&index| {
+                unit.chassis()
+                    .is_leg(loadout.weapons[index].criticals[0].section)
+            })
+            .collect();
+        let torso = (0..loadout.weapons.len())
+            .find(|index| !legs.contains(index))
+            .unwrap();
+        (legs, torso)
+    };
+    assert!(!legs.is_empty());
+    let active = |world: &World| world.btech.constructed_units()[&id].hull_down().active;
+    set_battle_hull_down(&mut world, id, ObjectId(1), "").unwrap();
+    for _ in 0..40 {
+        if active(&world) {
+            break;
+        }
+        advance_battle_units(&mut world, 0, true);
+    }
+    assert!(active(&world));
+    let before = world.btech.clone();
+    for &index in &legs {
+        let readiness = world.btech.constructed_units()[&id]
+            .weapon_readiness(index)
+            .unwrap();
+        assert!(!readiness.posture_ready);
+        assert!(!readiness.ready);
+        assert!(spend_battle_weapon(&mut world, id, ObjectId(1), index).is_err());
+        assert_eq!(world.btech, before);
+    }
+    assert!(
+        world.btech.constructed_units()[&id]
+            .weapon_readiness(torso)
+            .unwrap()
+            .ready
+    );
+    spend_battle_weapon(&mut world, id, ObjectId(1), torso).unwrap();
+    set_battle_hull_down(&mut world, id, ObjectId(1), "-").unwrap();
+    for _ in 0..40 {
+        if !active(&world) {
+            break;
+        }
+        advance_battle_units(&mut world, 0, true);
+    }
+    assert!(!active(&world));
+    for index in legs {
+        assert!(
+            world.btech.constructed_units()[&id]
+                .weapon_readiness(index)
+                .unwrap()
+                .posture_ready
+        );
+    }
+    world.validate(&config).unwrap();
+}
+
 /// Pickup preparation uses the same posture cleanup regardless of the carrier's chassis.
 #[tokio::test]
 async fn pickup_clears_completed_quad_cover() {

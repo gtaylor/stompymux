@@ -5365,8 +5365,8 @@ async fn facing_native_lua_controls_replay_without_observer_messages() {
             Torso::Right,
             false,
         ),
-        ("fliparms", "fliparms", "", Torso::Right, true),
-        ("rottorso center", "rottorso", ",'c'", Torso::Center, true),
+        ("rottorso center", "rottorso", ",'c'", Torso::Center, false),
+        ("fliparms", "fliparms", "", Torso::Center, true),
         (
             "rottorso center",
             "rottorso",

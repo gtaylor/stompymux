@@ -2143,7 +2143,7 @@ async fn mutual_charge_rejections_and_torso_merge() {
         world.btech.constructed_units()[&first].facing().torso,
         Torso::Both
     );
-    assert_eq!(Torso::Both.offset(), 59.0);
+    assert_eq!(Torso::Both.offset(), 60.0);
     for direction in [Torso::Left, Torso::Right, Torso::Both] {
         let before = world.btech.clone();
         assert!(rotate_battle_torso(&mut world, first, ObjectId(1), direction).is_err());

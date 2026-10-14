@@ -179,11 +179,15 @@ one turn still force a piloting check, which can cause a fall in flight.
 Cockpit stun blocks firing for ten simulation seconds and slows a running unit
 toward walking speed. Another stunning hit restarts that countdown.
 
-Use `rottorso <left|right|center>` (or `l`, `r`, `c`) to turn the torso. Turning
-in the opposite direction first returns it to center. `fliparms` toggles arm
-facing on chassis that support it. Both require a running unit and its conscious
-pilot. Facing survives restart; leg weapons follow the body heading. These
-commands take no switches, and `fliparms` takes no arguments.
+Use `rottorso <left|right|center>` (or `l`, `r`, `c`) to turn the torso one
+hexside (60 degrees). Torso, head and arm weapons turn with it; leg weapons follow
+the body heading. Turning in the opposite direction first returns it to center.
+`fliparms` toggles arm facing on chassis that support it: reversed arms fire only
+into the rear arc. A Mech cannot twist its torso and reverse its arms at the same
+time, so center the torso before `fliparms` and flip the arms forward before
+`rottorso` (Total Warfare p. 105). Both require a running, standing unit and its
+conscious pilot; quads cannot twist. Facing survives restart. These commands take
+no switches, and `fliparms` takes no arguments.
 
 Perception is automatic; there is nothing to switch. `sensor` shows how far and
 by what means your unit can perceive right now:
@@ -1216,7 +1220,9 @@ knee, and must pass a piloting roll to get it off the ground again, otherwise it
 stays down with the time spent and may try again. Transition time depends on
 current maximum chassis speed. Finish standing or jump stabilization first.
 Lowering requests a stop. Speed, heading, standing and jumping controls are
-blocked while lowered or changing posture.
+blocked while lowered or changing posture. Leg-mounted weapons, including a
+quad's front legs, cannot fire while lowered (Tactical Operations p. 19); the
+other weapons fire normally.
 
 Hull-down adds protection when terrain already gives partial cover: aiming at a
 hull-down unit behind partial cover costs an extra +2, however it is perceived. Shutdown cancels a pending change

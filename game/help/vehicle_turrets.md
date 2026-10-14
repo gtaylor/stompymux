@@ -12,9 +12,11 @@ current facing or `turret <degrees>` to turn it. Headings are whole degrees;
 values outside 0–359 wrap around. For example, `turret -90` faces 270 degrees.
 
 The facing is relative to the hull: turning the hull also turns the turret.
-An immobilized vehicle can still turn an undamaged turret. A damage-locked turret
-cannot turn, and a destroyed turret cannot be controlled. Facing and locks survive
-server restarts.
+Turret weapons fire into a forward arc of three hexsides (120 degrees) centred on
+the turret facing rather than the hull facing (Total Warfare p. 105); weapons on
+the hull keep their own hull arcs. An immobilized vehicle can still turn an
+undamaged turret. A damage-locked turret cannot turn, and a destroyed turret
+cannot be controlled. Facing and locks survive server restarts.
 
 
 Use `fixturret` to clear a jam. The attempt takes 60 seconds and prevents weapon

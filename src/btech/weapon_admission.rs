@@ -12,9 +12,8 @@ pub(super) struct WeaponMechanics {
     /// A busy anatomical section, using its cockpit display name.
     pub section_recycle: Option<&'static str>,
     pub carried_club: bool,
-    /// Chassis-specific support rejection; absent when the mount can bear weight normally.
+    /// Posture rejection (prone support or hull-down); absent when the posture permits the mount.
     pub posture_failure: Option<&'static str>,
-    pub covered: bool,
 }
 
 impl WeaponMechanics {
@@ -50,10 +49,6 @@ impl WeaponMechanics {
             bail!(reason);
         }
         ensure!(
-            !self.covered,
-            "Only turret weapons are available while in cover."
-        );
-        ensure!(
             self.intact,
             "The weapons system chirps: 'That weapon has been destroyed!'"
         );
@@ -71,16 +66,11 @@ impl WeaponMechanics {
             && !(self.intact && (self.recycle_remaining > 0 || self.section_recycle.is_some()))
             && !self.carried_club
             && self.posture_failure.is_none()
-            && !self.covered
             && self.intact
     }
 
     /// Sighting ignores recycling, posture and feed failures, but requires a usable offensive mount.
     pub fn check_sight(&self, disabled: bool) -> Result<Weapon> {
-        ensure!(
-            !self.covered,
-            "Only turret weapons are available while in cover."
-        );
         ensure!(
             self.intact && !disabled,
             "The weapons system chirps: 'That weapon has been destroyed!'"
@@ -104,7 +94,7 @@ mod tests {
     /// The message-free admission answers exactly as the ordered check over every combination.
     #[test]
     fn admits_matches_check() {
-        for bits in 0u32..256 {
+        for bits in 0u32..128 {
             let bit = |n: u32| bits & (1 << n) != 0;
             let mechanics = WeaponMechanics {
                 weapon: Weapon::MediumLaser,
@@ -115,9 +105,8 @@ mod tests {
                 section_recycle: bit(4).then_some("left_arm"),
                 carried_club: bit(5),
                 posture_failure: bit(6).then_some("Your leg cannot support the shot."),
-                covered: bit(7),
             };
-            assert_eq!(mechanics.admits(), mechanics.check().is_ok(), "{bits:08b}");
+            assert_eq!(mechanics.admits(), mechanics.check().is_ok(), "{bits:07b}");
         }
     }
 }
