@@ -72,21 +72,23 @@ fn torso_twist_excludes_legs_and_rear_mount_overrides_arm_flipping() {
         torso: Torso::Right,
         arms_flipped: false,
     };
+    // A twist is one hexside, so the right-twisted forward arc reaches bearing 120.
     assert!(
         mount(Section::CenterTorso, false)
-            .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 119.0, right)
+            .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 120.0, right)
             .unwrap()
     );
     assert!(
         !mount(Section::CenterTorso, false)
-            .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 119.001, right)
+            .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 120.001, right)
             .unwrap()
     );
     assert!(
         !mount(Section::LeftLeg, false)
-            .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 119.0, right)
+            .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 120.0, right)
             .unwrap()
     );
+    // Reversed arms fire into the rear arc only; their side and forward arcs are gone.
     let flipped = Facing {
         torso: Torso::Center,
         arms_flipped: true,
@@ -97,7 +99,7 @@ fn torso_twist_excludes_legs_and_rear_mount_overrides_arm_flipping() {
             .unwrap()
     );
     assert!(
-        mount(Section::LeftArm, false)
+        !mount(Section::LeftArm, false)
             .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 270.0, flipped)
             .unwrap()
     );
@@ -112,8 +114,13 @@ fn torso_twist_excludes_legs_and_rear_mount_overrides_arm_flipping() {
             .unwrap()
     );
     assert!(
-        mount(Section::RightArm, false)
+        !mount(Section::RightArm, false)
             .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 90.0, flipped)
+            .unwrap()
+    );
+    assert!(
+        mount(Section::RightArm, false)
+            .bears_on(stompymux_rs::MechChassis::Biped, 0.0, 239.0, flipped)
             .unwrap()
     );
     assert!(
@@ -204,34 +211,36 @@ fn contact_arc_boundaries_use_display_bearing_and_ignore_arm_flips() {
     assert!(Facing::default().contact_arc(0.0, f64::INFINITY).is_err());
 }
 
-/// Quad front legs keep their side arcs but use chassis heading even with a stored twist.
+/// Quad front legs are legs: a biped leg's forward-only geometry on the chassis heading,
+/// whatever torso or arm pose is stored.
 #[test]
-fn quad_front_leg_geometry_ignores_torso_pose_and_preserves_mount_arcs() {
+fn quad_front_leg_geometry_is_leg_geometry() {
     use stompymux_rs::MechChassis::{Biped, Quad};
     for section in Section::ALL {
         for rear in [false, true] {
             let weapon = mount(section, rear);
+            let (reference, reference_facing) = if Quad.is_leg(section) {
+                (mount(Section::LeftLeg, rear), Facing::default())
+            } else {
+                (weapon.clone(), Facing::default())
+            };
             for flipped in [false, true] {
-                let centered = Facing {
-                    torso: Torso::Center,
-                    arms_flipped: flipped,
-                };
-                for torso in [Torso::Left, Torso::Right, Torso::Both] {
+                for torso in [Torso::Center, Torso::Left, Torso::Right, Torso::Both] {
                     let facing = Facing {
                         torso,
                         arms_flipped: flipped,
                     };
+                    let expected = if Quad.is_leg(section) {
+                        reference_facing
+                    } else {
+                        facing
+                    };
                     for bearing in 0..360 {
-                        let expected = if Quad.is_leg(section) {
-                            centered
-                        } else {
-                            facing
-                        };
                         assert_eq!(
                             weapon
                                 .bears_on(Quad, 17.0, f64::from(bearing), facing)
                                 .unwrap(),
-                            weapon
+                            reference
                                 .bears_on(Biped, 17.0, f64::from(bearing), expected)
                                 .unwrap(),
                             "{section:?} {rear} {facing:?} {bearing}"
@@ -241,19 +250,19 @@ fn quad_front_leg_geometry_ignores_torso_pose_and_preserves_mount_arcs() {
             }
         }
     }
-    assert!(
-        mount(Section::LeftArm, false)
-            .bears_on(Quad, 0.0, 270.0, Facing::default())
-            .unwrap()
-    );
-    assert!(
-        mount(Section::RightArm, false)
-            .bears_on(Quad, 0.0, 90.0, Facing::default())
-            .unwrap()
-    );
-    assert!(
-        !mount(Section::LeftArm, false)
-            .bears_on(Quad, 0.0, 90.0, Facing::default())
-            .unwrap()
-    );
+    for section in [Section::LeftArm, Section::RightArm] {
+        assert!(
+            mount(section, false)
+                .bears_on(Quad, 0.0, 60.0, Facing::default())
+                .unwrap()
+        );
+        for bearing in [90.0, 270.0] {
+            assert!(
+                !mount(section, false)
+                    .bears_on(Quad, 0.0, bearing, Facing::default())
+                    .unwrap(),
+                "{section:?} {bearing}"
+            );
+        }
+    }
 }

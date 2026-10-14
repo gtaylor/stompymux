@@ -1,11 +1,14 @@
-//! Ground-vehicle firing geometry follows hull faces and the saved turret bearing.
+//! Ground-vehicle firing geometry follows hull faces and the saved turret bearing
+//! (Total Warfare p. 105).
 use super::{Vehicle, VehicleCriticalLocation, VehicleSection, WeaponMount};
 use anyhow::{Context, Result, ensure};
 
 /// Firing-arc geometry for vehicle weapon mounts.
 pub trait VehicleMountArcs {
     /// Test vehicle mounting geometry; rear-mount flags do not override a vehicle's hull face.
-    /// Bearings use nearest whole degrees, facing uses whole degrees, and turret arcs span 60 degrees.
+    /// Bearings use nearest whole degrees and facing uses whole degrees. Hull faces fire only
+    /// into their own 60-degree side arcs or the 120-degree front and rear arcs; turret
+    /// weapons use the forward arc centred on the turret's own facing.
     fn bears_on(&self, heading: f64, bearing: f64, turret_heading: Option<f64>) -> Result<bool>;
 }
 
@@ -69,8 +72,31 @@ impl Vehicle {
 }
 
 /// Shared whole-degree turret geometry, independent of whether a weapon is installed.
+/// A turret fires into the forward arc (three hexsides, 120 degrees) defined by the hexside
+/// it points at rather than the hull's facing (Total Warfare p. 105).
 pub(super) fn turret_arc(heading: f64, bearing: f64) -> bool {
     let angle =
         (bearing.rem_euclid(360.0).round() - heading.rem_euclid(360.0).trunc()).rem_euclid(360.0);
-    angle <= 30.0 || angle >= 330.0
+    angle <= 60.0 || angle >= 300.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The turret arc is the forward arc rotated to the turret's facing.
+    #[test]
+    fn turret_arc_spans_three_hexsides_around_the_turret_facing() {
+        for inside in [0.0, 60.0, 300.0, 359.0, 60.49, 299.5] {
+            assert!(turret_arc(0.0, inside), "{inside}");
+        }
+        for outside in [60.5, 61.0, 120.0, 180.0, 240.0, 299.49] {
+            assert!(!turret_arc(0.0, outside), "{outside}");
+        }
+        assert!(turret_arc(90.0, 150.0));
+        assert!(turret_arc(90.0, 30.0));
+        assert!(!turret_arc(90.0, 29.0));
+        assert!(!turret_arc(90.0, 151.0));
+        assert!(turret_arc(1.99, 61.0));
+    }
 }

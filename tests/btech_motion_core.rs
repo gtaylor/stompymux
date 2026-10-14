@@ -1074,6 +1074,9 @@ async fn torso_and_arm_facing_are_guarded_and_persistent() {
     let before = world.btech.clone();
     assert!(rotate_battle_torso(&mut world, id, ObjectId(1), Torso::Left).is_err());
     assert!(flip_battle_arms(&mut world, id, ObjectId(2)).is_err());
+    // A twisted torso cannot reverse its arms (Total Warfare p. 105).
+    let error = flip_battle_arms(&mut world, id, ObjectId(1)).unwrap_err();
+    assert!(error.to_string().contains("torso is rotated"), "{error:#}");
     assert_eq!(world.btech, before);
     rotate_battle_torso(&mut world, id, ObjectId(1), Torso::Right).unwrap();
     assert_eq!(
@@ -1081,13 +1084,23 @@ async fn torso_and_arm_facing_are_guarded_and_persistent() {
         Torso::Center
     );
     rotate_battle_torso(&mut world, id, ObjectId(1), Torso::Right).unwrap();
+    rotate_battle_torso(&mut world, id, ObjectId(1), Torso::Center).unwrap();
     flip_battle_arms(&mut world, id, ObjectId(1)).unwrap();
+    // Reversed arms refuse a torso twist; centering an already centred torso is harmless.
+    let before = world.btech.clone();
+    for direction in [Torso::Left, Torso::Right] {
+        let error = rotate_battle_torso(&mut world, id, ObjectId(1), direction).unwrap_err();
+        assert!(error.to_string().contains("arms are flipped"), "{error:#}");
+    }
+    assert_eq!(world.btech, before);
+    rotate_battle_torso(&mut world, id, ObjectId(1), Torso::Center).unwrap();
+    assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     let facing = world.btech.constructed_units()[&id].facing();
     world = persistence::load(&config.database()).await.unwrap();
     assert_eq!(world.btech.constructed_units()[&id].facing(), facing);
     assert!(facing.arms_flipped);
-    assert_eq!(facing.torso, Torso::Right);
+    assert_eq!(facing.torso, Torso::Center);
     stop_battle_unit(
         &mut world,
         id,

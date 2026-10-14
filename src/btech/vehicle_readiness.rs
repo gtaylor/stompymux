@@ -155,7 +155,8 @@ impl Vehicle {
                 .sum()
         };
         let recycle_remaining = self.weapon_recycle.get(&index).copied().unwrap_or(0);
-        let posture_ready = !mechanics.covered;
+        // Vehicles have no posture that restricts their mounts.
+        let posture_ready = true;
         Ok(WeaponReadiness {
             weapon: mount.weapon,
             intact,
@@ -204,7 +205,6 @@ impl Vehicle {
             section_recycle: None,
             carried_club: false,
             posture_failure: None,
-            covered: false,
         })
     }
 }

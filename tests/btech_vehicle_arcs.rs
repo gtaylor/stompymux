@@ -33,8 +33,9 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {
     (dir, config, world, id)
 }
 
+/// Hull faces partition the compass; the turret carries a forward arc on its own facing.
 #[test]
-fn vehicle_mount_arcs_partition_hull_and_keep_turret_narrow() {
+fn vehicle_mount_arcs_partition_hull_and_turret_follows_its_facing() {
     let target = Vehicle::new(
         VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
@@ -64,8 +65,8 @@ fn vehicle_mount_arcs_partition_hull_and_keep_turret_narrow() {
         ),
         (
             VehicleSection::Turret,
-            vec![330.0, 0.0, 30.0],
-            vec![329.0, 31.0, 180.0],
+            vec![300.0, 0.0, 60.0],
+            vec![299.0, 61.0, 180.0],
         ),
     ] {
         mount.criticals[0].section = section;
@@ -88,9 +89,9 @@ fn vehicle_mount_arcs_partition_hull_and_keep_turret_narrow() {
             }
         }
     }
-    assert!(mount.bears_on(0.0, 30.49, Some(0.0)).unwrap());
-    assert!(!mount.bears_on(0.0, 30.5, Some(0.0)).unwrap());
-    assert!(mount.bears_on(0.0, 31.0, Some(1.99)).unwrap());
+    assert!(mount.bears_on(0.0, 60.49, Some(0.0)).unwrap());
+    assert!(!mount.bears_on(0.0, 60.5, Some(0.0)).unwrap());
+    assert!(mount.bears_on(0.0, 61.0, Some(1.99)).unwrap());
     assert!(!mount.bears_on(0.0, 0.0, None).unwrap());
     for (heading, bearing, turret) in [
         (f64::NAN, 0.0, Some(0.0)),
