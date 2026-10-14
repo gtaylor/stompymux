@@ -1,10 +1,11 @@
-//! Crowded-hex biped collisions share occupancy, dice and damage in one transaction. A 'Mech
-//! landing or falling into a crowded hex makes an accidental fall from above (Total Warfare
-//! p. 152): a to-hit roll of 7 modified for the target's movement and terrain, tonnage over ten
-//! per level fallen on the Punch Location Table, and its own fall onto its back. A 'Mech walking
-//! into a crowded hex bumps the unit it displaces; the engine has no displacement, so the bump
-//! stands in for the domino effect with its own velocity-based damage.
-use super::{FallRules, Hit, HitArc, HitTable, Notice, Posture, Power};
+//! Stacking (Total Warfare p. 57): a hex holds at most two units a side and four in all, of
+//! which only one may be a 'Mech. A unit may pass through hexes its friends hold but may not
+//! end its movement in a hex that would exceed the limit, and entering a hex an enemy holds
+//! ends its movement, which here stops it at that hex's edge. A 'Mech that lands or falls
+//! into a hex the limit forbids makes an accidental fall from above (TW p. 152): a to-hit
+//! roll of 7 modified for the target's movement and terrain, tonnage over ten per level
+//! fallen on the Punch Location Table, and its own fall onto its back.
+use super::{FallRules, Hit, HitArc, HitTable, Notice, Posture};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -16,11 +17,10 @@ pub(super) struct StackingEffects {
     pub falls: Vec<super::MechFallReport>,
 }
 
-/// Ground motion bumps with relative velocity; jump and fall entries are accidental falls from
-/// above.
+/// How a 'Mech came down into a hex: a landing excludes the lander from the occupants it
+/// counts, a fall has already placed it there.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StackingEntry {
-    Ground,
     Jump,
     Fall,
 }
@@ -41,6 +41,132 @@ const IMPACT_LEVELS: u8 = 1;
 /// Base to-hit number of an accidental fall from above (Total Warfare p. 152).
 const ACCIDENTAL_FALL_TARGET: i32 = 7;
 
+/// Most units of one side that may end movement in a hex (Total Warfare p. 57).
+const SIDE_LIMIT: usize = 2;
+
+/// Most units of all sides that may end movement in a hex (Total Warfare p. 57).
+const HEX_LIMIT: usize = 4;
+
+/// A unit standing in a hex, as the stacking limit counts it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct Occupant {
+    pub id: ObjectId,
+    /// Only one 'Mech may stand in a hex.
+    pub mech: bool,
+    pub team: i32,
+}
+
+/// The units on the ground in `position` other than `exclude`: 'Mechs and vehicles that are
+/// neither destroyed nor in the air.
+pub(super) fn occupants(
+    world: &World,
+    position: super::Position,
+    exclude: ObjectId,
+) -> Vec<Occupant> {
+    let mut found: Vec<_> = world
+        .btech
+        .constructed_units()
+        .iter()
+        .filter(|(id, unit)| {
+            **id != exclude
+                && unit.position() == Some(position)
+                && !unit.is_destroyed()
+                && !unit.airborne()
+        })
+        .map(|(&id, unit)| Occupant {
+            id,
+            mech: true,
+            team: unit.signature().team,
+        })
+        .collect();
+    found.extend(
+        world
+            .btech
+            .vehicles()
+            .iter()
+            .filter(|(id, vehicle)| {
+                **id != exclude
+                    && vehicle.position() == Some(position)
+                    && !vehicle.is_destroyed()
+                    && vehicle
+                        .vtol_flight()
+                        .is_none_or(|flight| flight.phase == super::VtolFlightPhase::Landed)
+            })
+            .map(|(&id, vehicle)| Occupant {
+                id,
+                mech: false,
+                team: vehicle.signature().team,
+            }),
+    );
+    found
+}
+
+/// Whether a unit of `team` (a 'Mech when `mech`) resting among `others` would exceed the
+/// stacking limit: a second 'Mech, a third unit of its side, or a fifth unit in all.
+pub(super) fn exceeds_limit(mech: bool, team: i32, others: &[Occupant]) -> bool {
+    let mechs = others.iter().filter(|other| other.mech).count() + usize::from(mech);
+    let side = others.iter().filter(|other| other.team == team).count() + 1;
+    mechs > 1 || side > SIDE_LIMIT || others.len() + 1 > HEX_LIMIT
+}
+
+/// Why a ground unit may not enter `hex`, if it may not: an enemy holds it, which ends the
+/// unit's movement at the edge (a charge at a unit there is the exception, resolved by the
+/// charge rules), or the unit means to stop and the hex is already full.
+pub(super) fn ground_entry_block(
+    world: &World,
+    id: ObjectId,
+    hex: super::HexCoordinate,
+    desired_speed: f64,
+) -> Option<String> {
+    let unit = world.btech.unit(id)?;
+    let (map, team) = crate::btech::with_unit!(unit, |unit| {
+        (unit.position()?.map, unit.signature().team)
+    });
+    let Ok((x, y)) = u16::try_from(hex.x).and_then(|x| u16::try_from(hex.y).map(|y| (x, y))) else {
+        return None;
+    };
+    let position = super::Position { map, x, y };
+    let others = occupants(world, position, id);
+    if others.is_empty() {
+        return None;
+    }
+    let charging = world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .and_then(|unit| unit.charge().target);
+    if others
+        .iter()
+        .any(|other| other.team != team && Some(other.id) != charging)
+    {
+        return Some("An enemy unit holds the hex ahead; movement stopped.".to_owned());
+    }
+    let mech = world.btech.constructed_units().contains_key(&id);
+    if desired_speed == 0.0 && exceeds_limit(mech, team, &others) {
+        return Some("The hex ahead is already full; you cannot stop there.".to_owned());
+    }
+    None
+}
+
+/// A unit may not end its movement in a hex that would exceed the stacking limit: refuse a
+/// stop ordered inside one.
+pub(super) fn require_stop_allowed(world: &World, id: ObjectId) -> Result<()> {
+    let Some(unit) = world.btech.unit(id) else {
+        return Ok(());
+    };
+    let (position, team) =
+        crate::btech::with_unit!(unit, |unit| { (unit.position(), unit.signature().team) });
+    let Some(position) = position else {
+        return Ok(());
+    };
+    let mech = world.btech.constructed_units().contains_key(&id);
+    ensure!(
+        !exceeds_limit(mech, team, &occupants(world, position, id)),
+        "This hex is already full; you cannot stop here."
+    );
+    Ok(())
+}
+
 /// Capture current physical inputs before an action changes equipment or posture.
 pub(super) fn physical_input(
     world: &World,
@@ -59,8 +185,8 @@ pub(super) fn physical_input(
     })
 }
 
-/// Resolve a crowded hex atomically. No collision leaves all state unchanged except target dice
-/// when a selected target has insufficient relative impact energy.
+/// Resolve a landing or fall into a crowded hex atomically. No collision leaves all state
+/// unchanged except the lander's dice when it had to pick a target.
 /// An empty notice stream means no collision or avoidance event occurred.
 pub fn resolve_stacking(
     world: &mut World,
@@ -105,13 +231,15 @@ pub(super) fn resolve_pure_with_feedback(
     Ok(notices)
 }
 
-/// Occupancy counts include shut-down bipeds but target selection requires running power.
+/// A 'Mech coming down where the stacking limit forbids it to rest lands on one of the
+/// 'Mechs there, chosen at random; a hex holding only vehicles has nothing the accidental
+/// fall rules resolve against.
 fn resolve_in_candidate(
     world: &mut World,
     id: ObjectId,
     input: StackingInput,
     fall: FallRules,
-    mut effects: Option<&mut StackingEffects>,
+    effects: Option<&mut StackingEffects>,
     private: &mut Vec<super::PilotNotice>,
 ) -> Result<Vec<Notice>> {
     ensure!(input.mass > 0, "Collision mass must be positive");
@@ -122,116 +250,30 @@ fn resolve_in_candidate(
         .context("Unit is unavailable")?;
     let position = unit.position().context("Collision requires placement")?;
     let team = unit.signature().team;
-    let occupants: Vec<_> = world
-        .btech
-        .constructed_units()
-        .iter()
-        .filter(|(other_id, other)| {
-            !(input.entry == StackingEntry::Jump && **other_id == id)
-                && other.position() == Some(position)
-                && !other.is_destroyed()
-                && !other.airborne()
-        })
-        .map(|(&other, unit)| (other, unit.signature().team == team))
-        .collect();
-    let friendly = occupants.iter().filter(|(_, same)| *same).count();
-    let (count, same_team) = if friendly > 2 {
-        (friendly, true)
-    } else if occupants.len() > 6 {
-        (occupants.len() - friendly, false)
-    } else {
+    let others = occupants(world, position, id);
+    if !exceeds_limit(true, team, &others) {
         return Ok(Vec::new());
+    }
+    let candidates: Vec<_> = others
+        .iter()
+        .filter(|other| other.mech)
+        .map(|other| other.id)
+        .collect();
+    let Ok(count) = u16::try_from(candidates.len()) else {
+        anyhow::bail!("Too many units in collision hex");
     };
-    let count = u16::try_from(count).context("Too many units in collision hex")?;
-    let mut choice = world
+    if count == 0 {
+        return Ok(Vec::new());
+    }
+    let choice = world
         .btech
         .constructed
         .get_mut(&id)
         .unwrap()
         .dice
-        .die(count)? as i32
-        - 1;
-    // The selection cursor decrements before testing, so the first candidate owns two slots.
-    let target = world
-        .btech
-        .constructed_units()
-        .iter()
-        .find_map(|(&other, unit)| {
-            if other == id
-                || unit.position() != Some(position)
-                || unit.power() != Power::Running
-                || unit.airborne()
-                || (unit.signature().team == team) != same_team
-            {
-                return None;
-            }
-            choice -= 1;
-            (choice <= 0).then_some(other)
-        });
-    let Some(target) = target else {
-        return Ok(Vec::new());
-    };
-    let mover = &world.btech.constructed_units()[&id];
-    let other = &world.btech.constructed_units()[&target];
-    if input.entry != StackingEntry::Ground {
-        return accidental_fall(world, id, target, input, fall, effects, private);
-    }
-    let motion = mover.motion().context("Collision requires motion")?;
-    let target_motion = other.motion().context("Collision target requires motion")?;
-    let damage = collision_damage(
-        input,
-        motion.speed,
-        target_motion.speed,
-        mover
-            .travel_heading()
-            .context("Collision requires heading")?
-            - other
-                .travel_heading()
-                .context("Collision target requires heading")?,
-    );
-    if damage <= 1 {
-        return Ok(Vec::new());
-    }
-    world.btech.constructed.get_mut(&id).unwrap().charge = Default::default();
-    let mut notices = vec![
-        Notice {
-            unit: id,
-            text: "You bump into another unit!".to_owned(),
-        },
-        Notice {
-            unit: target,
-            text: "Another unit bumps into you!".to_owned(),
-        },
-    ];
-    notices.extend(super::broadcast::interaction_notices(
-        world,
-        id,
-        target,
-        "bumps into",
-    ));
-    apply_collision(
-        world,
-        id,
-        target,
-        damage.max(1),
-        HitTable::Weapon,
-        fall,
-        &mut notices,
-        private,
-        effects.as_deref_mut(),
-    )?;
-    apply_collision(
-        world,
-        id,
-        id,
-        (damage / 5).max(1),
-        HitTable::Weapon,
-        fall,
-        &mut notices,
-        private,
-        effects,
-    )?;
-    Ok(notices)
+        .die(count)?;
+    let target = candidates[usize::from(choice - 1)];
+    accidental_fall(world, id, target, input, fall, effects, private)
 }
 
 /// A 'Mech coming down into a crowded hex (Total Warfare p. 152): roll 7 or better, modified
@@ -258,8 +300,8 @@ fn accidental_fall(
         + i32::from(super::aim::ground_physical_target_modifier(world, other))
         + i32::from(obscured.woods_density() + obscured.smoke_density());
     let mover = world.btech.constructed.get_mut(&id).unwrap();
-    mover.charge = Default::default();
     let roll = mover.dice.generic_roll();
+    // A miss leaves everyone standing where they are, a pending charge included.
     if i32::from(roll) < target_number {
         let mut notices = vec![
             Notice {
@@ -281,6 +323,7 @@ fn accidental_fall(
         ));
         return Ok(notices);
     }
+    world.btech.constructed.get_mut(&id).unwrap().charge = Default::default();
     let mut notices = vec![
         Notice {
             unit: id,
@@ -327,13 +370,6 @@ fn accidental_fall(
 fn accidental_fall_damage(mass: u32, levels: u8) -> u16 {
     let tons = mass.div_ceil(1024);
     u16::try_from(tons.div_ceil(10) * u32::from(levels.max(1))).unwrap_or(u16::MAX)
-}
-
-/// Relative velocity governs the ground bump's damage; high-energy impacts are compressed.
-fn collision_damage(input: StackingInput, speed: f64, other_speed: f64, heading_delta: f64) -> i64 {
-    let relative = speed - other_speed * heading_delta.to_radians().cos();
-    let raw = (relative.abs() / 10.75 * (f64::from(input.mass) / 1024.0 + 5.0) / 15.0) as i64;
-    if raw > 10 { 10 + (raw - 10) / 3 } else { raw }
 }
 
 /// Resolve groups in order so damage and pilot effects precede the next location roll.
@@ -422,18 +458,43 @@ fn with_toughness(world: &World, id: ObjectId, mut rules: FallRules) -> FallRule
 mod tests {
     use super::*;
 
-    /// Ground bumps use relative motion, fractional mass and compressed high-energy impacts.
+    /// One Mech a hex, two units a side, four in all (Total Warfare p. 57).
     #[test]
-    fn relative_velocity_and_current_mass_determine_bump_damage() {
-        let input = StackingInput {
-            entry: StackingEntry::Ground,
-            mass: 35 * 1024,
+    fn stacking_limit_counts_mechs_sides_and_totals() {
+        let occupant = |id: i64, mech: bool, team: i32| Occupant {
+            id: ObjectId(id),
+            mech,
+            team,
         };
-        assert_eq!(collision_damage(input, 21.5, 21.5, 0.0), 0);
-        assert_eq!(collision_damage(input, 21.5, 21.5, 180.0), 10);
-        assert_eq!(collision_damage(input, -21.5, 21.5, 0.0), 10);
-        assert_eq!(collision_damage(input, 21.5, 21.5, 90.0), 5);
-        assert_eq!(collision_damage(input, 118.25, 0.0, 0.0), 16);
+        assert!(!exceeds_limit(true, 0, &[]));
+        assert!(exceeds_limit(true, 0, &[occupant(1, true, 0)]));
+        assert!(exceeds_limit(true, 0, &[occupant(1, true, 1)]));
+        assert!(!exceeds_limit(true, 0, &[occupant(1, false, 0)]));
+        assert!(!exceeds_limit(false, 0, &[occupant(1, true, 0)]));
+        assert!(exceeds_limit(
+            false,
+            0,
+            &[occupant(1, false, 0), occupant(2, false, 0)]
+        ));
+        assert!(!exceeds_limit(
+            false,
+            0,
+            &[
+                occupant(1, false, 0),
+                occupant(2, false, 1),
+                occupant(3, false, 1)
+            ]
+        ));
+        assert!(exceeds_limit(
+            false,
+            0,
+            &[
+                occupant(1, false, 1),
+                occupant(2, false, 1),
+                occupant(3, false, 2),
+                occupant(4, false, 2)
+            ]
+        ));
     }
 
     /// An accidental fall deals tonnage over ten, rounded up, per level fallen.

@@ -85,12 +85,14 @@ Mech that falls in one, or jumps into a swamp, is stuck at once. A stuck unit
 cannot move or turn, is two easier to hit, and rolls again to pull free at the
 start of every turn. Jumping out always works. Hovercraft never bog down.
 
-Crowded hexes can cause collisions when you enter them. More than two friendly
-units, or more than six total units, can trigger the configured collision rules.
-Ground damage depends on current mass and relative speed; avoidance rules can
-stop you or cause a fall. Landing among three friendly ground units can also
-trigger crowding; landing impacts use current mass.
-Maps with the `no_stacking` flag have no crowding collisions.
+Stacking follows Total Warfare p. 57: a hex may hold at most two units a side and
+four in all, only one of them a Mech. You may drive or walk through a hex your
+friends hold, but you cannot stop in one that is already full, and you stop at the
+edge of any hex an enemy holds (a charge at that enemy goes through). A Mech that
+lands or falls into a hex another Mech holds makes an accidental fall from above
+(TW p. 152): roll 7 or better, modified for the target's movement and cover, to
+come down on it for your tonnage over ten per level fallen, then take your own
+fall onto your back; a miss leaves everyone standing.
 
 Water depth affects piloting checks. Entering water a level or more deep requires a
 piloting check, one easier at depth one, unmodified at depth two and one harder

@@ -191,8 +191,11 @@ fn ice_seed(world: &mut World, id: ObjectId, fracture: bool, avoidance_first: bo
             if avoidance_first {
                 dice.two_d6();
             }
-            // Ice that holds is followed by a +0 footing roll, which these seeds pass.
-            (dice.d6() == 1) == fracture && (fracture || dice.two_d6() >= 11)
+            // Ice that holds is followed by a +0 footing roll, which these seeds pass, and a
+            // landing beside the neighbour on the sheet misses its accidental fall from above.
+            (dice.d6() == 1) == fracture
+                && (fracture
+                    || (dice.two_d6() >= 11 && dice.die(1).unwrap() == 1 && dice.two_d6() < 7))
         })
         .unwrap();
     world
@@ -201,13 +204,16 @@ fn ice_seed(world: &mut World, id: ObjectId, fracture: bool, avoidance_first: bo
         .unwrap();
 }
 
-/// Seed the dice for a jump landing on ice: the sheet breaks on a four or better, and ice that
-/// holds is followed by a +4 footing roll these seeds pass.
+/// Seed the dice for a jump landing on ice: the sheet breaks on a four or better, ice that
+/// holds is followed by a +4 footing roll these seeds pass, and the landing beside the
+/// neighbour on the sheet misses its accidental fall from above (Total Warfare p. 152).
 fn ice_landing_seed(world: &mut World, id: ObjectId, fracture: bool) {
     let seed = (0..=255)
         .find(|seed| {
             let mut dice = Dice::seeded([*seed; 32]);
-            (dice.d6() <= 3) == fracture && (fracture || dice.two_d6() >= 11)
+            (dice.d6() <= 3) == fracture
+                && (fracture
+                    || (dice.two_d6() >= 11 && dice.die(1).unwrap() == 1 && dice.two_d6() < 7))
         })
         .unwrap();
     world
@@ -1372,8 +1378,19 @@ async fn jumps_are_refused_beneath_a_bridge_deck() {
 async fn bridge_deck_jumps_and_early_landings_share_native_lua_state() {
     for deck in [0, 3, 9] {
         for early in [false, true] {
-            let (_dir, config, world, _map, units) = fixture_surface(Terrain::Bridge, deck).await;
+            let (_dir, config, mut world, _map, units) =
+                fixture_surface(Terrain::Bridge, deck).await;
             let id = units[0];
+            // An early landing comes down in the starting hex, which only one 'Mech may hold.
+            world
+                .btech
+                .rewrite_unit_record(units[1], |record| {
+                    record["position"]["x"] = 0.into();
+                    record["position"]["y"] = 0.into();
+                    record["motion"]["point"] =
+                        serde_json::to_value(HexCoordinate { x: 0, y: 0 }.center()).unwrap();
+                })
+                .unwrap();
             let native = Scripts::new(
                 &config,
                 std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
@@ -3237,9 +3254,12 @@ async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
                     .clone(),
             )
             .unwrap();
-            // A landing breaks ice on a four or better; ice that holds takes a footing roll.
+            // A landing breaks ice on a four or better; ice that holds takes a footing roll, and
+            // the landing beside the neighbour picks it and misses its accidental fall from above.
             assert!(dice.d6() > 3);
             dice.two_d6();
+            assert_eq!(dice.die(1).unwrap(), 1);
+            assert!(dice.two_d6() < 7);
             assert_eq!(
                 serde_json::to_value(unit).unwrap()["dice"],
                 serde_json::to_value(dice).unwrap()

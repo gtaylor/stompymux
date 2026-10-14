@@ -3591,6 +3591,19 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
     world.btech = serde_json::from_value(state).unwrap();
     place_battle_unit(&mut world, target, map, 5, 3).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
+    // Landing in the target's hex is an accidental fall from above (Total Warfare p. 152);
+    // these dice pick the shut-down target (7 less 4 for an immobile target) and miss with a
+    // 2, leaving the jumper standing beside it.
+    let miss = (0..=255)
+        .find(|seed| {
+            let mut dice = stompymux_rs::Dice::seeded([*seed; 32]);
+            dice.die(1).unwrap() == 1 && dice.two_d6() < 3
+        })
+        .unwrap();
+    world
+        .btech
+        .set_unit_dice(id, stompymux_rs::Dice::seeded([miss; 32]))
+        .unwrap();
     let rules = MovementRules {
         fall: jump_rules(),
         ..MovementRules::STANDARD

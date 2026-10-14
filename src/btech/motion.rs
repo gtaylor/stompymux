@@ -320,6 +320,9 @@ fn set_speed_by_actor(
         "Speed exceeds unit limits"
     );
     super::motion_controls::require_reverse_allowed(world, id, speed)?;
+    if speed == 0.0 && matches!(actor, super::combat_operator::ControlActor::Player(_)) {
+        super::stacking::require_stop_allowed(world, id)?;
+    }
     ensure!(
         unit.stun_remaining() == 0 || !running,
         "You cannot move faster than cruise speed while stunned!"
@@ -577,7 +580,7 @@ fn advance_motion_inner(
     let mut charges = Vec::new();
     let mut surface_breaks = Vec::new();
     let mut experience_messages = Vec::new();
-    let mut collisions = super::stacking::StackingEffects::default();
+    let collisions = super::stacking::StackingEffects::default();
     for id in ids {
         let unit = &world.btech.constructed_units()[&id];
         if unit.power() != Power::Running
@@ -696,26 +699,6 @@ fn advance_motion_inner(
                 id,
                 rules.fall.extended_piloting,
             )?);
-        }
-        let unit = &world.btech.constructed_units()[&id];
-        if !unit.is_destroyed() && unit.position() != Some(position) && !unit.hex_sync_pending() {
-            let input = super::StackingInput {
-                entry: super::StackingEntry::Ground,
-                mass: unit.effective_mass()?,
-            };
-            let events = if character {
-                super::stacking::resolve_in_action(
-                    world,
-                    id,
-                    input,
-                    rules.fall,
-                    &mut collisions,
-                    (&mut pilot_notices, notices.len()),
-                )?
-            } else {
-                super::resolve_stacking(world, id, input, rules.fall)?
-            };
-            notices.extend(events);
         }
         if motion.speed != 0.0 {
             notices.extend(super::charge_tracking::finish_update(
@@ -936,7 +919,9 @@ fn resolve_ground_segment(
             {
                 Some("You cannot run into the water!".to_owned())
             } else {
-                None
+                // Stacking (Total Warfare p. 57): an enemy in the hex ends movement at its
+                // edge, and a unit meaning to stop may not enter a hex already full.
+                super::stacking::ground_entry_block(world, id, hex, motion.desired_speed)
             };
             // Backing across a level change takes the reverse-slope check, a kept house rule:
             // Total Warfare p. 49 forbids backward level changes outright.

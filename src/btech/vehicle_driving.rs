@@ -283,7 +283,9 @@ pub(super) fn advance(
                     }
                     .to_owned(),
                 ),
-                None => None,
+                // Stacking (Total Warfare p. 57) stops a drive at the edge of an enemy hex or
+                // of a full hex it meant to stop in.
+                None => super::stacking::ground_entry_block(world, id, hex, next.desired_speed),
             };
             let stopping = stop.is_some();
             entries.push(VehicleStep {
@@ -650,28 +652,6 @@ pub(super) fn advance(
         let (notice, experience) = super::building_step::entered(world, id, position)?;
         report.notices.extend(notice);
         report.experience_messages.extend(experience);
-        stacking_entry(world, id, position, rules, character, &mut report)?;
     }
     Ok(report)
-}
-
-/// Hook for the shared stacking check after a vehicle's movement this second: Total Warfare
-/// p. 57 counts vehicles toward the two-units-per-side limit and ends a vehicle's movement
-/// when it enters a hex holding an enemy unit. The stacking module resolves those rules for
-/// 'Mechs and vehicles alike; this hook hands it every vehicle that has entered a new hex and
-/// is still on the field, and merges its collision effects into the movement report.
-fn stacking_entry(
-    world: &mut World,
-    id: ObjectId,
-    previous: super::Position,
-    rules: MovementRules,
-    character: bool,
-    report: &mut super::movement_report::MovementReport,
-) -> Result<()> {
-    let vehicle = &world.btech.vehicles()[&id];
-    if vehicle.is_destroyed() || vehicle.position() == Some(previous) {
-        return Ok(());
-    }
-    let _ = (rules, character, &mut report.stacking);
-    Ok(())
 }
