@@ -4,7 +4,7 @@ use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// All three host actions expose the initial check and use one diagnostic publication path.
+/// The bootlegger and stand actions expose their initial check; a drop to the ground has none.
 fn attempt(
     scripts: &Scripts,
     config: &Config,
@@ -15,7 +15,7 @@ fn attempt(
         0 => Ok(Some(
             battle_bootlegger(scripts, config, unit, ObjectId(1), "right")?.check,
         )),
-        1 => Ok(prone_action(scripts, config, unit, ObjectId(1))?.check),
+        1 => prone_action(scripts, config, unit, ObjectId(1)).map(|_| None),
         _ => Ok(Some(
             begin_battle_stand_action(
                 scripts,
@@ -35,7 +35,8 @@ fn attempt(
 async fn maneuver_checks_publish_diagnostics_at_the_roll_boundary() {
     for action in 0..3 {
         for automatic in [false, true] {
-            if automatic && action == 0 {
+            // A bootlegger turn always rolls; a drop to the ground never does (TW p. 49).
+            if automatic == (action == 0) && action != 2 {
                 continue;
             }
             let template = &firing::templates()[usize::from(automatic && action == 2)];

@@ -258,13 +258,15 @@ Saved timers keep their remaining seconds; offline time does not advance repairs
 
 
 Use `stand check` to inspect your piloting target while prone. `stand` attempts to
-get up. `stand careful` adds a -2 modifier when enabled, but takes twice as long;
-a failed careful attempt takes at least thirty seconds to recover. If your base
-target exceeds twelve, use `stand anyway` to attempt it despite certain failure.
-Failed attempts cause another fall. Successful attempts make you upright but block
-forward or reverse movement until the stand timer finishes. You can use `heading`
-to turn while prone, getting up or recovering from a failed attempt. Dry-ground
-tactical units can stand on land or in water while at least one leg remains usable.
+get up. `stand careful` spends the whole turn standing for a -2 modifier (Tactical
+Operations p. 20): it takes twice as long, and a failed careful attempt takes at least
+thirty seconds to recover. If your base target exceeds twelve, use `stand anyway` to
+attempt it despite certain failure. Every attempt adds one point of heat (Total Warfare
+p. 159). Failed attempts cause another fall. Successful attempts make you upright but
+block forward or reverse movement until the stand timer finishes. You can use `heading`
+to turn while prone, getting up or recovering from a failed attempt. A Mech can stand
+missing one leg, one arm and one leg, or both arms, but not one leg and both arms, and
+not without walking MP (TW pp. 50-51); it can stand on land or in water.
 Ice and bridge standing still require their terrain rules. `stand` takes no switches.
 
 
@@ -1383,12 +1385,11 @@ Use `prone` in a running biped or quad with its assigned pilot in the cockpit.
 The command stops your travel, centers your torso, restores flipped arms and
 cancels hull-down posture. You cannot use it while airborne or trying to stand.
 
-At up to one-third of effective maximum speed, the drop requires no control
-roll or fall damage. Faster movement requires a control check; above two-thirds
-of effective maximum speed the check is two points harder and failure causes a
-more severe fall. Reverse travel uses the same absolute-speed thresholds.
-Dropping into water can flood exposed compartments.
-The final ground contact also activates stepping mines.
+Dropping to the ground is a deliberate 1 MP action (Total Warfare p. 49): it
+needs no control roll, causes no damage and adds no heat, whatever speed you were
+moving at, forward or backward, and you keep your facing. You may not drop within
+thirty seconds of launching a jump. Dropping into water can flood exposed
+compartments, and the final ground contact activates stepping mines.
 
 Firing when down adds +2 to your weapon attacks (Total Warfare p. 113); a biped
 propped on its only remaining arm takes +3 instead (Tactical Operations p. 83).

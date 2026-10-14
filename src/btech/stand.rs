@@ -153,7 +153,10 @@ fn begin_stand_inner(
     world.attempt(|world| {
         let mut notices = super::broadcast::observer_notices(world, id, "attempts to stand up.");
         let mut pilot_notices = Vec::new();
-        world.btech.constructed.get_mut(&id).unwrap().posture = Posture::Standing;
+        let unit = world.btech.constructed.get_mut(&id).unwrap();
+        unit.posture = Posture::Standing;
+        // Each attempt to stand creates one point of heat (Total Warfare p. 159).
+        unit.heat.stored += 1.0;
         let check = super::piloting::roll_standing(
             world,
             id,

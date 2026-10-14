@@ -94,6 +94,10 @@ pub struct Mech {
     /// Levels climbed or descended into the current hex, charged while crossing it.
     #[serde(default)]
     pub(super) level_entry: Option<super::LevelEntry>,
+    /// Simulation time of the last jump launched; a Mech may not drop prone in the same
+    /// turn it jumps (Total Warfare p. 49).
+    #[serde(default)]
+    pub(super) last_jump_launch: Option<i64>,
     #[serde(default)]
     pub(super) masc: super::BoosterState,
     /// Shared identity of a C3i network; peers are derived from world membership.
@@ -362,6 +366,7 @@ super::saved_parts::saved_parts!(Mech {
         slick,
         turn_movement,
         level_entry,
+        last_jump_launch,
         c3i_network,
         c3_network,
         network_automation,
@@ -917,6 +922,7 @@ impl Mech {
             slick: Default::default(),
             turn_movement: Default::default(),
             level_entry: None,
+            last_jump_launch: None,
             masc: Default::default(),
             c3i_network: None,
             c3_network: None,

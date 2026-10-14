@@ -28,12 +28,26 @@ impl Mech {
 
     /// Validate physical support and return whether standing needs a control roll.
     /// Pilot, power, posture and retry timers remain the stand action's responsibility.
+    /// A Mech may stand missing one leg, or one arm and one leg, or both arms, but not
+    /// one leg and both arms, and never without walking MP (Total Warfare pp. 50-51).
     pub fn stand_requires_roll(&self) -> Result<bool> {
         let chassis = self.chassis();
         let missing = self.unavailable_legs();
         ensure!(missing < chassis.legs().len(), "No legs to stand on");
         ensure!(missing <= 2, "You'd be far too unstable!");
         ensure!(self.gyro_damage() < 2, "Cannot stand with a destroyed gyro");
+        let arms_gone = chassis == MechChassis::Biped
+            && [super::MechSection::LeftArm, super::MechSection::RightArm]
+                .iter()
+                .all(|&arm| self.sections()[&arm].internal == 0);
+        ensure!(
+            !(missing == 1 && arms_gone),
+            "Missing a leg and both arms, you cannot stand"
+        );
+        ensure!(
+            self.mobility().walking_speed > 0.0,
+            "You have no movement left to stand with"
+        );
         Ok(chassis != MechChassis::Quad || missing != 0)
     }
 

@@ -370,6 +370,7 @@ fn launch(
     } = prepare_jump(world, id, request)?;
     motion.speed = 0.0;
     motion.desired_heading = motion.heading;
+    let now = world.btech.simulation_time();
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.motion = Some(motion);
     unit.ground_elevation = None;
@@ -377,6 +378,7 @@ fn launch(
     unit.last_jump = last_jump;
     // Jumping heat is built up by the jump as a whole (Total Warfare p. 53).
     unit.heat.stored += heat as f64;
+    unit.last_jump_launch = Some(now);
     // Jump jets lift a 'Mech clear of any ground it was stuck in.
     unit.bogged_down = false;
     unit.slick.reset();

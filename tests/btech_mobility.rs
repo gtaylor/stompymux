@@ -169,7 +169,12 @@ fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
             serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
         assert_eq!(restored.mobility(), damaged.mobility());
         assert!(!restored.airborne_support_lost());
-        assert!(!restored.stand_requires_roll().unwrap());
+        // A quad needs no roll to stand, but one left without walking MP cannot try.
+        if count == 1 {
+            assert!(!restored.stand_requires_roll().unwrap());
+        } else {
+            assert!(restored.stand_requires_roll().is_err());
+        }
         encoded["lost_criticals"].as_array_mut().unwrap().extend([
             serde_json::to_value(CriticalLocation {
                 section: Section::CenterTorso,
@@ -294,7 +299,15 @@ fn biped_support_and_quad_gyro_standing_rules() {
             .unwrap();
     }
     assert!(biped.airborne_support_lost());
-    assert!(biped.stand_requires_roll().unwrap());
+    // Both hips gone leaves no walking MP to stand with (Total Warfare pp. 50 and 127).
+    assert!(
+        biped
+            .stand_requires_roll()
+            .unwrap_err()
+            .to_string()
+            .contains("no movement")
+    );
+    // With one leg gone the surviving hip no longer counts against it: walk 1, roll at +5.
     biped.damage_phase(Section::LeftLeg, 100, Phase::Internal);
     assert!(biped.validate_charge_support().is_err());
     assert!(biped.stand_requires_roll().unwrap());

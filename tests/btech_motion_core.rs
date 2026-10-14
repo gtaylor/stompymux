@@ -3078,6 +3078,47 @@ async fn fall_gravity_only_reduces_damage() {
     }
 }
 
+/// Each attempt to stand adds a point of heat (Total Warfare p. 159), and a Mech missing a
+/// leg and both arms cannot attempt to stand at all (TW p. 51).
+#[tokio::test]
+async fn stand_attempts_add_heat_and_need_a_leg_or_an_arm_to_push_with() {
+    use stompymux_rs::{
+        DamagePhase as P, MechSection as S, StandMode, apply_damage_phase, begin_battle_stand,
+    };
+    let (_dir, _config, mut world, id) = stand_fixture().await;
+    let stored = world.btech.constructed_units()[&id].heat().stored;
+    let attempt =
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Anyway, fall_rules()).unwrap();
+    assert!(attempt.timer.is_some());
+    assert_eq!(
+        world.btech.constructed_units()[&id].heat().stored,
+        stored + 1.0
+    );
+    for (sections, allowed) in [
+        (vec![S::LeftArm, S::RightArm], true),
+        (vec![S::LeftLeg, S::LeftArm], true),
+        (vec![S::LeftLeg, S::LeftArm, S::RightArm], false),
+    ] {
+        let (_dir, _config, mut world, id) = stand_fixture().await;
+        for section in sections {
+            apply_damage_phase(&mut world, id, section, 100, P::Internal).unwrap();
+        }
+        let before = world.btech.clone();
+        let result =
+            begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Anyway, fall_rules());
+        assert_eq!(result.is_ok(), allowed);
+        if !allowed {
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Missing a leg and both arms")
+            );
+            assert_eq!(world.btech, before);
+        }
+    }
+}
+
 #[tokio::test]
 async fn successful_stand_is_upright_immediately_and_finishes_after_durable_delay() {
     use stompymux_rs::{
