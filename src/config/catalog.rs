@@ -136,12 +136,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.nofusionvtolfuel",
-        legacy: "btech_nofusionvtolfuel",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.xploss",
         legacy: "btech_xploss",
         kind: "i64",
@@ -222,12 +216,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.maxtechtime",
         legacy: "btech_maxtechtime",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.vtol_ice_causes_fire",
-        legacy: "btech_vtol_ice_causes_fire",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },

@@ -59,7 +59,7 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
     for _ in 0..30 {
         advance_battle_units(&mut base, 0, true);
     }
-    begin_battle_vtol_takeoff(&mut base, id, ObjectId(2), 0, false).unwrap();
+    begin_battle_vtol_takeoff(&mut base, id, ObjectId(2), 0).unwrap();
     advance_battle_motion(&mut base, MovementRules::STANDARD).unwrap();
     set_battle_character(
         &mut base,
@@ -93,63 +93,12 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
     (dir, config, base, id, map)
 }
 
-/// Obstacle rolls stay between warning and outcome and belong only to the assigned pilot.
-fn assert_obstacle_feedback(
-    output: &[(ObjectId, String)],
-    roll: Option<u8>,
-    warning: &str,
-    nested: &[PilotNotice],
-) {
-    let is_roll = |text: &str| {
-        text.starts_with("You make a piloting") || text.starts_with("Modified Pilot Skill:")
-    };
-    let feedback: Vec<_> = output.iter().filter(|(_, text)| is_roll(text)).collect();
-    let initial = usize::from(roll.is_some()) * 2;
-    assert_eq!(feedback.len(), initial + nested.len());
-    assert_eq!(
-        feedback[initial..]
-            .iter()
-            .map(|(who, text)| (*who, text.as_str()))
-            .collect::<Vec<_>>(),
-        nested
-            .iter()
-            .map(|notice| (notice.pilot, notice.text.as_str()))
-            .collect::<Vec<_>>()
-    );
-    assert!(feedback.iter().all(|(who, _)| *who == ObjectId(2)));
-    let Some(roll) = roll else {
-        return;
-    };
-    let pilot: Vec<_> = output
-        .iter()
-        .filter(|(who, _)| *who == ObjectId(2))
-        .map(|(_, text)| text.as_str())
-        .collect();
-    let start = pilot.iter().position(|text| *text == warning).unwrap();
-    assert_eq!(pilot[start + 1], "You make a piloting skill roll!");
-    assert!(pilot[start + 2].starts_with("Modified Pilot Skill: BTH "));
-    assert!(pilot[start + 2].ends_with(&format!("\tRoll: {roll}")));
-    assert!(
-        output
-            .iter()
-            .any(|(who, text)| *who == ObjectId(1) && text == warning)
-    );
-}
-
-/// Elevation collisions retain rollback terrain, pilotless admission and signed crew modifiers.
+/// Flying into terrain crashes the VTOL in the hex it entered (Total Warfare p. 54), with or
+/// without a pilot and with no roll to avoid it; the crash damage follows TW p. 68, and the
+/// VTOL has landed on the hilltop when it comes through still able to fly.
 #[tokio::test]
-async fn elevation_collision_rolls_back_and_preserves_signed_crash_severity() {
-    // Previous terrain, rolled sum, assigned pilot, safe landing, signed crash severity.
-    for (tile, roll, assigned, safe, _levels) in [
-        (".0", 12, true, true, 1),
-        (".0", 2, true, false, 1),
-        (".1", 2, true, false, 0),
-        (".6", 7, true, false, -5),
-        ("%0", 12, true, false, 1),
-        ("%0", 2, false, true, 1),
-        ("/3", 12, true, false, -2),
-        ("~3", 12, true, false, 4),
-    ] {
+async fn flying_into_terrain_crashes_in_the_hex_entered_without_a_roll() {
+    for (tile, assigned) in [(".0", true), (".0", false), ("~3", true), ("%0", true)] {
         let (_dir, config, mut world, id, map) =
             obstacle_fixture(&format!("1 3\n.0\n^9\n{tile}\n")).await;
         world
@@ -159,9 +108,6 @@ async fn elevation_collision_rolls_back_and_preserves_signed_crash_severity() {
             .flags
             .insert(Flag::Connected);
         let previous = world.btech.maps()[&map].base_hex(0, 2).unwrap();
-        let seed = (0..=255)
-            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
-            .unwrap();
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut encoded["vehicles"][id.0.to_string()];
         if !assigned {
@@ -171,7 +117,6 @@ async fn elevation_collision_rolls_back_and_preserves_signed_crash_severity() {
         unit["motion"]["desired_speed"] = 129.0.into();
         unit["vtol_flight"]["altitude"] = f64::from(previous.surface_height().max(0) + 1).into();
         unit["vtol_flight"]["vertical_speed"] = 0.0.into();
-        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         encoded["maps"][map.0.to_string()]["movement_modifier"] = 1000.into();
         world.btech = serde_json::from_value(encoded).unwrap();
         let before = world.clone();
@@ -184,72 +129,44 @@ async fn elevation_collision_rolls_back_and_preserves_signed_crash_severity() {
             .flags
             .insert(Flag::Connected);
         let outcome =
-            advance_battle_vtol_environment(&mut world, id, false, MovementRules::STANDARD.fall)
-                .unwrap();
+            advance_battle_vtol_environment(&mut world, id, MovementRules::STANDARD.fall).unwrap();
         assert_eq!(
-            advance_battle_vtol_environment(&mut replay, id, false, MovementRules::STANDARD.fall)
-                .unwrap(),
+            advance_battle_vtol_environment(&mut replay, id, MovementRules::STANDARD.fall).unwrap(),
             outcome
         );
         assert_eq!(replay.btech, world.btech);
-        let VtolEnvironment::Obstacle {
-            path,
-            fall,
-            notices,
-            ..
-        } = outcome
-        else {
-            panic!("Expected elevation obstacle: {tile}");
+        let VtolEnvironment::Crashed { path, fall } = outcome else {
+            panic!("Expected a crash into the hill: {tile}");
         };
         assert!(matches!(
             path,
             VtolPath::Contact {
+                hex: HexCoordinate { x: 0, y: 1 },
                 contact: VtolSurfaceContact::Elevation,
                 ..
             }
         ));
-        assert_eq!(fall.is_none(), safe, "{tile}");
-        let nested = fall
-            .as_ref()
-            .map(|fall| fall.feedback.pilot_notices.clone())
-            .unwrap_or_default();
         let unit = &world.btech.vehicles()[&id];
-        assert_eq!(unit.position(), before.btech.vehicles()[&id].position());
+        // Twelve hexes of speed times 25 tons over ten (TW p. 68); the crew makes no roll.
+        assert_eq!(fall.damage, 36, "{tile}");
+        assert!(fall.avoidance.is_none(), "{tile}");
+        assert_eq!(unit.position().unwrap().y, 1);
         assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
-        assert_eq!(
-            unit.vtol_flight().unwrap().altitude,
-            f64::from(previous.surface_height())
-        );
+        assert_eq!(unit.vtol_flight().unwrap().altitude, 9.0);
         assert_eq!(unit.motion().unwrap().speed, 0.0);
-        assert!(
-            notices
-                .iter()
-                .any(|notice| notice.text == "You attempt to fly over elevation that is too high!")
-        );
-        if safe {
-            assert_eq!(unit.motion().unwrap().desired_speed, 129.0);
-            assert_eq!(unit.sections(), before.btech.vehicles()[&id].sections());
+        let wrecked = fall
+            .feedback
+            .notices
+            .iter()
+            .any(|notice| notice.text == "[fg=red bold]The VTOL is wrecked.[reset]");
+        assert_eq!(unit.is_destroyed(), wrecked, "{tile}");
+        if !wrecked {
+            assert!(!unit.rotor_destroyed() && !unit.immobilized());
             assert!(
-                notices
+                fall.feedback
+                    .notices
                     .iter()
-                    .any(|notice| notice.text == "You land safely.")
-            );
-            if !assigned {
-                assert_eq!(
-                    serde_json::to_value(unit).unwrap()["dice"],
-                    serde_json::to_value(&before.btech.vehicles()[&id]).unwrap()["dice"]
-                );
-            }
-        } else {
-            let fall = fall.unwrap();
-            assert!(fall.avoidance.is_none(), "{tile}");
-            assert!(unit.is_destroyed());
-            assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
-            assert!(
-                notices
-                    .iter()
-                    .any(|notice| notice.text
-                        == "You crash into the obstacle and fall from the sky!")
+                    .any(|notice| notice.text.contains("still flyable"))
             );
         }
         world.validate(&config).unwrap();
@@ -260,135 +177,87 @@ async fn elevation_collision_rolls_back_and_preserves_signed_crash_severity() {
         );
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(before))).unwrap();
         advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD).unwrap();
-        let messages: Vec<_> = scripts
+        let output = scripts
             .drain_outbox()
             .into_iter()
-            .map(|(who, document)| (who, text::plain(document.source())))
-            .collect();
-        assert_obstacle_feedback(
-            &messages,
-            assigned.then_some(roll),
-            "You attempt to fly over elevation that is too high!",
-            &nested,
-        );
-        let output = messages
-            .into_iter()
-            .map(|(_, text)| text)
+            .map(|(_, document)| text::plain(document.source()))
             .collect::<Vec<_>>()
             .join("\n");
         assert!(
-            output.contains("You attempt to fly over elevation that is too high!"),
+            output.contains("CRASH! You fly straight into the terrain!"),
             "{tile}: {output}"
         );
-        assert!(
-            output.contains(if safe {
-                "You land safely."
-            } else {
-                "You crash into the obstacle and fall from the sky!"
-            }),
-            "{tile}: {output}"
-        );
-        assert!(!output.contains("CRASH! You smash your toy into the ground!"));
+        assert!(!output.contains("piloting skill roll"), "{tile}: {output}");
         scripts.world().validate(&config).unwrap();
     }
 }
 
-/// Connected-pilot forest avoidance and crashes use deterministic shared checks and persistence.
+/// Entering a woods hex at or below the treetops crashes the VTOL there, and the trees are no
+/// place to land, so the wreck is a write-off (Total Warfare pp. 54 and 68).
 #[tokio::test]
-async fn forest_entry_replays_pilot_avoidance_and_one_level_crashes() {
+async fn flying_into_the_treetops_crashes_in_the_woods() {
     let (_dir, config, base, id, map) = obstacle_fixture("1 3\n.0\n`0\n.0\n").await;
-    // The connected pilot has target six: the forest's +5 makes a ten fail.
-    for (connected, roll, safe) in [
-        (true, 12, true),
-        (true, 10, false),
-        (true, 2, false),
-        (false, 12, false),
-    ] {
+    for (altitude, crashes) in [(1.0, true), (2.0, true), (3.0, false)] {
         let mut world = base.clone();
-        let flags = &mut world.objects.get_mut(&ObjectId(2)).unwrap().flags;
-        if connected {
-            flags.insert(Flag::Connected);
-        } else {
-            flags.remove(Flag::Connected);
-        }
-        let seed = (0..=255)
-            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
-            .unwrap();
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         let unit = &mut encoded["vehicles"][id.0.to_string()];
         unit["motion"]["speed"] = 129.0.into();
         unit["motion"]["desired_speed"] = 129.0.into();
-        unit["vtol_flight"]["altitude"] = 1.0.into();
+        unit["vtol_flight"]["altitude"] = altitude.into();
         unit["vtol_flight"]["vertical_speed"] = 0.0.into();
-        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
         encoded["maps"][map.0.to_string()]["movement_modifier"] = 1000.into();
         world.btech = serde_json::from_value(encoded).unwrap();
         let before = world.clone();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut replay = persistence::load(&config.database()).await.unwrap();
-        // Connections are session state, so restore the same pilot presence for replay.
-        if connected {
-            replay
-                .objects
-                .get_mut(&ObjectId(2))
-                .unwrap()
-                .flags
-                .insert(Flag::Connected);
-        }
         let rules = MovementRules::STANDARD.fall;
-        let outcome = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
+        let outcome = advance_battle_vtol_environment(&mut world, id, rules).unwrap();
         assert_eq!(
-            advance_battle_vtol_environment(&mut replay, id, false, rules).unwrap(),
+            advance_battle_vtol_environment(&mut replay, id, rules).unwrap(),
             outcome
         );
         assert_eq!(world.btech, replay.btech);
-        let VtolEnvironment::Obstacle { fall, notices, .. } = outcome else {
-            panic!("Expected forest collision");
-        };
-        assert_eq!(fall.is_none(), safe);
-        let nested = fall
-            .as_ref()
-            .map(|fall| fall.feedback.pilot_notices.clone())
-            .unwrap_or_default();
-        assert!(
-            notices
-                .iter()
-                .any(|notice| notice.text == "You go where no flying thing has ever gone before..")
-        );
         let unit = &world.btech.vehicles()[&id];
+        if !crashes {
+            assert!(
+                matches!(
+                    outcome,
+                    VtolEnvironment::Movement { .. } | VtolEnvironment::Boundary { .. }
+                ),
+                "{altitude}: {outcome:?}"
+            );
+            assert_eq!(unit.position().unwrap().y, 0);
+            assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Airborne);
+            continue;
+        }
+        let VtolEnvironment::Crashed { path, fall } = outcome else {
+            panic!("Expected a crash into the trees at {altitude}");
+        };
+        assert!(matches!(
+            path,
+            VtolPath::Contact {
+                hex: HexCoordinate { x: 0, y: 1 },
+                contact: VtolSurfaceContact::Forest,
+                ..
+            }
+        ));
+        // Crash damage is the hexes covered times tonnage/10 (TW p. 68): 129 kph is 12 MP.
+        assert_eq!(
+            fall.damage,
+            12 * u32::from(unit.definition().tons).div_ceil(10)
+        );
+        assert!(fall.avoidance.is_none());
+        assert_eq!(unit.position().unwrap().y, 1);
+        assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
         assert_eq!(unit.motion().unwrap().speed, 0.0);
         assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
-        if safe {
-            assert!(
-                notices
-                    .iter()
-                    .any(|notice| notice.text == "You stop in time!")
-            );
-            assert_eq!(unit.position(), before.btech.vehicles()[&id].position());
-            assert_eq!(unit.vtol_flight().unwrap().altitude, 0.0);
-            assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Airborne);
-            assert_eq!(unit.sections(), before.btech.vehicles()[&id].sections());
-        } else {
-            assert!(
-                notices
-                    .iter()
-                    .any(|notice| notice.text == "Eww.. You've a bad feeling about this.")
-            );
-            // Crash damage is the hexes covered times tonnage/10 (TW p. 68): 129 kph is 12 MP.
-            assert_eq!(
-                fall.as_ref().unwrap().damage,
-                12 * u32::from(unit.definition().tons).div_ceil(10)
-            );
-            assert!(fall.as_ref().unwrap().avoidance.is_none());
-            assert_eq!(unit.position().unwrap().y, 1);
-            assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
-            assert!(unit.immobilized() && unit.rotor_destroyed() && unit.is_destroyed());
-            assert!(
-                notices
-                    .iter()
-                    .any(|notice| notice.text == "[fg=red bold]The VTOL is wrecked.[reset]")
-            );
-        }
+        assert!(unit.immobilized() && unit.rotor_destroyed() && unit.is_destroyed());
+        assert!(
+            fall.feedback
+                .notices
+                .iter()
+                .any(|notice| notice.text == "[fg=red bold]The VTOL is wrecked.[reset]")
+        );
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         assert_eq!(
@@ -397,37 +266,20 @@ async fn forest_entry_replays_pilot_avoidance_and_one_level_crashes() {
         );
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(before))).unwrap();
         advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD).unwrap();
-        let messages: Vec<_> = scripts
+        let output = scripts
             .drain_outbox()
             .into_iter()
-            .map(|(who, document)| (who, text::plain(document.source())))
-            .collect();
-        assert_obstacle_feedback(
-            &messages,
-            connected.then_some(roll),
-            "You go where no flying thing has ever gone before..",
-            &nested,
-        );
-        let output = messages
-            .into_iter()
-            .map(|(_, text)| text)
+            .map(|(_, document)| text::plain(document.source()))
             .collect::<Vec<_>>()
             .join("\n");
-        if connected {
-            assert!(
-                output.contains("You go where no flying thing has ever gone before.."),
-                "{output}"
-            );
-            assert!(
-                output.contains(if safe {
-                    "You stop in time!"
-                } else {
-                    "Eww.. You've a bad feeling about this."
-                }),
-                "{output}"
-            );
-            assert!(!output.contains("CRASH! You smash your toy into the ground!"));
-        }
+        assert!(
+            output.contains("CRASH! You fly into the trees!"),
+            "{altitude}: {output}"
+        );
+        assert!(
+            output.contains("The VTOL is wrecked."),
+            "{altitude}: {output}"
+        );
         scripts.world().validate(&config).unwrap();
     }
 }
@@ -437,32 +289,11 @@ async fn forest_entry_replays_pilot_avoidance_and_one_level_crashes() {
 async fn horizontal_fuel_gate_shares_policy_without_blocking_heading_or_readouts() {
     let (_dir, config, world, id) = fixture().await;
     for phase in ["landed", "launching", "airborne"] {
-        for (ice, free, fuel, accepted) in [
-            (true, false, 0, false),
-            (true, true, 0, false),
-            (false, false, 0, false),
-            (false, true, 0, true),
-            (true, false, 1, true),
-        ] {
-            let path = config.root.join("stompymux.toml");
-            let mut settings: toml::Value =
-                toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-            settings
-                .as_table_mut()
-                .unwrap()
-                .entry("battletech")
-                .or_insert_with(|| toml::Value::Table(Default::default()))
-                .as_table_mut()
-                .unwrap()
-                .insert(
-                    "nofusionvtolfuel".into(),
-                    toml::Value::Integer(i64::from(free)),
-                );
-            std::fs::write(&path, toml::to_string(&settings).unwrap()).unwrap();
-            let config = Config::load(&config.root).unwrap();
+        // Only an internal-combustion VTOL burns fuel; a fusion VTOL never runs dry.
+        for (ice, fuel, accepted) in [(true, 0, false), (false, 0, true), (true, 1, true)] {
             let mut world = world.clone();
             if phase != "landed" {
-                begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0, false).unwrap();
+                begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0).unwrap();
             }
             if phase == "airborne" {
                 advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
@@ -547,7 +378,7 @@ async fn grounded_throttle_is_shared_saved_and_cleared_at_liftoff() {
                 .unwrap()
                 .flags
                 .insert(Flag::Wizard);
-            begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 3, false).unwrap();
+            begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 3).unwrap();
             world
                 .objects
                 .get_mut(&ObjectId(2))
@@ -662,17 +493,15 @@ async fn native_and_lua_flight_controls_share_state_permissions_and_rollback() {
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
     let output = support::run_text(&scripts, &config, ObjectId(2), 1, "vertical 10000");
-    assert!(output.contains("velocity budget"), "{output}");
+    assert!(output.contains("movement budget"), "{output}");
     assert_eq!(scripts.world().btech, before);
-    assert!(
-        battle_vtol_vertical_readout(&scripts.world(), ObjectId(0), ObjectId(2), false).is_err()
-    );
+    assert!(battle_vtol_vertical_readout(&scripts.world(), ObjectId(0), ObjectId(2)).is_err());
 }
 
 #[tokio::test]
 async fn shared_landing_cancels_launch_and_resolves_touchdown_without_jump_checks() {
     let (_dir, config, mut world, id) = fixture().await;
-    let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0, false).unwrap();
+    let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0).unwrap();
     let notices = land_battle_jump(&mut world, id, ObjectId(2), MovementRules::STANDARD).unwrap();
     assert!(notices.iter().any(|notice| notice.text
         == format!(
@@ -683,9 +512,9 @@ async fn shared_landing_cancels_launch_and_resolves_touchdown_without_jump_check
         world.btech.vehicles()[&id].vtol_flight().unwrap().phase,
         VtolFlightPhase::Landed
     );
-    let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0, false).unwrap();
+    let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0).unwrap();
     let _ = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
-    let _ = set_battle_vtol_vertical_speed(&mut world, id, ObjectId(2), 0.0, false).unwrap();
+    let _ = set_battle_vtol_vertical_speed(&mut world, id, ObjectId(2), 0.0).unwrap();
     let before = world.btech.clone();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let output = support::run_text(&scripts, &config, ObjectId(2), 1, "land");
@@ -715,7 +544,7 @@ async fn launch_cancellation_preserves_literal_pilot_name_and_callback_rollback(
     let (_dir, config, mut world, id) = fixture().await;
     let name = "[fg=red]Pilot[reset]";
     world.objects.get_mut(&ObjectId(2)).unwrap().name = name.into();
-    begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0, false).unwrap();
+    begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0).unwrap();
     let before = world.btech.clone();
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -751,7 +580,8 @@ async fn live_flight_persists_and_host_shutdown_descent_settles_after_restart() 
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let output = support::run_text(&scripts, &config, ObjectId(2), 1, "takeoff");
     assert!(output.contains("takeoff sequence"));
-    for _ in 0..10 {
+    // Liftoff climbs at 60 kph, a level every eleven seconds or so.
+    for _ in 0..60 {
         advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD).unwrap();
         scripts.world().validate(&config).unwrap();
     }
@@ -795,7 +625,7 @@ async fn live_flight_persists_and_host_shutdown_descent_settles_after_restart() 
 #[tokio::test]
 async fn live_validation_rejects_impossible_flight_lifecycle_combinations() {
     let (_dir, config, mut world, id) = fixture().await;
-    let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0, false).unwrap();
+    let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0).unwrap();
     let _ = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     world.validate(&config).unwrap();
     let base = serde_json::to_value(&world.btech).unwrap();
@@ -850,7 +680,7 @@ async fn live_character_crash_wrecks_the_vtol_without_crew_injury() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
-    let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0, false).unwrap();
+    let _ = begin_battle_vtol_takeoff(&mut world, id, ObjectId(2), 0).unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     for _ in 0..12 {
         advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD).unwrap();
@@ -923,5 +753,74 @@ async fn native_and_lua_asset_loading_admit_flying_and_stationary_aircraft() {
             assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
             assert!(unit.position().is_none());
         }
+    }
+}
+
+/// A VTOL at flank speed that changes facing and goes on into a new hex rolls to avoid a
+/// sideslip (Total Warfare pp. 54, 67): a failure drifts it along its old course, at its
+/// elevation, without damage over open ground; at cruising speed there is no roll.
+#[tokio::test]
+async fn a_flanking_vtol_rolls_against_sideslipping_after_a_turn() {
+    let field = format!("6 6\n{}", format!("{}\n", ".0".repeat(6)).repeat(6));
+    for (roll, flank) in [(2, true), (12, true), (12, false)] {
+        let (_dir, config, mut world, id, map) = obstacle_fixture(&field).await;
+        let seed = (0..=255)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
+            .unwrap();
+        let speed = if flank { 193.5 } else { 129.0 };
+        let mut encoded = serde_json::to_value(&world.btech).unwrap();
+        let unit = &mut encoded["vehicles"][id.0.to_string()];
+        unit["motion"]["heading"] = 90.0.into();
+        unit["motion"]["desired_heading"] = 150.0.into();
+        unit["motion"]["speed"] = speed.into();
+        unit["motion"]["desired_speed"] = speed.into();
+        unit["vtol_flight"]["altitude"] = 3.0.into();
+        unit["vtol_flight"]["vertical_speed"] = 0.0.into();
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+        encoded["maps"][map.0.to_string()]["movement_modifier"] = 200.into();
+        world.btech = serde_json::from_value(encoded).unwrap();
+        let mut checked = false;
+        for _ in 0..12 {
+            let before = world.clone();
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+            if !notices.iter().any(|n| n.text.contains("hold your line")) {
+                continue;
+            }
+            checked = true;
+            let unit = &world.btech.vehicles()[&id];
+            let flight = unit.vtol_flight().unwrap();
+            assert_eq!(flight.phase, VtolFlightPhase::Airborne);
+            assert_eq!(flight.altitude, 3.0);
+            assert_eq!(unit.sections(), before.btech.vehicles()[&id].sections());
+            if roll == 12 {
+                assert!(notices.iter().any(|n| n.text == "You hold your course."));
+            } else {
+                assert!(
+                    notices
+                        .iter()
+                        .any(|n| n.text == "You lose your line and sideslip!")
+                );
+                assert!(
+                    notices
+                        .iter()
+                        .any(|n| n.text.starts_with("You sideslip into"))
+                );
+                assert!(
+                    unit.position().unwrap().x > before.btech.vehicles()[&id].position().unwrap().x
+                );
+            }
+            persistence::save(&config.database(), &before)
+                .await
+                .unwrap();
+            let mut restored = persistence::load(&config.database()).await.unwrap();
+            assert_eq!(
+                notices,
+                advance_battle_motion(&mut restored, MovementRules::STANDARD).unwrap()
+            );
+            assert_eq!(world.btech, restored.btech);
+            break;
+        }
+        assert_eq!(checked, flank, "roll {roll} flank {flank}");
+        world.validate(&config).unwrap();
     }
 }

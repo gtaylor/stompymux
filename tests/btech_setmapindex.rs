@@ -83,7 +83,7 @@ async fn airborne_removal_replays_and_can_resume_before_update() {
             launch_battle_jump(&mut world, unit, ObjectId(1), 0, 3.0).unwrap();
             advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
         } else {
-            let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0, false).unwrap();
+            let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0).unwrap();
             advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         }
         let before = world.btech.clone();

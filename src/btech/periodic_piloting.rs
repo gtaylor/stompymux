@@ -1,4 +1,6 @@
 //! Heartbeat stability checks share piloting, fall, internal-damage and transaction services.
+//! Only 'Mechs make them: a vehicle neither falls nor rolls to keep its footing (Total Warfare
+//! p. 68), so a shut-down vehicle with an unconscious crew simply sits where it is.
 use super::{MechFallReport, MechSection, Notice, PilotingCheck, Power, TacticalImpact};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::Result;
@@ -13,7 +15,6 @@ pub struct PeriodicPiloting {
     pub pilot: Option<ObjectId>,
     pub gravity_damage: u16,
     pub fall: Option<MechFallReport>,
-    pub vehicle_fall: Option<super::VehicleFallReport>,
     pub impacts: Vec<TacticalImpact>,
     /// Private feedback from nested falls and gravity impacts.
     pub pilot_notices: Vec<super::PilotNotice>,
@@ -23,24 +24,6 @@ pub struct PeriodicPiloting {
 
 /// Select the reference's prioritized check without consuming dice or changing unit state.
 fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16, u16)>> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        let fallen = unit
-            .vtol_flight()
-            .is_some_and(|f| f.phase == super::VtolFlightPhase::Landed)
-            && unit
-                .sections()
-                .get(&super::VehicleSection::Rotor)
-                .is_some_and(|s| s.internal == 0);
-        return Ok((world.btech.turn_clock.due()
-            && unit.power() != Power::Running
-            && super::crew::unit_unconscious(world, id)
-            && !unit.is_destroyed()
-            && unit.position().is_some()
-            && !fallen
-            && unit.orbital_drop().is_none()
-            && unit.free_fall().is_none())
-        .then_some((3, 0)));
-    }
     let unit = &world.btech.constructed_units()[&id];
     if unit.is_destroyed()
         || unit.position().is_none()
@@ -88,7 +71,6 @@ pub fn advance_periodic_piloting(
         .btech
         .constructed_units()
         .keys()
-        .chain(world.btech.vehicles().keys())
         .copied()
         .filter(|id| {
             world
@@ -103,18 +85,11 @@ pub fn advance_periodic_piloting(
             continue;
         };
         let mut rules = super::FallRules::configured(config);
-        rules.toughness = world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .map_or_else(|| world.btech.vehicles()[&id].pilot(), |u| u.pilot())
+        rules.toughness = world.btech.constructed_units()[&id]
+            .pilot()
             .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
         let mut check = super::roll_piloting(world, id, modifier, rules.extended_piloting)?;
-        let pilot = world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .map_or_else(|| world.btech.vehicles()[&id].pilot(), |unit| unit.pilot());
+        let pilot = world.btech.constructed_units()[&id].pilot();
         let experience_messages =
             super::piloting::award_control_check(world, id, &mut check, rules.extended_piloting)?
                 .into_iter()
@@ -125,7 +100,6 @@ pub fn advance_periodic_piloting(
             pilot,
             gravity_damage,
             fall: None,
-            vehicle_fall: None,
             impacts: Vec::new(),
             pilot_notices: Vec::new(),
             notices: Vec::new(),
@@ -175,30 +149,13 @@ pub fn advance_periodic_piloting(
                 report
                     .notices
                     .extend(super::broadcast::observer_notices(world, id, "falls down."));
-                if world.btech.vehicles().contains_key(&id) {
-                    let fall = super::vehicle_fall::resolve_in_candidate(
-                        world,
-                        id,
-                        1,
-                        rules,
-                        world.objects[&id].flags.contains(Flag::InCharacter),
-                    )?;
-                    super::piloting::append_feedback(
-                        &mut report.pilot_notices,
-                        fall.feedback.pilot_notices.iter().cloned(),
-                        report.notices.len(),
-                    );
-                    report.notices.extend(fall.feedback.notices.clone());
-                    report.vehicle_fall = Some(fall);
+                let fall = if world.objects[&id].flags.contains(Flag::InCharacter) {
+                    super::fall::resolve_character_fall(world, id, 1, rules)?
                 } else {
-                    let fall = if world.objects[&id].flags.contains(Flag::InCharacter) {
-                        super::fall::resolve_character_fall(world, id, 1, rules)?
-                    } else {
-                        super::resolve_fall(world, id, 1, rules)?
-                    };
-                    fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
-                    report.fall = Some(fall);
-                }
+                    super::resolve_fall(world, id, 1, rules)?
+                };
+                fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
+                report.fall = Some(fall);
             }
         }
         reports.push(report);
@@ -234,9 +191,6 @@ pub fn advance_periodic_piloting_action(
             super::diagnostics::publish(scripts, &report.experience_messages);
             if let Some(fall) = &report.fall {
                 super::evacuation::publish_fall_consequences(scripts, config, fall)?;
-            }
-            if let Some(fall) = &report.vehicle_fall {
-                super::evacuation::publish_vehicle_fall_consequences(scripts, config, fall)?;
             }
             for impact in &report.impacts {
                 super::evacuation::publish_impact_consequences(scripts, config, impact)?;

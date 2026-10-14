@@ -1027,12 +1027,15 @@ mod vtol_landing;
 pub use vtol_landing::VtolLanding;
 
 mod vtol_motion;
-pub use vtol_motion::{VtolMotionStep, VtolSurfaceContact};
+pub use vtol_motion::{
+    MAXIMUM_VTOL_ELEVATION, VERTICAL_KPH_PER_LEVEL_SECOND, VtolMotionStep, VtolSurfaceContact,
+};
 
 mod vtol_path;
 pub use vtol_path::VtolPath;
 
 mod vtol_environment;
+mod vtol_sideslip;
 mod vtol_updates;
 pub use vtol_environment::{VtolEnvironment, advance_vtol_environment};
 mod vtol_crash;

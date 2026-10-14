@@ -61,7 +61,6 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
                             ObjectId(pilot),
                             value,
                             crate::btech::SpeedPolicy::configured(&crate::lua::configuration(lua)),
-                            crate::lua::configuration(lua).battletech.nofusionvtolfuel != 0,
                         )
                     }
                     .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
@@ -230,7 +229,6 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         crate::lua::transactions::run(lua, &scripts.world, || {
             crate::btech::vtol_controls::configured_takeoff(
                 &scripts,
-                &crate::lua::configuration(lua),
                 ObjectId(unit),
                 ObjectId(pilot),
                 delay.unwrap_or(0),
@@ -246,13 +244,11 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     let vertical = lua.create_function(|lua, (unit, pilot, speed): (i64, i64, Option<f64>)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;
-        let config = crate::lua::configuration(lua);
         let Some(speed) = speed else {
             return crate::battle_vtol_vertical_readout(
                 &scripts.world(),
                 ObjectId(unit),
                 ObjectId(pilot),
-                config.battletech.nofusionvtolfuel != 0,
             )
             .map(Value::Number)
             .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")));
@@ -260,7 +256,6 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         crate::lua::transactions::run(lua, &scripts.world, || {
             crate::btech::vtol_controls::configured_vertical(
                 &scripts,
-                &config,
                 ObjectId(unit),
                 ObjectId(pilot),
                 speed,

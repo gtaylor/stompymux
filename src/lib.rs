@@ -818,7 +818,9 @@ pub use btech::{VtolFlight, VtolFlightPhase, VtolTakeoff};
 
 pub use btech::VtolLanding;
 
-pub use btech::{VtolMotionStep, VtolSurfaceContact};
+pub use btech::{
+    MAXIMUM_VTOL_ELEVATION, VERTICAL_KPH_PER_LEVEL_SECOND, VtolMotionStep, VtolSurfaceContact,
+};
 
 pub use btech::VtolPath;
 

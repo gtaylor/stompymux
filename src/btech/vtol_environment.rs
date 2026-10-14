@@ -1,4 +1,7 @@
-//! Aircraft surface resolution reuses deliberate landing and shared vehicle flooding.
+//! Aircraft surface resolution reuses deliberate landing, shared vehicle flooding and the
+//! Total Warfare VTOL crash. Flying into terrain, a building or the treetops is an automatic
+//! crash in the hex entered (TW p. 54); coming down on water is a crash that destroys the VTOL;
+//! coming down to the ground is a landing where the VTOL can land and a crash elsewhere.
 use super::{MapAsset, Vehicle, VtolLanding, VtolPath, VtolSurfaceContact};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -8,19 +11,6 @@ use serde::Serialize;
 #[serde(tag = "kind", rename_all = "snake_case")]
 #[must_use = "Publish environmental effects or resolve the required crash in the host transaction"]
 pub enum VtolEnvironment {
-    /// No mutation: horizontal obstacles need the world's pilot and shared control check.
-    ObstacleRequired {
-        path: VtolPath,
-    },
-    /// A horizontal obstacle has stopped flight, caused an emergency landing or applied a crash.
-    Obstacle {
-        path: VtolPath,
-        fall: Option<Box<super::VehicleFallReport>>,
-        notices: Vec<super::Notice>,
-        /// Pilot roll feedback captured before landing or crash changes crew state.
-        pilot_notices: Vec<super::PilotNotice>,
-        experience_messages: Vec<super::DiagnosticMessage>,
-    },
     Movement {
         path: VtolPath,
     },
@@ -36,12 +26,12 @@ pub enum VtolEnvironment {
         path: VtolPath,
         newly: bool,
     },
-    /// No mutation: the host must apply shared falling damage at this contact before committing.
+    /// No mutation: the host must apply shared crash damage at this contact before committing.
     CrashRequired {
         path: VtolPath,
         levels: u32,
     },
-    /// World contact resolution has applied the shared fall damage at this position.
+    /// World contact resolution has applied the shared crash damage at this position.
     Crashed {
         path: VtolPath,
         fall: Box<super::VehicleFallReport>,
@@ -50,19 +40,15 @@ pub enum VtolEnvironment {
 
 impl Vehicle {
     /// Resolve an airborne movement event's first surface contact on a candidate copy.
-    /// Ground contact attempts ordinary landing; failed landing requires the shared host fall action.
-    /// The host owns map identity, landing mines, notifications, callbacks and casualty publication.
+    /// Ground contact attempts ordinary landing; every other contact, and a failed landing,
+    /// requires the shared host crash action. The host owns map identity, landing mines,
+    /// notifications, callbacks and casualty publication.
     pub fn advance_vtol_environment(
         &mut self,
         map: &MapAsset,
         movement_modifier: i64,
-        free_fusion_fuel: bool,
     ) -> Result<VtolEnvironment> {
-        self.advance_environment_with(
-            &|hex| Ok(map.hex(hex.x, hex.y)),
-            movement_modifier,
-            free_fusion_fuel,
-        )
+        self.advance_environment_with(&|hex| Ok(map.hex(hex.x, hex.y)), movement_modifier)
     }
 
     /// Resolve contact against current terrain using the same classifier as decoded assets.
@@ -70,7 +56,6 @@ impl Vehicle {
         &mut self,
         lookup: &impl Fn(super::HexCoordinate) -> Result<Option<super::Hex>>,
         movement_modifier: i64,
-        free_fusion_fuel: bool,
     ) -> Result<VtolEnvironment> {
         let mut candidate = self.clone();
         let path = candidate.advance_vtol_clear_path_with(lookup, movement_modifier)?;
@@ -87,8 +72,9 @@ impl Vehicle {
         let tile = lookup(hex)?.context("Contact hex is unavailable")?;
         candidate.place_contact(path)?;
         let outcome = match contact {
+            // Flying into terrain or the treetops is an automatic crash (TW p. 54).
             VtolSurfaceContact::Forest | VtolSurfaceContact::Elevation => {
-                return Ok(VtolEnvironment::ObstacleRequired { path });
+                return Ok(VtolEnvironment::CrashRequired { path, levels: 1 });
             }
             VtolSurfaceContact::Clear => unreachable!("Contact path cannot be clear"),
             VtolSurfaceContact::Water => {
@@ -101,7 +87,7 @@ impl Vehicle {
                 VtolEnvironment::Flooded { path, newly }
             }
             VtolSurfaceContact::Ground { fall_levels } => {
-                let Ok(landing) = candidate.land_vtol(tile, free_fusion_fuel) else {
+                let Ok(landing) = candidate.land_vtol(tile) else {
                     return Ok(VtolEnvironment::CrashRequired {
                         path,
                         levels: fall_levels,
@@ -115,7 +101,7 @@ impl Vehicle {
     }
 
     /// Place an observed contact, retaining agreement between continuous and hex coordinates.
-    fn place_contact(&mut self, path: VtolPath) -> Result<()> {
+    pub(super) fn place_contact(&mut self, path: VtolPath) -> Result<()> {
         let VtolPath::Contact {
             hex,
             point,
@@ -129,7 +115,7 @@ impl Vehicle {
     }
 
     /// Commit a resolved flight position after tracing contact or the map boundary.
-    fn place_at(
+    pub(super) fn place_at(
         &mut self,
         hex: super::HexCoordinate,
         point: super::Point,
@@ -161,23 +147,21 @@ impl Vehicle {
 
 /// Resolve a tactical flight contact against current world terrain atomically.
 /// Horizontal controls and fuel are updated by the caller before this event.
-/// Ground impacts compose shared crash damage; direct water contact uses shared
-/// vehicle flooding. The host owns landing mines, notifications, casualties and
+/// Ground, terrain and treetop impacts compose shared crash damage; direct water contact
+/// uses shared vehicle flooding. The host owns landing mines, notifications, casualties and
 /// final world validation.
 pub fn advance_vtol_environment(
     world: &mut crate::World,
     id: crate::ObjectId,
-    free_fusion_fuel: bool,
     rules: super::FallRules,
 ) -> Result<VtolEnvironment> {
-    advance_in_candidate(world, id, free_fusion_fuel, rules, false)
+    advance_in_candidate(world, id, rules, false)
 }
 
 /// Character-capable contact resolution for the shared host movement publisher.
 pub(super) fn advance_in_candidate(
     world: &mut crate::World,
     id: crate::ObjectId,
-    free_fusion_fuel: bool,
     rules: super::FallRules,
     character: bool,
 ) -> Result<VtolEnvironment> {
@@ -214,8 +198,7 @@ pub(super) fn advance_in_candidate(
     };
     let mut candidate = world.clone();
     let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
-    let mut outcome =
-        unit.advance_environment_with(&lookup, map.movement_modifier, free_fusion_fuel)?;
+    let mut outcome = unit.advance_environment_with(&lookup, map.movement_modifier)?;
     if let VtolEnvironment::CrashRequired { path, levels } = outcome {
         unit.place_contact(path)?;
         // Crossing exposes the aircraft before armor damage can ruin its cover.
@@ -233,149 +216,6 @@ pub(super) fn advance_in_candidate(
         outcome = VtolEnvironment::Crashed {
             path,
             fall: Box::new(fall),
-        };
-    }
-    if let VtolEnvironment::ObstacleRequired { path } = outcome {
-        let VtolPath::Contact {
-            contact, altitude, ..
-        } = path
-        else {
-            unreachable!("Obstacle requires a contact path")
-        };
-        let forest = contact == VtolSurfaceContact::Forest;
-        let old_tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-        // Hex rollback restores the previous terrain elevation, including the ice surface rule.
-        let rollback_height =
-            if old_tile.is_ice() && altitude as i32 >= i32::from(old_tile.water_line()) {
-                old_tile.water_line()
-            } else {
-                old_tile.surface_height()
-            };
-        if !forest {
-            candidate
-                .btech
-                .vehicles
-                .get_mut(&id)
-                .unwrap()
-                .vtol_flight
-                .as_mut()
-                .unwrap()
-                .altitude = f64::from(rollback_height);
-        }
-        let mut notices = vec![super::Notice {
-            unit: id,
-            text: if forest {
-                "You go where no flying thing has ever gone before.."
-            } else {
-                "You attempt to fly over elevation that is too high!"
-            }
-            .into(),
-        }];
-        let assigned = candidate.btech.vehicles()[&id].pilot().is_some();
-        let active = candidate.btech.vehicles()[&id]
-            .pilot()
-            .is_some_and(|pilot| {
-                candidate.objects.get(&pilot).is_some_and(|object| {
-                    object.kind != crate::Kind::Player
-                        || object.flags.contains(crate::Flag::Connected)
-                })
-            });
-        let mut experience_messages = Vec::new();
-        let mut pilot_notices = Vec::new();
-        let safe = if !forest && !assigned {
-            true
-        } else if (forest && active) || (!forest && assigned) {
-            let check = super::terrain_control::check(
-                &mut candidate,
-                id,
-                if forest { 5 } else { rollback_height / 3 },
-                rules.extended_piloting,
-                character,
-            )?;
-            check.capture_feedback(id, &mut notices, &mut pilot_notices);
-            experience_messages = check.experience_messages;
-            check.success && (forest || super::vtol_landing::supported_surface(old_tile))
-        } else {
-            false
-        };
-        let fall = if safe {
-            notices.push(super::Notice {
-                unit: id,
-                text: if forest {
-                    "You stop in time!"
-                } else {
-                    "You land safely."
-                }
-                .into(),
-            });
-            let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
-            unit.vtol_flight.as_mut().unwrap().altitude = f64::from(rollback_height);
-            if forest {
-                unit.motion.as_mut().unwrap().stop_translation();
-            } else {
-                unit.motion.as_mut().unwrap().speed = 0.0;
-                let flight = unit.vtol_flight.as_mut().unwrap();
-                flight.phase = super::VtolFlightPhase::Landed;
-                flight.vertical_speed = 0.0;
-            }
-            None
-        } else {
-            if forest {
-                candidate
-                    .btech
-                    .vehicles
-                    .get_mut(&id)
-                    .unwrap()
-                    .place_contact(path)?;
-                notices.extend(super::hiding::movement(&mut candidate, id));
-            }
-            notices.push(super::Notice {
-                unit: id,
-                text: if forest {
-                    "Eww.. You've a bad feeling about this."
-                } else {
-                    "You crash into the obstacle and fall from the sky!"
-                }
-                .into(),
-            });
-            notices.extend(super::broadcast::observer_notices(
-                &candidate,
-                id,
-                if forest {
-                    "crashes!"
-                } else {
-                    "crashes into an obstacle and falls from the sky!"
-                },
-            ));
-            // The drop-height helper subtracts the selected surface twice; retain the
-            // signed result for the crew roll even when structural damage becomes zero.
-            let levels = if forest {
-                1
-            } else {
-                let surface = super::fall_profile::surface(old_tile, i32::from(rollback_height));
-                rollback_height - 2 * surface + 1
-            };
-            let fall = super::vtol_crash::resolve_signed_in_candidate(
-                &mut candidate,
-                id,
-                levels,
-                rules,
-                character,
-            )?;
-            super::piloting::append_feedback(
-                &mut pilot_notices,
-                fall.feedback.pilot_notices.iter().cloned(),
-                notices.len(),
-            );
-            notices.extend(fall.feedback.notices.iter().cloned());
-            Some(Box::new(fall))
-        };
-        outcome = VtolEnvironment::Obstacle {
-            path,
-            fall,
-            notices,
-            pilot_notices,
-            experience_messages,
         };
     }
     *world = candidate;

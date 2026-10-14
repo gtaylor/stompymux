@@ -49,7 +49,8 @@ async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_repl
                 let changed = &world.btech.vehicles()[&id];
                 assert_eq!(report.damage.as_ref().unwrap().absorbed, 1);
                 // A Rotors result costs one Cruising MP on top of its damage, and a rotor
-                // critical of Rotor Damage one more.
+                // critical of Rotor Damage one more; flank is 1.5 times the cruising MP left,
+                // rounded up (TW p. 197), so a 12/18 Kestrel drops to 17 and then 15.
                 let rotor_criticals = report
                     .damage
                     .as_ref()
@@ -61,10 +62,8 @@ async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_repl
                             == Some(VehicleCriticalEffect::Rotor(RotorHit::Damage))
                     })
                     .count() as f64;
-                assert_eq!(
-                    changed.maximum_speed(),
-                    193.5 - 10.75 * (f64::from(u8::from(selected.rotor)) + rotor_criticals)
-                );
+                let cruising = 12.0 - f64::from(u8::from(selected.rotor)) - rotor_criticals;
+                assert_eq!(changed.maximum_speed(), (cruising * 1.5).ceil() * 10.75);
                 assert_eq!(
                     report.damage.as_ref().unwrap().criticals.len(),
                     usize::from(selected.hit.through_armor_critical)

@@ -52,7 +52,10 @@ steeper slope is impassable. Mechs cannot push into ultra-heavy woods or jungle.
 Wheeled vehicles keep out of rough ground, rubble, ultra rubble, woods, deep snow and
 magma crust; no vehicle enters heavy or ultra-heavy woods, any jungle, ultra rough ground
 or liquid magma; hovercraft also avoid light woods; and nothing but a hovercraft or an
-amphibious vehicle crosses water a level or more deep. A road or bridge carries a
+amphibious vehicle crosses water a level or more deep. Both ride the surface rather
+than the bed: a hovercraft skims water for its ordinary cost, and an amphibious
+vehicle pays two points for every water hex whatever its depth (Total Warfare p. 52),
+so neither is ever under water. A road or bridge carries a
 unit through terrain it could not otherwise enter, and buildings and walls are
 climbed onto rather than entered.
 
@@ -61,10 +64,16 @@ any speed, risks a skid: change facing on such a hex and then move on, and you
 roll against your piloting or driving skill, harder the farther you have moved
 this turn. Failure drops a Mech and slides it along its old course for half the
 hexes it had moved, taking half a fall's damage in every hex it slides through,
-stopping against higher ground or another unit and tumbling over any drop too
-steep to walk down. A vehicle slides the same way and rolls once for motive
-system damage; a hovercraft sideslips instead, drifting one hex for every point
-it missed by, without damage unless it drifts into something.
+stopping against higher ground and tumbling over any drop too steep to walk
+down. A skidding unit that reaches another unit charges it with the +3 modifier
+for an unintentional charge (Total Warfare p. 63); a hit ends the skid, a miss
+slides on through. A vehicle slides the same way and rolls once for motive
+system damage, and a vehicle that skids into terrain its drive could never
+enter takes a point of damage per five tons and is immobile there for good. A
+hovercraft does not skid but sideslips: whenever it changes facing at flank
+speed on any ground and then moves on, it rolls against its driving skill, and
+on a failure it drifts along its old course one hex for every point it missed
+by, without damage unless it drifts into something.
 
 Swamp, mud, deep snow, tundra and sand can bog you down. Entering such a hex
 takes a piloting or driving roll, one easier on tundra, deep snow and mud, and a

@@ -1,5 +1,6 @@
-//! Saved rotor material state: speed loss per hit, the flight stabilizer, rotor destruction and
-//! the realtime rule that a grounded VTOL with no rotor is a wreck.
+//! Saved rotor material state: one cruising MP lost per hit with flank recomputed (Total
+//! Warfare p. 197), the flight stabilizer, rotor destruction and the realtime rule that a
+//! grounded VTOL with no rotor is a wreck.
 use crate::support;
 use stompymux_rs::*;
 
@@ -34,10 +35,12 @@ fn rotor_damage_lowers_speed_one_mp_at_a_time_and_the_flight_stabilizer_hits_onc
         3,
         "a second stabilizer hit adds nothing"
     );
-    for step in 1..=18 {
+    // A 12/18 Kestrel loses one cruising MP per hit and recomputes flank as 1.5 times the
+    // rest, rounded up (TW p. 197): 17, 15, 14, 12, 11, 9, 8, 6, 5, 3, 2 and then nothing.
+    for flank in [17, 15, 14, 12, 11, 9, 8, 6, 5, 3, 2, 0] {
         let before = unit.clone();
         let report = unit.apply_rotor_hit(RotorHit::Damage, false).unwrap();
-        assert_eq!(report.speed_after, (18 - step) as f64 * 10.75);
+        assert_eq!(report.speed_after, f64::from(flank) * 10.75);
         assert!(!report.lost_rotor);
         assert!(!unit.rotor_destroyed());
         assert!(!unit.is_destroyed());

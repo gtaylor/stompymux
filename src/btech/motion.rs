@@ -140,8 +140,6 @@ impl Motion {
 /// Shared ground/jump movement configuration, including charge, terrain and fall rules.
 #[derive(Debug, Clone, Copy)]
 pub struct MovementRules {
-    /// Fusion-powered VTOLs may omit fuel consumption when configured by the host.
-    pub free_fusion_vtol_fuel: bool,
     /// Enable hot-myomer assistance when calculating towing load.
     pub tsm_tow_bonus: bool,
     /// Use pilot-based aim for DFA landing attacks.
@@ -161,7 +159,6 @@ impl MovementRules {
 
     /// Conventional movement and fall settings, suitable for an isolated simulation.
     pub const STANDARD: Self = Self {
-        free_fusion_vtol_fuel: false,
         tsm_tow_bonus: true,
         fasa_turning: false,
         slowdown: 2,
@@ -196,7 +193,6 @@ pub fn set_speed(world: &mut World, id: ObjectId, pilot: ObjectId, speed: f64) -
         super::combat_operator::ControlActor::Player(pilot),
         speed,
         super::SpeedPolicy::STANDARD,
-        false,
     )?;
     let _ = super::autopilot::manual_takeover(world, id);
     Ok(notice)
@@ -210,7 +206,6 @@ pub(crate) fn set_speed_autopilot(world: &mut World, id: ObjectId, speed: f64) -
         super::combat_operator::ControlActor::Autopilot,
         speed,
         super::SpeedPolicy::STANDARD,
-        false,
     )
 }
 
@@ -220,7 +215,6 @@ fn set_speed_by_actor(
     actor: super::combat_operator::ControlActor,
     speed: f64,
     policy: super::SpeedPolicy,
-    free_fusion_fuel: bool,
 ) -> Result<Notice> {
     if world.btech.vehicles().contains_key(&id) {
         return super::vehicle_driving::set_control_by_actor(
@@ -230,7 +224,6 @@ fn set_speed_by_actor(
             Some(speed),
             None,
             policy,
-            free_fusion_fuel,
         );
     }
     super::power::controlled_unit_by_actor(world, id, actor)?;
@@ -293,7 +286,6 @@ pub(crate) fn set_speed_configured(
     pilot: ObjectId,
     speed: f64,
     policy: super::SpeedPolicy,
-    free_fusion_fuel: bool,
 ) -> Result<Notice> {
     let notice = set_speed_by_actor(
         world,
@@ -301,7 +293,6 @@ pub(crate) fn set_speed_configured(
         super::combat_operator::ControlActor::Player(pilot),
         speed,
         policy,
-        free_fusion_fuel,
     )?;
     let _ = super::autopilot::manual_takeover(world, id);
     Ok(notice)
@@ -352,7 +343,6 @@ fn set_heading_by_actor(
             None,
             Some(heading),
             super::SpeedPolicy::STANDARD,
-            false,
         );
     }
     super::power::controlled_unit_by_actor(world, id, actor)?;
@@ -459,12 +449,7 @@ fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<
                 .vehicles
                 .get_mut(&id)
                 .unwrap()
-                .consume_vtol_fuel(
-                    flight.vertical_speed,
-                    flight.altitude as i32,
-                    false,
-                    rules.free_fusion_vtol_fuel,
-                )?;
+                .consume_vtol_fuel(flight.vertical_speed, flight.altitude as i32, false)?;
             if let super::VtolFuelUse::Exhausted { newly } = fuel {
                 if newly {
                     notices.push(Notice {

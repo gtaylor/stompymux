@@ -11,26 +11,41 @@ You can set `speed` while landed or during the countdown, but a landed VTOL
 does not travel across the ground. Liftoff clears horizontal speed commands
 and begins climbing at 60 KPH.
 Heading commands are also accepted while landed or preparing to launch.
-Changing horizontal speed requires fuel unless fusion engines are exempt;
-heading commands and speed readouts do not require fuel.
+Only a VTOL with an internal combustion engine burns fuel, and it needs fuel to
+change horizontal speed; a fusion-powered VTOL never runs dry. Heading commands
+and speed readouts never require fuel.
 
 After liftoff, `heading` and `speed` control horizontal travel. Use
 `vertical <kph>` to climb with a positive speed, descend with a negative speed,
 or stop changing altitude with zero. `vertical` without an argument shows the
-current vertical speed. Horizontal and vertical commands share the aircraft's
-available speed: a faster climb leaves less speed for forward travel.
+current vertical speed. Hexes and levels come out of one pool of movement
+(Total Warfare p. 54): horizontal and vertical speed add up to the VTOL's
+maximum, and 10.75 kph of climb or descent covers one level in the time 10.75
+kph of travel covers one hex. A VTOL can climb no higher than 500 levels.
 
-Keep at least two elevation levels above the surface when entering a forest
-hex. Below that clearance, an active pilot must pass a piloting check with a
-+5 penalty to stop before entry. Failure crashes the VTOL into the forest.
-Stopping rolls you back to the previous hex at that terrain's elevation.
+A VTOL whose elevation is the level of its hex is on the ground, and the only
+move it can make there is to climb; it must be at least one level above the
+terrain before it travels horizontally, and a VTOL that stops climbing at the
+terrain's level has landed (or crashed, where it cannot land).
 
-Flying into a higher obstacle also rolls you back. Your pilot can make an
-emergency landing over grass, road, sand or a building with no fire or smoke over
-it after a successful control check; otherwise the aircraft crashes. This emergency landing stops actual
-horizontal and vertical speed but retains your selected horizontal speed.
+Entering a hex at or below the level of its terrain, a building in it, or the
+treetops of its woods (two levels, three for ultra-heavy growth) is an
+automatic crash in that hex (Total Warfare p. 54): no roll avoids it. A road
+through the woods lets a VTOL fly below the treetops along it. A VTOL flying at
+flank speed that changes facing and then enters a new hex rolls against its
+driving skill to avoid sideslipping (p. 67); on a failure it drifts along its
+old course for as many hexes as it missed the roll by, never more than one less
+than the hexes it has entered, and crashes if the drift carries it into terrain
+or treetops at its elevation or down onto water.
+
+Crash damage is the hexes the VTOL was covering times its tonnage over ten, in
+five-point groups on the VTOL hit table (p. 68); damage that reaches internal
+structure makes the wreck explode. A VTOL that can still fly after a crash in a
+hex it could normally land in has landed there and may take off again;
+anywhere else the crash destroys it. Engine Damage in flight calls for a +4
+driving roll to land on clear, paved or rough ground or a building (p. 197).
 
 Use `land` near a suitable surface (open ground or a building roof, clear of fire and
-smoke), with low horizontal speed and a gentle descent. Landing requires working lift and fuel unless the server exempts
-fusion engines. Landing activates applicable mines. Shutting down in flight
-starts a fall; it does not perform a controlled landing.
+smoke), with low horizontal speed and a gentle descent. Landing requires working lift,
+and fuel for an internal combustion VTOL. Landing activates applicable mines. Shutting
+down in flight starts a fall; it does not perform a controlled landing.

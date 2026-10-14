@@ -65,11 +65,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_nofusionvtolfuel",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_xploss",
     "parser": "cf_int",
     "permission": "CA_GOD"
@@ -201,11 +196,6 @@
   },
   {
     "name": "btech_maxtechtime",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
-    "name": "btech_vtol_ice_causes_fire",
     "parser": "cf_int",
     "permission": "CA_GOD"
   },

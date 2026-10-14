@@ -575,7 +575,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00215
-//|---Read or set VTOL vertical speed using configured fuel rules and the shared velocity budget.
+//|---Read or set VTOL vertical speed; climb and horizontal travel share one movement budget.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param kph number? Omit for current speed; positive climbs, negative descends.

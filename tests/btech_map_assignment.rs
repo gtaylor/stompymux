@@ -171,7 +171,7 @@ async fn map_assignment_preserves_airborne_progress_and_restart() {
             launch_battle_jump(&mut world, unit, ObjectId(1), 0, 3.0).unwrap();
             advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
         } else {
-            let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0, false).unwrap();
+            let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0).unwrap();
             advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         }
         let map = world.create(&config, "Airspace".into(), Kind::Room);

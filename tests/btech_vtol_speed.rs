@@ -1,4 +1,5 @@
-//! Rotorcraft velocity limits use one budget for both axes and retain damage semantics.
+//! Rotorcraft movement limits share one additive budget between both axes (Total Warfare
+//! p. 54) and retain damage semantics.
 use stompymux_rs::*;
 
 /// Material-only aircraft; the host flight lifecycle remains responsible for world admission.
@@ -14,8 +15,9 @@ fn rotorcraft_velocity_budget_is_symmetric_and_tracks_material_damage() {
     let mut unit = aircraft();
     let maximum = unit.maximum_speed();
     for sign in [-1.0, 1.0] {
+        // Hexes and levels come from one pool of MP: 60% spent climbing leaves 40% for travel.
         let horizontal = unit.vtol_horizontal_limit(sign * maximum * 0.6).unwrap();
-        assert!((horizontal - maximum * 0.8).abs() < 1e-10);
+        assert!((horizontal - maximum * 0.4).abs() < 1e-10);
         assert!(
             (unit.vtol_vertical_limit(sign * horizontal).unwrap() - maximum * 0.6).abs() < 1e-10
         );
