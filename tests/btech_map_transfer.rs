@@ -84,7 +84,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         if key == "constructed" {
             let _ = launch_battle_jump(&mut airborne, id, ObjectId(1), 90, 1.0).unwrap();
         } else if airborne.btech.vehicles()[&id].definition().is_vtol() {
-            let _ = begin_battle_vtol_takeoff(&mut airborne, id, ObjectId(1), 0, false).unwrap();
+            let _ = begin_battle_vtol_takeoff(&mut airborne, id, ObjectId(1), 0).unwrap();
         }
         if airborne.btech != world.btech {
             let pending = airborne.btech.clone();

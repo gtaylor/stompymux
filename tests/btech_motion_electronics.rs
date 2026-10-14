@@ -11,7 +11,7 @@ use crate::btech_motion_common::{
 use crate::support;
 use crate::support::{restore_database, snapshot_database};
 use stompymux_rs::{
-    MechTemplate, MovementRules, ObjectId, advance_battle_motion, persistence, set_battle_heading,
+    MechTemplate, ObjectId, advance_battle_motion, persistence, set_battle_heading,
     set_battle_speed,
 };
 
@@ -6625,15 +6625,8 @@ async fn quad_live_movement_standing_and_restart() {
     assert!(!world.btech.constructed_units()[&id].is_destroyed());
     let before =
         serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"].clone();
-    let stand = begin_battle_stand(
-        &mut world,
-        id,
-        ObjectId(1),
-        StandMode::Normal,
-        true,
-        fall_rules(),
-    )
-    .unwrap();
+    let stand =
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules()).unwrap();
     assert!(stand.check.success);
     assert!(stand.check.roll.is_none());
     assert!(stand.timer.is_some());
@@ -7256,17 +7249,13 @@ async fn ground_proposals_match_live_trajectories_without_mutating_state() {
             let map = format!("12 12\n{}", format!("{row}\n").repeat(12));
             let (_dir, _config, baseline, id) =
                 fixture_assets(&map, MechTemplate::parse("test", source).unwrap()).await;
-            for slowdown in 0..=2 {
-                for fasa_turning in [false, true] {
+            {
+                {
                     for speed in [-10.75, 32.25] {
                         let mut world = baseline.clone();
                         set_battle_speed(&mut world, id, ObjectId(1), speed).unwrap();
                         set_battle_heading(&mut world, id, ObjectId(1), 90.0).unwrap();
-                        let rules = MovementRules {
-                            slowdown,
-                            fasa_turning,
-                            ..RULES
-                        };
+                        let rules = RULES;
                         for _ in 0..12 {
                             let unit = &world.btech.constructed_units()[&id];
                             let position = unit.position().unwrap();

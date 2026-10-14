@@ -133,18 +133,10 @@ pub struct BattleTechConfig {
     pub ic: i64,
     /// Configuration value for `afterlife_dbref`; defaults are centralized below.
     pub afterlife_dbref: i64,
-    /// Configuration value for `slowdown`; defaults are centralized below.
-    pub slowdown: i64,
-    /// Configuration value for `fasaturn`; defaults are centralized below.
-    pub fasaturn: i64,
-    /// Configuration value for `nofusionvtolfuel`; defaults are centralized below.
-    pub nofusionvtolfuel: i64,
     /// Configuration value for `xploss`; defaults are centralized below.
     pub xploss: i64,
     /// Configuration value for `mw_losmap`; defaults are centralized below.
     pub mw_losmap: i64,
-    /// Configuration value for `roll_on_backwalk`; defaults are centralized below.
-    pub roll_on_backwalk: i64,
     /// Configuration value for `usedunitstore`; defaults are centralized below.
     pub usedunitstore: i64,
     /// Configuration value for `ooc_comsys`; defaults are centralized below.
@@ -153,8 +145,6 @@ pub struct BattleTechConfig {
     pub idf_requires_spotter: i64,
     /// Configuration value for `tsm_tow_bonus`; defaults are centralized below.
     pub tsm_tow_bonus: i64,
-    /// Configuration value for `heatcutoff`; defaults are centralized below.
-    pub heatcutoff: i64,
     /// Configuration value for `cost_debug`; defaults are centralized below.
     pub cost_debug: i64,
     /// Configuration value for `allow_cargo_commands`; defaults are centralized below.
@@ -163,12 +153,8 @@ pub struct BattleTechConfig {
     pub transported_unit_death: i64,
     /// Configuration value for `mwpickup_action`; defaults are centralized below.
     pub mwpickup_action: i64,
-    /// Configuration value for `standcareful`; defaults are centralized below.
-    pub standcareful: i64,
     /// Configuration value for `maxtechtime`; defaults are centralized below.
     pub maxtechtime: i64,
-    /// Configuration value for `vtol_ice_causes_fire`; defaults are centralized below.
-    pub vtol_ice_causes_fire: i64,
     /// Configuration value for `blzmapmode`; defaults are centralized below.
     pub blzmapmode: i64,
     /// Configuration value for `extended_piloting`; defaults are centralized below.
@@ -196,24 +182,17 @@ impl Default for BattleTechConfig {
             parts: 1,
             ic: 1,
             afterlife_dbref: 5,
-            slowdown: 2,
-            fasaturn: 1,
-            nofusionvtolfuel: 0,
             xploss: 666,
             mw_losmap: 1,
-            roll_on_backwalk: 1,
             usedunitstore: 3,
             ooc_comsys: 0,
             idf_requires_spotter: 1,
             tsm_tow_bonus: 1,
-            heatcutoff: 1,
             cost_debug: 0,
             allow_cargo_commands: true,
             transported_unit_death: 1,
             mwpickup_action: 1,
-            standcareful: 1,
             maxtechtime: 600,
-            vtol_ice_causes_fire: 1,
             blzmapmode: 0,
             extended_piloting: 1,
             extended_gunnery: 1,

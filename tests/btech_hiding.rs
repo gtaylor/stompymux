@@ -346,9 +346,10 @@ async fn hiding_movement_waits_for_a_hex_crossing() {
             unit["motion"]["speed"] = serde_json::json!(10.75);
             unit["motion"]["desired_speed"] = serde_json::json!(10.75);
             if vtol {
+                // Above the treetops of the woods it crosses (TW p. 54).
                 unit["vtol_flight"] = serde_json::to_value(VtolFlight {
                     phase: VtolFlightPhase::Airborne,
-                    altitude: 1.0,
+                    altitude: 3.0,
                     ..Default::default()
                 })
                 .unwrap();
@@ -565,12 +566,14 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
             unit["signature"]["hidden"] = true.into();
             unit["hide_elapsed"] = 7.into();
             // Crash damage follows the hexes being covered (TW p. 68), so even the straight
-            // drop keeps a crawl of speed to have its cover ruined by damage.
+            // drop keeps a crawl of speed to have its cover ruined by damage. The crossing
+            // aircraft flies one level above its hex into the treetops next door; the other
+            // is already at ground level and comes down too fast to land.
             unit["motion"]["speed"] = if crossed { 100.0 } else { 1.0 }.into();
             unit["motion"]["desired_speed"] = if crossed { 100.0 } else { 1.0 }.into();
             unit["vtol_flight"] = serde_json::to_value(VtolFlight {
                 phase: VtolFlightPhase::Airborne,
-                altitude: 1.5,
+                altitude: if crossed { 2.5 } else { 1.9 },
                 vertical_speed: if crossed { 0.0 } else { -129.0 },
                 ..Default::default()
             })
@@ -607,25 +610,23 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
                 assert!(failed.drain_outbox().is_empty());
             }
         }
-        let result = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
+        let result = advance_battle_vtol_environment(&mut world, id, rules).unwrap();
         assert_eq!(
-            advance_battle_vtol_environment(&mut replay, id, false, rules).unwrap(),
+            advance_battle_vtol_environment(&mut replay, id, rules).unwrap(),
             result
         );
         assert_eq!(world.btech, replay.btech);
-        let (fall, notices) = match result {
-            VtolEnvironment::Crashed { fall, .. } if !crossed => {
-                let notices = fall.feedback.notices.clone();
-                (fall, notices)
-            }
-            VtolEnvironment::Obstacle {
-                fall: Some(fall),
-                notices,
-                ..
-            } if crossed => (fall, notices),
-            result => panic!("Expected an aircraft crash (crossed={crossed}): {result:?}"),
+        let VtolEnvironment::Crashed { fall, .. } = result else {
+            panic!("Expected an aircraft crash (crossed={crossed}): {result:?}");
         };
-        assert!(fall.damage > 0 && world.btech.vehicles()[&id].is_destroyed());
+        let notices = fall.feedback.notices.clone();
+        assert!(fall.damage > 0);
+        // The treetops wreck the VTOL; the open-ground crash may leave it flyable (TW p. 68).
+        assert!(!crossed || world.btech.vehicles()[&id].is_destroyed());
+        assert_eq!(
+            world.btech.vehicles()[&id].vtol_flight().unwrap().phase,
+            VtolFlightPhase::Landed
+        );
         assert_eq!(
             world.btech.vehicles()[&id].position().unwrap().y,
             if crossed { 1 } else { 2 }
@@ -646,7 +647,7 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
                 .unwrap();
             let crash = notices
                 .iter()
-                .position(|n| n.text.contains("bad feeling"))
+                .position(|n| n.text.contains("wrecked"))
                 .unwrap();
             assert!(movement < crash);
             assert_eq!(hiding(&world, id), (None, false));

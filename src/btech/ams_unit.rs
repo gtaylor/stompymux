@@ -185,7 +185,6 @@ pub(super) fn expend(
         if let Some(bin) = bin {
             unit.expend_reserved_ammunition(bin, spent)?;
         }
-        unit.weapon_heat += f64::from(weapon.profile().heat);
         unit.weapon_recycle.insert(index, u16::from(recycle));
         return Ok(spent);
     }

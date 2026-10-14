@@ -137,9 +137,8 @@ pub fn begin_dump(
     ensure!(unit.power() == Power::Running, "Start the unit first");
     ensure!(!unit.airborne(), "You can't dump ammo while jumping!");
     ensure!(
-        unit.motion().is_some_and(
-            |motion| motion.desired_speed <= unit.movement_maximum_speed() * 2.0 / 3.0 + 0.1
-        ),
+        unit.motion()
+            .is_some_and(|motion| !unit.speed_envelope().is_running(motion.desired_speed)),
         "You can't dump ammo while running!"
     );
     let words: Vec<_> = argument.split_whitespace().collect();

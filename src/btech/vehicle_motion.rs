@@ -5,8 +5,6 @@ use anyhow::{Result, ensure};
 /// Inputs independent of vehicle construction, supplied by world configuration and pilot state.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VehicleMotionRules {
-    pub fasa_turning: bool,
-    pub slowdown: i64,
     pub speed_demon: bool,
     /// Positive map movement percentage; nonpositive values use the ordinary rate.
     pub movement_modifier: i64,
@@ -19,8 +17,6 @@ pub struct VehicleMotionRules {
 impl VehicleMotionRules {
     /// Ordinary ground rules without pilot advantages or map rate changes.
     pub const STANDARD: Self = Self {
-        fasa_turning: false,
-        slowdown: 2,
         speed_demon: false,
         movement_modifier: 0,
         extra_cost: 0,
@@ -82,10 +78,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
             1.0
         };
         motion.point = motion.project_step(rate)?;
-        motion.validate(
-            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
-                + 10.75,
-        )?;
+        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
         Ok(motion)
     }
 
@@ -101,12 +94,8 @@ impl VehicleTemplateMotion for VehicleTemplate {
             "Invalid vehicle maximum speed"
         );
         // Roads increase actual speed, while commands retain the chassis throttle envelope.
-        motion.validate(
-            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
-                + 10.75,
-        )?;
-        let retained =
-            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false);
+        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
+        let retained = super::speed_bonus::saved_limit(self.max_speed.max(maximum));
         ensure!(
             motion.desired_speed >= -retained * 2.0 / 3.0 && motion.desired_speed <= retained,
             "Speed exceeds vehicle limits"
@@ -117,7 +106,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
         }
         let old_heading = motion.heading;
         // Paved-surface speed can exceed the turning maximum. Preserve the high-speed turn rule.
-        if !rules.fasa_turning && motion.speed > maximum {
+        if motion.speed > maximum {
             let difference =
                 (motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0;
             let base = maximum / 10.75;
@@ -128,10 +117,11 @@ impl VehicleTemplateMotion for VehicleTemplate {
             };
             motion.heading = (motion.heading + difference.clamp(-turn, turn)).rem_euclid(360.0);
         } else {
-            motion.turn_toward(maximum, rules.fasa_turning, 1.0);
+            motion.turn_toward(maximum, maximum * 2.0 / 3.0);
         }
         let mut target = motion.desired_speed.abs()
-            / (terrain_divisor(hex, self.movement) + f64::from(rules.extra_cost));
+            / (terrain_divisor(hex, self.movement, self.has_special("Waterproof_Tech"))
+                + f64::from(rules.extra_cost));
         // Ground vehicles on pavement, a road or a bridge deck gain a point of movement
         // (Total Warfare p. 61).
         if hex.is_paved() && self.movement != VehicleMovement::Vtol {
@@ -140,15 +130,12 @@ impl VehicleTemplateMotion for VehicleTemplate {
         if motion.heading != old_heading {
             let remaining =
                 ((motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0).abs();
-            target = super::motion_controls::turning_throttle(target, remaining, rules.slowdown);
+            target = super::motion_controls::turning_throttle(target, remaining);
         }
         target *= motion.desired_speed.signum();
         let acceleration = maximum / 20.0 * if rules.speed_demon { 1.25 } else { 1.0 };
         motion.accelerate(target, acceleration, maximum);
-        motion.validate(
-            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
-                + 10.75,
-        )?;
+        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
         Ok(motion)
     }
 }
@@ -166,8 +153,23 @@ impl super::Vehicle {
     }
 }
 
-/// Speed divisor a vehicle's hex imposes on its desired throttle.
-fn terrain_divisor(hex: Hex, movement: VehicleMovement) -> f64 {
+/// Movement points an amphibious vehicle spends to enter any water hex, which it crosses on
+/// the surface whatever the depth (Total Warfare p. 52 note 7, p. 56).
+const AMPHIBIOUS_WATER_COST: f64 = 2.0;
+
+/// Speed divisor a vehicle's hex imposes on its desired throttle. An amphibious tracked or
+/// wheeled vehicle rides the surface of open water at a flat two points per hex instead of
+/// wading or crawling along the bed.
+fn terrain_divisor(hex: Hex, movement: VehicleMovement, amphibious: bool) -> f64 {
+    if amphibious
+        && hex.is_open_water()
+        && matches!(
+            movement,
+            VehicleMovement::Tracked | VehicleMovement::Wheeled
+        )
+    {
+        return AMPHIBIOUS_WATER_COST;
+    }
     hex.ground_speed_divisor(ground_movement(movement))
 }
 
@@ -192,15 +194,38 @@ mod tests {
     #[test]
     fn sand_slows_only_wheeled_vehicles() {
         assert_eq!(
-            terrain_divisor(Hex::new(Terrain::Sand, 0), VehicleMovement::Wheeled),
+            terrain_divisor(Hex::new(Terrain::Sand, 0), VehicleMovement::Wheeled, false),
             2.0
         );
         for movement in [VehicleMovement::Tracked, VehicleMovement::Hover] {
-            assert_eq!(terrain_divisor(Hex::new(Terrain::Sand, 0), movement), 1.0);
+            assert_eq!(
+                terrain_divisor(Hex::new(Terrain::Sand, 0), movement, false),
+                1.0
+            );
         }
         assert_eq!(
-            terrain_divisor(Hex::new(Terrain::Rough, 0), VehicleMovement::Tracked),
+            terrain_divisor(Hex::new(Terrain::Rough, 0), VehicleMovement::Tracked, false),
             2.0
+        );
+    }
+
+    /// An amphibious tank crosses any depth of water on the surface at two points per hex
+    /// (Total Warfare p. 52 note 7); a hovercraft already skims it for one.
+    #[test]
+    fn amphibious_vehicles_cross_water_on_the_surface_at_two_points() {
+        for depth in [1, 2, 4] {
+            let water = Hex::new(Terrain::Water, depth);
+            assert_eq!(terrain_divisor(water, VehicleMovement::Tracked, true), 2.0);
+            assert_eq!(terrain_divisor(water, VehicleMovement::Wheeled, true), 2.0);
+            assert_eq!(terrain_divisor(water, VehicleMovement::Hover, true), 1.0);
+            assert_eq!(
+                terrain_divisor(water, VehicleMovement::Tracked, false),
+                if depth == 1 { 2.0 } else { 4.0 }
+            );
+        }
+        assert_eq!(
+            terrain_divisor(Hex::new(Terrain::Clear, 0), VehicleMovement::Tracked, true),
+            1.0
         );
     }
 }

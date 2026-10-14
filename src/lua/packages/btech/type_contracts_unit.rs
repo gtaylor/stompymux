@@ -391,12 +391,14 @@
 // lua-types-end
 
 // lua-types-begin btech 00172
-//|---Begin a four-second Mech heat cutoff toggle; requires the assigned conscious pilot.
-//|---The configuration gate applies to new toggles; admitted transitions survive shutdown.
+//|---Shut off that many of a Mech's heat sinks (zero switches them all back on); requires the
+//|---assigned conscious pilot. The change takes effect at the unit's next turn boundary
+//|---(Total Warfare p. 159, Shutting Off Heat Sinks).
 //|---@param dbref integer
 //|---@param pilot integer
+//|---@param sinks integer Heat sinks to shut off, at most the working sinks.
 //|---@return boolean
-//|function btech_unit.heatcutoff(dbref, pilot) end
+//|function btech_unit.heatcutoff(dbref, pilot, sinks) end
 // lua-types-end
 
 // lua-types-begin btech 00173
@@ -575,7 +577,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00215
-//|---Read or set VTOL vertical speed using configured fuel rules and the shared velocity budget.
+//|---Read or set VTOL vertical speed; climb and horizontal travel share one movement budget.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param kph number? Omit for current speed; positive climbs, negative descends.

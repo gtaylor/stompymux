@@ -17,22 +17,6 @@ impl Mech {
         )
     }
 
-    /// Completed MASC seizure; fall resolution precedes hip damage in the failure action.
-    pub(super) fn masc_seized(&self) -> bool {
-        self.masc.failed
-            && self.chassis().legs().iter().all(|&section| {
-                self.critical_destroyed(super::CriticalLocation { section, slot: 0 })
-            })
-    }
-
-    /// A failed MASC seizes every chassis hip, including quad front legs.
-    pub(super) fn damage_masc_hips(&mut self) -> Result<()> {
-        for &section in self.chassis().legs() {
-            self.destroy_critical(super::CriticalLocation { section, slot: 0 })?;
-        }
-        Ok(())
-    }
-
     /// Installed MASC can remain physically present after it stops meeting its working threshold.
     pub fn masc_installed(&self) -> Result<bool> {
         Ok(self
@@ -44,10 +28,11 @@ impl Mech {
             >= self.masc_required_slots())
     }
 
-    /// Working MASC requires the full threshold of functional, unflooded critical slots.
+    /// Working MASC requires the full threshold of functional, unflooded critical slots. A
+    /// failed activation damages the legs but leaves the MASC itself working (Total Warfare
+    /// p. 137).
     pub fn masc_operational(&self) -> Result<bool> {
-        Ok(!self.masc.failed
-            && !self.is_destroyed()
+        Ok(!self.is_destroyed()
             && self
                 .loadout()?
                 .systems
@@ -79,26 +64,17 @@ impl Mech {
             && self.power() == super::Power::Running
             && self.supercharger_operational()
     }
-    /// Each active device adds one third of the unboosted running speed.
-    pub(super) fn booster_multiplier(&self) -> f64 {
-        1.0 + f64::from(u8::from(self.masc_active()) + u8::from(self.supercharger_active())) / 3.0
-    }
-    /// Successive toggles can temporarily request more than the combined effective ceiling.
-    pub(super) fn booster_speed_envelope(&self) -> f64 {
-        let count = u8::from(self.masc_installed().unwrap_or(false))
-            + u8::from(self.supercharger_installed());
-        (4.0_f64 / 3.0).powi(i32::from(count))
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Ordinary quad hip loss retains slow movement; MASC seizure immobilizes and prevents upright landing.
+    /// A failed MASC activation leaves the system installed and working; only the
+    /// supercharger's failure flag takes it out of service.
     #[test]
-    fn masc_seizes_all_chassis_hips_and_survives_serialization() {
-        let biped = Mech::from_template(
+    fn masc_survives_its_failures_and_a_failed_supercharger_does_not() {
+        let mut unit = Mech::from_template(
             super::super::MechTemplate::parse(
                 "JR7-D",
                 include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
@@ -106,39 +82,12 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-        for chassis in ["Biped", "Quad"] {
-            let mut encoded = serde_json::to_value(&biped).unwrap();
-            if chassis == "Quad" {
-                encoded["definition"] = serde_json::to_value(
-                    super::super::MechTemplate::parse(
-                        "SCP-1N",
-                        include_str!("../../game/units/SCP-1N.toml"),
-                    )
-                    .unwrap(),
-                )
-                .unwrap();
-            }
-            let mut unit: Mech = serde_json::from_value(encoded).unwrap();
-            // The enclosing fall still uses pre-seizure support and movement.
-            unit.masc.failed = true;
-            assert!(unit.mobility().maximum_speed > 0.0);
-            assert!(!unit.airborne_support_lost());
-            unit.masc.failed = false;
-            unit.damage_masc_hips().unwrap();
-            for &section in unit.chassis().legs() {
-                assert!(
-                    unit.critical_destroyed(super::super::CriticalLocation { section, slot: 0 })
-                );
-            }
-            unit.masc.failed = true;
-            assert_eq!(unit.mobility().maximum_speed, 0.0);
-            assert!(unit.airborne_support_lost());
-            unit.masc.shutdown();
-            let restored: Mech =
-                serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
-            assert_eq!(restored.mobility(), unit.mobility());
-            assert!(restored.airborne_support_lost());
-            assert!(restored.masc().failed);
-        }
+        assert!(!unit.masc_installed().unwrap());
+        unit.masc.failed = true;
+        assert!(!unit.masc_operational().unwrap());
+        unit.supercharger.failed = true;
+        assert!(!unit.supercharger_operational());
+        let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+        assert!(restored.supercharger().failed);
     }
 }

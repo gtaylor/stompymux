@@ -88,6 +88,16 @@ pub struct Mech {
     /// Heading held on the pavement or ice the unit is crossing, for the skid rule.
     #[serde(default)]
     pub(super) slick: super::SlickTrack,
+    /// Movement seen since the last turn-clock boundary, for the once-a-turn checks.
+    #[serde(default)]
+    pub(super) turn_movement: super::TurnMovement,
+    /// Levels climbed or descended into the current hex, charged while crossing it.
+    #[serde(default)]
+    pub(super) level_entry: Option<super::LevelEntry>,
+    /// Simulation time of the last jump launched; a Mech may not drop prone in the same
+    /// turn it jumps (Total Warfare p. 49).
+    #[serde(default)]
+    pub(super) last_jump_launch: Option<i64>,
     #[serde(default)]
     pub(super) masc: super::BoosterState,
     /// Shared identity of a C3i network; peers are derived from world membership.
@@ -253,6 +263,13 @@ pub struct Mech {
     pub(super) heat_sample: super::HeatRates,
     #[serde(default)]
     pub(super) heat_cutoff: super::HeatCutoff,
+    /// Set while the reactor is down from a heat shutdown, which restarts by itself once heat
+    /// falls below 14 (Total Warfare p. 160).
+    #[serde(default)]
+    pub(super) heat_shutdown: bool,
+    /// Set by a failed restart Avoid Roll; the reactor stays down until the next turn.
+    #[serde(default)]
+    pub(super) restart_denied: bool,
     /// Total cooling adopted at the last material reconstruction, before physical sink losses.
     #[serde(default)]
     pub(super) reconstructed_cooling: Option<u16>,
@@ -347,6 +364,9 @@ super::saved_parts::saved_parts!(Mech {
         hull_down,
         bogged_down,
         slick,
+        turn_movement,
+        level_entry,
+        last_jump_launch,
         c3i_network,
         c3_network,
         network_automation,
@@ -415,6 +435,8 @@ super::saved_parts::saved_parts!(Mech {
         position,
         facing,
         power,
+        heat_shutdown,
+        restart_denied,
         heat,
         heat_sample,
         overheat_clock,
@@ -462,8 +484,10 @@ impl Mech {
                 self.power() == super::Power::Running || !motion.translating(),
                 "Unpowered untowed unit cannot move"
             );
-            motion.validate(self.motion_speed_limit(self.definition().max_speed))?;
-            motion.validate(self.motion_speed_limit(self.mobility().maximum_speed))?;
+            motion.validate_within(self.motion_speed_limit(super::SpeedEnvelope::from_running(
+                self.definition().max_speed,
+            )))?;
+            motion.validate_within(self.motion_speed_limit(self.mobility().envelope()))?;
         }
         ensure!(
             self.ground_elevation
@@ -896,6 +920,9 @@ impl Mech {
             hull_down: Default::default(),
             bogged_down: false,
             slick: Default::default(),
+            turn_movement: Default::default(),
+            level_entry: None,
+            last_jump_launch: None,
             masc: Default::default(),
             c3i_network: None,
             c3_network: None,
@@ -963,6 +990,8 @@ impl Mech {
             heat: Default::default(),
             heat_sample: Default::default(),
             heat_cutoff: Default::default(),
+            heat_shutdown: false,
+            restart_denied: false,
             reconstructed_cooling: None,
             hide_elapsed: None,
             self_destruct: None,
@@ -1133,6 +1162,7 @@ impl Mech {
         );
         self.validate_hull_down()?;
         self.slick.validate()?;
+        self.turn_movement.validate()?;
         ensure!(
             self.position().is_some() == self.map_slot.is_some(),
             "Battlefield placement and slot must coexist"
@@ -1175,8 +1205,13 @@ impl Mech {
         }
         self.heat_cutoff.validate(
             self.reconstructed_cooling
-                .unwrap_or(self.definition.heat_sinks),
+                .unwrap_or(self.definition.heat_sinks)
+                / self.heat_sink_points_each(),
         )?;
+        ensure!(
+            self.power == super::Power::Off || !(self.heat_shutdown || self.restart_denied),
+            "Heat shutdown state on a powered unit"
+        );
         ensure!(
             self.hide_elapsed.is_none_or(|elapsed| elapsed <= 100),
             "Invalid hiding timer"
@@ -1313,9 +1348,9 @@ impl Mech {
         if let Some(motion) = self.motion {
             motion
                 .propelled(self.power)?
-                .validate(self.motion_speed_limit(
+                .validate_within(self.motion_speed_limit(super::SpeedEnvelope::from_running(
                     self.definition.max_speed.max(self.mobility().maximum_speed),
-                ))?;
+                )))?;
             let position = self
                 .position
                 .ok_or_else(|| anyhow::anyhow!("Motion requires placement"))?;
@@ -1342,7 +1377,7 @@ impl Mech {
             (self.gyro() == super::Gyro::Hardened).then(|| self.system_hits(System::Gyro)),
         )?;
         if !self.contract_loadout {
-            self.jump_capacity(50)?;
+            self.jump_capacity(100)?;
             if self
                 .definition
                 .attributes
@@ -1542,7 +1577,7 @@ impl Mech {
         if let Some(motion) = self.motion {
             motion
                 .propelled(self.power)?
-                .validate(self.motion_speed_limit(self.mobility().maximum_speed))?;
+                .validate_within(self.motion_speed_limit(self.mobility().envelope()))?;
         }
         Ok(())
     }

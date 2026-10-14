@@ -7,7 +7,7 @@
 //! segment through the ordinary movement transaction before committing it.
 
 use super::super::{
-    GroundMovement, Hex, HexCoordinate, MapFlag, Mech, Position, StructureKind, VehicleMovement,
+    GroundMovement, Hex, HexCoordinate, Mech, Position, StructureKind, VehicleMovement,
 };
 use crate::{ObjectId, World};
 use std::collections::BTreeMap;
@@ -152,10 +152,6 @@ fn assess_with_occupancy(
 
     let (reason, hazard_cost) = transition_reason(unit_kind, from_tile, to_tile, to_height);
     cost = cost.saturating_add(hazard_cost);
-    // Without stacking collisions, other units neither block nor slow a route.
-    if map.has_flag(MapFlag::NoStacking) {
-        return TraversalAssessment::allowed(cost, reason);
-    }
 
     let (occupants, friendly) = if let Some(cached) = cached_occupancy {
         cached.get(&(to.x, to.y)).copied().unwrap_or_default()
@@ -202,22 +198,12 @@ impl<'a> GroundTraversal<'a> {
     /// Build a traversal provider with one stable occupancy snapshot.  A* calls
     /// this provider once per edge, so rebuilding map membership or sorting all
     /// battlefield slots in that hot path would violate the heartbeat budget.
-    /// Maps without stacking collisions need no snapshot.
     pub fn new(world: &'a World, unit_id: ObjectId, map: ObjectId) -> Self {
-        let stacking = world
-            .btech
-            .maps()
-            .get(&map)
-            .is_some_and(|stored| !stored.has_flag(MapFlag::NoStacking));
         Self {
             world,
             unit_id,
             map,
-            occupancy: if stacking {
-                known_occupancy(world, unit_id, map)
-            } else {
-                OccupancyCounts::new()
-            },
+            occupancy: known_occupancy(world, unit_id, map),
             congested: Default::default(),
         }
     }
@@ -705,10 +691,9 @@ mod tests {
         assert!(!known_occupant(&world, observer, target));
     }
 
-    /// A friendly crowd blocks a route until the map switches stacking off, after which
-    /// the crowded hex costs the same as an empty one.
+    /// A friendly crowd blocks a route; an empty hex beyond it is open at its plain cost.
     #[test]
-    fn no_stacking_maps_route_through_crowds() {
+    fn crowds_block_routes() {
         use crate::btech::autopilot::navigation::{GridHex, Traversal};
         use crate::{Config, Kind, Power, UnitTemplate};
         let config = Config::load("tests/fixtures/game").unwrap();
@@ -747,20 +732,9 @@ mod tests {
             None
         );
 
-        world
-            .btech
-            .maps
-            .get_mut(&map)
-            .unwrap()
-            .set_flag(MapFlag::NoStacking, true);
-        let open = assess(&world, mover, at(0), at(1));
+        let open = assess(&world, mover, at(1), at(2));
         assert!(open.eligible);
         assert_eq!(open.reason, TraversalReason::Eligible);
-        assert_eq!(open, assess(&world, mover, at(1), at(2)));
-        let traversal = GroundTraversal::new(&world, mover, map);
-        assert!(traversal.occupancy.is_empty());
-        assert_eq!(traversal.traversal_cost(from, crowd), Some(open.cost));
-        assert!(traversal.congested_cells().is_empty());
     }
 
     #[test]

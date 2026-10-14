@@ -52,28 +52,24 @@ impl Motion {
         self.desired_speed = 0.0;
     }
 
-    /// Advance heading toward the commanded bearing with the configured ground-turn model.
-    pub(super) fn turn_toward(&mut self, maximum: f64, fasa_turning: bool, multiplier: f64) {
+    /// Advance heading toward the commanded bearing. Facing changes are continuous: a unit
+    /// turns through as many degrees a second as it has running MP, half again as fast from
+    /// a standstill, and more slowly while running hard through a wide turn. Total Warfare
+    /// p. 50 charges 1 MP per hexside instead; this rate-limited turn with the throttle cut in
+    /// `motion_controls::turning_throttle` is the realtime adaptation of that cost, and it is
+    /// the same for bipeds and quads.
+    pub(super) fn turn_toward(&mut self, maximum: f64, walking: f64) {
         if maximum <= 0.0 {
             return;
         }
         let difference = (self.desired_heading - self.heading + 180.0).rem_euclid(360.0) - 180.0;
-        let turn = if fasa_turning {
-            let cap = if self.speed < 0.0 {
-                maximum * 2.0 / 3.0
-            } else {
-                maximum
-            };
-            (1.5 * (cap - self.speed.abs()).max(0.0) * (maximum / cap) / 10.75).max(0.0)
+        let base = if self.speed.abs() < 1.0 { 1.5 } else { 1.0 } * maximum / 10.75;
+        let turn = if difference.abs() > base && self.speed > walking + 0.1 {
+            base * (2.0 - 1.5 * self.speed / maximum)
         } else {
-            let base = if self.speed.abs() < 1.0 { 1.5 } else { 1.0 } * maximum / 10.75;
-            if difference.abs() > base && self.speed > maximum * 2.0 / 3.0 + 0.1 {
-                base * (2.0 - 1.5 * self.speed / maximum)
-            } else {
-                base
-            }
+            base
         };
-        self.turn_by(turn * multiplier);
+        self.turn_by(turn);
     }
 
     /// Rotate along the shortest arc without overshooting the commanded bearing.
@@ -95,7 +91,16 @@ impl Motion {
         };
     }
 
-    /// Reconcile a changed load while retaining paved-surface headroom where applicable.
+    /// Keep a Mech's controls inside its current envelope after its load or damage changed.
+    pub(super) fn limit_to(&mut self, envelope: super::SpeedEnvelope) {
+        self.desired_speed = envelope.clamp(self.desired_speed);
+        self.speed = envelope.clamp(self.speed);
+        if envelope.is_stopped() {
+            self.desired_heading = self.heading;
+        }
+    }
+
+    /// Reconcile a changed vehicle load while retaining paved-surface headroom where applicable.
     pub(super) fn limit_load(&mut self, maximum: f64, actual_maximum: f64) {
         self.desired_speed = self.desired_speed.clamp(-maximum * 2.0 / 3.0, maximum);
         self.speed = self
@@ -116,7 +121,28 @@ impl Motion {
         Ok(Self { speed: 0.0, ..self })
     }
 
-    /// Validate persistent motion before it can enter the simulation.
+    /// Validate persistent Mech motion against the widest envelope it may have retained:
+    /// backward no faster than walking, forward no faster than running.
+    pub(crate) fn validate_within(self, envelope: super::SpeedEnvelope) -> Result<()> {
+        self.point.range(self.point)?;
+        ensure!(
+            [self.heading, self.desired_heading]
+                .iter()
+                .all(|value| value.is_finite() && (0.0..360.0).contains(value)),
+            "Invalid unit heading"
+        );
+        ensure!(
+            [self.speed, self.desired_speed]
+                .iter()
+                .all(|value| value.is_finite()
+                    && *value >= -envelope.walking - 1e-6
+                    && *value <= envelope.running + 1e-6),
+            "Invalid unit speed"
+        );
+        Ok(())
+    }
+
+    /// Validate persistent vehicle motion before it can enter the simulation.
     pub(crate) fn validate(self, maximum: f64) -> Result<()> {
         self.point.range(self.point)?;
         ensure!(
@@ -140,15 +166,8 @@ impl Motion {
 /// Shared ground/jump movement configuration, including charge, terrain and fall rules.
 #[derive(Debug, Clone, Copy)]
 pub struct MovementRules {
-    /// Fusion-powered VTOLs may omit fuel consumption when configured by the host.
-    pub free_fusion_vtol_fuel: bool,
     /// Enable hot-myomer assistance when calculating towing load.
     pub tsm_tow_bonus: bool,
-    /// Use pilot-based aim for DFA landing attacks.
-    pub fasa_turning: bool,
-    pub slowdown: i64,
-    /// Require a control check when backing across an elevation change.
-    pub roll_on_backwalk: bool,
     /// Damage and pilot protection rules for failed movement checks.
     pub fall: super::FallRules,
 }
@@ -161,17 +180,45 @@ impl MovementRules {
 
     /// Conventional movement and fall settings, suitable for an isolated simulation.
     pub const STANDARD: Self = Self {
-        free_fusion_vtol_fuel: false,
         tsm_tow_bonus: true,
-        fasa_turning: false,
-        slowdown: 2,
-        roll_on_backwalk: true,
         fall: super::FallRules {
             vehicle_impact: crate::VehicleImpactRules::STANDARD,
             extended_piloting: true,
             toughness: false,
         },
     };
+}
+
+/// The levels a Mech climbed or descended to enter the hex it stands in. Each level costs
+/// one MP (Total Warfare pp. 48 and 52), charged like the hex's own terrain cost: the
+/// unit crosses the hex that many hex-widths slower (see `ground_proposal`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LevelEntry {
+    pub x: u16,
+    pub y: u16,
+    pub levels: u8,
+}
+
+impl LevelEntry {
+    /// The extra movement cost this record adds while the unit stands at `position`.
+    pub(super) fn cost_at(self, position: super::Position) -> u8 {
+        if self.x == position.x && self.y == position.y {
+            self.levels
+        } else {
+            0
+        }
+    }
+}
+
+impl super::Mech {
+    /// Levels climbed or descended into the current hex, still being paid for.
+    pub fn level_entry_cost(&self) -> u8 {
+        match (self.level_entry, self.position()) {
+            (Some(entry), Some(position)) => entry.cost_at(position),
+            _ => 0,
+        }
+    }
 }
 
 /// A checked crossing carries both map elevation and the selected physical bridge surface.
@@ -182,6 +229,8 @@ struct GroundStep {
     old_point: Point,
     elevation: Option<f64>,
     old_elevation: Option<f64>,
+    /// Levels climbed or descended to enter this hex, charged while crossing it.
+    levels: u8,
     ice_check: bool,
     /// Why the unit must stop at this hex's edge instead of entering it: terrain it cannot
     /// enter, a slope too steep to climb or descend, or water it is running at.
@@ -196,7 +245,6 @@ pub fn set_speed(world: &mut World, id: ObjectId, pilot: ObjectId, speed: f64) -
         super::combat_operator::ControlActor::Player(pilot),
         speed,
         super::SpeedPolicy::STANDARD,
-        false,
     )?;
     let _ = super::autopilot::manual_takeover(world, id);
     Ok(notice)
@@ -210,7 +258,6 @@ pub(crate) fn set_speed_autopilot(world: &mut World, id: ObjectId, speed: f64) -
         super::combat_operator::ControlActor::Autopilot,
         speed,
         super::SpeedPolicy::STANDARD,
-        false,
     )
 }
 
@@ -220,7 +267,6 @@ fn set_speed_by_actor(
     actor: super::combat_operator::ControlActor,
     speed: f64,
     policy: super::SpeedPolicy,
-    free_fusion_fuel: bool,
 ) -> Result<Notice> {
     if world.btech.vehicles().contains_key(&id) {
         return super::vehicle_driving::set_control_by_actor(
@@ -230,7 +276,6 @@ fn set_speed_by_actor(
             Some(speed),
             None,
             policy,
-            free_fusion_fuel,
         );
     }
     super::power::controlled_unit_by_actor(world, id, actor)?;
@@ -251,22 +296,35 @@ fn set_speed_by_actor(
         unit.posture() != super::Posture::Prone,
         "Stand the unit up first"
     );
-    let maximum = super::motion_controls::throttle_configured(world, id, policy)?;
+    // Every "may not run" gate compares against the current walking ceiling, the
+    // template's walking MP after damage, heat and load (Total Warfare p. 53).
+    let envelope = super::motion_controls::throttle_envelope(world, id, policy)?;
+    // An autopilot steers in fractions of the running ceiling; its reverse requests are
+    // held to the walking ceiling rather than refused.
+    let speed = if matches!(actor, super::combat_operator::ControlActor::Autopilot) {
+        envelope.clamp(speed)
+    } else {
+        speed
+    };
+    let running = envelope.is_running(speed);
     ensure!(
-        unit.dumping().is_none() || speed <= maximum * 2.0 / 3.0 + 0.1,
+        unit.dumping().is_none() || !running,
         "You can not run while dumping ammo!"
     );
     ensure!(
-        unit.unjam().is_none() || speed <= maximum * 2.0 / 3.0 + 0.1,
+        unit.unjam().is_none() || !running,
         "You can not run while unjamming your weapon!"
     );
     ensure!(
-        speed.is_finite() && speed >= -maximum * 2.0 / 3.0 && speed <= maximum,
+        speed.is_finite() && speed >= -envelope.walking && speed <= envelope.running,
         "Speed exceeds unit limits"
     );
     super::motion_controls::require_reverse_allowed(world, id, speed)?;
+    if speed == 0.0 && matches!(actor, super::combat_operator::ControlActor::Player(_)) {
+        super::stacking::require_stop_allowed(world, id)?;
+    }
     ensure!(
-        unit.stun_remaining() == 0 || speed <= maximum * 2.0 / 3.0 + 0.1,
+        unit.stun_remaining() == 0 || !running,
         "You cannot move faster than cruise speed while stunned!"
     );
     let mut motion = unit.motion().context("Unit is not placed")?;
@@ -274,10 +332,7 @@ fn set_speed_by_actor(
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
     let wet = tile.immerses(unit.elevation_level(tile));
-    ensure!(
-        !wet || speed <= maximum * 2.0 / 3.0 + 0.1,
-        "You can't run through water!"
-    );
+    ensure!(!wet || !running, "You can't run through water!");
     motion.desired_speed = speed;
     world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
     Ok(Notice {
@@ -293,7 +348,6 @@ pub(crate) fn set_speed_configured(
     pilot: ObjectId,
     speed: f64,
     policy: super::SpeedPolicy,
-    free_fusion_fuel: bool,
 ) -> Result<Notice> {
     let notice = set_speed_by_actor(
         world,
@@ -301,7 +355,6 @@ pub(crate) fn set_speed_configured(
         super::combat_operator::ControlActor::Player(pilot),
         speed,
         policy,
-        free_fusion_fuel,
     )?;
     let _ = super::autopilot::manual_takeover(world, id);
     Ok(notice)
@@ -352,7 +405,6 @@ fn set_heading_by_actor(
             None,
             Some(heading),
             super::SpeedPolicy::STANDARD,
-            false,
         );
     }
     super::power::controlled_unit_by_actor(world, id, actor)?;
@@ -459,12 +511,7 @@ fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<
                 .vehicles
                 .get_mut(&id)
                 .unwrap()
-                .consume_vtol_fuel(
-                    flight.vertical_speed,
-                    flight.altitude as i32,
-                    false,
-                    rules.free_fusion_vtol_fuel,
-                )?;
+                .consume_vtol_fuel(flight.vertical_speed, flight.altitude as i32, false)?;
             if let super::VtolFuelUse::Exhausted { newly } = fuel {
                 if newly {
                     notices.push(Notice {
@@ -475,28 +522,27 @@ fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<
                 continue;
             }
         }
-        let maximum = world.btech.unit(id).expect("moving unit").maximum_speed();
-        let maximum = super::load::movement_maximum(world, id, maximum, rules.tsm_tow_bonus)?;
-        let maximum = if let Some(unit) = world.btech.constructed_units().get(&id) {
-            let effective = super::speed_bonus::on_map(
+        let (maximum, walking) = if world.btech.constructed_units().contains_key(&id) {
+            let envelope = super::motion_controls::throttle_envelope(
                 world,
-                unit.position(),
-                unit.movement_maximum_at(maximum),
+                id,
+                super::SpeedPolicy {
+                    tsm_tow_bonus: rules.tsm_tow_bonus,
+                },
             )?;
-            unit.turning_from_maximum(effective)
+            (envelope.running, envelope.walking)
         } else {
-            super::speed_bonus::vehicle_on_map(
+            let vehicle = &world.btech.vehicles()[&id];
+            let maximum = super::load::movement_maximum(
                 world,
-                world.btech.vehicles()[&id].position(),
-                maximum,
-            )?
+                id,
+                vehicle.maximum_speed(),
+                rules.tsm_tow_bonus,
+            )?;
+            let maximum = super::speed_bonus::vehicle_on_map(world, vehicle.position(), maximum)?;
+            (maximum, maximum * 2.0 / 3.0)
         };
-        let multiplier = world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .map_or(1.0, |unit| unit.chassis().turn_multiplier());
-        motion.turn_toward(maximum, rules.fasa_turning, multiplier);
+        motion.turn_toward(maximum, walking);
         crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.motion = Some(motion);
         })
@@ -534,7 +580,7 @@ fn advance_motion_inner(
     let mut charges = Vec::new();
     let mut surface_breaks = Vec::new();
     let mut experience_messages = Vec::new();
-    let mut collisions = super::stacking::StackingEffects::default();
+    let collisions = super::stacking::StackingEffects::default();
     for id in ids {
         let unit = &world.btech.constructed_units()[&id];
         if unit.power() != Power::Running
@@ -553,12 +599,8 @@ fn advance_motion_inner(
             continue;
         };
         if unit.flight().is_some() {
-            let turn = if rules.fasa_turning {
-                18.0
-            } else {
-                let chassis = unit.chassis().turn_multiplier();
-                3.0 * f64::from(unit.jump_capacity(map.gravity)?.movement_points) * chassis
-            };
+            // An airborne Mech turns three degrees a second per jumping MP, whatever its chassis.
+            let turn = 3.0 * f64::from(unit.jump_capacity(map.gravity)?.movement_points);
             motion.turn_by(turn);
             world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
             continue;
@@ -583,7 +625,10 @@ fn advance_motion_inner(
         let proposed = proposal.destination;
         // A unit that turned on pavement or ice must keep its footing before it moves on.
         let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-        let walking_ceiling = world.btech.constructed_units()[&id].movement_maximum_speed();
+        let walking_ceiling = world.btech.constructed_units()[&id].walking_speed();
+        let normal_running = world.btech.constructed_units()[&id]
+            .mobility()
+            .maximum_speed;
         let leaving = proposed.containing_hex().ok()
             != Some(super::HexCoordinate {
                 x: i32::from(position.x),
@@ -591,6 +636,8 @@ fn advance_motion_inner(
             });
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.motion = Some(motion);
+        unit.turn_movement
+            .observe(motion.speed, walking_ceiling, normal_running);
         unit.slick
             .observe(current.is_slick(), motion.speed != 0.0, motion.heading);
         let held = unit.slick.heading;
@@ -652,27 +699,6 @@ fn advance_motion_inner(
                 id,
                 rules.fall.extended_piloting,
             )?);
-        }
-        let unit = &world.btech.constructed_units()[&id];
-        if !unit.is_destroyed() && unit.position() != Some(position) && !unit.hex_sync_pending() {
-            let input = super::StackingInput {
-                entry: super::StackingEntry::Ground,
-                mass: unit.effective_mass()?,
-                jump_movement_points: 0,
-            };
-            let events = if character {
-                super::stacking::resolve_in_action(
-                    world,
-                    id,
-                    input,
-                    rules.fall,
-                    &mut collisions,
-                    (&mut pilot_notices, notices.len()),
-                )?
-            } else {
-                super::resolve_stacking(world, id, input, rules.fall)?
-            };
-            notices.extend(events);
         }
         if motion.speed != 0.0 {
             notices.extend(super::charge_tracking::finish_update(
@@ -784,13 +810,14 @@ fn resolve_ground_segment(
     let map = &world.btech.maps()[&position.map];
     let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let traversed = trace_start.trace_positions(proposed)?;
-    let walking = unit.movement_maximum_speed() * 2.0 / 3.0 + 0.1;
+    let walking = unit.walking_speed() + 0.1;
     let mut destination = proposed.containing_hex().ok();
     let mut previous_height = current.surface_height();
     let mut previous_tile = current;
     let mut actual_height = unit.elevation_level(current) as i16;
     let mut ground_elevation = unit.ground_elevation;
-    let mut elevation_cost = 0.0;
+    let old_entry = unit.level_entry;
+    let mut entry = old_entry;
     let mut checked_steps = Vec::new();
     let mut previous_position = position;
     let mut previous_point = motion.point;
@@ -892,10 +919,29 @@ fn resolve_ground_segment(
             {
                 Some("You cannot run into the water!".to_owned())
             } else {
-                None
+                // Stacking (Total Warfare p. 57): an enemy in the hex ends movement at its
+                // edge, and a unit meaning to stop may not enter a hex already full.
+                super::stacking::ground_entry_block(world, id, hex, motion.desired_speed)
             };
-            let checked_height =
-                stop.is_some() || (change != 0 && motion.speed < 0.0 && rules.roll_on_backwalk);
+            // Backing across a level change takes the reverse-slope check, a kept house rule:
+            // Total Warfare p. 49 forbids backward level changes outright.
+            let checked_height = stop.is_some() || (change != 0 && motion.speed < 0.0);
+            // Inside a building the floor entered is the level climbed to, not the roof.
+            let climbed = if enters_building {
+                next_height
+            } else if next_height == tile.surface_height() {
+                tile.surface_height()
+            } else {
+                last_surface
+            };
+            let levels = (climbed - last_surface)
+                .unsigned_abs()
+                .min(u16::from(u8::MAX)) as u8;
+            entry = Some(LevelEntry {
+                x: hex.x as u16,
+                y: hex.y as u16,
+                levels,
+            });
             let hazardous_ground = tile
                 .entry_piloting_modifier(super::GroundMovement::Legged)
                 .is_some()
@@ -917,18 +963,10 @@ fn resolve_ground_segment(
                     old_point: previous_point,
                     elevation: next_elevation,
                     old_elevation: ground_elevation,
+                    levels,
                     ice_check,
                     stop,
                 });
-            }
-            if !checked_height && (next_height == tile.surface_height() || enters_building) {
-                // Inside a building the floor entered is the level climbed to, not the roof.
-                let climbed = if enters_building {
-                    next_height
-                } else {
-                    tile.surface_height()
-                };
-                elevation_cost += f64::from((climbed - last_surface).unsigned_abs()) * 10.75;
             }
             actual_height = next_height;
             ground_elevation = next_elevation;
@@ -958,7 +996,6 @@ fn resolve_ground_segment(
             text: text.to_owned(),
         });
     } else {
-        motion.speed = motion.speed.signum() * (motion.speed.abs() - elevation_cost).max(0.0);
         motion.point = proposed;
         let hex = destination.unwrap();
         position.x = hex.x as u16;
@@ -985,6 +1022,7 @@ fn resolve_ground_segment(
     }
     if blocked.is_none() {
         unit.hex_sync_pending = false;
+        unit.level_entry = entry;
     }
     unit.motion = Some(motion);
     unit.position = Some(position);
@@ -1017,6 +1055,7 @@ fn resolve_ground_segment(
         old_point,
         elevation,
         old_elevation,
+        levels,
         ice_check,
         stop,
     } in checked_steps
@@ -1028,6 +1067,11 @@ fn resolve_ground_segment(
             y: hex.y as u16,
         });
         unit.ground_elevation = elevation;
+        unit.level_entry = Some(LevelEntry {
+            x: hex.x as u16,
+            y: hex.y as u16,
+            levels,
+        });
         unit.motion.as_mut().unwrap().point = if hex == destination.unwrap() {
             proposed
         } else {
@@ -1063,7 +1107,7 @@ fn resolve_ground_segment(
         }
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         if let Some(text) = stop {
-            restore_ground_position(unit, old_position, old_point, old_elevation);
+            restore_ground_position(unit, old_position, old_point, old_elevation, old_entry);
             let motion = unit.motion.as_mut().unwrap();
             motion.speed = 0.0;
             motion.desired_speed = 0.0;
@@ -1071,7 +1115,7 @@ fn resolve_ground_segment(
             stopped = true;
             break;
         }
-        if change == 0 || motion.speed >= 0.0 || !rules.roll_on_backwalk {
+        if change == 0 || motion.speed >= 0.0 {
             let entry = super::water_movement::enter_water(
                 world,
                 id,
@@ -1222,7 +1266,7 @@ fn resolve_ground_segment(
         }
         if change > 0 {
             let unit = world.btech.constructed.get_mut(&id).unwrap();
-            restore_ground_position(unit, old_position, old_point, old_elevation);
+            restore_ground_position(unit, old_position, old_point, old_elevation, old_entry);
         }
         stopped = true;
         break;
@@ -1231,6 +1275,7 @@ fn resolve_ground_segment(
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.position = Some(position);
         unit.ground_elevation = ground_elevation;
+        unit.level_entry = entry;
         motion.point = proposed;
         unit.motion = Some(motion);
     }
@@ -1264,9 +1309,11 @@ fn restore_ground_position(
     position: super::Position,
     point: Point,
     elevation: Option<f64>,
+    entry: Option<LevelEntry>,
 ) {
     unit.position = Some(position);
     unit.ground_elevation = elevation;
+    unit.level_entry = entry;
     unit.hex_sync_pending = point.containing_hex().ok()
         != Some(super::HexCoordinate {
             x: i32::from(position.x),

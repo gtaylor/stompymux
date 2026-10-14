@@ -1,26 +1,25 @@
-//! Controlled Mech drops reuse piloting, fall damage, flooding and physical mine events.
-use super::{MechFallReport, MineEventReport, Notice, PilotingCheck, SectionExposureReport};
+//! Deliberate drops to the ground (Total Warfare p. 49): no roll, no damage and no extra heat,
+//! the unit keeps its facing, and the flooding and mine events of touching the ground follow.
+use super::{MineEventReport, Notice, SectionExposureReport};
 use crate::{Config, ObjectId, Scripts, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
-/// Completed controlled drop; an optional failed control check precedes ordinary fall consequences.
+/// Seconds after launching a jump during which a Mech may not drop to the ground: the
+/// book forbids dropping in a turn the Mech jumped.
+const JUMP_LOCKOUT_SECONDS: i64 = 30;
+
+/// Completed controlled drop and the ground-contact events it triggered.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ProneReport {
-    /// Slow drops succeed without consuming control dice.
-    pub check: Option<PilotingCheck>,
-    /// A failed fast-drop check delegates damage to the ordinary fall resolver.
-    pub fall: Option<MechFallReport>,
     /// New breaches flooded after the final prone posture is established.
     pub flooding: Vec<SectionExposureReport>,
-    /// The final stepping event follows any earlier fall-triggered mines.
+    /// The stepping event of coming to rest on the ground.
     pub mines: MineEventReport,
     /// Ordered cockpit and observer messages already published by the host action.
     pub notices: Vec<Notice>,
-    /// Private control feedback follows the drop warnings and precedes impact feedback.
+    /// Private feedback from flooding and mine consequences.
     pub pilot_notices: Vec<super::PilotNotice>,
-    /// Control-check experience diagnostics committed with the action.
-    pub experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Execute the native and Lua controlled-drop contract within one host rollback boundary.
@@ -36,13 +35,9 @@ pub fn prone_action(
             scripts,
             &report.notices,
             &report.pilot_notices,
-            report.check.as_ref(),
+            None,
             true,
         )?;
-        super::diagnostics::publish(scripts, &report.experience_messages);
-        if let Some(fall) = &report.fall {
-            super::evacuation::publish_fall_consequences(scripts, config, fall)?;
-        }
         for flood in &report.flooding {
             super::evacuation::publish_section_exposure_consequences(scripts, config, flood)?;
         }
@@ -53,7 +48,8 @@ pub fn prone_action(
     })
 }
 
-/// Validate before dice or posture changes, then resolve the complete physical sequence.
+/// Validate, then drop: a deliberate drop costs 1 MP in the book and nothing else, so here
+/// it only stops the unit's travel and lays it down with the facing it had.
 fn resolve(
     world: &mut World,
     config: &Config,
@@ -79,108 +75,32 @@ fn resolve(
         unit.stand_timer().is_none(),
         "You can't drop while trying to stand up!"
     );
-    unit.position().context("Unit is not on a battlefield")?;
-    let speed = unit
-        .motion()
-        .context("Unit has no motion state")?
-        .speed
-        .abs();
-    let threshold = f64::from(
-        super::effective_speed::configured(
-            world,
-            id,
-            super::speed_bonus::SpeedPolicy::configured(config),
-        )? as f32
-            / 3.0,
+    ensure!(
+        unit.last_jump_launch
+            .is_none_or(|launched| world.btech.simulation_time() - launched >= JUMP_LOCKOUT_SECONDS),
+        "You can't drop to the ground so soon after jumping!"
     );
-    let speed_levels = if speed > threshold * 2.0 {
-        2
-    } else {
-        u8::from(speed > threshold)
-    };
-    let stagger_level = unit.stagger().action_level();
-    let levels = speed_levels.max(u8::from(stagger_level > 0));
+    unit.position().context("Unit is not on a battlefield")?;
+    unit.motion().context("Unit has no motion state")?;
     let mut rules = super::FallRules::configured(config);
     rules.toughness = world
         .btech
         .character_values()
         .get(&pilot)
         .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
-    let mut notices = Vec::new();
-    let mut pilot_notices = Vec::new();
-    let mut experience_messages = Vec::new();
-    if speed_levels > 0 {
-        notices.push(Notice {
-            unit: id,
-            text: if speed_levels == 2 {
-                "You attempt a controlled drop while running."
-            } else {
-                "You attempt a controlled drop from your fast walk."
-            }
-            .into(),
-        });
-    }
-    if stagger_level > 0 {
-        notices.push(Notice {
-            unit: id,
-            text: "Still staggering, you try not to fall on your face.".into(),
-        });
-    }
-    let check = if levels > 0 {
-        // Large restored values still guarantee failure within the shared control-roll range.
-        let modifier =
-            (stagger_level + if speed_levels == 2 { 2 } else { 0 }).min(i32::from(i16::MAX)) as i16;
-        let mut check = super::roll_piloting(world, id, modifier, rules.extended_piloting)?;
-        super::piloting::capture_feedback(
-            id,
-            Some(pilot),
-            &check,
-            &mut notices,
-            &mut pilot_notices,
-        );
-        experience_messages.extend(super::piloting::award_control_check(
-            world,
-            id,
-            &mut check,
-            rules.extended_piloting,
-        )?);
-        Some(check)
-    } else {
-        None
-    };
-    let failed = check.as_ref().is_some_and(|check| !check.success);
-    notices.push(Notice {
+    let mut notices = vec![Notice {
         unit: id,
-        text: match check.as_ref() {
-            None => "You drop to the ground prone!",
-            Some(check) if check.success => "You hit the ground with minimal damage",
-            Some(_) => "You fall to the ground hard",
-        }
-        .into(),
-    });
+        text: "You drop to the ground prone!".into(),
+    }];
     notices.extend(super::broadcast::observer_notices(
         world,
         id,
-        if failed {
-            "falls hard to the ground!"
-        } else {
-            "drops to the ground!"
-        },
+        "drops to the ground!",
     ));
-    let fall = if failed {
-        let fall = if world.objects[&id].flags.contains(crate::Flag::InCharacter) {
-            super::fall::resolve_character_fall(world, id, levels, rules)?
-        } else {
-            super::resolve_fall(world, id, levels, rules)?
-        };
-        fall.append_notices(id, &mut notices, &mut pilot_notices);
-        Some(fall)
-    } else {
-        None
-    };
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     super::fall::set_prone(unit);
     unit.motion.as_mut().unwrap().stop_translation();
+    let mut pilot_notices = Vec::new();
     let flooding = super::flooding::flood_unit_in_action(world, id, rules)?;
     for flood in &flooding {
         super::piloting::append_feedback(
@@ -198,13 +118,10 @@ fn resolve(
     );
     notices.extend(mines.notices.clone());
     Ok(ProneReport {
-        check,
-        fall,
         flooding,
         mines,
         notices,
         pilot_notices,
-        experience_messages,
     })
 }
 

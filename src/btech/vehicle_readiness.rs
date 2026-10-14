@@ -297,10 +297,11 @@ pub(super) fn reserve_prepared_weapon(
             );
             draws
         };
+    // Vehicles shed all the heat they build up (Total Warfare p. 158); the launch heat is
+    // reported for the record only.
     let heat = fire_mode.launch_heat(mount.weapon, gatling_damage, launched);
     let now = world.btech.simulation_time();
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
-    vehicle.weapon_heat += f64::from(heat);
     vehicle.fired_recently |= launched;
     if launched {
         vehicle.last_weapon_fire = Some(now);

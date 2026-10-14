@@ -247,7 +247,8 @@ function btech_unit.inspect(dbref) end
 ---@field desired_speed number
 
 ---@class Mobility
----@field maximum_speed number Damage-adjusted maximum kph before terrain, heat and cargo.
+---@field walking_speed number Damage-adjusted walking kph before terrain, heat and cargo.
+---@field maximum_speed number Damage-adjusted running kph before terrain, heat and cargo.
 ---@field piloting_modifier integer Damage modifier for subsequent piloting checks.
 
 ---@alias DetectionChannel "sight"|"sensors"|"probe" Values from btech.unit.detection_channels.
@@ -366,7 +367,9 @@ function btech_unit.inspect(dbref) end
 ---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 ---@field crew_recovery_remaining integer Empty-crew consciousness countdown; random state stays private.
 ---@field character_pilot {injuries: integer, killed: boolean}? Saved character-mode injury status; character health determines death.
----@field heat_cutoff {enabled: boolean, disabled: integer, remaining: integer|nil} Intentional cooling suppression and seconds until the toggle completes.
+---@field heat_cutoff {requested: integer, shut_off: integer} Heat sinks shut off this turn and the count requested for the next.
+---@field heat_shutdown boolean Reactor down from a heat shutdown; it restarts by itself below 14 heat.
+---@field restart_denied boolean A failed restart Avoid Roll keeps the reactor down until the next turn.
 ---@field last_jump {heading: integer, length: integer} Current course bearing and signed length in field units, retained after landing.
 ---@field heat_sample {production: number, dissipation: number} Last committed thermal sample; production includes stored weapon heat.
 ---@field heat {stored: number, excess: number} Weapon heat and sampled excess heat.
@@ -456,7 +459,6 @@ function btech_unit.inspect(dbref) end
 ---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
 ---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 ---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
----@field weapon_heat number Passive weapon heat; ground vehicles do not overheat.
 ---@field gunnery_damage integer Cumulative firing penalty from sensor and commander damage.
 ---@field lost_stabilizers string[] Sections with destroyed weapon stabilizers.
 ---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
@@ -1333,12 +1335,14 @@ function btech_unit.tic_edit(dbref, pilot, group, operation, weapons) end
 ---@return {group: integer, weapon: integer, report: table|nil, rejection: string|nil}[]
 function btech_unit.tic_fire(dbref, pilot, groups, target) end
 
----Begin a four-second Mech heat cutoff toggle; requires the assigned conscious pilot.
----The configuration gate applies to new toggles; admitted transitions survive shutdown.
+---Shut off that many of a Mech's heat sinks (zero switches them all back on); requires the
+---assigned conscious pilot. The change takes effect at the unit's next turn boundary
+---(Total Warfare p. 159, Shutting Off Heat Sinks).
 ---@param dbref integer
 ---@param pilot integer
+---@param sinks integer Heat sinks to shut off, at most the working sinks.
 ---@return boolean
-function btech_unit.heatcutoff(dbref, pilot) end
+function btech_unit.heatcutoff(dbref, pilot, sinks) end
 
 ---Toggle an MML between SRM and LRM ammunition; requires dedicated matching bins.
 ---SRMs use 3/6/9 range and two-point hits; LRMs use 7/14/21, minimum six, and five-point groups.
@@ -1560,7 +1564,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field hit boolean Launch classification; missile near misses may have no target effects.
 ---@field expenditure WeaponUse
 ---@field salvo {kind: 'mech'|'vehicle'|'swarm', report: table}|nil Target-specific damage; nil on a miss or a heat-mode hit.
----@field heat_transfer integer Heat already added to the target, zero unless a heat-mode shot hits.
+---@field heat_transfer integer|nil Outside heat a heat-mode hit added to a Mech target (zero once the turn's outside-heat cap is full); nil for any other shot.
 ---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 ---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
 
@@ -1588,7 +1592,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field expenditure VehicleWeaponUse
 ---@field ams AmsReport|nil
 ---@field narc NarcReport|nil Beacon attachment or interception; vehicle sections use their own names.
----@field heat_transfer integer Direct flamer heat added to the target, otherwise zero.
+---@field heat_transfer integer|nil Outside heat a heat-mode hit added to a Mech target (zero once the turn's outside-heat cap is full); nil for any other shot.
 ---@field missed_terrain WoodlandImpact|nil Incidental terrain check after a launched non-missile miss, independent of woods damage configuration.
 ---@field missed_building StrayHit|nil A miss from the next hex that struck the building around a target inside one.
 ---@field salvo {kind: 'mech'|'vehicle'|'swarm', report: table}|nil Target-specific ordered damage groups.
@@ -1788,7 +1792,7 @@ function btech_unit.enterbase(dbref, pilot, direction) end
 ---@return boolean
 function btech_unit.takeoff(dbref, pilot, delay) end
 
----Read or set VTOL vertical speed using configured fuel rules and the shared velocity budget.
+---Read or set VTOL vertical speed; climb and horizontal travel share one movement budget.
 ---@param dbref integer
 ---@param pilot integer
 ---@param kph number? Omit for current speed; positive climbs, negative descends.
@@ -2907,9 +2911,10 @@ function btech_unit.dump(dbref, player, selection) end
 
 ---@class BoosterState
 ---@field enabled boolean
----@field counter integer
----@field remaining integer Seconds until the next overload/recovery check.
----@field failed boolean Hardware failure persists through shutdown.
+---@field counter integer Interval of the last activation check still in effect, 1-5.
+---@field used boolean The booster was active at some point this turn.
+---@field rested boolean The last turn passed without using the booster.
+---@field failed boolean A failed supercharger stays out of service through shutdown.
 
 ---Toggle MASC and adjust the desired throttle proportionally.
 ---@param dbref integer

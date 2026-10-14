@@ -94,15 +94,7 @@ async fn core_damage_survives_restart_and_rejects_invalid_phase_targets_atomical
         stompymux_rs::advance_battle_units(&mut world, 0, true);
     }
     stompymux_rs::set_battle_speed(&mut world, id, ObjectId(1), 10.0).unwrap();
-    stompymux_rs::advance_battle_motion(
-        &mut world,
-        stompymux_rs::MovementRules {
-            fasa_turning: false,
-            slowdown: 2,
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
+    stompymux_rs::advance_battle_motion(&mut world, stompymux_rs::MovementRules::STANDARD).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let before = world.clone();
     assert!(

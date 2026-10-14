@@ -161,8 +161,6 @@ pub struct Vehicle {
     pub(super) friendly_fire_safety: bool,
     pub(super) auto_fall: bool,
     pub(super) ams_enabled: bool,
-    /// Passive weapon heat; ground vehicles do not sample overheating.
-    pub(super) weapon_heat: f64,
     pub(super) inferno_remaining: u32,
     pub(super) building_entry: Option<super::BuildingEntry>,
     pub(super) beacons: BTreeMap<VehicleSection, std::collections::BTreeSet<super::BeaconKind>>,
@@ -360,8 +358,6 @@ struct VehicleRecord {
     auto_fall: bool,
     ams_enabled: bool,
     #[serde(default)]
-    weapon_heat: f64,
-    #[serde(default)]
     inferno_remaining: u32,
     #[serde(default)]
     building_entry: Option<super::BuildingEntry>,
@@ -501,7 +497,6 @@ super::saved_parts::saved_parts!(Vehicle {
         detached_heading,
         turret_repairs,
         aimed_section,
-        weapon_heat,
         fired_recently,
         shot_counters,
         damage_counters,
@@ -544,9 +539,7 @@ impl Vehicle {
         let Some(motion) = self.motion() else {
             return Ok(());
         };
-        motion.validate(
-            super::speed_bonus::saved_limit(self.maximum_speed(), false, false, false) + 10.75,
-        )?;
+        motion.validate(super::speed_bonus::saved_limit(self.maximum_speed()) + 10.75)?;
         ensure!(
             self.power() == super::Power::Running
                 || !motion.translating()
@@ -991,7 +984,6 @@ impl Vehicle {
             auto_fall: false,
             // Anti-missile defense is purely reactive, so installed systems start armed.
             ams_enabled: loadout.weapons.iter().any(|mount| mount.weapon.is_ams()),
-            weapon_heat: 0.0,
             inferno_remaining: 0,
             building_entry: None,
             beacons: BTreeMap::new(),
@@ -1070,11 +1062,6 @@ impl Vehicle {
     /// Whether an Engine Hit has disabled propulsion and direct-fire energy weapons.
     pub fn engine_destroyed(&self) -> bool {
         self.engine_destroyed
-    }
-
-    /// Stored weapon heat; never sampled as ground-vehicle overheating.
-    pub fn weapon_heat(&self) -> f64 {
-        self.weapon_heat
     }
 
     /// Saved virtual-crew recovery, independent of mechanical crew stun.
@@ -1263,7 +1250,8 @@ impl Vehicle {
             .or_else(|| self.vtol_flight.and_then(|flight| flight.fall))
     }
 
-    /// Ground support height; hovercraft float at water level rather than on the bed.
+    /// Ground support height; hovercraft and amphibious vehicles float at water level rather
+    /// than resting on the bed.
     pub fn elevation_level(&self, tile: super::Hex) -> i32 {
         if let Some(drop) = self.orbital_drop {
             return drop.elevation();
@@ -1281,14 +1269,23 @@ impl Vehicle {
     }
 
     /// Support height at a destination, independent of retained altitude on the current hex.
+    /// Hovercraft skim the water, and an amphibious vehicle crosses it on the surface too
+    /// (Total Warfare p. 52 note 7, p. 56), so neither is immersed in it.
     pub(super) fn terrain_elevation(&self, tile: super::Hex, under_bridge: bool) -> i32 {
         if under_bridge && tile.has_bridge() {
             return i32::from(tile.water_line());
         }
-        if self.definition.movement == super::VehicleMovement::Hover && tile.is_water_surface() {
+        if self.rides_water_surface() && tile.is_water_surface() {
             return i32::from(tile.water_line());
         }
         i32::from(tile.standing_height())
+    }
+
+    /// Whether this vehicle crosses water on its surface: a hovercraft, or an amphibious
+    /// (waterproofed) tracked or wheeled vehicle.
+    pub fn rides_water_surface(&self) -> bool {
+        self.definition.movement == super::VehicleMovement::Hover
+            || self.definition.has_special("Waterproof_Tech")
     }
 
     /// Current continuous position and commanded motion.
@@ -1738,7 +1735,6 @@ impl Vehicle {
             friendly_fire_safety: record.friendly_fire_safety,
             auto_fall: record.auto_fall,
             ams_enabled: record.ams_enabled,
-            weapon_heat: record.weapon_heat,
             inferno_remaining: record.inferno_remaining,
             building_entry: record.building_entry,
             beacons: record.beacons,
@@ -1966,7 +1962,7 @@ impl Vehicle {
                     .is_none_or(|motion| !motion.active()),
             "Rotorless aircraft retains horizontal motion"
         );
-        let maximum = super::speed_bonus::saved_limit(self.maximum_speed(), false, false, false);
+        let maximum = super::speed_bonus::saved_limit(self.maximum_speed());
         if let Some(motion) = self.motion {
             let propelled = motion.propelled(self.power)?;
             propelled.validate(maximum + 10.75)?;
@@ -2173,7 +2169,6 @@ impl Vehicle {
                 .is_none_or(|remaining| (1..=60).contains(&remaining)),
             "Invalid vehicle pod-removal countdown"
         );
-        ensure!(self.weapon_heat.is_finite(), "Invalid vehicle weapon heat");
         ensure!(
             self.inferno_remaining <= i32::MAX as u32,
             "Invalid inferno duration"

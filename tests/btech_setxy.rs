@@ -216,7 +216,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     let source = &firing::templates()[6];
     let (dir, config, mut world, unit, other, _) =
         firing::fixture_with_target(source, None, source).await;
-    let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0, false).unwrap();
+    let _ = begin_battle_vtol_takeoff(&mut world, unit, ObjectId(1), 0).unwrap();
     advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     assert_eq!(
         world.btech.vehicles()[&unit].vtol_flight().unwrap().phase,

@@ -46,121 +46,88 @@ async fn fixture(quad: bool, tile: &str) -> (tempfile::TempDir, Config, World, O
     (dir, config, world, id, map)
 }
 
-/// Exact speed boundaries, reverse travel and success/failure use the existing replayable checks.
+/// Dropping to the ground is safe at any speed, forward or backward (Total Warfare p. 49): no
+/// control roll, no damage, no dice, the facing kept, and the same result on replay.
 #[tokio::test]
-async fn prone_speed_boundaries_and_replay() {
+async fn prone_drops_at_any_speed_without_a_roll() {
     for quad in [false, true] {
         let (_dir, config, base, id, _) = fixture(quad, ".0").await;
-        let threshold =
-            f64::from(battle_effective_maximum_speed(&base, id, true).unwrap() as f32 / 3.0);
-        for (speed, levels) in [
-            (0.0, 0),
-            (threshold, 0),
-            (threshold + 0.01, 1),
-            (2.0 * threshold, 1),
-            (2.0 * threshold + 0.01, 2),
-        ] {
-            for reverse in [false, true] {
-                if reverse
-                    && speed
-                        > base.btech.constructed_units()[&id].mobility().maximum_speed * 2.0 / 3.0
-                {
-                    continue;
-                }
-                for success in [false, true] {
-                    let seed = (0..=255)
-                        .find(|seed| {
-                            Dice::seeded([*seed; 32]).two_d6() == if success { 12 } else { 2 }
-                        })
-                        .unwrap();
-                    let mut world = base.clone();
-                    world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
-                    world
-                        .objects
-                        .get_mut(&ObjectId(2))
-                        .unwrap()
-                        .flags
-                        .insert(Flag::Connected);
-                    edit(&mut world, id, |unit| {
-                        unit["motion"]["speed"] = (if reverse { -speed } else { speed }).into();
-                        unit["motion"]["desired_speed"] = unit["motion"]["speed"].clone();
-                        unit["motion"]["desired_heading"] = 90.0.into();
-                        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-                    });
-                    let scripts =
-                        Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-                    let report = prone_action(&scripts, &config, id, ObjectId(1)).unwrap();
-                    assert_eq!(report.check.is_some(), levels > 0);
-                    let output = scripts.drain_outbox();
-                    for player in [ObjectId(1), ObjectId(2)] {
-                        let feedback: Vec<_> = output
-                            .iter()
-                            .filter(|(who, text)| {
-                                *who == player
-                                    && (text.source().starts_with("You make a piloting")
-                                        || text.source().starts_with("Modified Pilot Skill:"))
-                            })
-                            .map(|(_, text)| text.source().to_owned())
-                            .collect();
-                        if player == ObjectId(1) && levels > 0 {
-                            let check = report.check.unwrap();
-                            let mut expected = check.messages().unwrap().to_vec();
-                            if let Some(messages) = report
-                                .fall
-                                .as_ref()
-                                .and_then(|fall| fall.avoidance.as_ref())
-                                .and_then(|check| check.messages())
-                            {
-                                expected.extend(messages);
-                            }
-                            assert_eq!(feedback, expected);
-                            assert_eq!(report.pilot_notices[0].before_notice, 1);
-                        } else {
-                            assert!(feedback.is_empty());
-                        }
-                    }
-                    assert_eq!(report.fall.is_some(), levels > 0 && !success);
-                    if let Some(check) = &report.check {
-                        assert_eq!(check.situational, if levels == 2 { 2 } else { 0 });
-                    }
-                    let after = scripts.world().clone();
-                    assert_eq!(
-                        after.btech.constructed_units()[&id].posture(),
-                        Posture::Prone
-                    );
-                    assert_eq!(
-                        after.btech.constructed_units()[&id].motion().unwrap().speed,
-                        0.0
-                    );
-                    if report.fall.is_none() {
-                        assert_eq!(
-                            after.btech.constructed_units()[&id].sections(),
-                            base.btech.constructed_units()[&id].sections()
-                        );
-                        assert_eq!(
-                            after.btech.constructed_units()[&id]
-                                .motion()
-                                .unwrap()
-                                .desired_heading,
-                            90.0
-                        );
-                    }
-                    if levels == 0 {
-                        let before = serde_json::to_value(&world.btech).unwrap();
-                        let after = serde_json::to_value(&after.btech).unwrap();
-                        assert_eq!(
-                            after["constructed"][id.0.to_string()]["dice"],
-                            before["constructed"][id.0.to_string()]["dice"]
-                        );
-                    }
-                    let replay = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-                    assert_eq!(
-                        prone_action(&replay, &config, id, ObjectId(1)).unwrap(),
-                        report
-                    );
-                    assert_eq!(replay.world().btech, after.btech);
-                }
-            }
+        let walking = base.btech.constructed_units()[&id].walking_speed();
+        let running = base.btech.constructed_units()[&id].movement_maximum_speed();
+        for speed in [0.0, walking, -walking, running] {
+            let mut world = base.clone();
+            world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
+            world
+                .objects
+                .get_mut(&ObjectId(2))
+                .unwrap()
+                .flags
+                .insert(Flag::Connected);
+            edit(&mut world, id, |unit| {
+                unit["motion"]["speed"] = speed.into();
+                unit["motion"]["desired_speed"] = speed.into();
+                unit["motion"]["desired_heading"] = 90.0.into();
+            });
+            let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
+            let report = prone_action(&scripts, &config, id, ObjectId(1)).unwrap();
+            assert_eq!(report.notices[0].text, "You drop to the ground prone!");
+            assert!(report.pilot_notices.is_empty());
+            let output = scripts.drain_outbox();
+            assert!(output.iter().any(|(who, text)| *who == ObjectId(1)
+                && text.source() == "You drop to the ground prone!"));
+            assert!(!output.iter().any(|(_, text)| {
+                text.source().starts_with("You make a piloting")
+                    || text.source().starts_with("Modified Pilot Skill:")
+            }));
+            let after = scripts.world().clone();
+            let unit = &after.btech.constructed_units()[&id];
+            assert_eq!(unit.posture(), Posture::Prone);
+            assert_eq!(unit.motion().unwrap().speed, 0.0);
+            assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
+            assert_eq!(unit.motion().unwrap().desired_heading, 90.0);
+            assert_eq!(
+                unit.sections(),
+                base.btech.constructed_units()[&id].sections()
+            );
+            assert_eq!(unit.heat(), base.btech.constructed_units()[&id].heat());
+            let before = serde_json::to_value(&world.btech).unwrap();
+            let saved = serde_json::to_value(&after.btech).unwrap();
+            assert_eq!(
+                saved["constructed"][id.0.to_string()]["dice"],
+                before["constructed"][id.0.to_string()]["dice"]
+            );
+            let replay = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+            assert_eq!(
+                prone_action(&replay, &config, id, ObjectId(1)).unwrap(),
+                report
+            );
+            assert_eq!(replay.world().btech, after.btech);
+        }
+    }
+}
+
+/// A Mech may not drop to the ground in the turn it jumped (Total Warfare p. 49): thirty
+/// seconds must pass after a launch, and the refusal changes nothing.
+#[tokio::test]
+async fn prone_is_refused_for_thirty_seconds_after_a_jump() {
+    let (_dir, config, base, id, _) = fixture(false, ".0").await;
+    let now = base.btech.simulation_time();
+    for (launched, allowed) in [(now, false), (now - 29, false), (now - 30, true)] {
+        let mut world = base.clone();
+        edit(&mut world, id, |unit| {
+            unit["last_jump_launch"] = launched.into();
+        });
+        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
+        let result = prone_action(&scripts, &config, id, ObjectId(1));
+        assert_eq!(result.is_ok(), allowed, "{launched}");
+        if !allowed {
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("so soon after jumping")
+            );
+            assert_eq!(scripts.world().btech, world.btech);
         }
     }
 }
@@ -461,31 +428,23 @@ async fn prone_rejects_vehicle_chassis() {
     }
 }
 
-/// Restored action damage is independent of the turn's ordinary damage and applies before the shared drop roll.
+/// Restored action damage survives replay and is shown by status and the field views, and a
+/// staggering Mech still drops to the ground without a roll.
 #[tokio::test]
-async fn restored_stagger_controls_drop_levels_and_survives_replay() {
+async fn restored_stagger_survives_replay_and_never_adds_a_drop_roll() {
     for quad in [false, true] {
         let (_dir, config, base, id, _) = fixture(quad, ".0").await;
-        let threshold =
-            f64::from(battle_effective_maximum_speed(&base, id, true).unwrap() as f32 / 3.0);
+        let walking = base.btech.constructed_units()[&id].walking_speed();
         for scalar in [-10, 0, 19, 20, 40, 60] {
-            for (speed, speed_levels) in
-                [(0.0, 0), (threshold + 0.01, 1), (2.0 * threshold + 0.01, 2)]
-            {
-                for success in [false, true] {
+            for speed in [0.0, walking + 0.01] {
+                {
                     let mut world = base.clone();
-                    let seed = (0..=255)
-                        .find(|&seed| {
-                            Dice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 }
-                        })
-                        .unwrap();
                     edit(&mut world, id, |u| {
                         u["stagger"]["action_damage"] = scalar.into();
                         // Ordinary turn damage must not itself activate action-time staggering.
                         u["stagger"]["turn_damage"] = 60.into();
                         u["motion"]["speed"] = speed.into();
                         u["motion"]["desired_speed"] = speed.into();
-                        u["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
                     });
                     persistence::save(&config.database(), &world).await.unwrap();
                     let restored = persistence::load(&config.database()).await.unwrap();
@@ -542,29 +501,13 @@ async fn restored_stagger_controls_drop_levels_and_survives_replay() {
                         prone_action(&replay, &config, id, ObjectId(1)).unwrap()
                     );
                     assert_eq!(scripts.world().btech, replay.world().btech);
-                    let needs_roll = speed_levels > 0 || level > 0;
-                    assert_eq!(report.check.is_some(), needs_roll);
-                    assert_eq!(report.fall.is_some(), needs_roll && !success);
-                    if let Some(check) = report.check {
-                        assert_eq!(
-                            check.situational,
-                            level + if speed_levels == 2 { 2 } else { 0 }
-                        );
-                    }
-                    assert_eq!(
-                        report.notices.iter().any(
-                            |n| n.text == "Still staggering, you try not to fall on your face."
-                        ),
-                        level > 0
-                    );
+                    assert!(report.pilot_notices.is_empty());
+                    assert_eq!(report.notices[0].text, "You drop to the ground prone!");
                     let after = scripts.world();
                     let state = after.btech.constructed_units()[&id].stagger();
                     assert_eq!(state.action_damage, scalar);
-                    // Only a completed fall ends the turn's damage accounting.
-                    assert_eq!(
-                        state.turn_damage,
-                        if report.fall.is_some() { 0 } else { 60 }
-                    );
+                    // A deliberate drop is not a fall, so the turn's damage accounting goes on.
+                    assert_eq!(state.turn_damage, 60);
                 }
             }
         }

@@ -207,10 +207,12 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
     }).await;
 }
 
+/// A reactor cannot restart until heat is below 30 (Total Warfare p. 160), the operator
+/// override included.
 #[tokio::test]
-async fn startup_heat_limit_is_strict_durable_and_cannot_be_overridden() {
+async fn startup_heat_limit_excludes_thirty_and_cannot_be_overridden() {
     for fast in [false, true] {
-        for excess in [30.0, 30.0001, 32.0] {
+        for excess in [13.0, 30.0, 32.0] {
             let (_dir, config, mut world, id) = fixture().await;
             // Seed a precise saved heat boundary without depending on floating-point cooling drift.
             let mut snapshot = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
@@ -224,14 +226,17 @@ async fn startup_heat_limit_is_strict_durable_and_cannot_be_overridden() {
             world = persistence::load(&config.database()).await.unwrap();
             let before = world.btech.clone();
             let result = start_battle_unit(&mut world, id, ObjectId(1), fast);
-            if excess > 30.0 {
+            if excess >= 30.0 {
                 assert!(result.unwrap_err().to_string().contains("too hot"));
                 assert_eq!(world.btech, before);
                 assert!(advance_battle_units(&mut world, 0, true).is_empty());
-                for _ in 0..12 {
-                    stompymux_rs::advance_battle_heat(&mut world);
-                }
-                assert!(world.btech.constructed_units()[&id].heat().excess < 30.0);
+                // Below 14 heat no restart Avoid Roll is needed (Total Warfare p. 160).
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        record["heat"] = serde_json::json!({"stored": 13.0, "excess": 13.0});
+                    })
+                    .unwrap();
                 start_battle_unit(&mut world, id, ObjectId(1), fast).unwrap();
             } else {
                 result.unwrap();

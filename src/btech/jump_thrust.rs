@@ -45,8 +45,7 @@ fn vehicle_losses(unit: &Vehicle) -> Result<usize> {
 /// Correct current jump thrust without changing equipment or mass; the caller owns rollback.
 pub(super) fn set(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     let speed = super::propulsion::parse(value)?;
-    JumpCapacity::from_speed(speed * 2.0)
-        .context("Jump speed exceeds supported flight capacity at low gravity")?;
+    JumpCapacity::from_speed(speed).context("Jump speed exceeds supported flight capacity")?;
     if let Some(unit) = world.btech.constructed.get_mut(&id) {
         ensure!(
             !unit.is_destroyed() || speed == 0.0,

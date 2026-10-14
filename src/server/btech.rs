@@ -201,11 +201,7 @@ impl Server {
             &self.scripts,
             &self.config,
             crate::MovementRules {
-                free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
-                fasa_turning: self.config.battletech.fasaturn != 0,
-                slowdown: self.config.battletech.slowdown,
-                roll_on_backwalk: self.config.battletech.roll_on_backwalk != 0,
                 fall: crate::FallRules {
                     vehicle_impact: crate::VehicleImpactRules::configured(
                         &self.config.battletech,
@@ -347,7 +343,6 @@ impl Server {
             &self.scripts,
             &self.config,
             crate::MovementRules {
-                free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
                 fall: crate::FallRules {
                     vehicle_impact: crate::VehicleImpactRules::configured(
@@ -357,8 +352,6 @@ impl Server {
                     extended_piloting: self.config.battletech.extended_piloting != 0,
                     toughness: false,
                 },
-                fasa_turning: self.config.battletech.fasaturn != 0,
-                ..crate::MovementRules::STANDARD
             },
         ) {
             Ok(arrivals) => {

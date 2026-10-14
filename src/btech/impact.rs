@@ -451,6 +451,41 @@ pub(super) fn resolve_internal_stress(
     Ok(context.report)
 }
 
+/// Apply critical hits chosen outside the damage cascade, each with the ordinary consequences
+/// of losing that slot: a MASC failure's one hit to each leg, located by the usual slot roll
+/// (Total Warfare p. 137), or a supercharger failure's hits to named upper center-torso slots
+/// (Tactical Operations: Advanced Units and Equipment p. 345). A target without a slot rolls
+/// one on its section; a section with nothing left to hit is skipped.
+pub(super) fn resolve_chosen_criticals(
+    world: &mut World,
+    id: ObjectId,
+    targets: &[(MechSection, Option<CriticalLocation>)],
+    rules: super::FallRules,
+) -> Result<super::TacticalImpact> {
+    let character = world.objects[&id].flags.contains(Flag::InCharacter);
+    let mut context = ImpactContext::new(world, id, Some(rules))?;
+    context.character_effects = true;
+    context.character_toughness = character.then_some(rules.toughness);
+    context.attacker = Some(id);
+    for &(section, slot) in targets {
+        if context.unit().is_destroyed() {
+            break;
+        }
+        context.spend()?;
+        let location = match slot {
+            Some(location) => location,
+            None => match context.unit_mut().choose_critical(section) {
+                Some(location) => location,
+                None => continue,
+            },
+        };
+        context.lose_critical(location)?;
+    }
+    context.unit().validate()?;
+    context.report.impact.destroyed = context.unit().is_destroyed();
+    Ok(context.report)
+}
+
 /// Environmental damage to a section's front armor, such as a burn from liquid magma, with
 /// the ordinary transfer, critical, CASE and injury cascade. `character` lets the cascade
 /// injure an in-character pilot; only a host action that publishes casualties may set it.

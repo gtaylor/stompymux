@@ -28,7 +28,7 @@ pub(super) fn engine_landing(
         .context("Aircraft emergency landing map is unavailable")?
         .hex(i64::from(position.x), i64::from(position.y))?;
     let height = tile.surface_height();
-    let check = if super::vtol_landing::supported_surface(tile) {
+    let check = if super::vtol_landing::engine_landing_surface(tile) {
         Some(super::vehicle_piloting::roll(
             world,
             id,

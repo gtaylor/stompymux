@@ -39,12 +39,12 @@ pub use btech::{
     RawSectionCode, RawTemplate, RawUnitClass, RecoilReport, Recovery, RecoveryMode,
     ResolvedLoadout, SEARCHLIGHT_SIGHT, SalvoGroup, SalvoReport, SectionDefinition,
     SectionExposure, SectionExposureReport, SectionState, ShotReport, ShotRules, SkillCategory,
-    StackingEntry, StackingInput, Stagger, StaggerReport, StaggerRules, StandAttempt, StandMode,
-    StandTimer, StoredBattleUnit, StoredMap, StrayHit, Surface, SurfaceBreak, System,
-    SystemCritical, TacticalImpact, TacticalPilotInjury, TargetLock, TemplateCheck, Terrain,
-    TerrainLos, Torso, UnitConfiguration, UnitDefinition, UnitEdit, UnitMut, UnitRef,
-    UnitSignature, Unjam, VehicleHit, VehicleMotiveHit, WaterRanges, Weapon, WeaponMount,
-    WeaponProfile, WeaponRange, WeaponReadiness, WeaponUse, Weather,
+    SpeedEnvelope, StackingEntry, StackingInput, Stagger, StaggerReport, StaggerRules,
+    StandAttempt, StandMode, StandTimer, StoredBattleUnit, StoredMap, StrayHit, Surface,
+    SurfaceBreak, System, SystemCritical, TacticalImpact, TacticalPilotInjury, TargetLock,
+    TemplateCheck, Terrain, TerrainLos, Torso, UnitConfiguration, UnitDefinition, UnitEdit,
+    UnitMut, UnitRef, UnitSignature, Unjam, VehicleHit, VehicleMotiveHit, WaterRanges, Weapon,
+    WeaponMount, WeaponProfile, WeaponRange, WeaponReadiness, WeaponUse, Weather,
     advance_heat as advance_battle_heat, advance_jumps as advance_battle_jumps,
     advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
     advance_recovery as advance_battle_recovery, advance_recycle as advance_battle_recycle,
@@ -818,7 +818,9 @@ pub use btech::{VtolFlight, VtolFlightPhase, VtolTakeoff};
 
 pub use btech::VtolLanding;
 
-pub use btech::{VtolMotionStep, VtolSurfaceContact};
+pub use btech::{
+    MAXIMUM_VTOL_ELEVATION, VERTICAL_KPH_PER_LEVEL_SECOND, VtolMotionStep, VtolSurfaceContact,
+};
 
 pub use btech::VtolPath;
 
@@ -906,7 +908,7 @@ pub use btech::{TicEdit, Tics, edit_battle_tic, tic};
 
 pub use btech::{FireTarget, TicShot, fire_battle_tics};
 
-pub use btech::{HeatCutoff, toggle_battle_heat_cutoff};
+pub use btech::{HeatCutoff, set_battle_heat_cutoff};
 
 pub use btech::set_battle_ammunition_section;
 

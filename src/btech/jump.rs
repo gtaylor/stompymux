@@ -6,9 +6,19 @@ use serde::{Deserialize, Serialize};
 /// Current jump performance at one map gravity, before launch and landing restrictions.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct JumpCapacity {
+    /// Gravity-scaled horizontal flight speed in km/h.
     pub speed: f64,
-    /// Whole movement points bound both horizontal range and endpoint elevation difference.
+    /// Whole Jumping MP, which bound both horizontal range and the climb to the destination.
     pub movement_points: u16,
+}
+
+/// Fastest flight speed the cursor can represent; thrust beyond it saturates.
+const MAXIMUM_JUMP_SPEED: f64 = 65535.0 * 10.75;
+
+/// Whole Jumping MP for a flight speed: the speed's MP rounded to the nearest whole number,
+/// halves down (Tactical Operations p. 53).
+fn whole_movement_points(speed: f64) -> u16 {
+    (speed / 10.75 - 0.5).ceil().max(0.0) as u16
 }
 
 impl JumpCapacity {
@@ -16,9 +26,8 @@ impl JumpCapacity {
     pub(crate) fn validate(self) -> Result<()> {
         ensure!(
             self.speed.is_finite()
-                && self.speed >= 0.0
-                && self.speed / 10.75 < f64::from(u16::MAX) + 1.0
-                && (self.speed / 10.75).floor() as u16 == self.movement_points,
+                && (0.0..=MAXIMUM_JUMP_SPEED).contains(&self.speed)
+                && whole_movement_points(self.speed) == self.movement_points,
             "Invalid jump capacity"
         );
         Ok(())
@@ -28,11 +37,36 @@ impl JumpCapacity {
     pub(super) fn from_speed(speed: f64) -> Result<Self> {
         let capacity = Self {
             speed,
-            movement_points: (speed / 10.75).floor() as u16,
+            movement_points: whole_movement_points(speed),
         };
         capacity.validate()?;
         Ok(capacity)
     }
+
+    /// Scale standard-gravity thrust by the map's gravity (Tactical Operations p. 53): Jumping
+    /// MP are divided by the G-rating and rounded to the nearest whole number, halves down,
+    /// with no lower bound on the gravity. The thrust itself must fit the flight model; a
+    /// gravity of zero is treated as one hundredth of a G so the division stays defined, and
+    /// the scaled speed saturates at the model's range.
+    fn at_gravity(speed: f64, gravity: i64) -> Result<Self> {
+        ensure!((0..=255).contains(&gravity), "Invalid jump gravity");
+        Self::from_speed(speed)?;
+        Self::from_speed((speed * 100.0 / gravity.max(1) as f64).min(MAXIMUM_JUMP_SPEED))
+    }
+}
+
+/// Heat from one jump (Total Warfare p. 53 and p. 158): one point for every hex jumped, with
+/// a minimum of three. Improved jump jets halve it to one point per two hexes or part
+/// thereof, still with the minimum of three. Gravity never changes it.
+pub fn jump_heat(hexes: u64, improved: bool) -> u64 {
+    let hexes = if improved { hexes.div_ceil(2) } else { hexes };
+    hexes.max(3)
+}
+
+/// Gravity modifier to the jump-strain roll (Tactical Operations p. 53): one for every full
+/// half G the map differs from standard gravity in either direction.
+pub fn jump_strain_modifier(gravity: i64) -> i16 {
+    (gravity.abs_diff(100) / 50) as i16
 }
 
 impl Mech {
@@ -40,16 +74,38 @@ impl Mech {
     /// This is capacity, not permission to jump while shut down, prone or otherwise restricted.
     pub fn jump_capacity(&self, gravity: i64) -> Result<JumpCapacity> {
         ensure!((0..=255).contains(&gravity), "Invalid jump gravity");
-        let speed = if self.is_destroyed() {
-            0.0
-        } else {
-            self.propulsion.jump(
-                self.definition().jump_speed,
-                usize::from(self.system_hits(System::JumpJet)),
-            ) * 100.0
-                / gravity.max(50) as f64
-        };
-        JumpCapacity::from_speed(speed)
+        if self.is_destroyed() {
+            return JumpCapacity::from_speed(0.0);
+        }
+        let speed = self.propulsion.jump(
+            self.definition().jump_speed,
+            usize::from(self.system_hits(System::JumpJet)),
+        );
+        JumpCapacity::at_gravity(speed, gravity)
+    }
+
+    /// Thrust from the jets a 'Mech standing in Depth 1 water may fire: only torso-mounted
+    /// jets, each providing one Jumping MP (Total Warfare p. 53). Leg jets are submerged,
+    /// and a quad's front legs count as legs. Administrative thrust overrides do not apply,
+    /// since they carry no jet locations.
+    pub fn torso_jump_capacity(&self, gravity: i64) -> Result<JumpCapacity> {
+        ensure!((0..=255).contains(&gravity), "Invalid jump gravity");
+        if self.is_destroyed() {
+            return JumpCapacity::from_speed(0.0);
+        }
+        let legs = self.chassis().legs();
+        let improved = self.definition().has_special("ImprovedJJ_Tech");
+        let jets = self
+            .loadout()?
+            .jump_jet_groups(improved)?
+            .into_iter()
+            .filter(|group| {
+                group.iter().all(|location| {
+                    !legs.contains(&location.section) && !self.critical_unavailable(*location)
+                })
+            })
+            .count();
+        JumpCapacity::at_gravity(jets as f64 * 10.75, gravity)
     }
 }
 
@@ -64,6 +120,8 @@ pub struct JumpPath {
     end_elevation: f64,
     distance: f64,
     apex: u16,
+    /// Lowest apex that keeps the displayed curve above every crossed hex.
+    clearance: u16,
     movement_points: u16,
     projection: Option<JumpProjection>,
     target_range: Option<f64>,
@@ -88,6 +146,8 @@ struct JumpPathDefinition {
     start_elevation: f64,
     end_elevation: i16,
     movement_points: u16,
+    #[serde(default)]
+    clearance: u16,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     projection: Option<JumpProjection>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -104,6 +164,7 @@ impl From<JumpPath> for JumpPathDefinition {
             start_elevation: path.start_elevation,
             end_elevation: path.end_elevation as i16,
             movement_points: path.movement_points,
+            clearance: path.clearance,
             projection: path.projection,
             target_range: path.target_range,
             continuation: path.continuation,
@@ -119,12 +180,12 @@ impl TryFrom<JumpPathDefinition> for JumpPath {
             value.projection.is_none() || value.target_range.is_none(),
             "Jump cannot have two range admission modes"
         );
-        if value.continuation {
+        let path = if value.continuation {
             ensure!(
                 value.projection.is_none() && value.target_range.is_none(),
                 "A jump continuation cannot repeat launch admission"
             );
-            return Self::continuation(
+            Self::continuation(
                 JumpSample {
                     point: value.start,
                     elevation: value.start_elevation,
@@ -132,46 +193,48 @@ impl TryFrom<JumpPathDefinition> for JumpPath {
                 value.end,
                 value.end_elevation,
                 value.movement_points,
-            );
-        }
-        ensure!(
-            value.start_elevation.is_finite()
-                && value.start_elevation.fract() == 0.0
-                && (f64::from(i16::MIN)..=f64::from(i16::MAX)).contains(&value.start_elevation),
-            "Invalid takeoff elevation"
-        );
-        if let Some(range) = value.target_range {
-            return Self::targeted(
-                value.start,
-                value.end,
-                range,
-                value.start_elevation as i16,
-                value.end_elevation,
-                value.movement_points,
-            );
-        }
-        if let Some(projection) = value.projection {
-            let path = Self::projected(
-                value.start,
-                projection.bearing,
-                projection.range,
-                value.start_elevation as i16,
-                value.end_elevation,
-                value.movement_points,
-            )?;
+            )?
+        } else {
             ensure!(
-                path.end == value.end,
-                "Saved jump destination differs from its projection"
+                value.start_elevation.is_finite()
+                    && value.start_elevation.fract() == 0.0
+                    && (f64::from(i16::MIN)..=f64::from(i16::MAX)).contains(&value.start_elevation),
+                "Invalid takeoff elevation"
             );
-            return Ok(path);
-        }
-        Self::new(
-            value.start,
-            value.end,
-            value.start_elevation as i16,
-            value.end_elevation,
-            value.movement_points,
-        )
+            if let Some(range) = value.target_range {
+                Self::targeted(
+                    value.start,
+                    value.end,
+                    range,
+                    value.start_elevation as i16,
+                    value.end_elevation,
+                    value.movement_points,
+                )?
+            } else if let Some(projection) = value.projection {
+                let path = Self::projected(
+                    value.start,
+                    projection.bearing,
+                    projection.range,
+                    value.start_elevation as i16,
+                    value.end_elevation,
+                    value.movement_points,
+                )?;
+                ensure!(
+                    path.end == value.end,
+                    "Saved jump destination differs from its projection"
+                );
+                path
+            } else {
+                Self::new(
+                    value.start,
+                    value.end,
+                    value.start_elevation as i16,
+                    value.end_elevation,
+                    value.movement_points,
+                )?
+            }
+        };
+        Ok(path.with_clearance(value.clearance))
     }
 }
 
@@ -183,8 +246,9 @@ pub struct JumpSample {
 }
 
 impl JumpPath {
-    /// Plan a nonzero center-directed jump within current horizontal and vertical capacity.
-    /// Map bounds, same-hex rejection, terrain, crew state and flight events belong to the caller.
+    /// Plan a center-directed jump within current horizontal range and climb capacity.
+    /// A jump may end in the hex it starts in (Total Warfare p. 52). Map bounds, terrain,
+    /// crew state and flight events belong to the caller.
     pub fn new(
         start: Point,
         end: Point,
@@ -217,7 +281,7 @@ impl JumpPath {
         movement_points: u16,
     ) -> Result<Self> {
         ensure!(
-            range.is_finite() && range > 0.0 && range <= f64::from(movement_points),
+            range.is_finite() && range >= 0.0 && range <= f64::from(movement_points),
             "Jump destination is out of range"
         );
         let end = start
@@ -251,6 +315,10 @@ impl JumpPath {
             end.containing_hex()?.center() == end,
             "Targeted jump destination must be a hex center"
         );
+        ensure!(
+            range > 0.0 || start.containing_hex()? == end.containing_hex()?,
+            "Jump destination is out of range"
+        );
         Self::build(
             JumpSample {
                 point: start,
@@ -266,9 +334,8 @@ impl JumpPath {
     }
 
     /// Plan the remaining route from an exact airborne point and fractional altitude.
-    /// Descent may exceed launch elevation capacity because the unit is already aloft;
-    /// horizontal range and further climbing remain bounded by the supplied capacity.
-    /// This only constructs geometry; the caller retains flight time, intent and collisions.
+    /// Horizontal range and further climbing remain bounded by the supplied capacity.
+    /// This only constructs geometry; the caller retains flight time, intent and landing.
     pub fn continuation(
         start: JumpSample,
         end: Point,
@@ -279,6 +346,8 @@ impl JumpPath {
     }
 
     /// Build cached geometry from validated exact-destination or projected launch inputs.
+    /// The climb to the destination is bounded by Jumping MP; descent is unlimited (Total
+    /// Warfare p. 53). A same-hex jump has no horizontal distance and lands where it began.
     fn build(
         start: JumpSample,
         end: Point,
@@ -297,23 +366,20 @@ impl JumpPath {
         let range = target_range
             .unwrap_or_else(|| projection.map_or(distance, |projection| projection.range));
         ensure!(
-            range.is_finite() && range > 0.0,
+            range.is_finite() && range >= 0.0,
             "Invalid jump admission range"
         );
+        ensure!(movement_points > 0, "Jump needs functioning jets");
         ensure!(
-            distance > 0.0 && movement_points > 0,
-            "Jump needs a destination and functioning jets"
+            !continuation || distance > 0.0,
+            "Jump continuation needs a destination"
         );
         ensure!(
             range <= f64::from(movement_points),
             "Jump destination is out of range"
         );
         ensure!(
-            if continuation {
-                f64::from(end_elevation) - start.elevation <= f64::from(movement_points)
-            } else {
-                (start.elevation - f64::from(end_elevation)).abs() <= f64::from(movement_points)
-            },
+            f64::from(end_elevation) - start.elevation <= f64::from(movement_points),
             "Jump elevation difference exceeds capacity"
         );
         let apex = (f64::from(movement_points) + 1.0 - range / 3.0)
@@ -326,6 +392,7 @@ impl JumpPath {
             end_elevation: f64::from(end_elevation),
             distance,
             apex,
+            clearance: 0,
             movement_points,
             projection,
             target_range,
@@ -333,12 +400,16 @@ impl JumpPath {
         })
     }
 
-    /// Whether this segment begins in flight rather than at a new takeoff.
-    pub(super) fn is_continuation(self) -> bool {
-        self.continuation
+    /// Raise the apex to at least `clearance`, so the displayed curve clears crossed terrain.
+    /// The caller derives the value from the map; a legal route never collides with terrain
+    /// (Total Warfare p. 52), so this only shapes the flight's altitude.
+    pub fn with_clearance(mut self, clearance: u16) -> Self {
+        self.clearance = clearance;
+        self
     }
 
-    /// Whole-degree direction of the committed route between its endpoints.
+    /// Whole-degree direction of the committed route between its endpoints; a same-hex jump
+    /// reports south.
     pub fn heading(self) -> Result<u16> {
         Ok(self
             .start
@@ -353,9 +424,10 @@ impl JumpPath {
         self.distance
     }
 
-    /// Additional midpoint elevation above the straight line between endpoint heights.
+    /// Additional midpoint elevation above the straight line between endpoint heights: the
+    /// natural apex of the launch, raised to the clearance the crossed terrain needs.
     pub fn apex(self) -> u16 {
-        self.apex
+        self.apex.max(self.clearance)
     }
 
     /// Launch-time whole movement points; subsequent thrust loss does not rewrite the path.
@@ -365,12 +437,13 @@ impl JumpPath {
 
     /// Sample the curved flight path, including its exact takeoff and landing endpoints.
     /// Lost thrust can switch the curve from quartic to quadratic during a flight.
+    /// A same-hex jump samples its single point at every progress.
     pub fn sample(self, progress: f64, current_movement_points: u16) -> Result<JumpSample> {
         ensure!(
             progress.is_finite() && (0.0..=1.0).contains(&progress),
             "Invalid jump progress"
         );
-        if progress == 0.0 {
+        if progress == 0.0 || self.distance == 0.0 {
             return Ok(JumpSample {
                 point: self.start,
                 elevation: self.start_elevation,
@@ -382,6 +455,7 @@ impl JumpPath {
                 elevation: self.end_elevation,
             });
         }
+        // Thrust lost since launch flattens the natural curve; the raised clearance does not.
         let midpoint = (progress - 0.5) * 2.0;
         let curve = if u32::from(self.apex) > u32::from(current_movement_points) {
             midpoint.powi(2)
@@ -395,7 +469,7 @@ impl JumpPath {
             },
             elevation: self.start_elevation
                 + (self.end_elevation - self.start_elevation) * progress
-                + (1.0 - curve) * f64::from(self.apex),
+                + (1.0 - curve) * f64::from(self.apex()),
         })
     }
 }
@@ -403,6 +477,74 @@ impl JumpPath {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// One heat per hex jumped with a minimum of three; improved jets halve the count, not
+    /// the minimum (Total Warfare p. 53).
+    #[test]
+    fn jump_heat_charges_hexes_with_a_minimum_of_three() {
+        for (hexes, standard, improved) in [
+            (0, 3, 3),
+            (1, 3, 3),
+            (3, 3, 3),
+            (4, 4, 3),
+            (5, 5, 3),
+            (6, 6, 3),
+            (7, 7, 4),
+            (8, 8, 4),
+            (9, 9, 5),
+        ] {
+            assert_eq!(jump_heat(hexes, false), standard, "{hexes}");
+            assert_eq!(jump_heat(hexes, true), improved, "{hexes}");
+        }
+    }
+
+    /// One per full half G off standard in either direction (Tactical Operations p. 53).
+    #[test]
+    fn jump_strain_modifier_counts_full_half_gravities() {
+        for (gravity, modifier) in [
+            (100, 0),
+            (60, 0),
+            (50, 1),
+            (20, 1),
+            (0, 2),
+            (150, 1),
+            (260, 3),
+        ] {
+            assert_eq!(jump_strain_modifier(gravity), modifier, "{gravity}");
+        }
+    }
+
+    /// Jumping MP divided by the G-rating rounds to the nearest whole number, halves down,
+    /// with no lower bound on the gravity (Tactical Operations p. 53).
+    #[test]
+    fn gravity_rounds_jump_points_to_nearest_with_halves_down() {
+        for (points, gravity, expected) in [
+            (4, 75, 5),
+            (4, 125, 3),
+            (5, 75, 7),
+            (5, 200, 2),
+            (3, 200, 1),
+            (1, 200, 0),
+            (5, 20, 25),
+            (5, 0, 500),
+            (5, 100, 5),
+        ] {
+            let capacity = JumpCapacity::at_gravity(f64::from(points) * 10.75, gravity).unwrap();
+            assert_eq!(
+                capacity.movement_points, expected,
+                "{points} MP at {gravity}"
+            );
+            assert_eq!(
+                capacity.speed,
+                f64::from(points) * 10.75 * 100.0 / gravity.max(1) as f64
+            );
+        }
+        assert!(JumpCapacity::at_gravity(10.75, 256).is_err());
+        assert!(JumpCapacity::at_gravity(MAXIMUM_JUMP_SPEED + 1.0, 100).is_err());
+        let saturated = JumpCapacity::at_gravity(MAXIMUM_JUMP_SPEED, 1).unwrap();
+        assert_eq!(saturated.movement_points, u16::MAX);
+        assert_eq!(saturated.speed, MAXIMUM_JUMP_SPEED);
+    }
 
     /// Redirection geometry must preserve the committed point and fractional altitude exactly.
     #[test]
@@ -445,7 +587,8 @@ mod tests {
         assert_eq!(replay, flight);
     }
 
-    /// Airborne descent does not waive range, climb or coordinate representability limits.
+    /// Neither takeoff nor airborne descent is bounded, but range, climb and coordinate
+    /// representability limits still apply.
     #[test]
     fn airborne_continuation_retains_admission_bounds() {
         let start = JumpSample {
@@ -454,7 +597,7 @@ mod tests {
         };
         let end = start.point.project(90.0, 2.0).unwrap();
         assert!(JumpPath::continuation(start, end, 0, 3).is_ok());
-        assert!(JumpPath::new(start.point, end, 8, 0, 3).is_err());
+        assert!(JumpPath::new(start.point, end, 8, 0, 3).is_ok());
         assert!(JumpPath::continuation(start, end, 12, 3).is_err());
         assert!(JumpPath::continuation(start, end, 0, 1).is_err());
         assert!(JumpPath::continuation(start, start.point, 0, 3).is_err());

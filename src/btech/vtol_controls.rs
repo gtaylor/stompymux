@@ -9,7 +9,6 @@ pub fn begin_vtol_takeoff(
     id: ObjectId,
     pilot: ObjectId,
     delay: u16,
-    free_fusion_fuel: bool,
 ) -> Result<Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
@@ -40,7 +39,7 @@ pub fn begin_vtol_takeoff(
         .vehicles
         .get_mut(&id)
         .unwrap()
-        .begin_vtol_takeoff(underground, free_fusion_fuel, delay)?;
+        .begin_vtol_takeoff(underground, delay)?;
     Ok(Notice {
         unit: id,
         text: "You begin the takeoff sequence.".into(),
@@ -48,12 +47,7 @@ pub fn begin_vtol_takeoff(
 }
 
 /// Read current vertical speed for a conscious occupant of a running aircraft.
-pub fn vtol_vertical_readout(
-    world: &World,
-    id: ObjectId,
-    viewer: ObjectId,
-    free_fusion_fuel: bool,
-) -> Result<f64> {
+pub fn vtol_vertical_readout(world: &World, id: ObjectId, viewer: ObjectId) -> Result<f64> {
     let unit = world
         .btech
         .vehicles()
@@ -63,20 +57,16 @@ pub fn vtol_vertical_readout(
     let flight = unit
         .vtol_flight()
         .context("Vertical speed requires a VTOL")?;
-    ensure!(
-        unit.has_vtol_fuel(free_fusion_fuel),
-        "The VTOL is out of fuel"
-    );
+    ensure!(unit.has_vtol_fuel(), "The VTOL is out of fuel");
     Ok(flight.vertical_speed)
 }
 
-/// Change vertical speed using the same owned velocity budget as horizontal commands.
+/// Change vertical speed within the movement budget shared with horizontal commands.
 pub fn set_vtol_vertical_speed(
     world: &mut World,
     id: ObjectId,
     pilot: ObjectId,
     speed: f64,
-    free_fusion_fuel: bool,
 ) -> Result<Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
@@ -86,7 +76,7 @@ pub fn set_vtol_vertical_speed(
         .vehicles
         .get_mut(&id)
         .unwrap()
-        .set_vtol_vertical_at(speed, free_fusion_fuel, maximum)?;
+        .set_vtol_vertical_at(speed, maximum)?;
     Ok(Notice {
         unit: id,
         text: format!("Vertical speed set to {speed:.2} KPH."),
@@ -112,12 +102,7 @@ pub(super) fn land_in_candidate(
         .context("Aircraft map is unavailable")?
         .hex(i64::from(position.x), i64::from(position.y))?;
     world.attempt(|world| {
-        let outcome = world
-            .btech
-            .vehicles
-            .get_mut(&id)
-            .unwrap()
-            .land_vtol(tile, movement.free_fusion_vtol_fuel)?;
+        let outcome = world.btech.vehicles.get_mut(&id).unwrap().land_vtol(tile)?;
         let report = landing_consequences(world, id, outcome, movement.fall, character)?;
         Ok(report)
     })
@@ -165,39 +150,25 @@ pub(super) fn landing_consequences(
     Ok(report)
 }
 
-/// Configured takeoff and its feedback are shared by both command adapters.
+/// Takeoff and its feedback are shared by both command adapters.
 pub(crate) fn configured_takeoff(
     scripts: &crate::Scripts,
-    config: &crate::Config,
     id: ObjectId,
     pilot: ObjectId,
     delay: u16,
 ) -> Result<()> {
-    let notice = begin_vtol_takeoff(
-        &mut scripts.world_mut(),
-        id,
-        pilot,
-        delay,
-        config.battletech.nofusionvtolfuel != 0,
-    )?;
+    let notice = begin_vtol_takeoff(&mut scripts.world_mut(), id, pilot, delay)?;
     super::notify_unit(scripts, notice)
 }
 
-/// Configured vertical control stages the same feedback for native and Lua calls.
+/// Vertical control stages the same feedback for native and Lua calls.
 pub(crate) fn configured_vertical(
     scripts: &crate::Scripts,
-    config: &crate::Config,
     id: ObjectId,
     pilot: ObjectId,
     speed: f64,
 ) -> Result<()> {
-    let notice = set_vtol_vertical_speed(
-        &mut scripts.world_mut(),
-        id,
-        pilot,
-        speed,
-        config.battletech.nofusionvtolfuel != 0,
-    )?;
+    let notice = set_vtol_vertical_speed(&mut scripts.world_mut(), id, pilot, speed)?;
     super::notify_unit(scripts, notice)
 }
 
@@ -217,21 +188,15 @@ pub(crate) fn command(
             } else {
                 argument.parse().context("Usage: takeoff [delay]")?
             };
-            configured_takeoff(ctx.scripts, ctx.config, id, ctx.player, delay)?;
+            configured_takeoff(ctx.scripts, id, ctx.player, delay)?;
             return Ok(None);
         }
         if argument.is_empty() {
-            let speed = vtol_vertical_readout(
-                &ctx.scripts.world(),
-                id,
-                ctx.player,
-                ctx.config.battletech.nofusionvtolfuel != 0,
-            )?;
+            let speed = vtol_vertical_readout(&ctx.scripts.world(), id, ctx.player)?;
             return Ok(Some(format!("Current vertical speed is {speed:.2} KPH.")));
         }
         configured_vertical(
             ctx.scripts,
-            ctx.config,
             id,
             ctx.player,
             argument.parse().context("Usage: vertical [kph]")?,

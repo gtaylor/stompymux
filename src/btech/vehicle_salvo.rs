@@ -122,9 +122,16 @@ pub(super) fn resolve_with_context_in_candidate(
         "Weapon mode is not supported"
     );
     ensure!(
-        weapon.beacon_kind(request.ammunition).is_none() && request.fire_mode != FireMode::Heat,
-        "Vehicle beacon and thermal effects require dedicated target resolution"
+        weapon.beacon_kind(request.ammunition).is_none(),
+        "Vehicle beacon effects require dedicated target resolution"
     );
+    // Heat mode has no effect on a unit that tracks no heat, so a flamer set to heat delivers
+    // its Damage Value as damage to a vehicle (Total Warfare p. 113, p. 303 note).
+    let fire_mode = if request.fire_mode == FireMode::Heat {
+        FireMode::Normal
+    } else {
+        request.fire_mode
+    };
     ensure!(
         match (request.fire_mode, request.gatling_damage) {
             (FireMode::Gatling, Some(damage)) => (1..=6).contains(&damage),
@@ -141,7 +148,7 @@ pub(super) fn resolve_with_context_in_candidate(
         super::weapon_groups::WeaponGroupRequest {
             weapon,
             ammunition: request.ammunition,
-            fire_mode: request.fire_mode,
+            fire_mode,
             gatling_damage: request.gatling_damage,
             distance: Some(request.distance),
             glancing: request.glancing,
@@ -155,7 +162,7 @@ pub(super) fn resolve_with_context_in_candidate(
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;
     packets.limit_missiles(incoming);
-    packets.finish_burst_glancing(request.fire_mode, request.glancing);
+    packets.finish_burst_glancing(fire_mode, request.glancing);
     let mut report = VehicleSalvoReport {
         building: None,
         collapse: None,

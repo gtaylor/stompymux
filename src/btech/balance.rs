@@ -82,12 +82,9 @@ pub(super) fn resolve_balance(
         }
         return Ok(None);
     }
-    let levels = if airborne && gyro {
-        let map = &world.btech.maps()[&unit.position().expect("validated airborne position").map];
-        u8::try_from(unit.jump_capacity(map.gravity)?.movement_points)?
-    } else {
-        1
-    };
+    // A jumping 'Mech that falls on a failed Piloting Skill Roll is considered to have fallen
+    // zero levels (Total Warfare p. 68), so an airborne gyro hit falls like a ground fall.
+    let levels = 1;
     let forced = if thrust_loss {
         true
     } else {

@@ -53,8 +53,6 @@ fn project(
 ) -> Result<Motion> {
     let coordinate = motion.point.containing_hex()?;
     let rules = crate::MovementRules {
-        fasa_turning: config.battletech.fasaturn != 0,
-        slowdown: config.battletech.slowdown,
         tsm_tow_bonus: config.battletech.tsm_tow_bonus != 0,
         ..crate::MovementRules::STANDARD
     };

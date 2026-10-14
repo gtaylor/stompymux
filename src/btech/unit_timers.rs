@@ -89,8 +89,6 @@ impl SavedTimers for Mech {
         if let Some(elapsed) = self.hide_elapsed {
             list.add(T::Hide, 0, elapsed, Up);
         }
-        list.add(T::Masc, 0, self.masc.remaining, Down);
-        list.add(T::Supercharger, 0, self.supercharger.remaining, Down);
         if let Some(dump) = self.dumping {
             list.add(
                 T::Dump,
@@ -101,9 +99,6 @@ impl SavedTimers for Mech {
         }
         if let Some(attempt) = self.unjam {
             list.add(T::Unjam, 0, attempt.remaining, Down);
-        }
-        if let Some(remaining) = self.heat_cutoff.remaining {
-            list.add(T::HeatCutoff, 0, remaining, Down);
         }
         list.add(T::HullDown, 0, self.hull_down.remaining, Down);
         list.add(T::Lateral, 0, self.lateral.remaining, Down);

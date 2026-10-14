@@ -445,7 +445,7 @@ fn resolve_charge_inner(
 }
 
 /// Unintentional charge target number: Piloting +3 (Total Warfare p. 63).
-const UNINTENTIONAL_CHARGE_MODIFIER: i32 = 3;
+pub(super) const UNINTENTIONAL_CHARGE_MODIFIER: i32 = 3;
 
 /// A 'Mech skidding into another 'Mech's hex charges it unintentionally (Total Warfare p. 63):
 /// Piloting +3 with the movement, terrain and light modifiers but no skill comparison, damage

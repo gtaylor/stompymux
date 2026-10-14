@@ -28,19 +28,26 @@ pub(crate) fn speed_request(
     argument: &str,
     policy: super::SpeedPolicy,
 ) -> Result<f64> {
-    let maximum = throttle_configured(world, unit, policy)?;
-    let walking = maximum * 2.0 / 3.0;
+    let envelope = if world.btech.vehicles().contains_key(&unit) {
+        let maximum = throttle_configured(world, unit, policy)?;
+        super::SpeedEnvelope {
+            walking: maximum * 2.0 / 3.0,
+            running: maximum,
+        }
+    } else {
+        throttle_envelope(world, unit, policy)?
+    };
     let speed = match argument.trim().to_ascii_lowercase().as_str() {
-        "walk" | "cruise" => walking,
-        "run" | "flank" => maximum,
+        "walk" | "cruise" => envelope.walking,
+        "run" | "flank" => envelope.running,
         "stop" => 0.0,
-        "back" => -walking,
+        "back" => -envelope.walking,
         value => value
             .parse::<f64>()
             .context("Usage: speed <kph|stop|walk|run|back|cruise|flank>")?,
     };
     ensure!(speed.is_finite(), "Invalid speed");
-    Ok(speed.clamp(-walking, maximum))
+    Ok(envelope.clamp(speed))
 }
 
 /// Reversing while towing requires salvage equipment.
@@ -78,28 +85,65 @@ pub(crate) fn throttle_configured(
             super::load::movement_maximum(world, id, unit.maximum_speed(), policy.tsm_tow_bonus)?;
         return super::speed_bonus::vehicle_on_map(world, unit.position(), maximum);
     }
+    Ok(throttle_envelope(world, id, policy)?.running)
+}
+
+/// A Mech's live walking and running ceilings: damage-only mobility with hot myomer,
+/// heat and boosters applied in whole MP, scaled for towed load, and map gravity last.
+pub(crate) fn throttle_envelope(
+    world: &World,
+    id: ObjectId,
+    policy: super::SpeedPolicy,
+) -> Result<super::SpeedEnvelope> {
     let unit = world
         .btech
         .constructed_units()
         .get(&id)
         .context("Enter a constructed unit first")?;
-    let base = super::load::movement_maximum(
-        world,
-        id,
-        unit.mobility().maximum_speed,
-        policy.tsm_tow_bonus,
-    )?;
-    super::speed_bonus::on_map(world, unit.position(), unit.movement_maximum_at(base))
+    let base = unit.mobility().envelope();
+    let loaded = super::load::movement_maximum(world, id, base.running, policy.tsm_tow_bonus)?;
+    let factor = if base.running > 0.0 {
+        loaded / base.running
+    } else {
+        0.0
+    };
+    // Equipment and heat work in whole MP on the damaged figure; towed load and gravity
+    // then scale the result continuously.
+    let envelope = unit.equip_envelope(base).scaled(factor);
+    super::speed_bonus::envelope_on_map(world, unit.position(), envelope)
 }
 
-/// Apply the configured speed reduction during an ordinary heading change.
-pub(super) fn turning_throttle(target: f64, remaining: f64, slowdown: i64) -> f64 {
+/// Cut the throttle target while a heading change is under way: 80 % of the request with
+/// less than 31 degrees still to turn, one tenth less for every further 30 degrees, down to
+/// 30 % for a full reversal. Together with the rate-limited turn this stands in for the
+/// 1 MP per hexside that Total Warfare p. 50 charges for facing changes.
+pub(super) fn turning_throttle(target: f64, remaining: f64) -> f64 {
     let remaining = remaining.abs();
-    let factor = match slowdown {
-        1 if remaining != 0.0 => 2.0 / 3.0,
-        1 => 0.75,
-        2 if remaining >= 1.0 => (8.0 - ((remaining - 1.0) / 30.0).floor()) / 10.0,
-        _ => 1.0,
+    if remaining < 1.0 {
+        return target;
+    }
+    target * (8.0 - ((remaining - 1.0) / 30.0).floor()) / 10.0
+}
+
+/// The running ceiling that sets a Mech's acceleration: its live envelope without the heat
+/// penalty, so a hot unit is capped lower but closes on that cap as fast as a cool one.
+pub(crate) fn acceleration_ceiling(
+    world: &World,
+    id: ObjectId,
+    policy: super::SpeedPolicy,
+) -> Result<f64> {
+    let unit = world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .context("Enter a constructed unit first")?;
+    let base = unit.mobility().envelope();
+    let loaded = super::load::movement_maximum(world, id, base.running, policy.tsm_tow_bonus)?;
+    let factor = if base.running > 0.0 {
+        loaded / base.running
+    } else {
+        0.0
     };
-    target * factor
+    let envelope = unit.equip_envelope_without_heat(base).scaled(factor);
+    Ok(super::speed_bonus::envelope_on_map(world, unit.position(), envelope)?.running)
 }

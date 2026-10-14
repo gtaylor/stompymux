@@ -1,6 +1,7 @@
 //! Shared vehicle descent composes the forced-descent clock with the vehicle fall transaction
 //! and the Total Warfare VTOL crash: speed-based crash damage (p. 68), an explosion when the
-//! crash reaches internal structure (p. 198), and a wrecked rotor that destroys the VTOL.
+//! crash reaches internal structure (p. 198), and the p. 68 outcome that a VTOL still able to
+//! fly which crashed where it could have landed has landed, while any other crash destroys it.
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -37,7 +38,7 @@ pub fn advance_vtol_fall(
             .is_some_and(|unit| unit.vtol_flight().is_some()),
         "Aircraft is unavailable"
     );
-    advance_in_candidate(world, id, rules, false, false)
+    advance_in_candidate(world, id, rules, false)
 }
 
 /// Advance forced descent for any vehicle using the shared impact and replay boundary.
@@ -46,7 +47,7 @@ pub fn advance_vehicle_descent(
     id: ObjectId,
     rules: FallRules,
 ) -> Result<VehicleDescentEvent> {
-    advance_in_candidate(world, id, rules, false, false)
+    advance_in_candidate(world, id, rules, false)
 }
 
 /// Character-capable descent inside the host movement transaction.
@@ -55,7 +56,6 @@ fn advance_in_candidate(
     id: ObjectId,
     rules: FallRules,
     character: bool,
-    free_fusion_fuel: bool,
 ) -> Result<VehicleDescentEvent> {
     let object = world.objects.get(&id).context("Aircraft is unavailable")?;
     ensure!(
@@ -79,7 +79,7 @@ fn advance_in_candidate(
     world.attempt(|world| {
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
         let step = if unit.vtol_flight().is_some() {
-            unit.advance_vtol_fall(i32::from(surface), free_fusion_fuel)?
+            unit.advance_vtol_fall(i32::from(surface))?
         } else {
             let fall = unit.free_fall.as_mut().context("Vehicle is not falling")?;
             fall.advance(i32::from(surface))?
@@ -133,10 +133,11 @@ pub(super) fn resolve_in_candidate(
 
 /// Resolve the crash itself. Crash damage follows TW p. 68: the hexes the VTOL was covering
 /// in a turn (its speed in MP) times its tonnage divided by ten, in five-point groups on the
-/// VTOL hit location table. Height does not add damage; a VTOL hovering when it lost lift
-/// takes none, but every crash wrecks the rotor and so destroys the VTOL (rotor loss is a
-/// crash in this realtime engine), and any crash damage that reaches internal structure
-/// explodes the wreck (TW p. 198).
+/// VTOL hit location table. Height does not add damage, so a VTOL hovering when it lost lift
+/// takes none. Any crash damage that reaches internal structure explodes the wreck (TW
+/// p. 198). A VTOL that is still functional afterwards, with a working rotor and movement,
+/// and that could normally land in the hex it crashed in, has landed there and may fly on;
+/// otherwise the crash destroys it (TW p. 68), which this engine records as a wrecked rotor.
 pub(super) fn resolve_signed_in_candidate(
     world: &mut World,
     id: ObjectId,
@@ -217,7 +218,24 @@ pub(super) fn resolve_signed_in_candidate(
                 super::vehicle_explosion::explode_followup_in_candidate(world, id, false)?;
             report.feedback.notices.extend(explosion.notices);
         }
+        // The crash may have broken ice or collapsed a roof: judge the landing on the live hex.
+        let landable = world
+            .btech
+            .maps()
+            .get(&position.map)
+            .context("Aircraft crash map is unavailable")?
+            .base_hex(i64::from(position.x), i64::from(position.y))
+            .is_ok_and(super::vtol_landing::supported_surface);
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
+        let functional =
+            !unit.is_destroyed() && !unit.rotor_destroyed() && unit.maximum_speed() > 0.0;
+        if functional && landable {
+            report.feedback.notices.push(Notice {
+                unit: id,
+                text: "[fg=yellow]You come down hard, but the VTOL is still flyable.[reset]".into(),
+            });
+            return Ok(report);
+        }
         let rotor_lost = !unit.rotor_destroyed();
         unit.damage_phase(VehicleSection::Rotor, u16::MAX, DamagePhase::Internal)?;
         unit.apply_motive_hit(VehicleMotiveHit::Immobilize);
@@ -267,13 +285,7 @@ pub(super) fn advance_all(
             .pilot()
             .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
         let observers = super::broadcast::observer_notices(world, id, "hits the ground!");
-        let event = advance_in_candidate(
-            world,
-            id,
-            fall_rules,
-            character,
-            rules.free_fusion_vtol_fuel,
-        )?;
+        let event = advance_in_candidate(world, id, fall_rules, character)?;
         if let VehicleDescentEvent::Impact { fall, .. } = event {
             report.notices.push(Notice {
                 unit: id,

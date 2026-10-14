@@ -5,13 +5,14 @@ linkTitle: "heatcutoff"
 manualLinkTitle: "heatcutoff"
 ---
 
-Begin a four-second Mech heat cutoff toggle; requires the assigned conscious pilot.
-The configuration gate applies to new toggles; admitted transitions survive shutdown.
+Shut off that many of a Mech's heat sinks (zero switches them all back on); requires the
+assigned conscious pilot. The change takes effect at the unit's next turn boundary
+(Total Warfare p. 159, Shutting Off Heat Sinks).
 
 ## Signature
 
 ```lua
-btech.unit.heatcutoff(dbref, pilot)
+btech.unit.heatcutoff(dbref, pilot, sinks)
 ```
 
 ## Parameters
@@ -20,6 +21,7 @@ btech.unit.heatcutoff(dbref, pilot)
 | --- | --- | --- |
 | `dbref` | `integer` |  |
 | `pilot` | `integer` |  |
+| `sinks` | `integer` | Heat sinks to shut off, at most the working sinks. |
 
 ## Returns
 

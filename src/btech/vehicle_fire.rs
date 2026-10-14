@@ -269,7 +269,7 @@ fn fire_shot(
                 ams_engaged,
             },
         )?))
-    } else if missile_destroyed || !resolved.hit || narc.is_some() || heat_transfer > 0 {
+    } else if missile_destroyed || !resolved.hit || narc.is_some() || heat_transfer.is_some() {
         None
     } else if candidate.btech.vehicles().contains_key(&target) {
         Some(super::target_salvo::resolve_vehicle_target_in_candidate(

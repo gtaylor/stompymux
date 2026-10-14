@@ -1,4 +1,5 @@
-//! Effective speed from shared load accounting and chassis-specific propulsion and map rules.
+//! Effective running speed from shared load accounting and chassis-specific equipment and
+//! map rules, for gunnery experience, building entry and the inspection report.
 use super::{Mech, StoredMap};
 use anyhow::Result;
 
@@ -27,14 +28,12 @@ impl Mech {
         load: super::UnitLoad,
         maximum: f64,
     ) -> Result<f64> {
-        let speed = super::speed_bonus::SpeedBonuses {
-            masc: self.masc_active(),
-            supercharger: self.supercharger_active(),
-            hot_myomer: self.triple_myomer_active(),
-        }
-        .apply(load.maximum_speed(maximum)?)?;
+        let envelope = super::SpeedEnvelope::from_running(maximum);
+        let loaded = load.maximum_speed(maximum)?;
+        let factor = if maximum > 0.0 { loaded / maximum } else { 0.0 };
+        let running = self.equip_envelope(envelope).scaled(factor).running;
         super::speed_bonus::gravity(
-            speed,
+            running as f32,
             map.filter(|map| map.gravity != 100).map(|map| map.gravity),
         )
     }

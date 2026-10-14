@@ -19,13 +19,24 @@ After taking the cockpit on a battlefield, use `startup`. The startup cycle
 runs for 30 simulation seconds and reports six stages. Wizards can use
 `startup override` for a five-second cycle. `shutdown` stops the engine or aborts
 startup, and releases the cockpit. Use `pilot` again before restarting.
-Excess heat above 30 prevents startup, including the operator override; let the
-unit cool before retrying.
+A reactor cannot restart at 30 or more heat, the operator override included.
+From 14 to 29 heat, `startup` rolls 2d6 against the highest current shutdown
+avoid number (4 at 14, 6 at 18, 8 at 22, 10 at 26); a failed roll keeps the
+reactor down until the next 30-second turn (Total Warfare p. 160).
 
 Startup progress survives restart. It pauses while the server is offline or
 unable to save progress. A running unit accepts `heading <degrees>` and
-`speed <kph|stop|walk|run|back>`. Turns and speed changes are gradual. Shutting down above 10.75 kph forward
-causes a fall and can cause crowding collisions. Reverse or slower motion stops
+`speed <kph|stop|walk|run|back>`. Walking speed is your template's walking MP at 10.75
+kph per point and running is walking x 1.5 rounded up (Total Warfare p. 53); you
+may back up no faster than walking. Heat takes one walking MP per five points and
+caps the throttle rather than scaling it, hot triple-strength myomer adds two walking
+MP, and MASC doubles the walking figure that is left, running refigured each time
+(TW pp. 137, 139, 159). A Mech that runs during a thirty-second turn with a damaged
+hip or gyro makes one piloting roll at the turn's end (TW p. 53), and one that
+exceeds its normal running MP under light gravity rolls once a turn against a point
+of leg damage per MP over (Tactical Operations p. 53). Turns and speed changes are
+gradual. Shutting down above 10.75 kph forward
+causes a fall, which can land you on another unit. Reverse or slower motion stops
 without that shutdown fall. Each hex costs movement for its ground, foliage, route, water and any ice,
 snow or mud, and your speed is divided by that cost, following the Total Warfare and
 Tactical Operations movement cost tables. A road or rail line replaces the
@@ -37,13 +48,15 @@ ground one extra for Mechs. Sand and thin snow slow only wheeled
 vehicles. Deep snow, mud and ice cost one extra, except for hovercraft, and ice costs
 that over water as on land. Water one level deep costs one extra and deeper water
 three; rapids add one more and torrents two. Fire slows every ground unit at least as
-much as rough ground; smoke does not. Standing in flames adds five to a Mech's heat
-production, unless it is under the water or beneath the bridge deck the fire burns on.
-Forward steps reduce speed by 10.75 kph per level while preserving your requested
-throttle. Backing across a step normally requires a piloting check: failure causes a
-fall, with an uphill fall returning you to the previous position. When reverse-step
-checks are disabled, backing uses the same speed costs as forward movement. Map edges
-and unresolved altitude transitions stop the unit. Buildings and walls use their
+much as rough ground; smoke does not. Standing in flames at the turn boundary adds five
+outside heat to a Mech, counted against the fifteen-point outside-heat cap, unless it is
+under the water or beneath the bridge deck the fire burns on.
+Each level climbed or descended to enter a hex costs one MP (Total Warfare p. 52),
+charged like the hex's own terrain cost: you keep your throttle and cross the hex
+that many hex-widths slower. Backing across a step also requires a piloting check (a
+house rule; the book forbids backward level changes): failure causes a fall, with an
+uphill fall returning you to the previous position. Map edges and unresolved altitude
+transitions stop the unit. Buildings and walls use their
 mapped heights.
 
 Some terrain cannot be entered at all, and a unit that reaches its edge simply
@@ -52,7 +65,10 @@ steeper slope is impassable. Mechs cannot push into ultra-heavy woods or jungle.
 Wheeled vehicles keep out of rough ground, rubble, ultra rubble, woods, deep snow and
 magma crust; no vehicle enters heavy or ultra-heavy woods, any jungle, ultra rough ground
 or liquid magma; hovercraft also avoid light woods; and nothing but a hovercraft or an
-amphibious vehicle crosses water a level or more deep. A road or bridge carries a
+amphibious vehicle crosses water a level or more deep. Both ride the surface rather
+than the bed: a hovercraft skims water for its ordinary cost, and an amphibious
+vehicle pays two points for every water hex whatever its depth (Total Warfare p. 52),
+so neither is ever under water. A road or bridge carries a
 unit through terrain it could not otherwise enter, and buildings and walls are
 climbed onto rather than entered.
 
@@ -61,10 +77,16 @@ any speed, risks a skid: change facing on such a hex and then move on, and you
 roll against your piloting or driving skill, harder the farther you have moved
 this turn. Failure drops a Mech and slides it along its old course for half the
 hexes it had moved, taking half a fall's damage in every hex it slides through,
-stopping against higher ground or another unit and tumbling over any drop too
-steep to walk down. A vehicle slides the same way and rolls once for motive
-system damage; a hovercraft sideslips instead, drifting one hex for every point
-it missed by, without damage unless it drifts into something.
+stopping against higher ground and tumbling over any drop too steep to walk
+down. A skidding unit that reaches another unit charges it with the +3 modifier
+for an unintentional charge (Total Warfare p. 63); a hit ends the skid, a miss
+slides on through. A vehicle slides the same way and rolls once for motive
+system damage, and a vehicle that skids into terrain its drive could never
+enter takes a point of damage per five tons and is immobile there for good. A
+hovercraft does not skid but sideslips: whenever it changes facing at flank
+speed on any ground and then moves on, it rolls against its driving skill, and
+on a failure it drifts along its old course one hex for every point it missed
+by, without damage unless it drifts into something.
 
 Swamp, mud, deep snow, tundra and sand can bog you down. Entering such a hex
 takes a piloting or driving roll, one easier on tundra, deep snow and mud, and a
@@ -72,12 +94,14 @@ Mech that falls in one, or jumps into a swamp, is stuck at once. A stuck unit
 cannot move or turn, is two easier to hit, and rolls again to pull free at the
 start of every turn. Jumping out always works. Hovercraft never bog down.
 
-Crowded hexes can cause collisions when you enter them. More than two friendly
-units, or more than six total units, can trigger the configured collision rules.
-Ground damage depends on current mass and relative speed; avoidance rules can
-stop you or cause a fall. Landing among three friendly ground units can also
-trigger crowding; landing impacts use current mass and remaining jump thrust.
-Maps with the `no_stacking` flag have no crowding collisions.
+Stacking follows Total Warfare p. 57: a hex may hold at most two units a side and
+four in all, only one of them a Mech. You may drive or walk through a hex your
+friends hold, but you cannot stop in one that is already full, and you stop at the
+edge of any hex an enemy holds (a charge at that enemy goes through). A Mech that
+lands or falls into a hex another Mech holds makes an accidental fall from above
+(TW p. 152): roll 7 or better, modified for the target's movement and cover, to
+come down on it for your tonnage over ten per level fallen, then take your own
+fall onto your back; a miss leaves everyone standing.
 
 Water depth affects piloting checks. Entering water a level or more deep requires a
 piloting check, one easier at depth one, unmodified at depth two and one harder
@@ -140,15 +164,28 @@ Use `jump <bearing> <range>` to engage jump jets toward a hex center. Grassland,
 forests, rough ground, mountains, snow, sand, smoke, fire, water, ice, bridges,
 buildings and walls are supported,
 including changes in elevation. Jump progress survives restart
-and pauses while the server is offline or unable to save. Jet damage and gravity
-limit range; jumping produces at least three heat, or one per undamaged jump MP.
+and pauses while the server is offline or unable to save. You have one jump MP
+per working jet; in unusual gravity your jump MP is divided by the G-rating and
+rounded to the nearest whole number, halves down. Range is limited to your jump
+MP, and so is the climb to the landing hex, but you may jump down any number of
+levels. A jump may not cross a hex whose surface (ground, roof or bridge deck) is
+higher than your jump MP plus the level you took off from; such a jump is refused
+before you leave the ground, so a jump that launches never hits terrain. A range of
+zero jumps in place and lands in your own hex. Jumping builds up one heat per hex
+jumped, at least three, charged at takeoff; improved jump jets charge one per two
+hexes, still at least three. Gravity does not change the heat.
 Jumping and death-from-above attacks are refused when load-adjusted effective
 speed is more than one MP (10.75 KPH) below the unloaded maximum. CargoTech,
 movement boosters, TSM and special gravity affect that calculation. A loss of
 exactly one MP is allowed. You cannot jump while towing another unit.
 Wait twelve seconds after an ordinary landing before jumping again. Stabilizing adds two
 to firing difficulty. Damaged landing gear or loss of consciousness can cause
-a fall, and losing all jump thrust or overheating can cut the flight short.
+a fall, and losing all jump thrust or overheating can cut the flight short; a
+fall in flight is a zero-level fall. A quad missing one leg lands at +5 and has
+lost its -2 piloting bonus. On a low-gravity world, jumping more hexes than your
+normal jump MP strains the legs: a piloting roll at +1 per full half G below
+standard, and failure costs each leg one point of internal structure per hex
+beyond your normal jump MP.
 Use `land` to attempt an early landing at your current location. A failed
 control check causes a fall; a successful abort still requires any damaged-leg
 or gyro landing check. Ground speed changes are unavailable in flight. Use `heading <degrees>` to turn
@@ -163,18 +200,18 @@ Losing both legs or hips leaves you unable to stand while your jets finish the
 jump; further jet loss can still bring you down.
 Crossing ice during a jump can break it and drop other units standing on that hex.
 Breaking downward can end your jump in a fall; breaking upward preserves your flight.
-A hill taller than your current jump height can force an early landing or crash.
 Water crossings use your current altitude. Submerging can flood breached sections
-and improve cooling; takeoff is limited to water one level deep. Landing in water a
+and improve cooling; takeoff is limited to water one level deep, and from water one
+level deep only torso-mounted jets can fire. Landing in water a
 level or more deep takes a piloting check; failure tumbles you to the bottom for
 a fall as many levels as the water is deep, at half damage. Intact ice is at
 surface level. Landing on it breaks it half the time, dropping units on that tile
 into the water, and ice that holds takes a piloting check to keep your feet.
 Landing in a swamp sticks you fast, and landing in liquid magma or other soft
-ground rolls against getting stuck. Buildings and walls block jumps that are too
-low to clear them. DFA remains unavailable.
-Accumulated damage does not block takeoff. Twenty or more points of damage in
-one turn still force a piloting check, which can cause a fall in flight.
+ground rolls against getting stuck. DFA remains unavailable.
+Accumulated damage never adds a takeoff or landing check. Twenty or more points of
+damage in one turn force the turn's single piloting check, which can cause a fall
+in flight.
 
 Cockpit stun blocks firing for ten simulation seconds and slows a running unit
 toward walking speed. Another stunning hit restarts that countdown.
@@ -232,13 +269,15 @@ Saved timers keep their remaining seconds; offline time does not advance repairs
 
 
 Use `stand check` to inspect your piloting target while prone. `stand` attempts to
-get up. `stand careful` adds a -2 modifier when enabled, but takes twice as long;
-a failed careful attempt takes at least thirty seconds to recover. If your base
-target exceeds twelve, use `stand anyway` to attempt it despite certain failure.
-Failed attempts cause another fall. Successful attempts make you upright but block
-forward or reverse movement until the stand timer finishes. You can use `heading`
-to turn while prone, getting up or recovering from a failed attempt. Dry-ground
-tactical units can stand on land or in water while at least one leg remains usable.
+get up. `stand careful` spends the whole turn standing for a -2 modifier (Tactical
+Operations p. 20): it takes twice as long, and a failed careful attempt takes at least
+thirty seconds to recover. If your base target exceeds twelve, use `stand anyway` to
+attempt it despite certain failure. Every attempt adds one point of heat (Total Warfare
+p. 159). Failed attempts cause another fall. Successful attempts make you upright but
+block forward or reverse movement until the stand timer finishes. You can use `heading`
+to turn while prone, getting up or recovering from a failed attempt. A Mech can stand
+missing one leg, one arm and one leg, or both arms, but not one leg and both arms, and
+not without walking MP (TW pp. 50-51); it can stand on land or in water.
 Ice and bridge standing still require their terrain rules. `stand` takes no switches.
 
 
@@ -282,8 +321,11 @@ the coordinate and queues its impact. Lua accepts `{x=1, y=2}` as the target in
 `btech.unit.fire(unit, pilot, weapon, target)`.
 
 `heat <selection>` (also `flamerheat`) toggles ready flamers between normal damage and heat
-transfer. Heat mode adds two heat to the target on a hit, including a glancing hit,
-instead of damaging armor. It still costs you three heat and ten seconds of
+transfer. Heat mode adds two outside heat to a Mech target on a hit, including a
+glancing hit, instead of damaging armor; outside heat from flamers, infernos,
+plasma and fire together cannot exceed fifteen points a turn (Total Warfare
+p. 159). A vehicle tracks no heat, so a heat-mode hit on one does its normal
+damage instead (Total Warfare p. 113). It still costs you three heat and ten seconds of
 recycle. `weapons` marks heat mode with `[HEAT]`. Modes survive shutdown and restart.
 Select numbers and ranges separated by commas without spaces, such as `0,2-4`.
 Reversed ranges work; repeated numbers toggle again. An invalid selection clause
@@ -345,14 +387,17 @@ timers using the Total Warfare heat scale: at high heat, ammunition can explode
 before the reactor attempts to shut down, and each check is a 2d6 avoid roll
 whose target rises with heat. Shutdown at 30 heat cannot be avoided. Carrying
 inferno ammunition adds its own, earlier ammunition avoid rolls. Heat can also
-injure the pilot once life support is destroyed. A reactor shutdown clears your
-cockpit assignment and target and stops the unit. If you were moving faster than 10.75 kph, a failed piloting check can
-also knock the unit prone. Take the cockpit again and wait for safe startup heat
-before restarting. These checks currently cover supported tactical units.
+injure the pilot once life support is destroyed. A heat shutdown clears your
+target and stops the unit, but you keep the cockpit. The involuntary shutdown
+forces a piloting check at +3 whatever your speed, and failing it knocks the unit
+prone (Total Warfare p. 60). The reactor restarts by itself at the next turn
+boundary once heat falls below 14, even if you are unconscious; from 14 to 29
+`startup` needs the avoid roll described above, and at 30 or more nothing
+restarts it (Total Warfare p. 160). These checks currently cover supported
+tactical units.
 
-A reactor shutdown during flight causes a fall scaled by remaining jump thrust.
-Falling after a jump obstacle or airborne shutdown can also cause a collision
-with units crowding the same hex.
+A reactor shutdown during flight causes a zero-level fall. Falling after an
+airborne shutdown can also cause a collision with units crowding the same hex.
 
 An airborne gyro failure can make you fall onto a crowded hex. Losing the last
 jump jet also causes a fall, but leaves no thrust for the collision damage rule.
@@ -1166,15 +1211,22 @@ Use `dump all`, `dump <weapon number>`, `dump <section>`, or
 critical slots start at one. For example, `dump RT 1` selects the first right-torso
 slot. `dump stop` cancels. Dumping takes time and prevents running and jumping.
 
-`masc` toggles an installed MASC booster. It increases speed but makes progressively
-harder failure checks while active. Switch it off to recover between uses. A
-failure disables MASC and destroys both hip actuators; moving faster than one MP
-also causes a fall. `weapons` and `status` show the current MASC counter.
+`masc` toggles an installed MASC booster, which lets you run at twice your walking
+MP (Total Warfare p. 137). Every thirty-second turn in which it was switched on ends
+with a 2d6 activation check: the first such turn fails on a 2, the second on 4 or
+less, the third on 6 or less, the fourth on 10 or less, and a fifth consecutive turn
+fails automatically. Each turn you leave it off steps the interval back down, never
+below the first. A failure puts one critical hit on each surviving leg, located as a
+normal critical, and the MASC keeps working. `weapons` and `status` show the
+current interval.
 
-`scharge` toggles a supercharger. Its overload checks grow harder with use and
-recover while switched off. Failure can destroy the engine. Using it with MASC
-increases speed further and makes both devices' checks harder. `weapons` and
-`status` show the separate counters.
+`scharge` toggles a supercharger, which follows the same activation checks (Tactical
+Operations: Advanced Units and Equipment p. 345). A failure rolls on the Determining
+Critical Hits Table, applies the result to the upper-most undamaged center torso
+slots, and destroys the supercharger for the rest of the scenario. With both engaged
+you run at two and a half times your walking MP, rounded up, and each device makes
+its own check with no extra penalty. `weapons` and `status` show the separate
+intervals.
 
 
 Artillery also supports `hotload <selection>`. Hotloaded launchers never jam. An
@@ -1297,18 +1349,19 @@ groups is attempted again, subject to ordinary recycling restrictions. Lua
 
 ## Heat cutoff
 
-`heatcutoff` toggles a Mech's automatic cooling regulator after four seconds.
-It needs the conscious assigned pilot; the reactor may be off. Wait for the
-current toggle to finish before issuing another. The server may disable new
-toggles with `battletech.heatcutoff`.
+`heatcutoff <sinks>` shuts off that many of a Mech's heat sinks, most often to
+build up heat for triple-strength myomer; `heatcutoff all` shuts off every
+working sink and `heatcutoff 0` switches them all back on (Total Warfare p. 159,
+Shutting Off Heat Sinks). `heatcutoff` alone reports the current setting. It
+needs the conscious assigned pilot; the reactor may be off.
 
-When enabled, the regulator adjusts active cooling toward the 9–10 heat band.
-It changes at most two cooling points per second, or four with double/Clan heat
-sinks. It cannot create heat on its own. Turning it off restores disabled
-cooling at the same gradual rate while thermal accounting is active. An idle,
-stopped Mech finishes the toggle but leaves cooling capacity unchanged until
-heat accounting resumes. Water and other environmental effects still
-apply. `status` shows the resulting heat production, heat sinks and dissipation.
+The count is in sinks, so a double heat sink is one sink worth two points of
+cooling. A request takes effect at the unit's next 30-second turn boundary,
+whether it shuts sinks off or switches them back on, and a newer request
+replaces one still waiting. Losing a heat sink to damage lowers the count to
+the sinks that still work. Water doubles only the sinks left on, and other
+environmental effects still apply. `status` shows the resulting heat
+production, heat sinks and dissipation.
 
 
 ## Preferred ammunition sections
@@ -1350,12 +1403,11 @@ Use `prone` in a running biped or quad with its assigned pilot in the cockpit.
 The command stops your travel, centers your torso, restores flipped arms and
 cancels hull-down posture. You cannot use it while airborne or trying to stand.
 
-At up to one-third of effective maximum speed, the drop requires no control
-roll or fall damage. Faster movement requires a control check; above two-thirds
-of effective maximum speed the check is two points harder and failure causes a
-more severe fall. Reverse travel uses the same absolute-speed thresholds.
-Dropping into water can flood exposed compartments.
-The final ground contact also activates stepping mines.
+Dropping to the ground is a deliberate 1 MP action (Total Warfare p. 49): it
+needs no control roll, causes no damage and adds no heat, whatever speed you were
+moving at, forward or backward, and you keep your facing. You may not drop within
+thirty seconds of launching a jump. Dropping into water can flood exposed
+compartments, and the final ground contact activates stepping mines.
 
 Firing when down adds +2 to your weapon attacks (Total Warfare p. 113); a biped
 propped on its only remaining arm takes +3 instead (Tactical Operations p. 83).

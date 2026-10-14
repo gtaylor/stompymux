@@ -120,6 +120,13 @@ async fn masc_hardware_and_damage_survive_save_and_lua_inspection() {
     assert!(scripts.drain_outbox().is_empty());
 }
 
+/// Edit only the committed global phase, as database load would.
+fn phase(world: &mut World, value: u8) {
+    let mut saved = serde_json::to_value(&world.btech).unwrap();
+    saved["turn_clock"] = value.into();
+    world.btech = serde_json::from_value(saved).unwrap();
+}
+
 /// A running MASC-equipped Atlas on clear terrain.
 async fn powered_masc() -> (tempfile::TempDir, Config, World, ObjectId) {
     powered_template(with_masc(5, false).0).await
@@ -150,11 +157,18 @@ async fn powered_template(template: MechTemplate) -> (tempfile::TempDir, Config,
     (dir, config, world, id)
 }
 
+/// MASC doubles the walking figure, a turn of use is checked once at the turn-clock boundary
+/// against the first interval, and an unused turn decays the interval again (Total Warfare
+/// p. 137); the whole history survives a save and replays.
 #[tokio::test]
-async fn masc_toggle_speed_first_check_recovery_and_restart_are_shared() {
+async fn masc_toggle_speed_boundary_check_recovery_and_restart_are_shared() {
     let (_dir, config, mut world, id) = powered_masc().await;
+    // The Atlas walks 3 and runs 5; MASC doubles the walking figure to a run of 6.
     let base = world.btech.constructed_units()[&id].movement_maximum_speed();
-    set_battle_speed(&mut world, id, ObjectId(1), -base * 2.0 / 3.0).unwrap();
+    let walking = world.btech.constructed_units()[&id].walking_speed();
+    let boosted = walking * 2.0;
+    set_battle_speed(&mut world, id, ObjectId(1), -walking).unwrap();
+    phase(&mut world, 5);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
     assert!(
@@ -169,17 +183,13 @@ async fn masc_toggle_speed_first_check_recovery_and_restart_are_shared() {
         let snapshot = scripts.world();
         let unit = &snapshot.btech.constructed_units()[&id];
         assert!(unit.masc_active());
-        assert_eq!(unit.masc().remaining, 1);
-        assert!((unit.movement_maximum_speed() - base * 4.0 / 3.0).abs() < 1e-9);
-        assert!((unit.motion().unwrap().desired_speed + base * 2.0 / 3.0 * 4.0 / 3.0).abs() < 1e-9);
+        assert!(unit.masc().used);
+        assert_eq!(unit.masc().counter, 0);
+        assert!((unit.movement_maximum_speed() - boosted).abs() < 1e-9);
+        assert!(boosted > base);
+        assert!((unit.motion().unwrap().desired_speed + walking).abs() < 1e-9);
     }
-    set_battle_speed(
-        &mut scripts.world_mut(),
-        id,
-        ObjectId(1),
-        base * (4.0 / 3.0),
-    )
-    .unwrap();
+    set_battle_speed(&mut scripts.world_mut(), id, ObjectId(1), boosted).unwrap();
     for _ in 0..20 {
         advance_battle_motion(&mut scripts.world_mut(), MovementRules::STANDARD).unwrap();
     }
@@ -188,69 +198,73 @@ async fn masc_toggle_speed_first_check_recovery_and_restart_are_shared() {
             .motion()
             .unwrap()
             .speed
-            - base * (4.0 / 3.0))
+            - boosted)
             .abs()
             < 1e-9
     );
-    // God receives the reference's early-check wizard protection.
-    let notices = advance_battle_boosters_action(&scripts, &config).unwrap();
+    // Inside the turn nothing is rolled; the boundary makes the first-interval check.
     assert!(
-        notices
-            .iter()
-            .any(|notice| notice.text.contains("MASC: BTH 3+"))
+        advance_battle_boosters_action(&scripts, &config)
+            .unwrap()
+            .is_empty()
     );
     assert_eq!(
         scripts.world().btech.constructed_units()[&id]
             .masc()
             .counter,
-        1
+        0
     );
-    assert_eq!(
-        scripts.world().btech.constructed_units()[&id]
-            .masc()
-            .remaining,
-        60
+    phase(&mut scripts.world_mut(), 0);
+    let notices = advance_battle_boosters_action(&scripts, &config).unwrap();
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text.starts_with("MASC: turn 1, fails on 2 or less")),
+        "{notices:?}"
     );
+    {
+        let snapshot = scripts.world();
+        let unit = &snapshot.btech.constructed_units()[&id];
+        assert_eq!(unit.masc().counter, 1);
+        assert!(!unit.masc().used);
+        assert!(!unit.masc().rested);
+    }
     assert!(
         support::run_text(&scripts, &config, ObjectId(1), 1, "weapons").contains("MASC: 1 (On)")
     );
+    // Switched off, each unused turn steps the interval back down.
+    phase(&mut scripts.world_mut(), 3);
     let _: mlua::Value = scripts
         .eval_callback(&format!("return btech.unit.masc({},1)", id.0))
         .unwrap();
     assert!(!scripts.world().btech.constructed_units()[&id].masc_active());
-    for _ in 0..30 {
-        advance_battle_boosters_action(&scripts, &config).unwrap();
-    }
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     let replay =
         Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
-    for _ in 0..30 {
+    for tick in 4..=31 {
+        phase(&mut scripts.world_mut(), tick % 30);
+        phase(&mut replay.world_mut(), tick % 30);
         assert_eq!(
             advance_battle_boosters_action(&scripts, &config).unwrap(),
             advance_battle_boosters_action(&replay, &config).unwrap()
         );
     }
     assert_eq!(scripts.world().btech, replay.world().btech);
-    assert_eq!(
-        scripts.world().btech.constructed_units()[&id]
-            .masc()
-            .counter,
-        0
-    );
-    assert_eq!(
-        scripts.world().btech.constructed_units()[&id]
-            .masc()
-            .remaining,
-        0
-    );
+    let snapshot = scripts.world();
+    let unit = &snapshot.btech.constructed_units()[&id];
+    assert_eq!(unit.masc().counter, 0);
+    assert!(unit.masc().rested);
+    assert!(!unit.masc().used);
 }
 
+/// A failed MASC check puts one critical hit on each leg and nothing else (Total Warfare
+/// p. 137): no fall, no stop, and the MASC itself keeps working.
 #[tokio::test]
-async fn masc_failure_breaks_both_hips_and_falls_only_above_one_mp() {
+async fn masc_failure_damages_each_leg_once_and_keeps_masc_working() {
     let (_dir, config, world, id) = powered_masc().await;
-    for speed in [0.0_f64, 10.75, -10.75, 10.76, -10.76] {
+    for speed in [0.0_f64, 10.75, -21.5, 64.5] {
         let mut trial = world.clone();
         for pilot in [ObjectId(1), ObjectId(2)] {
             trial.objects.get_mut(&pilot).unwrap().location = Some(id);
@@ -262,59 +276,54 @@ async fn masc_failure_breaks_both_hips_and_falls_only_above_one_mp() {
                 .insert(Flag::Connected);
         }
         toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
-        let mut state = serde_json::to_value(&trial.btech).unwrap();
-        state["constructed"][id.0.to_string()]["masc"]["counter"] = serde_json::json!(5);
-        state["constructed"][id.0.to_string()]["motion"]["speed"] = serde_json::json!(speed);
-        state["constructed"][id.0.to_string()]["dice"] =
-            serde_json::to_value(Dice::seeded([2; 32])).unwrap();
-        // The failed fall injures the pilot; pin the consciousness stream too.
-        state["recoveries"][ObjectId(1).0.to_string()]["dice"] =
-            serde_json::to_value(Dice::seeded([2; 32])).unwrap();
-        trial.btech = serde_json::from_value(state).unwrap();
+        // The fifth consecutive turn of use fails automatically.
+        trial
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["masc"]["counter"] = serde_json::json!(4);
+                record["motion"]["speed"] = serde_json::json!(speed);
+                record["dice"] = serde_json::to_value(Dice::seeded([2; 32])).unwrap();
+            })
+            .unwrap();
+        phase(&mut trial, 0);
+        let lost = trial.btech.constructed_units()[&id].lost_criticals().len();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(trial))).unwrap();
         let notices = advance_battle_boosters_action(&scripts, &config).unwrap();
-        assert!(notices.iter().any(|notice| notice.text.contains("BTH 13+")));
-        let output = scripts.drain_outbox();
-        assert!(!output.iter().any(|(who, message)| *who == ObjectId(2)
-            && (message.source().starts_with("Modified Pilot Skill:")
-                || message.source() == "You make a piloting skill roll!")));
-        let pilot: Vec<_> = output
-            .iter()
-            .filter(|(who, _)| *who == ObjectId(1))
-            .map(|(_, message)| message.source())
-            .collect();
-        if speed.abs() > 10.75 {
-            let index = pilot
+        assert!(
+            notices
                 .iter()
-                .position(|message| *message == "You make a piloting skill roll!")
-                .unwrap();
-            assert!(index > 0);
-            assert!(
-                pilot[..index]
-                    .iter()
-                    .any(|message| message.contains("BTH 13+"))
-            );
-            let mut dice = Dice::seeded([2; 32]);
-            dice.two_d6();
-            assert!(pilot[index + 1].ends_with(&format!("\tRoll: {}", dice.two_d6())));
-        } else {
-            assert!(
-                !pilot
-                    .iter()
-                    .any(|message| message.starts_with("Modified Pilot Skill:"))
-            );
-        }
+                .any(|notice| notice.text.starts_with("MASC: turn 5, fails on 12 or less")),
+            "{notices:?}"
+        );
+        assert!(
+            notices
+                .iter()
+                .any(|notice| notice.text == "Your MASC overloads and damages your legs!")
+        );
+        // The MASC failure itself forces no fall; any piloting roll that follows is the
+        // ordinary consequence of the leg actuator or hip it happened to hit (TW p. 125).
+        scripts.drain_outbox();
         let snapshot = scripts.world();
         let unit = &snapshot.btech.constructed_units()[&id];
-        assert!(unit.masc().failed);
-        assert!(!unit.masc_operational().unwrap());
-        assert_eq!(unit.mobility().maximum_speed, 0.0);
-        assert_eq!(unit.motion().unwrap().speed, 0.0);
-        assert_eq!(unit.posture() == Posture::Prone, speed.abs() > 10.75);
+        assert!(!unit.masc().failed);
+        assert!(unit.masc().enabled);
+        assert!(unit.masc_operational().unwrap());
+        assert_eq!(unit.masc().counter, 5);
+        assert_eq!(unit.lost_criticals().len(), lost + 2);
         for section in [MechSection::LeftLeg, MechSection::RightLeg] {
-            assert!(unit.critical_destroyed(CriticalLocation { section, slot: 0 }));
+            assert_eq!(
+                unit.lost_criticals()
+                    .iter()
+                    .filter(|location| location.section == section)
+                    .count(),
+                1
+            );
         }
+        assert!(unit.mobility().maximum_speed > 0.0);
+        // Whatever the legs lost, the throttle stays within the new ceiling.
+        let envelope = unit.speed_envelope();
+        assert!(unit.motion().unwrap().speed.abs() <= envelope.running + 1e-9);
         drop(snapshot);
         stop_battle_unit(
             &mut scripts.world_mut(),
@@ -323,7 +332,6 @@ async fn masc_failure_breaks_both_hips_and_falls_only_above_one_mp() {
             MovementRules::STANDARD.fall,
         )
         .unwrap();
-        assert!(scripts.world().btech.constructed_units()[&id].masc().failed);
         assert_eq!(
             scripts.world().btech.constructed_units()[&id]
                 .masc()
@@ -341,9 +349,12 @@ async fn masc_failure_retries_failed_server_saves_atomically() {
         toggle_battle_masc(&mut world, id, ObjectId(1)).unwrap();
         world.btech
             .rewrite_unit_record(id, |record| {
-        record["masc"]["counter"] = serde_json::json!(5);
+        record["masc"]["counter"] = serde_json::json!(4);
         })
             .unwrap();
+        // The next heartbeat crosses the turn boundary and makes the automatic failure.
+        phase(&mut world, 29);
+        let lost = world.btech.constructed_units()[&id].lost_criticals().len();
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -352,8 +363,9 @@ async fn masc_failure_retries_failed_server_saves_atomically() {
         heartbeats.attempt().await;
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, before);
         sqlx::query("DROP TRIGGER deny_masc").execute(&mut sql).await.unwrap();
-        let restored = heartbeats.until_saved(&config, 5, |restored| restored.btech.constructed_units()[&id].masc().failed).await;
-        assert_eq!(restored.btech.constructed_units()[&id].mobility().maximum_speed, 0.0);
+        let restored = heartbeats.until_saved(&config, 5, |restored| restored.btech.constructed_units()[&id].lost_criticals().len() > lost).await;
+        assert_eq!(restored.btech.constructed_units()[&id].lost_criticals().len(), lost + 2);
+        assert!(restored.btech.constructed_units()[&id].masc().enabled);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
@@ -408,9 +420,12 @@ async fn combined_boosters_preserve_speed_envelopes_check_order_and_lua_rollback
     {
         let snapshot = scripts.world();
         let unit = &snapshot.btech.constructed_units()[&id];
-        assert!((unit.movement_maximum_speed() - base * (5.0 / 3.0)).abs() < 1e-9);
-        assert!((unit.motion().unwrap().desired_speed - base * (16.0 / 9.0)).abs() < 1e-9);
+        // Walk 3 under both boosters runs at 3 x 2.5 rounded up: 8 MP, and a forward throttle
+        // keeps pace with the ceiling through each toggle.
+        assert!((unit.movement_maximum_speed() - 86.0).abs() < 1e-9);
+        assert!((unit.motion().unwrap().desired_speed - 86.0).abs() < 1e-9);
     }
+    phase(&mut scripts.world_mut(), 0);
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
@@ -421,11 +436,12 @@ async fn combined_boosters_preserve_speed_envelopes_check_order_and_lua_rollback
         notices,
         advance_battle_boosters_action(&replay, &config).unwrap()
     );
+    // Each device makes its own separate activation roll (TacOps AUE p. 345).
     let checks: Vec<_> = notices
         .iter()
-        .filter(|notice| notice.text.contains("BTH"))
+        .filter(|notice| notice.text.contains("fails on"))
         .collect();
-    assert_eq!(checks.len(), 2);
+    assert_eq!(checks.len(), 2, "{notices:?}");
     assert!(checks[0].text.starts_with("Supercharger:"));
     assert!(checks[1].text.starts_with("MASC:"));
     assert_eq!(scripts.world().btech, replay.world().btech);
@@ -438,16 +454,19 @@ async fn combined_boosters_preserve_speed_envelopes_check_order_and_lua_rollback
     assert!(!scripts.world().btech.constructed_units()[&id].supercharger_active());
 }
 
+/// A failed supercharger check rolls on the Determining Critical Hits Table and applies the
+/// hits to the upper-most undamaged center-torso slots, the Atlas's engine, then destroys
+/// the supercharger (Tactical Operations: Advanced Units and Equipment p. 345).
 #[tokio::test]
-async fn supercharger_failure_damages_ordered_engine_slots_and_replays() {
+async fn supercharger_failure_rolls_critical_hits_onto_the_upper_torso_slots_and_replays() {
     let (template, compressor) = with_supercharger();
     let (_dir, config, world, id) = powered_template(template).await;
-    for wanted in 1..=4 {
+    for (wanted, critical_roll) in [(0, 7), (1, 8), (2, 10), (3, 12)] {
         let seed = (0..=255)
             .find(|seed| {
                 let mut dice = Dice::seeded([*seed; 32]);
                 dice.two_d6();
-                dice.die(4).unwrap() == wanted
+                dice.two_d6() == critical_roll
             })
             .unwrap();
         let mut trial = world.clone();
@@ -455,10 +474,11 @@ async fn supercharger_failure_damages_ordered_engine_slots_and_replays() {
         trial
             .btech
             .rewrite_unit_record(id, |record| {
-                record["supercharger"]["counter"] = serde_json::json!(5);
+                record["supercharger"]["counter"] = serde_json::json!(4);
                 record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             })
             .unwrap();
+        phase(&mut trial, 0);
         persistence::save(&config.database(), &trial).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
         let scripts =
@@ -478,6 +498,10 @@ async fn supercharger_failure_damages_ordered_engine_slots_and_replays() {
         assert!(unit.critical_destroyed(compressor));
         assert_eq!(unit.system_hits(System::Engine), wanted as u8);
         assert_eq!(unit.is_destroyed(), wanted >= 3);
+        assert!(notices.iter().any(|notice| notice.text
+            == format!(
+                "Your supercharger overloads and explodes!  Critical roll: {critical_roll}"
+            )));
         assert!(
             notices
                 .iter()
@@ -486,38 +510,41 @@ async fn supercharger_failure_damages_ordered_engine_slots_and_replays() {
     }
 }
 
+/// Running both boosters adds no penalty to either roll: an 11 on the fourth interval
+/// (fails on 10 or less) passes with or without the MASC engaged.
 #[tokio::test]
-async fn simultaneous_boosters_apply_the_other_devices_roll_penalty() {
+async fn simultaneous_boosters_roll_separately_without_a_penalty() {
     let (_dir, config, world, id) = powered_template(with_supercharger().0).await;
     let seed = (0..=255)
         .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 11)
         .unwrap();
     for both in [false, true] {
         let mut trial = world.clone();
+        toggle_battle_supercharger(&mut trial, id, ObjectId(1)).unwrap();
         if both {
             toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
         }
-        toggle_battle_supercharger(&mut trial, id, ObjectId(1)).unwrap();
         trial
             .btech
             .rewrite_unit_record(id, |record| {
-                record["supercharger"]["counter"] = serde_json::json!(4);
-                if both {
-                    record["masc"]["remaining"] = serde_json::json!(60);
-                }
+                record["supercharger"]["counter"] = serde_json::json!(3);
                 record["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
             })
             .unwrap();
+        phase(&mut trial, 0);
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(trial))).unwrap();
         let notices = advance_battle_boosters_action(&scripts, &config).unwrap();
-        assert!(notices.iter().any(|notice| notice.text
-            == format!("Supercharger: BTH 11, Roll: {}", if both { 10 } else { 11 })));
-        assert_eq!(
-            scripts.world().btech.constructed_units()[&id]
+        assert!(
+            notices
+                .iter()
+                .any(|notice| notice.text == "Supercharger: turn 4, fails on 10 or less, Roll: 11"),
+            "{notices:?}"
+        );
+        assert!(
+            !scripts.world().btech.constructed_units()[&id]
                 .supercharger()
-                .failed,
-            both
+                .failed
         );
     }
 }
@@ -621,12 +648,14 @@ fn sample_booster_heat(world: &mut World, id: ObjectId, heat: f64) {
 #[tokio::test]
 async fn hot_myomer_replaces_the_extra_movement_boost_and_preserves_turning() {
     let (_dir, config, world, id) = powered_template(myomer_booster_design()).await;
-    // These ceilings follow the independent control and update conversions for the 7/11 chassis.
-    for (masc, compressor, control, update) in [
-        (false, false, 129.0, 150.5),
-        (true, false, 182.75, 193.5),
-        (false, true, 182.75, 193.5),
-        (true, true, 215.0, 225.75),
+    // A 7/11 at heat 9 walks 7 + 2 - 1 = 8 and runs 12; one booster doubles the walk to a
+    // run of 16, both multiply it by 2.5 for 20 (Total Warfare pp. 137 and 139). The unit
+    // accelerates by a twentieth of the ceiling it would have while cool, 9/14 and up.
+    for (masc, compressor, control, acceleration) in [
+        (false, false, 129.0, 150.5 / 20.0),
+        (true, false, 172.0, 193.5 / 20.0),
+        (false, true, 172.0, 193.5 / 20.0),
+        (true, true, 215.0, 247.25 / 20.0),
     ] {
         let mut trial = world.clone();
         sample_booster_heat(&mut trial, id, 9.0);
@@ -649,13 +678,13 @@ async fn hot_myomer_replaces_the_extra_movement_boost_and_preserves_turning() {
                 .motion()
                 .unwrap()
                 .heading
-                - 1.5 * (control + 16.125) / 10.75)
+                - 1.5 * control / 10.75)
                 .abs()
                 < 1e-9
         );
         advance_battle_motion(&mut trial, MovementRules::STANDARD).unwrap();
         assert!(
-            (trial.btech.constructed_units()[&id].motion().unwrap().speed - update / 20.0).abs()
+            (trial.btech.constructed_units()[&id].motion().unwrap().speed - acceleration).abs()
                 < 1e-9
         );
         trial.validate(&config).unwrap();
@@ -673,11 +702,13 @@ async fn hot_throttle_toggle_rounding_survives_save_and_cooling() {
     ] {
         let mut trial = world.clone();
         sample_booster_heat(&mut trial, id, 9.0);
+        // Backward travel is limited to the walking ceiling, 86 km/h at heat 9.
+        let request = |ceiling: f64| if direction > 0.0 { ceiling } else { -86.0 };
         if intermediate {
             toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
-            set_battle_speed(&mut trial, id, ObjectId(1), 182.75 * direction).unwrap();
+            set_battle_speed(&mut trial, id, ObjectId(1), request(172.0)).unwrap();
         } else {
-            set_battle_speed(&mut trial, id, ObjectId(1), 129.0 * direction).unwrap();
+            set_battle_speed(&mut trial, id, ObjectId(1), request(129.0)).unwrap();
             toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
         }
         toggle_battle_supercharger(&mut trial, id, ObjectId(1)).unwrap();
@@ -685,12 +716,8 @@ async fn hot_throttle_toggle_rounding_survives_save_and_cooling() {
             .motion()
             .unwrap()
             .desired_speed;
-        let expected = if intermediate {
-            182.75 * (4.0 / 3.0)
-        } else {
-            129.0 * (16.0 / 9.0)
-        };
-        assert!((desired - expected * direction).abs() < 1e-9);
+        // A forward throttle follows the ceiling to 215; a reverse one is left alone.
+        assert!((desired - request(215.0)).abs() < 1e-9);
         trial.validate(&config).unwrap();
         persistence::save(&config.database(), &trial).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();

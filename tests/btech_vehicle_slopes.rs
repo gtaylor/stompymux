@@ -203,29 +203,6 @@ async fn reverse_slope_checks_replay_success_and_failed_climbs_and_descents() {
 }
 
 #[tokio::test]
-async fn disabled_reverse_checks_cross_slopes_without_control_dice() {
-    let (_dir, _config, mut world, id) = fixture(VehicleMovement::Wheeled, true).await;
-    let dice = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap()["dice"].clone();
-    let rules = MovementRules {
-        roll_on_backwalk: false,
-        ..MovementRules::STANDARD
-    };
-    let mut climbed = false;
-    for _ in 0..100 {
-        assert!(advance_battle_motion(&mut world, rules).unwrap().is_empty());
-        if battle_unit_elevation(&world, id).unwrap() == Some(1) {
-            climbed = true;
-            break;
-        }
-    }
-    assert!(climbed);
-    assert_eq!(
-        serde_json::to_value(&world.btech.vehicles()[&id]).unwrap()["dice"],
-        dice
-    );
-}
-
-#[tokio::test]
 async fn two_level_vehicle_cliffs_stop_before_entry() {
     let (_dir, _config, mut world, id) = fixture(VehicleMovement::Tracked, false).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;

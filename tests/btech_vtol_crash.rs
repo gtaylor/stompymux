@@ -86,10 +86,23 @@ async fn crashes_use_speed_based_damage_and_saved_replay() {
                         fall: None,
                     }
                 );
-                assert!(unit.immobilized());
-                assert_eq!(unit.maximum_speed(), 0.0);
-                // Every crash wrecks the rotor and so destroys the VTOL.
-                assert!(unit.rotor_destroyed() && unit.is_destroyed());
+                // A VTOL still able to fly that crashed where it could land has landed; any
+                // other crash destroys it (TW p. 68). Water is no place to land.
+                let flyable = report
+                    .feedback
+                    .notices
+                    .iter()
+                    .any(|notice| notice.text.contains("still flyable"));
+                assert_eq!(flyable, !unit.is_destroyed(), "{terrain}/{hexes}");
+                assert!(!flyable || terrain == ".3");
+                if flyable {
+                    assert!(!unit.immobilized() && !unit.rotor_destroyed());
+                    assert!(unit.maximum_speed() > 0.0);
+                } else {
+                    assert!(unit.immobilized());
+                    assert_eq!(unit.maximum_speed(), 0.0);
+                    assert!(unit.rotor_destroyed() && unit.is_destroyed());
+                }
                 assert_eq!(
                     serde_json::from_value::<Vehicle>(serde_json::to_value(unit).unwrap()).unwrap(),
                     *unit
@@ -311,11 +324,14 @@ async fn movement_dispatch_advances_falls_and_powered_flight_exactly_once() {
         let mut expected = world.clone();
         let event = advance_battle_vtol_fall(&mut expected, falling, rules.fall).unwrap();
         let mut flyer = expected.btech.vehicles()[&flying].clone();
-        let _ = flyer.consume_vtol_fuel(0.0, 5, false, false).unwrap();
+        let _ = flyer.consume_vtol_fuel(0.0, 5, false).unwrap();
         let mut state = serde_json::to_value(&expected.btech).unwrap();
         state["vehicles"][flying.0.to_string()] = serde_json::to_value(flyer).unwrap();
+        // Powered flight also watches the heading for a flank-speed sideslip (TW p. 67).
+        state["vehicles"][flying.0.to_string()]["slick"] =
+            serde_json::json!({"heading": 0.0, "turned": false});
         expected.btech = serde_json::from_value(state).unwrap();
-        let _ = advance_battle_vtol_environment(&mut expected, flying, false, rules.fall).unwrap();
+        let _ = advance_battle_vtol_environment(&mut expected, flying, rules.fall).unwrap();
         let notices = advance_battle_motion(&mut world, rules).unwrap();
         assert_eq!(world.btech, expected.btech);
         assert_eq!(
@@ -423,9 +439,9 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
         let before = world.btech.clone();
         let mut replay = world.clone();
         let rules = MovementRules::STANDARD.fall;
-        let result = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
+        let result = advance_battle_vtol_environment(&mut world, id, rules).unwrap();
         assert_eq!(
-            advance_battle_vtol_environment(&mut replay, id, false, rules).unwrap(),
+            advance_battle_vtol_environment(&mut replay, id, rules).unwrap(),
             result
         );
         assert_eq!(world.btech, replay.btech);
@@ -439,7 +455,7 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
             ) => {
                 assert_eq!(
                     unit.vtol_flight().unwrap().altitude,
-                    altitude + vertical / 129.0
+                    altitude + vertical / VERTICAL_KPH_PER_LEVEL_SECOND
                 );
             }
             ("landing", VtolEnvironment::Landed { .. }) => {
@@ -456,7 +472,11 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
                 assert_eq!(contact, VtolSurfaceContact::Ground { fall_levels: 13 });
                 assert!(fall.avoidance.is_none());
                 assert_eq!(unit.vtol_flight().unwrap().altitude, 1.0);
-                assert!(unit.immobilized() && unit.is_destroyed());
+                // No horizontal speed means no crash damage (TW p. 68), and clear ground is
+                // somewhere a VTOL can land, so the hard arrival counts as a landing.
+                assert_eq!(fall.damage, 0);
+                assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
+                assert!(!unit.immobilized() && !unit.is_destroyed());
             }
             ("water", VtolEnvironment::Flooded { newly: true, .. }) => {
                 assert!(unit.flooded() && unit.is_destroyed());
@@ -464,7 +484,8 @@ async fn world_contacts_commit_clear_flight_landing_crash_and_water_with_replay(
                 assert_eq!(unit.power(), Power::Off);
                 assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
                 assert!(unit.vtol_flight().unwrap().fall.is_none());
-                assert!(unit.vtol_flight().unwrap().altitude <= -1.0);
+                // The water takes a descending VTOL at its surface (TW p. 54).
+                assert!(unit.vtol_flight().unwrap().altitude <= 0.0);
             }
             (_, result) => panic!("Unexpected {expected} outcome: {result:?}"),
         }
@@ -523,7 +544,7 @@ async fn world_contact_failure_restores_precontact_height_position_and_dice() {
     let before = world.btech.clone();
     let rules = MovementRules::STANDARD.fall;
     for _ in 0..2 {
-        let error = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap_err();
+        let error = advance_battle_vtol_environment(&mut world, id, rules).unwrap_err();
         assert!(
             error
                 .to_string()
@@ -566,10 +587,7 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
                 }
             })
             .unwrap();
-        let rules = MovementRules {
-            free_fusion_vtol_fuel: free_fuel,
-            ..MovementRules::STANDARD
-        };
+        let rules = MovementRules::STANDARD;
         for tick in 1..=5 {
             let mut replay = world.clone();
             replay.btech =
@@ -589,11 +607,15 @@ async fn launch_flight_and_fuel_exhaustion_share_one_restartable_tick() {
                 assert!(notices.iter().any(|notice| notice.text == "You lift off!"));
             } else if free_fuel || tick == 3 {
                 assert_eq!(flight.phase, VtolFlightPhase::Airborne);
-                assert!((flight.altitude - f64::from(tick - 2) * 60.0 / 129.0).abs() < 1e-12);
+                assert!(
+                    (flight.altitude - f64::from(tick - 2) * 60.0 / VERTICAL_KPH_PER_LEVEL_SECOND)
+                        .abs()
+                        < 1e-12
+                );
                 assert_eq!(unit.vtol_fuel().unwrap().remaining(), 0);
             } else {
                 assert_eq!(flight.phase, VtolFlightPhase::Falling);
-                assert_eq!(flight.altitude, 60.0 / 129.0);
+                assert_eq!(flight.altitude, 60.0 / VERTICAL_KPH_PER_LEVEL_SECOND);
                 assert_eq!(unit.vtol_fuel().unwrap().remaining(), -1);
                 let mut cursor = FreeFall::new(0);
                 if tick == 5 {
@@ -666,7 +688,7 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
     let flight = unit.vtol_flight().unwrap();
     assert_eq!(flight.phase, VtolFlightPhase::Airborne);
     assert_eq!(flight.vertical_speed, 60.0);
-    assert!(flight.altitude > 5.0 && flight.altitude < 5.0 + 60.0 / 129.0);
+    assert!(flight.altitude > 5.0 && flight.altitude < 5.0 + 60.0 / VERTICAL_KPH_PER_LEVEL_SECOND);
     assert_eq!(unit.sections(), before.vehicles()[&id].sections());
     assert!(
         advance_battle_motion(&mut world, MovementRules::STANDARD)
@@ -675,7 +697,7 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
     );
     assert_eq!(
         world.btech.vehicles()[&id].vtol_flight().unwrap().altitude,
-        flight.altitude + 60.0 / 129.0
+        flight.altitude + 60.0 / VERTICAL_KPH_PER_LEVEL_SECOND
     );
 }
 
@@ -800,12 +822,10 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         assert_eq!(pure, before.vehicles()[&id]);
         let mut replay = world.clone();
         let result =
-            advance_battle_vtol_environment(&mut world, id, false, MovementRules::STANDARD.fall)
-                .unwrap();
+            advance_battle_vtol_environment(&mut world, id, MovementRules::STANDARD.fall).unwrap();
         assert_eq!(result, VtolEnvironment::Boundary { path });
         assert_eq!(
-            advance_battle_vtol_environment(&mut replay, id, false, MovementRules::STANDARD.fall)
-                .unwrap(),
+            advance_battle_vtol_environment(&mut replay, id, MovementRules::STANDARD.fall).unwrap(),
             result
         );
         assert_eq!(world.btech, replay.btech);
@@ -854,31 +874,34 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
     .unwrap();
     world.btech = serde_json::from_value(state).unwrap();
     let rules = MovementRules::STANDARD.fall;
-    let result = advance_battle_vtol_environment(&mut world, id, false, rules).unwrap();
-    assert!(matches!(
-        result,
-        VtolEnvironment::Obstacle {
-            path: VtolPath::Contact {
+    let result = advance_battle_vtol_environment(&mut world, id, rules).unwrap();
+    // Flying into the hill is an automatic crash in the hill hex (TW p. 54), ahead of the
+    // map edge beyond it; the VTOL comes to rest on the hilltop, where it may have landed.
+    let VtolEnvironment::Crashed {
+        path:
+            VtolPath::Contact {
                 hex: HexCoordinate { x: 0, y: 1 },
                 contact: VtolSurfaceContact::Elevation,
                 ..
             },
-            fall: None,
-            ..
-        }
-    ));
-    assert_eq!(world.btech.vehicles()[&id].position().unwrap().y, 2);
+        fall,
+    } = result
+    else {
+        panic!("Expected a crash into the hill: {result:?}");
+    };
+    // Ten hexes of speed times 25 tons over ten (TW p. 68).
+    assert_eq!(fall.damage, 30);
+    let unit = &world.btech.vehicles()[&id];
+    assert_eq!(unit.position().unwrap().y, 1);
+    assert_eq!(unit.vtol_flight().unwrap().altitude, 9.0);
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
+    assert_eq!(unit.motion().unwrap().speed, 0.0);
     assert_eq!(
-        world.btech.vehicles()[&id].vtol_flight().unwrap().altitude,
-        0.0
-    );
-    assert_eq!(
-        world.btech.vehicles()[&id].vtol_flight().unwrap().phase,
-        VtolFlightPhase::Landed
-    );
-    assert_eq!(
-        world.btech.vehicles()[&id].motion().unwrap().desired_speed,
-        100.0
+        unit.is_destroyed(),
+        fall.feedback
+            .notices
+            .iter()
+            .any(|notice| notice.text.contains("wrecked"))
     );
 }
 
@@ -909,10 +932,7 @@ async fn movement_dispatch_recovers_powered_aircraft_without_impact_or_dice() {
         .unwrap();
     let before = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
     let mut replay = world.clone();
-    let rules = MovementRules {
-        free_fusion_vtol_fuel: true,
-        ..MovementRules::STANDARD
-    };
+    let rules = MovementRules::STANDARD;
     let report = advance_battle_motion(&mut world, rules).unwrap();
     let other = advance_battle_motion(&mut replay, rules).unwrap();
     assert_eq!(

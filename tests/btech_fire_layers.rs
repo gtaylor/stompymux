@@ -179,8 +179,9 @@ fn mech(world: &mut World, config: &Config, map: ObjectId, x: i64, y: i64) -> Ob
     id
 }
 
-/// Fire adds heat to a Mech standing or wading in the flames, but not to one under the water
-/// or beneath the bridge deck the fire burns on.
+/// Fire adds five points of outside heat at the turn boundary to a Mech standing or wading in
+/// the flames, counted against the outside-heat cap (Total Warfare p. 159), but not to one
+/// under the water or beneath the bridge deck the fire burns on.
 #[tokio::test]
 async fn fire_heats_only_mechs_in_the_flames() {
     // Ground, shallow water, deep water, then two bridge decks four levels over shallow
@@ -198,12 +199,32 @@ async fn fire_heats_only_mechs_in_the_flames() {
                 .unwrap();
         }
         let cool = world.btech.constructed_units()[&id].heat_rates(&world);
-        ignite(&mut world, map, x as i32, 0, 30);
-        let hot = world.btech.constructed_units()[&id].heat_rates(&world);
-        cases.push((x, hot.production - cool.production, burns));
+        assert!(!world.btech.constructed_units()[&id].in_flames(&world));
+        ignite(&mut world, map, x as i32, 0, 60);
+        let unit = &world.btech.constructed_units()[&id];
+        // The flames are not a continuous rate; they arrive as a lump once a turn.
+        assert_eq!(unit.heat_rates(&world), cool, "hex {x}");
+        assert_eq!(unit.in_flames(&world), burns, "hex {x}");
+        cases.push((id, x, burns));
     }
-    for (x, extra, burns) in cases {
-        assert_eq!(extra, if burns { 5.0 } else { 0.0 }, "hex {x}");
+    let mut notices = Vec::new();
+    for _ in 0..30 {
+        notices.extend(advance_battle_heat(&mut world));
+    }
+    for (id, x, burns) in cases {
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.overheat_clock().phase, 0, "hex {x}");
+        let expected = if burns { 5 } else { 0 };
+        assert_eq!(unit.overheat_clock().outside_heat, expected, "hex {x}");
+        assert_eq!(unit.heat().stored, f64::from(expected), "hex {x}");
+        assert_eq!(
+            notices
+                .iter()
+                .filter(|notice| notice.unit == id && notice.text.contains("flames around you"))
+                .count(),
+            usize::from(burns),
+            "hex {x}"
+        );
     }
 }
 

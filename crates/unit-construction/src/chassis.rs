@@ -12,11 +12,6 @@ pub enum MechChassis {
 }
 
 impl MechChassis {
-    /// Quad ground and non-FASA jump turns use twice the ordinary angular rate.
-    pub fn turn_multiplier(self) -> f64 {
-        if self == Self::Quad { 2.0 } else { 1.0 }
-    }
-
     /// Decode the asset movement class without assuming its live simulation is available.
     pub fn parse(name: &str) -> Result<Self> {
         if name.eq_ignore_ascii_case("Biped") {

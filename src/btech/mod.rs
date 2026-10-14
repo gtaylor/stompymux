@@ -142,6 +142,8 @@ mod loadout_context;
 mod map_flags;
 pub use stompymux_map::{MapFlag, format_map_flags, parse_map_flags};
 mod mobility;
+mod speed_envelope;
+pub use speed_envelope::{MP_KPH, SpeedEnvelope};
 mod motion;
 pub use ground_proposal::{
     GroundMotionProposal, propose_mech_ground_motion, propose_vehicle_ground_motion,
@@ -297,7 +299,7 @@ pub use stompymux_unit_construction::{
 };
 
 pub(crate) use motion::set_speed_autopilot;
-pub use motion::{Motion, MovementRules, advance_motion, set_heading, set_speed};
+pub use motion::{LevelEntry, Motion, MovementRules, advance_motion, set_heading, set_speed};
 
 /// Stage a player-owned condition notice through the normal notification boundary.
 pub(crate) fn notify_character(
@@ -1027,12 +1029,15 @@ mod vtol_landing;
 pub use vtol_landing::VtolLanding;
 
 mod vtol_motion;
-pub use vtol_motion::{VtolMotionStep, VtolSurfaceContact};
+pub use vtol_motion::{
+    MAXIMUM_VTOL_ELEVATION, VERTICAL_KPH_PER_LEVEL_SECOND, VtolMotionStep, VtolSurfaceContact,
+};
 
 mod vtol_path;
 pub use vtol_path::VtolPath;
 
 mod vtol_environment;
+mod vtol_sideslip;
 mod vtol_updates;
 pub use vtol_environment::{VtolEnvironment, advance_vtol_environment};
 mod vtol_crash;
@@ -1110,7 +1115,7 @@ pub use tic::{TicEdit, Tics, edit_battle_tic, tic};
 pub use tic::{TicShot, fire_battle_tics};
 
 pub(crate) mod heat_cutoff;
-pub use heat_cutoff::{HeatCutoff, toggle_battle_heat_cutoff};
+pub use heat_cutoff::{HeatCutoff, set_battle_heat_cutoff};
 
 pub(crate) mod ammunition_preference;
 pub use ammunition_preference::set_battle_ammunition_section;
@@ -1413,7 +1418,7 @@ pub(crate) mod turn_clock;
 
 mod periodic_piloting;
 pub use periodic_piloting::{
-    PeriodicPiloting, advance_periodic_piloting, advance_periodic_piloting_action,
+    PeriodicPiloting, TurnMovement, advance_periodic_piloting, advance_periodic_piloting_action,
 };
 
 pub(crate) use jumping::{launch_dfa_action, launch_jump_action};

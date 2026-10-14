@@ -11,8 +11,10 @@ fn unit() -> Mech {
     .unwrap()
 }
 
+/// A destroyed hip halves walking MP before each other leg actuator takes one (Total Warfare
+/// p. 125), whatever order the hits land in, and running is refigured from what is left.
 #[test]
-fn hips_override_same_leg_actuators_and_hit_order_does_not_accumulate_penalties() {
+fn hips_halve_walking_before_actuators_and_hit_order_does_not_matter() {
     let mut a = unit();
     let mut b = a.clone();
     let hip = CriticalLocation {
@@ -24,21 +26,24 @@ fn hips_override_same_leg_actuators_and_hit_order_does_not_accumulate_penalties(
         slot: 1,
     };
     a.destroy_critical(upper).unwrap();
-    assert_eq!(a.mobility().maximum_speed, 107.5);
+    assert_eq!(a.mobility().walking_speed, 64.5);
+    assert_eq!(a.mobility().maximum_speed, 96.75);
     assert_eq!(a.mobility().piloting_modifier, 1);
     a.destroy_critical(hip).unwrap();
     b.destroy_critical(hip).unwrap();
     b.destroy_critical(upper).unwrap();
     assert_eq!(a.mobility(), b.mobility());
-    assert_eq!(a.mobility().maximum_speed, 59.125);
-    assert_eq!(a.mobility().piloting_modifier, 2);
+    // Walk 7 halved is 4, less one actuator is 3; run 3 x 1.5 rounded up is 5.
+    assert_eq!(a.mobility().walking_speed, 32.25);
+    assert_eq!(a.mobility().maximum_speed, 53.75);
+    assert_eq!(a.mobility().piloting_modifier, 3);
     a.destroy_critical(CriticalLocation {
         section: Section::RightLeg,
         slot: 0,
     })
     .unwrap();
     assert_eq!(a.mobility().maximum_speed, 0.0);
-    assert_eq!(a.mobility().piloting_modifier, 4);
+    assert_eq!(a.mobility().piloting_modifier, 5);
 }
 
 #[test]
@@ -113,12 +118,14 @@ fn quad_leg_loss_patterns_and_flooded_support_have_distinct_limits() {
                 1 | 2 => assert!(damaged.stand_requires_roll().unwrap()),
                 _ => assert!(damaged.stand_requires_roll().is_err()),
             }
+            // A quad missing one leg loses one MP and its -2 bonus; missing two it is
+            // restricted like a one-legged biped (Total Warfare p. 123).
             let mobility = damaged.mobility();
             let (speed, penalty) = match missing {
                 0 => (96.75, 0),
-                1 => (86.0, 2),
-                2 => (10.75, 7),
-                _ => (0.0, 2),
+                1 => (86.0, 0),
+                2 => (10.75, 5),
+                _ => (0.0, 10),
             };
             assert_eq!(
                 (mobility.maximum_speed, mobility.piloting_modifier),
@@ -126,19 +133,15 @@ fn quad_leg_loss_patterns_and_flooded_support_have_distinct_limits() {
                 "mask={mask} flooded={flooded}"
             );
             assert_eq!(
-                i16::from(penalty) + damaged.chassis().piloting_modifier(),
-                match missing {
-                    0 => -2,
-                    2 => 5,
-                    _ => 0,
-                }
+                damaged.chassis_piloting_modifier(),
+                if missing == 0 { -2 } else { 0 }
             );
         }
     }
 }
 
-/// Each hip hit halves speed until the fourth leaves none (Total Warfare p. 127), and a hip
-/// replaces the same leg's lesser penalties.
+/// Each hip hit halves walking MP, rounding up, before the actuator hits take theirs, until
+/// the fourth leaves none (Total Warfare pp. 125 and 127).
 #[test]
 fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
     let quad = quad();
@@ -156,20 +159,22 @@ fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
             .collect();
         encoded["lost_criticals"] = serde_json::to_value(losses).unwrap();
         let damaged: Mech = serde_json::from_value(encoded.clone()).unwrap();
+        // Walk 6: one hip and actuator leave 3 - 1 = 2 (run 3); two leave 2 - 2 = 0.
         assert_eq!(
             damaged.mobility().maximum_speed,
-            if count == 4 {
-                0.0
-            } else {
-                96.75 / 2f64.powi(count as i32)
-            }
+            if count == 1 { 32.25 } else { 0.0 }
         );
-        assert_eq!(damaged.mobility().piloting_modifier, count as u8 * 2);
+        assert_eq!(damaged.mobility().piloting_modifier, count as u8 * 3);
         let restored: Mech =
             serde_json::from_value(serde_json::to_value(&damaged).unwrap()).unwrap();
         assert_eq!(restored.mobility(), damaged.mobility());
         assert!(!restored.airborne_support_lost());
-        assert!(!restored.stand_requires_roll().unwrap());
+        // A quad needs no roll to stand, but one left without walking MP cannot try.
+        if count == 1 {
+            assert!(!restored.stand_requires_roll().unwrap());
+        } else {
+            assert!(restored.stand_requires_roll().is_err());
+        }
         encoded["lost_criticals"].as_array_mut().unwrap().extend([
             serde_json::to_value(CriticalLocation {
                 section: Section::CenterTorso,
@@ -196,7 +201,7 @@ fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
                 damaged.mobility().maximum_speed,
                 damaged.mobility().piloting_modifier
             ),
-            (64.5, 3)
+            (53.75, 3)
         );
     }
     assert_eq!(quad.chassis().piloting_skill(true), "Piloting-Quad");
@@ -294,7 +299,15 @@ fn biped_support_and_quad_gyro_standing_rules() {
             .unwrap();
     }
     assert!(biped.airborne_support_lost());
-    assert!(biped.stand_requires_roll().unwrap());
+    // Both hips gone leaves no walking MP to stand with (Total Warfare pp. 50 and 127).
+    assert!(
+        biped
+            .stand_requires_roll()
+            .unwrap_err()
+            .to_string()
+            .contains("no movement")
+    );
+    // With one leg gone the surviving hip no longer counts against it: walk 1, roll at +5.
     biped.damage_phase(Section::LeftLeg, 100, Phase::Internal);
     assert!(biped.validate_charge_support().is_err());
     assert!(biped.stand_requires_roll().unwrap());

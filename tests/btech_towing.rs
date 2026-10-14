@@ -615,6 +615,7 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
         }
         set_battle_tow(&mut world, a, Some(b)).unwrap();
         let maximum = battle_throttle_maximum(&world, a, true).unwrap();
+        // Climb and travel share one budget (TW p. 54): 60% spent climbing leaves 40%.
         let horizontal = if index == 2 {
             world
                 .btech
@@ -622,18 +623,21 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
                     record["vtol_flight"]["vertical_speed"] = (maximum * 0.6).into();
                 })
                 .unwrap();
-            maximum * 0.8
+            maximum * 0.4
         } else {
             maximum
         };
+        // The towed Jenner keeps its 7/11 walking share of the loaded ceiling; vehicles cruise
+        // at two thirds of flank.
+        let walking_share = if index == 0 { 7.0 / 11.0 } else { 2.0 / 3.0 };
         for (argument, expected) in [
             ("run", horizontal),
             ("flank", horizontal),
-            ("walk", maximum * 2.0 / 3.0),
-            ("cruise", maximum * 2.0 / 3.0),
-            ("back", -horizontal * 2.0 / 3.0),
+            ("walk", (maximum * walking_share).min(horizontal)),
+            ("cruise", (maximum * walking_share).min(horizontal)),
+            ("back", -horizontal * walking_share),
             ("99999", horizontal),
-            ("-99999", -horizontal * 2.0 / 3.0),
+            ("-99999", -horizontal * walking_share),
         ] {
             let native = Scripts::new(
                 &config,
@@ -827,7 +831,8 @@ async fn vertical_commands_share_loaded_budget_and_atomic_native_lua_behavior() 
         if maximum > 0.0 {
             set_battle_speed(&mut world, a, ObjectId(1), maximum * 0.6).unwrap();
         }
-        let vertical_limit = maximum * 0.8;
+        // Travel and climb share one budget (TW p. 54): 60% spent moving leaves 40%.
+        let vertical_limit = maximum * 0.4;
         for sign in [-1.0, 1.0] {
             let requested = vertical_limit * 0.99 * sign;
             let native = Scripts::new(
@@ -867,7 +872,7 @@ async fn vertical_commands_share_loaded_budget_and_atomic_native_lua_behavior() 
                 1,
                 &format!("vertical {rejected}"),
             );
-            assert!(output.contains("remaining velocity budget"), "{output}");
+            assert!(output.contains("remaining movement budget"), "{output}");
             assert_eq!(native.world().btech, before);
             lua.drain_outbox();
             assert!(

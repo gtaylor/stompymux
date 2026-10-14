@@ -747,7 +747,6 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 if fed {
                     assert_eq!(world.btech.vehicles()[&target].ammunition()[0], rounds);
                 }
-                assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 0.0);
                 assert!(world.btech.vehicles()[&target].weapon_recycle().is_empty());
                 assert_eq!(roll_unit_dice(&mut world, shooter, 1).unwrap(), [dice.d6()]);
                 world.validate(&config).unwrap();
@@ -757,10 +756,6 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
             // system's heat and a -4 on the cluster roll (Total Warfare pp. 129-130).
             let ams = report.ams.as_ref().unwrap();
             assert_eq!(ams.roll, None);
-            assert_eq!(
-                world.btech.vehicles()[&target].weapon_heat(),
-                f64::from(weapon.profile().heat)
-            );
             assert_eq!(
                 (ams.weapon_index, ams.ammunition_bin),
                 (0, fed.then_some(0))
@@ -955,7 +950,8 @@ async fn vehicle_ams_expenditure_and_feedback_roll_back_with_host_shots() {
     lua.world().validate(&config).unwrap();
 }
 
-/// Vehicle flamer heat mode heats Mech and vehicle targets alike without touching their armor.
+/// Vehicle flamer heat mode heats a Mech target without touching its armor, while a vehicle
+/// target, tracking no heat, takes the Damage Value as damage (Total Warfare p. 113).
 #[tokio::test]
 async fn vehicle_flamer_heat_shares_target_effects_and_host_rollback() {
     let weapon = Weapon::VehicleFlamer;
@@ -984,10 +980,7 @@ async fn vehicle_flamer_heat_shares_target_effects_and_host_rollback() {
             world.btech.constructed_units()[&target].sections(),
             original.constructed_units()[&target].sections()
         );
-        assert_eq!(
-            report.heat_transfer,
-            if hit { weapon.profile().damage } else { 0 }
-        );
+        assert_eq!(report.heat_transfer, hit.then_some(weapon.profile().damage));
         let mut initial = base.clone();
         initial.btech = original;
         let lua = Scripts::new(
@@ -1023,17 +1016,11 @@ async fn vehicle_flamer_heat_shares_target_effects_and_host_rollback() {
             fire_battle_vehicle_shot(&mut initial, shooter, ObjectId(1), vehicle, 0, fire_rules())
                 .unwrap();
         assert_eq!(vehicle_report.hit, hit);
+        assert_eq!(vehicle_report.heat_transfer, None);
+        assert_eq!(vehicle_report.salvo.is_some(), hit);
         assert_eq!(
-            initial.btech.vehicles()[&vehicle].weapon_heat(),
-            vehicle_before.weapon_heat() + expected
-        );
-        assert_eq!(
-            initial.btech.vehicles()[&vehicle].sections(),
-            vehicle_before.sections()
-        );
-        assert_eq!(
-            world.btech.vehicles()[&shooter].weapon_heat(),
-            f64::from(report.expenditure.heat)
+            initial.btech.vehicles()[&vehicle].sections() != vehicle_before.sections(),
+            hit
         );
         world.validate(&config).unwrap();
     }
@@ -1176,7 +1163,7 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
         )
         .unwrap();
         assert!(report.hit);
-        assert_eq!(report.heat_transfer, 0);
+        assert_eq!(report.heat_transfer, None);
         assert!(report.narc.is_none());
         match report.salvo.unwrap() {
             TargetSalvo::Swarm(_) => panic!("Direct explosive ammunition cannot retarget"),
@@ -2171,7 +2158,7 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
                 world.btech.vehicles()[&target],
                 expected.btech.vehicles()[&target]
             );
-            assert_eq!(report["heat_transfer"], 0);
+            assert!(report["heat_transfer"].is_null());
             assert!(report["narc"].is_null());
             if damage == 0 {
                 assert!(report["salvo"].is_null());
@@ -2235,7 +2222,8 @@ async fn plasma_vehicle_targets_share_native_lua_feedback_and_rollback() {
     }
 }
 
-/// Direct flamer heat reaches the same vehicle recipient regardless of carrier anatomy.
+/// A heat-mode flamer damages a vehicle target instead of heating it, whatever the carrier
+/// anatomy (Total Warfare p. 113).
 #[tokio::test]
 async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
     let weapon = Weapon::VehicleFlamer;
@@ -2250,7 +2238,6 @@ async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
             let mut saved = serde_json::to_value(&world.btech).unwrap();
             saved[if carrier { "vehicles" } else { "constructed" }][shooter.0.to_string()]["dice"] =
                 serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-            saved["vehicles"][target.0.to_string()]["weapon_heat"] = 1.5.into();
             world.btech = serde_json::from_value(saved).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
@@ -2277,17 +2264,13 @@ async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
                 tactical_shot(&mut replay, shooter, target, index, fire_rules())
             );
             assert_eq!(world.btech, replay.btech);
-            let delta = if hit {
-                f64::from(weapon.profile().damage)
-            } else {
-                0.0
-            };
-            assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 1.5 + delta);
+            assert!(report["heat_transfer"].is_null());
+            assert_eq!(report["salvo"].is_null(), !hit);
             assert_eq!(
-                report["heat_transfer"],
-                if hit { weapon.profile().damage } else { 0 }
+                world.btech.vehicles()[&target].sections()
+                    != base.btech.vehicles()[&target].sections(),
+                hit
             );
-            assert!(report["salvo"].is_null());
             lua.eval_callback::<()>(&call).unwrap();
             let output = support::run_text(
                 &native,
@@ -2299,11 +2282,6 @@ async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
             assert!(output.contains("You fire"), "{output}");
             assert_eq!(native.world().btech, world.btech);
             assert_eq!(lua.world().btech, world.btech);
-            for _ in 0..60 {
-                let _ = advance_battle_units(&mut world, 0, true);
-                let _ = advance_battle_heat(&mut world);
-            }
-            assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 1.5 + delta);
             world.validate(&config).unwrap();
         }
     }

@@ -25,7 +25,7 @@ pub fn stun_unit(world: &mut World, id: ObjectId) -> Result<Notice> {
         .get(&id)
         .context("Unit construction state is unavailable")?;
     ensure!(!unit.is_destroyed(), "Unit is already destroyed");
-    let walking = unit.movement_maximum_speed() * 2.0 / 3.0;
+    let walking = unit.walking_speed();
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     unit.stun_remaining = 10;
     if let Some(motion) = &mut unit.motion

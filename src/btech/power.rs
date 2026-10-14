@@ -38,6 +38,19 @@ impl Power {
     }
 }
 
+impl super::Mech {
+    /// Whether the reactor is down from a heat shutdown and will restart by itself below 14
+    /// heat (Total Warfare p. 160).
+    pub fn heat_shutdown(&self) -> bool {
+        self.heat_shutdown
+    }
+
+    /// Whether a failed restart Avoid Roll keeps the reactor down until the next turn.
+    pub fn restart_denied(&self) -> bool {
+        self.restart_denied
+    }
+}
+
 /// Domain notification addressed to the occupants of one unit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Notice {
@@ -102,20 +115,33 @@ fn start_unit_by_actor(
         .context("Map not found")?
         .base_hex(i64::from(position.x), i64::from(position.y))?;
     ensure!(!unit.is_destroyed(), "Destroyed unit cannot start");
+    // A reactor cannot restart until heat is below 30, and from 14 up the pilot must pass a
+    // 2d6 roll against the highest current Avoid Number once a turn (Total Warfare p. 160).
+    let heat = unit.heat().excess;
+    ensure!(heat < 30.0, "This 'Mech is too hot to start back up!");
     ensure!(
-        unit.heat().excess <= 30.0,
-        "This 'Mech is too hot to start back up!"
+        !unit.restart_denied,
+        "The reactor refused to restart this turn; try again next turn"
     );
-    world.btech.constructed.get_mut(&id).unwrap().power = Power::Starting {
+    if let Some(target) = super::overheat::shutdown_target(heat) {
+        let check = super::overheat::avoid_roll(world, id, target);
+        let roll = check.roll.unwrap_or_default();
+        if !check.success {
+            world.btech.constructed.get_mut(&id).unwrap().restart_denied = true;
+            return Ok(Notice {
+                unit: id,
+                text: format!(
+                    "Restart Avoid Roll fails: {roll} against {target}. The reactor stays down until next turn."
+                ),
+            });
+        }
+    }
+    let unit = world.btech.constructed.get_mut(&id).unwrap();
+    unit.power = Power::Starting {
         remaining: if fast { 5 } else { 30 },
     };
-    world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .unwrap()
-        .limb_recycle
-        .clear();
+    unit.heat_shutdown = false;
+    unit.limb_recycle.clear();
     if let super::combat_operator::ControlActor::Player(pilot) = actor {
         super::pilot_health::synchronize(world, id, pilot);
     }

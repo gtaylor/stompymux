@@ -38,24 +38,6 @@ async fn acceleration_crosses_hexes_and_restart_preserves_fractional_motion() {
         world.btech.constructed_units()[&id].position().unwrap().y,
         3
     );
-    let mut fasa = world.clone();
-    set_battle_heading(&mut fasa, id, ObjectId(1), 90.0).unwrap();
-    advance_battle_motion(
-        &mut fasa,
-        MovementRules {
-            fasa_turning: true,
-            slowdown: 2,
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
-    assert_eq!(
-        fasa.btech.constructed_units()[&id]
-            .motion()
-            .unwrap()
-            .heading,
-        0.0
-    );
     let mut turning = world.clone();
     set_battle_heading(&mut turning, id, ObjectId(1), 90.0).unwrap();
     advance_battle_motion(&mut turning, RULES).unwrap();
@@ -263,13 +245,14 @@ async fn damage_clamps_live_controls_and_native_speed_uses_remaining_mobility() 
         },
     )
     .unwrap();
+    // A destroyed hip halves walking MP, rounding up: walk 4, run 6 (Total Warfare p. 125).
     let motion = world.btech.constructed_units()[&id].motion().unwrap();
-    assert_eq!(motion.speed, 59.125);
-    assert_eq!(motion.desired_speed, 59.125);
+    assert_eq!(motion.speed, 64.5);
+    assert_eq!(motion.desired_speed, 64.5);
     assert!(set_battle_speed(&mut world, id, ObjectId(1), 118.25).is_err());
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "speed run");
-    assert!(text.contains("Desired speed changed to 59 KPH."), "{text}");
+    assert!(text.contains("Desired speed changed to 64 KPH."), "{text}");
     assert_eq!(
         scripts
             .eval_callback::<f64>(&format!(
@@ -277,7 +260,7 @@ async fn damage_clamps_live_controls_and_native_speed_uses_remaining_mobility() 
                 id.0
             ))
             .unwrap(),
-        59.125
+        64.5
     );
     destroy_battle_critical(
         &mut scripts.world_mut(),
@@ -522,27 +505,34 @@ async fn heat_slows_motion_gradually_preserves_throttle_and_recovers_after_cooli
     }
     stompymux_rs::advance_battle_heat(&mut world);
     assert_eq!(world.btech.constructed_units()[&id].heat().excess, 26.0);
+    // Twenty-six heat costs five walking MP (Total Warfare p. 159): the 7/11 walks 2 and
+    // runs 3, backward no faster than its walking ceiling.
+    let unit = &world.btech.constructed_units()[&id];
+    assert_eq!(unit.walking_speed(), 21.5);
+    assert_eq!(unit.movement_maximum_speed(), 32.25);
     let mut reversing = world.clone();
-    set_battle_speed(&mut reversing, id, ObjectId(1), -59.125).unwrap();
+    assert!(set_battle_speed(&mut reversing, id, ObjectId(1), -59.125).is_err());
+    set_battle_speed(&mut reversing, id, ObjectId(1), -21.5).unwrap();
     for _ in 0..5 {
         advance_battle_motion(&mut reversing, RULES).unwrap();
     }
     let reverse_motion = reversing.btech.constructed_units()[&id].motion().unwrap();
-    assert!((reverse_motion.speed + 16.125).abs() < 1e-10);
-    assert_eq!(reverse_motion.desired_speed, -59.125);
+    assert!((reverse_motion.speed + 21.5).abs() < 1e-10);
+    assert_eq!(reverse_motion.desired_speed, -21.5);
 
-    set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
+    assert!(set_battle_speed(&mut world, id, ObjectId(1), 118.25).is_err());
+    set_battle_speed(&mut world, id, ObjectId(1), 32.25).unwrap();
     advance_battle_motion(&mut world, RULES).unwrap();
     assert_eq!(
         world.btech.constructed_units()[&id].motion().unwrap().speed,
         118.25 / 20.0
     );
-    for _ in 0..10 {
+    for _ in 0..25 {
         advance_battle_motion(&mut world, RULES).unwrap();
     }
     let motion = world.btech.constructed_units()[&id].motion().unwrap();
     assert!((motion.speed - 32.25).abs() < 1e-10);
-    assert_eq!(motion.desired_speed, 118.25);
+    assert_eq!(motion.desired_speed, 32.25);
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
@@ -552,16 +542,23 @@ async fn heat_slows_motion_gradually_preserves_throttle_and_recovers_after_cooli
     for _ in 0..150 {
         stompymux_rs::advance_battle_heat(&mut world);
     }
+    // Cooled off, the whole template envelope is available again.
+    assert_eq!(
+        world.btech.constructed_units()[&id].movement_maximum_speed(),
+        118.25
+    );
+    set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
     advance_battle_motion(&mut world, RULES).unwrap();
     let recovered = world.btech.constructed_units()[&id].motion().unwrap();
     assert!(recovered.speed > motion.speed);
-    assert_eq!(recovered.desired_speed, motion.desired_speed);
+    assert_eq!(recovered.desired_speed, 118.25);
 }
 
 #[tokio::test]
 async fn occupied_environment_changes_heat_and_survives_restart() {
+    // Fire adds its five points at the turn boundary, not to the continuous rates.
     for (tile, temperature, production, dissipation) in [
-        ("&0", 20, 5.0, 10.0),
+        ("&0", 20, 0.0, 10.0),
         ("~1", 20, 0.0, 10.0),
         ("~2", 20, 0.0, 16.0),
         (".0", 100, 0.0, 5.0),
@@ -823,13 +820,13 @@ async fn stun_refreshes_expires_after_restart_and_blocks_expenditure_without_sto
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(unit.stun_remaining(), 10);
     assert_eq!(unit.motion().unwrap().speed, 118.25);
-    assert_eq!(unit.motion().unwrap().desired_speed, 118.25 * 2.0 / 3.0);
+    assert_eq!(unit.motion().unwrap().desired_speed, 75.25);
     assert!(!unit.weapon_readiness(0).unwrap().ready);
     let before = world.btech.clone();
     assert!(spend_battle_weapon(&mut world, id, ObjectId(1), 0).is_err());
     assert_eq!(world.btech, before);
     advance_battle_motion(&mut world, RULES).unwrap();
-    assert!(world.btech.constructed_units()[&id].motion().unwrap().speed > 118.25 * 2.0 / 3.0);
+    assert!(world.btech.constructed_units()[&id].motion().unwrap().speed > 75.25);
     for _ in 0..4 {
         assert!(advance_battle_stun(&mut world).is_empty());
     }
@@ -935,8 +932,8 @@ async fn hip_critical_clamps_desired_speed_to_the_new_maximum() {
             continue;
         }
         let unit = &trial.btech.constructed_units()[&id];
-        assert_eq!(unit.mobility().maximum_speed, 59.125);
-        assert_eq!(unit.motion().unwrap().desired_speed, 59.125);
+        assert_eq!(unit.mobility().maximum_speed, 64.5);
+        assert_eq!(unit.motion().unwrap().desired_speed, 64.5);
         assert_eq!(unit.stun_remaining(), 0);
         return;
     }
@@ -3081,6 +3078,47 @@ async fn fall_gravity_only_reduces_damage() {
     }
 }
 
+/// Each attempt to stand adds a point of heat (Total Warfare p. 159), and a Mech missing a
+/// leg and both arms cannot attempt to stand at all (TW p. 51).
+#[tokio::test]
+async fn stand_attempts_add_heat_and_need_a_leg_or_an_arm_to_push_with() {
+    use stompymux_rs::{
+        DamagePhase as P, MechSection as S, StandMode, apply_damage_phase, begin_battle_stand,
+    };
+    let (_dir, _config, mut world, id) = stand_fixture().await;
+    let stored = world.btech.constructed_units()[&id].heat().stored;
+    let attempt =
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Anyway, fall_rules()).unwrap();
+    assert!(attempt.timer.is_some());
+    assert_eq!(
+        world.btech.constructed_units()[&id].heat().stored,
+        stored + 1.0
+    );
+    for (sections, allowed) in [
+        (vec![S::LeftArm, S::RightArm], true),
+        (vec![S::LeftLeg, S::LeftArm], true),
+        (vec![S::LeftLeg, S::LeftArm, S::RightArm], false),
+    ] {
+        let (_dir, _config, mut world, id) = stand_fixture().await;
+        for section in sections {
+            apply_damage_phase(&mut world, id, section, 100, P::Internal).unwrap();
+        }
+        let before = world.btech.clone();
+        let result =
+            begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Anyway, fall_rules());
+        assert_eq!(result.is_ok(), allowed);
+        if !allowed {
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Missing a leg and both arms")
+            );
+            assert_eq!(world.btech, before);
+        }
+    }
+}
+
 #[tokio::test]
 async fn successful_stand_is_upright_immediately_and_finishes_after_durable_delay() {
     use stompymux_rs::{
@@ -3095,8 +3133,7 @@ async fn successful_stand_is_upright_immediately_and_finishes_after_durable_dela
         stompymux_rs::battle_stand_target(&world, id, ObjectId(1), true).unwrap(),
         6
     );
-    let attempt =
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, true, fall_rules()).unwrap();
+    let attempt = begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, fall_rules()).unwrap();
     assert!(attempt.check.success);
     assert!(attempt.fall.is_none());
     assert_eq!(attempt.timer, Some(T::Rising { remaining: 5 }));
@@ -3110,9 +3147,7 @@ async fn successful_stand_is_upright_immediately_and_finishes_after_durable_dela
     );
     let before = world.btech.clone();
     assert!(set_battle_speed(&mut world, id, ObjectId(1), 10.0).is_err());
-    assert!(
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, true, fall_rules()).is_err()
-    );
+    assert!(begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, fall_rules()).is_err());
     assert_eq!(world.btech, before);
     for _ in 0..2 {
         assert!(advance_battle_standing(&mut world).is_empty());
@@ -3139,13 +3174,8 @@ async fn careful_stand_failure_falls_again_and_requires_thirty_second_recovery()
         .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() < 4)
         .unwrap();
     shot_seed(&mut world, id, seed);
-    let before = world.btech.clone();
-    assert!(
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, false, fall_rules()).is_err()
-    );
-    assert_eq!(world.btech, before);
     let attempt =
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, true, fall_rules()).unwrap();
+        begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, fall_rules()).unwrap();
     assert!(!attempt.check.success);
     assert_eq!(attempt.check.target, 4);
     let fall = attempt.fall.unwrap();
@@ -3157,9 +3187,7 @@ async fn careful_stand_failure_falls_again_and_requires_thirty_second_recovery()
         Posture::Prone
     );
     let before = world.btech.clone();
-    assert!(
-        begin_battle_stand(&mut world, id, ObjectId(1), M::Anyway, true, fall_rules()).is_err()
-    );
+    assert!(begin_battle_stand(&mut world, id, ObjectId(1), M::Anyway, fall_rules()).is_err());
     assert_eq!(world.btech, before);
     for _ in 0..29 {
         assert!(advance_battle_standing(&mut world).is_empty());
@@ -3225,7 +3253,7 @@ async fn stand_command_inspection_and_impossible_target_guards_are_atomic() {
         stompymux_rs::StandMode::Careful,
     ] {
         assert!(
-            stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), mode, true, fall_rules())
+            stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), mode, fall_rules())
                 .is_err()
         );
         assert_eq!(world.btech, before);
@@ -3235,7 +3263,6 @@ async fn stand_command_inspection_and_impossible_target_guards_are_atomic() {
         id,
         ObjectId(1),
         stompymux_rs::StandMode::Anyway,
-        true,
         fall_rules(),
     )
     .unwrap();
@@ -3250,7 +3277,7 @@ async fn stand_completion_retries_failed_server_save_without_losing_timer() {
         let (_dir, config, mut world, id) = stand_fixture().await;
         let seed = (0..=255).find(|seed| stompymux_rs::Dice::seeded([*seed;32]).two_d6() >= 6).unwrap();
         shot_seed(&mut world, id, seed);
-        let _attempt = stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), stompymux_rs::StandMode::Normal, true, fall_rules()).unwrap();
+        let _attempt = stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), stompymux_rs::StandMode::Normal, fall_rules()).unwrap();
         for _ in 0..4 { stompymux_rs::advance_battle_standing(&mut world); }
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
@@ -3305,7 +3332,6 @@ async fn stand_timer_corruption_and_destroyed_gyro_are_rejected_without_rolls() 
             id,
             ObjectId(1),
             stompymux_rs::StandMode::Anyway,
-            true,
             fall_rules()
         )
         .unwrap_err()
@@ -3893,7 +3919,7 @@ async fn prone_pivots_and_stand_countdown_turns_preserve_position_and_restart() 
     use stompymux_rs::{Dice, StandMode, StandTimer, begin_battle_stand};
     let (_dir, config, base, id) = stand_fixture().await;
     for mode in [None, Some(true), Some(false)] {
-        for fasa_turning in [false, true] {
+        {
             let mut world = base.clone();
             if let Some(success) = mode {
                 let seed = (0..=255)
@@ -3908,7 +3934,6 @@ async fn prone_pivots_and_stand_countdown_turns_preserve_position_and_restart() 
                     id,
                     ObjectId(1),
                     StandMode::Normal,
-                    true,
                     fall_rules(),
                 )
                 .unwrap();
@@ -3934,11 +3959,7 @@ async fn prone_pivots_and_stand_countdown_turns_preserve_position_and_restart() 
             let desired = (old.heading + 90.0).rem_euclid(360.0);
             set_battle_heading(&mut world, id, ObjectId(1), desired).unwrap();
             world.validate(&config).unwrap();
-            let rules = MovementRules {
-                fasa_turning,
-                slowdown: 2,
-                ..stompymux_rs::MovementRules::STANDARD
-            };
+            let rules = MovementRules::STANDARD;
             assert!(advance_battle_motion(&mut world, rules).unwrap().is_empty());
             let unit = &world.btech.constructed_units()[&id];
             assert!(
@@ -4180,15 +4201,8 @@ async fn prone_fire_forbids_leg_mounts_until_upright() {
     let before = world.btech.clone();
     assert!(stompymux_rs::spend_battle_weapon(&mut world, id, ObjectId(1), index).is_err());
     assert_eq!(world.btech, before);
-    let _stand = begin_battle_stand(
-        &mut world,
-        id,
-        ObjectId(1),
-        StandMode::Normal,
-        true,
-        fall_rules(),
-    )
-    .unwrap();
+    let _stand =
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules()).unwrap();
     assert!(
         world.btech.constructed_units()[&id]
             .weapon_readiness(index)
@@ -4489,15 +4503,9 @@ async fn water_falls_scale_damage_and_replay_before_standing() {
             fall
         );
         assert_eq!(loaded.btech, world.btech);
-        let stand = begin_battle_stand(
-            &mut world,
-            id,
-            ObjectId(1),
-            StandMode::Normal,
-            true,
-            fall_rules(),
-        )
-        .unwrap();
+        let stand =
+            begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules())
+                .unwrap();
         assert!(stand.check.success);
         world.validate(&config).unwrap();
     }
@@ -4533,15 +4541,8 @@ async fn water_leg_breaches_force_falls_without_destroying_structure() {
     }));
     assert_eq!(unit.mobility().maximum_speed, 10.75);
     assert_eq!(unit.mobility().piloting_modifier, 5);
-    let stand = begin_battle_stand(
-        &mut world,
-        id,
-        ObjectId(1),
-        StandMode::Normal,
-        true,
-        fall_rules(),
-    )
-    .unwrap();
+    let stand =
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules()).unwrap();
     assert!(stand.check.success);
     for _ in 0..30 {
         stompymux_rs::advance_battle_standing(&mut world);
@@ -4584,17 +4585,10 @@ async fn water_leg_breaches_force_falls_without_destroying_structure() {
         0.0
     );
     assert!(
-        begin_battle_stand(
-            &mut world,
-            id,
-            ObjectId(1),
-            StandMode::Normal,
-            true,
-            fall_rules()
-        )
-        .unwrap_err()
-        .to_string()
-        .contains("No legs")
+        begin_battle_stand(&mut world, id, ObjectId(1), StandMode::Normal, fall_rules())
+            .unwrap_err()
+            .to_string()
+            .contains("No legs")
     );
     world.validate(&config).unwrap();
 }
@@ -5392,6 +5386,11 @@ async fn overheat_avoid_rolls_match_heat_bands_for_every_pilot() {
                 shutdown_roll.is_some_and(|roll| i16::from(roll) >= check.target)
             );
             assert_eq!(report.shutdown, !check.success);
+            if report.shutdown {
+                // The involuntary shutdown's +3 Piloting Skill Roll is due at any speed
+                // (Total Warfare p. 60).
+                dice.two_d6();
+            }
             assert_eq!(
                 serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
                 serde_json::to_value(dice).unwrap()
@@ -5429,10 +5428,14 @@ async fn overheat_unconscious_pilot_cannot_avoid_shutdown() {
     assert_eq!((check.target, check.roll, check.success), (4, None, false));
     assert!(report.shutdown);
     assert_eq!(world.btech.constructed_units()[&id].power(), Power::Off);
-    // No dice were consumed: the shutdown was automatic.
+    // The shutdown was automatic, and the involuntary shutdown's Piloting Skill Roll fails
+    // without dice for an unconscious MechWarrior (Total Warfare p. 60), so the Mech falls.
+    let balance = report.balance.unwrap();
+    assert_eq!((balance.roll, balance.success), (None, false));
+    assert!(report.fall.is_some());
     assert_eq!(
-        serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
-        serde_json::to_value(Dice::seeded([32; 32])).unwrap()
+        world.btech.constructed_units()[&id].posture(),
+        stompymux_rs::Posture::Prone
     );
     world.validate(&config).unwrap();
 }
@@ -5517,8 +5520,10 @@ async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown
     world.validate(&config).unwrap();
 }
 
+/// An involuntary shutdown forces a +3 Piloting Skill Roll whatever the speed (Total Warfare
+/// p. 60); the fall it causes does no structural damage, and the MechWarrior keeps the cockpit.
 #[tokio::test]
-async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() {
+async fn overheat_shutdown_forces_a_balance_roll_at_any_speed_without_structural_fall_damage() {
     use stompymux_rs::advance_battle_overheat;
     let seed = {
         let (_dir, _config, mut probe, id) = fixture('.').await;
@@ -5542,7 +5547,8 @@ async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() 
             .expect("a seed that fails the shutdown and balance rolls")
     };
     for (terrain, speed) in [
-        ('.', 10.75_f64),
+        ('.', 0.0_f64),
+        ('.', 10.75),
         ('.', -10.75),
         ('.', 10.8),
         ('.', -10.8),
@@ -5562,16 +5568,18 @@ async fn overheat_shutdown_at_speed_can_topple_without_structural_fall_damage() 
         let result = advance_battle_overheat(&mut world, overheat_rules());
         let report = result.unwrap().remove(0);
         assert!(report.shutdown);
-        assert_eq!(report.fall.is_some(), speed.abs() > 10.75);
-        if let Some(fall) = report.fall {
-            assert_eq!(fall.damage, 0);
-            assert!(fall.groups.is_empty());
-            assert!(fall.pilot_injury.is_none());
-        }
+        assert!(report.balance.is_some_and(|balance| !balance.success));
+        let fall = report
+            .fall
+            .expect("a failed balance roll topples the Mech at any speed");
+        assert_eq!(fall.damage, 0);
+        assert!(fall.groups.is_empty());
+        assert!(fall.pilot_injury.is_none());
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.sections(), before.constructed_units()[&id].sections());
         assert_eq!(unit.power(), Power::Off);
-        assert!(unit.pilot().is_none());
+        assert_eq!(unit.pilot(), Some(ObjectId(1)));
+        assert_eq!(unit.posture(), stompymux_rs::Posture::Prone);
         assert_eq!(unit.motion().unwrap().speed, 0.0);
         world.validate(&config).unwrap();
     }
@@ -5601,10 +5609,11 @@ async fn overheat_intact_life_support_never_injures_and_thirty_heat_shuts_down_u
             (13, None, false)
         );
         assert!(report.shutdown);
-        assert_eq!(
-            serde_json::to_value(&world.btech).unwrap()["constructed"][id.0.to_string()]["dice"],
-            serde_json::to_value(dice).unwrap()
-        );
+        // No Avoid Roll was made: the next roll is the involuntary shutdown's +3 Piloting
+        // Skill Roll (Total Warfare p. 60), and a fall after it draws further dice.
+        let balance = report.balance.unwrap();
+        assert_eq!(balance.roll, Some(dice.two_d6()));
+        assert_eq!(report.fall.is_some(), !balance.success);
         world.validate(&config).unwrap();
     }
     for clock in [
@@ -6274,6 +6283,8 @@ async fn flamer_heat_mode_native_lua_persistence_and_recycle_guards() {
     assert_eq!(native.world().btech, lua.world().btech);
     let mut expected_target = target_before;
     expected_target["heat"]["stored"] = serde_json::json!(2.0);
+    // Flamer heat is outside heat, counted against the turn's cap (Total Warfare p. 159).
+    expected_target["overheat_clock"]["outside_heat"] = serde_json::json!(2);
     assert_eq!(
         serde_json::to_value(&lua.world().btech.constructed_units()[&target]).unwrap(),
         expected_target
@@ -6379,11 +6390,7 @@ async fn flamer_heat_hits_glances_and_misses_do_not_roll_target_damage() {
                 resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
             assert_eq!(
                 report.heat_transfer,
-                if roll >= target_number {
-                    weapon.profile().damage
-                } else {
-                    0
-                }
+                (roll >= target_number).then_some(weapon.profile().damage)
             );
             assert_eq!(report.glancing, roll == target_number);
             assert!(report.salvo.is_none());

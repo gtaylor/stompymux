@@ -21,20 +21,17 @@ pub enum MapFlag {
     NoFriendlyFire,
     /// Physical attacks are not allowed.
     NoPhysicalAttacks,
-    /// Units share crowded hexes without stacking collisions.
-    NoStacking,
 }
 
 impl MapFlag {
     /// Every flag, in bit order.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 6] = [
         Self::Vacuum,
         Self::Underground,
         Self::Dark,
         Self::IndestructibleStructures,
         Self::NoFriendlyFire,
         Self::NoPhysicalAttacks,
-        Self::NoStacking,
     ];
 
     /// Persisted bit for this flag.
@@ -46,7 +43,6 @@ impl MapFlag {
             Self::IndestructibleStructures => 64,
             Self::NoFriendlyFire => 256,
             Self::NoPhysicalAttacks => 512,
-            Self::NoStacking => 1024,
         }
     }
 
@@ -59,7 +55,6 @@ impl MapFlag {
             Self::IndestructibleStructures => "indestructible_structures",
             Self::NoFriendlyFire => "no_friendly_fire",
             Self::NoPhysicalAttacks => "no_physical_attacks",
-            Self::NoStacking => "no_stacking",
         }
     }
 
@@ -76,7 +71,6 @@ impl MapFlag {
             }
             Self::NoFriendlyFire => "Teammates cannot damage each other with weapons.",
             Self::NoPhysicalAttacks => "Physical attacks are not allowed.",
-            Self::NoStacking => "Units share crowded hexes without stacking collisions.",
         }
     }
 

@@ -1,23 +1,13 @@
-//! Crowding thresholds, physical collision inputs and atomic damage/restart contracts.
+//! Stacking at the hex edge, accidental falls into crowded hexes, and their atomic damage and
+//! restart contracts.
 use crate::support;
 use stompymux_rs::*;
 
 /// A supplied team roster shares one hex; the first unit has the active cockpit.
 async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<ObjectId>) {
-    fixture_with_flags(teams, &[]).await
-}
-
-/// [`fixture`] on a map with `flags` switched on.
-async fn fixture_with_flags(
-    teams: &[i32],
-    flags: &[MapFlag],
-) -> (tempfile::TempDir, Config, World, Vec<ObjectId>) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Crowded field".into(), Kind::Room);
-    let mut asset = MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap();
-    for flag in flags {
-        asset.flags = flag.apply(i64::from(asset.flags), true) as i32;
-    }
+    let asset = MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap();
     create_battle_map(&mut world, map, "crowding.map", asset).unwrap();
     let mut ids = Vec::new();
     for &team in teams {
@@ -71,7 +61,6 @@ fn input(entry: StackingEntry) -> StackingInput {
     StackingInput {
         entry,
         mass: 35 * 1024,
-        jump_movement_points: 5,
     }
 }
 
@@ -80,9 +69,11 @@ fn fall() -> FallRules {
     MovementRules::STANDARD.fall
 }
 
+/// A 'Mech landing where the stacking limit allows it to rest rolls nothing (Total Warfare
+/// p. 57): alone in the hex, nothing happens.
 #[tokio::test]
-async fn crowding_thresholds_do_not_consume_dice() {
-    for teams in [vec![0, 0], vec![0, 0, 1], vec![0, 0, 1, 1, 1, 1]] {
+async fn landing_within_the_stacking_limit_does_not_consume_dice() {
+    for teams in [vec![0]] {
         let (_dir, _, mut world, ids) = fixture(&teams).await;
         let before = world.btech.clone();
         assert!(
@@ -94,35 +85,17 @@ async fn crowding_thresholds_do_not_consume_dice() {
     }
 }
 
+/// The 'Mech landed on is rolled among every other 'Mech in the hex, friend or foe, powered
+/// or shut down (Total Warfare p. 152).
 #[tokio::test]
-async fn no_stacking_maps_never_collide() {
-    for entry in [
-        StackingEntry::Ground,
-        StackingEntry::Jump,
-        StackingEntry::Fall,
-    ] {
-        let (_dir, _, mut world, ids) =
-            fixture_with_flags(&[0, 1, 0, 0, 1, 1, 1, 0], &[MapFlag::NoStacking]).await;
-        seed(&mut world, ids[0], 3, 1, None);
-        let before = world.btech.clone();
-        assert!(
-            resolve_battle_stacking(&mut world, ids[0], input(entry), fall())
-                .unwrap()
-                .is_empty()
-        );
-        assert_eq!(world.btech, before);
-    }
-}
-
-#[tokio::test]
-async fn crowding_selection_obeys_team_priority_and_stopped_target_gaps() {
-    for (teams, count, target) in [
-        (vec![0, 1, 0, 0, 1, 1, 1, 0], 3, 2),
-        (vec![0, 1, 1, 1, 1, 1, 1, 1], 7, 1),
+async fn landing_target_is_rolled_among_the_hexes_mechs() {
+    for (teams, selection, target) in [
+        (vec![0, 1, 0, 0, 1, 1, 1, 0], 2, 2),
+        (vec![0, 1, 1, 1, 1, 1, 1, 1], 1, 1),
     ] {
         let (_dir, config, mut world, ids) = fixture(&teams).await;
         // The selection die, then the accidental fall's to-hit roll of seven or better.
-        seed(&mut world, ids[0], count, 1, Some(12));
+        seed(&mut world, ids[0], 7, selection, Some(12));
         let events =
             resolve_battle_stacking(&mut world, ids[0], input(StackingEntry::Jump), fall())
                 .unwrap();
@@ -138,15 +111,16 @@ async fn crowding_selection_obeys_team_priority_and_stopped_target_gaps() {
         stompymux_rs::MovementRules::STANDARD.fall,
     )
     .unwrap();
-    // Shut-down units count toward the threshold, but cannot be selected as targets.
-    seed(&mut world, ids[1], 3, 3, None);
+    // A shut-down 'Mech is landed on like any other.
+    seed(&mut world, ids[1], 2, 1, Some(12));
     let before = world.btech.clone();
-    assert!(
-        resolve_battle_stacking(&mut world, ids[1], input(StackingEntry::Fall), fall())
-            .unwrap()
-            .is_empty()
+    let events =
+        resolve_battle_stacking(&mut world, ids[1], input(StackingEntry::Fall), fall()).unwrap();
+    assert_eq!(events[1].unit, ids[0]);
+    assert_ne!(
+        world.btech.constructed_units()[&ids[0]].sections(),
+        before.constructed_units()[&ids[0]].sections()
     );
-    assert_ne!(world.btech, before); // Selection still consumes one die.
 }
 
 #[tokio::test]
@@ -189,12 +163,8 @@ async fn collision_damage_and_second_unit_failure_commit_together() {
 }
 
 #[tokio::test]
-async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
-    for entry in [
-        StackingEntry::Ground,
-        StackingEntry::Jump,
-        StackingEntry::Fall,
-    ] {
+async fn collision_tables_use_punch_and_prone_normal_locations() {
+    for entry in [StackingEntry::Jump, StackingEntry::Fall] {
         for prone in [false, true] {
             let (_dir, config, mut world, ids) = fixture(if entry == StackingEntry::Jump {
                 &[0, 0, 0, 0]
@@ -202,7 +172,14 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
                 &[0, 0, 0]
             })
             .await;
-            seed(&mut world, ids[0], 3, 1, Some(12));
+            // The lander picks among the other three; the fallen 'Mech among the other two.
+            seed(
+                &mut world,
+                ids[0],
+                if entry == StackingEntry::Jump { 3 } else { 2 },
+                1,
+                Some(12),
+            );
             let target_seed = (0..=255)
                 .find(|value| {
                     let mut dice = Dice::seeded([*value; 32]);
@@ -224,26 +201,18 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
             let before = world.btech.constructed_units()[&ids[1]].sections().clone();
             let physical = StackingInput {
                 entry,
-                mass: if entry == StackingEntry::Ground {
-                    35 * 1024
-                } else {
-                    20 * 1024
-                },
-                jump_movement_points: 2,
+                mass: 20 * 1024,
             };
             let events = resolve_battle_stacking(&mut world, ids[0], physical, fall()).unwrap();
-            let location = if prone || entry == StackingEntry::Ground {
+            let location = if prone {
                 MechSection::LeftTorso
             } else {
                 MechSection::CenterTorso
             };
-            // A ground bump of five points; an accidental fall of a 20-ton 'Mech from one
-            // level: two (Total Warfare p. 152).
-            let damage = if entry == StackingEntry::Ground { 5 } else { 2 };
+            // An accidental fall of a 20-ton 'Mech from one level: two points (Total Warfare
+            // p. 152).
+            let damage = 2;
             let warning = before[&location].armor - damage < before[&location].armor / 2;
-            if entry == StackingEntry::Ground {
-                assert_eq!(events.len(), 2 + usize::from(warning));
-            }
             if warning {
                 assert_eq!(events[2].unit, ids[1]);
                 assert!(events[2].text.contains("WARNING:"));
@@ -263,82 +232,81 @@ async fn collision_tables_use_punch_kick_and_prone_normal_locations() {
     }
 }
 
+/// Stacking at the hex edge (Total Warfare p. 57): a unit passes through a hex its friends
+/// hold, stops at the edge of a hex an enemy holds, may not enter a full hex it means to
+/// stop in, and a charge at the enemy in the hex goes through; every outcome replays.
 #[tokio::test]
-async fn ground_entry_collisions_use_current_mass_and_replay_the_whole_tick() {
-    {
-        let (_dir, config, mut world, ids) = fixture(&[0, 0, 0]).await;
+async fn ground_entry_passes_friends_and_stops_at_enemy_and_full_hexes() {
+    for (teams, desired, charging, enters, notice) in [
+        (vec![0, 0, 0], 21.5, false, true, None),
+        (vec![0, 0, 0], 0.0, false, false, Some("already full")),
+        (vec![0, 0], 0.0, false, false, Some("already full")),
+        (vec![0, 1], 21.5, false, false, Some("enemy unit")),
+        (vec![0, 1], 21.5, true, true, None),
+    ] {
+        let (_dir, config, mut world, ids) = fixture(&teams).await;
         let id = ids[0];
-        seed(&mut world, id, 3, 1, Some(9));
+        let target = ids[1];
         world
             .btech
             .rewrite_unit_record(id, |record| {
-                let moving = record;
-                moving["position"]["y"] = 0.into();
-                moving["motion"]["point"] = serde_json::to_value(Point {
+                record["position"]["y"] = 0.into();
+                record["motion"]["point"] = serde_json::to_value(Point {
                     y: 0.49,
                     ..HexCoordinate { x: 1, y: 0 }.center()
                 })
                 .unwrap();
-                moving["motion"]["heading"] = 180.0.into();
-                moving["motion"]["desired_heading"] = 180.0.into();
-                moving["motion"]["speed"] = 21.5.into();
-                moving["motion"]["desired_speed"] = 21.5.into();
+                record["motion"]["heading"] = 180.0.into();
+                record["motion"]["desired_heading"] = 180.0.into();
+                record["motion"]["speed"] = 21.5.into();
+                record["motion"]["desired_speed"] = desired.into();
+                if charging {
+                    record["charge"]["target"] = target.0.into();
+                }
             })
             .unwrap();
         world.validate(&config).unwrap();
-        let movement = MovementRules::STANDARD;
-        let mut rejected = world.clone();
-        rejected
-            .objects
-            .get_mut(&id)
-            .unwrap()
-            .flags
-            .insert(Flag::InCharacter);
-        let before = rejected.btech.clone();
-        assert!(advance_battle_motion(&mut rejected, movement).is_err());
-        assert_eq!(rejected.btech, before);
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
-        let notices = advance_battle_motion(&mut world, movement).unwrap();
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         assert_eq!(
             notices,
-            advance_battle_motion(&mut loaded, movement).unwrap()
+            advance_battle_motion(&mut loaded, MovementRules::STANDARD).unwrap()
         );
         assert_eq!(world.btech, loaded.btech);
-        assert!(notices.iter().any(|notice| notice.text.contains("bump")));
+        let unit = &world.btech.constructed_units()[&id];
+        let row = format!("{teams:?} {desired} {charging}");
         assert_eq!(
-            world.btech.constructed_units()[&id].position().unwrap().y,
-            1
+            unit.position().unwrap().y,
+            if enters { 1 } else { 0 },
+            "{row}: {notices:?}"
         );
-        assert_eq!(
-            world.btech.constructed_units()[&id].motion().unwrap().speed,
-            21.5
-        );
-        let scripts = Scripts::new(
-            &config,
-            std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-        )
-        .unwrap();
-        let mass:i64 = scripts.eval_callback(&format!("local s=btech.unit.state({}); local n=s.mass.total; s.mass.total=0; assert(btech.unit.state({}).mass.total==n); return n",id.0,id.0)).unwrap();
-        assert_eq!(
-            mass,
-            i64::from(world.btech.constructed_units()[&id].mass().unwrap().total)
-        );
-        let text = support::run_text(
-            &scripts,
-            &config,
-            ObjectId(1),
-            1,
-            &format!("@btech inspect #{}", id.0),
-        );
-        assert!(text.contains("Current mass:"), "{text}");
-        persistence::save(&config.database(), &world).await.unwrap();
-        let reloaded = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(
-            world.btech.constructed_units()[&id].mass().unwrap(),
-            reloaded.btech.constructed_units()[&id].mass().unwrap()
-        );
+        assert!(!notices.iter().any(|notice| notice.text.contains("bump")));
+        match notice {
+            Some(text) => {
+                assert!(
+                    notices.iter().any(|notice| notice.text.contains(text)),
+                    "{row}: {notices:?}"
+                );
+                assert_eq!(unit.motion().unwrap().speed, 0.0);
+                assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
+            }
+            None if !charging => {
+                assert!(notices.is_empty(), "{row}: {notices:?}");
+                assert_eq!(unit.motion().unwrap().speed, 21.5);
+            }
+            None => {}
+        }
+        world.validate(&config).unwrap();
     }
+    // A stop ordered inside a hex already over the limit is refused.
+    let (_dir, config, mut world, ids) = fixture(&[0, 0]).await;
+    let before = world.btech.clone();
+    let error = set_battle_speed(&mut world, ids[0], ObjectId(1), 0.0).unwrap_err();
+    assert!(error.to_string().contains("already full"), "{error}");
+    assert_eq!(world.btech, before);
+    set_battle_speed(&mut world, ids[0], ObjectId(1), 10.0).unwrap();
+    world.validate(&config).unwrap();
 }
 
 /// An airborne Jenner is one tick away from landing beside the supplied number of bipeds.
@@ -365,7 +333,7 @@ async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World,
 
 #[tokio::test]
 async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
-    for neighbors in [2, 3] {
+    for neighbors in [1, 3] {
         {
             let (_dir, config, mut world, ids) = landing_fixture(neighbors).await;
             let id = ids[0];
@@ -375,7 +343,7 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
                     .unwrap()
                     .is_some()
             );
-            seed(&mut world, id, 3, 1, Some(12));
+            seed(&mut world, id, neighbors as u16, 1, Some(12));
             let before = world.btech.clone();
             let rules = fall();
             if neighbors == 3 {
@@ -421,7 +389,8 @@ async fn completed_landings_exclude_the_arriving_unit_and_replay_crowding() {
                 .unwrap()
             );
             assert_eq!(world.btech, loaded.btech);
-            let collides = neighbors == 3;
+            // Any other 'Mech in the hex breaks the one-'Mech limit (Total Warfare p. 57).
+            let collides = true;
             assert_eq!(
                 events
                     .iter()
@@ -589,96 +558,9 @@ async fn landing_collision_thrust_uses_map_gravity() {
     }
 }
 
-#[tokio::test]
-async fn jump_obstacle_falls_resolve_crowding_after_fall_damage() {
-    let (_dir, config, mut world, ids) = fixture(&[0, 0, 0]).await;
-    let id = ids[0];
-    let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let chosen = (0..=255)
-        .find(|value| {
-            let mut dice = Dice::seeded([*value; 32]);
-            let safe = dice.two_d6() >= 7;
-            dice.d6();
-            safe && dice.two_d6() == 7 && dice.die(3).unwrap() == 1 && dice.two_d6() >= 7
-        })
-        .unwrap();
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["movement_modifier"] = 800.into();
-    for index in 3..6 {
-        state["maps"][map.0.to_string()]["terrain"][index] =
-            serde_json::to_value(Hex::new(Terrain::Wall, 9)).unwrap();
-    }
-    for unit in &ids {
-        state["constructed"][unit.0.to_string()]["position"]["y"] = 0.into();
-        state["constructed"][unit.0.to_string()]["motion"]["point"] =
-            serde_json::to_value(HexCoordinate { x: 1, y: 0 }.center()).unwrap();
-    }
-    state["constructed"][id.0.to_string()]["dice"] =
-        serde_json::to_value(Dice::seeded([chosen; 32])).unwrap();
-    world.btech = serde_json::from_value(state).unwrap();
-    launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
-    let rules = fall();
-    let mut rejected = world.clone();
-    rejected
-        .objects
-        .get_mut(&ids[1])
-        .unwrap()
-        .flags
-        .insert(Flag::InCharacter);
-    let before = rejected.btech.clone();
-    assert!(
-        advance_battle_jumps(
-            &mut rejected,
-            stompymux_rs::MovementRules {
-                fall: rules,
-                ..stompymux_rs::MovementRules::STANDARD
-            }
-        )
-        .is_err()
-    );
-    assert_eq!(rejected.btech, before);
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut loaded = persistence::load(&config.database()).await.unwrap();
-    let events = advance_battle_jumps(
-        &mut world,
-        stompymux_rs::MovementRules {
-            fall: rules,
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
-    // The obstacle fall's damage precedes the crowding collision it causes.
-    let crash = events
-        .iter()
-        .position(|notice| notice.text.contains("crash into the obstacle"))
-        .expect("obstacle fall notice");
-    let collision = events
-        .iter()
-        .position(|notice| notice.text.contains("land on another"))
-        .expect("collision notice");
-    assert!(crash < collision);
-    assert_eq!(
-        events,
-        advance_battle_jumps(
-            &mut loaded,
-            stompymux_rs::MovementRules {
-                fall: rules,
-                ..stompymux_rs::MovementRules::STANDARD
-            }
-        )
-        .unwrap()
-    );
-    assert_eq!(world.btech, loaded.btech);
-    assert!(
-        events
-            .iter()
-            .any(|notice| notice.text.contains("land on another"))
-    );
-    world.validate(&config).unwrap();
-}
-
-/// Avoid unrelated pilot injuries and distribute a five-level fall over four intact sections;
-/// `accept` then checks the whole action, so the landing's accidental-fall roll also passes.
+/// Avoid unrelated pilot injuries and land the zero-level fall's single packet on an intact
+/// section; `accept` then checks the whole action, so the landing's accidental-fall roll also
+/// passes.
 fn thermal_fall_dice(accept: impl Fn(&Dice) -> bool) -> Dice {
     (0u32..100_000)
         .find_map(|value| {
@@ -693,20 +575,16 @@ fn thermal_fall_dice(accept: impl Fn(&Dice) -> bool) -> Dice {
                 return None;
             }
             dice.d6();
-            let mut locations = Vec::new();
-            for _ in 0..4 {
-                locations.push(dice.two_d6());
-                dice.two_d6(); // Each fall packet enters material resolution.
-            }
-            locations.sort();
-            (locations == [5, 6, 8, 9] && dice.die(3).unwrap() == 1 && accept(&original))
+            let location = dice.two_d6();
+            dice.two_d6(); // The fall packet enters material resolution.
+            (matches!(location, 5 | 6 | 8 | 9) && dice.die(2).unwrap() == 1 && accept(&original))
                 .then_some(original)
         })
         .unwrap()
 }
 
 #[tokio::test]
-async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() {
+async fn airborne_shutdown_falls_zero_levels_and_commits_crowding_before_power_down() {
     {
         let (_dir, config, mut world, ids) = landing_fixture(2).await;
         let id = ids[0];
@@ -738,12 +616,14 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
         });
         prepare(&mut world, &dice);
         let mut rejected = world.clone();
-        rejected
-            .objects
-            .get_mut(&ids[1])
-            .unwrap()
-            .flags
-            .insert(Flag::InCharacter);
+        for neighbor in &ids[1..] {
+            rejected
+                .objects
+                .get_mut(neighbor)
+                .unwrap()
+                .flags
+                .insert(Flag::InCharacter);
+        }
         let before = rejected.btech.clone();
         assert!(advance_battle_overheat(&mut rejected, rules).is_err());
         assert_eq!(rejected.btech, before);
@@ -755,7 +635,8 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
             advance_battle_overheat(&mut loaded, rules).unwrap()
         );
         assert_eq!(world.btech, loaded.btech);
-        assert_eq!(reports[0].fall.as_ref().unwrap().damage, 20);
+        // A jumping 'Mech brought down has fallen zero levels (Total Warfare p. 68).
+        assert_eq!(reports[0].fall.as_ref().unwrap().damage, 4);
         assert!(
             reports[0]
                 .notices
@@ -764,7 +645,9 @@ async fn airborne_shutdown_scales_fall_and_commits_crowding_before_power_down() 
         );
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.power(), Power::Off);
-        assert!(unit.pilot().is_none());
+        // A heat shutdown leaves the MechWarrior in the cockpit (Total Warfare p. 160).
+        assert_eq!(unit.pilot(), Some(ObjectId(1)));
+        assert!(unit.heat_shutdown());
         assert!(unit.flight().is_none());
         assert_eq!(unit.jump_stabilization(), 0);
         persistence::save(&config.database(), &world).await.unwrap();
@@ -898,7 +781,7 @@ async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
                 let mut dice = Dice::seeded([*value; 32]);
                 let protected = dice.two_d6() >= 7;
                 dice.d6();
-                protected && dice.two_d6() == 7 && dice.die(3).unwrap() == 1
+                protected && dice.two_d6() == 7 && dice.die(2).unwrap() == 1
             })
             .unwrap();
         world
@@ -1069,11 +952,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entries() {
     base.btech
         .set_unit_dice(target, Dice::seeded([target_seed; 32]))
         .unwrap();
-    for entry in [
-        StackingEntry::Ground,
-        StackingEntry::Jump,
-        StackingEntry::Fall,
-    ] {
+    for entry in [StackingEntry::Jump, StackingEntry::Fall] {
         {
             for visible in 0..4 {
                 for powered in [false, true] {
@@ -1095,8 +974,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entries() {
                         viewer["power"] = serde_json::json!({"state":"off"});
                     }
                     world.btech = serde_json::from_value(state).unwrap();
-                    let count = if entry == StackingEntry::Jump { 3 } else { 4 };
-                    seed(&mut world, actor, count, 1, Some(12));
+                    seed(&mut world, actor, 3, 1, Some(12));
                     let observer_before = world.btech.constructed_units()[&observer].clone();
                     let original = world.btech.clone();
                     let mut rejected = world.clone();
@@ -1142,12 +1020,7 @@ async fn collision_observers_filter_each_participant_and_replay_all_entries() {
                         } else {
                             "someone".to_owned()
                         };
-                        let action = if entry == StackingEntry::Ground {
-                            "bumps into"
-                        } else {
-                            "lands on"
-                        };
-                        expected.push(format!("{actor_name} {action} {target_name}!"));
+                        expected.push(format!("{actor_name} lands on {target_name}!"));
                     }
                     assert_eq!(
                         observed, expected,
@@ -1372,7 +1245,7 @@ async fn collision_damage_preserves_target_balance_feedback() {
             motion.desired_speed = 43.0;
         })
         .unwrap();
-    seed(&mut base, mover, 3, 1, None);
+    seed(&mut base, mover, 2, 1, Some(12));
     for byte in 0..=255 {
         let mut world = base.clone();
         world
@@ -1386,7 +1259,7 @@ async fn collision_damage_preserves_target_balance_feedback() {
             &scripts,
             &config,
             mover,
-            input(StackingEntry::Ground),
+            input(StackingEntry::Fall),
             fall(),
         )
         .unwrap();
@@ -1412,7 +1285,7 @@ async fn collision_damage_preserves_target_balance_feedback() {
             &scripts,
             &config,
             mover,
-            input(StackingEntry::Ground),
+            input(StackingEntry::Fall),
             fall(),
         )
         .unwrap();

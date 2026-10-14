@@ -1,4 +1,7 @@
 //! Aircraft movement events reuse launch, fuel, vehicle controls and contact consequences.
+//! Flight follows Total Warfare p. 54: a VTOL on the ground may only climb, horizontal and
+//! vertical movement share one budget, flanking turns risk a sideslip (p. 67), and flying
+//! into terrain or treetops crashes the VTOL (p. 68).
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -64,7 +67,7 @@ pub(super) fn advance_all(
                 .vehicles
                 .get_mut(&id)
                 .unwrap()
-                .advance_vtol_takeoff(underground, rules.free_fusion_vtol_fuel)?;
+                .advance_vtol_takeoff(underground)?;
             match result {
                 VtolTakeoff::Aborted { reason } => {
                     notice(&mut report, id, &format!("Takeoff aborted: {reason}"))
@@ -111,59 +114,82 @@ pub(super) fn advance_all(
             .pilot()
             .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
         let movement = VehicleMotionRules {
-            fasa_turning: rules.fasa_turning,
-            slowdown: rules.slowdown,
             speed_demon,
             movement_modifier: map.movement_modifier,
             // Fog and buildings slow ground movement, not rotorcraft in flight.
             extra_cost: 0,
         };
+        let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+        let movement_modifier = map.movement_modifier;
+        let current_hex = super::HexCoordinate {
+            x: i32::from(position.x),
+            y: i32::from(position.y),
+        };
+        // A VTOL whose elevation is its hex's level is on the ground: the only movement it
+        // may make is to climb at least one elevation above the terrain (TW p. 54).
+        let ground = if current.is_water_surface() {
+            i32::from(current.water_line())
+        } else {
+            i32::from(current.surface_height())
+        };
+        let grounded = (flight.altitude as i32) <= ground;
         let unit = world.btech.vehicles.get_mut(&id).unwrap();
-        let fuel = unit.consume_vtol_fuel(
-            flight.vertical_speed,
-            flight.altitude as i32,
-            false,
-            rules.free_fusion_vtol_fuel,
-        )?;
+        let fuel = unit.consume_vtol_fuel(flight.vertical_speed, flight.altitude as i32, false)?;
         if let VtolFuelUse::Exhausted { newly } = fuel {
             if newly {
                 notice(&mut report, id, "You run out of fuel and begin to fall!");
             }
             continue;
         }
-        unit.motion = Some(unit.definition().control_at_maximum(
+        let mut controlled = unit.definition().control_at_maximum(
             motion,
             super::Hex::at_level(0),
             movement,
             maximum,
-        )?);
-        let edge_motion = unit.motion.expect("controlled flight");
-        let edge_map = unit.position().expect("placed flight").map;
-        let observers = super::broadcast::observer_notices(world, id, "crashes into the ground!");
-        let outcome = super::vtol_environment::advance_in_candidate(
-            world,
-            id,
-            rules.free_fusion_vtol_fuel,
-            fall_rules,
-            character,
         )?;
-        match outcome {
-            VtolEnvironment::Obstacle {
-                fall,
-                notices,
-                pilot_notices,
-                experience_messages,
-                ..
-            } => {
-                super::piloting::append_feedback(
-                    &mut report.pilot_notices,
-                    pilot_notices,
-                    report.notices.len(),
-                );
-                report.notices.extend(notices);
-                report.experience_messages.extend(experience_messages);
-                report.vehicle_falls.extend(fall.map(|fall| *fall));
+        if grounded {
+            controlled.speed = 0.0;
+        }
+        unit.motion = Some(controlled);
+        // A flanking VTOL that turns and then goes on into a new hex may sideslip (TW p. 67).
+        unit.slick
+            .observe(true, controlled.speed != 0.0, controlled.heading);
+        let held = unit.slick.heading;
+        let leaving = unit
+            .vtol_motion_step(movement_modifier)?
+            .motion
+            .point
+            .containing_hex()?
+            != current_hex;
+        let cruise =
+            super::vtol_speed::remaining_speed(maximum, flight.vertical_speed)? * 2.0 / 3.0;
+        if leaving && unit.slick.turned && controlled.speed.abs() > cruise + 0.1 {
+            unit.slick.reset();
+            let slip = super::vtol_sideslip::check(
+                world,
+                id,
+                held.unwrap_or(controlled.heading),
+                fall_rules,
+                character,
+            )?;
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                slip.pilot_notices,
+                report.notices.len(),
+            );
+            report.notices.extend(slip.notices);
+            report.experience_messages.extend(slip.experience_messages);
+            report.vehicle_falls.extend(slip.vehicle_falls);
+            if slip.ended {
+                continue;
             }
+        }
+        let unit = &world.btech.vehicles()[&id];
+        let edge_motion = unit.motion().expect("controlled flight");
+        let edge_map = unit.position().expect("placed flight").map;
+        let outcome =
+            super::vtol_environment::advance_in_candidate(world, id, fall_rules, character)?;
+        match outcome {
             VtolEnvironment::Boundary { .. } => {
                 report
                     .boundaries
@@ -181,7 +207,7 @@ pub(super) fn advance_all(
                 notice(
                     &mut report,
                     id,
-                    "You cannot achieve orbit! Vertical movement halted!",
+                    "You cannot climb any higher! Vertical movement halted!",
                 );
             }
             VtolEnvironment::Landed { landing, .. } => {
@@ -209,13 +235,31 @@ pub(super) fn advance_all(
                     "splashes into the water!",
                 ));
             }
-            VtolEnvironment::Crashed { fall, .. } => {
-                notice(
-                    &mut report,
-                    id,
-                    "CRASH! You smash your toy into the ground!",
-                );
-                report.notices.extend(observers);
+            VtolEnvironment::Crashed { fall, path } => {
+                let (own, seen) = match path {
+                    VtolPath::Contact {
+                        contact: VtolSurfaceContact::Forest,
+                        ..
+                    } => (
+                        "CRASH! You fly into the trees!",
+                        "flies into the trees and crashes!",
+                    ),
+                    VtolPath::Contact {
+                        contact: VtolSurfaceContact::Elevation,
+                        ..
+                    } => (
+                        "CRASH! You fly straight into the terrain!",
+                        "flies into an obstacle and crashes!",
+                    ),
+                    _ => (
+                        "CRASH! You smash your toy into the ground!",
+                        "crashes into the ground!",
+                    ),
+                };
+                notice(&mut report, id, own);
+                report
+                    .notices
+                    .extend(super::broadcast::observer_notices(world, id, seen));
                 super::piloting::append_feedback(
                     &mut report.pilot_notices,
                     fall.feedback.pilot_notices.iter().cloned(),
@@ -224,10 +268,14 @@ pub(super) fn advance_all(
                 report.notices.extend(fall.feedback.notices.iter().cloned());
                 report.vehicle_falls.push(*fall);
             }
-            VtolEnvironment::CrashRequired { .. } | VtolEnvironment::ObstacleRequired { .. } => {
+            VtolEnvironment::CrashRequired { .. } => {
                 unreachable!("World contacts resolve crash damage")
             }
             _ => {}
+        }
+        let unit = world.btech.vehicles.get_mut(&id).unwrap();
+        if unit.position() != Some(position) {
+            unit.slick.reset();
         }
         let (notice, experience) = super::building_step::entered(world, id, position)?;
         report.notices.extend(notice);

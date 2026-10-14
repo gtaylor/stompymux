@@ -11,11 +11,7 @@ use stompymux_rs::{
     start_battle_unit,
 };
 
-pub(crate) const RULES: MovementRules = MovementRules {
-    fasa_turning: false,
-    slowdown: 2,
-    ..stompymux_rs::MovementRules::STANDARD
-};
+pub(crate) const RULES: MovementRules = MovementRules::STANDARD;
 
 /// Seed for the main fixture unit's own stream. The fixture seeds every other stream it
 /// creates through [`support::seed_world_dice`] and then gives this unit the fixed stream its

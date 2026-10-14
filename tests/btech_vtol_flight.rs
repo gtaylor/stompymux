@@ -28,9 +28,9 @@ fn launch_countdown_replays_and_liftoff_stops_horizontal_motion_without_spending
     for delay in [0, 2, u16::MAX] {
         let mut unit = aircraft();
         let before = serde_json::to_value(&unit).unwrap();
-        unit.begin_vtol_takeoff(false, false, delay).unwrap();
+        unit.begin_vtol_takeoff(false, delay).unwrap();
         let queued = unit.clone();
-        assert!(unit.begin_vtol_takeoff(false, false, 0).is_err());
+        assert!(unit.begin_vtol_takeoff(false, 0).is_err());
         assert_eq!(unit, queued);
         let mut replay = restored(&unit);
         // The maximum override must remain representable and cancellable after saving.
@@ -44,18 +44,18 @@ fn launch_countdown_replays_and_liftoff_stops_horizontal_motion_without_spending
             continue;
         }
         for remaining in (1..=u32::from(delay)).rev() {
-            let report = unit.advance_vtol_takeoff(false, false).unwrap();
+            let report = unit.advance_vtol_takeoff(false).unwrap();
             assert_eq!(report, VtolTakeoff::Waiting { remaining });
-            assert_eq!(replay.advance_vtol_takeoff(false, false).unwrap(), report);
+            assert_eq!(replay.advance_vtol_takeoff(false).unwrap(), report);
             assert_eq!(unit, replay);
             replay = restored(&replay);
         }
         assert_eq!(
-            unit.advance_vtol_takeoff(false, false).unwrap(),
+            unit.advance_vtol_takeoff(false).unwrap(),
             VtolTakeoff::LiftedOff
         );
         assert_eq!(
-            replay.advance_vtol_takeoff(false, false).unwrap(),
+            replay.advance_vtol_takeoff(false).unwrap(),
             VtolTakeoff::LiftedOff
         );
         assert_eq!(unit, replay);
@@ -70,10 +70,7 @@ fn launch_countdown_replays_and_liftoff_stops_horizontal_motion_without_spending
         );
         assert!(!unit.motion().unwrap().active());
         assert!(!unit.cancel_vtol_takeoff());
-        assert_eq!(
-            unit.advance_vtol_takeoff(false, false).unwrap(),
-            VtolTakeoff::Idle
-        );
+        assert_eq!(unit.advance_vtol_takeoff(false).unwrap(), VtolTakeoff::Idle);
         let after = serde_json::to_value(&unit).unwrap();
         assert_eq!(before["dice"], after["dice"]);
         assert_eq!(before["vtol_fuel"], after["vtol_fuel"]);
@@ -85,11 +82,11 @@ fn launch_countdown_replays_and_liftoff_stops_horizontal_motion_without_spending
 fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
     let base = aircraft();
     let mut unit = base.clone();
-    assert!(unit.begin_vtol_takeoff(true, false, 0).is_err());
+    assert!(unit.begin_vtol_takeoff(true, 0).is_err());
     assert_eq!(unit, base);
-    unit.begin_vtol_takeoff(false, false, 0).unwrap();
+    unit.begin_vtol_takeoff(false, 0).unwrap();
     assert!(matches!(
-        unit.advance_vtol_takeoff(true, false).unwrap(),
+        unit.advance_vtol_takeoff(true).unwrap(),
         VtolTakeoff::Aborted { .. }
     ));
     assert_eq!(unit, base);
@@ -105,10 +102,7 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
         }
         let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         let before = unit.clone();
-        assert!(
-            unit.begin_vtol_takeoff(false, false, 0).is_err(),
-            "{change}"
-        );
+        assert!(unit.begin_vtol_takeoff(false, 0).is_err(), "{change}");
         assert_eq!(unit, before);
     }
     for source in [
@@ -118,7 +112,7 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
     ] {
         let mut unit = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
         let before = unit.clone();
-        assert!(unit.begin_vtol_takeoff(false, false, 0).is_err());
+        assert!(unit.begin_vtol_takeoff(false, 0).is_err());
         assert_eq!(unit, before);
     }
 }
@@ -128,10 +122,10 @@ fn shared_damage_cancels_launch_or_starts_one_fall_without_fabricating_crew_dama
     for airborne in [false, true] {
         for section in [VehicleSection::Rotor, VehicleSection::Front] {
             let mut unit = aircraft();
-            unit.begin_vtol_takeoff(false, false, 0).unwrap();
+            unit.begin_vtol_takeoff(false, 0).unwrap();
             if airborne {
                 assert_eq!(
-                    unit.advance_vtol_takeoff(false, false).unwrap(),
+                    unit.advance_vtol_takeoff(false).unwrap(),
                     VtolTakeoff::LiftedOff
                 );
             }
@@ -163,30 +157,30 @@ fn fuel_exhaustion_starts_a_fall_and_fusion_exemption_permits_empty_takeoff() {
     let mut saved = serde_json::to_value(aircraft()).unwrap();
     saved["vtol_fuel"]["remaining"] = 1.into();
     let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
-    unit.begin_vtol_takeoff(false, false, 0).unwrap();
+    unit.begin_vtol_takeoff(false, 0).unwrap();
     assert_eq!(
-        unit.advance_vtol_takeoff(false, false).unwrap(),
+        unit.advance_vtol_takeoff(false).unwrap(),
         VtolTakeoff::LiftedOff
     );
     assert!(matches!(
-        unit.consume_vtol_fuel(60.0, 1, false, false).unwrap(),
+        unit.consume_vtol_fuel(60.0, 1, false).unwrap(),
         VtolFuelUse::Consumed { remaining: 0, .. }
     ));
     assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Airborne);
     assert_eq!(
-        unit.consume_vtol_fuel(60.0, 1, false, false).unwrap(),
+        unit.consume_vtol_fuel(60.0, 1, false).unwrap(),
         VtolFuelUse::Exhausted { newly: true }
     );
     assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);
     let mut saved = serde_json::to_value(aircraft()).unwrap();
     saved["vtol_fuel"]["remaining"] = 0.into();
     let mut combustion: Vehicle = serde_json::from_value(saved.clone()).unwrap();
-    assert!(combustion.begin_vtol_takeoff(false, true, 0).is_err());
+    assert!(combustion.begin_vtol_takeoff(false, 0).is_err());
     saved["definition"]["attributes"]["specials"] = "CargoTech".into();
     let mut fusion: Vehicle = serde_json::from_value(saved).unwrap();
-    fusion.begin_vtol_takeoff(false, true, 0).unwrap();
+    fusion.begin_vtol_takeoff(false, 0).unwrap();
     assert_eq!(
-        fusion.advance_vtol_takeoff(false, true).unwrap(),
+        fusion.advance_vtol_takeoff(false).unwrap(),
         VtolTakeoff::LiftedOff
     );
 }
@@ -239,9 +233,9 @@ fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice()
         let mut replay = restored(&unit);
         let before = serde_json::to_value(&unit).unwrap();
         let hex = Hex::new(terrain, 5);
-        let report = unit.land_vtol(hex, false).unwrap();
+        let report = unit.land_vtol(hex).unwrap();
         assert_eq!(report, VtolLanding::Touchdown { elevation: 5 });
-        assert_eq!(replay.land_vtol(hex, false).unwrap(), report);
+        assert_eq!(replay.land_vtol(hex).unwrap(), report);
         assert_eq!(unit, replay);
         assert_eq!(
             unit.vtol_flight().unwrap(),
@@ -257,7 +251,7 @@ fn touchdown_replays_on_supported_surfaces_and_preserves_command_fuel_and_dice()
         assert_eq!(before["vtol_fuel"], after["vtol_fuel"]);
         assert_eq!(restored(&unit), unit);
         let landed = unit.clone();
-        assert!(unit.land_vtol(hex, false).is_err());
+        assert!(unit.land_vtol(hex).is_err());
         assert_eq!(unit, landed);
     }
 }
@@ -278,7 +272,7 @@ fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
         let mut unit = at_altitude(landing_aircraft(speed, desired, vertical), 1.0);
         let before = unit.clone();
         assert_eq!(
-            unit.land_vtol(grass, false).is_ok(),
+            unit.land_vtol(grass).is_ok(),
             accepted,
             "{speed}/{desired}/{vertical}"
         );
@@ -288,7 +282,7 @@ fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
     }
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 2.0);
     let before = unit.clone();
-    assert!(unit.land_vtol(grass, false).is_err());
+    assert!(unit.land_vtol(grass).is_err());
     assert_eq!(unit, before);
     let mut unit = at_altitude(unit, 0.0);
     let before = unit.clone();
@@ -305,7 +299,7 @@ fn landing_checks_speed_altitude_and_terrain_boundaries_atomically() {
         Terrain::DeepSnow,
         Terrain::Wall,
     ] {
-        assert!(unit.land_vtol(Hex::new(terrain, 0), false).is_err());
+        assert!(unit.land_vtol(Hex::new(terrain, 0)).is_err());
         assert_eq!(unit, before);
     }
 }
@@ -338,7 +332,7 @@ fn landing_refusals_match_reference_output() {
     ] {
         let before = unit.clone();
         assert_eq!(
-            unit.land_vtol(Hex::new(terrain, 0), false)
+            unit.land_vtol(Hex::new(terrain, 0))
                 .unwrap_err()
                 .to_string(),
             expected
@@ -352,18 +346,15 @@ fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
     let hex = Hex::new(Terrain::Clear, 0);
     let mut unit = aircraft();
     let before = unit.clone();
-    unit.begin_vtol_takeoff(false, false, 4).unwrap();
-    assert_eq!(
-        unit.land_vtol(hex, false).unwrap(),
-        VtolLanding::LaunchCancelled
-    );
+    unit.begin_vtol_takeoff(false, 4).unwrap();
+    assert_eq!(unit.land_vtol(hex).unwrap(), VtolLanding::LaunchCancelled);
     assert_eq!(unit, before);
     let mut unit = landing_aircraft(0.0, 0.0, 0.0);
     let report = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
     assert!(report.lost_rotor);
     let before = unit.clone();
     assert_eq!(
-        unit.land_vtol(hex, false).unwrap_err().to_string(),
+        unit.land_vtol(hex).unwrap_err().to_string(),
         "The rotor's dead!"
     );
     assert_eq!(unit, before);
@@ -372,7 +363,7 @@ fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
     let mut empty: Vehicle = serde_json::from_value(empty).unwrap();
     let before = empty.clone();
     assert_eq!(
-        empty.land_vtol(hex, false).unwrap_err().to_string(),
+        empty.land_vtol(hex).unwrap_err().to_string(),
         "You lack fuel to maneuver for landing!"
     );
     assert_eq!(empty, before);
@@ -381,14 +372,14 @@ fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
     let mut unit: Vehicle = serde_json::from_value(saved.clone()).unwrap();
     let before = unit.clone();
     assert_eq!(
-        unit.land_vtol(hex, true).unwrap_err().to_string(),
+        unit.land_vtol(hex).unwrap_err().to_string(),
         "You lack fuel to maneuver for landing!"
     );
     assert_eq!(unit, before);
     saved["definition"]["attributes"]["specials"] = "CargoTech".into();
     let mut fusion: Vehicle = serde_json::from_value(saved).unwrap();
     assert_eq!(
-        fusion.land_vtol(hex, true).unwrap(),
+        fusion.land_vtol(hex).unwrap(),
         VtolLanding::Touchdown { elevation: 0 }
     );
 }
@@ -397,28 +388,28 @@ fn landing_cancels_launch_but_cannot_recover_lost_lift_or_empty_fuel() {
 fn public_takeoff_vertical_control_and_landing_form_a_replayable_sequence() {
     let mut unit = aircraft();
     let before = unit.clone();
-    assert!(unit.set_vtol_vertical_speed(-1.0, false).is_err());
+    assert!(unit.set_vtol_vertical_speed(-1.0).is_err());
     assert_eq!(unit, before);
-    unit.begin_vtol_takeoff(false, false, 0).unwrap();
+    unit.begin_vtol_takeoff(false, 0).unwrap();
     assert_eq!(
-        unit.advance_vtol_takeoff(false, false).unwrap(),
+        unit.advance_vtol_takeoff(false).unwrap(),
         VtolTakeoff::LiftedOff
     );
     let before = unit.clone();
     for request in [f64::NAN, f64::INFINITY, unit.maximum_speed() + 0.1] {
-        assert!(unit.set_vtol_vertical_speed(request, false).is_err());
+        assert!(unit.set_vtol_vertical_speed(request).is_err());
         assert_eq!(unit, before);
     }
     let mut replay = restored(&unit);
-    unit.set_vtol_vertical_speed(-5.0, false).unwrap();
-    replay.set_vtol_vertical_speed(-5.0, false).unwrap();
+    unit.set_vtol_vertical_speed(-5.0).unwrap();
+    replay.set_vtol_vertical_speed(-5.0).unwrap();
     let hex = Hex::new(Terrain::Road, 1);
     assert_eq!(
-        unit.land_vtol(hex, false).unwrap(),
+        unit.land_vtol(hex).unwrap(),
         VtolLanding::Touchdown { elevation: 1 }
     );
     assert_eq!(
-        replay.land_vtol(hex, false).unwrap(),
+        replay.land_vtol(hex).unwrap(),
         VtolLanding::Touchdown { elevation: 1 }
     );
     assert_eq!(unit, replay);
@@ -427,9 +418,9 @@ fn public_takeoff_vertical_control_and_landing_form_a_replayable_sequence() {
     let limit = unit
         .vtol_vertical_limit(unit.motion().unwrap().desired_speed)
         .unwrap();
-    unit.set_vtol_vertical_speed(-limit, false).unwrap();
+    unit.set_vtol_vertical_speed(-limit).unwrap();
     let before = unit.clone();
-    assert!(unit.set_vtol_vertical_speed(limit + 0.1, false).is_err());
+    assert!(unit.set_vtol_vertical_speed(limit + 0.1).is_err());
     assert_eq!(unit, before);
 }
 
@@ -439,7 +430,8 @@ fn flight_projection_preserves_fractional_altitude_and_shared_reverse_geometry()
         let mut unit = at_altitude(landing_aircraft(speed, speed, 64.5), 5.25);
         let before = unit.clone();
         let first = unit.vtol_motion_step(modifier).unwrap();
-        assert!((first.altitude - 5.75).abs() < 1e-12);
+        // 64.5 kph is six MP of climb: six levels a minute, a tenth of a level a second.
+        assert!((first.altitude - 5.35).abs() < 1e-12);
         assert_eq!(first.elevation(), 5);
         assert!(!first.ceiling_reached);
         let start = unit.motion().unwrap().point;
@@ -452,11 +444,12 @@ fn flight_projection_preserves_fractional_altitude_and_shared_reverse_geometry()
         unit.commit_vtol_motion(first).unwrap();
         unit = restored(&unit);
         let second = unit.vtol_motion_step(modifier).unwrap();
-        assert!((second.altitude - 6.25).abs() < 1e-12);
+        assert!((second.altitude - 5.45).abs() < 1e-12);
     }
-    let unit = at_altitude(landing_aircraft(0.0, 0.0, 129.0), 299.0);
+    // The ceiling is 500 levels (TW p. 54): a climb past it stops there.
+    let unit = at_altitude(landing_aircraft(0.0, 0.0, 129.0), 499.9);
     let step = unit.vtol_motion_step(100).unwrap();
-    assert_eq!(step.altitude, 299.0);
+    assert_eq!(step.altitude, 500.0);
     assert_eq!(step.vertical_speed, 0.0);
     assert!(step.ceiling_reached);
     assert_eq!(step.motion.point, unit.motion().unwrap().point);
@@ -478,17 +471,32 @@ fn flight_projection_preserves_fractional_altitude_and_shared_reverse_geometry()
 fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact() {
     let unit = landing_aircraft(0.0, 0.0, -21.5);
     // Back out this event's vertical increment to inspect exact destination altitudes.
+    // A descending VTOL at the terrain's level is coming down on it (TW p. 54); the water
+    // takes it at its surface, a bridge at its deck or its underside, a building at its roof.
     for (altitude, terrain, elevation, contact) in [
-        (0.0, Terrain::Clear, 0, VtolSurfaceContact::Clear),
+        (1.0, Terrain::Clear, 0, VtolSurfaceContact::Clear),
+        (
+            0.0,
+            Terrain::Clear,
+            0,
+            VtolSurfaceContact::Ground { fall_levels: 3 },
+        ),
         (
             -1.0,
             Terrain::Clear,
             0,
             VtolSurfaceContact::Ground { fall_levels: 3 },
         ),
-        (-0.99, Terrain::Water, 5, VtolSurfaceContact::Clear),
+        (1.0, Terrain::Water, 5, VtolSurfaceContact::Clear),
+        (-0.99, Terrain::Water, 5, VtolSurfaceContact::Water),
         (-1.0, Terrain::Water, 5, VtolSurfaceContact::Water),
-        (5.0, Terrain::Bridge, 5, VtolSurfaceContact::Clear),
+        (6.0, Terrain::Bridge, 5, VtolSurfaceContact::Clear),
+        (
+            5.0,
+            Terrain::Bridge,
+            5,
+            VtolSurfaceContact::Ground { fall_levels: 3 },
+        ),
         (
             4.0,
             Terrain::Bridge,
@@ -503,9 +511,12 @@ fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact
             VtolSurfaceContact::Ground { fall_levels: 3 },
         ),
     ] {
-        let step = at_altitude(unit.clone(), altitude + 21.5 / 129.0)
-            .vtol_motion_step(100)
-            .unwrap();
+        let step = at_altitude(
+            unit.clone(),
+            altitude + 21.5 / VERTICAL_KPH_PER_LEVEL_SECOND,
+        )
+        .vtol_motion_step(100)
+        .unwrap();
         assert_eq!(
             step.surface_contact(Hex::new(terrain, elevation)),
             contact,
@@ -531,7 +542,7 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
     assert!(unit.commit_vtol_motion(forged).is_err());
     assert_eq!(unit, before);
     unit.commit_vtol_motion(step).unwrap();
-    assert_eq!(unit.vtol_flight().unwrap().altitude, 12.75);
+    assert_eq!(unit.vtol_flight().unwrap().altitude, 12.35);
     assert_eq!(unit.elevation_level(Hex::new(Terrain::Clear, 0)), 12);
     assert_eq!(restored(&unit), unit);
     let advanced = unit.clone();
@@ -539,26 +550,27 @@ fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lif
     assert_eq!(unit, advanced);
     let report = unit.apply_rotor_hit(RotorHit::Destroy, false).unwrap();
     assert!(report.lost_rotor);
-    assert_eq!(unit.vtol_flight().unwrap().altitude, 12.75);
+    assert_eq!(unit.vtol_flight().unwrap().altitude, 12.35);
     assert_eq!(restored(&unit), unit);
     let mut launch = at_altitude(aircraft(), 15.0);
-    launch.begin_vtol_takeoff(false, false, 2).unwrap();
+    launch.begin_vtol_takeoff(false, 2).unwrap();
     assert!(launch.cancel_vtol_takeoff());
     assert_eq!(launch.vtol_flight().unwrap().altitude, 15.0);
-    launch.begin_vtol_takeoff(false, false, 0).unwrap();
+    launch.begin_vtol_takeoff(false, 0).unwrap();
     assert_eq!(
-        launch.advance_vtol_takeoff(false, false).unwrap(),
+        launch.advance_vtol_takeoff(false).unwrap(),
         VtolTakeoff::LiftedOff
     );
     assert_eq!(launch.vtol_flight().unwrap().altitude, 15.0);
 }
 
-/// Canopy clearance is a horizontal-entry hazard, not an automatic hover collision.
+/// A VTOL at or below the treetops (two levels, TW p. 54) runs into a woods hex it enters,
+/// and the crash is the host's to resolve; hovering in one is no collision by itself.
 #[test]
 fn forest_entry_checks_canopy_only_when_crossing_hexes() {
     for terrain in ['`', '"'] {
         let map = MapAsset::from_cells(&format!("1 3\n.0\n{terrain}0\n.0\n")).unwrap();
-        for (altitude, obstructed) in [(0.0, true), (1.99, true), (2.0, false)] {
+        for (altitude, obstructed) in [(1.0, true), (2.99, true), (3.0, false)] {
             let mut saved =
                 serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), altitude))
                     .unwrap();
@@ -581,14 +593,14 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
             if obstructed {
                 assert_eq!(unit, before);
                 assert!(matches!(
-                    unit.advance_vtol_environment(&map, 1000, false).unwrap(),
-                    VtolEnvironment::ObstacleRequired { .. }
+                    unit.advance_vtol_environment(&map, 1000).unwrap(),
+                    VtolEnvironment::CrashRequired { .. }
                 ));
                 assert_eq!(unit, before);
             }
         }
         let forest = MapAsset::from_cells(&format!("1 1\n{terrain}0\n")).unwrap();
-        let mut hover = landing_aircraft(0.0, 0.0, 0.0);
+        let mut hover = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 3.0);
         assert!(matches!(
             hover.advance_vtol_clear_path(&forest, 100).unwrap(),
             VtolPath::Advanced { .. }
@@ -638,12 +650,13 @@ fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
 #[test]
 fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_motion() {
     let bridge = MapAsset::from_cells("1 1\n/5\n").unwrap();
-    // A high material descent rate exercises a complete bridge-band crossing in one event.
-    let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -387.0), 6.0);
+    // A high material descent rate exercises a complete bridge-band crossing in one event;
+    // the descent is stopped at the deck, the first surface it comes down on.
+    let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -1935.0), 6.0);
     let before = unit.clone();
     let result = unit.advance_vtol_clear_path(&bridge, 100).unwrap();
     assert!(
-        matches!(result, VtolPath::Contact { contact: VtolSurfaceContact::Ground { .. }, altitude, .. } if (4.0..5.0).contains(&altitude))
+        matches!(result, VtolPath::Contact { contact: VtolSurfaceContact::Ground { .. }, altitude, .. } if (5.0..6.0).contains(&altitude))
     );
     assert_eq!(unit, before);
     let mut under = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 3.0);
@@ -669,7 +682,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     let ground = MapAsset::from_cells("1 1\n.1\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -5.0), 1.01);
     let mut replay = restored(&unit);
-    let result = unit.advance_vtol_environment(&ground, 100, false).unwrap();
+    let result = unit.advance_vtol_environment(&ground, 100).unwrap();
     assert!(matches!(
         result,
         VtolEnvironment::Landed {
@@ -678,9 +691,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
         }
     ));
     assert_eq!(
-        replay
-            .advance_vtol_environment(&ground, 100, false)
-            .unwrap(),
+        replay.advance_vtol_environment(&ground, 100).unwrap(),
         result
     );
     assert_eq!(unit, replay);
@@ -690,7 +701,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     let mut crash = at_altitude(landing_aircraft(0.0, 0.0, -129.0), 1.5);
     let before = crash.clone();
     assert!(matches!(
-        crash.advance_vtol_environment(&ground, 100, false).unwrap(),
+        crash.advance_vtol_environment(&ground, 100).unwrap(),
         VtolEnvironment::CrashRequired { levels: 13, .. }
     ));
     assert_eq!(crash, before);
@@ -698,7 +709,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -129.0), -0.5);
     let before = unit.clone();
     assert!(matches!(
-        unit.advance_vtol_environment(&water, 100, false).unwrap(),
+        unit.advance_vtol_environment(&water, 100).unwrap(),
         VtolEnvironment::Flooded { newly: true, .. }
     ));
     assert!(unit.flooded() && unit.is_destroyed());
@@ -715,16 +726,23 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
 fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
     for (tile, altitude, expected) in [
         ("/3", -1.0, Some(VtolSurfaceContact::Elevation)),
+        ("/3", 0.0, Some(VtolSurfaceContact::Elevation)),
         ("/3", 1.0, None),
         ("/3", 2.0, Some(VtolSurfaceContact::Elevation)),
-        ("/3", 3.0, None),
+        ("/3", 3.0, Some(VtolSurfaceContact::Elevation)),
+        ("/3", 4.0, None),
         ("-3", -1.0, Some(VtolSurfaceContact::Elevation)),
-        ("-3", 0.0, None),
+        ("-3", 0.0, Some(VtolSurfaceContact::Elevation)),
+        ("-3", 1.0, None),
         ("~3", -1.0, Some(VtolSurfaceContact::Water)),
+        ("~3", 0.0, Some(VtolSurfaceContact::Water)),
+        ("~3", 1.0, None),
     ] {
         let map = MapAsset::from_cells(&format!("1 3\n.0\n{tile}\n/6\n")).unwrap();
+        // A slight climb keeps the aircraft airborne at ground level in its own hex (a VTOL
+        // at the terrain's level that is not climbing has landed, TW p. 54).
         let mut saved =
-            serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), altitude))
+            serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 1.0), altitude))
                 .unwrap();
         saved["position"]["y"] = 2.into();
         saved["motion"]["point"] =
@@ -746,7 +764,7 @@ fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
     }
 }
 
-/// Even a slow horizontal hill entry needs the host's piloting decision before mutation.
+/// Even a slow horizontal hill entry is a crash the host resolves before any mutation.
 #[test]
 fn slow_hill_entry_defers_landing_and_keeps_continuous_and_hex_positions_consistent() {
     let map = MapAsset::from_cells("1 2\n.2\n.0\n").unwrap();
@@ -757,8 +775,8 @@ fn slow_hill_entry_defers_landing_and_keeps_continuous_and_hex_positions_consist
     let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
     let before = unit.clone();
     assert!(matches!(
-        unit.advance_vtol_environment(&map, 6450, false).unwrap(),
-        VtolEnvironment::ObstacleRequired { .. }
+        unit.advance_vtol_environment(&map, 6450).unwrap(),
+        VtolEnvironment::CrashRequired { .. }
     ));
     assert_eq!(unit, before);
     assert_eq!(unit.position().unwrap().y, 1);
@@ -780,7 +798,7 @@ fn forced_aircraft_descent_reuses_the_shared_clock_and_retains_impact_for_atomic
     for tick in 1..=6 {
         let before = unit.clone();
         let expected = reference.advance(0).unwrap();
-        let step = unit.advance_vtol_fall(0, false).unwrap();
+        let step = unit.advance_vtol_fall(0).unwrap();
         assert_eq!(step, expected);
         assert_eq!(unit.vtol_flight().unwrap().fall, Some(reference));
         if tick < 3 {
@@ -792,7 +810,7 @@ fn forced_aircraft_descent_reuses_the_shared_clock_and_retains_impact_for_atomic
         if tick == 6 {
             assert_eq!(step, FreeFallStep::Impact { levels: 6 });
             assert_eq!(unit, before);
-            assert_eq!(unit.advance_vtol_fall(0, false).unwrap(), step);
+            assert_eq!(unit.advance_vtol_fall(0).unwrap(), step);
             assert_eq!(unit, before);
         }
         unit = restored(&unit);
@@ -818,8 +836,8 @@ fn powered_recovery_brakes_gradually_and_replays_before_returning_to_flight() {
     let before = serde_json::to_value(&unit).unwrap();
     for tick in 0..=9 {
         let mut replay = restored(&unit);
-        let event = unit.advance_vtol_fall(0, false).unwrap();
-        assert_eq!(replay.advance_vtol_fall(0, false).unwrap(), event);
+        let event = unit.advance_vtol_fall(0).unwrap();
+        assert_eq!(replay.advance_vtol_fall(0).unwrap(), event);
         assert_eq!(unit, replay);
         if tick == 9 {
             assert_eq!(event, FreeFallStep::Recovered);
@@ -853,7 +871,7 @@ fn loss_of_power_during_arrest_resumes_descent_and_braking_can_still_hit_ground(
         saved["vtol_flight"]["fall"] = serde_json::json!({"elevation":altitude,"speed":if power == Power::Off {0} else {1},"remaining":1});
         let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         let before = unit.clone();
-        assert_eq!(unit.advance_vtol_fall(0, false).unwrap(), expected);
+        assert_eq!(unit.advance_vtol_fall(0).unwrap(), expected);
         if power == Power::Off {
             assert_eq!(unit.vtol_flight().unwrap().altitude, 4.0);
             assert_eq!(restored(&unit), unit);
@@ -863,15 +881,16 @@ fn loss_of_power_during_arrest_resumes_descent_and_braking_can_still_hit_ground(
     }
 }
 
+/// Recovery needs power, a rotor and, for an internal-combustion VTOL, fuel; a fusion VTOL
+/// never burns any.
 #[test]
-fn recovery_requires_lift_and_honors_the_fusion_fuel_exemption() {
-    for (fusion, free, fuel, rotor, powered, recovers) in [
-        (false, false, 1, true, true, true),
-        (false, true, 0, true, true, false),
-        (true, false, 0, true, true, false),
-        (true, true, 0, true, true, true),
-        (true, true, 0, false, true, false),
-        (true, true, 0, true, false, false),
+fn recovery_requires_lift_and_fusion_aircraft_never_need_fuel() {
+    for (fusion, fuel, rotor, powered, recovers) in [
+        (false, 1, true, true, true),
+        (false, 0, true, true, false),
+        (true, 0, true, true, true),
+        (true, 0, false, true, false),
+        (true, 0, true, false, false),
     ] {
         let mut unit = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 20.0);
         if !rotor {
@@ -888,7 +907,7 @@ fn recovery_requires_lift_and_honors_the_fusion_fuel_exemption() {
         saved["vtol_flight"]["fall"] = serde_json::json!({"elevation":20,"speed":0,"remaining":1});
         let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         assert_eq!(
-            unit.advance_vtol_fall(0, free).unwrap(),
+            unit.advance_vtol_fall(0).unwrap(),
             if recovers {
                 FreeFallStep::Recovered
             } else {

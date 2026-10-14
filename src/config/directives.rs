@@ -65,21 +65,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_slowdown",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_fasaturn",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_nofusionvtolfuel",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_xploss",
         parser: "cf_int",
         permission: P::GOD,
@@ -140,11 +125,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_roll_on_backwalk",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_usedunitstore",
         parser: "cf_int",
         permission: P::GOD,
@@ -166,11 +146,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "btech_tsm_tow_bonus",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_heatcutoff",
         parser: "cf_int",
         permission: P::GOD,
     },
@@ -205,17 +180,7 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_standcareful",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_maxtechtime",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_vtol_ice_causes_fire",
         parser: "cf_int",
         permission: P::GOD,
     },
