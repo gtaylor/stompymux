@@ -24,9 +24,7 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.unit.ammunition_modes.INARC_NEMESIS` | `4096` |  |
 | `btech.unit.ammunition_modes.ARMOR_PIERCING` | `8192` |  |
 | `btech.unit.ammunition_modes.FLECHETTE` | `16384` |  |
-| `btech.unit.ammunition_modes.INCENDIARY` | `32768` |  |
 | `btech.unit.ammunition_modes.PRECISION` | `65536` |  |
-| `btech.unit.ammunition_modes.STINGER` | `131072` |  |
 | `btech.unit.ammunition_modes.CASELESS` | `262144` |  |
 | `btech.unit.ammunition_modes.SEMI_GUIDED` | `524288` |  |
 | `btech.unit.ammunition_modes.EXTENDED_RANGE` | `1048576` |  |

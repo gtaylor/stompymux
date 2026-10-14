@@ -16,8 +16,10 @@ pub struct VehicleSalvoRequest {
     pub glancing: bool,
     pub guidance_blocked: bool,
     pub angel_blocked: bool,
-    /// Missiles intercepted by a separately resolved defensive action.
-    pub intercepted: u8,
+    /// An anti-missile system engaged the flight, shifting the cluster roll.
+    pub ams_engaged: bool,
+    /// Spotter-directed indirect fire gets no Artemis or Narc cluster bonus.
+    pub indirect: bool,
 }
 
 /// One independently located packet and its complete vehicle consequences.
@@ -54,7 +56,6 @@ pub fn resolve_vehicle_salvo(
 /// An admitted shot retains its source independently of optional experience awards.
 #[derive(Clone, Copy, Default)]
 pub(super) struct SalvoContext<'a> {
-    pub woods_damage: bool,
     pub aimed: Option<super::aimed_hit::AimedShot>,
     pub incoming: Option<u8>,
     pub attacker: Option<ObjectId>,
@@ -85,7 +86,6 @@ pub(super) fn resolve_with_context_in_candidate(
     context: SalvoContext<'_>,
 ) -> Result<VehicleSalvoReport> {
     let SalvoContext {
-        woods_damage,
         aimed,
         incoming,
         attacker,
@@ -122,14 +122,8 @@ pub(super) fn resolve_with_context_in_candidate(
         "Weapon mode is not supported"
     );
     ensure!(
-        weapon.beacon_kind(request.ammunition).is_none()
-            && weapon != Weapon::CoolantGun
-            && request.fire_mode != FireMode::Heat,
+        weapon.beacon_kind(request.ammunition).is_none() && request.fire_mode != FireMode::Heat,
         "Vehicle beacon and thermal effects require dedicated target resolution"
-    );
-    ensure!(
-        request.intercepted <= weapon.profile().missiles,
-        "Invalid intercepted missile count"
     );
     ensure!(
         match (request.fire_mode, request.gatling_damage) {
@@ -143,14 +137,6 @@ pub(super) fn resolve_with_context_in_candidate(
     let target_beacon =
         vehicle.has_beacon(BeaconKind::Narc) || vehicle.has_beacon(BeaconKind::Homing);
     let artemis_v = attacker.is_some_and(|shooter| super::artemis::artemis_v(world, shooter));
-    let initial_woods = if woods_damage && let Some(shooter) = attacker {
-        super::woods_absorption::begin_pellets(world, shooter, target, weapon, request.ammunition)?
-    } else {
-        None
-    };
-    let shell_woods = woods_damage
-        && attacker.is_some()
-        && super::woods_absorption::direct_shells(weapon, request.ammunition);
     let mut packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
             weapon,
@@ -158,32 +144,34 @@ pub(super) fn resolve_with_context_in_candidate(
             fire_mode: request.fire_mode,
             gatling_damage: request.gatling_damage,
             distance: Some(request.distance),
-            glancing: request.glancing
-                && (!shell_woods || request.fire_mode.rounds_per_cycle() > 1),
+            glancing: request.glancing,
             guidance_blocked: request.guidance_blocked,
             angel_blocked: request.angel_blocked,
             target_beacon,
             artemis_v,
+            ams_engaged: request.ams_engaged,
+            indirect: request.indirect,
         },
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;
     packets.limit_missiles(incoming);
-    packets.finish_burst_glancing(request.fire_mode, request.glancing && !shell_woods);
+    packets.finish_burst_glancing(request.fire_mode, request.glancing);
     let mut report = VehicleSalvoReport {
         building: None,
         collapse: None,
-        initial_woods,
-        woods: None,
         cluster_roll: packets.cluster_roll,
         missiles_before_defense: None,
+        missiles_intercepted: None,
         groups: Vec::new(),
         inferno: None,
         experience: Vec::new(),
         experience_messages: Vec::new(),
     };
-    if let Some((hits, surviving)) = packets.intercept(weapon, request.intercepted) {
-        report.missiles_before_defense = Some(hits as u8);
+    if weapon.profile().missiles > 0 {
+        report.missiles_before_defense = packets.missiles_before_defense;
+        report.missiles_intercepted = packets.missiles_intercepted;
         if request.ammunition == AmmunitionMode::Inferno {
+            let surviving = packets.missile_count();
             if surviving > 0 {
                 let arc = direction.current(world, target)?;
                 report.inferno = Some(super::vehicle_burning::resolve_inferno_from(
@@ -193,31 +181,6 @@ pub(super) fn resolve_with_context_in_candidate(
             world.btech.validate_action(world)?;
             return Ok(report);
         }
-    }
-    if woods_damage
-        && (weapon.profile().missiles > 0 || request.ammunition == AmmunitionMode::Cluster)
-        && let Some(shooter) = attacker
-    {
-        report.woods = super::woods_absorption::resolve_projectiles(
-            world,
-            shooter,
-            target,
-            weapon,
-            request.ammunition,
-            &mut packets,
-        )?;
-    }
-    if shell_woods && let Some(shooter) = attacker {
-        report.woods = super::woods_absorption::resolve_shells(
-            world,
-            shooter,
-            target,
-            weapon,
-            request.ammunition,
-            &mut packets.damage,
-            request.glancing,
-        )?;
-        packets.damage.retain(|packet| *packet > 0);
     }
     report.building =
         super::building_interior::absorb(world, attacker, target, &mut packets.damage)?;

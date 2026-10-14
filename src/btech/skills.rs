@@ -209,6 +209,17 @@ pub(super) fn unit_gunnery_skill(
     }
 }
 
+/// Gunnery for a TAG designation, a standard weapon attack (Total Warfare p. 142). TAG is a
+/// laser designator, so under per-family gunnery it uses the laser skill; otherwise the
+/// chassis skill, like any weapon.
+pub(super) fn unit_tag_gunnery_target(
+    world: &World,
+    unit: ObjectId,
+    extended: bool,
+) -> Result<i16> {
+    unit_weapon_gunnery_target(world, unit, super::Weapon::SmallLaser, extended)
+}
+
 /// Artillery uses its dedicated skill and fallback, independently of conventional skill policy.
 pub(super) fn operator_artillery_gunnery_target(
     world: &World,

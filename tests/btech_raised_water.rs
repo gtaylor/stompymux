@@ -256,11 +256,6 @@ fn shot_rules() -> ShotRules {
         tsm_tow_bonus: true,
         vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
         aim: AimRules {
-            woods_damage: false,
-            fasa_turning: false,
-            extended_movement: false,
-            extended_ranges: false,
-            hotload_half_minimum: false,
             override_weapon_arcs: true,
         },
         extended_gunnery: false,
@@ -496,7 +491,9 @@ async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World,
 /// ashore, with the same aim and shot whether the lake lies at level 0 or higher.
 #[tokio::test]
 async fn lifting_a_map_keeps_indirect_fire_into_water_unchanged() {
-    let lake = MapAsset::from_cells("1 10\n~2\n~1\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n").unwrap();
+    // A wall between the spotter and the shooter keeps the shooter from seeing the target:
+    // an attacker with its own line of sight may not fire indirectly (TW p. 111).
+    let lake = MapAsset::from_cells("1 10\n~2\n~1\n.0\n.0\n.0\n.0\n=6\n.0\n.0\n.0\n").unwrap();
     let rules = shot_rules();
     let mut outcomes = Vec::new();
     for target_row in [1, 2] {

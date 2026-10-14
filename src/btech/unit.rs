@@ -128,8 +128,14 @@ pub struct Mech {
     /// Selected observer, or this unit itself while spotting.
     #[serde(default)]
     pub(super) spotter: Option<crate::ObjectId>,
+    /// Simulation time of the last weapon this unit launched; a spotter that attacked within
+    /// the turn makes the indirect fire it spots harder (Total Warfare p. 111).
     #[serde(default)]
-    pub(super) spotter_events: super::SpotterEvents,
+    pub(super) last_weapon_fire: Option<i64>,
+    /// Simulation time of this unit's last charge or death-from-above attack; it may not
+    /// spot for the rest of that turn (Total Warfare p. 111).
+    #[serde(default)]
+    pub(super) physical_assault_time: Option<i64>,
     /// Saved correction for the current artillery target.
     #[serde(default)]
     pub(super) artillery_adjustment: u8,
@@ -259,6 +265,9 @@ pub struct Mech {
     pub(super) powered_down_weapons: std::collections::BTreeSet<usize>,
     #[serde(default)]
     pub(super) jammed_weapons: std::collections::BTreeSet<usize>,
+    /// Jammed feeds that cannot be cleared in the field; a subset of `jammed_weapons`.
+    #[serde(default)]
+    pub(super) broken_feeds: std::collections::BTreeSet<usize>,
     #[serde(default)]
     pub(super) unjam: Option<super::Unjam>,
     #[serde(default)]
@@ -383,6 +392,7 @@ super::saved_parts::saved_parts!(Mech {
         reconstructed_cooling,
         powered_down_weapons,
         jammed_weapons,
+        broken_feeds,
         spent_launchers,
         fire_modes,
         ammunition_modes,
@@ -430,7 +440,8 @@ super::saved_parts::saved_parts!(Mech {
         supercharger_scheduled_last,
         dumping,
         unjam,
-        spotter_events,
+        last_weapon_fire,
+        physical_assault_time,
     ],
     // The stagger phase wraps every second on a running unit and is stored as a timer; the
     // object stays in the live part so its blanked text never flips between present and absent.
@@ -678,6 +689,7 @@ impl Mech {
         if let Some(index) = weapon {
             self.weapon_failures.remove(&index);
             self.jammed_weapons.remove(&index);
+            self.broken_feeds.remove(&index);
             self.spent_launchers.remove(&index);
             self.powered_down_weapons.remove(&index);
             self.weapon_recycle.remove(&index);
@@ -748,6 +760,7 @@ impl Mech {
         self.ammunition_sections = remap_map(&remap, &self.ammunition_sections);
         self.weapon_recycle = remap_map(&remap, &self.weapon_recycle);
         self.jammed_weapons = remap_set(&remap, &self.jammed_weapons);
+        self.broken_feeds = remap_set(&remap, &self.broken_feeds);
         self.spent_launchers = remap_set(&remap, &self.spent_launchers);
         self.powered_down_weapons = remap_set(&remap, &self.powered_down_weapons);
         self.weapon_failures = remap_map(&remap, &self.weapon_failures);
@@ -924,7 +937,8 @@ impl Mech {
             stagger: Default::default(),
             tag: Default::default(),
             spotter: None,
-            spotter_events: Default::default(),
+            last_weapon_fire: None,
+            physical_assault_time: None,
             artillery_adjustment: 0,
             signature: Default::default(),
             scanner_perception: super::scanner::default_perception(),
@@ -971,6 +985,7 @@ impl Mech {
                 .collect(),
             weapon_recycle: BTreeMap::new(),
             jammed_weapons: Default::default(),
+            broken_feeds: Default::default(),
             unjam: None,
             dumping: None,
             spent_launchers: loadout
@@ -1192,10 +1207,14 @@ impl Mech {
         self.overheat_clock.validate()?;
         self.stagger.validate()?;
         self.tag.validate()?;
-        self.spotter_events.validate()?;
         ensure!(
             self.spotter.is_none_or(|id| id.0 > 0),
             "Invalid spotter identity"
+        );
+        ensure!(
+            self.last_weapon_fire.is_none_or(|time| time >= 0)
+                && self.physical_assault_time.is_none_or(|time| time >= 0),
+            "Invalid attack timestamp"
         );
         ensure!(
             self.jump_stabilization <= 12 && (self.jump_stabilization == 0 || !self.is_destroyed()),
@@ -1271,9 +1290,8 @@ impl Mech {
             "Invalid prone motion or facing"
         );
         ensure!(
-            self.target_lock
-                .is_none_or(|lock| lock.remaining() <= 8 && self.power == super::Power::Running),
-            "Invalid target lock countdown or power state"
+            self.target_lock.is_none() || self.power == super::Power::Running,
+            "Invalid target lock power state"
         );
         ensure!(self.stun_remaining <= 10, "Invalid crew stun countdown");
         super::crew_recovery::validate(&self.crew_recovery, self.pilot(), self.pilot_injuries())?;
@@ -1381,6 +1399,10 @@ impl Mech {
                 .get(*index)
                 .is_some_and(|mount| mount.weapon.profile().ammunition_per_ton > 0)),
             "Invalid jammed weapon"
+        );
+        ensure!(
+            self.broken_feeds.is_subset(&self.jammed_weapons),
+            "Broken feed without a jam"
         );
         ensure!(
             self.unjam
@@ -1585,9 +1607,7 @@ pub(super) fn replace_critical_modes(
         "iNarc_Nemesis",
         "AP",
         "Flechette",
-        "Incendiary",
         "Precision",
-        "Stinger",
         "Caseless",
         "Sguided",
         "ExtendedRange",

@@ -328,7 +328,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00162
-//|---Illuminate an enemy within fifteen hexes, or stop with nil; requires working TAG and a ready timer.
+//|---Make a TAG attack roll at an enemy within fifteen hexes (ranges 5/9/15), or stop with nil; requires working TAG and a ready timer. A miss designates nothing and recycles the TAG.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param target integer?
@@ -462,7 +462,7 @@
 // lua-types-begin btech 00202
 //|---Fire under configured tactical rules and stage cockpit notices in the current callback transaction.
 //|---Requires the conscious assigned pilot; the calling script owns authority to act as that pilot.
-//|---An omitted target uses cockpit selection, including automatic coolant self-selection.
+//|---An omitted target uses cockpit selection.
 //|---An IDF observer takes precedence when the firer has no unit lock, even with explicit arguments.
 //|---Explicit coordinates select an occupant for conventional weapons or use terrain effects when empty.
 //|---Artillery always uses coordinates and queues its impact. Explicit requests do not change saved locks.
@@ -727,15 +727,6 @@
 //|function btech_unit.caseless(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00265
-//|---Toggle incendiary autocannon ammunition with cockpit feedback.
-//|---@param dbref integer
-//|---@param pilot integer
-//|---@param weapon integer Zero-based weapon index.
-//|---@return AmmunitionMode
-//|function btech_unit.incendiary(dbref, pilot, weapon) end
-// lua-types-end
-
 // lua-types-begin btech 00266
 //|---Toggle inferno missile ammunition with cockpit feedback.
 //|---@param dbref integer
@@ -809,7 +800,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00274
-//|---Set the assigned pilot's friendly-fire safety. Coolant guns are exempt.
+//|---Set the assigned pilot's friendly-fire safety.
 //|---@param dbref integer
 //|---@param player integer
 //|---@param enabled boolean
@@ -1102,17 +1093,8 @@
 //|function btech_unit.sguided(dbref, pilot, weapon) end
 // lua-types-end
 
-// lua-types-begin btech 00315
-//|---Toggle Stinger ammunition on a supported recycled missile launcher.
-//|---@param dbref integer
-//|---@param pilot integer
-//|---@param weapon integer
-//|---@return AmmunitionMode
-//|function btech_unit.stinger(dbref, pilot, weapon) end
-// lua-types-end
-
 // lua-types-begin btech 00316
-//|---Select an acquired friendly spotter; use own dbref to declare spotting, or nil to stop.
+//|---Select a friendly declared spotter on the same battlefield; use own dbref to declare spotting, or nil to stop.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param spotter integer?

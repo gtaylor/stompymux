@@ -99,7 +99,7 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
         CriticalDefinition {
             equipment: format!("Ammo_{}", Weapon::ClanArrowIv.name()),
             data: "2".into(),
-            modes: vec!["Cluster".into(), "Halfton".into()],
+            modes: vec!["Cluster".into()],
         },
     );
     let loadout = VehicleLoadout::resolve(&template).unwrap();
@@ -108,8 +108,8 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
         loadout.weapons[0].initial_ammunition_mode,
         AmmunitionMode::Cluster
     );
-    assert_eq!(loadout.ammunition[0].capacity, 2);
-    assert!(loadout.ammunition[0].half_ton);
+    assert_eq!(loadout.ammunition[0].capacity, 5);
+    assert!(!loadout.ammunition[0].half_ton);
     template
         .sections
         .get_mut(&VehicleSection::Turret)
@@ -117,7 +117,7 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
         .criticals
         .get_mut(&1)
         .unwrap()
-        .data = "3".into();
+        .data = "6".into();
     assert!(
         format!("{:#}", VehicleLoadout::resolve(&template).unwrap_err()).contains("Turret slot 2")
     );

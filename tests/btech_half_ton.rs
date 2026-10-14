@@ -1,4 +1,5 @@
-//! Explicit half-ton ammunition sizing, type independence and unchanged reference assets.
+//! Explicit half-ton ammunition sizing for machine guns, rejection elsewhere and unchanged
+//! reference assets.
 use stompymux_rs::*;
 
 /// Replace the fixture's bin while preserving its other ordinary construction facts.
@@ -18,14 +19,28 @@ fn definition(weapon: Weapon, rounds: u16, flags: &[&str]) -> MechTemplate {
     template
 }
 
-/// Capacity rounds down for odd ammunition counts; mass and explosion potential follow actual rounds.
+/// Machine guns size half-ton lots; mass and explosion potential follow actual rounds. Every
+/// other ammunition weapon refuses the flag (TechManual p. 48).
 #[test]
 fn half_ton_capacity_modes_mass_and_hazards() {
     for weapon in Weapon::ALL
         .iter()
         .copied()
-        .filter(|w| w.profile().ammunition_per_ton > 0)
+        .filter(|w| w.profile().ammunition_per_ton > 0 && !w.allows_half_ton_bins())
     {
+        let capacity = u16::from(weapon.profile().ammunition_per_ton / 2);
+        let error = Mech::from_template(definition(weapon, capacity, &["Halfton"])).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("Half-ton ammunition bins are limited to machine guns"),
+            "{weapon:?}: {error:#}"
+        );
+    }
+    for weapon in Weapon::ALL
+        .iter()
+        .copied()
+        .filter(|w| w.allows_half_ton_bins())
+    {
+        assert!(weapon.supports_gatling());
         let full = u16::from(weapon.profile().ammunition_per_ton);
         let capacity = full / 2;
         for rounds in [0, capacity] {
@@ -64,10 +79,7 @@ fn half_ton_capacity_modes_mass_and_hazards() {
         vec!["Halfton", "LBX/Cluster"],
         vec!["LBX/Cluster", "Halfton"],
     ] {
-        let unit = Mech::from_template(definition(Weapon::Lbx10, 5, &flags)).unwrap();
-        let loadout = unit.loadout().unwrap();
-        assert_eq!(loadout.ammunition[0].mode, AmmunitionMode::Cluster);
-        assert_eq!(loadout.ammunition[0].capacity, 5);
+        assert!(Mech::from_template(definition(Weapon::Lbx10, 5, &flags)).is_err());
     }
     for flags in [
         vec!["Halfton", "Halfton"],

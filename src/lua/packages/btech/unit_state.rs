@@ -156,7 +156,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("target_lock", detached(lua, &vehicle.target_selection())?)?;
             state.set("artillery_adjustment", vehicle.artillery_adjustment())?;
             state.set("spotter", vehicle.spotter().map(|id| id.0))?;
-            state.set("spotter_events", detached(lua, vehicle.spotter_events())?)?;
+            state.set("last_weapon_fire", vehicle.last_weapon_fire())?;
             state.set("electronics", detached(lua, &vehicle.electronics())?)?;
             state.set("flooded", vehicle.flooded())?;
             state.set("crew_killed", vehicle.crew_killed())?;
@@ -290,7 +290,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("map_slot", unit.map_slot())?;
         state.set("target_lock", detached(lua, &unit.target_selection())?)?;
         state.set("spotter", unit.spotter().map(|id| id.0))?;
-        state.set("spotter_events", detached(lua, unit.spotter_events())?)?;
+        state.set("last_weapon_fire", unit.last_weapon_fire())?;
+        state.set("physical_assault_time", unit.physical_assault_time())?;
         state.set("artillery_adjustment", unit.artillery_adjustment())?;
         state.set("tag", detached(lua, &unit.tag())?)?;
         state.set(

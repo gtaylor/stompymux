@@ -1202,6 +1202,8 @@ fn finish_landing_inner(
                     notices.extend(report.notices);
                 }
                 dfa = true;
+                // A unit that made a death from above attack may not spot this turn.
+                super::spotter::record_physical_assault(world, id);
             }
             Err(error) => notices.push(Notice {
                 unit: id,

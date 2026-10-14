@@ -73,12 +73,10 @@ pub(super) fn resolve_in_action(
             observers.extend(observer_messages(&before, notice.unit, &notice.text));
         }
     }
-    let mut failure_private = Vec::new();
-    if let Some(messages) =
-        super::launch_feedback::failure_messages((&report).into(), observers, &mut failure_private)
-    {
+    let feedback: super::launch_feedback::LaunchFeedback = (&report).into();
+    if let Some(messages) = super::launch_feedback::failure_messages(&feedback) {
         return Ok(super::firing::FiringAction {
-            pilot_notices: failure_private,
+            pilot_notices: Vec::new(),
             report: report.into(),
             messages,
         });
@@ -101,9 +99,7 @@ pub(super) fn resolve_in_action(
             target_number: report.aim.subtotal(),
             glancing: report.glancing,
             hit: report.hit,
-            observer_hit: report.salvo.is_some()
-                || report.cooling.is_some()
-                || report.heat_transfer > 0,
+            observer_hit: report.salvo.is_some() || report.heat_transfer > 0,
             coordinate,
             notices,
             pilot_notices,
@@ -121,6 +117,13 @@ pub(super) fn resolve_in_action(
             messages.extend(observer_messages(&before, notice.unit, &notice.text));
         }
     }
+    let base = messages.len();
+    messages.extend(super::launch_feedback::consequence_messages(
+        feedback,
+        observers,
+        &mut private,
+        base,
+    ));
     Ok(super::firing::FiringAction {
         pilot_notices: private,
         report: report.into(),

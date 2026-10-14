@@ -52,10 +52,9 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
         .criticals
         .get_mut(&2)
         .unwrap();
+    // An autocannon bin cannot be a half-ton lot (TechManual p. 48).
     bin.modes.push("Halfton".into());
-    let half_bin = template.mass().unwrap();
-    assert_eq!(half_bin.design_total, mass.design_total - 512);
-    assert_eq!(half_bin.total, empty_bin.total);
+    assert!(template.mass().is_err());
     let truck = VehicleTemplate::parse(
         "Flatbed_Truck",
         include_str!("../game/units/Flatbed_Truck.toml"),

@@ -734,13 +734,14 @@ async fn artillery_observed_launch_and_link_revalidation() {
     );
 }
 
-/// Hotloaded artillery shares native/Lua controls, jams without launching and spends once on success.
+/// Hotloaded artillery shares native/Lua controls, never jams and spends once per launch.
 #[tokio::test]
-async fn artillery_hotload_launch_and_jam() {
-    for jam in [true, false] {
+async fn artillery_hotload_launches_without_jamming() {
+    // Hot-loaded launchers never jam (Tactical Operations p. 101), even on a low firing roll.
+    for low_roll in [true, false] {
         let (_dir, config, mut world, map, shooter, index) = fixture(&[]).await;
         let seed = (0..=255)
-            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() <= 3) == jam)
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() <= 3) == low_roll)
             .unwrap();
         world
             .btech
@@ -770,16 +771,13 @@ async fn artillery_hotload_launch_and_jam() {
         assert!(text.contains("toggled on"), "{text}");
         assert_eq!(lua.world().btech, native.world().btech);
         let result: (bool, bool, u8) = lua.eval_callback(&format!("local r=btech.unit.fire({},1,{index}); return r.launched,r.jammed,r.expenditure.heat", shooter.0)).unwrap();
-        assert_eq!(result, (!jam, jam, if jam { 0 } else { 10 }));
+        assert_eq!(result, (true, false, 10));
         support::run_text(&native, &config, ObjectId(1), 1, &format!("fire {index}"));
         assert_eq!(lua.world().btech, native.world().btech);
-        assert_eq!(
-            lua.world().btech.maps()[&map].artillery_shots().len(),
-            usize::from(!jam)
-        );
+        assert_eq!(lua.world().btech.maps()[&map].artillery_shots().len(), 1);
         assert_eq!(
             lua.world().btech.constructed_units()[&shooter].ammunition()[0],
-            if jam { 5 } else { 4 }
+            4
         );
         let saved = lua.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
@@ -878,7 +876,7 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
     }
 }
 
-/// An off-screen radio observer feeds the existing artillery launch path after its delay completes.
+/// An observer the launcher cannot see feeds the artillery launch path as soon as it is selected.
 #[tokio::test]
 async fn artillery_fires_after_radio_observer_connection() {
     use std::{cell::RefCell, rc::Rc};
@@ -905,9 +903,6 @@ async fn artillery_fires_after_radio_observer_connection() {
             })
             .unwrap();
         select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
-        for _ in 0..10 {
-            advance_battle_spotter_links(&mut world).unwrap();
-        }
         assert_eq!(
             world.btech.constructed_units()[&shooter].spotter(),
             Some(observer)

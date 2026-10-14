@@ -276,19 +276,6 @@ impl Mech {
                     {
                         weapon.profile_for_ammunition(hotload_supply).damage
                             * weapon.profile().missiles.max(1)
-                    } else if self.ammunition_mode(index)? == super::AmmunitionMode::Incendiary
-                        && self
-                            .weapon_recycle
-                            .get(&index)
-                            .is_some_and(|remaining| *remaining > 0)
-                        && loadout.ammunition.iter().enumerate().any(|(i, bin)| {
-                            bin.weapon == weapon
-                                && bin.mode == super::AmmunitionMode::Incendiary
-                                && self.ammunition[i] > 0
-                                && !self.critical_unavailable(bin.location)
-                        })
-                    {
-                        weapon.profile().damage
                     } else if weapon.jammed_explosion_damage() > 0 && self.weapon_jammed(index)? {
                         weapon.jammed_explosion_damage()
                     } else {
@@ -483,7 +470,6 @@ impl Mech {
             self.carried_club = None;
         }
         if self.is_destroyed() {
-            super::spotter_events::clear(&mut self.spotter_events);
             self.self_destruct = None;
             self.crew_recovery.clear();
             self.stagger = Default::default();

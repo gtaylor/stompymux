@@ -68,7 +68,7 @@ async fn vehicle_feed_clearing_replays_skill_success_and_failure() {
             begin_battle_unjam(&mut world, id, ObjectId(1), 0).unwrap();
             for _ in 0..59 {
                 assert!(
-                    advance_battle_unjamming(&mut world, false, false)
+                    advance_battle_unjamming(&mut world, false)
                         .unwrap()
                         .is_empty()
                 );
@@ -77,10 +77,10 @@ async fn vehicle_feed_clearing_replays_skill_success_and_failure() {
             let mut replay = world.clone();
             replay.btech =
                 serde_json::from_value(serde_json::to_value(&world.btech).unwrap()).unwrap();
-            let messages = advance_battle_unjamming(&mut world, false, false).unwrap();
+            let messages = advance_battle_unjamming(&mut world, false).unwrap();
             assert_eq!(
                 messages,
-                advance_battle_unjamming(&mut replay, false, false).unwrap()
+                advance_battle_unjamming(&mut replay, false).unwrap()
             );
             assert_eq!(world.btech, replay.btech);
             assert!(
@@ -159,9 +159,9 @@ async fn vehicle_feed_clearing_admission_lua_rollback_and_silent_expiry() {
             assert!(serde_json::from_value::<BtechState>(bad).is_err());
         }
         for _ in 0..59 {
-            advance_battle_unjamming(&mut world, false, false).unwrap();
+            advance_battle_unjamming(&mut world, false).unwrap();
         }
-        let messages = advance_battle_unjamming(&mut world, false, false).unwrap();
+        let messages = advance_battle_unjamming(&mut world, false).unwrap();
         assert_eq!(messages.is_empty(), condition != "empty");
         assert!(world.btech.vehicles()[&id].unjam().is_none());
         assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
@@ -170,7 +170,7 @@ async fn vehicle_feed_clearing_admission_lua_rollback_and_silent_expiry() {
 }
 
 #[tokio::test]
-async fn vehicle_feed_clearing_character_xp_and_output_roll_back_together() {
+async fn vehicle_feed_clearing_output_rolls_back_together() {
     let (_dir, config, mut world, id) =
         fixture(include_str!("../game/units/Demolisher.toml")).await;
     jam(&mut world, id);
@@ -219,20 +219,21 @@ async fn vehicle_feed_clearing_character_xp_and_output_roll_back_together() {
     begin_battle_unjam(&mut world, id, ObjectId(1), 0).unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
-    assert!(advance_battle_unjamming(&mut scripts.world_mut(), true, true).is_err());
+    assert!(advance_battle_unjamming(&mut scripts.world_mut(), true).is_err());
     assert_eq!(scripts.world().btech, before);
     for _ in 0..59 {
-        advance_battle_unjamming_action(&scripts, &config, true, true).unwrap();
+        advance_battle_unjamming_action(&scripts, &config, true).unwrap();
     }
     assert!(scripts.drain_outbox().is_empty());
     assert!(support::drain_traces(&scripts, TraceTopic::PilotingExperience).is_empty());
-    advance_battle_unjamming_action(&scripts, &config, true, true).unwrap();
+    advance_battle_unjamming_action(&scripts, &config, true).unwrap();
     assert!(
         !scripts.world().btech.vehicles()[&id]
             .weapon_jammed(0)
             .unwrap()
     );
-    assert!(!support::drain_traces(&scripts, TraceTopic::PilotingExperience).is_empty());
+    // Clearing a jam is a Gunnery Skill Roll (Tactical Operations p. 73): no piloting experience.
+    assert!(support::drain_traces(&scripts, TraceTopic::PilotingExperience).is_empty());
 }
 
 #[tokio::test]
@@ -286,7 +287,7 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
     seed(&mut world, id, value);
     begin_battle_unjam(&mut world, id, ObjectId(1), 0).unwrap();
     for _ in 0..59 {
-        advance_battle_unjamming(&mut world, false, false).unwrap();
+        advance_battle_unjamming(&mut world, false).unwrap();
     }
     let mut unseen = world.clone();
     unseen
@@ -295,8 +296,8 @@ async fn vehicle_feed_clearing_broadcasts_only_to_current_contacts() {
             record["contacts"] = serde_json::json!({});
         })
         .unwrap();
-    let visible = advance_battle_unjamming(&mut world, false, false).unwrap();
-    let hidden = advance_battle_unjamming(&mut unseen, false, false).unwrap();
+    let visible = advance_battle_unjamming(&mut world, false).unwrap();
+    let hidden = advance_battle_unjamming(&mut unseen, false).unwrap();
     assert!(visible.iter().any(
         |(recipient, text)| *recipient == MessageTarget::Unit(observer)
             && text.contains("ejects a mangled shell")

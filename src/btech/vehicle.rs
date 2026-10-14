@@ -161,7 +161,7 @@ pub struct Vehicle {
     pub(super) friendly_fire_safety: bool,
     pub(super) auto_fall: bool,
     pub(super) ams_enabled: bool,
-    /// Passive weapon heat and coolant credit; ground vehicles do not sample overheating.
+    /// Passive weapon heat; ground vehicles do not sample overheating.
     pub(super) weapon_heat: f64,
     pub(super) inferno_remaining: u32,
     pub(super) building_entry: Option<super::BuildingEntry>,
@@ -176,7 +176,9 @@ pub struct Vehicle {
     pub(super) network_automation: super::NetworkAutomation,
     pub(super) electronics: super::Electronics,
     pub(super) spotter: Option<crate::ObjectId>,
-    pub(super) spotter_events: super::SpotterEvents,
+    /// Simulation time of the last weapon this vehicle launched; a spotter that attacked
+    /// within the turn makes the indirect fire it spots harder (Total Warfare p. 111).
+    pub(super) last_weapon_fire: Option<i64>,
     pub(super) tag: super::TagState,
     pub(super) contacts: BTreeMap<crate::ObjectId, super::Contact>,
     pub(super) fire_modes: BTreeMap<usize, super::FireMode>,
@@ -185,6 +187,9 @@ pub struct Vehicle {
     pub(super) unjam: Option<super::Unjam>,
     pub(super) pod_removal: Option<u8>,
     pub(super) jammed_weapons: std::collections::BTreeSet<usize>,
+    /// Jammed feeds that cannot be cleared in the field; a subset of `jammed_weapons`.
+    #[serde(default)]
+    pub(super) broken_feeds: std::collections::BTreeSet<usize>,
     #[serde(default)]
     pub(super) component_failures: Vec<super::ComponentFailure<super::VehicleCriticalLocation>>,
     pub(super) weapon_failures: BTreeMap<usize, super::EquipmentFailure>,
@@ -372,7 +377,7 @@ struct VehicleRecord {
     electronics: super::Electronics,
     spotter: Option<crate::ObjectId>,
     #[serde(default)]
-    spotter_events: super::SpotterEvents,
+    last_weapon_fire: Option<i64>,
     #[serde(default)]
     tag: super::TagState,
     contacts: BTreeMap<crate::ObjectId, super::Contact>,
@@ -385,6 +390,8 @@ struct VehicleRecord {
     #[serde(default)]
     pod_removal: Option<u8>,
     jammed_weapons: std::collections::BTreeSet<usize>,
+    #[serde(default)]
+    broken_feeds: std::collections::BTreeSet<usize>,
     #[serde(default)]
     component_failures: Vec<super::ComponentFailure<super::VehicleCriticalLocation>>,
     weapon_failures: BTreeMap<usize, super::EquipmentFailure>,
@@ -484,6 +491,7 @@ super::saved_parts::saved_parts!(Vehicle {
         ammunition_modes,
         ammunition_sections,
         jammed_weapons,
+        broken_feeds,
         component_failures,
         weapon_failures,
         powered_down_weapons,
@@ -510,7 +518,7 @@ super::saved_parts::saved_parts!(Vehicle {
         inferno_remaining,
         unjam,
         pod_removal,
-        spotter_events,
+        last_weapon_fire,
     ],
     live_always: [
         motion,
@@ -674,6 +682,7 @@ impl Vehicle {
         self.ammunition_sections = super::unit::remap_map(&remap, &self.ammunition_sections);
         self.weapon_recycle = super::unit::remap_map(&remap, &self.weapon_recycle);
         self.jammed_weapons = super::unit::remap_set(&remap, &self.jammed_weapons);
+        self.broken_feeds = super::unit::remap_set(&remap, &self.broken_feeds);
         self.spent_launchers = super::unit::remap_set(&remap, &self.spent_launchers);
         self.powered_down_weapons = super::unit::remap_set(&remap, &self.powered_down_weapons);
         self.weapon_failures = super::unit::remap_map(&remap, &self.weapon_failures);
@@ -810,6 +819,7 @@ impl Vehicle {
         if let Some(index) = weapon {
             self.weapon_failures.remove(&index);
             self.jammed_weapons.remove(&index);
+            self.broken_feeds.remove(&index);
             self.spent_launchers.remove(&index);
             self.powered_down_weapons.remove(&index);
             self.weapon_recycle.remove(&index);
@@ -993,7 +1003,7 @@ impl Vehicle {
             network_automation: Default::default(),
             electronics: Default::default(),
             spotter: None,
-            spotter_events: Default::default(),
+            last_weapon_fire: None,
             tag: Default::default(),
             contacts: Default::default(),
             fire_modes,
@@ -1002,6 +1012,7 @@ impl Vehicle {
             unjam: None,
             pod_removal: None,
             jammed_weapons: Default::default(),
+            broken_feeds: Default::default(),
             component_failures: Vec::new(),
             weapon_failures: BTreeMap::new(),
             powered_down_weapons: Default::default(),
@@ -1061,7 +1072,7 @@ impl Vehicle {
         self.engine_destroyed
     }
 
-    /// Stored weapon heat, including coolant credit; never sampled as ground-vehicle overheating.
+    /// Stored weapon heat; never sampled as ground-vehicle overheating.
     pub fn weapon_heat(&self) -> f64 {
         self.weapon_heat
     }
@@ -1097,7 +1108,6 @@ impl Vehicle {
 
     /// Cancel active controls once when a vehicle becomes a wreck, preserving material state.
     pub(super) fn finish_destruction(&mut self) {
-        super::spotter_events::clear(&mut self.spotter_events);
         self.self_destruct = None;
         self.hide_elapsed = None;
         self.lose_vtol_lift();
@@ -1543,18 +1553,6 @@ impl Vehicle {
         Ok(())
     }
 
-    /// Apply the common surviving-inventory rule after a misload has resolved vehicle damage.
-    pub(super) fn spend_surviving_draws(
-        &mut self,
-        draws: Vec<super::AmmunitionDraw>,
-    ) -> Vec<super::AmmunitionDraw> {
-        let spent = super::ammunition_feed::spend_surviving_draws(&mut self.ammunition, draws);
-        if !spent.is_empty() {
-            self.live_mass.invalidate();
-        }
-        spent
-    }
-
     /// Apply one protection phase, returning overflow for the combat caller to handle.
     /// Vehicle armor uses the selected hull face; the Mech rear-armor selector has no effect.
     /// This primitive does not transfer damage or roll criticals, and turret loss preserves the hull.
@@ -1610,6 +1608,8 @@ impl Vehicle {
                 self.turret_offset = 0.0;
             }
             self.jammed_weapons
+                .retain(|index| loadout.weapons[*index].criticals[0].section != section);
+            self.broken_feeds
                 .retain(|index| loadout.weapons[*index].criticals[0].section != section);
             self.weapon_failures
                 .retain(|index, _| loadout.weapons[*index].criticals[0].section != section);
@@ -1750,7 +1750,7 @@ impl Vehicle {
             network_automation: record.network_automation,
             electronics: record.electronics,
             spotter: record.spotter,
-            spotter_events: record.spotter_events,
+            last_weapon_fire: record.last_weapon_fire,
             tag: record.tag,
             contacts: record.contacts,
             fire_modes: record.fire_modes,
@@ -1759,6 +1759,7 @@ impl Vehicle {
             unjam: record.unjam,
             pod_removal: record.pod_removal,
             jammed_weapons: record.jammed_weapons,
+            broken_feeds: record.broken_feeds,
             component_failures: record.component_failures,
             weapon_failures: record.weapon_failures,
             weapon_recycle: record.weapon_recycle,
@@ -2111,6 +2112,10 @@ impl Vehicle {
             "Invalid vehicle ammunition-feed jam"
         );
         ensure!(
+            self.broken_feeds.is_subset(&self.jammed_weapons),
+            "Broken feed without a jam"
+        );
+        ensure!(
             self.unjam
                 .is_none_or(|attempt| (1..=60).contains(&attempt.remaining)
                     && loadout
@@ -2121,9 +2126,8 @@ impl Vehicle {
         );
         super::weapon_power::validate(&self.powered_down_weapons, &loadout.weapons)?;
         ensure!(
-            self.target_lock
-                .is_none_or(|lock| lock.remaining() <= 8 && self.power == super::Power::Running),
-            "Invalid vehicle target lock countdown or power state"
+            self.target_lock.is_none() || self.power == super::Power::Running,
+            "Invalid vehicle target lock power state"
         );
         if let Some(selection) = self.aimed_section {
             selection.validate()?;
@@ -2132,7 +2136,10 @@ impl Vehicle {
             self.spotter.is_none_or(|id| id.0 > 0),
             "Invalid spotter identity"
         );
-        self.spotter_events.validate()?;
+        ensure!(
+            self.last_weapon_fire.is_none_or(|time| time >= 0),
+            "Invalid attack timestamp"
+        );
         self.tag.validate()?;
         ensure!(
             self.c3_network != Some(0) && self.c3i_network != Some(0),

@@ -221,8 +221,6 @@ fn weapon_line<S>(mount: WeaponInspection<S>, location: &str) -> String {
         },
         if mount.ammunition_mode == super::AmmunitionMode::Inferno {
             " [Inferno]"
-        } else if mount.ammunition_mode == super::AmmunitionMode::Incendiary {
-            " [Incendiary]"
         } else if mount.ammunition_mode == super::AmmunitionMode::Caseless {
             " [CASELESS]"
         } else if mount.ammunition_mode == super::AmmunitionMode::ArmorPiercing {
@@ -346,7 +344,6 @@ pub(super) fn resolve_in_action(
 ) -> Result<FiringAction> {
     let operator = super::combat_operator::admit(world, shooter, pilot)?;
     let shooter = operator.source.unit;
-    super::spotter::check_firing_role(world, shooter)?;
     let mechanics = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
         unit.weapon_mechanics(index)?
     });
@@ -461,12 +458,10 @@ pub(super) fn resolve_in_action(
             hex_messages,
         )
     };
-    let mut failure_private = Vec::new();
-    if let Some(messages) =
-        super::launch_feedback::failure_messages((&report).into(), observers, &mut failure_private)
-    {
+    let feedback: super::launch_feedback::LaunchFeedback = (&report).into();
+    if let Some(messages) = super::launch_feedback::failure_messages(&feedback) {
         return Ok(FiringAction {
-            pilot_notices: failure_private,
+            pilot_notices: Vec::new(),
             report: report.into(),
             messages,
         });
@@ -490,11 +485,8 @@ pub(super) fn resolve_in_action(
             glancing: report.glancing,
             hit: report.salvo.is_some()
                 || report.narc.as_ref().is_some_and(|pod| pod.hit)
-                || report.heat_transfer > 0
-                || report.cooling.is_some(),
-            observer_hit: report.salvo.is_some()
-                || report.heat_transfer > 0
-                || report.cooling.is_some(),
+                || report.heat_transfer > 0,
+            observer_hit: report.salvo.is_some() || report.heat_transfer > 0,
             coordinate: report.coordinate.map(|_| target_hex),
             notices,
             pilot_notices,
@@ -517,6 +509,13 @@ pub(super) fn resolve_in_action(
             messages.extend(super::observer_messages(&before, notice.unit, &notice.text));
         }
     }
+    let base = messages.len();
+    messages.extend(super::launch_feedback::consequence_messages(
+        feedback,
+        observers,
+        &mut private,
+        base,
+    ));
     Ok(FiringAction {
         pilot_notices: private,
         report: report.into(),

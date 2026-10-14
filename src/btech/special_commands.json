@@ -331,13 +331,6 @@
     },
     {
       "class_mask": 0,
-      "syntax": "INCENDIARY <weapnum>",
-      "description": "Sets/Unsets the autocannon to fire incendiary rounds.",
-      "restricted": false,
-      "category": false
-    },
-    {
-      "class_mask": 0,
       "syntax": "INFERNO <weapnum>",
       "description": "Sets/Unsets the SRM launcher to shoot inferno missiles",
       "restricted": false,
@@ -361,13 +354,6 @@
       "class_mask": 0,
       "syntax": "SGUIDED <weapnum>",
       "description": "Sets weapon to and from Sguide Mode",
-      "restricted": false,
-      "category": false
-    },
-    {
-      "class_mask": 0,
-      "syntax": "STINGER <weaponum>",
-      "description": "Sets weapon to and from Stinger Mode.",
       "restricted": false,
       "category": false
     },

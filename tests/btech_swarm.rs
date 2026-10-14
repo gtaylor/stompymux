@@ -75,11 +75,6 @@ async fn fixture(
 /// Deterministic conventional firing policy for shared damage checks.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -199,57 +194,13 @@ fn fire_with_rules(
         },
     )
     .unwrap();
-    let (salvo, ams) = stompymux_rs::by_chassis!(report, |report| (report.salvo, report.ams));
-    assert!(ams.is_none());
+    let salvo = stompymux_rs::by_chassis!(report, |report| report.salvo);
     salvo.map(|salvo| {
         let TargetSalvo::Swarm(report) = salvo else {
             panic!("Swarm report missing")
         };
         report
     })
-}
-
-/// Missiles stopped by cover are spent at that target, not returned to the next swarm hop.
-#[tokio::test]
-async fn swarm_woods_absorption_preserves_pre_cover_flight_accounting() {
-    for source in templates() {
-        for recipient in [templates()[0].clone(), templates()[2].clone()] {
-            let (_dir, config, mut world, shooter, target) =
-                fixture(&source, &recipient, false).await;
-            let next = candidate(&mut world, &config, target, &templates()[2], 0);
-            let map = world.btech.units()[&target].map.unwrap();
-            world
-                .btech
-                .rewrite_map_record(map, |record| {
-                    record["terrain"][0] =
-                        serde_json::to_value(Hex::new(Terrain::HeavyWoods, 0)).unwrap();
-                })
-                .unwrap();
-            acquire(&mut world, shooter, target);
-            set_battle_visibility(
-                &mut world,
-                target,
-                Visibility {
-                    clairvoyant: true,
-                    invisible: false,
-                },
-            )
-            .unwrap();
-            dice(&mut world, shooter, 12);
-            dice(&mut world, target, 2);
-            let mut rules = shot_rules();
-            rules.aim.woods_damage = true;
-            let report = fire_with_rules(&mut world, shooter, target, rules).unwrap();
-            assert_eq!(report.hops.len(), 2);
-            assert_eq!(report.hops[0].remaining, 14);
-            assert_eq!(report.hops[1].incoming, 14);
-            assert_eq!(report.hops[1].target, next);
-            let salvo = serde_json::to_value(report.hops[0].salvo.as_ref().unwrap()).unwrap();
-            assert_eq!(salvo["report"]["missiles_before_defense"], 6);
-            assert_eq!(salvo["report"]["woods"]["damage_before"], 6);
-            assert_eq!(salvo["report"]["woods"]["damage_after"], 2);
-        }
-    }
 }
 
 /// Construct real launchers on all seven chassis and replay the same capped missile flight.
@@ -280,6 +231,7 @@ async fn swarm_launchers_and_targets_share_damage_and_restart() {
             assert_eq!(fire(&mut replay, shooter, target).unwrap(), report);
             assert_eq!(world.btech, replay.btech);
             let mut miss = before;
+            gunnery(&mut miss, 8);
             dice(&mut miss, shooter, 2);
             assert!(fire(&mut miss, shooter, target).is_none());
         }
@@ -560,7 +512,7 @@ async fn swarm_visited_boundary_allows_exactly_eleven_attacks() {
             .unwrap();
         }
         acquire(&mut world, shooter, target);
-        gunnery(&mut world, 9);
+        gunnery(&mut world, 11);
         let seed = long_flight_seed();
         edit(&mut world, shooter, |unit| {
             unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
@@ -735,7 +687,7 @@ fn swarm_template_modes_cover_compatible_catalogue() {
             ("Swarm", AmmunitionMode::Swarm),
             ("Swarm1", AmmunitionMode::Swarm1),
         ] {
-            let compatible = weapon.supports_semiguided() && !weapon.is_dead_fire();
+            let compatible = weapon.supports_semiguided();
             assert_eq!(
                 weapon
                     .damage_groups_for_ammunition(mode, Some(7), 10.0)
@@ -886,13 +838,15 @@ async fn aimed_swarm_matrix(source: &str) {
             };
             actual[key][shooter.0.to_string()]["aimed_section"] = serde_json::Value::Null;
             assert_eq!(actual, serde_json::to_value(&ordinary.btech).unwrap());
+            // Swarm rounds are not exempt from AMS (Tactical Operations: AUE p. 181): the
+            // initial target engages, while secondary hops are not engaged.
             for id in [target, second, third] {
                 let recycle = if let Some(unit) = world.btech.vehicles().get(&id) {
                     unit.weapon_recycle()
                 } else {
                     world.btech.constructed_units()[&id].weapon_recycle()
                 };
-                assert!(recycle.is_empty(), "Swarm must not activate AMS on any hop");
+                assert_eq!(recycle.is_empty(), id != target);
             }
             // Fidelity probe once per flight shape per shard.
             if !probed_fidelity[shape] {

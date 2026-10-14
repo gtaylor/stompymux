@@ -81,8 +81,17 @@ fn atm_profiles_tables_and_ammunition_markers() {
             Part::from_id(id + AMMUNITION_PART_OFFSET).unwrap().name,
             format!("Ammo_{}", weapon.name())
         );
-        assert!(weapon.supports_hotload());
-        assert!(weapon.supports_indirect_fire());
+        // ATMs fire only directly (Total Warfare p. 141), so they cannot hotload either.
+        assert!(!weapon.supports_hotload());
+        assert!(!weapon.supports_indirect_fire());
+        for mode in [
+            AmmunitionMode::Artemis,
+            AmmunitionMode::Narc,
+            AmmunitionMode::Inferno,
+            AmmunitionMode::SemiGuided,
+        ] {
+            assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
+        }
         for (roll, count) in (2..=12).zip(hits) {
             assert_eq!(weapon.missile_hits(roll).unwrap(), count);
         }
@@ -116,20 +125,10 @@ fn atm_profiles_tables_and_ammunition_markers() {
                 assert_eq!(groups.len(), usize::from(total.div_ceil(5)));
                 assert!(groups.iter().all(|damage| (1..=5).contains(damage)));
                 let long = f64::from(ranges.3);
-                for (distance, extended, reaches) in [
-                    (long, false, true),
-                    (long + 0.051, false, false),
-                    (f64::from(ranges.2) * 2.0, true, true),
-                ] {
+                for (distance, reaches) in [(long, true), (long + 0.051, false)] {
                     assert_eq!(
                         weapon
-                            .range_modifier_for_ammunition(
-                                distance,
-                                extended,
-                                FireMode::Normal,
-                                false,
-                                mode
-                            )
+                            .range_modifier_for_ammunition(distance, FireMode::Normal, mode)
                             .unwrap()
                             .is_some(),
                         reaches,
@@ -341,7 +340,9 @@ async fn atm_ams_and_missing_supply() {
             )
             .await;
             firing::edit(&mut world, target, |state| {
-                state["ams_enabled"] = true.into()
+                state["ams_enabled"] = true.into();
+                state["motion"]["heading"] = 180.0.into();
+                state["motion"]["desired_heading"] = 180.0.into();
             });
             let seed = (0..=255)
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)

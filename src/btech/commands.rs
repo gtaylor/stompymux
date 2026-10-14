@@ -1179,7 +1179,13 @@ pub(crate) fn tag_command(ctx: &CommandContext<'_>, input: &CommandInput) -> Res
                     })?,
                 )
             };
-            super::select_tag(&mut world, unit, ctx.player, target)?
+            super::select_tag(
+                &mut world,
+                unit,
+                ctx.player,
+                target,
+                super::TagRules::configured(&ctx.config.battletech),
+            )?
         };
         for notice in notices {
             super::notify_unit(ctx.scripts, notice)?;

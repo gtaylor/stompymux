@@ -32,25 +32,26 @@ pub struct WeaponProfile {
     pub recycle_seconds: u8,
 }
 
+/// Hexes across one mapsheet: indirect artillery lists its reach in mapsheets
+/// (Tactical Operations p. 149), and a standard sheet is seventeen hexes wide.
+pub const ARTILLERY_MAPSHEET_HEXES: u16 = 17;
+
 impl Weapon {
-    /// Effective range in hexes, including artillery map-sheet units and optional extreme range.
-    pub fn effective_range(self, extended: bool) -> u16 {
-        self.effective_range_for_ammunition(extended, super::AmmunitionMode::Normal)
+    /// Effective range in hexes, including artillery map-sheet units.
+    pub fn effective_range(self) -> u16 {
+        self.effective_range_for_ammunition(super::AmmunitionMode::Normal)
     }
 
-    /// Maximum reach follows the selected ammunition family before extreme-range expansion.
-    pub fn effective_range_for_ammunition(
-        self,
-        extended: bool,
-        ammunition: super::AmmunitionMode,
-    ) -> u16 {
+    /// Maximum reach in hexes for the selected ammunition family. Indirect artillery stores
+    /// mapsheets in its long range; artillery cannons and every other weapon store hexes.
+    pub fn effective_range_for_ammunition(self, ammunition: super::AmmunitionMode) -> u16 {
         let profile = self.profile_for_ammunition(ammunition);
-        let normal = u16::from(profile.long_range) * if self.is_artillery() { 20 } else { 1 };
-        if extended {
-            normal.max(u16::from(profile.medium_range) * 2)
+        let sheet = if self.is_indirect_artillery() {
+            ARTILLERY_MAPSHEET_HEXES
         } else {
-            normal
-        }
+            1
+        };
+        u16::from(profile.long_range) * sheet
     }
 
     /// Weapons whose installations may span adjacent Mech sections through explicit links.
@@ -70,17 +71,13 @@ impl Weapon {
     pub fn is_flamer(self) -> bool {
         matches!(
             self,
-            Self::ClanFlamer
-                | Self::Flamer
-                | Self::HeavyFlamer
-                | Self::VehicleFlamer
-                | Self::VehicleHeavyFlamer
+            Self::ClanFlamer | Self::Flamer | Self::HeavyFlamer | Self::VehicleFlamer
         )
     }
 
-    /// Heat-mode controls select flamer heat transfer or coolant self-application.
+    /// Heat-mode controls select flamer heat transfer.
     pub fn supports_heat_mode(self) -> bool {
-        self.is_flamer() || self == Self::CoolantGun
+        self.is_flamer()
     }
 
     /// Machine guns can trade three rounds per rolled damage point for gatling fire.
@@ -99,11 +96,7 @@ impl Weapon {
     pub fn is_rotary(self) -> bool {
         matches!(
             self,
-            Self::RotaryAc2
-                | Self::RotaryAc5
-                | Self::ClanRotaryAc2
-                | Self::ClanRotaryAc5
-                | Self::ClanRotaryAc10
+            Self::RotaryAc2 | Self::RotaryAc5 | Self::ClanRotaryAc2 | Self::ClanRotaryAc5
         )
     }
 
@@ -136,17 +129,14 @@ impl Weapon {
     }
 
     /// Supported missile profiles carrying indirect-fire capability, including disposable rockets.
+    /// ATMs may not fire indirectly (Total Warfare p. 141), and Streak LRMs may not either.
     pub fn supports_indirect_fire(self) -> bool {
         self.is_rocket()
             || self.is_mml()
             || self.is_thunderbolt()
             || matches!(
                 self,
-                Self::ClanAtm3
-                    | Self::ClanAtm6
-                    | Self::ClanAtm9
-                    | Self::ClanAtm12
-                    | Self::ClanLrm5
+                Self::ClanLrm5
                     | Self::ClanLrm10
                     | Self::ClanLrm15
                     | Self::ClanLrm20
@@ -162,10 +152,6 @@ impl Weapon {
                     | Self::Elrm10
                     | Self::Elrm15
                     | Self::Elrm20
-                    | Self::LrDfm5
-                    | Self::LrDfm10
-                    | Self::LrDfm15
-                    | Self::LrDfm20
             )
     }
 
@@ -216,10 +202,7 @@ impl Weapon {
     pub fn is_energy(self) -> bool {
         match self {
             Self::APod | Self::ClanAPod | Self::LaserAms | Self::ClanLaserAms => false,
-            Self::HeavyFlamer
-            | Self::VehicleFlamer
-            | Self::VehicleHeavyFlamer
-            | Self::PlasmaRifle => true,
+            Self::HeavyFlamer | Self::VehicleFlamer | Self::PlasmaRifle => true,
             _ => self.gunnery_skill(true) == "Gunnery-Laser",
         }
     }
@@ -264,20 +247,6 @@ impl Weapon {
                 | Self::ClanStreakLrm10
                 | Self::ClanStreakLrm15
                 | Self::ClanStreakLrm20
-        )
-    }
-
-    /// Dead-fire launchers always use the lowest two of three attack dice.
-    pub fn is_dead_fire(self) -> bool {
-        matches!(
-            self,
-            Self::LrDfm5
-                | Self::LrDfm10
-                | Self::LrDfm15
-                | Self::LrDfm20
-                | Self::SrDfm2
-                | Self::SrDfm4
-                | Self::SrDfm6
         )
     }
 
@@ -482,6 +451,49 @@ mod tests {
             assert!(enhanced.supports_indirect_fire() && enhanced.supports_semiguided());
         }
         assert!(W::parse("IS.NLRM-15").is_ok());
+    }
+
+    /// ATMs and Streak LRMs fire directly only (Total Warfare p. 141; Tactical Operations:
+    /// Advanced Units & Equipment p. 139), so neither can hotload; standard LRMs do both.
+    #[test]
+    fn atms_and_streak_lrms_fire_directly_only() {
+        for weapon in [W::ClanAtm3, W::ClanAtm12, W::ClanStreakLrm5, W::StreakSrm2] {
+            assert!(!weapon.supports_indirect_fire(), "{weapon:?}");
+            assert!(!weapon.supports_hotload(), "{weapon:?}");
+        }
+        for weapon in [W::Lrm5, W::ClanLrm20, W::Nlrm10, W::Elrm5, W::Mml3] {
+            assert!(weapon.supports_indirect_fire(), "{weapon:?}");
+            assert!(weapon.supports_hotload(), "{weapon:?}");
+        }
+    }
+
+    /// Indirect artillery reaches its Tactical Operations p. 149 mapsheet count at seventeen
+    /// hexes per sheet, while artillery cannons keep their direct-fire hex ranges.
+    #[test]
+    fn artillery_reach_converts_mapsheets_to_hexes() {
+        for (weapon, sheets) in [
+            (W::ArrowIv, 8),
+            (W::ClanArrowIv, 9),
+            (W::Thumper, 21),
+            (W::Sniper, 18),
+            (W::LongTom, 30),
+        ] {
+            assert!(weapon.is_indirect_artillery());
+            assert_eq!(
+                weapon.effective_range(),
+                sheets * super::ARTILLERY_MAPSHEET_HEXES,
+                "{weapon:?}"
+            );
+        }
+        for (weapon, hexes) in [
+            (W::LongTomCannon, 20),
+            (W::SniperCannon, 12),
+            (W::ThumperCannon, 14),
+        ] {
+            assert!(weapon.is_artillery() && !weapon.is_indirect_artillery());
+            assert_eq!(weapon.effective_range(), hexes, "{weapon:?}");
+        }
+        assert_eq!(W::Thumper.profile().heat, 6);
     }
 
     /// Energy weapons are the ones reflective armor deflects.

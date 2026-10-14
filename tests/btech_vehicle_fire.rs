@@ -53,11 +53,6 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 /// Ordinary conventional aim without range extensions or arc overrides.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -120,6 +115,9 @@ fn install_test_ams_at(
         .rewrite_unit_record(id, |record| {
             record["definition"] = serde_json::to_value(definition).unwrap();
             record["ammunition"] = serde_json::to_value(constructed.ammunition()).unwrap();
+            // Face the shooter one hex south so the arm-mounted defense covers the attack
+            // direction (Total Warfare p. 129).
+            record["motion"]["heading"] = 180.0.into();
         })
         .unwrap();
     let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
@@ -275,13 +273,13 @@ async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() 
             world.validate(&config).unwrap();
             continue;
         }
-        let defense = dice.d6();
+        // A cluster engagement rolls no die and spends one round (Total Warfare p. 130).
         let ams = report.ams.unwrap();
-        assert_eq!(ams.roll, defense);
-        assert_eq!(ams.ammunition_spent, u16::from(defense));
+        assert_eq!(ams.roll, None);
+        assert_eq!(ams.ammunition_spent, 1);
         assert_eq!(
             world.btech.constructed_units()[&target].ammunition()[ams.ammunition_bin.unwrap()],
-            before[ams.ammunition_bin.unwrap()] - u16::from(defense)
+            before[ams.ammunition_bin.unwrap()] - 1
         );
         assert_eq!(roll_unit_dice(&mut world, shooter, 1).unwrap(), [dice.d6()]);
         world.validate(&config).unwrap();
@@ -416,18 +414,12 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
             let report =
                 fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                     .unwrap();
-            assert_eq!(report.expenditure.launched, active);
+            // A confused Streak still launches nothing on a failed roll (TacOps: AUE p. 91).
+            assert!(!report.expenditure.launched);
             assert!(!report.hit);
             assert!(report.salvo.is_none());
-            assert_eq!(
-                report
-                    .expenditure
-                    .ammunition
-                    .iter()
-                    .map(|draw| draw.rounds)
-                    .sum::<u16>(),
-                u16::from(active)
-            );
+            assert!(report.expenditure.ammunition.is_empty());
+            assert_eq!(report.streak_confused, active);
             world.validate(&config).unwrap();
         }
     }
@@ -698,6 +690,9 @@ fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: Weapon) {
             record["definition"] = serde_json::to_value(unit.definition()).unwrap();
             record["ammunition"] = serde_json::to_value(unit.ammunition()).unwrap();
             record["ams_enabled"] = serde_json::json!(true);
+            // Face the shooter one hex south so the turret defense covers the attack direction
+            // (Total Warfare p. 129).
+            record["motion"]["heading"] = 180.0.into();
         })
         .unwrap();
 }
@@ -758,14 +753,10 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 world.validate(&config).unwrap();
                 continue;
             }
-            let defense = if matches!(weapon, Weapon::ClanAntiMissileSystem | Weapon::ClanLaserAms)
-            {
-                dice.two_d6()
-            } else {
-                dice.d6()
-            };
+            // Every tech base engages the same way: no die of its own, one round, the
+            // system's heat and a -4 on the cluster roll (Total Warfare pp. 129-130).
             let ams = report.ams.as_ref().unwrap();
-            assert_eq!(ams.roll, defense);
+            assert_eq!(ams.roll, None);
             assert_eq!(
                 world.btech.vehicles()[&target].weapon_heat(),
                 f64::from(weapon.profile().heat)
@@ -775,7 +766,7 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 (0, fed.then_some(0))
             );
             if fed {
-                assert_eq!(ams.ammunition_spent, rounds.min(u16::from(defense.min(6))));
+                assert_eq!(ams.ammunition_spent, rounds.min(1));
                 assert_eq!(
                     world.btech.vehicles()[&target].ammunition()[0],
                     rounds - ams.ammunition_spent
@@ -791,7 +782,7 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 panic!("vehicle salvo missing")
             };
             let missiles = salvo.missiles_before_defense.unwrap();
-            assert_eq!(ams.shot_down, defense.min(missiles));
+            assert_eq!(salvo.missiles_intercepted, Some(ams.shot_down));
             assert_eq!(
                 salvo.groups.iter().map(|group| group.damage).sum::<u16>(),
                 u16::from(missiles - ams.shot_down) * 2
@@ -901,7 +892,7 @@ async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
             fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                 .unwrap();
         if matches!(condition, "first_busy" | "first_failed" | "first_bin_lost") {
-            assert_eq!(report.ams.as_ref().unwrap().roll, dice.d6());
+            assert_eq!(report.ams.as_ref().unwrap().roll, None);
             assert_eq!(
                 report.ams.as_ref().unwrap().weapon_index,
                 usize::from(condition != "first_bin_lost")
@@ -964,114 +955,87 @@ async fn vehicle_ams_expenditure_and_feedback_roll_back_with_host_shots() {
     lua.world().validate(&config).unwrap();
 }
 
+/// Vehicle flamer heat mode heats Mech and vehicle targets alike without touching their armor.
 #[tokio::test]
-async fn vehicle_coolant_and_flamer_heat_share_target_effects_and_host_rollback() {
-    for weapon in [
-        Weapon::CoolantGun,
-        Weapon::VehicleFlamer,
-        Weapon::VehicleHeavyFlamer,
-    ] {
-        let template =
-            include_str!("../game/units/Demolisher.toml").replace("IS.AC/20", weapon.name());
-        let (_dir, config, base, _, [target, _, shooter, vehicle]) = engagement(&template).await;
-        for hit in [false, true] {
-            let mut world = base.clone();
-            if weapon != Weapon::CoolantGun {
-                toggle_battle_flamer_heat(&mut world, shooter, ObjectId(1), 0).unwrap();
-            }
-            let value = (0..=255)
-                .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+async fn vehicle_flamer_heat_shares_target_effects_and_host_rollback() {
+    let weapon = Weapon::VehicleFlamer;
+    let template = include_str!("../game/units/Demolisher.toml").replace("IS.AC/20", weapon.name());
+    let (_dir, config, base, _, [target, _, shooter, vehicle]) = engagement(&template).await;
+    for hit in [false, true] {
+        let mut world = base.clone();
+        toggle_battle_flamer_heat(&mut world, shooter, ObjectId(1), 0).unwrap();
+        let value = (0..=255)
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
+            .unwrap();
+        seed(&mut world, shooter, value);
+        let original = world.btech.clone();
+        let report =
+            fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                 .unwrap();
-            seed(&mut world, shooter, value);
-            let original = world.btech.clone();
-            let report =
-                fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
-                    .unwrap();
-            assert_eq!(report.hit, hit);
-            assert!(report.salvo.is_none() && report.narc.is_none());
-            let amount = f64::from(weapon.profile().damage);
-            let expected = if !hit {
-                0.0
-            } else if weapon == Weapon::CoolantGun {
-                -amount
-            } else {
-                amount
-            };
-            assert_eq!(
-                world.btech.constructed_units()[&target].heat().stored,
-                original.constructed_units()[&target].heat().stored + expected
-            );
-            assert_eq!(
-                world.btech.constructed_units()[&target].sections(),
-                original.constructed_units()[&target].sections()
-            );
-            assert_eq!(
-                report.cooling,
-                (hit && weapon == Weapon::CoolantGun).then_some(amount)
-            );
-            assert_eq!(
-                report.heat_transfer,
-                if hit && weapon != Weapon::CoolantGun {
-                    weapon.profile().damage
-                } else {
-                    0
-                }
-            );
-            let mut initial = base.clone();
-            initial.btech = original;
-            let lua = Scripts::new(
-                &config,
-                std::rc::Rc::new(std::cell::RefCell::new(initial.clone())),
-            )
-            .unwrap();
-            let native = Scripts::new(
-                &config,
-                std::rc::Rc::new(std::cell::RefCell::new(initial.clone())),
-            )
-            .unwrap();
-            let call = format!("btech.unit.fire({},1,0,{})", shooter.0, target.0);
-            assert!(
-                lua.eval_callback::<()>(&format!("{call}; error('abort')"))
-                    .is_err()
-            );
-            assert_eq!(lua.world().btech, initial.btech);
-            assert!(lua.drain_outbox().is_empty());
-            lua.eval_callback::<()>(&call).unwrap();
-            let output = support::run_text(
-                &native,
-                &config,
-                ObjectId(1),
-                1,
-                &format!("fire 0 #{}", target.0),
-            );
-            assert!(output.contains("You fire"), "{output}");
-            assert_eq!(lua.world().btech, native.world().btech);
-            assert_eq!(lua.world().btech, world.btech);
-            let vehicle_before = initial.btech.vehicles()[&vehicle].clone();
-            let vehicle_report = fire_battle_vehicle_shot(
-                &mut initial,
-                shooter,
-                ObjectId(1),
-                vehicle,
-                0,
-                fire_rules(),
-            )
-            .unwrap();
-            assert_eq!(vehicle_report.hit, hit);
-            assert_eq!(
-                initial.btech.vehicles()[&vehicle].weapon_heat(),
-                vehicle_before.weapon_heat() + expected
-            );
-            assert_eq!(
-                initial.btech.vehicles()[&vehicle].sections(),
-                vehicle_before.sections()
-            );
-            assert_eq!(
-                world.btech.vehicles()[&shooter].weapon_heat(),
-                f64::from(report.expenditure.heat)
-            );
-            world.validate(&config).unwrap();
-        }
+        assert_eq!(report.hit, hit);
+        assert!(report.salvo.is_none() && report.narc.is_none());
+        let amount = f64::from(weapon.profile().damage);
+        let expected = if hit { amount } else { 0.0 };
+        assert_eq!(
+            world.btech.constructed_units()[&target].heat().stored,
+            original.constructed_units()[&target].heat().stored + expected
+        );
+        assert_eq!(
+            world.btech.constructed_units()[&target].sections(),
+            original.constructed_units()[&target].sections()
+        );
+        assert_eq!(
+            report.heat_transfer,
+            if hit { weapon.profile().damage } else { 0 }
+        );
+        let mut initial = base.clone();
+        initial.btech = original;
+        let lua = Scripts::new(
+            &config,
+            std::rc::Rc::new(std::cell::RefCell::new(initial.clone())),
+        )
+        .unwrap();
+        let native = Scripts::new(
+            &config,
+            std::rc::Rc::new(std::cell::RefCell::new(initial.clone())),
+        )
+        .unwrap();
+        let call = format!("btech.unit.fire({},1,0,{})", shooter.0, target.0);
+        assert!(
+            lua.eval_callback::<()>(&format!("{call}; error('abort')"))
+                .is_err()
+        );
+        assert_eq!(lua.world().btech, initial.btech);
+        assert!(lua.drain_outbox().is_empty());
+        lua.eval_callback::<()>(&call).unwrap();
+        let output = support::run_text(
+            &native,
+            &config,
+            ObjectId(1),
+            1,
+            &format!("fire 0 #{}", target.0),
+        );
+        assert!(output.contains("You fire"), "{output}");
+        assert_eq!(lua.world().btech, native.world().btech);
+        assert_eq!(lua.world().btech, world.btech);
+        let vehicle_before = initial.btech.vehicles()[&vehicle].clone();
+        let vehicle_report =
+            fire_battle_vehicle_shot(&mut initial, shooter, ObjectId(1), vehicle, 0, fire_rules())
+                .unwrap();
+        assert_eq!(vehicle_report.hit, hit);
+        assert_eq!(
+            initial.btech.vehicles()[&vehicle].weapon_heat(),
+            vehicle_before.weapon_heat() + expected
+        );
+        assert_eq!(
+            initial.btech.vehicles()[&vehicle].sections(),
+            vehicle_before.sections()
+        );
+        assert_eq!(
+            world.btech.vehicles()[&shooter].weapon_heat(),
+            f64::from(report.expenditure.heat)
+        );
+        world.validate(&config).unwrap();
     }
 }
 
@@ -1213,7 +1177,7 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
         .unwrap();
         assert!(report.hit);
         assert_eq!(report.heat_transfer, 0);
-        assert!(report.narc.is_none() && report.cooling.is_none());
+        assert!(report.narc.is_none());
         match report.salvo.unwrap() {
             TargetSalvo::Swarm(_) => panic!("Direct explosive ammunition cannot retarget"),
             TargetSalvo::Mech(salvo) => assert_eq!(
@@ -1423,7 +1387,8 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
         glancing: false,
         guidance_blocked: false,
         angel_blocked: false,
-        intercepted: 0,
+        ams_engaged: false,
+        indirect: false,
     };
     let enhanced = resolve_battle_vehicle_salvo(
         &mut world,
@@ -1788,17 +1753,8 @@ async fn mech_vehicle_fire_locks_damage_and_restart_share_existing_resolvers() {
             .set_unit_dice(shooter, Dice::seeded([value; 32]))
             .unwrap();
         select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
-        for _ in 0..3 {
-            advance_battle_target_locks(&mut world);
-        }
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        for _ in 0..5 {
-            assert_eq!(
-                advance_battle_target_locks(&mut world),
-                advance_battle_target_locks(&mut restored)
-            );
-        }
         let before = world.btech.vehicles()[&target].clone();
         let report = resolve_battle_shot(
             &mut world,
@@ -2216,7 +2172,7 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
                 expected.btech.vehicles()[&target]
             );
             assert_eq!(report["heat_transfer"], 0);
-            assert!(report["narc"].is_null() && report["cooling"].is_null());
+            assert!(report["narc"].is_null());
             if damage == 0 {
                 assert!(report["salvo"].is_null());
             } else {
@@ -2279,228 +2235,77 @@ async fn plasma_vehicle_targets_share_native_lua_feedback_and_rollback() {
     }
 }
 
-/// Coolant credit and direct flamer heat have identical recipients regardless of carrier anatomy.
+/// Direct flamer heat reaches the same vehicle recipient regardless of carrier anatomy.
 #[tokio::test]
 async fn thermal_vehicle_targets_share_replay_feedback_and_rollback() {
+    let weapon = Weapon::VehicleFlamer;
     for carrier in [false, true] {
-        for weapon in [
-            Weapon::CoolantGun,
-            Weapon::VehicleFlamer,
-            Weapon::VehicleHeavyFlamer,
-        ] {
-            let (_dir, config, base, shooter, target, index) =
-                weapon_engagement(carrier, weapon).await;
-            for hit in [false, true] {
-                let mut world = base.clone();
-                if weapon != Weapon::CoolantGun {
-                    toggle_battle_flamer_heat(&mut world, shooter, ObjectId(1), index).unwrap();
-                }
-                let seed = (0..=255)
-                    .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
-                    .unwrap();
-                let mut saved = serde_json::to_value(&world.btech).unwrap();
-                saved[if carrier { "vehicles" } else { "constructed" }][shooter.0.to_string()]["dice"] =
-                    serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-                saved["vehicles"][target.0.to_string()]["weapon_heat"] = 1.5.into();
-                world.btech = serde_json::from_value(saved).unwrap();
-                persistence::save(&config.database(), &world).await.unwrap();
-                let mut replay = persistence::load(&config.database()).await.unwrap();
-                let native = Scripts::new(
-                    &config,
-                    std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
-                )
+        let (_dir, config, base, shooter, target, index) = weapon_engagement(carrier, weapon).await;
+        for hit in [false, true] {
+            let mut world = base.clone();
+            toggle_battle_flamer_heat(&mut world, shooter, ObjectId(1), index).unwrap();
+            let seed = (0..=255)
+                .find(|value| Dice::seeded([*value; 32]).two_d6() == if hit { 12 } else { 2 })
                 .unwrap();
-                let lua = Scripts::new(
-                    &config,
-                    std::rc::Rc::new(std::cell::RefCell::new(replay.clone())),
-                )
-                .unwrap();
-                let call = format!("btech.unit.fire({},1,{index},{})", shooter.0, target.0);
-                assert!(
-                    lua.eval_callback::<()>(&format!("{call}; error('abort')"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, world.btech);
-                assert!(lua.drain_outbox().is_empty());
-                let report = tactical_shot(&mut world, shooter, target, index, fire_rules());
-                assert_eq!(
-                    report,
-                    tactical_shot(&mut replay, shooter, target, index, fire_rules())
-                );
-                assert_eq!(world.btech, replay.btech);
-                let delta = if !hit {
-                    0.0
-                } else if weapon == Weapon::CoolantGun {
-                    -f64::from(weapon.profile().damage)
-                } else {
-                    f64::from(weapon.profile().damage)
-                };
-                assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 1.5 + delta);
-                assert_eq!(
-                    report["cooling"],
-                    if hit && weapon == Weapon::CoolantGun {
-                        serde_json::json!(weapon.profile().damage as f64)
-                    } else {
-                        serde_json::Value::Null
-                    }
-                );
-                assert_eq!(
-                    report["heat_transfer"],
-                    if hit && weapon != Weapon::CoolantGun {
-                        weapon.profile().damage
-                    } else {
-                        0
-                    }
-                );
-                assert!(report["salvo"].is_null());
-                lua.eval_callback::<()>(&call).unwrap();
-                let output = support::run_text(
-                    &native,
-                    &config,
-                    ObjectId(1),
-                    1,
-                    &format!("fire {index} #{}", target.0),
-                );
-                assert!(output.contains("You fire"), "{output}");
-                assert_eq!(native.world().btech, world.btech);
-                assert_eq!(lua.world().btech, world.btech);
-                for _ in 0..60 {
-                    let _ = advance_battle_units(&mut world, 0, true);
-                    let _ = advance_battle_heat(&mut world);
-                }
-                assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 1.5 + delta);
-                world.validate(&config).unwrap();
-            }
-        }
-    }
-}
-
-/// Self-cooling bypasses target selection and optical acquisition but still reserves a real shot.
-#[tokio::test]
-async fn vehicle_self_cooling_shares_host_selection_and_atomic_expenditure() {
-    let (_dir, config, mut base, shooter, target, index) =
-        weapon_engagement(true, Weapon::CoolantGun).await;
-    toggle_battle_flamer_heat(&mut base, shooter, ObjectId(1), index).unwrap();
-    let seed_value = (0..=255)
-        .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
-        .unwrap();
-    seed(&mut base, shooter, seed_value);
-    base.btech
-        .rewrite_unit_record(shooter, |record| {
-            record["contacts"] = serde_json::json!({});
-            record["weapon_heat"] = 1.5.into();
-        })
-        .unwrap();
-    for selection in 0..4 {
-        let explicit = selection == 1 || selection == 3;
-        let recipient = if selection == 1 { target } else { shooter };
-        let mut base = base.clone();
-        if selection == 1 {
-            refresh_battle_contacts(&mut base, &[shooter]).unwrap();
-        }
-        if selection == 2 {
-            select_battle_hex_target(
-                &mut base,
-                shooter,
-                ObjectId(1),
-                HexCoordinate { x: 0, y: 4 },
-                HexTargetMode::Hex,
+            let mut saved = serde_json::to_value(&world.btech).unwrap();
+            saved[if carrier { "vehicles" } else { "constructed" }][shooter.0.to_string()]["dice"] =
+                serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+            saved["vehicles"][target.0.to_string()]["weapon_heat"] = 1.5.into();
+            world.btech = serde_json::from_value(saved).unwrap();
+            persistence::save(&config.database(), &world).await.unwrap();
+            let mut replay = persistence::load(&config.database()).await.unwrap();
+            let native = Scripts::new(
+                &config,
+                std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
             )
             .unwrap();
-        }
-        let mut raw = base.clone();
-        let report = fire_battle_vehicle_shot(
-            &mut raw,
-            shooter,
-            ObjectId(1),
-            recipient,
-            index,
-            fire_rules(),
-        )
-        .unwrap();
-        assert_eq!(report.target, recipient);
-        let native = Scripts::new(
-            &config,
-            std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
-        )
-        .unwrap();
-        let lua = Scripts::new(
-            &config,
-            std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
-        )
-        .unwrap();
-        let call = if explicit {
-            format!("btech.unit.fire({},1,{index},{})", shooter.0, recipient.0)
-        } else {
-            format!("btech.unit.fire({},1,{index})", shooter.0)
-        };
-        assert!(
-            lua.eval_callback::<()>(&format!("{call}; error('abort')"))
-                .is_err()
-        );
-        assert_eq!(lua.world().btech, base.btech);
-        assert!(lua.drain_outbox().is_empty());
-        let (actual_recipient, cooling): (i64, f64) = lua
-            .eval_callback(&format!("local r={call}; return r.target,r.cooling"))
+            let lua = Scripts::new(
+                &config,
+                std::rc::Rc::new(std::cell::RefCell::new(replay.clone())),
+            )
             .unwrap();
-        assert_eq!(actual_recipient, recipient.0);
-        assert_eq!(cooling, f64::from(Weapon::CoolantGun.profile().damage));
-        let command = if explicit {
-            format!("fire {index} #{}", recipient.0)
-        } else {
-            format!("fire {index}")
-        };
-        let output = support::run_text(&native, &config, ObjectId(1), 1, &command);
-        assert!(
-            output.contains(if recipient == shooter {
-                "Coolant washes"
+            let call = format!("btech.unit.fire({},1,{index},{})", shooter.0, target.0);
+            assert!(
+                lua.eval_callback::<()>(&format!("{call}; error('abort')"))
+                    .is_err()
+            );
+            assert_eq!(lua.world().btech, world.btech);
+            assert!(lua.drain_outbox().is_empty());
+            let report = tactical_shot(&mut world, shooter, target, index, fire_rules());
+            assert_eq!(
+                report,
+                tactical_shot(&mut replay, shooter, target, index, fire_rules())
+            );
+            assert_eq!(world.btech, replay.btech);
+            let delta = if hit {
+                f64::from(weapon.profile().damage)
             } else {
-                "stream of coolant"
-            }),
-            "{output}"
-        );
-        assert_eq!(native.world().btech, lua.world().btech);
-        assert_eq!(
-            lua.world().btech.vehicles()[&shooter].weapon_heat(),
-            1.5 - if recipient == shooter { cooling } else { 0.0 }
-        );
-        if recipient == shooter {
+                0.0
+            };
+            assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 1.5 + delta);
             assert_eq!(
-                lua.world().btech.vehicles()[&target],
-                base.btech.vehicles()[&target]
+                report["heat_transfer"],
+                if hit { weapon.profile().damage } else { 0 }
             );
-        } else {
-            assert_eq!(
-                lua.world().btech.vehicles()[&target].weapon_heat(),
-                base.btech.vehicles()[&target].weapon_heat() - cooling
-            );
-        }
-        let committed = lua.world().btech.clone();
-        assert!(lua.eval_callback::<()>(&call).is_err());
-        assert_eq!(lua.world().btech, committed);
-        let mut empty = base.clone();
-        empty
-            .btech
-            .rewrite_unit_record(shooter, |record| {
-                for rounds in record["ammunition"].as_array_mut().unwrap() {
-                    *rounds = 0.into();
-                }
-            })
-            .unwrap();
-        let before = empty.btech.clone();
-        assert!(
-            fire_battle_vehicle_shot(
-                &mut empty,
-                shooter,
+            assert!(report["salvo"].is_null());
+            lua.eval_callback::<()>(&call).unwrap();
+            let output = support::run_text(
+                &native,
+                &config,
                 ObjectId(1),
-                target,
-                index,
-                fire_rules()
-            )
-            .is_err()
-        );
-        assert_eq!(empty.btech, before);
-        lua.world().validate(&config).unwrap();
+                1,
+                &format!("fire {index} #{}", target.0),
+            );
+            assert!(output.contains("You fire"), "{output}");
+            assert_eq!(native.world().btech, world.btech);
+            assert_eq!(lua.world().btech, world.btech);
+            for _ in 0..60 {
+                let _ = advance_battle_units(&mut world, 0, true);
+                let _ = advance_battle_heat(&mut world);
+            }
+            assert_eq!(world.btech.vehicles()[&target].weapon_heat(), 1.5 + delta);
+            world.validate(&config).unwrap();
+        }
     }
 }
 
@@ -2805,7 +2610,7 @@ async fn character_direct_fire_shares_native_lua_casualties_for_both_chassis() {
                         ObjectId(1),
                         skill,
                         CharacterValue {
-                            value: 2,
+                            value: 0,
                             ..Default::default()
                         },
                     )

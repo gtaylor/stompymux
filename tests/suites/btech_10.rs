@@ -53,12 +53,6 @@ mod btech_signature;
 #[path = "../btech_snipe.rs"]
 mod btech_snipe;
 
-#[path = "../btech_spotter_links.rs"]
-mod btech_spotter_links;
-
-#[path = "../btech_stinger.rs"]
-mod btech_stinger;
-
 #[path = "../btech_units.rs"]
 mod btech_units;
 

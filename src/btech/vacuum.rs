@@ -54,6 +54,7 @@ pub(super) fn check_vehicle(
             vehicle.weapon_recycle.remove(&index);
             vehicle.weapon_failures.remove(&index);
             vehicle.jammed_weapons.remove(&index);
+            vehicle.broken_feeds.remove(&index);
             if vehicle
                 .unjam
                 .is_some_and(|attempt| attempt.weapon_index == index)

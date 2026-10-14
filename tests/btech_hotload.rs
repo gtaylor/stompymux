@@ -31,14 +31,14 @@ fn definition(mode: &str) -> MechTemplate {
     template
 }
 
-/// The half-minimum option is applied to the raw distance without shrinking ordinary range brackets.
+/// Hotloading removes the minimum-range penalty without shrinking ordinary range brackets.
 #[test]
 fn hotload_range_options_and_template_mode() {
     for &weapon in Weapon::ALL.iter().filter(|w| w.supports_hotload()) {
         if weapon.is_artillery() {
             assert!(
                 weapon
-                    .range_modifier_for_mode(1.0, false, FireMode::Hotload, false)
+                    .range_modifier_for_mode(1.0, FireMode::Hotload)
                     .is_err()
             );
             continue;
@@ -46,26 +46,14 @@ fn hotload_range_options_and_template_mode() {
         let min = f64::from(weapon.profile().minimum_range);
         for distance in [0.0, 0.1, min / 2.0, min, min + 0.01] {
             let normal = weapon
-                .range_modifier_for_mode(distance, false, FireMode::Hotload, false)
-                .unwrap()
-                .unwrap();
-            let half = weapon
-                .range_modifier_for_mode(distance, false, FireMode::Hotload, true)
+                .range_modifier_for_mode(distance, FireMode::Hotload)
                 .unwrap()
                 .unwrap();
             assert_eq!(normal.modifier, 0);
-            assert_eq!(
-                half.modifier,
-                if min > 0.0 && distance <= min {
-                    ((min - distance + 2.0) / 2.0).floor() as u8
-                } else {
-                    0
-                }
-            );
         }
         assert!(
             weapon
-                .range_modifier_for_mode(100.0, false, FireMode::Hotload, true)
+                .range_modifier_for_mode(100.0, FireMode::Hotload)
                 .unwrap()
                 .is_none()
         );

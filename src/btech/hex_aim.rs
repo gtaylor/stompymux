@@ -32,9 +32,8 @@ pub fn hex_aim_modifiers(
     hex: HexCoordinate,
     weapon_index: usize,
     gunnery: i16,
-    rules: AimRules,
 ) -> Result<HexAimModifiers> {
-    modifiers_for_source(world, shooter.into(), hex, weapon_index, gunnery, rules)
+    modifiers_for_source(world, shooter.into(), hex, weapon_index, gunnery)
 }
 
 /// Coordinate aim uses physical equipment with the selected operator's purpose and observer choice.
@@ -44,7 +43,6 @@ pub(super) fn modifiers_for_source(
     hex: HexCoordinate,
     weapon_index: usize,
     gunnery: i16,
-    rules: AimRules,
 ) -> Result<HexAimModifiers> {
     let shooter = source.unit;
     let mode = match source.selection(world) {
@@ -59,58 +57,47 @@ pub(super) fn modifiers_for_source(
         "Shooter is unavailable"
     );
     let (_, distance) = super::los::unit_hex_los(world, shooter, hex)?;
-    let (weapon, ammunition, mut modifiers) =
-        if let Some(unit) = world.btech.vehicles().get(&shooter) {
-            let weapon = unit
-                .loadout()?
-                .weapons
-                .get(weapon_index)
-                .context("Weapon index out of bounds")?
-                .weapon;
-            (
-                weapon,
-                unit.ammunition_mode(weapon_index)?,
-                super::vehicle_aim::weapon_modifiers(unit, weapon_index, distance, gunnery, rules)?,
-            )
-        } else {
-            let unit = world
-                .btech
-                .constructed_units()
-                .get(&shooter)
-                .context("Shooter is not constructed")?;
-            let loadout = unit.loadout()?;
-            let mount = loadout
-                .weapons
-                .get(weapon_index)
-                .context("Weapon index out of bounds")?;
-            (
-                mount.weapon,
-                unit.ammunition_mode(weapon_index)?,
-                super::aim::weapon_modifiers(unit, weapon_index, mount, distance, gunnery, rules)?,
-            )
-        };
-    ensure!(
-        ammunition.munition() != AmmunitionMode::Stinger,
-        "Stinger missiles cannot shoot hexes!"
-    );
+    let (weapon, mut modifiers) = if let Some(unit) = world.btech.vehicles().get(&shooter) {
+        let weapon = unit
+            .loadout()?
+            .weapons
+            .get(weapon_index)
+            .context("Weapon index out of bounds")?
+            .weapon;
+        (
+            weapon,
+            super::vehicle_aim::weapon_modifiers(unit, weapon_index, distance, gunnery)?,
+        )
+    } else {
+        let unit = world
+            .btech
+            .constructed_units()
+            .get(&shooter)
+            .context("Shooter is not constructed")?;
+        let loadout = unit.loadout()?;
+        let mount = loadout
+            .weapons
+            .get(weapon_index)
+            .context("Weapon index out of bounds")?;
+        (
+            mount.weapon,
+            super::aim::weapon_modifiers(unit, weapon_index, mount, distance, gunnery)?,
+        )
+    };
     let indirect = super::spotter::indirect_hex_for_source(world, source, weapon_index)?;
     if let Some((observer, coordinate)) = indirect {
         ensure!(
             coordinate == hex,
             "Target differs from the spotter's selected hex"
         );
-        modifiers.indirect = Some(super::spotter::observer_aim(
-            world,
-            observer,
-            rules.fasa_turning,
-        )?);
+        modifiers.indirect = Some(super::spotter::observer_aim(world, observer)?);
     }
+    modifiers.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     let submerged = super::weapon_geometry::apply_water_range(
         world,
         shooter,
         weapon_index,
         weapon,
-        rules.extended_ranges,
         &mut modifiers,
     )?;
     super::network_range::apply(
@@ -122,7 +109,6 @@ pub(super) fn modifiers_for_source(
         &mut modifiers,
     )?;
     modifiers.environment = super::planetary_conditions::aim_modifier(world, shooter, weapon);
-    super::targeting_mode::apply(world, source, None, weapon, ammunition, &mut modifiers)?;
     Ok(HexAimModifiers {
         hex,
         mode,
@@ -147,8 +133,7 @@ pub fn pilot_hex_aim_modifiers(
     hex: HexCoordinate,
     weapon_index: usize,
     extended_gunnery: bool,
-    rules: AimRules,
 ) -> Result<HexAimModifiers> {
     let gunnery = unit_gunnery_target(world, shooter, weapon_index, extended_gunnery)?;
-    hex_aim_modifiers(world, shooter, hex, weapon_index, gunnery, rules)
+    hex_aim_modifiers(world, shooter, hex, weapon_index, gunnery)
 }

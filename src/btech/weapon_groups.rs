@@ -15,14 +15,24 @@ pub(super) struct WeaponGroupRequest {
     pub target_beacon: bool,
     /// The launching unit's Artemis controllers are Artemis V.
     pub artemis_v: bool,
+    /// An anti-missile system engaged the flight: -4 on the Cluster Hits roll, never below 2,
+    /// with a Streak launcher treated as a roll of 11 (Total Warfare p. 129).
+    pub ams_engaged: bool,
+    /// Spotter-directed indirect fire, which Artemis and Narc guidance do not improve (Total
+    /// Warfare pp. 130, 139).
+    pub indirect: bool,
 }
 
-/// Shared cluster draw and ordered damage packet sizes, before target defenses.
+/// Shared cluster draw and ordered damage packet sizes, before cover and terrain absorption.
 pub(super) struct WeaponGroups {
     /// Retain the ammunition profile through interception and flight truncation.
     missile_damage: u8,
     pub cluster_roll: Option<u8>,
     pub damage: Vec<u16>,
+    /// Cluster hits of a missile flight before any anti-missile engagement shifted the roll.
+    pub missiles_before_defense: Option<u8>,
+    /// Hits an anti-missile engagement removed from the Cluster Hits result.
+    pub missiles_intercepted: Option<u8>,
 }
 
 /// Consume candidate dice and size packets without assigning hit locations or applying damage.
@@ -41,6 +51,8 @@ pub(super) fn roll_weapon_groups(
         angel_blocked,
         target_beacon,
         artemis_v,
+        ams_engaged,
+        indirect,
     } = request;
     let burst = fire_mode.rounds_per_cycle() > 1;
     let cluster_roll = (burst || weapon.profile().missiles > 0 || mode == AmmunitionMode::Cluster)
@@ -54,77 +66,107 @@ pub(super) fn roll_weapon_groups(
                 dice.generic_roll()
             }
         });
-    let mut damage = if let Some(damage) = gatling_damage {
-        vec![if glancing {
-            u16::from(damage) / 2
-        } else {
-            u16::from(damage)
-        }]
-    } else if weapon.is_streak() && angel_blocked {
-        let conventional = match weapon {
-            Weapon::StreakSrm2 | Weapon::ClanStreakSrm2 => Weapon::Srm2,
-            Weapon::StreakSrm4 | Weapon::ClanStreakSrm4 => Weapon::Srm4,
-            Weapon::StreakSrm6 | Weapon::ClanStreakSrm6 => Weapon::Srm6,
-            Weapon::ClanStreakLrm5 => Weapon::ClanLrm5,
-            Weapon::ClanStreakLrm10 => Weapon::ClanLrm10,
-            Weapon::ClanStreakLrm15 => Weapon::ClanLrm15,
-            Weapon::ClanStreakLrm20 => Weapon::ClanLrm20,
-            _ => unreachable!("Streak family checked"),
-        };
-        conventional.damage_groups_for_hit(cluster_roll, glancing, distance)?
-    } else if weapon.is_rotary() && burst {
-        weapon.rotary_damage_groups(fire_mode, cluster_roll.unwrap(), glancing)?
-    } else if burst {
-        weapon
-            .double_shot_damage_groups(cluster_roll.unwrap(), glancing)?
-            .into_iter()
-            .map(|damage| mode.armored_damage(damage))
-            .collect()
+    let missile_damage = if mode == AmmunitionMode::Cluster {
+        1
     } else {
-        let guided_mode = if mode == AmmunitionMode::Inferno {
-            // Nominal missile packets supply the hit count; target resolvers apply burning instead.
-            AmmunitionMode::Normal
-        } else if guidance_blocked
-            && matches!(
-                mode.munition(),
-                AmmunitionMode::Artemis | AmmunitionMode::Narc
-            )
-        {
-            mode.with_munition(AmmunitionMode::Normal)
-        } else if mode.munition() == AmmunitionMode::Narc && target_beacon {
-            mode.with_munition(AmmunitionMode::Artemis)
-        } else {
-            mode
-        };
-        // Artemis V improves only its own guided rounds, not Narc beacon homing.
-        let artemis_v =
-            artemis_v && guided_mode == mode && mode.munition() == AmmunitionMode::Artemis;
-        weapon.damage_groups_for_guided_hit(
-            guided_mode,
-            cluster_roll,
-            glancing,
-            distance,
-            artemis_v,
-            guidance_blocked,
-        )?
+        weapon.profile_for_ammunition(mode).damage
     };
-    // A glancing blow halves damage rounding down (Tactical Operations p. 79), so a one-point
-    // round lands without effect and no hit location is rolled for it.
-    damage.retain(|packet| *packet > 0);
-    Ok(WeaponGroups {
-        missile_damage: if mode == AmmunitionMode::Cluster {
-            1
+    let resolve = |ams_engaged: bool| -> Result<Vec<u16>> {
+        let mut damage = if let Some(damage) = gatling_damage {
+            vec![if glancing {
+                u16::from(damage) / 2
+            } else {
+                u16::from(damage)
+            }]
+        } else if weapon.is_streak() && angel_blocked {
+            let conventional = match weapon {
+                Weapon::StreakSrm2 | Weapon::ClanStreakSrm2 => Weapon::Srm2,
+                Weapon::StreakSrm4 | Weapon::ClanStreakSrm4 => Weapon::Srm4,
+                Weapon::StreakSrm6 | Weapon::ClanStreakSrm6 => Weapon::Srm6,
+                Weapon::ClanStreakLrm5 => Weapon::ClanLrm5,
+                Weapon::ClanStreakLrm10 => Weapon::ClanLrm10,
+                Weapon::ClanStreakLrm15 => Weapon::ClanLrm15,
+                Weapon::ClanStreakLrm20 => Weapon::ClanLrm20,
+                _ => unreachable!("Streak family checked"),
+            };
+            conventional.damage_groups_for_guided_hit(super::GuidedHit {
+                mode: AmmunitionMode::Normal,
+                cluster_roll,
+                glancing,
+                distance,
+                artemis_v: false,
+                guidance_blocked: false,
+                ams_engaged,
+            })?
+        } else if weapon.is_rotary() && burst {
+            weapon.rotary_damage_groups(fire_mode, cluster_roll.unwrap(), glancing)?
+        } else if burst {
+            weapon
+                .double_shot_damage_groups(cluster_roll.unwrap(), glancing)?
+                .into_iter()
+                .map(|damage| mode.armored_damage(damage))
+                .collect()
         } else {
-            weapon.profile_for_ammunition(mode).damage
-        },
+            let guided_mode = if mode == AmmunitionMode::Inferno {
+                // Nominal missile packets supply the hit count; target resolvers apply burning instead.
+                AmmunitionMode::Normal
+            } else if (guidance_blocked || indirect)
+                && matches!(
+                    mode.munition(),
+                    AmmunitionMode::Artemis | AmmunitionMode::Narc
+                )
+            {
+                mode.with_munition(AmmunitionMode::Normal)
+            } else if mode.munition() == AmmunitionMode::Narc && target_beacon {
+                mode.with_munition(AmmunitionMode::Artemis)
+            } else {
+                mode
+            };
+            // Artemis V improves only its own guided rounds, not Narc beacon homing.
+            let artemis_v =
+                artemis_v && guided_mode == mode && mode.munition() == AmmunitionMode::Artemis;
+            weapon.damage_groups_for_guided_hit(super::GuidedHit {
+                mode: guided_mode,
+                cluster_roll,
+                glancing,
+                distance,
+                artemis_v,
+                guidance_blocked,
+                ams_engaged,
+            })?
+        };
+        // A glancing blow halves damage rounding down (Tactical Operations p. 79), so a one-point
+        // round lands without effect and no hit location is rolled for it.
+        damage.retain(|packet| *packet > 0);
+        Ok(damage)
+    };
+    let damage = resolve(ams_engaged)?;
+    let count = |damage: &[u16]| {
+        u8::try_from(damage.iter().sum::<u16>() / u16::from(missile_damage.max(1)))
+            .expect("bounded missile rack")
+    };
+    let missile = weapon.profile().missiles > 0;
+    let missiles_before_defense = if !missile {
+        None
+    } else if ams_engaged {
+        Some(count(&resolve(false)?))
+    } else {
+        Some(count(&damage))
+    };
+    let missiles_intercepted =
+        (missile && ams_engaged).then(|| missiles_before_defense.unwrap_or(0) - count(&damage));
+    Ok(WeaponGroups {
+        missile_damage,
         cluster_roll,
         damage,
+        missiles_before_defense,
+        missiles_intercepted,
     })
 }
 
 impl WeaponGroups {
     /// A glancing unit hit halves shell damage, rounding down, as well as the already-adjusted
-    /// burst count. Occupied-woods callers defer this step until after per-shell absorption.
+    /// burst count.
     pub(super) fn finish_burst_glancing(&mut self, mode: FireMode, glancing: bool) {
         if !glancing || mode.rounds_per_cycle() <= 1 {
             return;
@@ -133,21 +175,6 @@ impl WeaponGroups {
             *damage /= 2;
         }
         self.damage.retain(|damage| *damage > 0);
-    }
-
-    /// Remove cover damage in whole missiles while retaining the ordered packet boundaries.
-    /// The returned totals precede and follow absorption, after any interception or flight cap.
-    pub(super) fn absorb_missiles(&mut self, reduction: u16) -> (u16, u16) {
-        let damage = u16::from(self.missile_damage);
-        let before = self.damage.iter().sum::<u16>();
-        let surviving = before.saturating_sub(reduction) / damage;
-        self.limit_missiles(Some(u8::try_from(surviving).expect("bounded missile rack")));
-        (before, surviving * damage)
-    }
-
-    /// Per-missile payload includes the launcher's selected ammunition family.
-    pub(super) fn missile_payload(&self) -> u16 {
-        u16::from(self.missile_damage)
     }
 
     /// A retargeted cluster cannot contain more missiles than remain in the flight.
@@ -161,33 +188,40 @@ impl WeaponGroups {
             remaining -= *damage;
         }
         self.damage.retain(|damage| *damage > 0);
+        self.missiles_before_defense = self.missiles_before_defense.map(|hits| hits.min(incoming));
     }
 
-    /// Cap defensive kills and rebuild remaining missile packets for every target anatomy.
-    /// Returns cluster size and survivors; non-missile packets remain unchanged.
-    pub(super) fn intercept(&mut self, weapon: Weapon, intercepted: u8) -> Option<(u16, u16)> {
-        if weapon.profile().missiles == 0 {
-            return None;
-        }
-        let hits = self.damage.iter().sum::<u16>() / u16::from(self.missile_damage);
-        let surviving = hits.saturating_sub(u16::from(intercepted));
-        if intercepted > 0 {
-            let packet = self.damage.first().copied().unwrap_or(1);
-            let mut remaining = surviving * u16::from(self.missile_damage);
-            self.damage.clear();
-            while remaining > 0 {
-                let damage = remaining.min(packet);
-                self.damage.push(damage);
-                remaining -= damage;
-            }
-        }
-        Some((hits, surviving))
+    /// Missiles represented by the current packets, after any defense and flight cap.
+    pub(super) fn missile_count(&self) -> u16 {
+        self.damage.iter().sum::<u16>() / u16::from(self.missile_damage.max(1))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A request with ordinary guidance and no defenses.
+    fn request(
+        weapon: Weapon,
+        ammunition: AmmunitionMode,
+        fire_mode: FireMode,
+    ) -> WeaponGroupRequest {
+        WeaponGroupRequest {
+            weapon,
+            ammunition,
+            fire_mode,
+            gatling_damage: None,
+            distance: Some(7.0),
+            glancing: false,
+            guidance_blocked: false,
+            angel_blocked: false,
+            target_beacon: false,
+            artemis_v: false,
+            ams_engaged: false,
+            indirect: false,
+        }
+    }
 
     /// Artemis V adds three to the cluster roll, only for its own guided rounds.
     #[test]
@@ -196,14 +230,15 @@ mod tests {
         for roll in 2..=9 {
             assert_eq!(
                 weapon
-                    .damage_groups_for_guided_hit(
-                        AmmunitionMode::Artemis,
-                        Some(roll),
-                        false,
-                        None,
-                        true,
-                        false
-                    )
+                    .damage_groups_for_guided_hit(super::super::GuidedHit {
+                        mode: AmmunitionMode::Artemis,
+                        cluster_roll: Some(roll),
+                        glancing: false,
+                        distance: None,
+                        artemis_v: true,
+                        guidance_blocked: false,
+                        ams_engaged: false,
+                    })
                     .unwrap(),
                 weapon
                     .damage_groups_for_ammunition_hit(
@@ -216,18 +251,12 @@ mod tests {
             );
         }
         for seed in 0..=31 {
-            let request =
+            let guided =
                 |ammunition, artemis_v, target_beacon, guidance_blocked| WeaponGroupRequest {
-                    weapon,
-                    ammunition,
-                    fire_mode: FireMode::Normal,
-                    gatling_damage: None,
-                    distance: Some(7.0),
-                    glancing: false,
-                    guidance_blocked,
-                    angel_blocked: false,
-                    target_beacon,
                     artemis_v,
+                    target_beacon,
+                    guidance_blocked,
+                    ..request(weapon, ammunition, FireMode::Normal)
                 };
             let roll = |request| {
                 roll_weapon_groups(request, &mut Dice::seeded([seed; 32]))
@@ -236,15 +265,148 @@ mod tests {
             };
             // Narc homing keeps the Artemis IV bonus even on an Artemis V chassis.
             assert_eq!(
-                roll(request(AmmunitionMode::Narc, true, true, false)),
-                roll(request(AmmunitionMode::Artemis, false, false, false))
+                roll(guided(AmmunitionMode::Narc, true, true, false)),
+                roll(guided(AmmunitionMode::Artemis, false, false, false))
             );
             // ECM blocks Artemis V just as it blocks Artemis IV.
             assert_eq!(
-                roll(request(AmmunitionMode::Artemis, true, false, true)),
-                roll(request(AmmunitionMode::Normal, false, false, false))
+                roll(guided(AmmunitionMode::Artemis, true, false, true)),
+                roll(guided(AmmunitionMode::Normal, false, false, false))
             );
         }
+    }
+
+    /// Indirect fire strips the Artemis and Narc cluster bonuses but not the ATM's integral one.
+    #[test]
+    fn indirect_fire_strips_artemis_and_narc_bonuses() {
+        for seed in 0..=31 {
+            let roll = |request| {
+                roll_weapon_groups(request, &mut Dice::seeded([seed; 32]))
+                    .unwrap()
+                    .damage
+            };
+            let indirect = |ammunition, target_beacon| WeaponGroupRequest {
+                indirect: true,
+                target_beacon,
+                ..request(Weapon::Lrm20, ammunition, FireMode::Normal)
+            };
+            let normal = roll(request(
+                Weapon::Lrm20,
+                AmmunitionMode::Normal,
+                FireMode::Normal,
+            ));
+            assert_eq!(roll(indirect(AmmunitionMode::Artemis, false)), normal);
+            assert_eq!(roll(indirect(AmmunitionMode::Narc, true)), normal);
+            assert_eq!(
+                roll(WeaponGroupRequest {
+                    indirect: true,
+                    ..request(Weapon::ClanAtm9, AmmunitionMode::Normal, FireMode::Normal)
+                }),
+                roll(request(
+                    Weapon::ClanAtm9,
+                    AmmunitionMode::Normal,
+                    FireMode::Normal
+                ))
+            );
+        }
+    }
+
+    /// An engaged AMS shifts the cluster roll by four (never below 2), treats a Streak as a roll
+    /// of 11 and reports the hits it removed; the dice stream is unchanged.
+    #[test]
+    fn ams_engagement_shifts_the_cluster_roll() {
+        for seed in 0..=255 {
+            for (weapon, ammunition) in [
+                (Weapon::Lrm20, AmmunitionMode::Normal),
+                (Weapon::Srm6, AmmunitionMode::Inferno),
+                (Weapon::Mml7, AmmunitionMode::MmlLrm),
+                (Weapon::Lrm20, AmmunitionMode::Artemis),
+            ] {
+                let mut dice = Dice::seeded([seed; 32]);
+                let plain =
+                    roll_weapon_groups(request(weapon, ammunition, FireMode::Normal), &mut dice)
+                        .unwrap();
+                let mut defended_dice = Dice::seeded([seed; 32]);
+                let defended = roll_weapon_groups(
+                    WeaponGroupRequest {
+                        ams_engaged: true,
+                        ..request(weapon, ammunition, FireMode::Normal)
+                    },
+                    &mut defended_dice,
+                )
+                .unwrap();
+                assert_eq!(dice, defended_dice);
+                assert_eq!(plain.cluster_roll, defended.cluster_roll);
+                let roll = plain.cluster_roll.unwrap();
+                let (table_mode, bonus) = match ammunition {
+                    AmmunitionMode::Artemis => (AmmunitionMode::Normal, 2),
+                    AmmunitionMode::Inferno => (AmmunitionMode::Normal, 0),
+                    mode => (mode, 0),
+                };
+                let expected = weapon
+                    .damage_groups_for_ammunition_hit(
+                        table_mode,
+                        Some((i16::from(roll) + bonus - 4).clamp(2, 12) as u8),
+                        false,
+                        Some(7.0),
+                    )
+                    .unwrap();
+                assert_eq!(
+                    defended.damage, expected,
+                    "{weapon:?} {ammunition:?} roll {roll}"
+                );
+                let before = defended.missiles_before_defense.unwrap();
+                assert_eq!(u16::from(before), plain.missile_count());
+                assert_eq!(plain.missiles_before_defense, Some(before));
+                assert_eq!(
+                    defended.missiles_intercepted,
+                    Some(before - u8::try_from(defended.missile_count()).unwrap())
+                );
+                assert!(plain.missiles_intercepted.is_none());
+            }
+            // A locked Streak counts as a roll of 11 before the -4.
+            let streak = roll_weapon_groups(
+                WeaponGroupRequest {
+                    ams_engaged: true,
+                    ..request(Weapon::StreakSrm6, AmmunitionMode::Normal, FireMode::Normal)
+                },
+                &mut Dice::seeded([seed; 32]),
+            )
+            .unwrap();
+            assert_eq!(streak.damage, vec![2; 4]);
+            assert_eq!(streak.missiles_before_defense, Some(6));
+            assert_eq!(streak.missiles_intercepted, Some(2));
+            let streak_lrm = roll_weapon_groups(
+                WeaponGroupRequest {
+                    ams_engaged: true,
+                    ..request(
+                        Weapon::ClanStreakLrm20,
+                        AmmunitionMode::Normal,
+                        FireMode::Normal,
+                    )
+                },
+                &mut Dice::seeded([seed; 32]),
+            )
+            .unwrap();
+            assert_eq!(streak_lrm.damage, vec![5, 5, 2]);
+            assert_eq!(streak_lrm.missiles_before_defense, Some(20));
+            assert_eq!(streak_lrm.missiles_intercepted, Some(8));
+        }
+        // Non-missile weapons report no defense.
+        let laser = roll_weapon_groups(
+            WeaponGroupRequest {
+                ams_engaged: true,
+                ..request(
+                    Weapon::MediumLaser,
+                    AmmunitionMode::Normal,
+                    FireMode::Normal,
+                )
+            },
+            &mut Dice::seeded([1; 32]),
+        )
+        .unwrap();
+        assert_eq!(laser.damage, vec![5]);
+        assert!(laser.missiles_before_defense.is_none() && laser.missiles_intercepted.is_none());
     }
 
     /// Hotloaded clusters use direct dice; ordinary clusters record one generic check.
@@ -269,18 +431,7 @@ mod tests {
                     Some(expected.two_d6())
                 };
                 let groups = roll_weapon_groups(
-                    WeaponGroupRequest {
-                        weapon,
-                        ammunition: AmmunitionMode::Normal,
-                        fire_mode,
-                        gatling_damage: None,
-                        distance: Some(7.0),
-                        glancing: false,
-                        guidance_blocked: false,
-                        angel_blocked: false,
-                        target_beacon: false,
-                        artemis_v: false,
-                    },
+                    request(weapon, AmmunitionMode::Normal, fire_mode),
                     &mut dice,
                 )
                 .unwrap();
@@ -292,65 +443,6 @@ mod tests {
                         dice.generic_roll_statistics().counts()[usize::from(roll.unwrap() - 2)],
                         1
                     );
-                }
-            }
-        }
-    }
-
-    /// Cover follows defensive interception and removes whole projectiles for every payload size.
-    #[test]
-    fn missile_cover_preserves_payload_grouping_and_consumes_no_dice() {
-        for (weapon, mode) in [
-            (Weapon::Lrm5, AmmunitionMode::Normal),
-            (Weapon::Lrm20, AmmunitionMode::Normal),
-            (Weapon::Srm2, AmmunitionMode::Normal),
-            (Weapon::Srm6, AmmunitionMode::Normal),
-            (Weapon::StreakSrm6, AmmunitionMode::Normal),
-            (Weapon::Thunderbolt20, AmmunitionMode::Normal),
-            (Weapon::Mml5, AmmunitionMode::Normal),
-            (Weapon::Mml5, AmmunitionMode::MmlLrm),
-        ] {
-            for seed in 0..=255 {
-                for glancing in [false, true] {
-                    for intercepted in [0, 1, 255] {
-                        for reduction in [2, 4] {
-                            let mut dice = Dice::seeded([seed; 32]);
-                            let mut groups = roll_weapon_groups(
-                                WeaponGroupRequest {
-                                    weapon,
-                                    ammunition: mode,
-                                    fire_mode: FireMode::Normal,
-                                    gatling_damage: None,
-                                    distance: Some(7.0),
-                                    glancing,
-                                    guidance_blocked: false,
-                                    angel_blocked: false,
-                                    target_beacon: false,
-                                    artemis_v: false,
-                                },
-                                &mut dice,
-                            )
-                            .unwrap();
-                            let before_dice = dice.clone();
-                            let (_, survivors) = groups.intercept(weapon, intercepted).unwrap();
-                            let payload = groups.missile_payload();
-                            let expected_before = survivors * payload;
-                            let expected_after =
-                                expected_before.saturating_sub(reduction) / payload * payload;
-                            assert_eq!(
-                                groups.absorb_missiles(reduction),
-                                (expected_before, expected_after)
-                            );
-                            assert_eq!(groups.damage.iter().sum::<u16>(), expected_after);
-                            assert!(
-                                groups
-                                    .damage
-                                    .iter()
-                                    .all(|damage| *damage > 0 && damage % payload == 0)
-                            );
-                            assert_eq!(dice, before_dice);
-                        }
-                    }
                 }
             }
         }
@@ -388,6 +480,8 @@ mod streak_lrm_tests {
                                 angel_blocked: confused,
                                 target_beacon: false,
                                 artemis_v: false,
+                                ams_engaged: false,
+                                indirect: false,
                             },
                             &mut dice,
                         )

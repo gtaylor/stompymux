@@ -206,7 +206,8 @@ async fn vehicle_coordinate_misload_is_tagged_and_rolls_back_with_terrain_action
         shooter.0
     );
     let report: (bool, String, usize) = lua.eval_callback(&code).unwrap();
-    assert_eq!(report, (true, "vehicle".into(), 0));
+    // The burst is fired at the hex before the rounds explode (Tactical Operations p. 98).
+    assert_eq!(report, (true, "vehicle".into(), 1));
     assert_eq!(
         report,
         replay
@@ -409,7 +410,7 @@ async fn character_coordinate_misload_publishes_crew_criticals_and_rolls_back_fa
                 .insert(afterlife, std::sync::Arc::unwrap_or_clone(room));
         }
         let report: (bool, String, usize) = scripts.eval_callback(&code).unwrap();
-        assert_eq!(report, (true, "vehicle".into(), 0));
+        assert_eq!(report, (true, "vehicle".into(), 1));
         assert_eq!(
             report,
             replay

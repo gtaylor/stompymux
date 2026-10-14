@@ -7,7 +7,7 @@ manualLinkTitle: "fire"
 
 Fire under configured tactical rules and stage cockpit notices in the current callback transaction.
 Requires the conscious assigned pilot; the calling script owns authority to act as that pilot.
-An omitted target uses cockpit selection, including automatic coolant self-selection.
+An omitted target uses cockpit selection.
 An IDF observer takes precedence when the firer has no unit lock, even with explicit arguments.
 Explicit coordinates select an occupant for conventional weapons or use terrain effects when empty.
 Artillery always uses coordinates and queues its impact. Explicit requests do not change saved locks.

@@ -105,7 +105,7 @@ pub struct StoredMap {
 }
 
 impl StoredMap {
-    /// The saved map restriction blocks non-coolant fire between teammates.
+    /// The saved map restriction blocks weapon fire between teammates.
     pub fn blocks_friendly_fire(&self) -> bool {
         self.has_flag(super::MapFlag::NoFriendlyFire)
     }
@@ -705,7 +705,6 @@ impl BtechState {
             )?;
         }
         super::tag::validate(self)?;
-        super::spotter_events::validate(self)?;
         for (id, unit) in self.constructed.iter() {
             self.validate_unit(
                 world,

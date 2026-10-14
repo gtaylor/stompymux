@@ -613,15 +613,6 @@ fn destroy_weapon(
     } else if hotload && supplied(hotload_supply) {
         u32::from(mount.weapon.profile_for_ammunition(hotload_supply).damage)
             * u32::from(mount.weapon.profile().missiles.max(1))
-    } else if !hotload
-        && vehicle.ammunition_mode(index)? == AmmunitionMode::Incendiary
-        && vehicle
-            .weapon_recycle()
-            .get(&index)
-            .is_some_and(|remaining| *remaining > 0)
-        && supplied(AmmunitionMode::Incendiary)
-    {
-        u32::from(mount.weapon.profile().damage)
     } else {
         0
     };
@@ -644,10 +635,8 @@ fn destroy_weapon(
             format!("It explodes for {explosion} points damage.")
         } else if jammed {
             format!("[fg=red bold]Your jammed autocannon explodes for {explosion} points of damage![reset]")
-        } else if hotload {
-            format!("[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]")
         } else {
-            format!("[fg=red bold]The incendiary ammunition in your launcher ignites for {explosion} points of damage![reset]")
+            format!("[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]")
         },
     });
     effects.broadcasts.push(Notice {
@@ -659,13 +648,8 @@ fn destroy_weapon(
             )
         } else if jammed {
             " loses an autocannon in a brilliant explosion!".into()
-        } else if hotload {
-            " loses a launcher in a brilliant explosion!".into()
         } else {
-            format!(
-                "'s {} is engulfed in a brilliant blue flame!",
-                section.name().replace('_', " ")
-            )
+            " loses a launcher in a brilliant explosion!".into()
         },
     });
     // An exploding weapon is an ammunition explosion in its location (TW p. 195); vehicle crews

@@ -53,11 +53,6 @@ fn power(world: &mut World, ids: &[ObjectId], value: Power) {
 /// Ordinary conventional aim without range extensions or arc overrides.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }

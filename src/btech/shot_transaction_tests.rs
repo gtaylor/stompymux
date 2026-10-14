@@ -463,6 +463,11 @@ fn missile_defenses_match_reference_for_both_chassis() {
 
             crate::btech::with_unit_mut!(initial.btech.unit_mut(target).unwrap(), |unit| {
                 unit.ams_enabled = true;
+                // Face the shooter three hexes south so the forward-mounted defense covers
+                // the attack direction (Total Warfare p. 129).
+                let motion = unit.motion.as_mut().unwrap();
+                motion.heading = 180.0;
+                motion.desired_heading = 180.0;
             });
             let index = if let Some(unit) = initial.btech.constructed_units().get(&shooter) {
                 unit.loadout()

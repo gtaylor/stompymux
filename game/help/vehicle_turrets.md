@@ -12,9 +12,11 @@ current facing or `turret <degrees>` to turn it. Headings are whole degrees;
 values outside 0–359 wrap around. For example, `turret -90` faces 270 degrees.
 
 The facing is relative to the hull: turning the hull also turns the turret.
-An immobilized vehicle can still turn an undamaged turret. A damage-locked turret
-cannot turn, and a destroyed turret cannot be controlled. Facing and locks survive
-server restarts.
+Turret weapons fire into a forward arc of three hexsides (120 degrees) centred on
+the turret facing rather than the hull facing (Total Warfare p. 105); weapons on
+the hull keep their own hull arcs. An immobilized vehicle can still turn an
+undamaged turret. A damage-locked turret cannot turn, and a destroyed turret
+cannot be controlled. Facing and locks survive server restarts.
 
 
 Use `fixturret` to clear a jam. The attempt takes 60 seconds and prevents weapon
@@ -30,8 +32,8 @@ along their existing facing.
 the mode with the reactor off, provided you are the conscious assigned pilot,
 the vehicle is on a map and its turret survives.
 
-While running, tracking updates once per second without waiting for the target
-lock to settle. Hull turns and target movement change the required facing.
+While running, tracking updates once per second. Hull turns and target movement
+change the required facing.
 Unconsciousness, turret jams and turret locks pause rotation. Crew stun still
 permits turning. The mode survives shutdown and restart. A manual `turret` setting is replaced on the next tracking update while
 the mode is enabled. `status` shows whether automatic tracking is on.

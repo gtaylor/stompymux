@@ -39,6 +39,8 @@ pub(super) struct SwarmRequest<'a> {
     pub glancing: bool,
     pub character: bool,
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
+    /// An anti-missile system engaged the initial attack; secondary hops are not engaged.
+    pub ams_engaged: bool,
 }
 
 /// Retargeting uses retained acquisition and clear terrain, without acquiring new contacts.
@@ -74,10 +76,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
     let mut target = request.target;
     while report.remaining > 0 {
         report.traveled += unit_range(world, previous, target)?.spatial;
-        if weapon
-            .range_modifier(report.traveled, request.rules.aim.extended_ranges)?
-            .is_none()
-        {
+        if weapon.range_modifier(report.traveled)?.is_none() {
             report.notices.push(Notice {
                 unit: target,
                 text: "Luckily, the missiles fall short of you!".into(),
@@ -115,11 +114,11 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                         glancing: request.glancing,
                         guidance_blocked: false,
                         angel_blocked: false,
-                        intercepted: 0,
+                        ams_engaged: request.ams_engaged && report.hops.is_empty(),
+                        indirect: false,
                     },
                     request.rules.vehicle_impact,
                     super::vehicle_salvo::SalvoContext {
-                        woods_damage: request.rules.aim.woods_damage,
                         aimed: None,
                         incoming: Some(incoming),
                         attacker: Some(shooter),
@@ -133,7 +132,6 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                     target,
                     request.weapon,
                     super::salvo::ShotDamage {
-                        woods_damage: request.rules.aim.woods_damage,
                         aimed: None,
                         incoming: Some(incoming),
                         rules: FallRules {
@@ -143,7 +141,8 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                         },
                         glancing: request.glancing,
                         character: request.character,
-                        intercepted: 0,
+                        ams_engaged: request.ams_engaged && report.hops.is_empty(),
+                        indirect: false,
                         experience,
                     },
                 )?)

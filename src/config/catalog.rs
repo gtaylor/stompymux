@@ -136,18 +136,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.moddamagewithwoods",
-        legacy: "btech_moddamagewithwoods",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.hotloadaddshalfbthmod",
-        legacy: "btech_hotloadaddshalfbthmod",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.nofusionvtolfuel",
         legacy: "btech_nofusionvtolfuel",
         kind: "i64",
@@ -156,12 +144,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.xploss",
         legacy: "btech_xploss",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.extendedmovemod",
-        legacy: "btech_extendedmovemod",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
@@ -300,12 +282,6 @@ pub const KEYS: &[KeySpec] = &[
     KeySpec {
         path: "battletech.limitedrepairs",
         legacy: "btech_limitedrepairs",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
-        path: "battletech.erange",
-        legacy: "btech_erange",
         kind: "i64",
         bounds: Some((-2147483648.0, 2147483647.0)),
     },

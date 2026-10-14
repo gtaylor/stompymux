@@ -13,7 +13,7 @@ pub struct VehicleLaunchRequest {
     pub distance: f64,
     pub target_number: Option<i32>,
     pub streak_confused: bool,
-    /// Shooter-local critical policy for a rapid misload or caseless propellant ignition.
+    /// Shooter-local critical policy for rapid-fire rounds exploding in the barrel.
     pub critical_rules: super::VehicleCriticalRules,
 }
 
@@ -26,12 +26,15 @@ pub struct VehicleLaunch {
     /// Cocoon opening precedes the shot's target consequences.
     pub launch_notices: Vec<super::Notice>,
     pub roll: u8,
-    /// Permanent mount loss from an Ultra/rapid loader failure or propellant ignition.
+    /// The mount was destroyed after the shot: rapid-fire rounds exploded in the barrel or a
+    /// caseless feed broke down (vehicles treat that as a Weapon Destroyed critical hit).
     pub loader_destroyed: bool,
-    /// Persistent ammunition-feed jam, distinct from temporary critical failures.
+    /// Persistent ammunition-feed jam after the shot, distinct from temporary critical failures.
     pub jammed: bool,
-    /// Caseless ignition check following an attack roll of two or three.
-    pub propellant_roll: Option<u8>,
+    /// The jam is permanent for the rest of the game.
+    pub feed_broken: bool,
+    /// Always absent: a vehicle's caseless breakdown destroys the weapon without a critical roll.
+    pub feed_critical_roll: Option<u8>,
     /// Internal damage and nested critical consequences on the shooter.
     pub misload: Option<super::VehicleInternalDamage>,
     /// Launch classification; a missile near miss can still be rejected by target resolution.
@@ -44,8 +47,9 @@ pub struct VehicleLaunch {
 /// Reserve and roll a vehicle firing cycle atomically, consuming only its own saved dice stream.
 /// Gatling preparation precedes attack dice; failed Streak locks recycle without ammunition loss.
 /// The caller must check target admission and resolve damage in the same enclosing transaction.
-/// Ultra loader loss destroys the mount; rotary and hotload failures persist a feed jam.
-/// Rapid and caseless misloads resolve shooter-local internal damage before spending surviving supply.
+/// Every feed failure fires the shot first: an Ultra roll of 2 breaks the feed for good, rotary
+/// and rapid-fire jams persist a clearable feed jam, rapid-fire rounds exploding in the barrel
+/// destroy the mount and damage its section, and a caseless breakdown destroys the weapon.
 pub fn launch_vehicle_weapon(
     world: &mut World,
     request: VehicleLaunchRequest,
@@ -112,7 +116,7 @@ fn launch(
     } else {
         None
     };
-    // Short supply changes the saved selection even when caseless ignition prevents launch.
+    // Short supply changes the saved selection even when the shot then fails its feed.
     if effective != requested {
         world
             .btech
@@ -124,10 +128,10 @@ fn launch(
     }
     let super::launch_roll::LaunchRoll {
         roll,
-        propellant_roll,
-        loader_destroyed,
         jammed,
-        misload_required,
+        feed_broken,
+        exploded,
+        caseless_failure,
         launched,
         hit,
         glancing,
@@ -142,51 +146,37 @@ fn launch(
         },
         &mut world.btech.vehicles.get_mut(&shooter).unwrap().dice,
     )?;
-    let launch_notices = if jammed || loader_destroyed {
-        Vec::new()
-    } else {
-        super::orbital_drop_combat::open_for_fire(world, shooter)?
-    };
-    let mut expenditure = if let Some(prepared) = prepared {
+    let launch_notices = super::orbital_drop_combat::open_for_fire(world, shooter)?;
+    // The shot is fired before any feed failure takes effect (Total Warfare p. 114).
+    let expenditure = if let Some(prepared) = prepared {
         prepared
-    } else if loader_destroyed || jammed {
-        let vehicle = world.btech.vehicles.get_mut(&shooter).unwrap();
-        if loader_destroyed {
-            let criticals = vehicle.loadout()?.weapons[weapon_index].criticals.clone();
-            for location in criticals {
-                vehicle.destroy_critical(location)?;
-            }
-        } else {
-            vehicle.jam_weapon(weapon_index)?;
-        }
-        VehicleWeaponUse {
-            weapon,
-            ammunition: Vec::new(),
-            ammunition_mode: ammunition,
-            fire_mode: effective,
-            gatling_damage: None,
-            launched: false,
-            heat: 0,
-        }
     } else {
         super::reserve_vehicle_weapon(world, shooter, pilot, weapon_index, launched)?
     };
-    let misload = if misload_required {
-        let draws = attacker.ammunition_feed(weapon_index, effective.rounds_per_cycle())?;
-        let section = attacker.loadout()?.weapons[weapon_index].criticals[0].section;
-        let damage = super::vehicle_internal_damage::resolve_in_candidate(
+    let criticals = attacker.loadout()?.weapons[weapon_index].criticals.clone();
+    let vehicle = world.btech.vehicles.get_mut(&shooter).unwrap();
+    // Vehicles treat a caseless breakdown as a Weapon Destroyed critical hit (TacOps: AUE p. 165).
+    let destroyed = exploded || caseless_failure;
+    if destroyed {
+        for location in &criticals {
+            vehicle.destroy_critical(*location)?;
+        }
+    } else if jammed {
+        if feed_broken {
+            vehicle.break_weapon_feed(weapon_index)?;
+        } else {
+            vehicle.jam_weapon(weapon_index)?;
+        }
+    }
+    let misload = if exploded {
+        Some(super::vehicle_internal_damage::resolve_in_candidate(
             world,
             shooter,
-            section,
+            criticals[0].section,
             u32::from(weapon.profile().damage),
             critical_rules,
             super::vehicle_internal_damage::DamageContext::default(),
-        )?;
-        let vehicle = world.btech.vehicles.get_mut(&shooter).unwrap();
-        expenditure
-            .ammunition
-            .extend(vehicle.spend_surviving_draws(draws));
-        Some(damage)
+        )?)
     } else {
         None
     };
@@ -199,9 +189,10 @@ fn launch(
         ammunition_warning,
         launch_notices,
         roll,
-        loader_destroyed,
-        jammed,
-        propellant_roll,
+        loader_destroyed: destroyed,
+        jammed: jammed && !destroyed,
+        feed_broken: feed_broken && !destroyed,
+        feed_critical_roll: None,
         misload,
         hit,
         glancing,

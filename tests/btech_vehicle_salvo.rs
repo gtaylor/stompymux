@@ -65,7 +65,8 @@ fn request(weapon: Weapon) -> VehicleSalvoRequest {
         glancing: false,
         guidance_blocked: false,
         angel_blocked: false,
-        intercepted: 0,
+        ams_engaged: false,
+        indirect: false,
     }
 }
 
@@ -158,48 +159,49 @@ async fn vehicle_salvos_share_packet_rules_and_order_every_impact() {
 #[tokio::test]
 async fn vehicle_salvos_apply_interception_glancing_and_streak_confusion() {
     let (_dir, _config, base, id) = fixture(include_str!("../game/units/Demolisher.toml")).await;
-    for intercepted in [6, 20] {
+    // An engaged AMS shifts the cluster roll of 12 down to 8 (Total Warfare p. 129): twelve of
+    // the twenty missiles still land, and the roll consumes no extra dice.
+    for ams_engaged in [false, true] {
         let mut world = base.clone();
         let seed = matching_seed(|dice| dice.two_d6() == 12);
         set_seed(&mut world, id, seed);
         let mut input = request(Weapon::Lrm20);
-        input.intercepted = intercepted;
+        input.ams_engaged = ams_engaged;
         let report =
             resolve_battle_vehicle_salvo(&mut world, id, HitArc::Front, input, rules()).unwrap();
         assert_eq!(report.missiles_before_defense, Some(20));
+        assert_eq!(report.missiles_intercepted, ams_engaged.then_some(8));
         assert_eq!(
             report
                 .groups
                 .iter()
                 .map(|group| group.damage)
                 .collect::<Vec<_>>(),
-            if intercepted == 20 {
-                vec![]
+            if ams_engaged {
+                vec![5, 5, 2]
             } else {
-                vec![5, 5, 4]
+                vec![5, 5, 5, 5]
             }
         );
-        if intercepted == 20 {
-            let mut dice = Dice::seeded(seed);
-            dice.two_d6();
-            assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
-            assert_eq!(
-                world.btech.vehicles()[&id].sections(),
-                base.btech.vehicles()[&id].sections()
-            );
-        }
     }
     for confused in [false, true] {
         let mut world = base.clone();
         set_seed(&mut world, id, matching_seed(|dice| dice.two_d6() == 2));
         let mut input = request(Weapon::StreakSrm6);
         input.angel_blocked = confused;
+        input.ams_engaged = true;
         let report =
             resolve_battle_vehicle_salvo(&mut world, id, HitArc::Front, input, rules()).unwrap();
+        // A locked Streak counts as a roll of 11 before the -4; a confused one rolls as an SRM-6.
         assert_eq!(
             report.missiles_before_defense,
             Some(if confused { 2 } else { 6 })
         );
+        assert_eq!(
+            report.missiles_intercepted,
+            Some(if confused { 0 } else { 2 })
+        );
+        assert_eq!(report.groups.len(), if confused { 2 } else { 4 });
     }
     for gatling in [false, true] {
         let mut world = base.clone();
@@ -260,11 +262,10 @@ async fn vehicle_salvos_finish_after_hull_loss_and_reject_invalid_effects_atomic
     );
     assert_eq!(replay.btech, world.btech);
     world.validate(&config).unwrap();
-    for case in ["interception", "gatling", "range", "going"] {
+    for case in ["gatling", "range", "going"] {
         let mut world = base.clone();
         let mut input = request(Weapon::Srm6);
         match case {
-            "interception" => input.intercepted = 7,
             "gatling" => input.gatling_damage = Some(5),
             "range" => input.distance = f64::NAN,
             _ => {

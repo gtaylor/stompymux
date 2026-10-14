@@ -116,14 +116,14 @@ async fn crew_recovery_clears_ordinary_feed_failures_and_preserves_critical_fail
         begin_battle_unjam(&mut world, id, ObjectId(1), index).unwrap();
         for _ in 0..59 {
             assert!(
-                advance_battle_unjamming(&mut world, false, false)
+                advance_battle_unjamming(&mut world, false)
                     .unwrap()
                     .is_empty()
             );
         }
         let mut replay = world.clone();
         replay.btech = serde_json::from_value(serde_json::to_value(&world.btech).unwrap()).unwrap();
-        let messages = advance_battle_unjamming(&mut world, false, false).unwrap();
+        let messages = advance_battle_unjamming(&mut world, false).unwrap();
         assert!(
             messages
                 .iter()
@@ -131,7 +131,7 @@ async fn crew_recovery_clears_ordinary_feed_failures_and_preserves_critical_fail
         );
         assert_eq!(
             messages,
-            advance_battle_unjamming(&mut replay, false, false).unwrap()
+            advance_battle_unjamming(&mut replay, false).unwrap()
         );
         assert_eq!(world.btech, replay.btech);
         world.validate(&config).unwrap();

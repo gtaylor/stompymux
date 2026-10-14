@@ -137,16 +137,10 @@ pub struct BattleTechConfig {
     pub slowdown: i64,
     /// Configuration value for `fasaturn`; defaults are centralized below.
     pub fasaturn: i64,
-    /// Configuration value for `moddamagewithwoods`; defaults are centralized below.
-    pub moddamagewithwoods: i64,
-    /// Configuration value for `hotloadaddshalfbthmod`; defaults are centralized below.
-    pub hotloadaddshalfbthmod: i64,
     /// Configuration value for `nofusionvtolfuel`; defaults are centralized below.
     pub nofusionvtolfuel: i64,
     /// Configuration value for `xploss`; defaults are centralized below.
     pub xploss: i64,
-    /// Configuration value for `extendedmovemod`; defaults are centralized below.
-    pub extendedmovemod: i64,
     /// Configuration value for `mw_losmap`; defaults are centralized below.
     pub mw_losmap: i64,
     /// Configuration value for `roll_on_backwalk`; defaults are centralized below.
@@ -193,8 +187,6 @@ pub struct BattleTechConfig {
     pub statengine_obj: i64,
     /// Configuration value for `limitedrepairs`; defaults are centralized below.
     pub limitedrepairs: i64,
-    /// Configuration value for `erange`; defaults are centralized below.
-    pub erange: i64,
     /// Configuration value for `xp`; defaults are centralized below.
     pub xp: XpConfig,
 }
@@ -206,11 +198,8 @@ impl Default for BattleTechConfig {
             afterlife_dbref: 5,
             slowdown: 2,
             fasaturn: 1,
-            moddamagewithwoods: 0,
-            hotloadaddshalfbthmod: 0,
             nofusionvtolfuel: 0,
             xploss: 666,
-            extendedmovemod: 1,
             mw_losmap: 1,
             roll_on_backwalk: 1,
             usedunitstore: 3,
@@ -234,7 +223,6 @@ impl Default for BattleTechConfig {
             techtime_multiplier: 1.0,
             statengine_obj: -1,
             limitedrepairs: 0,
-            erange: 1,
             xp: Default::default(),
         }
     }

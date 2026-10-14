@@ -156,16 +156,11 @@ pub struct WeaponSpecification {
     pub short_range: u8,
     pub medium_range: u8,
     pub long_range: u16,
-    pub extended_range: Option<u16>,
     pub recycle_seconds: u8,
 }
 
 /// Distinct weapon types retain first-installation order, including destroyed installations.
-pub fn weapon_specifications(
-    world: &World,
-    id: ObjectId,
-    extended: bool,
-) -> Result<Vec<WeaponSpecification>> {
+pub fn weapon_specifications(world: &World, id: ObjectId) -> Result<Vec<WeaponSpecification>> {
     let mut seen = BTreeSet::new();
     let weapons: Vec<_> = crate::btech::with_unit!(
         world
@@ -204,9 +199,7 @@ pub fn weapon_specifications(
                 minimum_range: profile.minimum_range,
                 short_range: profile.short_range,
                 medium_range: profile.medium_range,
-                long_range: weapon.effective_range_for_ammunition(false, ammunition),
-                extended_range: extended
-                    .then(|| weapon.effective_range_for_ammunition(true, ammunition)),
+                long_range: weapon.effective_range_for_ammunition(ammunition),
                 recycle_seconds: world.btech.weapon_settings.recycle_seconds(weapon),
             }
         })
@@ -240,9 +233,9 @@ pub fn weapon_diagnostic_text(world: &World, id: ObjectId) -> Result<String> {
     Ok(lines.join("\r\n"))
 }
 
-/// Render one catalogue row per installed type with the configured extended-range column.
-pub fn weapon_specification_text(world: &World, id: ObjectId, extended: bool) -> Result<String> {
-    let rows = weapon_specifications(world, id, extended)?;
+/// Render one catalogue row per installed type.
+pub fn weapon_specification_text(world: &World, id: ObjectId) -> Result<String> {
+    let rows = weapon_specifications(world, id)?;
     if rows.is_empty() {
         return Ok("You have no weapons!".into());
     }
@@ -259,11 +252,8 @@ pub fn weapon_specification_text(world: &World, id: ObjectId, extended: bool) ->
     } else {
         format!("{name}: {reference}")
     };
-    let header = if extended {
-        "[fg=green]Weapon Name             Heat  Damage  Range: Min Short Med Long Ext VRT[reset]"
-    } else {
-        "[fg=green]Weapon Name             Heat  Damage  Range: Min  Short  Med  Long  VRT[reset]"
-    };
+    let header =
+        "[fg=green]Weapon Name             Heat  Damage  Range: Min  Short  Med  Long  VRT[reset]";
     let rows = rows.into_iter().map(|row| {
         let family = if !row.weapon.is_mml() {
             ""
@@ -273,30 +263,16 @@ pub fn weapon_specification_text(world: &World, id: ObjectId, extended: bool) ->
             " (SRM)"
         };
         let name = format!("{}{family}", row.weapon.name());
-        let line = if let Some(extreme) = row.extended_range {
-            format!(
-                "{name:<24} {:>2}     {:>2}           {:>2}  {:>2}    {:>2}  {:>3}  {:>3} {:>2}",
-                row.heat,
-                row.damage,
-                row.minimum_range,
-                row.short_range,
-                row.medium_range,
-                row.long_range,
-                extreme,
-                row.recycle_seconds
-            )
-        } else {
-            format!(
-                "{name:<24} {:>2}     {:>2}           {:>2}    {:>2}     {:>2}  {:>3}   {:>2}",
-                row.heat,
-                row.damage,
-                row.minimum_range,
-                row.short_range,
-                row.medium_range,
-                row.long_range,
-                row.recycle_seconds
-            )
-        };
+        let line = format!(
+            "{name:<24} {:>2}     {:>2}           {:>2}    {:>2}     {:>2}  {:>3}   {:>2}",
+            row.heat,
+            row.damage,
+            row.minimum_range,
+            row.short_range,
+            row.medium_range,
+            row.long_range,
+            row.recycle_seconds
+        );
         crate::text::escape(&line)
     });
     Ok(super::menu::information(
@@ -356,11 +332,7 @@ pub(crate) fn specs_command(
 ) -> Result<crate::CommandAction> {
     let result = (|| {
         let id = cockpit(ctx, false, false)?;
-        weapon_specification_text(
-            &ctx.scripts.world.borrow(),
-            id,
-            ctx.config.battletech.erange != 0,
-        )
+        weapon_specification_text(&ctx.scripts.world.borrow(), id)
     })();
     Ok(crate::CommandAction::Report(match result {
         Ok(text) => crate::CommandReport::Styled(text),

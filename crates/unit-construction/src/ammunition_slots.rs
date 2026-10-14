@@ -52,7 +52,9 @@ fn normalize_with(template: &mut MechTemplate, contract: bool) -> Result<()> {
                 .parse()
                 .context("Invalid ammunition count")
                 .with_context(context)?;
-            if rounds < capacity {
+            // A machine gun bin listing at most half a ton of rounds is a half-ton lot; every
+            // other weapon's bin is a full ton (TechManual p. 48) and fills to capacity.
+            if rounds < capacity && weapon.allows_half_ton_bins() {
                 let half_capacity =
                     u16::from(weapon.profile_for_ammunition(mode).ammunition_per_ton / 2);
                 if rounds <= half_capacity {

@@ -224,17 +224,9 @@ async fn two_clients_acquire_lock_fire_destroy_and_restart() {
                 .await;
                 assert!(output.contains("Target set"), "{output}");
             }
-            for _ in 0..8 {
-                world = tick(&config, &mut heartbeats).await;
-            }
+            world = tick(&config, &mut heartbeats).await;
             for id in units {
-                assert_eq!(
-                    world.btech.constructed_units()[&id]
-                        .target_lock()
-                        .unwrap()
-                        .remaining,
-                    0
-                );
+                assert!(world.btech.constructed_units()[&id].target_lock().is_some());
             }
             let initial = world.btech.clone();
             let mut shots = [0; 2];

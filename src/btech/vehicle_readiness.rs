@@ -16,7 +16,7 @@ pub struct VehicleWeaponUse {
     pub fire_mode: FireMode,
     /// Supply-limited gatling damage rolled before the enclosing attack's hit dice.
     pub gatling_damage: Option<u8>,
-    /// False for a failed Streak lock or a loader failure; the launch result describes consequences.
+    /// False only for a failed Streak lock; a feed failure still fires the shot.
     pub launched: bool,
     /// Already applied weapon heat for this launch.
     pub heat: u8,
@@ -155,7 +155,8 @@ impl Vehicle {
                 .sum()
         };
         let recycle_remaining = self.weapon_recycle.get(&index).copied().unwrap_or(0);
-        let posture_ready = !mechanics.covered;
+        // Vehicles have no posture that restricts their mounts.
+        let posture_ready = true;
         Ok(WeaponReadiness {
             weapon: mount.weapon,
             intact,
@@ -204,7 +205,6 @@ impl Vehicle {
             section_recycle: None,
             carried_club: false,
             posture_failure: None,
-            covered: false,
         })
     }
 }
@@ -298,9 +298,13 @@ pub(super) fn reserve_prepared_weapon(
             draws
         };
     let heat = fire_mode.launch_heat(mount.weapon, gatling_damage, launched);
+    let now = world.btech.simulation_time();
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.weapon_heat += f64::from(heat);
     vehicle.fired_recently |= launched;
+    if launched {
+        vehicle.last_weapon_fire = Some(now);
+    }
     for draw in &ammunition {
         vehicle
             .expend_ammunition(draw.bin_index, draw.rounds)

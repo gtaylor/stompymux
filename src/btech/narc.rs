@@ -160,7 +160,7 @@ impl<S> NarcReport<S> {
                 },
                 Notice {
                     unit: target,
-                    text: "Your Anti-Missile System activates and shoots down the incoming pod!"
+                    text: "Your Anti-Missile System activates and destroys the incoming pod!"
                         .into(),
                 },
             ];

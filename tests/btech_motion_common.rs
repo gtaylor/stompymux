@@ -112,11 +112,6 @@ pub(crate) async fn lock_fixture() -> (
 /// Conventional aim configuration with no optional rule overrides.
 pub(crate) fn optical_aim_rules() -> stompymux_rs::AimRules {
     stompymux_rs::AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -412,11 +407,7 @@ pub(crate) async fn kick_fixture() -> (
 
 /// Explicit physical rules keep direct tests independent of local configuration defaults.
 pub(crate) fn kick_rules() -> stompymux_rs::PhysicalRules {
-    stompymux_rs::PhysicalRules {
-        fasa_turning: false,
-        extended_movement: false,
-        fall: fall_rules(),
-    }
+    stompymux_rs::PhysicalRules { fall: fall_rules() }
 }
 
 /// A charge collision fixture isolates current velocity, accumulated travel and deterministic control skills.

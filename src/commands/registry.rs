@@ -824,8 +824,6 @@ impl CommandRegistry {
                 crate::btech::inferno_ammunition::command,
             )
             .policy(SwitchPolicy::Reject("inferno takes no switches."), false),
-            CommandDefinition::native("incendiary", P::EVERYONE, crate::btech::incendiary::command)
-                .policy(SwitchPolicy::Reject("incendiary takes no switches."), false),
             CommandDefinition::native("precision", P::EVERYONE, crate::btech::precision::command)
                 .policy(SwitchPolicy::Reject("precision takes no switches."), false),
             CommandDefinition::native("fireswarm", P::EVERYONE, crate::btech::swarm::command)
@@ -843,8 +841,6 @@ impl CommandRegistry {
                     SwitchPolicy::Reject("atmexplosive takes no switches."),
                     false,
                 ),
-            CommandDefinition::native("stinger", P::EVERYONE, crate::btech::stinger::command)
-                .policy(SwitchPolicy::Reject("stinger takes no switches."), false),
             CommandDefinition::native("rac", P::EVERYONE, crate::btech::rotary::command)
                 .policy(SwitchPolicy::Reject("rac takes no switches."), false),
             CommandDefinition::native("rapidfire", P::EVERYONE, crate::btech::rapid::command)

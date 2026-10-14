@@ -145,7 +145,7 @@ impl<'a> UnitRef<'a> {
         /// Accumulated trajectory correction for the currently selected target.
         pub fn artillery_adjustment(&self) -> u8;
         /// Jumping and stabilization precede ground speed and the template's walking threshold.
-        pub fn attacker_movement_modifier(&self, fasa_turning: bool) -> u8;
+        pub fn attacker_movement_modifier(&self) -> u8;
         /// Whether the pilot has opted to fall off cliffs without an avoidance check.
         pub fn auto_fall(&self) -> bool;
         /// Whether routine contact notices include targets whose reactors are not running.
@@ -238,8 +238,8 @@ impl<'a> UnitRef<'a> {
         pub fn signature(&self) -> UnitSignature;
         /// Self-selection declares this unit a spotter; another ID selects a forward observer.
         pub fn spotter(&self) -> Option<ObjectId>;
-        /// Read pending radio connections and periodic checks without advancing their clocks.
-        pub fn spotter_events(&self) -> &'a super::SpotterEvents;
+        /// Simulation time of the last weapon this unit launched, if it ever has.
+        pub fn last_weapon_fire(&self) -> Option<i64>;
         /// Saved TAG selection and countdown; current geometry is checked separately.
         pub fn tag(&self) -> TagState;
         /// Standalone TAG and integrated C3 master equipment share their live damage gate.

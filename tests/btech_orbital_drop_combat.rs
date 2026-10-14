@@ -12,6 +12,42 @@ fn protect(world: &mut World, id: ObjectId, mass: i64, seed: u8) {
     });
 }
 
+/// Give the pilot a gunnery target of eight so that a roll of 2 misses even an immobile target.
+fn poor_gunnery(world: &mut World) {
+    world
+        .objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .flags
+        .insert(Flag::Connected);
+    set_battle_character(
+        world,
+        ObjectId(1),
+        Character {
+            build: 5,
+            reflexes: 4,
+            intuition: 3,
+            learn: 2,
+            charisma: 1,
+            bruise: 0,
+            lethal: 0,
+        },
+    )
+    .unwrap();
+    crate::support::seed_object_dice(world, ObjectId(1), crate::support::FIXTURE_DICE_SEED);
+    set_battle_character_value(
+        world,
+        ObjectId(1),
+        "Gunnery-Missile",
+        CharacterValue {
+            value: 3,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
+}
+
 /// Pick a protected hit after the diagnostic damage-entry roll.
 fn intercept_seed() -> u8 {
     (0..=255)
@@ -135,11 +171,6 @@ async fn intact_target_bonus_is_shared_and_disappears_after_breach() {
             firing::fixture_with_target(&source, Some(Weapon::MediumLaser), &source).await;
         protect(&mut world, target, 100 * 1024, 42);
         let rules = AimRules {
-            woods_damage: false,
-            fasa_turning: false,
-            extended_movement: false,
-            extended_ranges: false,
-            hotload_half_minimum: false,
             override_weapon_arcs: false,
         };
         let protected = battle_aim_modifiers(&world, shooter, target, weapon, 4, rules).unwrap();
@@ -222,6 +253,7 @@ async fn failed_streak_lock_still_opens_the_cocoon() {
         )
         .await;
         protect(&mut world, id, 100 * 1024, seed);
+        poor_gunnery(&mut world);
         let before = state(&world, id);
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let report: mlua::Table = scripts

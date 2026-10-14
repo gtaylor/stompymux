@@ -67,11 +67,6 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
 /// Ordinary conventional aim without range extensions or arc overrides.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -90,7 +85,7 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         assert_eq!(aim.gunnery, 6);
         assert_eq!(aim.distance, 0.0);
         assert_eq!(aim.range.unwrap().modifier, 0);
-        assert_eq!(aim.target_lock, 2);
+        assert_eq!(aim.target_lock, 1); // No lock: every shot is a secondary attack.
         assert_eq!(aim.attacker_movement, 0);
         assert_eq!(aim.sensors, 0);
         assert_eq!(aim.control_damage, 0);
@@ -107,13 +102,10 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         let supplied = battle_aim_modifiers(&world, shooter, target, 0, 3, rules()).unwrap();
         assert_eq!(supplied.subtotal(), aim.subtotal().map(|n| n - 3));
         select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
-        for _ in 0..8 {
-            advance_battle_target_locks(&mut world);
-        }
-        let settled =
+        let selected =
             battle_pilot_aim_modifiers(&world, shooter, target, 0, false, rules()).unwrap();
-        assert_eq!(settled.target_lock, 0);
-        assert_eq!(settled.subtotal(), aim.subtotal().map(|n| n - 2));
+        assert_eq!(selected.target_lock, 0);
+        assert_eq!(selected.subtotal(), aim.subtotal().map(|n| n - 1));
         damage_battle_vehicle_controls(&mut world, shooter, VehicleControlHit::Sensors).unwrap();
         damage_battle_vehicle_controls(
             &mut world,
@@ -135,7 +127,7 @@ async fn vehicle_aim_combines_mixed_targets_controls_locks_and_saved_replay() {
         assert_eq!(damaged.control_damage, 1);
         assert_eq!(damaged.sensors, 0);
         assert_eq!(damaged.attacker_movement, 2);
-        assert_eq!(damaged.subtotal(), settled.subtotal().map(|n| n + 3));
+        assert_eq!(damaged.subtotal(), selected.subtotal().map(|n| n + 3));
         persistence::save(&config.database(), &world).await.unwrap();
         let restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(
@@ -318,7 +310,6 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
     for weapon in [
         Weapon::HeavyFlamer,
         Weapon::VehicleFlamer,
-        Weapon::VehicleHeavyFlamer,
         Weapon::MachineGun,
         Weapon::ClanMachineGun,
     ] {

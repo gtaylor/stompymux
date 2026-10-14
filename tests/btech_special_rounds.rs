@@ -225,11 +225,6 @@ async fn artillery_cluster_controls_feed_real_launches() {
 /// Deterministic conventional firing policy for shared damage checks.
 fn rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: false,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -273,7 +268,7 @@ fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
     panic!("Fixture contact was not acquired");
 }
 
-/// Missile Smoke/Mine supplies retain ordinary impact damage; only Mine exempts the shot from AMS.
+/// Missile Smoke/Mine supplies retain ordinary impact damage and neither exempts the shot from AMS.
 #[tokio::test]
 async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
     for source in templates() {
@@ -284,7 +279,10 @@ async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
             let (_dir, config, mut initial, shooter, target) =
                 fixture(&source, target_source, false).await;
             edit(&mut initial, target, |unit| {
-                unit["ams_enabled"] = true.into()
+                unit["ams_enabled"] = true.into();
+                // Face the shooter so the forward defense covers the attack direction.
+                unit["motion"]["heading"] = 180.0.into();
+                unit["motion"]["desired_heading"] = 180.0.into();
             });
             acquire(&mut initial, shooter, target);
             for mode in [AmmunitionMode::Smoke, AmmunitionMode::Mine] {
@@ -309,7 +307,9 @@ async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
                     assert_eq!(report.expenditure.ammunition_mode, mode);
                     (report.ams, report.salvo)
                 });
-                assert_eq!(defense.is_some(), mode == AmmunitionMode::Smoke);
+                // Neither smoke nor mine rounds are exempt from AMS (Tactical Operations: AUE
+                // pp. 181-182).
+                assert!(defense.is_some());
                 assert!(salvo.is_some());
                 if mode == AmmunitionMode::Mine {
                     let hits = match salvo.unwrap() {

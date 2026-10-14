@@ -33,11 +33,13 @@ async fn fixture_with_mml(
     };
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Spotting field".into(), Kind::Room);
+    // A wall at (1,1) keeps the shooter at (1,2) from seeing the target at (1,0): an
+    // attacker with its own line of sight may not fire indirectly (TW p. 111).
     create_battle_map(
         &mut world,
         map,
         "test",
-        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells("3 3\n.0.0.0\n.0=8.0\n.0.0.0\n").unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -64,7 +66,7 @@ async fn fixture_with_mml(
             )
             .unwrap();
         }
-        let (x, y) = [(1, 2), (2, 1), (1, 0)][index];
+        let (x, y) = [(1, 2), (2, 0), (1, 0)][index];
         place_battle_unit(&mut world, id, map, x, y).unwrap();
         if index < 2 {
             let pilot = ObjectId(index as i64 + 1);
@@ -167,17 +169,17 @@ async fn mixed_spotters_share_native_lua_links_and_indirect_fire() {
         .unwrap();
         let shot = Scripts::new(&config, Rc::new(RefCell::new(prepared.clone()))).unwrap();
         let command = format!(
-            "local r=btech.unit.fire({},1,{index}); return r.target,r.aim.indirect.spotter,r.aim.target_lock,r.aim.indirect.target_lock,r.aim.indirect.movement",
+            "local r=btech.unit.fire({},1,{index}); return r.target,r.aim.indirect.spotter,r.aim.target_lock,r.aim.indirect.spotter_attacked,r.aim.indirect.movement",
             ids[0].0
         );
-        let result: (i64, i64, i32, i32, u8) = shot.eval_callback(&command).unwrap();
+        let result: (i64, i64, i32, bool, u8) = shot.eval_callback(&command).unwrap();
         assert_eq!(
             result,
-            (ids[2].0, ids[1].0, 0, 2, u8::from(vehicle_observer))
+            (ids[2].0, ids[1].0, 0, false, u8::from(vehicle_observer))
         );
         assert_eq!(
             restored
-                .eval_callback::<(i64, i64, i32, i32, u8)>(&command)
+                .eval_callback::<(i64, i64, i32, bool, u8)>(&command)
                 .unwrap(),
             result
         );
@@ -282,6 +284,18 @@ async fn mixed_spotters_share_native_lua_links_and_indirect_fire() {
 #[tokio::test]
 async fn vehicle_spotter_guards_and_callback_rollback_preserve_state() {
     let (_dir, config, mut world, ids, index) = fixture(true, true).await;
+    // This scenario fires directly at the enemy, so the fixture's wall comes down.
+    let map = world.btech.constructed_units()[&ids[2]]
+        .position()
+        .unwrap()
+        .map;
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            record["terrain"][4] = serde_json::to_value(Hex::new(Terrain::Clear, 0)).unwrap();
+        })
+        .unwrap();
+    refresh_battle_contacts(&mut world, &[ids[0]]).unwrap();
     let before = world.btech.clone();
     assert!(select_battle_spotter(&mut world, ids[0], ObjectId(1), Some(ids[1])).is_err());
     assert_eq!(world.btech, before);
@@ -298,16 +312,19 @@ async fn vehicle_spotter_guards_and_callback_rollback_preserve_state() {
         .unwrap();
     let selected = scripts.world().btech.clone();
     scripts.drain_outbox();
-    assert!(
-        scripts
-            .eval_callback::<()>(&format!(
-                "btech.unit.fire({},1,{index},{})",
-                ids[0].0, ids[2].0
-            ))
-            .is_err()
+    // A declared spotter keeps firing its own weapons (Total Warfare p. 111).
+    scripts
+        .eval_callback::<()>(&format!(
+            "btech.unit.fire({},1,{index},{})",
+            ids[0].0, ids[2].0
+        ))
+        .unwrap();
+    assert_ne!(scripts.world().btech, selected);
+    assert_eq!(
+        scripts.world().btech.vehicles()[&ids[0]].last_weapon_fire(),
+        Some(scripts.world().btech.simulation_time())
     );
-    assert_eq!(scripts.world().btech, selected);
-    assert!(scripts.drain_outbox().is_empty());
+    // Recycling weapons do not bar the declaration either.
     let mut recycling = scripts.world().clone();
     select_battle_spotter(&mut recycling, ids[0], ObjectId(1), None).unwrap();
     recycling
@@ -316,9 +333,8 @@ async fn vehicle_spotter_guards_and_callback_rollback_preserve_state() {
             record["weapon_recycle"] = serde_json::json!({index.to_string(): 10});
         })
         .unwrap();
-    let checkpoint = recycling.btech.clone();
-    assert!(select_battle_spotter(&mut recycling, ids[0], ObjectId(1), Some(ids[0])).is_err());
-    assert_eq!(recycling.btech, checkpoint);
+    select_battle_spotter(&mut recycling, ids[0], ObjectId(1), Some(ids[0])).unwrap();
+    assert_eq!(recycling.btech.vehicles()[&ids[0]].spotter(), Some(ids[0]));
     recycling.validate(&config).unwrap();
 }
 
@@ -447,9 +463,6 @@ async fn empty_spotter_hexes_fire_through_blocked_firer_sightlines() {
             .unwrap();
         select_battle_hex_target(&mut world, shooter, ObjectId(1), hex, HexTargetMode::Clear)
             .unwrap();
-        for _ in 0..8 {
-            advance_battle_target_locks(&mut world);
-        }
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
@@ -692,7 +705,11 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
             );
             assert_eq!(scripts.world().btech, trial.btech);
             assert!(scripts.drain_outbox().is_empty());
-            let result: (usize, bool, i16) = scripts.eval_callback(&format!("local r={call}; return #r.experience_messages,r.salvo==nil,r.aim.indirect.spotting")).unwrap();
+            let result: (usize, bool) = scripts
+                .eval_callback(&format!(
+                    "local r={call}; return #r.experience_messages,r.salvo==nil"
+                ))
+                .unwrap();
             let spotting = !matches!(
                 case,
                 "cooldown" | "coordinate" | "target" | "observer" | "disconnected"
@@ -704,9 +721,6 @@ async fn mixed_indirect_experience_shares_eligibility_levels_and_rollback() {
                 "{case}"
             );
             assert!(result.1);
-            if case == "level" {
-                assert_eq!(result.2, 7);
-            }
             for (pilot, skill, awarded) in [
                 (ObjectId(1), "Gunnery-Artillery", artillery),
                 (ObjectId(2), "Gunnery-Spotting", spotting),

@@ -450,8 +450,6 @@ pub fn arm_attack_profile(
 /// Policy shared by physical inspection and attack resolution.
 #[derive(Debug, Clone, Copy)]
 pub struct PhysicalRules {
-    pub fasa_turning: bool,
-    pub extended_movement: bool,
     pub fall: FallRules,
 }
 
@@ -631,7 +629,7 @@ struct TargetFacts {
 }
 
 /// Sample the target's live facts; vehicles use the shared immobility test and their speed.
-fn target_facts(world: &World, target: ObjectId, extended_movement: bool) -> Result<TargetFacts> {
+fn target_facts(world: &World, target: ObjectId) -> Result<TargetFacts> {
     if let Some(vehicle) = world.btech.vehicles().get(&target) {
         vehicle.validate()?;
         ensure!(!vehicle.is_destroyed(), "Unit is destroyed");
@@ -647,10 +645,8 @@ fn target_facts(world: &World, target: ObjectId, extended_movement: bool) -> Res
             airborne: vehicle.vtol_flight().is_some() || vehicle.free_fall().is_some(),
             prone: false,
             rising: false,
-            movement: super::aim::target_motion(
-                motion.map_or(0.0, |motion| motion.speed),
-                extended_movement,
-            ) - if immobile { 4 } else { 0 },
+            movement: super::aim::target_motion(motion.map_or(0.0, |motion| motion.speed))
+                - if immobile { 4 } else { 0 },
         });
     }
     let victim = world
@@ -670,7 +666,7 @@ fn target_facts(world: &World, target: ObjectId, extended_movement: bool) -> Res
         airborne: victim.airborne() || victim.free_fall().is_some(),
         prone: victim.posture() == Posture::Prone,
         rising: matches!(victim.stand_timer(), Some(StandTimer::Rising { .. })),
-        movement: super::aim::ground_physical_target_modifier(world, victim, extended_movement),
+        movement: super::aim::ground_physical_target_modifier(world, victim),
     })
 }
 
@@ -710,7 +706,7 @@ fn attack_profile_inner(
         .context("Unit construction state is unavailable")?;
     source.validate()?;
     ensure!(!source.is_destroyed(), "Unit is destroyed");
-    let victim = target_facts(world, target, rules.extended_movement)?;
+    let victim = target_facts(world, target)?;
     super::building_interior::check_physical(world, attacker, target)?;
     attack.validate_chassis_support(source)?;
     ensure!(source.power() == Power::Running, "Start the unit first");
@@ -977,7 +973,7 @@ fn attack_profile_inner(
     let base = unit_piloting_target(world, attacker, rules.fall.extended_piloting)? - skill_bonus;
     let weapon_modifier = attack.hand_weapon().map_or(0, ArmAttack::weapon_modifier);
     let rear_kick = u8::from(rear_kick);
-    let movement = i16::from(source.attacker_movement_modifier(rules.fasa_turning));
+    let movement = i16::from(source.attacker_movement_modifier());
     let attacker_movement = if specialist {
         (movement - 1).min(0)
     } else {
@@ -1910,8 +1906,6 @@ fn selected_leg(value: Option<&str>) -> Result<Leg> {
 pub(crate) fn configured_rules(config: &crate::Config) -> PhysicalRules {
     let settings = &config.battletech;
     PhysicalRules {
-        fasa_turning: settings.fasaturn != 0,
-        extended_movement: settings.extendedmovemod != 0,
         fall: FallRules {
             vehicle_impact: crate::VehicleImpactRules::configured(settings, false),
             extended_piloting: settings.extended_piloting != 0,

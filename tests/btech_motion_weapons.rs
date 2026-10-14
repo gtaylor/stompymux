@@ -1,7 +1,7 @@
 //! Weapon families and their ammunition: LB-X, rockets and one-shots, targeting computers,
 //! hardened and half-ton construction, Artemis, jams and hotloading, ultra/rapid/rotary/gatling
-//! and special autocannons, caseless, armor-piercing and incendiary rounds; then observer and
-//! cockpit feedback, fueled flamers and coolant, status and warning reports, and kick, punch,
+//! and special autocannons, caseless and armor-piercing rounds; then observer and
+//! cockpit feedback, fueled flamers, status and warning reports, and kick, punch,
 //! and trip attacks.
 
 use crate::btech_motion_common::{
@@ -542,7 +542,6 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
         Weapon::Flamer,
         Weapon::HeavyFlamer,
         Weapon::VehicleFlamer,
-        Weapon::VehicleHeavyFlamer,
         Weapon::HeavyMachineGun,
         Weapon::Srm4,
     ] {
@@ -1003,7 +1002,7 @@ async fn hardened_gyro_critical_checks_and_restart() {
 #[tokio::test(flavor = "current_thread")]
 async fn half_ton_native_lua_fire_capacity_and_restart() {
     use stompymux_rs::*;
-    for weapon in [Weapon::MachineGun, Weapon::Lbx2] {
+    for weapon in [Weapon::MachineGun, Weapon::HeavyMachineGun] {
         let (_dir, config, mut base, id, target) = shot_fixture().await;
         shot_skill(&mut base, 30);
         set_battle_character_value(
@@ -1041,9 +1040,6 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
         bin.equipment = format!("Ammo_{}", weapon.name());
         bin.data = capacity.to_string();
         bin.modes = vec!["Halfton".into()];
-        if weapon.is_lbx() {
-            bin.modes.push("LBX/Cluster".into());
-        }
         base.btech
             .rewrite_unit_record(id, |record| {
                 record["definition"] = serde_json::to_value(template).unwrap();
@@ -1057,9 +1053,6 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
             .iter()
             .position(|m| m.weapon == weapon)
             .unwrap();
-        if weapon.is_lbx() {
-            toggle_battle_lbx(&mut base, id, ObjectId(1), index).unwrap();
-        }
         base.validate(&config).unwrap();
         let mut invalid = base.clone();
         // Overfill the bin through the raw record, which skips validation.
@@ -1549,7 +1542,7 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
         assert_eq!(world.btech, before);
         for remaining in (1..60).rev() {
             assert!(
-                advance_battle_unjamming(&mut world, true, true)
+                advance_battle_unjamming(&mut world, true)
                     .unwrap()
                     .is_empty()
             );
@@ -1570,9 +1563,9 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
         let supply = world.btech.constructed_units()[&id].ammunition()[0];
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        let messages = advance_battle_unjamming(&mut world, true, true).unwrap();
+        let messages = advance_battle_unjamming(&mut world, true).unwrap();
         assert_eq!(
-            advance_battle_unjamming(&mut restored, true, true).unwrap(),
+            advance_battle_unjamming(&mut restored, true).unwrap(),
             messages
         );
         assert_eq!(world.btech, restored.btech);
@@ -1596,10 +1589,10 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
         );
         if matches!(outcome, "success" | "failure") {
             assert_eq!(messages[0].0, MessageTarget::Player(ObjectId(1)));
-            assert!(messages[1].1.starts_with("Modified Pilot Skill: BTH "));
+            assert!(messages[1].1.starts_with("Modified Gunnery Skill: BTH "));
         }
         assert!(
-            advance_battle_unjamming(&mut world, true, true)
+            advance_battle_unjamming(&mut world, true)
                 .unwrap()
                 .is_empty()
         );
@@ -1610,8 +1603,8 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
 #[tokio::test]
 async fn hotload_native_lua_shots_jams_and_recovery() {
     use stompymux_rs::*;
-    for weapon in [Weapon::Lrm5, Weapon::Elrm5, Weapon::LrDfm5] {
-        for jam in [false, true] {
+    for weapon in [Weapon::Lrm5, Weapon::Elrm5] {
+        for low_roll in [false, true] {
             let (_dir, config, mut base, id, target) = shot_fixture().await;
             let mut template = base.btech.constructed_units()[&id].definition().clone();
             template
@@ -1651,16 +1644,8 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
             .unwrap();
             let seed = (0..=255)
                 .find(|seed| {
-                    let mut dice = Dice::seeded([*seed; 32]);
-                    let a = dice.d6();
-                    let b = dice.d6();
-                    let roll = if weapon == Weapon::Lrm5 {
-                        a + b
-                    } else {
-                        let c = dice.d6();
-                        a + b + c - a.max(b).max(c)
-                    };
-                    (roll <= 3) == jam
+                    let roll = Dice::seeded([*seed; 32]).two_d6();
+                    (roll <= 3) == low_roll
                 })
                 .unwrap();
             shot_seed(&mut base, id, seed);
@@ -1715,46 +1700,31 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
                 1,
                 &format!("fire {index} #{}", target.0),
             );
-            assert!(
-                text.contains(if jam { "mechanism jams" } else { "You fire" }),
-                "{text}"
-            );
+            // Hot-loaded launchers never jam (Tactical Operations p. 101), even on a low roll.
+            assert!(text.contains("You fire"), "{text}");
+            assert!(!text.contains("mechanism jams"), "{text}");
             let report: mlua::Table = lua
                 .eval_callback(&format!(
                     "return btech.unit.fire({},1,{index},{})",
                     id.0, target.0
                 ))
                 .unwrap();
-            assert_eq!(report.get::<bool>("jammed").unwrap(), jam);
-            assert_eq!(report.get::<bool>("launched").unwrap(), !jam);
+            assert!(!report.get::<bool>("jammed").unwrap());
+            assert!(report.get::<bool>("launched").unwrap());
             assert_eq!(lua.world().btech, native.world().btech);
             let fired = lua.world().clone();
             let unit = &fired.btech.constructed_units()[&id];
             assert_eq!(
                 unit.ammunition()[0],
-                selected.btech.constructed_units()[&id].ammunition()[0] - u16::from(!jam)
+                selected.btech.constructed_units()[&id].ammunition()[0] - 1
             );
-            assert_eq!(unit.weapon_jammed(index).unwrap(), jam);
+            assert!(!unit.weapon_jammed(index).unwrap());
             assert_eq!(
                 unit.weapon_readiness(index).unwrap().recycle_remaining,
-                if jam {
-                    0
-                } else {
-                    u16::from(weapon.profile().recycle_seconds)
-                }
+                u16::from(weapon.profile().recycle_seconds)
             );
-            if jam {
-                assert_eq!(unit.heat(), selected.btech.constructed_units()[&id].heat());
-                assert_eq!(
-                    fired.btech.constructed_units()[&target],
-                    selected.btech.constructed_units()[&target]
-                );
-            } else {
-                let salvo: mlua::Table = report
-                    .get::<mlua::Table>("salvo")
-                    .unwrap()
-                    .get("report")
-                    .unwrap();
+            if let Ok(salvo) = report.get::<mlua::Table>("salvo") {
+                let salvo: mlua::Table = salvo.get("report").unwrap();
                 let mut dice = Dice::seeded([1; 32]);
                 let a = dice.d6();
                 let b = dice.d6();
@@ -1763,29 +1733,12 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
                     salvo.get::<u8>("cluster_roll").unwrap(),
                     a + b + c - a.max(b).max(c)
                 );
+            } else {
+                assert!(low_roll);
             }
             persistence::save(&config.database(), &fired).await.unwrap();
-            let mut restored = persistence::load(&config.database()).await.unwrap();
+            let restored = persistence::load(&config.database()).await.unwrap();
             assert_eq!(restored.btech, fired.btech);
-            if jam {
-                let before = restored.btech.clone();
-                assert!(toggle_battle_hotload(&mut restored, id, ObjectId(1), index).is_err());
-                assert_eq!(restored.btech, before);
-                begin_battle_unjam(&mut restored, id, ObjectId(1), index).unwrap();
-                // A disconnected pilot uses target six; force a successful recovery roll.
-                let seed = (0..=255)
-                    .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 6)
-                    .unwrap();
-                shot_seed(&mut restored, id, seed);
-                for _ in 0..60 {
-                    let _ = advance_battle_unjamming(&mut restored, true, true).unwrap();
-                }
-                assert!(
-                    !restored.btech.constructed_units()[&id]
-                        .weapon_jammed(index)
-                        .unwrap()
-                );
-            }
         }
     }
 }
@@ -1903,7 +1856,7 @@ async fn unjam_deletion_corruption_and_weapon_loss_are_atomic() {
         .insert(Flag::Going);
     let before = deleting.btech.constructed_units()[&id].clone();
     assert!(
-        advance_battle_unjamming(&mut deleting, true, true)
+        advance_battle_unjamming(&mut deleting, true)
             .unwrap()
             .is_empty()
     );
@@ -1927,7 +1880,7 @@ async fn unjam_deletion_corruption_and_weapon_loss_are_atomic() {
             .unwrap();
         let before = invalid.btech.clone();
         assert!(invalid.validate(&config).is_err());
-        assert!(advance_battle_unjamming(&mut invalid, true, true).is_err());
+        assert!(advance_battle_unjamming(&mut invalid, true).is_err());
         assert_eq!(invalid.btech, before);
     }
 
@@ -1946,12 +1899,12 @@ async fn unjam_deletion_corruption_and_weapon_loss_are_atomic() {
     persistence::save(&config.database(), &lost).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert!(
-        advance_battle_unjamming(&mut lost, true, true)
+        advance_battle_unjamming(&mut lost, true)
             .unwrap()
             .is_empty()
     );
     assert!(
-        advance_battle_unjamming(&mut restored, true, true)
+        advance_battle_unjamming(&mut restored, true)
             .unwrap()
             .is_empty()
     );
@@ -2114,10 +2067,13 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                 assert_eq!(restored.btech, expected.btech);
             }
             let double = supply.iter().sum::<u16>() == 2;
-            let destroyed = double && attack == 2;
-            assert_eq!(report.loader_destroyed, destroyed);
-            assert!(!report.jammed);
-            assert_eq!(report.launched, !destroyed);
+            // A double shot on a 2 fires both shells, then the feed is useless for the rest of
+            // the game (Total Warfare p. 114): the mount stays intact but cannot be cleared.
+            let broken = double && attack == 2;
+            assert!(!report.loader_destroyed);
+            assert_eq!(report.jammed, broken);
+            assert_eq!(report.feed_broken, broken);
+            assert!(report.launched);
             assert_eq!(
                 report.expenditure.fire_mode,
                 if double {
@@ -2126,13 +2082,7 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                     FireMode::Normal
                 }
             );
-            let spent = if destroyed {
-                0
-            } else if double {
-                2
-            } else {
-                1
-            };
+            let spent = if double { 2 } else { 1 };
             assert_eq!(
                 report
                     .expenditure
@@ -2148,38 +2098,48 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                 unit.ammunition().iter().sum::<u16>(),
                 supply.iter().sum::<u16>() - spent
             );
-            assert_eq!(unit.weapon_intact(index).unwrap(), !destroyed);
-            if destroyed {
+            assert!(unit.weapon_intact(index).unwrap());
+            assert_eq!(unit.weapon_jammed(index).unwrap(), broken);
+            assert_eq!(unit.weapon_feed_broken(index).unwrap(), broken);
+            assert_eq!(
+                unit.weapon_recycle()[&index],
+                u16::from(weapon.profile().recycle_seconds)
+            );
+            assert_eq!(unit.fire_mode(index).unwrap(), report.expenditure.fire_mode);
+            if skill == 30 {
+                let salvo = report.salvo.as_ref().unwrap().as_mech().unwrap();
+                assert_eq!(salvo.cluster_roll.is_some(), double);
                 assert!(
-                    unit.loadout().unwrap().weapons[index]
-                        .criticals
+                    salvo
+                        .groups
                         .iter()
-                        .all(|slot| unit.lost_criticals().contains(slot))
+                        .all(|group| group.damage == u16::from(weapon.profile().damage))
                 );
-                assert!(unit.weapon_recycle().is_empty());
-                assert_eq!(
-                    expected.btech.constructed_units()[&target],
-                    before.btech.constructed_units()[&target]
-                );
-                assert!(begin_battle_unjam(&mut expected, id, ObjectId(1), index).is_err());
             } else {
-                assert_eq!(
-                    unit.weapon_recycle()[&index],
-                    u16::from(weapon.profile().recycle_seconds)
-                );
-                assert_eq!(unit.fire_mode(index).unwrap(), report.expenditure.fire_mode);
-                if skill == 30 {
-                    let salvo = report.salvo.as_ref().unwrap().as_mech().unwrap();
-                    assert_eq!(salvo.cluster_roll.is_some(), double);
-                    assert!(
-                        salvo
-                            .groups
-                            .iter()
-                            .all(|group| group.damage == u16::from(weapon.profile().damage))
-                    );
-                } else {
-                    assert!(report.salvo.is_none());
+                assert!(report.salvo.is_none());
+            }
+            if broken {
+                let mut later = expected.clone();
+                for _ in 0..130 {
+                    advance_battle_recycle(&mut later);
                 }
+                assert_eq!(
+                    begin_battle_unjam(&mut later, id, ObjectId(1), index)
+                        .unwrap_err()
+                        .to_string(),
+                    "The ammo feed on that weapon is broken beyond field repair."
+                );
+                assert!(
+                    resolve_battle_shot(
+                        &mut later,
+                        id,
+                        ObjectId(1),
+                        target,
+                        index,
+                        configured_shot_rules(&config)
+                    )
+                    .is_err()
+                );
             }
             assert!(
                 lua.eval_callback::<()>(&format!(
@@ -2196,14 +2156,8 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                 1,
                 &format!("fire {index} #{}", target.0),
             );
-            assert!(
-                text.contains(if destroyed {
-                    "destroying it!"
-                } else {
-                    "You fire"
-                }),
-                "{text}"
-            );
+            assert!(text.contains("You fire"), "{text}");
+            assert_eq!(text.contains("useless until repaired"), broken, "{text}");
             lua.eval_callback::<mlua::Table>(&format!(
                 "return btech.unit.fire({},1,{index},{})",
                 id.0, target.0
@@ -2433,12 +2387,15 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                 assert_eq!(restored.btech, expected.btech);
             }
             let double = supply.iter().sum::<u16>() == 2;
+            // The burst is always fired; a 2 then explodes the rounds in the barrel and a 3 or
+            // 4 jams the feed (Tactical Operations p. 98).
             let destroyed = double && attack == 2;
             assert_eq!(report.loader_destroyed, destroyed);
             let jammed = double && (3..=4).contains(&attack);
             assert_eq!(report.jammed, jammed);
+            assert!(!report.feed_broken);
             assert_eq!(report.misload.is_some(), destroyed);
-            assert_eq!(report.launched, !destroyed && !jammed);
+            assert!(report.launched);
             assert_eq!(
                 report.expenditure.fire_mode,
                 if double {
@@ -2447,13 +2404,7 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                     FireMode::Normal
                 }
             );
-            let spent = if jammed {
-                0
-            } else if double {
-                2
-            } else {
-                1
-            };
+            let spent = if double { 2 } else { 1 };
             assert_eq!(
                 report
                     .expenditure
@@ -2463,20 +2414,25 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                     .sum::<u16>(),
                 spent
             );
-            assert_eq!(
-                report.expenditure.heat,
-                if destroyed {
-                    0
-                } else {
-                    weapon.profile().heat * spent as u8
-                }
-            );
+            assert_eq!(report.expenditure.heat, weapon.profile().heat * spent as u8);
             let unit = &expected.btech.constructed_units()[&id];
             assert_eq!(
                 unit.ammunition().iter().sum::<u16>(),
                 supply.iter().sum::<u16>() - spent
             );
             assert_eq!(unit.weapon_intact(index).unwrap(), !destroyed);
+            if skill == 30 {
+                let salvo = report.salvo.as_ref().unwrap().as_mech().unwrap();
+                assert_eq!(salvo.cluster_roll.is_some(), double);
+                assert!(
+                    salvo
+                        .groups
+                        .iter()
+                        .all(|group| group.damage == u16::from(weapon.profile().damage))
+                );
+            } else {
+                assert!(report.salvo.is_none());
+            }
             if destroyed {
                 let explosion = report.misload.as_ref().unwrap();
                 assert!(!explosion.impact.phases.is_empty());
@@ -2508,36 +2464,14 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                         .all(|slot| unit.lost_criticals().contains(slot))
                 );
                 assert!(unit.weapon_recycle().is_empty());
-                assert_eq!(
-                    expected.btech.constructed_units()[&target],
-                    before.btech.constructed_units()[&target]
-                );
                 assert!(begin_battle_unjam(&mut expected, id, ObjectId(1), index).is_err());
-            } else if jammed {
-                assert!(unit.weapon_recycle().is_empty());
-                assert!(unit.weapon_jammed(index).unwrap());
-                assert_eq!(
-                    expected.btech.constructed_units()[&target],
-                    before.btech.constructed_units()[&target]
-                );
             } else {
                 assert_eq!(
                     unit.weapon_recycle()[&index],
                     u16::from(weapon.profile().recycle_seconds)
                 );
                 assert_eq!(unit.fire_mode(index).unwrap(), report.expenditure.fire_mode);
-                if skill == 30 {
-                    let salvo = report.salvo.as_ref().unwrap().as_mech().unwrap();
-                    assert_eq!(salvo.cluster_roll.is_some(), double);
-                    assert!(
-                        salvo
-                            .groups
-                            .iter()
-                            .all(|group| group.damage == u16::from(weapon.profile().damage))
-                    );
-                } else {
-                    assert!(report.salvo.is_none());
-                }
+                assert_eq!(unit.weapon_jammed(index).unwrap(), jammed);
             }
             assert!(
                 lua.eval_callback::<()>(&format!(
@@ -2554,14 +2488,11 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                 1,
                 &format!("fire {index} #{}", target.0),
             );
-            assert!(
-                text.contains(if destroyed {
-                    "catastrophic misload"
-                } else if jammed {
-                    "ammo loader mechanism jams"
-                } else {
-                    "You fire"
-                }),
+            assert!(text.contains("You fire"), "{text}");
+            assert_eq!(text.contains("explode in the barrel"), destroyed, "{text}");
+            assert_eq!(
+                text.contains("ammo loader mechanism jams"),
+                jammed,
                 "{text}"
             );
             lua.eval_callback::<mlua::Table>(&format!(
@@ -2597,9 +2528,13 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                         .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 6)
                         .unwrap();
                     shot_seed(&mut recovery, id, seed);
+                    // The jammed burst still fired, so its recycle clock must run down first.
+                    for _ in 0..130 {
+                        advance_battle_recycle(&mut recovery);
+                    }
                     begin_battle_unjam(&mut recovery, id, ObjectId(1), index).unwrap();
                     for _ in 0..60 {
-                        advance_battle_unjamming(&mut recovery, true, true).unwrap();
+                        advance_battle_unjamming(&mut recovery, true).unwrap();
                     }
                     assert!(
                         !recovery.btech.constructed_units()[&id]
@@ -2611,7 +2546,7 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                             .ammunition()
                             .iter()
                             .sum::<u16>(),
-                        1
+                        0
                     );
                     assert_eq!(
                         recovery.btech.constructed_units()[&id]
@@ -2764,7 +2699,7 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::Weapon]) {
                     begin_battle_unjam(&mut world, id, ObjectId(1), index).unwrap();
                     for _ in 0..59 {
                         assert!(
-                            advance_battle_unjamming(&mut world, true, extended)
+                            advance_battle_unjamming(&mut world, extended)
                                 .unwrap()
                                 .is_empty()
                         );
@@ -2801,10 +2736,9 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::Weapon]) {
                                 .sum::<u8>(),
                             roll
                         );
-                        let messages =
-                            advance_battle_unjamming(&mut world, false, extended).unwrap();
+                        let messages = advance_battle_unjamming(&mut world, extended).unwrap();
                         assert_eq!(
-                            advance_battle_unjamming(&mut restored, false, extended).unwrap(),
+                            advance_battle_unjamming(&mut restored, extended).unwrap(),
                             messages
                         );
                         assert_eq!(restored.btech, world.btech);
@@ -2861,12 +2795,6 @@ async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac2() {
 async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac5() {
     use stompymux_rs::Weapon;
     rotary_unjam_matrix(&[Weapon::ClanRotaryAc5]).await;
-}
-
-#[tokio::test(flavor = "current_thread")]
-async fn rotary_unjam_gunnery_thresholds_and_restart_clanrotaryac10() {
-    use stompymux_rs::Weapon;
-    rotary_unjam_matrix(&[Weapon::ClanRotaryAc10]).await;
 }
 
 /// Rotary burst controls and firing agree across native/Lua, supply fallback, jams and restart.
@@ -3071,22 +2999,17 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::Weapon]) {
                     assert_eq!(restored.btech, expected.btech);
                 }
                 let burst = supply >= rounds;
+                // The burst that jams is still fired (Total Warfare p. 114).
                 let jammed = burst && attack <= jam_limit;
                 assert_eq!(report.jammed, jammed);
-                assert_eq!(report.launched, !jammed);
-                assert!(!report.loader_destroyed);
+                assert!(report.launched);
+                assert!(!report.loader_destroyed && !report.feed_broken);
                 assert!(report.misload.is_none());
                 assert_eq!(
                     report.expenditure.fire_mode,
                     if burst { mode } else { FireMode::Normal }
                 );
-                let spent = if jammed {
-                    0
-                } else if burst {
-                    rounds
-                } else {
-                    1
-                };
+                let spent = if burst { rounds } else { 1 };
                 assert_eq!(
                     report
                         .expenditure
@@ -3104,28 +3027,20 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::Weapon]) {
                     unit.ammunition().iter().sum::<u16>(),
                     u16::from(supply - spent)
                 );
-                if jammed {
-                    assert!(unit.weapon_recycle().is_empty());
-                    assert_eq!(
-                        expected.btech.constructed_units()[&target],
-                        before.btech.constructed_units()[&target]
+                assert_eq!(unit.fire_mode(index).unwrap(), report.expenditure.fire_mode);
+                assert_eq!(
+                    unit.weapon_recycle()[&index],
+                    u16::from(weapon.profile().recycle_seconds)
+                );
+                assert_eq!(report.salvo.is_some(), skill == 30);
+                if let Some(stompymux_rs::TargetSalvo::Mech(salvo)) = &report.salvo {
+                    assert_eq!(salvo.cluster_roll.is_some(), burst);
+                    assert!(
+                        salvo
+                            .groups
+                            .iter()
+                            .all(|group| group.damage == u16::from(weapon.profile().damage))
                     );
-                } else {
-                    assert_eq!(unit.fire_mode(index).unwrap(), report.expenditure.fire_mode);
-                    assert_eq!(
-                        unit.weapon_recycle()[&index],
-                        u16::from(weapon.profile().recycle_seconds)
-                    );
-                    assert_eq!(report.salvo.is_some(), skill == 30);
-                    if let Some(stompymux_rs::TargetSalvo::Mech(salvo)) = &report.salvo {
-                        assert_eq!(salvo.cluster_roll.is_some(), burst);
-                        assert!(
-                            salvo
-                                .groups
-                                .iter()
-                                .all(|group| group.damage == u16::from(weapon.profile().damage))
-                        );
-                    }
                 }
                 assert!(
                     lua.eval_callback::<()>(&format!(
@@ -3142,12 +3057,10 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::Weapon]) {
                     1,
                     &format!("fire {index} #{}", target.0),
                 );
-                assert!(
-                    text.contains(if jammed {
-                        "ammo loader mechanism jams"
-                    } else {
-                        "You fire"
-                    }),
+                assert!(text.contains("You fire"), "{text}");
+                assert_eq!(
+                    text.contains("ammo loader mechanism jams"),
+                    jammed,
                     "{text}"
                 );
                 lua.eval_callback::<mlua::Table>(&format!(
@@ -3194,12 +3107,6 @@ async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac2() {
 async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac5() {
     use stompymux_rs::Weapon;
     rotary_burst_matrix(&[Weapon::ClanRotaryAc5]).await;
-}
-
-#[tokio::test(flavor = "current_thread")]
-async fn rotary_burst_native_lua_supply_jams_and_restart_clan_rotary_ac10() {
-    use stompymux_rs::Weapon;
-    rotary_burst_matrix(&[Weapon::ClanRotaryAc10]).await;
 }
 
 /// Gatling fire shares a single supply-limited die across damage/heat/expenditure and replays both interfaces.
@@ -3575,7 +3482,6 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::Weapon]) {
         (AmmunitionMode::Precision, "Precision", "precision", 2),
         (AmmunitionMode::Flechette, "Flechette", "flechette", 1),
         (AmmunitionMode::Caseless, "CASELESS", "caseless", 1),
-        (AmmunitionMode::Incendiary, "Incendiary", "incendiary", 1),
     ] {
         for weapon in weapons.iter().copied() {
             for rapid in [false, true] {
@@ -3795,9 +3701,6 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::Weapon]) {
                         report
                     );
                     assert_eq!(restored.btech, expected.btech);
-                }
-                if ammunition == AmmunitionMode::Incendiary {
-                    check_incendiary_impact(&expected, id, index, weapon);
                 }
 
                 let shell_damage = u16::from(weapon.profile().damage)
@@ -4073,7 +3976,10 @@ fn check_armor_piercing_thresholds(
     }
 }
 
-/// Caseless ignition precedes rapid-fire failures and uses the same atomic damage and recovery paths.
+/// A caseless feed breaks down only on an attack roll of 2 (Tactical Operations: AUE p. 165):
+/// the shot is spent and misses, one Determining Critical Hits roll hits the autocannon's own
+/// slots, and the feed is useless for the rest of the game. Rapid-fire mode's own explosion on
+/// a 2 (Tactical Operations p. 98) applies alongside it.
 async fn check_caseless_failures(
     base: &stompymux_rs::World,
     config: &stompymux_rs::Config,
@@ -4087,7 +3993,7 @@ async fn check_caseless_failures(
     replayed: &mut Vec<(bool, bool, bool)>,
 ) {
     use stompymux_rs::*;
-    // One contact refresh and observer check covers every roll/propellant shape;
+    // One contact refresh and observer check covers every roll/critical shape;
     // each sub-scenario clones the prepared witness state instead.
     let mut shared = base.clone();
     for _ in 0..16 {
@@ -4101,13 +4007,13 @@ async fn check_caseless_failures(
     }
     assert!(!battle_observer_messages(&shared, id, "test").is_empty());
     for attack in [2, 3] {
-        for (propellant, short) in [(7, false), (8, false), (7, true), (8, true)] {
+        for (critical, short) in [(7, false), (8, false), (7, true), (8, true)] {
             if short && !rapid {
                 continue;
             }
             let mut before = shared.clone();
             toggle_battle_caseless(&mut before, id, ObjectId(1), index).unwrap();
-            let seed = stompymux_rs::Dice::seeded(caseless_seed_bytes(attack, propellant));
+            let seed = stompymux_rs::Dice::seeded(caseless_seed_bytes(attack, critical));
             before
                 .btech
                 .rewrite_unit_record(id, |record| {
@@ -4121,12 +4027,16 @@ async fn check_caseless_failures(
             let report =
                 resolve_battle_shot(&mut expected, id, ObjectId(1), target, index, shot_rules())
                     .unwrap();
-            let ignited = propellant == 8;
+            let breakdown = attack == 2;
+            let burst = rapid && !short;
+            let exploded = breakdown && burst;
+            // The single-slot autocannon is wrecked by any critical hit (a roll of 8 or more).
+            let wrecked = breakdown && (critical >= 8 || exploded);
             assert_eq!(report.roll, attack);
-            assert_eq!(report.propellant_roll, Some(propellant));
+            assert_eq!(report.feed_critical_roll, breakdown.then_some(critical));
             assert_eq!(
                 report.expenditure.fire_mode,
-                if rapid && !short {
+                if burst {
                     FireMode::Rapid
                 } else {
                     FireMode::Normal
@@ -4138,16 +4048,26 @@ async fn check_caseless_failures(
                     .unwrap(),
                 report.expenditure.fire_mode
             );
-            assert_eq!(report.loader_destroyed, ignited);
-            assert_eq!(report.jammed, !ignited);
-            assert_eq!(report.misload.is_some(), ignited);
-            assert!(!report.launched);
-            assert!(report.salvo.is_none());
+            assert!(report.launched);
+            // Rapid-fire mode's own jam on a 3 (Tactical Operations p. 98) still applies.
+            let rapid_jam = burst && attack == 3;
+            assert_eq!(report.loader_destroyed, wrecked);
+            assert_eq!(report.jammed, (breakdown && !wrecked) || rapid_jam);
+            assert_eq!(report.feed_broken, breakdown && !wrecked);
+            assert_eq!(report.misload.is_some(), exploded);
+            if breakdown {
+                // The shot automatically misses, but its ammunition and heat are spent.
+                assert!(!report.hit && report.salvo.is_none());
+                assert_eq!(
+                    expected.btech.constructed_units()[&target],
+                    before.btech.constructed_units()[&target]
+                );
+            }
+            let rounds = if burst { 2 } else { 1 };
             assert_eq!(
-                expected.btech.constructed_units()[&target],
-                before.btech.constructed_units()[&target]
+                report.expenditure.heat,
+                report.expenditure.weapon.profile().heat * rounds
             );
-            assert_eq!(report.expenditure.heat, 0);
             assert_eq!(
                 report
                     .expenditure
@@ -4155,20 +4075,28 @@ async fn check_caseless_failures(
                     .iter()
                     .map(|draw| draw.rounds)
                     .sum::<u16>(),
-                if ignited {
-                    if rapid && !short { 2 } else { 1 }
-                } else {
-                    0
-                }
+                u16::from(rounds)
             );
             let unit = &expected.btech.constructed_units()[&id];
-            assert_eq!(unit.weapon_intact(index).unwrap(), !ignited);
-            assert!(unit.weapon_recycle().is_empty());
+            assert_eq!(unit.weapon_intact(index).unwrap(), !wrecked);
+            // An explosion's internal damage can add its own feed conditions to the wreck.
+            if !exploded {
+                assert_eq!(
+                    unit.weapon_jammed(index).unwrap(),
+                    (breakdown && !wrecked) || rapid_jam
+                );
+                assert_eq!(
+                    unit.weapon_feed_broken(index).unwrap(),
+                    breakdown && !wrecked
+                );
+            }
+            assert_eq!(unit.weapon_recycle().contains_key(&index), !wrecked);
             assert_eq!(
                 unit.ammunition()[1],
                 before.btech.constructed_units()[&id].ammunition()[1]
             );
-            if !ignited {
+            if breakdown && !exploded {
+                // The breakdown's critical check is the only extra shooter roll.
                 let mut dice = seed.clone();
                 dice.two_d6();
                 dice.two_d6();
@@ -4177,53 +4105,54 @@ async fn check_caseless_failures(
                     serde_json::to_value(dice).unwrap()
                 );
             }
-            // The fire/parity triple's outcomes, texts and messages depend on the
-            // propellant and ammunition shape, not the attack roll; probe the first
-            // roll of each shape only.
-            if attack == 2 {
-                install(native, before.clone());
-                install(lua, before.clone());
-                assert!(
-                    lua.eval_callback::<()>(&format!(
-                        "btech.unit.fire({},1,{index},{}); error('abort')",
-                        id.0, target.0
-                    ))
-                    .is_err()
-                );
-                assert_eq!(lua.world().btech, before.btech);
-                assert!(lua.drain_outbox().is_empty());
-                let text = support::run_text(
-                    native,
-                    config,
-                    ObjectId(1),
-                    1,
-                    &format!("fire {index} #{}", target.0),
-                );
-                assert!(text.contains("ammo loading mechanism jams"), "{text}");
-                assert_eq!(text.contains("Propellant from"), ignited, "{text}");
-                assert_eq!(
-                    text.contains("shudders from an internal explosion!"),
-                    ignited,
-                    "{text}"
-                );
-                lua.eval_callback::<mlua::Table>(&format!(
-                    "return btech.unit.fire({},1,{index},{})",
+            if !breakdown {
+                continue;
+            }
+            // The fire/parity triple's outcomes, texts and messages depend on the critical
+            // and ammunition shape, not the attack roll; probe each shape once.
+            install(native, before.clone());
+            install(lua, before.clone());
+            assert!(
+                lua.eval_callback::<()>(&format!(
+                    "btech.unit.fire({},1,{index},{}); error('abort')",
                     id.0, target.0
                 ))
-                .unwrap();
-                assert_eq!(native.world().btech, expected.btech);
-                assert_eq!(lua.world().btech, expected.btech);
-                let messages = lua.drain_outbox();
-                assert_eq!(
-                    messages.iter().any(|(_, text)| text
-                        .source()
-                        .contains("shudders from an internal explosion!")),
-                    ignited
-                );
-            }
+                .is_err()
+            );
+            assert_eq!(lua.world().btech, before.btech);
+            assert!(lua.drain_outbox().is_empty());
+            let text = support::run_text(
+                native,
+                config,
+                ObjectId(1),
+                1,
+                &format!("fire {index} #{}", target.0),
+            );
+            assert!(text.contains("You fire"), "{text}");
+            assert!(text.contains("caseless feed on your"), "{text}");
+            assert_eq!(text.contains("wrecks your"), critical >= 8, "{text}");
+            assert_eq!(text.contains("explode in the barrel"), exploded, "{text}");
+            assert_eq!(
+                text.contains("shudders from an internal explosion!"),
+                exploded,
+                "{text}"
+            );
+            lua.eval_callback::<mlua::Table>(&format!(
+                "return btech.unit.fire({},1,{index},{})",
+                id.0, target.0
+            ))
+            .unwrap();
+            assert_eq!(native.world().btech, expected.btech);
+            assert_eq!(lua.world().btech, expected.btech);
+            let messages = lua.drain_outbox();
+            assert_eq!(
+                messages.iter().any(|(_, text)| text
+                    .source()
+                    .contains("shudders from an internal explosion!")),
+                exploded
+            );
             // Restart parity probe runs once per shard; the save+recovery replay
-            // below is latched per distinct recovery shape (all ignition outcomes
-            // share one shape), per the pellet-family latching convention.
+            // below is latched per distinct recovery shape.
             if !*probed_restart {
                 *probed_restart = true;
                 persistence::save(&config.database(), &before)
@@ -4243,11 +4172,7 @@ async fn check_caseless_failures(
                 );
                 assert_eq!(loaded.btech, expected.btech);
             }
-            let shape = if ignited {
-                (false, false, true)
-            } else {
-                (rapid, short, false)
-            };
+            let shape = (rapid, short, wrecked);
             if replayed.contains(&shape) {
                 continue;
             }
@@ -4256,29 +4181,28 @@ async fn check_caseless_failures(
                 .await
                 .unwrap();
             let mut recovery = persistence::load(&config.database()).await.unwrap();
-            if ignited {
-                assert!(begin_battle_unjam(&mut recovery, id, ObjectId(1), index).is_err());
-                continue;
-            }
             let frozen = recovery.btech.clone();
-            assert!(toggle_battle_caseless(&mut recovery, id, ObjectId(1), index).is_err());
+            // Neither a wrecked mount nor a broken feed can be cleared in the field, and a
+            // broken feed still refuses mode changes.
+            let error = begin_battle_unjam(&mut recovery, id, ObjectId(1), index).unwrap_err();
+            if wrecked {
+                assert_eq!(error.to_string(), "That weapon has been destroyed");
+            } else {
+                assert_eq!(
+                    error.to_string(),
+                    "The ammo feed on that weapon is broken beyond field repair."
+                );
+                assert!(toggle_battle_caseless(&mut recovery, id, ObjectId(1), index).is_err());
+            }
             assert_eq!(recovery.btech, frozen);
-            let seed = (0..=255)
-                .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 6)
-                .unwrap();
-            shot_seed(&mut recovery, id, seed);
-            begin_battle_unjam(&mut recovery, id, ObjectId(1), index).unwrap();
-            for _ in 0..60 {
-                advance_battle_unjamming(&mut recovery, true, true).unwrap();
+            for _ in 0..130 {
+                advance_battle_units(&mut recovery, 0, true);
             }
             assert!(
                 !recovery.btech.constructed_units()[&id]
-                    .weapon_jammed(index)
+                    .weapon_readiness(index)
                     .unwrap()
-            );
-            assert_eq!(
-                recovery.btech.constructed_units()[&id].ammunition()[0],
-                unit.ammunition()[0] - 1
+                    .ready
             );
             assert_eq!(
                 recovery.btech.constructed_units()[&id]
@@ -4288,110 +4212,6 @@ async fn check_caseless_failures(
             );
         }
     }
-}
-
-/// A critical after firing ignites loaded rounds through the shared tactical cascade.
-fn check_incendiary_impact(
-    base: &stompymux_rs::World,
-    id: ObjectId,
-    index: usize,
-    weapon: stompymux_rs::Weapon,
-) {
-    use stompymux_rs::*;
-    let unit = &base.btech.constructed_units()[&id];
-    let loadout = unit.loadout().unwrap();
-    let mount = &loadout.weapons[index];
-    let section = mount.criticals[0].section;
-    let candidates = unit.critical_candidates(section);
-    let seed = (0u32..10000)
-        .find_map(|value| {
-            let mut bytes = [0; 32];
-            bytes[..4].copy_from_slice(&value.to_le_bytes());
-            let initial = Dice::seeded(bytes);
-            let mut dice = initial.clone();
-            dice.two_d6(); // Material entry before the selected weapon critical.
-            (dice.two_d6() == 8
-                && mount.criticals.contains(
-                    &candidates[usize::from(dice.die(candidates.len() as u16).unwrap() - 1)],
-                ))
-            .then_some(initial)
-        })
-        .unwrap();
-    let mut world = base.clone();
-    let observer = *world
-        .btech
-        .constructed_units()
-        .keys()
-        .find(|other| **other != id)
-        .unwrap();
-    // Use an intact observer independently of damage to the previous shot's target.
-    let mut state = serde_json::to_value(&world.btech).unwrap();
-    let previous = state["constructed"][observer.0.to_string()].clone();
-    let fresh = Mech::from_template(
-        world.btech.constructed_units()[&observer]
-            .definition()
-            .clone(),
-    )
-    .unwrap();
-    let mut fresh = serde_json::to_value(fresh).unwrap();
-    fresh["position"] = previous["position"].clone();
-    fresh["map_slot"] = previous["map_slot"].clone();
-    fresh["motion"] = previous["motion"].clone();
-    fresh["power"] = serde_json::json!({"state":"running"});
-    state["constructed"][observer.0.to_string()] = fresh;
-    world.btech = serde_json::from_value(state).unwrap();
-    for _ in 0..16 {
-        if world.btech.constructed_units()[&observer]
-            .contacts()
-            .contains_key(&id)
-        {
-            break;
-        }
-        refresh_battle_contacts(&mut world, &[observer]).unwrap();
-    }
-    assert!(!battle_observer_messages(&world, id, "test").is_empty());
-    world.btech.set_unit_dice(id, seed).unwrap();
-    let rules = shot_rules();
-    let report = resolve_battle_tactical_impact(
-        &mut world,
-        id,
-        Hit {
-            section,
-            rear_armor: false,
-            through_armor_critical: true,
-        },
-        1,
-        FallRules {
-            vehicle_impact: stompymux_rs::VehicleImpactRules::STANDARD,
-            extended_piloting: rules.extended_piloting,
-            toughness: rules.target_toughness,
-        },
-    )
-    .unwrap();
-    assert_eq!(
-        report.impact.criticals[0].1,
-        CriticalLoss::Weapon {
-            index,
-            explosion_damage: weapon.profile().damage
-        }
-    );
-    assert!(
-        report
-            .notices
-            .iter()
-            .any(|notice| notice.text.contains("incendiary ammunition"))
-    );
-    assert!(report.notices.iter().any(|notice| notice.unit == observer
-        && notice.text.contains("engulfed in a brilliant blue flame")));
-    assert!(
-        world.btech.constructed_units()[&id].sections()[&section].internal
-            < unit.sections()[&section].internal
-    );
-    assert!(mount.criticals.iter().all(|slot| {
-        world.btech.constructed_units()[&id]
-            .lost_criticals()
-            .contains(slot)
-    }));
 }
 
 #[tokio::test]
@@ -4596,19 +4416,20 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
             .unwrap();
         for _ in 0..59 {
             assert!(
-                advance_battle_unjamming(&mut world, true, true)
+                advance_battle_unjamming(&mut world, true)
                     .unwrap()
                     .is_empty()
             );
         }
-        let messages = advance_battle_unjamming(&mut world, true, true).unwrap();
+        let messages = advance_battle_unjamming(&mut world, true).unwrap();
         let rolls: Vec<_> = messages
             .iter()
             .filter(|(_, text)| {
-                text.contains("skill roll") || text.contains("Modified Pilot Skill")
+                text.contains("roll to unjam") || text.contains("Modified Gunnery Skill")
             })
             .collect();
-        if matches!(outcome, "empty" | "prone") {
+        // A prone unit makes the same Gunnery Skill Roll as a standing one.
+        if outcome == "empty" {
             assert!(rolls.is_empty());
         } else {
             assert_eq!(rolls.len(), 2);
@@ -4636,7 +4457,7 @@ async fn unjam_feedback_separates_pilot_cockpit_and_observers() {
 async fn firing_observers_hide_unseen_participants_and_replay_transactionally() {
     use stompymux_rs::*;
     let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 8)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 6)
         .unwrap();
     let target_seed = (0..=255)
         .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 7)
@@ -5365,8 +5186,8 @@ async fn facing_native_lua_controls_replay_without_observer_messages() {
             Torso::Right,
             false,
         ),
-        ("fliparms", "fliparms", "", Torso::Right, true),
-        ("rottorso center", "rottorso", ",'c'", Torso::Center, true),
+        ("rottorso center", "rottorso", ",'c'", Torso::Center, false),
+        ("fliparms", "fliparms", "", Torso::Center, true),
         (
             "rottorso center",
             "rottorso",
@@ -6788,7 +6609,6 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
     for (weapon, mass, ranges) in [
         (Weapon::HeavyFlamer, 1536, (2, 3, 4)),
         (Weapon::VehicleFlamer, 512, (1, 2, 3)),
-        (Weapon::VehicleHeavyFlamer, 1024, (2, 4, 6)),
     ] {
         let profile = weapon.profile();
         let mut definition = base.btech.constructed_units()[&id].definition().clone();
@@ -6936,254 +6756,6 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
     }
 }
 
-/// Coolant hits preserve armor and target dice while fuel, cooling and self-routing replay atomically.
-#[tokio::test]
-async fn coolant_modes_fuel_native_lua_and_saved_replay() {
-    use stompymux_rs::*;
-    let (_dir, config, mut base, id, target) = shot_fixture().await;
-    shot_skill(&mut base, 0);
-    set_battle_character_value(
-        &mut base,
-        ObjectId(1),
-        "Gunnery-Ballistic",
-        CharacterValue {
-            value: 4,
-            experience: 0,
-            last_used: 0,
-        },
-    )
-    .unwrap();
-    set_battle_friendly_fire_safety(&mut base, id, ObjectId(1), true).unwrap();
-    let mut definition = base.btech.constructed_units()[&id].definition().clone();
-    definition
-        .sections
-        .get_mut(&MechSection::LeftArm)
-        .unwrap()
-        .criticals
-        .get_mut(&2)
-        .unwrap()
-        .equipment = "IS.CoolantGun".into();
-    let bin = definition
-        .sections
-        .get_mut(&MechSection::RightTorso)
-        .unwrap()
-        .criticals
-        .get_mut(&0)
-        .unwrap();
-    bin.equipment = "Ammo_IS.CoolantGun".into();
-    bin.data = "25".into();
-    let mut state = serde_json::to_value(&base.btech).unwrap();
-    let map = base.btech.constructed_units()[&id].position().unwrap().map;
-    state["maps"][map.0.to_string()]["flags"] = 256.into();
-
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
-    state["constructed"][id.0.to_string()]["ammunition"][0] = 25.into();
-    base.btech = serde_json::from_value(state).unwrap();
-    let seed = (0..=255)
-        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
-        .unwrap();
-    let native = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
-    )
-    .unwrap();
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(base.clone())),
-    )
-    .unwrap();
-    let pristine_db = snapshot_database(&config);
-    // Explicit heat-mode coolant shots keep the supplied recipient in both
-    // single and grouped host actions; the omitted-target path below cools self.
-    let mut explicit_world = base.clone();
-    toggle_battle_flamer_heat(&mut explicit_world, id, ObjectId(1), 0).unwrap();
-    edit_battle_tic(
-        &mut explicit_world,
-        id,
-        ObjectId(1),
-        0,
-        TicEdit::Add(vec![0]),
-    )
-    .unwrap();
-    shot_seed(&mut explicit_world, id, seed);
-    for grouped in [false, true] {
-        install(&native, explicit_world.clone());
-        install(&lua, explicit_world.clone());
-        let call = if grouped {
-            format!(
-                "btech.unit.tic_fire({},1,{{0}},{})[1].report",
-                id.0, target.0
-            )
-        } else {
-            format!("btech.unit.fire({},1,0,{})", id.0, target.0)
-        };
-        assert!(
-            lua.eval_callback::<()>(&format!("local r={call}; error('abort')"))
-                .is_err()
-        );
-        assert_eq!(lua.world().btech, explicit_world.btech);
-        assert!(lua.drain_outbox().is_empty());
-        let (recipient, cooling): (i64, f64) = lua
-            .eval_callback(&format!("local r={call}; return r.target,r.cooling"))
-            .unwrap();
-        assert_eq!((recipient, cooling), (target.0, 3.0));
-        let command = if grouped { "firetic" } else { "fire" };
-        let text = support::run_text(
-            &native,
-            &config,
-            ObjectId(1),
-            1,
-            &format!("{command} 0 #{}", target.0),
-        );
-        assert!(text.contains("stream of coolant"), "{text}");
-        assert_eq!(native.world().btech, lua.world().btech);
-        assert_eq!(
-            lua.world().btech.constructed_units()[&id].heat(),
-            explicit_world.btech.constructed_units()[&id].heat()
-        );
-    }
-    for self_cooling in [false, true] {
-        for stored in [0.0_f64, 1.5, 9.0] {
-            for rounds in [0, 1, 25] {
-                let mut world = base.clone();
-                let recipient = if self_cooling { id } else { target };
-                let mut state = serde_json::to_value(&world.btech).unwrap();
-                for unit in [id, target] {
-                    state["constructed"][unit.0.to_string()]["heat"]["stored"] = 6.0.into();
-                }
-                state["constructed"][recipient.0.to_string()]["heat"]["stored"] = stored.into();
-                state["constructed"][id.0.to_string()]["ammunition"][0] = rounds.into();
-                state["constructed"][id.0.to_string()]["target_lock"] = serde_json::Value::Null;
-                world.btech = serde_json::from_value(state).unwrap();
-                if self_cooling {
-                    toggle_battle_flamer_heat(&mut world, id, ObjectId(1), 0).unwrap();
-                }
-                shot_seed(&mut world, id, seed);
-                restore_database(&config, &pristine_db);
-                persistence::save(&config.database(), &world).await.unwrap();
-                let mut restored = persistence::load(&config.database()).await.unwrap();
-                restored
-                    .objects
-                    .get_mut(&ObjectId(1))
-                    .unwrap()
-                    .flags
-                    .insert(Flag::Connected);
-                install(&native, world.clone());
-                install(&lua, restored);
-                let call = if self_cooling {
-                    format!("btech.unit.fire({},1,0)", id.0)
-                } else {
-                    format!("btech.unit.fire({},1,0,{})", id.0, target.0)
-                };
-                assert!(
-                    lua.eval_callback::<()>(&format!("{call}; error('abort')"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, world.btech);
-                assert!(lua.drain_outbox().is_empty());
-                let command = if self_cooling {
-                    "fire 0".to_owned()
-                } else {
-                    format!("fire 0 #{}", target.0)
-                };
-                commands::run(&native, &config, ObjectId(1), 1, &command).unwrap();
-                let result = lua.eval_callback::<mlua::Table>(&format!("return {call}"));
-                if rounds == 0 {
-                    assert!(result.is_err());
-                    assert_eq!(native.world().btech, world.btech);
-                    assert_eq!(lua.world().btech, world.btech);
-                    continue;
-                }
-                let result = result.unwrap();
-                assert_eq!(result.get::<f64>("cooling").unwrap(), 3.0);
-                assert_eq!(result.get::<i64>("target").unwrap(), recipient.0);
-                assert_eq!(result.get::<u8>("heat_transfer").unwrap(), 0);
-                assert!(
-                    result
-                        .get::<Option<mlua::Table>>("salvo")
-                        .unwrap()
-                        .is_none()
-                );
-                assert_eq!(native.world().btech, lua.world().btech);
-                let messages = native.drain_outbox();
-                assert_eq!(messages, lua.drain_outbox());
-                if self_cooling {
-                    assert!(
-                        messages
-                            .iter()
-                            .all(|(_, text)| !text.source().contains("has fired"))
-                    );
-                }
-                let after = native.world().clone();
-                assert_eq!(
-                    after.btech.constructed_units()[&recipient].heat().stored,
-                    stored - 3.0
-                );
-                assert_eq!(
-                    after.btech.constructed_units()[&id].ammunition()[0],
-                    rounds as u16 - 1
-                );
-                for unit in [id, target] {
-                    assert_eq!(
-                        after.btech.constructed_units()[&unit].sections(),
-                        world.btech.constructed_units()[&unit].sections()
-                    );
-                }
-                assert_eq!(
-                    serde_json::to_value(&after.btech.constructed_units()[&target]).unwrap()["dice"],
-                    serde_json::to_value(&world.btech.constructed_units()[&target]).unwrap()["dice"]
-                );
-                persistence::save(&config.database(), &after).await.unwrap();
-                let mut saved = persistence::load(&config.database()).await.unwrap();
-                saved
-                    .objects
-                    .get_mut(&ObjectId(1))
-                    .unwrap()
-                    .flags
-                    .insert(Flag::Connected);
-                assert_eq!(saved.btech, after.btech);
-            }
-        }
-        let mut before = base.clone();
-        if self_cooling {
-            toggle_battle_flamer_heat(&mut before, id, ObjectId(1), 0).unwrap();
-        }
-        let mut state = serde_json::to_value(&before.btech).unwrap();
-        for unit in [id, target] {
-            state["constructed"][unit.0.to_string()]["heat"]["stored"] = 9.0.into();
-        }
-        before.btech = serde_json::from_value(state).unwrap();
-        let rules = ShotRules {
-            tsm_tow_bonus: true,
-            ..shot_rules()
-        };
-        let mut probe = before.clone();
-        let number = resolve_battle_shot(&mut probe, id, ObjectId(1), target, 0, rules)
-            .unwrap()
-            .target_number
-            .unwrap();
-        assert!((3..=11).contains(&number));
-        for roll in [number - 1, number, number + 1] {
-            let mut world = before.clone();
-            let seed = (0..=255)
-                .find(|seed| i32::from(Dice::seeded([*seed; 32]).two_d6()) == roll)
-                .unwrap();
-            shot_seed(&mut world, id, seed);
-            let report =
-                resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
-            assert_eq!(report.target, target);
-            assert_eq!(report.cooling, (roll >= number).then_some(3.0));
-            assert_eq!(report.glancing, roll == number);
-            assert!(report.salvo.is_none());
-            assert_eq!(world.btech.constructed_units()[&id].ammunition()[0], 24);
-        }
-    }
-    let before = base.btech.clone();
-    assert!(resolve_battle_shot(&mut base, id, ObjectId(1), id, 1, shot_rules()).is_err());
-    assert_eq!(base.btech, before);
-}
-
 /// Plasma heat accompanies material hits, remains full on glances, and consumes no target dice on misses.
 #[tokio::test]
 async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
@@ -7246,7 +6818,6 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
         shot_seed(&mut world, id, seed);
         let report = resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, rules).unwrap();
         assert_eq!(report.heat_transfer, 0);
-        assert_eq!(report.cooling, None);
         assert_eq!(report.glancing, roll == number);
         assert_eq!(world.btech.constructed_units()[&id].ammunition()[0], 9);
         assert_eq!(world.btech.constructed_units()[&id].heat().stored, 10.0);

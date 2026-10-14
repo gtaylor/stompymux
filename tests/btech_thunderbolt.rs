@@ -43,14 +43,30 @@ fn thunderbolt_clusters_supply_and_mount_losses() {
         assert_eq!(weapon.gunnery_skill(true), "Gunnery-Missile");
         for roll in 2..=12 {
             assert_eq!(weapon.missile_hits(roll).unwrap(), 1);
-            for mode in [AmmunitionMode::Normal, AmmunitionMode::Artemis] {
-                assert_eq!(
-                    weapon
-                        .damage_groups_for_ammunition(mode, Some(roll), 1.0)
-                        .unwrap(),
-                    [u16::from(p.damage)]
-                );
-            }
+            assert_eq!(
+                weapon
+                    .damage_groups_for_ammunition(AmmunitionMode::Normal, Some(roll), 6.0)
+                    .unwrap(),
+                [u16::from(p.damage)]
+            );
+            // Inside the minimum range the warhead has not armed: half damage, rounded
+            // down (Tactical Operations: AUE p. 159).
+            assert_eq!(
+                weapon
+                    .damage_groups_for_ammunition(AmmunitionMode::Normal, Some(roll), 1.0)
+                    .unwrap(),
+                [u16::from(p.damage) / 2]
+            );
+        }
+        // Thunderbolts fire standard rounds only (Tactical Operations: Advanced Units &
+        // Equipment p. 159): no Artemis, Narc or other special munitions.
+        for mode in [
+            AmmunitionMode::Artemis,
+            AmmunitionMode::Narc,
+            AmmunitionMode::Inferno,
+            AmmunitionMode::SemiGuided,
+        ] {
+            assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
         }
         assert!(weapon.damage_groups(None).is_err());
         for hotload in [false, true] {

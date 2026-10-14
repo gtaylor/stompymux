@@ -17,7 +17,7 @@ pub enum MapFlag {
     Dark,
     /// Weapon fire cannot damage buildings, walls or bridges.
     IndestructibleStructures,
-    /// Teammates cannot damage each other with non-coolant weapons.
+    /// Teammates cannot damage each other with weapons.
     NoFriendlyFire,
     /// Physical attacks are not allowed.
     NoPhysicalAttacks,
@@ -74,7 +74,7 @@ impl MapFlag {
             Self::IndestructibleStructures => {
                 "Weapon fire cannot damage buildings, walls or bridges."
             }
-            Self::NoFriendlyFire => "Teammates cannot damage each other with non-coolant weapons.",
+            Self::NoFriendlyFire => "Teammates cannot damage each other with weapons.",
             Self::NoPhysicalAttacks => "Physical attacks are not allowed.",
             Self::NoStacking => "Units share crowded hexes without stacking collisions.",
         }

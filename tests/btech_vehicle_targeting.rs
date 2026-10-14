@@ -65,7 +65,7 @@ async fn formation() -> (tempfile::TempDir, Config, World, [ObjectId; 4]) {
 }
 
 #[tokio::test]
-async fn vehicle_unit_and_coordinate_selections_settle_replay_and_drive_scans() {
+async fn vehicle_unit_and_coordinate_selections_replay_and_drive_scans() {
     let (_dir, config, initial, [mech, _, observer, vehicle]) = formation().await;
     for target in [mech, vehicle] {
         let mut world = initial.clone();
@@ -82,28 +82,12 @@ async fn vehicle_unit_and_coordinate_selections_settle_replay_and_drive_scans() 
             world.btech.vehicles()[&observer]
                 .target_lock()
                 .unwrap()
-                .remaining,
-            8
+                .target,
+            target
         );
-        for _ in 0..3 {
-            assert!(advance_battle_target_locks(&mut world).is_empty());
-        }
         persistence::save(&config.database(), &world).await.unwrap();
-        let mut restored = persistence::load(&config.database()).await.unwrap();
-        for remaining in (0..5).rev() {
-            let notices = advance_battle_target_locks(&mut world);
-            assert_eq!(notices, advance_battle_target_locks(&mut restored));
-            assert_eq!(notices.len(), usize::from(remaining == 0));
-            assert_eq!(
-                world.btech.vehicles()[&observer]
-                    .target_lock()
-                    .unwrap()
-                    .remaining,
-                remaining
-            );
-        }
+        let restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(world.btech, restored.btech);
-        assert!(advance_battle_target_locks(&mut world).is_empty());
         let expected = scan_battle_unit(&world, observer, ObjectId(1), target, "").unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
@@ -130,13 +114,13 @@ async fn vehicle_unit_and_coordinate_selections_settle_replay_and_drive_scans() 
             &format!("lock #{}", target.0),
         );
         assert!(text.contains("Target set"), "{text}");
-        let remaining: u8 = scripts
+        let selected: i64 = scripts
             .eval_callback(&format!(
-                "return btech.unit.state({}).target_lock.remaining",
+                "return btech.unit.state({}).target_lock.target",
                 observer.0
             ))
             .unwrap();
-        assert_eq!(remaining, 8);
+        assert_eq!(selected, target.0);
         support::run_text(&scripts, &config, ObjectId(1), 1, "lock 0 0");
         assert!(
             scripts.world().btech.vehicles()[&observer]
@@ -274,16 +258,16 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
 }
 
 #[tokio::test]
-async fn vehicle_lock_snapshots_reject_invalid_countdowns_targets_and_coordinates() {
+async fn vehicle_lock_snapshots_reject_invalid_targets_coordinates_and_power() {
     let (_dir, config, mut world, [_, _, observer, target]) = formation().await;
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
     refresh_battle_contacts(&mut world, &[observer]).unwrap();
     select_battle_target(&mut world, observer, ObjectId(1), Some(target)).unwrap();
     for value in [
-        serde_json::json!({"target": observer.0,"remaining":8}),
-        serde_json::json!({"target":999999,"remaining":8}),
-        serde_json::json!({"hex":{"x":-1,"y":0},"mode":"hex","remaining":8}),
+        serde_json::json!({"target": observer.0}),
+        serde_json::json!({"target":999999}),
+        serde_json::json!({"hex":{"x":-1,"y":0},"mode":"hex"}),
     ] {
         let mut bad = world.clone();
         bad.btech
@@ -293,42 +277,7 @@ async fn vehicle_lock_snapshots_reject_invalid_countdowns_targets_and_coordinate
             .unwrap();
         assert!(bad.validate(&config).is_err());
     }
-    for field in ["remaining", "power"] {
-        let mut saved = serde_json::to_value(&world.btech).unwrap();
-        if field == "remaining" {
-            saved["vehicles"][observer.0.to_string()]["target_lock"]["remaining"] =
-                serde_json::json!(9);
-        } else {
-            saved["vehicles"][observer.0.to_string()]["power"] =
-                serde_json::to_value(Power::Off).unwrap();
-        }
-        assert!(serde_json::from_value::<BtechState>(saved).is_err());
-    }
-}
-
-#[tokio::test]
-async fn idle_vehicle_lock_countdown_retries_failed_server_commits() {
-    tokio::task::LocalSet::new().run_until(async {
-        use sqlx::Connection;
-        let (_dir, config, mut world, [a, b, observer, other]) = formation().await;
-        power(&mut world, &[a, b, other], Power::Off);
-        for id in [a, b, other] { remove_battle_unit(&mut world, id, ObjectId(config.home())).unwrap(); }
-        world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
-        assign_battle_pilot(&mut world, observer, ObjectId(1)).unwrap();
-        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
-        select_battle_hex_target(&mut world, observer, ObjectId(1), HexCoordinate { x: 0, y: 1 }, HexTargetMode::Hex).unwrap();
-        assert!(battle_contact_observers(&world).is_empty());
-        persistence::save(&config.database(), &world).await.unwrap();
-        let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
-        // A settling lock keeps its timer row still; refuse the commit at the snapshot stamp.
-        sqlx::raw_sql("CREATE TRIGGER deny_lock BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'lock failure'); END;").execute(&mut sql).await.unwrap();
-        let (_address, shutdown, server, _lua, mut heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
-        heartbeats.attempt().await;
-        let saved = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(saved.btech.vehicles()[&observer].hex_lock().unwrap().remaining, 8);
-        sqlx::raw_sql("DROP TRIGGER deny_lock").execute(&mut sql).await.unwrap();
-        heartbeats.until_saved(&config, 5, |saved| saved.btech.vehicles()[&observer].hex_lock().unwrap().remaining < 8).await;
-        shutdown.send(ShutdownRequest::Sigterm).unwrap();
-        server.await.unwrap().unwrap();
-    }).await;
+    let mut saved = serde_json::to_value(&world.btech).unwrap();
+    saved["vehicles"][observer.0.to_string()]["power"] = serde_json::to_value(Power::Off).unwrap();
+    assert!(serde_json::from_value::<BtechState>(saved).is_err());
 }

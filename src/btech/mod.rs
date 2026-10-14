@@ -82,8 +82,8 @@ mod arcs;
 pub use arcs::MountArcs;
 mod assets;
 pub use aim::{
-    AimModifiers, AimRules, IndirectAim, PerceptionAim, aim_modifiers, pilot_aim_modifiers,
-    unit_target_movement_modifier,
+    AimModifiers, AimRules, IndirectAim, PerceptionAim, TargetMovement, aim_modifiers,
+    pilot_aim_modifiers, unit_target_movement, unit_target_movement_modifier,
 };
 pub use arcs::{ContactArc, Facing, Torso, flip_arms, rotate_torso, weapon_bears_on};
 mod surface_break;
@@ -165,7 +165,7 @@ mod readiness;
 mod weapon_admission;
 pub use readiness::{WeaponReadiness, WeaponUse, advance_recycle, spend_weapon};
 mod salvo;
-pub use salvo::WeaponSalvo;
+pub use salvo::{GuidedHit, WeaponSalvo, cluster_hits};
 mod state;
 mod stun;
 pub use salvo::{MechSalvoReport, SalvoGroup, SalvoReport, resolve_salvo, resolve_tactical_salvo};
@@ -266,20 +266,20 @@ pub use geometry::{Range, unit_elevation, unit_range};
 pub use stompymux_map::{HexCoordinate, Point};
 
 pub use stompymux_unit_construction::{
-    AMMUNITION_PART_OFFSET, AmmunitionAdjustment, AmmunitionBin, AmmunitionMode,
-    CriticalDefinition, CriticalLocation, DamageClass, Engine, FireMode, Gyro, InspectionArmor,
-    InspectionCritical, InspectionPart, InspectionWeapon, MechChassis, MechLoadout, MechSection,
-    MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part, PartForm, PartKind, PartNames, PartPrices,
-    RangeBracket, RawMovement, RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout,
-    SectionDefinition, System, SystemCritical, Technology, TemplateCheck, TemplateRegistryCache,
-    UnitTemplate, VehicleCriticalLocation, VehicleEngine, VehicleLoadout, VehicleMass,
-    VehicleMaterial, VehicleMovement, VehiclePowerplant, VehicleSection, VehicleTemplate,
-    WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount, WeaponProfile, WeaponRange,
-    administrative_technology, administrative_template_movement, administrative_template_tonnage,
-    armor_mass, cargo_space_mass, check_template, edit_special, engine_mass,
-    finalize_raw_load_specials, flag_spells_technology, half_ton, inspect_raw_template_armor,
-    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_weapons,
-    inspection_ammunition_modes, inspection_canonical_mech_internal,
+    AMMUNITION_PART_OFFSET, ARTILLERY_MAPSHEET_HEXES, AmmunitionAdjustment, AmmunitionBin,
+    AmmunitionMode, CriticalDefinition, CriticalLocation, DamageClass, Engine, FireMode, Gyro,
+    InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon, MechChassis,
+    MechLoadout, MechSection, MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part, PartForm,
+    PartKind, PartNames, PartPrices, RangeBracket, RawMovement, RawSectionCode, RawTemplate,
+    RawUnitClass, ResolvedLoadout, SectionDefinition, System, SystemCritical, Technology,
+    TemplateCheck, TemplateRegistryCache, UnitTemplate, VehicleCriticalLocation, VehicleEngine,
+    VehicleLoadout, VehicleMass, VehicleMaterial, VehicleMovement, VehiclePowerplant,
+    VehicleSection, VehicleTemplate, WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount,
+    WeaponProfile, WeaponRange, administrative_technology, administrative_template_movement,
+    administrative_template_tonnage, armor_mass, cargo_space_mass, check_template, edit_special,
+    engine_mass, finalize_raw_load_specials, flag_spells_technology, half_ton,
+    inspect_raw_template_armor, inspect_raw_template_criticals, inspect_raw_template_engine,
+    inspect_raw_template_weapons, inspection_ammunition_modes, inspection_canonical_mech_internal,
     inspection_compatible_template, inspection_compatible_vehicle_template,
     inspection_configured_technology, inspection_configured_technology_attributes,
     inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
@@ -343,7 +343,7 @@ pub use scanner::{
 };
 
 mod targeting;
-pub use targeting::{TargetLock, advance_target_locks, select_target};
+pub use targeting::{TargetLock, select_target};
 
 pub(crate) mod fire_target;
 pub use fire_target::FireTarget;
@@ -429,9 +429,6 @@ pub use armor_piercing::toggle_armor_piercing;
 pub(crate) mod caseless;
 pub use caseless::toggle_caseless;
 
-pub(crate) mod incendiary;
-pub use incendiary::toggle_incendiary;
-
 mod broadcast;
 pub use broadcast::{MessageTarget, observer_messages};
 
@@ -478,7 +475,7 @@ pub use charge::{
 pub use charge::{MutualChargeAttempt, MutualChargeReport, resolve_mutual_charge};
 
 mod charge_tracking;
-pub use charge_tracking::{ChargePolicy, ChargeSelection, ChargeState, select_charge};
+pub use charge_tracking::{ChargeSelection, ChargeState, select_charge};
 
 mod dfa;
 pub use dfa::{DfaBalance, DfaProfile, DfaReport, dfa_profile, resolve_dfa};
@@ -606,13 +603,13 @@ mod vehicle_timers;
 pub use recent_fire::clear_recent_fire;
 
 mod tag;
-pub use tag::{TagState, advance_tags, select_tag, tagged_by};
+pub use tag::{TagRules, TagState, advance_tags, select_tag, tagged_by};
+mod tag_aim;
+pub use tag_aim::tag_aim_modifiers;
 
 pub(crate) mod semiguided;
 pub(crate) use semiguided::SemiGuidedAim;
 pub use semiguided::toggle_semiguided;
-pub(crate) mod stinger;
-pub use stinger::toggle_stinger;
 pub(crate) mod thunder;
 pub use thunder::{THUNDER_MAXIMUM_STRENGTH, ThunderField, ThunderReport, toggle_thunder};
 pub(crate) mod torpedo;
@@ -653,9 +650,7 @@ mod fire_spread;
 pub use fire_spread::{advance_map_fire, map_fire_pending};
 
 mod woodland_action;
-mod woods_absorption;
 pub use woodland_action::{WoodlandAttack, WoodlandImpact, resolve_woodland_attack};
-pub use woods_absorption::WoodsAbsorption;
 
 mod weapon_groups;
 
@@ -1345,7 +1340,6 @@ pub use orbital_drop_launch::{OrbitalInsertion, initiate_action as initiate_orbi
 
 mod cockpit_links;
 mod hardware_settings;
-mod targeting_mode;
 pub(crate) mod unit_fields;
 mod unit_identity;
 pub use unit_fields::{UnitField, UnitFieldReport, set_unit_field_action, view_unit_fields_action};
@@ -1428,9 +1422,6 @@ mod menu;
 
 mod advantages;
 pub use advantages::{AdvantageDefinition, AdvantageKind, BATTLE_ADVANTAGES, advantage_definition};
-
-mod spotter_events;
-pub use spotter_events::{SpotterEvents, advance_spotter_links};
 
 mod shot_counters;
 

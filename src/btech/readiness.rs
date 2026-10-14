@@ -12,7 +12,8 @@ pub struct WeaponReadiness {
     pub intact: bool,
     pub ammunition: u32,
     pub recycle_remaining: u16,
-    /// Whether chassis-specific prone support permits this mount.
+    /// Whether the unit's posture permits this mount: prone support and the hull-down
+    /// restriction on leg-mounted weapons.
     pub posture_ready: bool,
     /// True after a self-contained salvo has launched, including misses.
     pub spent: bool,
@@ -156,9 +157,19 @@ impl Mech {
             carried_club: self
                 .carried_club()
                 .is_some_and(|arm| arm.section() == section),
-            posture_failure: self.prone_support_failure(loadout, section),
-            covered: false,
+            posture_failure: self
+                .prone_support_failure(loadout, section)
+                .or_else(|| self.hull_down_failure(section)),
         })
+    }
+
+    /// Leg-mounted weapons cannot be fired while hull-down (Tactical Operations p. 19); a
+    /// squatting quad's front legs are legs too.
+    fn hull_down_failure(&self, section: super::MechSection) -> Option<&'static str> {
+        if !self.hull_down.active || !self.chassis().is_leg(section) {
+            return None;
+        }
+        Some("You cannot fire leg mounted weapons while hull-down.")
     }
 
     /// A prone arm weapon needs the opposite arm; other non-leg mounts can use either arm.
@@ -273,6 +284,7 @@ pub(super) fn use_weapon(
         draws
     };
     let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
+    let now = world.btech.simulation_time();
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     if fire_mode == super::FireMode::Normal {
         unit.fire_modes.remove(&index);
@@ -285,6 +297,9 @@ pub(super) fn use_weapon(
         unit.spent_launchers.insert(index);
     }
     unit.fired_recently |= launched;
+    if launched {
+        unit.last_weapon_fire = Some(now);
+    }
     unit.heat.stored += f64::from(heat);
     unit.weapon_recycle.insert(index, u16::from(recycle));
     Ok(WeaponUse {
@@ -414,5 +429,86 @@ mod tests {
             .map(|index| unit.weapon_readiness(index).unwrap())
             .collect();
         assert_eq!(unit.weapon_readiness_batch().unwrap(), individual);
+    }
+
+    /// Build a running unit from a template and report its leg-mounted weapon indices.
+    fn running_unit(world: &mut World, config: &Config, name: &str, source: &str) -> ObjectId {
+        let id = world.create(config, format!("{name} hull-down test"), Kind::Thing);
+        world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+        UnitTemplate::parse(name, source)
+            .unwrap()
+            .create(world, id)
+            .unwrap();
+        world.btech.constructed.get_mut(&id).unwrap().power = Power::Running;
+        id
+    }
+
+    /// Hull-down blocks every leg-mounted weapon, including a squatting quad's front legs,
+    /// and nothing else (Tactical Operations p. 19).
+    #[test]
+    fn hull_down_blocks_leg_mounted_weapons() {
+        let config = Config::load("tests/fixtures/game").unwrap();
+        let mut world = World::default();
+        for (name, source) in [
+            ("ASN-101", include_str!("../../game/units/ASN-101.toml")),
+            ("GOL-3S", include_str!("../../game/units/GOL-3S.toml")),
+        ] {
+            let id = running_unit(&mut world, &config, name, source);
+            let unit = &world.btech.constructed_units()[&id];
+            let loadout = unit.loadout().unwrap();
+            let legs: Vec<usize> = loadout
+                .weapons
+                .iter()
+                .enumerate()
+                .filter(|(_, mount)| unit.chassis().is_leg(mount.criticals[0].section))
+                .map(|(index, _)| index)
+                .collect();
+            assert!(!legs.is_empty(), "{name} needs leg weapons");
+            assert!(
+                legs.len() < loadout.weapons.len(),
+                "{name} needs other weapons"
+            );
+            // Readiness before lowering; supply and other conditions stay as they were.
+            let standing: Vec<bool> = (0..loadout.weapons.len())
+                .map(|index| {
+                    let readiness = unit.weapon_readiness(index).unwrap();
+                    assert!(readiness.posture_ready, "{name} {index}");
+                    readiness.ready
+                })
+                .collect();
+            assert!(legs.iter().all(|&index| standing[index]), "{name}");
+            world.btech.constructed.get_mut(&id).unwrap().hull_down =
+                crate::btech::hull_down::HullDownState {
+                    active: true,
+                    pending: None,
+                    remaining: 0,
+                };
+            let unit = &world.btech.constructed_units()[&id];
+            for (index, &was_ready) in standing.iter().enumerate() {
+                let readiness = unit.weapon_readiness(index).unwrap();
+                let leg = legs.contains(&index);
+                assert_eq!(readiness.posture_ready, !leg, "{name} {index}");
+                assert_eq!(readiness.ready, !leg && was_ready, "{name} {index}");
+                let check = unit.weapon_mechanics(index).unwrap().check();
+                assert_eq!(check.is_err(), leg, "{name} {index}");
+                if leg {
+                    assert_eq!(
+                        check.unwrap_err().to_string(),
+                        "You cannot fire leg mounted weapons while hull-down."
+                    );
+                }
+            }
+            // A pending transition alone does not restrict anything.
+            world.btech.constructed.get_mut(&id).unwrap().hull_down =
+                crate::btech::hull_down::HullDownState {
+                    active: false,
+                    pending: Some(true),
+                    remaining: 3,
+                };
+            let unit = &world.btech.constructed_units()[&id];
+            for index in legs {
+                assert!(unit.weapon_readiness(index).unwrap().posture_ready);
+            }
+        }
     }
 }

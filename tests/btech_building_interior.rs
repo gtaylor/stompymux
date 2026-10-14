@@ -300,11 +300,7 @@ async fn interiors_give_partial_cover_and_block_outside_physical_attacks() {
     step_inside(&mut world, target, 0);
     let terrain = battle_unit_terrain_los(&world, attacker, target).unwrap();
     assert!(terrain.partial_cover && !terrain.blocked);
-    let physical = PhysicalRules {
-        fasa_turning: false,
-        extended_movement: false,
-        fall: rules(),
-    };
+    let physical = PhysicalRules { fall: rules() };
     relocate(&mut world, attacker, _map, 1, 1);
     step_inside(&mut world, target, 0);
     let error = battle_punch_profile(&world, attacker, ObjectId(1), target, Arm::Left, physical)

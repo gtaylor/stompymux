@@ -159,7 +159,7 @@ async fn vehicle_launch_glancing_misses_and_out_of_range_attempts_replay_expendi
 }
 
 #[tokio::test]
-async fn vehicle_streak_failure_recycles_without_ammunition_and_confusion_allows_misses() {
+async fn vehicle_streak_failure_recycles_without_ammunition_even_when_confused() {
     let (_dir, _config, mut base, id) =
         fixture(include_str!("../game/units/Svantovit-Streak.toml")).await;
     seed(&mut base, id, 17);
@@ -172,11 +172,13 @@ async fn vehicle_streak_failure_recycles_without_ammunition_and_confusion_allows
         .unwrap();
     let mut dice = Dice::seeded([17; 32]);
     let roll = dice.two_d6();
+    // A confused Streak launcher still refuses to launch on a failed roll (TacOps: AUE p. 91).
     for (target, confused, launched, hit) in [
         (Some(13), false, false, false),
         (None, false, false, false),
-        (Some(13), true, true, false),
+        (Some(13), true, false, false),
         (Some(i32::from(roll)), false, true, true),
+        (Some(i32::from(roll)), true, true, true),
     ] {
         let mut world = base.clone();
         let before = world.btech.vehicles()[&id].ammunition().to_vec();
@@ -196,7 +198,8 @@ async fn vehicle_streak_failure_recycles_without_ammunition_and_confusion_allows
         };
         assert_eq!(report.expenditure.heat, heat);
         assert_eq!(world.btech.vehicles()[&id].weapon_heat(), f64::from(heat));
-        assert!(!report.glancing);
+        // A confused launcher resolves as a standard launcher, so its boundary roll glances.
+        assert_eq!(report.glancing, confused && hit);
         assert!(
             world.btech.vehicles()[&id]
                 .weapon_recycle()
@@ -300,36 +303,53 @@ async fn vehicle_ultra_launches_and_loader_loss_replay_without_affecting_other_m
         );
         assert_eq!(world.btech, replay.btech);
         assert_eq!(report.roll, roll);
-        assert_eq!(report.loader_destroyed, roll == 2);
-        assert_eq!(report.expenditure.launched, roll != 2);
+        // A roll of 2 fires both shots, then leaves the weapon useless for the rest of the
+        // game (Total Warfare p. 114): an intact mount with a feed the crew cannot clear.
+        assert!(report.expenditure.launched);
+        assert!(!report.loader_destroyed);
+        assert_eq!(report.jammed, roll == 2);
+        assert_eq!(report.feed_broken, roll == 2);
+        assert_eq!(report.feed_critical_roll, None);
         assert_eq!(report.hit, roll >= 6);
         assert_eq!(report.glancing, roll == 6);
         assert_eq!(report.expenditure.fire_mode, FireMode::Ultra);
+        assert_eq!(
+            report
+                .expenditure
+                .ammunition
+                .iter()
+                .map(|draw| draw.rounds)
+                .sum::<u16>(),
+            2
+        );
         let unit = &world.btech.vehicles()[&id];
         assert!(unit.weapon_readiness(1).unwrap().ready);
+        assert!(unit.weapon_readiness(0).unwrap().intact);
+        assert!(unit.weapon_readiness(0).unwrap().recycle_remaining > 0);
+        assert_eq!(
+            unit.ammunition().iter().sum::<u16>() + 2,
+            ammunition.iter().sum::<u16>()
+        );
+        assert!(!unit.is_destroyed());
+        assert_eq!(unit.weapon_jammed(0).unwrap(), roll == 2);
+        assert_eq!(unit.weapon_feed_broken(0).unwrap(), roll == 2);
         if roll == 2 {
-            assert_eq!(unit.ammunition(), ammunition);
-            assert!(unit.weapon_recycle().is_empty());
-            assert!(!unit.weapon_readiness(0).unwrap().intact);
-            assert!(!unit.is_destroyed());
-            assert!(
-                unit.loadout().unwrap().weapons[0]
-                    .criticals
-                    .iter()
-                    .all(|location| unit.critical_destroyed(*location))
-            );
-        } else {
-            assert!(unit.weapon_readiness(0).unwrap().intact);
-            assert!(unit.weapon_readiness(0).unwrap().recycle_remaining > 0);
+            assert!(unit.weapon_readiness(0).unwrap().jammed);
+            assert!(battle_weapon_status(&world, id).unwrap().contains("jammed"));
+            let mut attempt = world.clone();
+            for _ in 0..130 {
+                advance_battle_recycle(&mut attempt);
+            }
             assert_eq!(
-                report
-                    .expenditure
-                    .ammunition
-                    .iter()
-                    .map(|draw| draw.rounds)
-                    .sum::<u16>(),
-                2
+                begin_battle_unjam(&mut attempt, id, ObjectId(1), 0)
+                    .unwrap_err()
+                    .to_string(),
+                "The ammo feed on that weapon is broken beyond field repair."
             );
+            // A saved record cannot mark a feed broken without its jam.
+            let mut bad = serde_json::to_value(&world.btech).unwrap();
+            bad["vehicles"][id.0.to_string()]["jammed_weapons"] = serde_json::json!([]);
+            assert!(serde_json::from_value::<BtechState>(bad).is_err());
         }
         let after = world.btech.clone();
         assert!(launch_battle_vehicle_weapon(&mut world, request(id)).is_err());
@@ -349,7 +369,7 @@ async fn vehicle_feed_jams_follow_burst_thresholds_and_survive_ticks_and_reload(
         ("IS.RotaryAC/2", "Rotary_TwoShot", 2, 2),
         ("IS.RotaryAC/2", "Rotary_FourShot", 3, 4),
         ("IS.RotaryAC/2", "Rotary_SixShot", 4, 6),
-        ("IS.LRM-5", "Hotload", 3, 1),
+        ("IS.LRM-5", "Hotload", 1, 1),
     ] {
         let template = with_modes(&demolisher_with(weapon), weapon, &[flag]);
         let (_dir, config, base, id) = fixture(&template).await;
@@ -365,10 +385,12 @@ async fn vehicle_feed_jams_follow_burst_thresholds_and_survive_ticks_and_reload(
             let before = world.btech.vehicles()[&id].ammunition().to_vec();
             let report = launch_battle_vehicle_weapon(&mut world, request(id)).unwrap();
             assert_eq!(report.roll, roll);
+            // The burst that jams is still fired (Total Warfare p. 114); hot-loaded launchers
+            // never jam (Tactical Operations p. 101).
             assert_eq!(report.jammed, roll <= threshold);
-            assert!(!report.loader_destroyed);
-            assert_eq!(report.expenditure.launched, !report.jammed);
-            assert_eq!(report.hit, !report.jammed && roll >= 6);
+            assert!(!report.loader_destroyed && !report.feed_broken);
+            assert!(report.expenditure.launched);
+            assert_eq!(report.hit, roll >= 6);
             assert!(
                 world.btech.vehicles()[&id]
                     .weapon_readiness(0)
@@ -376,21 +398,23 @@ async fn vehicle_feed_jams_follow_burst_thresholds_and_survive_ticks_and_reload(
                     .intact
             );
             assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
+            assert_eq!(
+                report
+                    .expenditure
+                    .ammunition
+                    .iter()
+                    .map(|draw| draw.rounds)
+                    .sum::<u16>(),
+                rounds
+            );
+            assert_eq!(
+                world.btech.vehicles()[&id].ammunition().iter().sum::<u16>() + rounds,
+                before.iter().sum::<u16>()
+            );
+            assert!(!world.btech.vehicles()[&id].weapon_recycle().is_empty());
             if !report.jammed {
-                assert_eq!(
-                    report
-                        .expenditure
-                        .ammunition
-                        .iter()
-                        .map(|draw| draw.rounds)
-                        .sum::<u16>(),
-                    rounds
-                );
                 continue;
             }
-            assert!(report.expenditure.ammunition.is_empty());
-            assert_eq!(world.btech.vehicles()[&id].ammunition(), before);
-            assert!(world.btech.vehicles()[&id].weapon_recycle().is_empty());
             let saved = serde_json::to_value(&world.btech).unwrap();
             let mut replay = world.clone();
             replay.btech = serde_json::from_value(saved.clone()).unwrap();
@@ -431,7 +455,7 @@ async fn vehicle_feed_jams_follow_burst_thresholds_and_survive_ticks_and_reload(
 }
 
 #[tokio::test]
-async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() {
+async fn vehicle_rapid_fire_explosions_and_caseless_breakdowns_fire_first() {
     for (rapid, caseless) in [(true, false), (false, true), (true, true)] {
         let flags: &[&str] = match (rapid, caseless) {
             (true, true) => &["RapidFire", "Caseless"],
@@ -447,19 +471,23 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
         for value in 0..=255 {
             let mut dice = Dice::seeded([value; 32]);
             let roll = dice.two_d6();
-            let propellant = (caseless && roll <= 3).then(|| dice.two_d6());
-            if !covered.insert((roll, propellant)) {
+            if !covered.insert(roll) {
                 continue;
             }
-            let destroyed = propellant.map_or(rapid && roll == 2, |roll| roll > 7);
-            let jammed = propellant.map_or(rapid && (3..=4).contains(&roll), |roll| roll <= 7);
-            let expected_damage_rolls = if destroyed {
+            // Rapid-fire rounds explode in the barrel on a 2 (Tactical Operations p. 98); a
+            // vehicle's caseless breakdown on a 2 destroys the weapon outright (TacOps: AUE
+            // p. 165). Either way the shot is fired first.
+            let exploded = rapid && roll == 2;
+            let breakdown = caseless && roll == 2;
+            let destroyed = exploded || breakdown;
+            let jammed = rapid && (3..=4).contains(&roll);
+            let expected_damage_rolls = if exploded {
                 vec![dice.two_d6()]
             } else {
                 Vec::new()
             };
             // The structure damage then rolls once on the turret column.
-            let critical = destroyed.then(|| dice.two_d6());
+            let critical = exploded.then(|| dice.two_d6());
             let mut world = base.clone();
             seed(&mut world, id, value);
             let before_ammo: u16 = world.btech.vehicles()[&id].ammunition().iter().sum();
@@ -473,21 +501,16 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
             );
             assert_eq!(world.btech, replay.btech);
             assert_eq!(report.roll, roll);
-            assert_eq!(report.propellant_roll, propellant);
+            assert_eq!(report.feed_critical_roll, None);
             assert_eq!(report.loader_destroyed, destroyed);
             assert_eq!(report.jammed, jammed);
-            assert_eq!(report.expenditure.launched, !destroyed && !jammed);
-            let heat = if destroyed || jammed {
-                0
-            } else if rapid {
-                2
-            } else {
-                1
-            };
+            assert!(!report.feed_broken);
+            assert!(report.expenditure.launched);
+            let heat = if rapid { 2 } else { 1 };
             assert_eq!(report.expenditure.heat, heat);
             assert_eq!(world.btech.vehicles()[&id].weapon_heat(), f64::from(heat));
-            assert_eq!(report.hit, !destroyed && !jammed && roll >= 6);
-            assert_eq!(report.misload.is_some(), destroyed);
+            assert_eq!(report.hit, !breakdown && roll >= 6);
+            assert_eq!(report.misload.is_some(), exploded);
             if let Some(damage) = report.misload {
                 assert_eq!(damage.rolls, expected_damage_rolls);
                 assert_eq!(damage.absorbed, 2);
@@ -501,16 +524,13 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
                     );
                 }
             }
-            // A critical from the misload's structure damage has its own consequences; the
+            let unit = &world.btech.vehicles()[&id];
+            assert_eq!(unit.weapon_readiness(0).unwrap().intact, !destroyed);
+            assert_eq!(unit.weapon_jammed(0).unwrap(), jammed);
+            // A critical from the explosion's structure damage has its own consequences; the
             // bookkeeping below holds whenever the roll was too low to apply one.
             if critical.is_none_or(|roll| roll < 6) {
-                let spent = if jammed {
-                    0
-                } else if rapid {
-                    2
-                } else {
-                    1
-                };
+                let spent = if rapid { 2 } else { 1 };
                 assert_eq!(
                     report
                         .expenditure
@@ -524,9 +544,10 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
                     world.btech.vehicles()[&id].ammunition().iter().sum::<u16>(),
                     before_ammo - spent
                 );
+                // Destroying the mount retires its recycle clock.
                 assert_eq!(
                     world.btech.vehicles()[&id].weapon_recycle().is_empty(),
-                    destroyed || jammed
+                    destroyed
                 );
                 assert_eq!(roll_unit_dice(&mut world, id, 1).unwrap(), [dice.d6()]);
                 world.validate(&config).unwrap();
@@ -535,25 +556,12 @@ async fn vehicle_misloads_and_propellant_checks_replay_damage_supply_and_dice() 
                 assert_eq!(restored, world.btech);
             }
         }
-        assert!(covered.iter().any(|(roll, _)| *roll == 2));
-        assert!(covered.iter().any(|(roll, _)| *roll == 12));
-        if caseless {
-            assert!(
-                covered
-                    .iter()
-                    .any(|(_, propellant)| propellant.is_some_and(|roll| roll > 7))
-            );
-            assert!(
-                covered
-                    .iter()
-                    .any(|(_, propellant)| propellant.is_some_and(|roll| roll <= 7))
-            );
-        }
+        assert_eq!(covered, (2..=12).collect());
     }
 }
 
 #[tokio::test]
-async fn vehicle_misloads_clamp_destroyed_bins_and_spend_surviving_supply_after_hull_loss() {
+async fn vehicle_rapid_fire_explosions_spend_the_burst_before_hull_loss() {
     let seed_value = (0..=255)
         .find(|value| Dice::seeded([*value; 32]).two_d6() == 2)
         .unwrap();
@@ -587,7 +595,8 @@ async fn vehicle_misloads_clamp_destroyed_bins_and_spend_surviving_supply_after_
         let before_ammo: u16 = world.btech.vehicles()[&id].ammunition().iter().sum();
         let report = launch_battle_vehicle_weapon(&mut world, request(id)).unwrap();
         assert!(report.loader_destroyed && report.misload.is_some());
-        // Either misload guts a location, and any lost location wrecks the vehicle (TW p. 128).
+        // The burst is spent before the explosion; either explosion guts a location, and any
+        // lost location wrecks the vehicle (TW p. 128).
         assert!(world.btech.vehicles()[&id].is_destroyed());
         let ammo: u16 = world.btech.vehicles()[&id].ammunition().iter().sum();
         assert_eq!(ammo, if front { before_ammo - 2 } else { 0 });
@@ -598,7 +607,7 @@ async fn vehicle_misloads_clamp_destroyed_bins_and_spend_surviving_supply_after_
                 .iter()
                 .map(|draw| draw.rounds)
                 .sum::<u16>(),
-            if front { 2 } else { 0 }
+            2
         );
         world.validate(&config).unwrap();
         if front {
@@ -624,12 +633,11 @@ async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
         &["Caseless"],
     );
     let (_dir, config, base, id) = fixture(&template).await;
-    for ignition in [false, true] {
+    // With one round left the burst falls back to a single shot; only a roll of 2 breaks the
+    // caseless feed, and a vehicle then loses the weapon outright.
+    for roll in [2, 3] {
         let value = (0..=255)
-            .find(|value| {
-                let mut dice = Dice::seeded([*value; 32]);
-                dice.two_d6() <= 3 && (dice.two_d6() > 7) == ignition
-            })
+            .find(|value| Dice::seeded([*value; 32]).two_d6() == roll)
             .unwrap();
         let mut world = base.clone();
         seed(&mut world, id, value);
@@ -640,16 +648,23 @@ async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
             })
             .unwrap();
         let report = launch_battle_vehicle_weapon(&mut world, request(id)).unwrap();
-        assert_eq!(report.loader_destroyed, ignition);
-        assert_eq!(report.jammed, !ignition);
+        assert_eq!(report.loader_destroyed, roll == 2);
+        assert!(!report.jammed && !report.feed_broken);
+        assert_eq!(report.feed_critical_roll, None);
+        assert!(report.misload.is_none());
+        assert!(report.expenditure.launched);
         assert_eq!(report.expenditure.fire_mode, FireMode::Normal);
         assert_eq!(
             world.btech.vehicles()[&id].fire_mode(0).unwrap(),
             FireMode::Normal
         );
+        assert_eq!(world.btech.vehicles()[&id].ammunition()[0], 0);
         assert_eq!(
-            world.btech.vehicles()[&id].ammunition()[0],
-            u16::from(!ignition)
+            world.btech.vehicles()[&id]
+                .weapon_readiness(0)
+                .unwrap()
+                .intact,
+            roll != 2
         );
         world.validate(&config).unwrap();
     }
@@ -678,16 +693,16 @@ async fn vehicle_misload_policy_and_caseless_short_supply_are_retained() {
             assert_eq!(impact.absorbed, 0);
         }
         assert_eq!(impact.criticals.is_empty(), safe);
-        let consumed = report
-            .expenditure
-            .ammunition
-            .iter()
-            .map(|draw| draw.rounds)
-            .sum::<u16>();
-        assert!(consumed <= 2);
-        if safe {
-            assert_eq!(consumed, 2);
-        }
+        // The burst is spent before the rounds explode.
+        assert_eq!(
+            report
+                .expenditure
+                .ammunition
+                .iter()
+                .map(|draw| draw.rounds)
+                .sum::<u16>(),
+            2
+        );
         let mut replay = base.clone();
         let expected = launch_battle_vehicle_weapon(&mut replay, rules).unwrap();
         assert_eq!(expected.misload.unwrap(), impact);

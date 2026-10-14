@@ -30,11 +30,6 @@ impl FireMode {
         gatling_damage.unwrap_or(weapon.profile().heat * self.rounds_per_cycle() as u8)
     }
 
-    /// Coolant heat mode redirects the shot to its carrier before target selection.
-    pub fn self_cooling(self, weapon: Weapon) -> bool {
-        self == Self::Heat && weapon == Weapon::CoolantGun
-    }
-
     /// Whether this firing behavior is valid for the installed weapon family.
     pub fn supports(self, weapon: Weapon) -> bool {
         match self {
@@ -81,9 +76,8 @@ impl FireMode {
         }
     }
 
-    /// Rotary bursts jam at increasing thresholds and never destroy the loader directly: a
-    /// to-hit roll at or below 2 jams two- and three-round bursts, 3 jams four and five, and 4
-    /// jams six, as in MegaMek.
+    /// Rapid-fire jam thresholds (Total Warfare p. 114): a to-hit roll of 2 jams a two- or
+    /// three-round burst, 3 or less jams four or five rounds and 4 or less jams six.
     pub fn rotary_jam_threshold(self) -> u8 {
         match self {
             Self::Rotary2 | Self::Rotary3 => 2,
@@ -93,14 +87,29 @@ impl FireMode {
         }
     }
 
-    /// Feed failures retain the mount and ammunition, requiring an explicit clearing attempt.
+    /// Whether this attack roll jams the feed so that the crew must clear it afterwards. Rotary
+    /// bursts jam at their thresholds; TacOps rapid-fire mode jams on a 3 or 4 (p. 98); the
+    /// burst that jams is still fired. Hot-loaded launchers never jam (Tactical Operations
+    /// p. 101) and an Ultra autocannon's roll of 2 breaks the feed instead.
     pub fn jams_on(self, roll: u8) -> bool {
-        (self == Self::Hotload && roll <= 3)
-            || (self == Self::Rapid && (3..=4).contains(&roll))
-            || roll <= self.rotary_jam_threshold()
+        (self == Self::Rapid && (3..=4).contains(&roll)) || roll <= self.rotary_jam_threshold()
     }
 
-    /// Ultra and conventional rapid fire have catastrophic loader failure on a two.
+    /// Whether this attack roll leaves the weapon useless for the rest of the game (Total
+    /// Warfare p. 114): an Ultra autocannon firing two shots on a roll of 2. The shots are
+    /// still fired; the mount stays intact but its feed cannot be cleared in the field.
+    pub fn breaks_feed_on(self, roll: u8) -> bool {
+        self == Self::Ultra && roll == 2
+    }
+
+    /// Whether this attack roll makes the rounds explode in the barrel (Tactical Operations
+    /// p. 98): a standard autocannon in rapid-fire mode on a roll of 2. The burst is still
+    /// fired, then the weapon's slots are destroyed and its location takes one shot's damage.
+    pub fn explodes_on(self, roll: u8) -> bool {
+        self == Self::Rapid && roll == 2
+    }
+
+    /// Ultra and conventional rapid fire resolve two shells on the two-shot hit table.
     pub fn is_double_shot(self) -> bool {
         matches!(self, Self::Ultra | Self::Rapid)
     }
@@ -108,7 +117,31 @@ impl FireMode {
 
 #[cfg(test)]
 mod tests {
+    use super::FireMode;
     use crate::Weapon;
+
+    /// Jams follow the rapid-fire thresholds; hot-loading never jams; Ultra and rapid-fire mode
+    /// have their own roll-of-2 outcomes.
+    #[test]
+    fn jam_break_and_explosion_thresholds() {
+        for roll in 2..=12 {
+            assert!(!FireMode::Hotload.jams_on(roll));
+            assert!(!FireMode::Normal.jams_on(roll));
+            assert!(!FireMode::Ultra.jams_on(roll));
+            assert_eq!(FireMode::Rapid.jams_on(roll), (3..=4).contains(&roll));
+            assert_eq!(FireMode::Rotary2.jams_on(roll), roll <= 2);
+            assert_eq!(FireMode::Rotary3.jams_on(roll), roll <= 2);
+            assert_eq!(FireMode::Rotary4.jams_on(roll), roll <= 3);
+            assert_eq!(FireMode::Rotary5.jams_on(roll), roll <= 3);
+            assert_eq!(FireMode::Rotary6.jams_on(roll), roll <= 4);
+            assert_eq!(FireMode::Ultra.breaks_feed_on(roll), roll == 2);
+            assert_eq!(FireMode::Rapid.explodes_on(roll), roll == 2);
+            assert!(!FireMode::Rapid.breaks_feed_on(roll));
+            assert!(!FireMode::Ultra.explodes_on(roll));
+            assert!(!FireMode::Rotary6.breaks_feed_on(roll));
+            assert!(!FireMode::Rotary6.explodes_on(roll));
+        }
+    }
 
     #[test]
     fn two_shell_tables_and_glancing_preserve_individual_damage() {

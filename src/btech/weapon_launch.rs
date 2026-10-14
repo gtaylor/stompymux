@@ -15,20 +15,48 @@ pub(super) struct WeaponLaunchRequest {
     pub character_shooter: bool,
 }
 
-/// The committed candidate's launch, expenditure and immediate loader consequences.
+/// The committed candidate's launch, expenditure and immediate loader consequences. A feed
+/// failure never cancels the shot: ammunition and heat are spent and the attack resolves as
+/// rolled before the weapon is disabled (Total Warfare p. 114).
 pub(super) struct WeaponLaunch {
     /// Cocoon opening precedes the shot's target consequences.
     pub launch_notices: Vec<super::Notice>,
     pub roll: u8,
     pub launched: bool,
+    /// The feed jammed after the shot; `feed_broken` says whether the crew can clear it.
     pub jammed: bool,
+    /// The jam is permanent for the rest of the game.
+    pub feed_broken: bool,
+    /// The mount's slots were destroyed: rapid-fire rounds exploded in the barrel or a caseless
+    /// breakdown's critical roll wrecked every slot.
     pub loader_destroyed: bool,
-    pub propellant_roll: Option<u8>,
+    /// A caseless breakdown's Determining Critical Hits roll against the autocannon.
+    pub feed_critical_roll: Option<u8>,
+    /// Internal damage from rapid-fire rounds exploding in the barrel.
     pub misload: Option<TacticalImpact>,
     pub expenditure: WeaponUse,
     pub hit: bool,
     pub glancing: bool,
     pub ammunition_warning: Option<String>,
+}
+
+/// Destroy the autocannon's uppermost intact slots for one Determining Critical Hits roll
+/// (Tactical Operations: AUE p. 165). Returns the number of slots destroyed.
+pub(super) fn wreck_feed_slots<L: Copy + Ord>(
+    criticals: &[L],
+    lost: &mut std::collections::BTreeSet<L>,
+    count: u8,
+) -> u8 {
+    let mut destroyed = 0;
+    for location in criticals {
+        if destroyed == count {
+            break;
+        }
+        if lost.insert(*location) {
+            destroyed += 1;
+        }
+    }
+    destroyed
 }
 
 /// Resolve on an unpublished world candidate; later attack failures must discard that candidate.
@@ -82,10 +110,10 @@ pub(super) fn resolve_prepared_launch(
     }
     let super::launch_roll::LaunchRoll {
         roll,
-        propellant_roll,
-        loader_destroyed,
         jammed,
-        misload_required,
+        feed_broken,
+        exploded,
+        caseless_failure,
         launched,
         hit,
         glancing,
@@ -100,73 +128,59 @@ pub(super) fn resolve_prepared_launch(
         },
         &mut world.btech.constructed.get_mut(&shooter).unwrap().dice,
     )?;
-    let launch_notices = if jammed || loader_destroyed {
-        Vec::new()
-    } else {
-        super::orbital_drop_combat::open_for_fire(world, shooter)?
-    };
-    let mut misload = None;
-    let mut expenditure = if jammed || loader_destroyed {
-        if loader_destroyed {
-            world
-                .btech
-                .constructed
-                .get_mut(&shooter)
-                .unwrap()
-                .lost_criticals
-                .extend(mount.criticals.iter().copied());
+    let launch_notices = super::orbital_drop_combat::open_for_fire(world, shooter)?;
+    // The shot is fired before any feed failure takes effect (Total Warfare p. 114).
+    let expenditure = super::readiness::use_weapon(
+        world,
+        shooter,
+        pilot,
+        weapon_index,
+        launched,
+        gatling_damage,
+    )?;
+    let unit = world.btech.constructed.get_mut(&shooter).unwrap();
+    let mut feed_critical_roll = None;
+    if caseless_failure {
+        // One Determining Critical Hits roll, applied to the autocannon's own slots only.
+        let critical = unit.dice.generic_roll();
+        feed_critical_roll = Some(critical);
+        wreck_feed_slots(
+            &mount.criticals,
+            &mut unit.lost_criticals,
+            super::impact::critical_count(critical),
+        );
+    }
+    if exploded {
+        unit.lost_criticals.extend(mount.criticals.iter().copied());
+    }
+    let intact = unit.weapon_intact(weapon_index)?;
+    if !intact {
+        // A destroyed mount has nothing left to recycle.
+        unit.weapon_recycle.remove(&weapon_index);
+    }
+    if jammed && intact {
+        if feed_broken {
+            unit.break_weapon_feed(weapon_index)?;
         } else {
-            world
-                .btech
-                .constructed
-                .get_mut(&shooter)
-                .unwrap()
-                .jam_weapon(weapon_index)?;
+            unit.jam_weapon(weapon_index)?;
         }
-        super::WeaponUse {
-            weapon,
-            ammunition: Vec::new(),
-            fire_mode,
-            heat: 0,
-            gatling_damage: None,
-            ammunition_mode: attacker.ammunition_mode(weapon_index)?,
-        }
-    } else {
-        super::readiness::use_weapon(
-            world,
-            shooter,
-            pilot,
-            weapon_index,
-            launched,
-            gatling_damage,
-        )?
-    };
-    if misload_required {
-        let draws = attacker.ammunition_feed(weapon_index, fire_mode.rounds_per_cycle())?;
+    }
+    let misload = if exploded {
         let resolve = if character_shooter {
             super::impact::resolve_character_misload_in_candidate
         } else {
             super::impact::resolve_misload_in_candidate
         };
-        misload = Some(resolve(
+        Some(resolve(
             world,
             shooter,
             mount.criticals[0].section,
             u16::from(weapon.profile().damage),
             request.fall,
-        )?);
-        // Damage may have destroyed a supply bin. Decrement only its surviving inventory.
-        let unit = world.btech.constructed.get_mut(&shooter).unwrap();
-        expenditure
-            .ammunition
-            .extend(super::ammunition_feed::spend_surviving_draws(
-                &mut unit.ammunition,
-                draws,
-            ));
-        if !expenditure.ammunition.is_empty() {
-            unit.live_mass.invalidate();
-        }
-    }
+        )?)
+    } else {
+        None
+    };
     let ammunition_warning = if launched {
         super::combat_warnings::ammunition_message(&attacker, &expenditure)
     } else {
@@ -176,9 +190,10 @@ pub(super) fn resolve_prepared_launch(
         launch_notices,
         roll,
         launched,
-        jammed,
-        loader_destroyed,
-        propellant_roll,
+        jammed: jammed && intact,
+        feed_broken: feed_broken && intact,
+        loader_destroyed: !intact,
+        feed_critical_roll,
         misload,
         expenditure,
         hit,
@@ -261,5 +276,26 @@ impl RecoilReport {
             });
             fall.append_notices(shooter, notices, private);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wreck_feed_slots;
+    use std::collections::BTreeSet;
+
+    /// A caseless breakdown destroys the autocannon's uppermost intact slots, skipping slots
+    /// already lost and never more than the critical check allows.
+    #[test]
+    fn caseless_breakdown_wrecks_uppermost_intact_slots() {
+        let criticals = [1u8, 2, 3, 4];
+        let mut lost = BTreeSet::from([2u8]);
+        assert_eq!(wreck_feed_slots(&criticals, &mut lost, 0), 0);
+        assert_eq!(lost, BTreeSet::from([2]));
+        assert_eq!(wreck_feed_slots(&criticals, &mut lost, 2), 2);
+        assert_eq!(lost, BTreeSet::from([1, 2, 3]));
+        assert_eq!(wreck_feed_slots(&criticals, &mut lost, 3), 1);
+        assert_eq!(lost, BTreeSet::from([1, 2, 3, 4]));
+        assert_eq!(wreck_feed_slots(&criticals, &mut lost, 1), 0);
     }
 }

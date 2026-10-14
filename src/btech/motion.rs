@@ -146,8 +146,6 @@ pub struct MovementRules {
     pub tsm_tow_bonus: bool,
     /// Use pilot-based aim for DFA landing attacks.
     pub fasa_turning: bool,
-    /// Charge tracking and collision options for each committed movement update.
-    pub charge: super::ChargePolicy,
     pub slowdown: i64,
     /// Require a control check when backing across an elevation change.
     pub roll_on_backwalk: bool,
@@ -158,11 +156,7 @@ pub struct MovementRules {
 impl MovementRules {
     /// Physical landing policy shares movement, hit arcs and fall settings with the tick.
     pub(super) fn landing_physical(self) -> super::PhysicalRules {
-        super::PhysicalRules {
-            fasa_turning: self.fasa_turning,
-            extended_movement: self.charge.extended_movement,
-            fall: self.fall,
-        }
+        super::PhysicalRules { fall: self.fall }
     }
 
     /// Conventional movement and fall settings, suitable for an isolated simulation.
@@ -170,7 +164,6 @@ impl MovementRules {
         free_fusion_vtol_fuel: false,
         tsm_tow_bonus: true,
         fasa_turning: false,
-        charge: super::ChargePolicy::STANDARD,
         slowdown: 2,
         roll_on_backwalk: true,
         fall: super::FallRules {

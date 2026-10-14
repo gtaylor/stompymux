@@ -42,12 +42,8 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
     let shared = world.clone();
     let specifications = lua.create_function(move |lua, id: i64| {
         crate::lua::transactions::require(lua)?;
-        let rows = crate::battle_weapon_specifications(
-            &shared.borrow(),
-            ObjectId(id),
-            crate::lua::configuration(lua).battletech.erange != 0,
-        )
-        .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
+        let rows = crate::battle_weapon_specifications(&shared.borrow(), ObjectId(id))
+            .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
         detached(lua, &rows)
     })?;
     native.set(

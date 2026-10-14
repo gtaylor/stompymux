@@ -49,8 +49,8 @@ pub use btech::{
     advance_motion as advance_battle_motion, advance_overheat as advance_battle_overheat,
     advance_recovery as advance_battle_recovery, advance_recycle as advance_battle_recycle,
     advance_stagger as advance_battle_stagger, advance_standing as advance_battle_standing,
-    advance_stun as advance_battle_stun, advance_target_locks as advance_battle_target_locks,
-    advance_units as advance_battle_units, advance_unjamming as advance_battle_unjamming,
+    advance_stun as advance_battle_stun, advance_units as advance_battle_units,
+    advance_unjamming as advance_battle_unjamming,
     advance_unjamming_action as advance_battle_unjamming_action,
     aim_modifiers as battle_aim_modifiers, apply_damage_phase, assign_pilot as assign_battle_pilot,
     begin_stand as begin_battle_stand, begin_unjam as begin_battle_unjam,
@@ -95,10 +95,10 @@ pub use btech::{
     toggle_electronics as toggle_battle_electronics, toggle_explosive as toggle_battle_explosive,
     toggle_flamer_heat as toggle_battle_flamer_heat, toggle_flechette as toggle_battle_flechette,
     toggle_gatling as toggle_battle_gatling, toggle_hotload as toggle_battle_hotload,
-    toggle_incendiary as toggle_battle_incendiary, toggle_lbx as toggle_battle_lbx,
-    toggle_narc as toggle_battle_narc, toggle_precision as toggle_battle_precision,
-    toggle_rapid as toggle_battle_rapid, toggle_ultra as toggle_battle_ultra,
-    unit_elevation as battle_unit_elevation, unit_gunnery_target as battle_unit_gunnery_target,
+    toggle_lbx as toggle_battle_lbx, toggle_narc as toggle_battle_narc,
+    toggle_precision as toggle_battle_precision, toggle_rapid as toggle_battle_rapid,
+    toggle_ultra as toggle_battle_ultra, unit_elevation as battle_unit_elevation,
+    unit_gunnery_target as battle_unit_gunnery_target,
     unit_inside_building as battle_unit_inside_building,
     unit_piloting_target as battle_unit_piloting_target, unit_range as battle_unit_range,
     unit_terrain_los as battle_unit_terrain_los, update_contact as update_battle_contact,
@@ -257,9 +257,7 @@ pub use btech::{
     MutualChargeAttempt, MutualChargeReport, resolve_mutual_charge as resolve_battle_mutual_charge,
 };
 
-pub use btech::{
-    ChargePolicy, ChargeSelection, ChargeState, select_charge as select_battle_charge,
-};
+pub use btech::{ChargeSelection, ChargeState, select_charge as select_battle_charge};
 
 pub use btech::{
     DfaBalance, DfaProfile, DfaReport, dfa_profile as battle_dfa_profile,
@@ -395,8 +393,8 @@ pub use btech::{
 };
 
 pub use btech::{
-    TagState, advance_tags as advance_battle_tags, select_tag as select_battle_tag,
-    tagged_by as battle_tagged_by,
+    TagRules, TagState, advance_tags as advance_battle_tags, select_tag as select_battle_tag,
+    tag_aim_modifiers as battle_tag_aim_modifiers, tagged_by as battle_tagged_by,
 };
 
 pub use btech::toggle_semiguided as toggle_battle_semiguided;
@@ -697,9 +695,7 @@ pub use btech::{VehicleWeaponUse, reserve_vehicle_weapon as reserve_battle_vehic
 
 /// Read target movement contributions for Mechs and ground vehicles.
 pub use btech::unit_target_movement_modifier as battle_unit_target_movement_modifier;
-
-/// Toggle Stinger ammunition on an intact, recycled indirect missile launcher.
-pub use btech::toggle_stinger as toggle_battle_stinger;
+pub use btech::{TargetMovement, unit_target_movement as battle_unit_target_movement};
 
 /// Destroy an installed vehicle equipment slot inside an enclosing damage transaction.
 pub use btech::destroy_vehicle_critical as destroy_battle_vehicle_critical;
@@ -982,8 +978,9 @@ pub use btech::{
 };
 
 pub use btech::{
-    AMMUNITION_PART_OFFSET, PART_ID_LIMIT, Part, PartKind, WEAPON_PART_IDS,
-    inventory_mass as battle_inventory_mass, set_inventory_named as set_battle_inventory_named,
+    AMMUNITION_PART_OFFSET, ARTILLERY_MAPSHEET_HEXES, PART_ID_LIMIT, Part, PartKind,
+    WEAPON_PART_IDS, inventory_mass as battle_inventory_mass,
+    set_inventory_named as set_battle_inventory_named,
 };
 
 pub use btech::{
@@ -1022,7 +1019,6 @@ pub use btech::{IceChange, MapIceReport, change_map_ice_action as change_battle_
 
 pub use btech::{MapHexChange, set_map_hex_action as set_battle_map_hex_action};
 
-pub use btech::WoodsAbsorption;
 pub use btech::add_landing_exclusion_action as add_battle_landing_exclusion_action;
 pub use btech::clear_map_units_action as clear_battle_map_units_action;
 pub use btech::emit_map_action as emit_battle_map_action;
@@ -1170,9 +1166,6 @@ pub use btech::{
     AdvantageDefinition, AdvantageKind, BATTLE_ADVANTAGES,
     advantage_definition as battle_advantage_definition,
 };
-
-/// Shared durable forward-observer link clocks.
-pub use btech::{SpotterEvents, advance_spotter_links as advance_battle_spotter_links};
 
 pub use btech::RollStatistics;
 

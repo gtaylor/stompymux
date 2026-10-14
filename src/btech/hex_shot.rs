@@ -19,7 +19,8 @@ pub struct HexShotReport {
     pub launched: bool,
     pub jammed: bool,
     pub loader_destroyed: bool,
-    pub propellant_roll: Option<u8>,
+    pub feed_broken: bool,
+    pub feed_critical_roll: Option<u8>,
     pub expenditure: WeaponUse,
     pub misload: Option<LaunchMisload>,
     pub ammunition_warning: Option<String>,
@@ -137,9 +138,9 @@ fn resolve_hex_shot_inner(
         bears,
     } = super::weapon_geometry::geometry(world, shooter, weapon_index, coordinate.center())?;
     let indirect = super::spotter::indirect_hex_for_source(world, operator.source, weapon_index)?;
-    if indirect.is_none() {
+    if super::spotter::observed_hex_for_source(world, operator.source, weapon_index)?.is_none() {
         ensure!(
-            super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?
+            super::spotter::observed_target_for_source(world, operator.source, weapon_index)?
                 .is_none(),
             "Occupied observer target requires a unit shot"
         );
@@ -160,7 +161,6 @@ fn resolve_hex_shot_inner(
         coordinate,
         weapon_index,
         super::unit_gunnery_target(world, shooter, weapon_index, rules.extended_gunnery)?,
-        rules.aim,
     )?;
     ensure!(aim.visible, "Target hex is not visible");
     if aim.mode == HexTargetMode::UnitAtHex {
@@ -225,6 +225,8 @@ fn resolve_hex_shot_inner(
                         angel_blocked: field.angel_disturbed,
                         target_beacon: false,
                         artemis_v: super::artemis::artemis_v(world, shooter),
+                        ams_engaged: false,
+                        indirect: false,
                     },
                     super::dice::unit_dice_mut(world, shooter)?,
                 )?;
@@ -323,7 +325,8 @@ fn resolve_hex_shot_inner(
             launched: launch.launched,
             jammed: launch.jammed,
             loader_destroyed: launch.loader_destroyed,
-            propellant_roll: launch.propellant_roll,
+            feed_broken: launch.feed_broken,
+            feed_critical_roll: launch.feed_critical_roll,
             expenditure: launch.expenditure,
             misload: launch.misload,
             ammunition_warning: launch.ammunition_warning,
@@ -349,13 +352,6 @@ impl HexShotReport {
         &self,
         private: &mut Vec<super::PilotNotice>,
     ) -> Vec<Notice> {
-        if let Some(misload) = &self.misload {
-            super::piloting::append_feedback(private, misload.pilot_notices().to_vec(), 0);
-            return misload.notices();
-        }
-        if self.jammed || self.loader_destroyed {
-            return Vec::new();
-        }
         if !self.launched {
             let mut notices = self.launch_notices.clone();
             notices.push(Notice {

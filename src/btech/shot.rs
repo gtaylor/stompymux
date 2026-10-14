@@ -46,19 +46,21 @@ pub struct ShotReport<U, M> {
     pub aim: AimModifiers,
     /// None represents a physically out-of-range attempt; ordinary weapons still spend a salvo.
     pub target_number: Option<i32>,
-    /// Attack result, including dead-fire and close-range extended-LRM dice rules.
+    /// The 2d6 attack roll.
     pub roll: u8,
-    /// False for a failed Streak lock or loader failure; loader failures consume only shooter dice.
+    /// False only for a failed Streak lock; a feed failure still fires the shot.
     pub launched: bool,
     /// Launch classification; a missile near miss can still be rejected by target resolution.
     pub hit: bool,
-    /// Recoverable ammunition feed failure; no expenditure or recycle.
+    /// The ammunition feed jammed after the shot; firing is blocked until it is cleared.
     pub jammed: bool,
-    /// Permanent mount loss from loader failure or propellant ignition.
+    /// The jam is permanent for the rest of the game: `unjam` cannot clear it.
+    pub feed_broken: bool,
+    /// The mount's slots were destroyed after the shot.
     pub loader_destroyed: bool,
-    /// Second shooter roll on a caseless feed failure; eight or more ignites the propellant.
-    pub propellant_roll: Option<u8>,
-    /// Internal damage and immediate consequences from misload or propellant ignition.
+    /// A caseless feed breakdown's Determining Critical Hits roll against the autocannon.
+    pub feed_critical_roll: Option<u8>,
+    /// Internal damage and immediate consequences from rapid-fire rounds exploding in the barrel.
     pub misload: Option<M>,
     /// A successful boundary hit with reduced damage or missile count.
     pub glancing: bool,
@@ -71,14 +73,10 @@ pub struct ShotReport<U, M> {
     pub salvo: Option<super::TargetSalvo>,
     /// Heat transferred to the target in place of material damage.
     pub heat_transfer: u8,
-    /// Woods feedback and terrain effects preceding an unchanged thermal transfer.
-    pub thermal_woods: Option<super::WoodsAbsorption>,
     /// Incidental terrain check from a launched non-missile miss.
     pub missed_terrain: Option<super::WoodlandImpact>,
     /// A miss from the next hex striking the building around a target inside one.
     pub missed_building: Option<super::StrayHit>,
-    /// Coolant reduction applied to stored heat, including temporary negative credit.
-    pub cooling: Option<f64>,
     /// Present when Heavy Gauss firing required a moving-shooter control check.
     pub recoil: Option<RecoilReport>,
     /// Defensive activation after the missile reaches its base target number.
@@ -103,13 +101,6 @@ impl MechShotReport {
         &self,
         private: &mut Vec<super::PilotNotice>,
     ) -> Vec<super::Notice> {
-        if let Some(misload) = &self.misload {
-            super::piloting::append_feedback(private, misload.pilot_notices.clone(), 0);
-            return misload.notices.clone();
-        }
-        if self.jammed || self.loader_destroyed {
-            return Vec::new();
-        }
         if !self.launched {
             let mut notices = self.launch_notices.clone();
             notices.extend(super::launch_feedback::streak_failure(self.shooter));
@@ -136,9 +127,6 @@ impl MechShotReport {
                 notices.extend(collapse.notices.iter().cloned());
             }
         }
-        if let Some(woods) = &self.thermal_woods {
-            notices.extend(woods.notices.iter().cloned());
-        }
         notices.extend(super::fire_feedback::glancing_notices(
             self.target,
             self.expenditure.weapon,
@@ -147,7 +135,6 @@ impl MechShotReport {
         notices.extend(super::direct_effects::thermal_notices(
             self.shooter,
             self.target,
-            self.cooling,
             self.heat_transfer,
         ));
         notices.extend(super::fire_feedback::streak_notices(
@@ -235,7 +222,7 @@ pub(crate) fn resolve_shot_autopilot(
 /// The damage recipient and optional coordinate-directed presentation of an admitted attack.
 #[derive(Clone, Copy)]
 pub(super) struct ShotTarget {
-    /// Damage or coolant recipient already selected by the host.
+    /// Damage recipient already selected by the host.
     pub unit: ObjectId,
     pub coordinate: Option<super::HexCoordinate>,
 }
@@ -317,11 +304,12 @@ fn resolve_shot_inner(
         .context("Weapon index out of bounds")?
         .weapon;
     attacker.check_spotter_fire(shooter, weapon_index)?;
+    let observed =
+        super::spotter::observed_target_for_source(world, operator.source, weapon_index)?;
     let indirect =
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
 
-    let target = indirect.map_or(target, |link| link.target);
-    let coolant = selected_weapon == super::Weapon::CoolantGun;
+    let target = observed.map_or(target, |link| link.target);
     let coordinate = if indirect.is_some() {
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
@@ -333,19 +321,8 @@ fn resolve_shot_inner(
     } else {
         effects.coordinate
     };
-    if attacker.ammunition_mode(weapon_index)?.munition() == super::AmmunitionMode::Stinger {
-        ensure!(coordinate.is_none(), "Stinger missiles cannot shoot hexes!");
-        ensure!(
-            super::stinger::target_airborne(world, target),
-            "Stinger missiles can only engage airborne targets!"
-        );
-    }
     let vehicle_target = world.btech.vehicles().contains_key(&target);
-    let self_cooling = coolant && shooter == target;
-    ensure!(
-        shooter != target || self_cooling,
-        "A unit cannot fire on itself"
-    );
+    ensure!(shooter != target, "A unit cannot fire on itself");
     for id in [shooter, target] {
         let object = world.objects.get(&id).context("Unit is unavailable")?;
         ensure!(!object.flags.contains(Flag::Going), "Unit is unavailable");
@@ -369,12 +346,7 @@ fn resolve_shot_inner(
         super::spotter::check_indirect_water(world, shooter, target)?;
     }
     let attacker = &world.btech.constructed_units()[&shooter];
-    super::fire_target::check_target_safety_for_source(
-        world,
-        operator.source,
-        target,
-        selected_weapon,
-    )?;
+    super::fire_target::check_target_safety_for_source(world, operator.source, target)?;
     let loadout = attacker.loadout()?;
     ensure!(
         attacker
@@ -384,8 +356,7 @@ fn resolve_shot_inner(
     );
     let mount = &loadout.weapons[weapon_index];
     ensure!(
-        self_cooling
-            || indirect.is_some()
+        indirect.is_some()
             || rules.aim.override_weapon_arcs
             || super::weapon_bears_on(world, shooter, target, weapon_index)?,
         "Target is outside weapon arc"
@@ -393,7 +364,7 @@ fn resolve_shot_inner(
     let mut aim_dice = attacker.dice.clone();
     let prepared = super::gatling::prepare(world, shooter, weapon_index, &mut aim_dice)?;
     let gunnery = super::unit_gunnery_target(world, shooter, weapon_index, rules.extended_gunnery)?;
-    let mut aim = super::aim::aim_modifiers_for_source(
+    let aim = super::aim::aim_modifiers_for_source(
         world,
         operator.source,
         target,
@@ -401,16 +372,14 @@ fn resolve_shot_inner(
         gunnery,
         rules.aim,
     )?;
-    if !self_cooling {
-        super::aim::ensure_perceived(&aim)?;
-    }
+    super::aim::ensure_perceived(&aim)?;
     super::hit_direction::HitDirection::Direct { shooter }.current(world, target)?;
     drop(loadouts);
     drop(admission);
     let mut candidate = super::shot_transaction::ShotCandidate::new(world);
     let launch_measurement = super::autopilot::diagnostics::combat("launch_defenses");
     let experience_messages = if character && let Some(link) = indirect {
-        super::spotter::award_indirect_experience(&mut candidate, shooter, link, &mut aim)?
+        super::spotter::award_indirect_experience(&mut candidate, shooter, link)?
     } else {
         Vec::new()
     };
@@ -429,8 +398,9 @@ fn resolve_shot_inner(
         roll,
         launched,
         jammed,
+        feed_broken,
         loader_destroyed,
-        propellant_roll,
+        feed_critical_roll,
         misload,
         expenditure,
         hit,
@@ -474,19 +444,21 @@ fn resolve_shot_inner(
         target_number,
         streak_confused,
     );
-    let mut ams = if resolved.hit
-        && weapon.profile().missiles > 0
-        && !expenditure.ammunition_mode.bypasses_ams()
-    {
-        super::ams::intercept(&mut candidate, shooter, target, weapon.profile().missiles)?
+    let mut ams = if resolved.hit && weapon.profile().missiles > 0 {
+        super::ams::intercept(&mut candidate, shooter, target, weapon)?
     } else {
         None
     };
+    // A single missile the defense destroyed never reaches the target; a cluster engagement
+    // shifts the Cluster Hits roll instead.
+    let missile_destroyed = ams
+        .as_ref()
+        .is_some_and(super::AmsReport::destroyed_missile);
+    let ams_engaged = ams.is_some() && !missile_destroyed;
+    let indirect_fire = aim.indirect.is_some();
     let super::direct_effects::DirectEffects {
         narc,
-        cooling,
         heat_transfer,
-        woods: thermal_woods,
         missed_terrain,
         missed_building,
     } = super::direct_effects::resolve(
@@ -499,9 +471,8 @@ fn resolve_shot_inner(
             fire_mode: expenditure.fire_mode,
             hit: resolved.hit,
             launched,
-            intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
+            intercepted: missile_destroyed,
             vehicle_impact: rules.vehicle_impact,
-            woods_damage: rules.aim.woods_damage,
             distance: aim.distance,
             gatling_damage: expenditure.gatling_damage,
             coordinate,
@@ -543,9 +514,12 @@ fn resolve_shot_inner(
                 glancing: resolved.glancing,
                 character,
                 experience,
+                ams_engaged,
             },
         )?))
-    } else if resolved.hit && !pod && heat_transfer == 0 && cooling.is_none() && vehicle_target {
+    } else if missile_destroyed || !resolved.hit || pod || heat_transfer > 0 {
+        None
+    } else if vehicle_target {
         Some(super::target_salvo::resolve_vehicle_target_in_candidate(
             &mut candidate,
             shooter,
@@ -559,18 +533,18 @@ fn resolve_shot_inner(
                 glancing: resolved.glancing,
                 guidance_blocked: false,
                 angel_blocked: false,
-                intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
+                ams_engaged,
+                indirect: indirect_fire,
             },
             rules.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
-                woods_damage: rules.aim.woods_damage,
                 incoming: None,
                 attacker: Some(shooter),
                 experience,
                 aimed,
             },
         )?)
-    } else if resolved.hit && !pod && heat_transfer == 0 && cooling.is_none() {
+    } else {
         Some(super::TargetSalvo::Mech(
             super::salvo::resolve_salvo_in_candidate(
                 &mut candidate,
@@ -578,7 +552,6 @@ fn resolve_shot_inner(
                 target,
                 &expenditure,
                 super::salvo::ShotDamage {
-                    woods_damage: rules.aim.woods_damage,
                     aimed,
                     incoming: None,
                     rules: super::FallRules {
@@ -588,23 +561,22 @@ fn resolve_shot_inner(
                     },
                     glancing: resolved.glancing,
                     character,
-                    intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
+                    ams_engaged,
+                    indirect: indirect_fire,
                     experience,
                 },
             )?,
         ))
-    } else {
-        None
     };
     if let Some(defense) = &mut ams {
-        defense.shot_down = defense.shot_down.min(if let Some(pod) = &narc {
-            u8::from(pod.hit)
+        defense.shot_down = if missile_destroyed {
+            1
         } else {
             salvo
                 .as_ref()
-                .and_then(super::TargetSalvo::missiles_before_defense)
+                .and_then(super::TargetSalvo::missiles_intercepted)
                 .unwrap_or(0)
-        });
+        };
     }
     let recoil = super::weapon_launch::resolve_recoil(
         &mut candidate,
@@ -641,8 +613,9 @@ fn resolve_shot_inner(
         launched,
         hit,
         jammed,
+        feed_broken,
         loader_destroyed,
-        propellant_roll,
+        feed_critical_roll,
         misload,
         glancing: resolved.glancing,
         expenditure,
@@ -650,10 +623,8 @@ fn resolve_shot_inner(
         launch_notices,
         salvo,
         heat_transfer,
-        thermal_woods,
         missed_terrain,
         missed_building,
-        cooling,
         recoil,
         ams,
         streak_confused,

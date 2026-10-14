@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub(super) struct Weapons<'a> {
     pub failures: &'a mut BTreeMap<usize, EquipmentFailure>,
     pub manual_jams: &'a mut BTreeSet<usize>,
+    pub broken_feeds: &'a mut BTreeSet<usize>,
     pub powered_down: &'a mut BTreeSet<usize>,
     pub spent: &'a mut BTreeSet<usize>,
     pub recycle: &'a mut BTreeMap<usize, u16>,
@@ -24,6 +25,7 @@ pub(super) fn replace<L: Copy + Ord>(
 ) -> Result<()> {
     state.failures.clear();
     state.manual_jams.clear();
+    state.broken_feeds.clear();
     state.powered_down.clear();
     for (index, mount) in mounts.iter().enumerate() {
         if available.contains(&index) {

@@ -243,6 +243,50 @@ async fn prone_native_lua_and_restart() {
     }
 }
 
+/// Firing when down (Total Warfare p. 113; Tactical Operations p. 83): a prone biped fires
+/// at +2, or +3 once only one arm is left to prop it; a prone quad with four legs and no hip
+/// hit fires as though standing, and a hip hit puts it back on the biped rule.
+#[tokio::test]
+async fn prone_fire_modifier_by_chassis_arms_and_hips() {
+    for quad in [false, true] {
+        let (_dir, config, world, id, _) = fixture(quad, ".0").await;
+        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        prone_action(&scripts, &config, id, ObjectId(1)).unwrap();
+        let mut world = scripts.world().clone();
+        assert_eq!(
+            world.btech.constructed_units()[&id].posture(),
+            Posture::Prone
+        );
+        let modifier =
+            |world: &World| world.btech.constructed_units()[&id].attacker_movement_modifier();
+        assert_eq!(modifier(&world), if quad { 0 } else { 2 });
+        if quad {
+            destroy_battle_critical(
+                &mut world,
+                id,
+                CriticalLocation {
+                    section: MechSection::LeftLeg,
+                    slot: 0,
+                },
+            )
+            .unwrap();
+            assert_eq!(modifier(&world), 2);
+        } else {
+            edit(&mut world, id, |unit| {
+                unit["sections"]["LeftArm"]["internal"] = 0.into();
+                unit["sections"]["LeftArm"]["armor"] = 0.into();
+            });
+            assert_eq!(modifier(&world), 3);
+            edit(&mut world, id, |unit| {
+                unit["sections"]["RightArm"]["internal"] = 0.into();
+                unit["sections"]["RightArm"]["armor"] = 0.into();
+            });
+            assert_eq!(modifier(&world), 2);
+        }
+        world.validate(&config).unwrap();
+    }
+}
+
 /// Grounded drops flood exposed compartments and publish stepping mine callbacks atomically.
 #[tokio::test]
 async fn prone_water_and_mine_callback_rollback() {

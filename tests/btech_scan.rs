@@ -5149,7 +5149,6 @@ async fn eta_uses_horizontal_range_absolute_speed_and_only_plain_hex_defaults() 
             serde_json::to_value(TargetSelection::Hex(HexLock {
                 hex: HexCoordinate { x: 1, y: 2 },
                 mode,
-                remaining: 3,
             }))
             .unwrap();
         shared.borrow_mut().btech = serde_json::from_value(state).unwrap();
@@ -5264,7 +5263,6 @@ async fn bearing_queries_share_defaults_bounds_and_live_visibility_without_mutat
             serde_json::to_value(TargetSelection::Hex(HexLock {
                 hex: HexCoordinate { x: 1, y: 0 },
                 mode,
-                remaining: 3,
             }))
             .unwrap();
         shared.borrow_mut().btech = serde_json::from_value(state).unwrap();

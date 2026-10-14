@@ -78,17 +78,19 @@ macro_rules! weapon_catalogue {
 }
 
 // Profile columns: heat, damage, missiles, minimum, [short, medium, long], slots, ammo/ton, recycle.
+// Indirect artillery (Arrow IV, Long Tom, Sniper, Thumper) lists its long range in mapsheets, as
+// Tactical Operations p. 149 does; `Weapon::effective_range` converts it to hexes.
 weapon_catalogue! {
     ArrowIv { name: ("IS", "ArrowIVSystem"), part_id: 115, mass: 15360, bv: 171, skill: "Gunnery-Artillery",
-        profile: (10, 20, 0, 0, [0, 0, 5], 15, 5, 60) },
+        profile: (10, 20, 0, 0, [0, 0, 8], 15, 5, 60) },
     ClanArrowIv { name: ("CL", "ArrowIVSystem"), part_id: 64, mass: 12288, bv: 171, skill: "Gunnery-Artillery",
-        profile: (10, 20, 0, 0, [0, 0, 6], 12, 5, 60) },
+        profile: (10, 20, 0, 0, [0, 0, 9], 12, 5, 60) },
     LongTom { name: ("IS", "LongTom"), part_id: 5, mass: 30720, bv: 171, skill: "Gunnery-Artillery",
-        profile: (20, 25, 0, 0, [0, 0, 20], 30, 5, 60) },
+        profile: (20, 25, 0, 0, [0, 0, 30], 30, 5, 60) },
     Sniper { name: ("IS", "Sniper"), part_id: 116, mass: 20480, bv: 86, skill: "Gunnery-Artillery",
-        profile: (10, 20, 0, 0, [0, 0, 12], 20, 10, 60) },
+        profile: (10, 20, 0, 0, [0, 0, 18], 20, 10, 60) },
     Thumper { name: ("IS", "Thumper"), part_id: 117, mass: 15360, bv: 40, skill: "Gunnery-Artillery",
-        profile: (5, 15, 0, 0, [0, 0, 14], 15, 20, 60) },
+        profile: (6, 15, 0, 0, [0, 0, 21], 15, 20, 60) },
     LongTomCannon { name: ("IS", "LongTomCannon"), part_id: 121, mass: 20480, bv: 348, skill: "Gunnery-Artillery",
         profile: (20, 20, 0, 4, [6, 13, 20], 15, 5, 30) },
     SniperCannon { name: ("IS", "SniperCannon"), part_id: 122, mass: 15360, bv: 115, skill: "Gunnery-Artillery",
@@ -217,18 +219,12 @@ weapon_catalogue! {
         profile: (15, 10, 0, 0, [7, 14, 22], 2, 0, 25) },
     Flamer { name: ("IS", "Flamer"), part_id: 81, mass: 1024, bv: 6, skill: "Gunnery-Laser",
         profile: (3, 2, 0, 0, [1, 2, 3], 1, 0, 10) },
-    CoolantGun { name: ("IS", "CoolantGun"), part_id: 161, mass: 1024, bv: 15, skill: "Gunnery-Ballistic",
-        profile: (0, 3, 0, 0, [1, 2, 3], 1, 25, 15) },
     HeavyFlamer { name: ("IS", "HeavyFlamer"), part_id: 118, mass: 1536, bv: 20, skill: "Gunnery-Ballistic",
         profile: (5, 4, 0, 0, [2, 3, 4], 1, 10, 15) },
     VehicleFlamer { name: ("IS", "VehicleFlamer"), part_id: 99, mass: 512, bv: 5, skill: "Gunnery-Ballistic",
         profile: (3, 2, 0, 0, [1, 2, 3], 1, 20, 10) },
-    VehicleHeavyFlamer { name: ("IS", "VehicleHeavyFlamer"), part_id: 163, mass: 1024, bv: 20, skill: "Gunnery-Ballistic",
-        profile: (5, 4, 0, 0, [2, 4, 6], 1, 20, 10) },
     PlasmaRifle { name: ("IS", "PlasmaRifle"), part_id: 125, mass: 6144, bv: 210, skill: "Gunnery-Ballistic",
         profile: (10, 10, 0, 0, [5, 10, 15], 2, 10, 30) },
-    AcidThrower { name: ("IS", "AcidThrower"), part_id: 162, mass: 1536, bv: 30, skill: "Gunnery-Ballistic",
-        profile: (3, 3, 0, 0, [1, 2, 3], 2, 10, 25) },
     Thunderbolt5 { name: ("IS", "Thunderbolt-5"), part_id: 149, mass: 3072, bv: 64, skill: "Gunnery-Missile",
         profile: (3, 5, 1, 5, [6, 12, 18], 1, 12, 20) },
     Thunderbolt10 { name: ("IS", "Thunderbolt-10"), part_id: 150, mass: 7168, bv: 127, skill: "Gunnery-Missile",
@@ -307,20 +303,6 @@ weapon_catalogue! {
         profile: (3, 2, 4, 0, [3, 6, 9], 1, 25, 15) },
     StreakSrm6 { name: ("IS", "StreakSRM-6"), part_id: 145, mass: 4608, bv: 89, skill: "Gunnery-Missile",
         profile: (4, 2, 6, 0, [3, 6, 9], 2, 15, 15) },
-    LrDfm5 { name: ("IS", "LR_DFM-5"), part_id: 25, mass: 2048, bv: 1000, skill: "Gunnery-Missile",
-        profile: (2, 2, 5, 4, [6, 12, 18], 1, 24, 15) },
-    LrDfm10 { name: ("IS", "LR_DFM-10"), part_id: 26, mass: 5120, bv: 1000, skill: "Gunnery-Missile",
-        profile: (4, 2, 10, 4, [6, 12, 18], 2, 12, 20) },
-    LrDfm15 { name: ("IS", "LR_DFM-15"), part_id: 27, mass: 7168, bv: 1000, skill: "Gunnery-Missile",
-        profile: (5, 2, 15, 4, [6, 12, 18], 3, 8, 25) },
-    LrDfm20 { name: ("IS", "LR_DFM-20"), part_id: 28, mass: 10240, bv: 1000, skill: "Gunnery-Missile",
-        profile: (6, 2, 20, 4, [6, 12, 18], 5, 6, 30) },
-    SrDfm2 { name: ("IS", "SR_DFM-2"), part_id: 29, mass: 1024, bv: 1000, skill: "Gunnery-Missile",
-        profile: (2, 3, 2, 0, [2, 4, 6], 1, 50, 15) },
-    SrDfm4 { name: ("IS", "SR_DFM-4"), part_id: 30, mass: 2048, bv: 1000, skill: "Gunnery-Missile",
-        profile: (3, 3, 4, 0, [2, 4, 6], 1, 25, 15) },
-    SrDfm6 { name: ("IS", "SR_DFM-6"), part_id: 31, mass: 3072, bv: 1000, skill: "Gunnery-Missile",
-        profile: (4, 3, 6, 0, [2, 4, 6], 2, 15, 15) },
     Elrm5 { name: ("IS", "ELRM-5"), part_id: 21, mass: 6144, bv: 1000, skill: "Gunnery-Missile",
         profile: (3, 1, 5, 10, [12, 22, 38], 1, 18, 30) },
     Elrm10 { name: ("IS", "ELRM-10"), part_id: 22, mass: 8192, bv: 1000, skill: "Gunnery-Missile",
@@ -416,9 +398,7 @@ weapon_catalogue! {
     ClanRotaryAc2 { name: ("CL", "RotaryAC/2"), part_id: 164, mass: 8192, bv: 161, skill: "Gunnery-Ballistic",
         profile: (1, 2, 0, 0, [8, 17, 25], 4, 45, 10) },
     ClanRotaryAc5 { name: ("CL", "RotaryAC/5"), part_id: 165, mass: 10240, bv: 345, skill: "Gunnery-Ballistic",
-        profile: (1, 5, 0, 0, [7, 14, 21], 8, 20, 15) },
-    ClanRotaryAc10 { name: ("CL", "RotaryAC/10"), part_id: 166, mass: 14336, bv: 250, skill: "Gunnery-Ballistic",
-        profile: (3, 10, 0, 0, [6, 12, 18], 7, 10, 20) }
+        profile: (1, 5, 0, 0, [7, 14, 21], 8, 20, 15) }
 }
 
 #[cfg(test)]

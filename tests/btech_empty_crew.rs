@@ -65,7 +65,7 @@ async fn empty_crew_injury_recovery_and_restart_share_player_rules() {
         let (_dir, config, mut world, id, value) = fixture(vehicle).await;
         let players = world.btech.recoveries().clone();
         assert_eq!(
-            battle_unit_target_movement_modifier(&world, id, 2.0, false).unwrap(),
+            battle_unit_target_movement_modifier(&world, id, 2.0).unwrap(),
             0
         );
         let injury = injure_battle_tactical_pilot(&mut world, id, 3, false).unwrap();
@@ -78,7 +78,7 @@ async fn empty_crew_injury_recovery_and_restart_share_player_rules() {
         assert!(!check.conscious);
         assert_eq!(recovery(&world, id).remaining, 30);
         assert_eq!(
-            battle_unit_target_movement_modifier(&world, id, 2.0, false).unwrap(),
+            battle_unit_target_movement_modifier(&world, id, 2.0).unwrap(),
             -4
         );
         for _ in 0..3 {

@@ -5,7 +5,7 @@ linkTitle: "spot"
 manualLinkTitle: "spot"
 ---
 
-Select an acquired friendly spotter; use own dbref to declare spotting, or nil to stop.
+Select a friendly declared spotter on the same battlefield; use own dbref to declare spotting, or nil to stop.
 
 ## Signature
 

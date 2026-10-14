@@ -98,7 +98,7 @@ pub(crate) fn vehicle_catalog(unit: &super::Vehicle) -> Vec<Preference> {
     ]
 }
 
-/// Set the assigned pilot's friendly-fire safety; coolant remains exempt.
+/// Set the assigned pilot's friendly-fire safety.
 pub fn set_friendly_fire_safety(
     world: &mut World,
     id: ObjectId,

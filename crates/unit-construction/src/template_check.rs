@@ -86,32 +86,59 @@ mod tests {
 
     const JENNER: &str = include_str!("../tests/fixtures/JR7-D.toml");
 
+    /// A short SRM bin fills to its full ton, while a short machine-gun bin becomes a half-ton lot.
     #[test]
     fn constructible_templates_report_normalized_bins_and_keep_the_source() {
+        for (bin, supplied, normalized, inferred_half_ton) in [
+            ("Ammo_IS.SRM-4", 7, 25, false),
+            ("Ammo_IS.MachineGun", 40, 100, true),
+        ] {
+            let source = JENNER.replace(
+                "item = \"Ammo_IS.SRM-4\", rounds = 25",
+                &format!("item = \"{bin}\", rounds = {supplied}"),
+            );
+            assert_ne!(source, JENNER);
+            let template = MechTemplate::parse("JR7-D", &source).unwrap();
+            let original = template.clone();
+            let report = check_template(&template);
+            assert!(report.constructible, "{:?}", report.rejection);
+            assert_eq!(report.chassis, Some(MechChassis::Biped));
+            assert_eq!((report.weapons, report.ammunition_bins), (5, 1));
+            assert_eq!(
+                report.ammunition_adjustments,
+                [AmmunitionAdjustment {
+                    location: CriticalLocation {
+                        section: MechSection::RightTorso,
+                        slot: 0
+                    },
+                    supplied,
+                    normalized,
+                    inferred_half_ton,
+                }]
+            );
+            assert_eq!(template, original);
+        }
+    }
+
+    /// An explicit half-ton lot on anything but a machine gun is a construction failure.
+    #[test]
+    fn half_ton_bins_on_other_weapons_are_rejected() {
         let source = JENNER.replace(
             "item = \"Ammo_IS.SRM-4\", rounds = 25",
-            "item = \"Ammo_IS.SRM-4\", rounds = 7",
+            "item = \"Ammo_IS.SRM-4\", rounds = 12, modes = [\"Halfton\"]",
         );
         assert_ne!(source, JENNER);
-        let template = MechTemplate::parse("JR7-D", &source).unwrap();
-        let original = template.clone();
-        let report = check_template(&template);
-        assert!(report.constructible, "{:?}", report.rejection);
-        assert_eq!(report.chassis, Some(MechChassis::Biped));
-        assert_eq!((report.weapons, report.ammunition_bins), (5, 1));
-        assert_eq!(
-            report.ammunition_adjustments,
-            [AmmunitionAdjustment {
-                location: CriticalLocation {
-                    section: MechSection::RightTorso,
-                    slot: 0
-                },
-                supplied: 7,
-                normalized: 12,
-                inferred_half_ton: true,
-            }]
+        let report = check_template(&MechTemplate::parse("JR7-D", &source).unwrap());
+        assert!(!report.constructible);
+        assert!(
+            report
+                .rejection
+                .as_deref()
+                .is_some_and(|rejection| rejection
+                    .contains("Half-ton ammunition bins are limited to machine guns")),
+            "{:?}",
+            report.rejection
         );
-        assert_eq!(template, original);
     }
 
     #[test]

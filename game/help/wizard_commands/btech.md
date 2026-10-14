@@ -679,7 +679,7 @@ names. Map `flags` are:
 | `underground` | A ceiling blocks jumping and flight; artillery needs a spotter. |
 | `dark` | Units see only terrain in their line of sight. |
 | `indestructible_structures` | Weapon fire cannot damage buildings, walls or bridges. |
-| `no_friendly_fire` | Teammates cannot damage each other with non-coolant weapons. |
+| `no_friendly_fire` | Teammates cannot damage each other with weapons. |
 | `no_physical_attacks` | Physical attacks are not allowed. |
 | `no_stacking` | Units share crowded hexes without stacking collisions, and autopilots do not route around them. |
 
@@ -956,15 +956,6 @@ Lua `btech.unit.fields(actor, unit, arguments)` returns the detached report and
 publishes it. `btech.unit.set_field(actor, unit, field, value)` uses the same named
 edits. Errors preserve state and previously staged output.
 
-`@setunit targcomp <mode>` selects normal (0), short-range bias (1), long-range
-bias (2), multiple-target tracking (3), or anti-air tracking (4). Range biases
-trade a one-point benefit for a one-point penalty across the medium-range
-boundary. Multiple-target tracking removes settling delay on the selected unit
-and penalizes a selected target outside the forward arc. Anti-air tracking
-favors jumping units, airborne VTOLs and units descending in cocoons, and
-penalizes ground targets. AntiAircraft equipment improves its airborne bonus
-from two points to three.
-
 Thermal fields report the last committed sample: `heat` includes weapon and
 continuous heat production, `dissheat` reports dissipation, and `overheat` reports
 excess heat. `disabled_hs` reports intentionally disabled cooling; `heatsinks`
@@ -1132,8 +1123,8 @@ bits remain clear. This field currently supports inspection only.
 `@setunit pilotnum <player number>` assigns a live, conscious player who is
 physically inside the unit. It can replace the current pilot; `-1` clears the
 assignment. Invalid replacements leave the existing pilot assigned.
-`@setunit target <unit number>` selects another placed unit on the same map,
-restarts sensor settling and clears artillery adjustment. This administrative
+`@setunit target <unit number>` selects another placed unit on the same map
+and clears artillery adjustment. This administrative
 selection does not require an acquired contact; ordinary firing checks still
 apply. `-1` clears all targeting modes. Both fields use the same operations through
 Lua unit field access and participate in callback rollback.

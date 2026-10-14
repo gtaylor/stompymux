@@ -73,6 +73,7 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str, tsm_bonus: bool)
         super::damage_weapons::Weapons {
             failures: &mut unit.weapon_failures,
             manual_jams: &mut unit.jammed_weapons,
+            broken_feeds: &mut unit.broken_feeds,
             powered_down: &mut unit.powered_down_weapons,
             spent: &mut unit.spent_launchers,
             recycle: &mut unit.weapon_recycle,
@@ -178,6 +179,7 @@ fn set_mech(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
         super::damage_weapons::Weapons {
             failures: &mut unit.weapon_failures,
             manual_jams: &mut unit.jammed_weapons,
+            broken_feeds: &mut unit.broken_feeds,
             powered_down: &mut unit.powered_down_weapons,
             spent: &mut unit.spent_launchers,
             recycle: &mut unit.weapon_recycle,

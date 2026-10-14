@@ -100,12 +100,11 @@ pub(super) fn apply_water_range(
     shooter: ObjectId,
     index: usize,
     weapon: Weapon,
-    extended: bool,
     aim: &mut AimModifiers,
 ) -> Result<bool> {
     let water = submerged(world, shooter, index)?;
     if water {
-        let water_range = weapon.water_range_modifier(aim.distance, extended)?;
+        let water_range = weapon.water_range_modifier(aim.distance)?;
         let minimum = weapon.profile().minimum_range;
         // The enclosing reference aim calculation handles raw minimum range
         // before entering either the ordinary or underwater bracket routine.

@@ -127,9 +127,12 @@ async fn weight_report_permissions_literal_names_and_output_rollback() {
                 .collect(),
         };
         for critical in criticals {
-            if critical.equipment.starts_with("Ammo_") {
+            if let Some(name) = critical.equipment.strip_prefix("Ammo_") {
                 critical.data = "0".into();
-                critical.modes.push("Halfton".into());
+                // Only machine guns may carry half-ton lots (TechManual p. 48).
+                if Weapon::parse(name).unwrap().allows_half_ton_bins() {
+                    critical.modes.push("Halfton".into());
+                }
             }
         }
         template.create(&mut world, unit).unwrap();
@@ -141,7 +144,18 @@ async fn weight_report_permissions_literal_names_and_output_rollback() {
             .collect();
         assert!(!bins.is_empty());
         for bin in bins {
-            assert_eq!(bin.mass, i64::from(bin.count.unwrap()) * 512);
+            let weapon = Weapon::parse(bin.name.strip_prefix("Ammo_").unwrap()).unwrap();
+            let lot = if weapon.allows_half_ton_bins() {
+                512
+            } else {
+                1024
+            };
+            assert_eq!(
+                bin.mass,
+                i64::from(bin.count.unwrap()) * lot,
+                "{}",
+                bin.name
+            );
         }
 
         let visitor = world.create(&config, "Visitor".into(), Kind::Player);

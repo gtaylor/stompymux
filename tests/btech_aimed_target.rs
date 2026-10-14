@@ -183,6 +183,42 @@ async fn head_aim_penalty_and_sight_feedback_share_all_chassis() {
 }
 
 /// Find a target or attack stream by its next roll, without depending on incidental seed values.
+/// Give the pilot a gunnery target of eight so that a roll of 2 misses even an immobile target.
+fn poor_gunnery(world: &mut World) {
+    world
+        .objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .flags
+        .insert(Flag::Connected);
+    set_battle_character(
+        world,
+        ObjectId(1),
+        Character {
+            build: 5,
+            reflexes: 4,
+            intuition: 3,
+            learn: 2,
+            charisma: 1,
+            bruise: 0,
+            lethal: 0,
+        },
+    )
+    .unwrap();
+    support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
+    set_battle_character_value(
+        world,
+        ObjectId(1),
+        "Gunnery-Missile",
+        CharacterValue {
+            value: 3,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
+}
+
 fn seed_for(predicate: impl Fn(u8) -> bool) -> [u8; 32] {
     for byte in 0..=255 {
         let seed = [byte; 32];
@@ -484,13 +520,6 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                     "",
                     false,
                 ),
-                (
-                    Weapon::CoolantGun,
-                    FireMode::Normal,
-                    AmmunitionMode::Normal,
-                    "",
-                    false,
-                ),
             ] {
                 let (mut world, shooter, target, index) = firing_support::supply_fixture_on(
                     base.clone(),
@@ -560,7 +589,7 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                 assert_eq!(a, b, "{weapon:?} {mode:?} miss={miss}");
                 if miss {
                     assert!(a["salvo"].is_null(), "{a}");
-                } else if mode != FireMode::Heat && weapon != Weapon::CoolantGun {
+                } else if mode != FireMode::Heat {
                     assert!(a["salvo"].is_object(), "{a}");
                 }
                 if vehicle {
@@ -690,9 +719,12 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
             );
             for miss in [false, true] {
                 let mut world = base.clone();
+                poor_gunnery(&mut world);
                 edit(&mut world, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
+                    state["motion"]["heading"] = 180.0.into();
+                    state["motion"]["desired_heading"] = 180.0.into();
                     state["dice"] = serde_json::to_value(Dice::seeded(target_seed)).unwrap();
                 });
                 edit(&mut world, shooter, |state| {
@@ -788,9 +820,12 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                     false,
                     Some(flag),
                 );
+                poor_gunnery(&mut base);
                 edit(&mut base, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
+                    state["motion"]["heading"] = 180.0.into();
+                    state["motion"]["desired_heading"] = 180.0.into();
                     state["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
                 });
                 if ammunition != AmmunitionMode::Normal {
@@ -825,11 +860,8 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                     let value = serde_json::to_value(value).unwrap();
                     assert_eq!(value["glancing"], serde_json::json!(roll == threshold));
                     assert_eq!(value["salvo"].is_object(), roll >= threshold, "{value}");
-                    assert_eq!(
-                        value["ams"].is_object(),
-                        roll >= threshold && ammunition == AmmunitionMode::Normal,
-                        "{value}"
-                    );
+                    // Swarm rounds are not exempt from AMS (Tactical Operations: AUE p. 181).
+                    assert_eq!(value["ams"].is_object(), roll >= threshold, "{value}");
                     if roll < threshold {
                         let mut expected = world.clone();
                         roll_unit_dice(&mut expected, target, 2).unwrap();

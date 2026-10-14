@@ -258,7 +258,7 @@ fn charge_profile_for(
         "You have not covered enough ground to charge."
     );
     let received = recoil_damage(victim.definition().tons);
-    let movement = i16::from(source.attacker_movement_modifier(rules.physical.fasa_turning));
+    let movement = i16::from(source.attacker_movement_modifier());
     let skill = charge_skill_difference(
         world,
         attacker,
@@ -284,11 +284,7 @@ fn charge_profile_for(
         } else {
             movement
         })
-        + i32::from(super::aim::ground_physical_target_modifier(
-            world,
-            victim,
-            rules.physical.extended_movement,
-        ))
+        + i32::from(super::aim::ground_physical_target_modifier(world, victim))
         + i32::from(terrain)
         + i32::from(super::light_aim::modifier(world, target, true)?);
     ensure!(
@@ -494,10 +490,8 @@ pub(super) fn resolve_skid_charge(
         attacker,
         rules.extended_piloting,
     )?) + UNINTENTIONAL_CHARGE_MODIFIER
-        + i32::from(source.attacker_movement_modifier(false))
-        + i32::from(super::aim::ground_physical_target_modifier(
-            world, victim, false,
-        ))
+        + i32::from(source.attacker_movement_modifier())
+        + i32::from(super::aim::ground_physical_target_modifier(world, victim))
         + i32::from(terrain)
         + i32::from(super::light_aim::modifier(world, target, true)?);
     let range = unit_range(world, attacker, target)?;
@@ -522,11 +516,7 @@ pub(super) fn resolve_skid_charge(
         .unwrap()
         .dice
         .generic_roll();
-    let physical = PhysicalRules {
-        fasa_turning: false,
-        extended_movement: false,
-        fall: rules,
-    };
+    let physical = PhysicalRules { fall: rules };
     let report = resolve_prepared(
         world,
         PreparedCharge {

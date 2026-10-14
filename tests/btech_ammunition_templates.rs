@@ -19,7 +19,8 @@ fn definition(weapon: Weapon, quantity: u16, flags: &[&str]) -> MechTemplate {
     template
 }
 
-/// Template quantities select a size and fill it once, including zero, odd capacities and overfilled bins.
+/// Template quantities select a size and fill it once, including zero, odd capacities and
+/// overfilled bins. Only machine guns infer or accept half-ton lots (TechManual p. 48).
 #[test]
 fn ammunition_template_normalization_boundaries() {
     for weapon in Weapon::ALL
@@ -29,6 +30,7 @@ fn ammunition_template_normalization_boundaries() {
     {
         let full = u16::from(weapon.profile().ammunition_per_ton);
         let half = full / 2;
+        let half_lots = weapon.allows_half_ton_bins();
         for quantity in [0, 1, half, half + 1, full - 1, full, full + 1, u16::MAX] {
             for explicit_half in [false, true] {
                 let flags = if explicit_half {
@@ -37,6 +39,10 @@ fn ammunition_template_normalization_boundaries() {
                     vec![]
                 };
                 let template = definition(weapon, quantity, &flags);
+                if explicit_half && !half_lots {
+                    assert!(Mech::from_template(template).is_err(), "{weapon:?}");
+                    continue;
+                }
                 let original = template.clone();
                 let mut lowercase = template.clone();
                 for section in lowercase.sections.values_mut() {
@@ -46,7 +52,7 @@ fn ammunition_template_normalization_boundaries() {
                 }
                 let lowercase_unit = Mech::from_template(lowercase).unwrap();
                 let unit = Mech::from_template(template).unwrap();
-                let expected_half = explicit_half || quantity <= half;
+                let expected_half = half_lots && (explicit_half || quantity <= half);
                 let capacity = if expected_half { half } else { full };
                 let loadout = unit.loadout().unwrap();
                 assert_eq!(lowercase_unit.loadout().unwrap(), loadout);
@@ -72,7 +78,7 @@ fn ammunition_template_normalization_boundaries() {
         unit.loadout().unwrap().ammunition[0].mode,
         AmmunitionMode::Cluster
     );
-    assert_eq!(unit.ammunition(), [22]);
+    assert_eq!(unit.ammunition(), [45]);
     for flags in [
         vec!["Halfton", "Halfton"],
         vec!["UnknownBinFlag"],
@@ -128,8 +134,8 @@ async fn ammunition_template_native_lua_creation_and_empty_restart() {
         built.btech.constructed_units()[&id].definition(),
         scripted.btech.constructed_units()[&id].definition()
     );
-    assert_eq!(built.btech.constructed_units()[&id].ammunition(), [12]);
-    assert_eq!(scripted.btech.constructed_units()[&id].ammunition(), [12]);
+    assert_eq!(built.btech.constructed_units()[&id].ammunition(), [25]);
+    assert_eq!(scripted.btech.constructed_units()[&id].ammunition(), [25]);
     let bin = built.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
@@ -146,7 +152,7 @@ async fn ammunition_template_native_lua_creation_and_empty_restart() {
             .unwrap()
             .ammunition[0]
             .rounds,
-        12
+        25
     );
     assert_eq!(
         std::fs::read_to_string(dir.path().join("units/partial.toml")).unwrap(),

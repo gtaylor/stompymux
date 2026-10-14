@@ -203,9 +203,6 @@ impl Server {
             crate::MovementRules {
                 free_fusion_vtol_fuel: self.config.battletech.nofusionvtolfuel != 0,
                 tsm_tow_bonus: self.config.battletech.tsm_tow_bonus != 0,
-                charge: crate::ChargePolicy {
-                    extended_movement: self.config.battletech.extendedmovemod != 0,
-                },
                 fasa_turning: self.config.battletech.fasaturn != 0,
                 slowdown: self.config.battletech.slowdown,
                 roll_on_backwalk: self.config.battletech.roll_on_backwalk != 0,
@@ -310,7 +307,6 @@ impl Server {
         }
         let unjam_result = crate::btech::unjam::advance_unjamming_in_action(
             &mut self.scripts.world.borrow_mut(),
-            self.config.battletech.extended_piloting != 0,
             self.config.battletech.extended_gunnery != 0,
         );
         let unjam_report = match unjam_result {
@@ -360,9 +356,6 @@ impl Server {
                     ),
                     extended_piloting: self.config.battletech.extended_piloting != 0,
                     toughness: false,
-                },
-                charge: crate::ChargePolicy {
-                    extended_movement: self.config.battletech.extendedmovemod != 0,
                 },
                 fasa_turning: self.config.battletech.fasaturn != 0,
                 ..crate::MovementRules::STANDARD
@@ -506,22 +499,6 @@ impl Server {
                 return false;
             }
         }
-        let links = crate::advance_battle_spotter_links(&mut self.scripts.world.borrow_mut());
-        match links {
-            Ok(link_notices) => notices.extend(link_notices),
-            Err(error) => {
-                tracing::error!(error = %format_args!("{error:#}"), "BattleTech update failed");
-                *self.scripts.world.borrow_mut() = before;
-                self.scripts
-                    .world
-                    .borrow_mut()
-                    .btech
-                    .autopilot_plans
-                    .clear();
-                self.scripts.effects.rollback();
-                return false;
-            }
-        }
         notices.extend(crate::advance_battle_tags(
             &mut self.scripts.world.borrow_mut(),
         ));
@@ -587,9 +564,6 @@ impl Server {
                 return false;
             }
         }
-        notices.extend(crate::advance_battle_target_locks(
-            &mut self.scripts.world.borrow_mut(),
-        ));
         let autopilot_result = match metrics.as_deref_mut() {
             Some(metrics) => crate::btech::autopilot::runtime::advance_combat_with_metrics(
                 &mut self.scripts.world.borrow_mut(),

@@ -338,7 +338,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         5.0
     );
     assert_eq!(
-        world.btech.constructed_units()[&id].attacker_movement_modifier(false),
+        world.btech.constructed_units()[&id].attacker_movement_modifier(),
         3
     );
     for _ in 0..12 {
@@ -442,7 +442,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         .is_empty()
     );
     shutdown.validate(&config).unwrap();
-    assert_eq!(unit.attacker_movement_modifier(false), 2);
+    assert_eq!(unit.attacker_movement_modifier(), 2);
     assert_eq!(unit.heat_rates(&world).production, 0.0);
     assert!(launch_battle_jump(&mut world, id, ObjectId(1), 180, 1.0).is_err());
     for remaining in (0..12).rev() {
@@ -461,7 +461,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
         assert_eq!(notices.len(), usize::from(remaining == 0));
     }
     assert_eq!(
-        world.btech.constructed_units()[&id].attacker_movement_modifier(false),
+        world.btech.constructed_units()[&id].attacker_movement_modifier(),
         0
     );
     launch_battle_jump(&mut world, id, ObjectId(1), 180, 1.0).unwrap();
@@ -1222,11 +1222,6 @@ async fn airborne_target_modifier_uses_current_thrust_and_gravity_without_consum
             0,
             4,
             AimRules {
-                woods_damage: false,
-                fasa_turning: false,
-                extended_movement: false,
-                extended_ranges: false,
-                hotload_half_minimum: false,
                 override_weapon_arcs: false,
             },
         )
@@ -3655,14 +3650,7 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
     );
     select_battle_charge(&mut world, id, ObjectId(1), ChargeSelection::Target(target)).unwrap();
     let charge = world.btech.constructed_units()[&id].charge();
-    advance_battle_jumps(
-        &mut world,
-        MovementRules {
-            charge: ChargePolicy::STANDARD,
-            ..rules
-        },
-    )
-    .unwrap();
+    advance_battle_jumps(&mut world, rules).unwrap();
     assert_eq!(world.btech.constructed_units()[&id].charge(), charge);
     world.validate(&config).unwrap();
 }

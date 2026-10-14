@@ -277,9 +277,7 @@ fn accidental_fall(
     let obscured =
         world.btech.maps()[&position.map].hex(i64::from(position.x), i64::from(position.y))?;
     let target_number = ACCIDENTAL_FALL_TARGET
-        + i32::from(super::aim::ground_physical_target_modifier(
-            world, other, false,
-        ))
+        + i32::from(super::aim::ground_physical_target_modifier(world, other))
         + i32::from(obscured.woods_density() + obscured.smoke_density());
     let mover = world.btech.constructed.get_mut(&id).unwrap();
     mover.charge = Default::default();

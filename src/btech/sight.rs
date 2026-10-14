@@ -148,7 +148,6 @@ fn resolve(
     request: super::fire_target::FireTargetRequest<'_>,
 ) -> Result<SightReport> {
     let operator = super::combat_operator::admit_running(world, shooter, pilot)?;
-    super::spotter::check_firing_role(world, shooter)?;
     let (mechanics, disabled, mode, mut dice) =
         super::with_unit!(world.btech.unit(shooter).expect("admitted unit"), |unit| {
             (
@@ -174,7 +173,7 @@ fn resolve(
     // Sighting still draws preparation intensity, with no supply check or cap.
     let gatling_roll = (mode == FireMode::Gatling).then(|| dice.d6());
     let rules = AimRules::configured(&config.battletech);
-    let (target, coordinate, aim, number, distance, partial_cover) = match target {
+    let (target, coordinate, aim, number, partial_cover) = match target {
         None => {
             let prepared =
                 super::artillery_firing::prepare(world, config, shooter, pilot, index, requested)?;
@@ -183,7 +182,6 @@ fn resolve(
                 Some(prepared.coordinate),
                 SightAim::Artillery(prepared.aim),
                 Some(prepared.aim.target_number).filter(|number| *number <= 900),
-                prepared.distance,
                 false,
             )
         }
@@ -200,12 +198,10 @@ fn resolve(
                     index,
                     config.battletech.extended_gunnery != 0,
                 )?,
-                rules,
             )?;
             ensure!(aim.visible, "Target hex is not visible");
             let number = aim.subtotal();
-            let distance = aim.modifiers.distance;
-            (None, Some(hex), SightAim::Hex(aim), number, distance, false)
+            (None, Some(hex), SightAim::Hex(aim), number, false)
         }
         Some(super::fire_target::ResolvedFireTarget::Unit {
             unit: target,
@@ -235,18 +231,16 @@ fn resolve(
                     *number < 900
                 }
             });
-            let distance = aim.distance;
             (
                 Some(target),
                 coordinate,
                 SightAim::Unit(aim),
                 number,
-                distance,
                 partial_cover,
             )
         }
     };
-    let roll = super::launch_roll::attack_roll(weapon, distance, &mut dice);
+    let roll = dice.generic_roll();
     crate::btech::with_unit_mut!(world.btech.unit_mut(shooter).unwrap(), |unit| {
         unit.dice = dice;
     });
@@ -331,18 +325,8 @@ fn check_unit_target(
     let source = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
     let recipient = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
     ensure!(!recipient.destroyed, "Unit is destroyed");
-    let coolant = weapon == Weapon::CoolantGun;
-    ensure!(shooter != target || coolant, "A unit cannot fire on itself");
-    super::fire_target::check_target_safety_for_source(world, targeting, target, weapon)?;
-    let ammunition = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
-        unit.ammunition_mode(index)?
-    });
-    if ammunition.munition() == AmmunitionMode::Stinger {
-        ensure!(
-            super::stinger::target_airborne(world, target),
-            "Stinger missiles can only engage airborne targets!"
-        );
-    }
+    ensure!(shooter != target, "A unit cannot fire on itself");
+    super::fire_target::check_target_safety_for_source(world, targeting, target)?;
     super::torpedo::check_target(
         world,
         weapon,
@@ -367,10 +351,7 @@ fn check_unit_target(
     super::weapon_geometry::check_water(geometry.weapon, geometry.submerged)?;
     super::planetary_conditions::check_wind(world, shooter, geometry.weapon)?;
     ensure!(
-        (coolant && shooter == target)
-            || indirect.is_some()
-            || rules.override_weapon_arcs
-            || geometry.bears,
+        indirect.is_some() || rules.override_weapon_arcs || geometry.bears,
         "Target is outside weapon arc"
     );
     Ok(())

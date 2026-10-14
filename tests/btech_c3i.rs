@@ -489,11 +489,6 @@ fn weapon_index(world: &World, id: ObjectId, weapon: Weapon) -> usize {
 /// Conventional aim with strict physical range and ordinary minimum-range penalties.
 fn aim_rules() -> AimRules {
     AimRules {
-        woods_damage: false,
-        fasa_turning: true,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     }
 }
@@ -572,36 +567,18 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     assert_eq!(minimum.range.unwrap().modifier, 2);
     assert!(minimum.network_range.is_none());
     toggle_battle_hotload(&mut world, first, pilot, lrm).unwrap();
-    for (half, modifier) in [(false, 0), (true, 1)] {
-        let hot = battle_aim_modifiers(
-            &world,
-            first,
-            target,
-            lrm,
-            4,
-            AimRules {
-                woods_damage: false,
-                hotload_half_minimum: half,
-                ..aim_rules()
-            },
-        )
-        .unwrap();
-        assert_eq!(hot.range.unwrap().modifier, modifier);
-        assert!(hot.network_range.is_none());
-    }
+    let hot = battle_aim_modifiers(&world, first, target, lrm, 4, aim_rules()).unwrap();
+    assert_eq!(hot.range.unwrap().modifier, 0);
+    assert!(hot.network_range.is_none());
 
+    // Total Warfare p. 131: the network never extends a weapon beyond its own maximum range.
     relocate(&mut world, first, 8);
-    let extended = AimRules {
-        woods_damage: false,
-        extended_ranges: true,
-        ..aim_rules()
-    };
-    let linked = battle_aim_modifiers(&world, first, target, ac, 4, extended).unwrap();
+    let linked = battle_aim_modifiers(&world, first, target, ac, 4, aim_rules()).unwrap();
     assert!(linked.range.is_none());
-    assert_eq!(linked.network_range.unwrap().source, Some(peer));
+    assert!(linked.network_range.is_none());
     join_leave_battle_c3i(&mut world, first, pilot, None).unwrap();
-    let ordinary = battle_aim_modifiers(&world, first, target, ac, 4, extended).unwrap();
-    assert_eq!(ordinary.range.unwrap().bracket, RangeBracket::Extreme);
+    let ordinary = battle_aim_modifiers(&world, first, target, ac, 4, aim_rules()).unwrap();
+    assert!(ordinary.range.is_none());
     world.validate(&config).unwrap();
 }
 
@@ -793,15 +770,8 @@ async fn shared_range_applies_to_hex_aim_and_replays_in_actual_shots() {
     relocate(&mut world, peer, 17);
     relocate(&mut world, target, 18);
     let index = weapon_index(&world, first, Weapon::Lrm20);
-    let aim = battle_hex_aim_modifiers(
-        &world,
-        first,
-        HexCoordinate { x: 10, y: 18 },
-        index,
-        4,
-        aim_rules(),
-    )
-    .unwrap();
+    let aim =
+        battle_hex_aim_modifiers(&world, first, HexCoordinate { x: 10, y: 18 }, index, 4).unwrap();
     assert_eq!(aim.modifiers.range.unwrap().modifier, 0);
     assert_eq!(aim.modifiers.network_range.unwrap().source, Some(peer));
     persistence::save(&config.database(), &world).await.unwrap();
@@ -1268,8 +1238,7 @@ async fn direct_network_targets_keep_sight_markers_selection_and_destroyed_first
     encoded["constructed"][wreck.0.to_string()]["power"] =
         serde_json::to_value(Power::Off).unwrap();
     encoded["constructed"][wreck.0.to_string()]["pilot"] = serde_json::Value::Null;
-    encoded["constructed"][first.0.to_string()]["target_lock"] =
-        serde_json::json!({"target":near,"remaining":0});
+    encoded["constructed"][first.0.to_string()]["target_lock"] = serde_json::json!({"target":near});
     world.btech = serde_json::from_value(encoded).unwrap();
     let contacts = displayed_battle_contacts(&world, first).unwrap();
     assert_eq!(
@@ -1597,15 +1566,8 @@ async fn classic_assisted_unit_and_hex_shots_share_limits_and_restart_replay() {
     relocate(&mut world, target, 18);
     let lrm = weapon_index(&world, first, Weapon::Lrm20);
     let ac = weapon_index(&world, first, Weapon::Ac20);
-    let hex = battle_hex_aim_modifiers(
-        &world,
-        first,
-        HexCoordinate { x: 10, y: 18 },
-        lrm,
-        4,
-        aim_rules(),
-    )
-    .unwrap();
+    let hex =
+        battle_hex_aim_modifiers(&world, first, HexCoordinate { x: 10, y: 18 }, lrm, 4).unwrap();
     assert_eq!(
         hex.modifiers.network_range.unwrap().kind,
         CommandNetwork::C3
@@ -1887,21 +1849,13 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
 
     join_leave_battle_c3i(&mut world, shooter, pilot, Some(peer)).unwrap();
     let index = weapon_index(&world, shooter, Weapon::MediumLaser);
-    let mut rules = aim_rules();
-    rules.extended_ranges = true;
+    let rules = aim_rules();
     let before = world.btech.clone();
     let direct = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();
     assert_eq!(direct.network_range.unwrap().source, Some(peer));
     assert_eq!(direct.range.unwrap().modifier, 0);
-    let coordinate = battle_hex_aim_modifiers(
-        &world,
-        shooter,
-        HexCoordinate { x: 10, y: 8 },
-        index,
-        4,
-        rules,
-    )
-    .unwrap();
+    let coordinate =
+        battle_hex_aim_modifiers(&world, shooter, HexCoordinate { x: 10, y: 8 }, index, 4).unwrap();
     // The submerged peer beside the hex must sight it for the network to use its distance.
     assert!(
         battle_hex_visible(&world, peer, HexCoordinate { x: 10, y: 8 }).unwrap(),
@@ -1916,7 +1870,7 @@ async fn underwater_network_aim_keeps_the_physical_water_limit() {
     relocate(&mut world, target, 9);
     let out_of_range = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();
     assert!(out_of_range.range.is_none());
-    assert!(out_of_range.network_range.is_some());
+    assert!(out_of_range.network_range.is_none());
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(

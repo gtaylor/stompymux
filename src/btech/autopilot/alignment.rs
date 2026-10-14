@@ -113,8 +113,12 @@ pub(crate) fn align(
         .vehicles()
         .get(&id)
         .and_then(|u| u.turret_heading());
+    // Reversed arms rule out a torso twist (Total Warfare p. 105), so only score poses the
+    // torso controls would accept.
     let can_twist = world.btech.constructed_units().get(&id).is_some_and(|u| {
-        u.chassis() != crate::MechChassis::Quad && u.posture() != crate::Posture::Prone
+        u.chassis() != crate::MechChassis::Quad
+            && u.posture() != crate::Posture::Prone
+            && !u.facing().arms_flipped
     });
     let can_turret =
         world.btech.vehicles().get(&id).is_some_and(|u| {

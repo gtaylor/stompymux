@@ -4,7 +4,7 @@ use crate::{Flag, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 
-/// Weapon heat (including temporary coolant credit) and the last sampled excess.
+/// Weapon heat and the last sampled excess.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Heat {
     pub stored: f64,
@@ -12,10 +12,13 @@ pub struct Heat {
 }
 
 impl Heat {
-    /// Coolant credit may be negative until the next sample; excess heat remains nonnegative.
+    /// Stored and excess heat are both finite and nonnegative.
     pub(crate) fn validate(self) -> Result<()> {
         ensure!(
-            self.stored.is_finite() && self.excess.is_finite() && self.excess >= 0.0,
+            self.stored.is_finite()
+                && self.stored >= 0.0
+                && self.excess.is_finite()
+                && self.excess >= 0.0,
             "Invalid unit heat"
         );
         Ok(())
@@ -389,29 +392,6 @@ mod tests {
         assert_eq!(heat.stored, 30.0);
     }
 
-    /// Coolant affects intervening weapon heat before the heartbeat clears unused credit.
-    #[test]
-    fn coolant_credit_survives_until_the_next_heat_sample() {
-        let mut heat = Heat {
-            stored: -3.0,
-            excess: 0.0,
-        };
-        heat.validate().unwrap();
-        heat.stored += 5.0;
-        heat.advance(HeatRates {
-            production: 0.0,
-            dissipation: 0.0,
-        });
-        assert_eq!(heat.stored, 2.0);
-        assert_eq!(heat.excess, 2.0);
-        heat.stored = -1.5;
-        heat.advance(HeatRates {
-            production: 0.0,
-            dissipation: 0.0,
-        });
-        assert_eq!(heat, Heat::default());
-    }
-
     #[test]
     fn cooling_stops_at_zero_and_corrupt_heat_is_rejected() {
         let mut heat = Heat {
@@ -423,7 +403,7 @@ mod tests {
             dissipation: 10.0,
         });
         assert_eq!(heat, Heat::default());
-        for stored in [f64::NEG_INFINITY, f64::NAN, f64::INFINITY] {
+        for stored in [f64::NEG_INFINITY, f64::NAN, f64::INFINITY, -1.0] {
             assert!(
                 Heat {
                     stored,

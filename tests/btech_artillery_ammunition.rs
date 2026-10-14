@@ -81,10 +81,13 @@ fn artillery_flags_do_not_reinterpret_conventional_ammunition() {
         assert_eq!(loadout.ammunition[0].mode, mode);
         for flag in ["Cluster", "Smoke", "Mine"] {
             let result = MechLoadout::resolve(&ammunition_template(weapon, &[flag]));
-            assert_eq!(
-                result.is_ok(),
-                flag != "Cluster" && weapon.profile().missiles > 0
-            );
+            // Smoke rounds exist for SRMs and LRMs; mine (Thunder) rounds for LRMs only.
+            let expected = match flag {
+                "Smoke" => weapon.is_standard_srm() || weapon.is_standard_lrm(),
+                "Mine" => weapon.supports_thunder(),
+                _ => false,
+            };
+            assert_eq!(result.is_ok(), expected, "{weapon:?} {flag}");
         }
     }
 }

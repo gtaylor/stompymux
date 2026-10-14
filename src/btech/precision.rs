@@ -1,20 +1,23 @@
 //! Precision autocannon ammunition controls and target-movement adjustment.
-use super::{AmmunitionFeedback, AmmunitionMode};
+use super::{AmmunitionFeedback, AmmunitionMode, TargetMovement};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
-/// Precision ammunition's reduction of the target-movement modifier.
+/// Precision ammunition's reduction of the target-movement modifier (Total Warfare p. 142).
 pub(crate) trait PrecisionAim {
-    /// Precision reduces the complete target-movement modifier by two, with a zero floor.
-    fn target_movement_modifier(self, movement: i8) -> i8;
+    /// Precision reduces the target's movement itself by two, to a minimum of zero; the
+    /// immobile -4 and the prone adjustments are untouched.
+    fn precision_movement(self, movement: TargetMovement) -> TargetMovement;
 }
 
 impl PrecisionAim for AmmunitionMode {
-    fn target_movement_modifier(self, movement: i8) -> i8 {
-        if self == Self::Precision {
-            movement.saturating_sub(2).max(0)
-        } else {
-            movement
+    fn precision_movement(self, movement: TargetMovement) -> TargetMovement {
+        if self != Self::Precision {
+            return movement;
+        }
+        TargetMovement {
+            motion: movement.motion.saturating_sub(2).max(0),
+            ..movement
         }
     }
 }
@@ -52,17 +55,30 @@ pub(crate) fn command(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Only the movement band shrinks; immobile and prone targets keep their adjustments.
     #[test]
-    fn precision_movement_reduction_has_a_zero_floor() {
-        for (movement, expected) in [(-4, 0), (-2, 0), (0, 0), (1, 0), (2, 0), (3, 1), (7, 5)] {
-            assert_eq!(
-                AmmunitionMode::Precision.target_movement_modifier(movement),
-                expected
-            );
-            assert_eq!(
-                AmmunitionMode::Normal.target_movement_modifier(movement),
-                movement
-            );
+    fn precision_reduces_movement_only_with_a_zero_floor() {
+        for (motion, expected) in [(0, 0), (1, 0), (2, 0), (3, 1), (7, 5)] {
+            for (immobile, prone) in [(0, 0), (-4, 0), (0, 1), (-4, -2)] {
+                let movement = TargetMovement {
+                    motion,
+                    immobile,
+                    prone,
+                };
+                assert_eq!(
+                    AmmunitionMode::Precision.precision_movement(movement),
+                    TargetMovement {
+                        motion: expected,
+                        immobile,
+                        prone,
+                    }
+                );
+                assert_eq!(
+                    AmmunitionMode::Normal.precision_movement(movement),
+                    movement
+                );
+            }
         }
     }
 }

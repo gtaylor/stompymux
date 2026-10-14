@@ -254,21 +254,24 @@ fn artillery_scatter_and_atomic_invalid_arrival() {
 /// Artillery uses map-sheet range, direct/indirect skill arithmetic and truncation toward zero.
 #[test]
 fn artillery_aim_ranges_observers_and_corrections() {
+    // Indirect pieces reach the Tactical Operations p. 149 mapsheet counts (8, 9, 30, 18 and 21
+    // sheets of seventeen hexes); artillery cannons keep their direct-fire hex ranges.
     let weapons = [
-        (Weapon::ArrowIv, 100),
-        (Weapon::ClanArrowIv, 120),
-        (Weapon::LongTom, 400),
-        (Weapon::Sniper, 240),
-        (Weapon::Thumper, 280),
-        (Weapon::LongTomCannon, 400),
-        (Weapon::SniperCannon, 240),
-        (Weapon::ThumperCannon, 280),
+        (Weapon::ArrowIv, 8 * ARTILLERY_MAPSHEET_HEXES),
+        (Weapon::ClanArrowIv, 9 * ARTILLERY_MAPSHEET_HEXES),
+        (Weapon::LongTom, 30 * ARTILLERY_MAPSHEET_HEXES),
+        (Weapon::Sniper, 18 * ARTILLERY_MAPSHEET_HEXES),
+        (Weapon::Thumper, 21 * ARTILLERY_MAPSHEET_HEXES),
+        (Weapon::LongTomCannon, 20),
+        (Weapon::SniperCannon, 12),
+        (Weapon::ThumperCannon, 14),
     ];
+    assert_eq!(ARTILLERY_MAPSHEET_HEXES, 17);
+    assert_eq!(Weapon::LongTom.effective_range(), 510);
     for (weapon, maximum) in weapons {
-        for extended_range in [false, true] {
+        {
             let base = ArtilleryAimInput {
                 distance: f64::from(maximum),
-                extended_range,
                 submerged: false,
                 visible: false,
                 gunnery: 4,
@@ -337,7 +340,7 @@ fn artillery_aim_ranges_observers_and_corrections() {
             }
             assert!(Weapon::MediumLaser.artillery_aim(base).is_err());
         }
-        assert!(weapon.range_modifier(1.0, false).is_err());
+        assert!(weapon.range_modifier(1.0).is_err());
         assert!(weapon.damage_groups(None).is_err());
         assert_eq!(weapon.gunnery_skill(false), "Gunnery-Artillery");
     }

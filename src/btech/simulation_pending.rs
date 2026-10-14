@@ -16,7 +16,6 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
                 })
                 || unit.orbital_drop().is_some()
                 || unit.free_fall().is_some()
-                || unit.spotter_events.pending()
                 || unit.tag().target.is_some()
                 || unit.tag().remaining > 0
                 || unit.searchlight().remaining > 0
@@ -24,9 +23,6 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
                 || unit.crew_recovery().remaining > 0
                 || unit.unjam().is_some()
                 || unit.pod_removal().is_some()
-                || unit
-                    .target_selection()
-                    .is_some_and(|lock| lock.remaining() > 0)
                 || !unit.turret_repairs().is_empty()
                 || unit.crew_stun_remaining() > 0
                 || matches!(unit.power(), crate::Power::Starting { .. })
@@ -55,7 +51,6 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
             .any(|recovery| recovery.remaining > 0)
         || world.btech.constructed_units().values().any(|unit| {
             unit.radio_experience_remaining() > 0
-                || unit.spotter_events.pending()
                 || unit.tag().target.is_some()
                 || unit.tag().remaining > 0
                 || unit.fired_recently()
@@ -71,9 +66,6 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
                 || unit.orbital_drop().is_some()
                 || unit.free_fall().is_some()
                 || unit.jump_stabilization() > 0
-                || unit
-                    .target_selection()
-                    .is_some_and(|lock| lock.remaining() > 0)
                 || unit.searchlight().remaining > 0
                 || unit.stealth().pending.is_some()
                 || unit.null_signature().pending.is_some()

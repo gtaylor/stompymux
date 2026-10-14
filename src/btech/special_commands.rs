@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn catalogue_order_restrictions_and_dispatch_are_shared() {
         for (kind, count) in [
-            (SpecialType::Unit, 194),
+            (SpecialType::Unit, 192),
             (SpecialType::Debug, 9),
             (SpecialType::Map, 25),
             (SpecialType::Autopilot, 7),

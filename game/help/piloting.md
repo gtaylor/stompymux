@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "stinger", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "incendiary", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
 article_tags = ["show_in_index"]
 +++
 
@@ -179,11 +179,15 @@ one turn still force a piloting check, which can cause a fall in flight.
 Cockpit stun blocks firing for ten simulation seconds and slows a running unit
 toward walking speed. Another stunning hit restarts that countdown.
 
-Use `rottorso <left|right|center>` (or `l`, `r`, `c`) to turn the torso. Turning
-in the opposite direction first returns it to center. `fliparms` toggles arm
-facing on chassis that support it. Both require a running unit and its conscious
-pilot. Facing survives restart; leg weapons follow the body heading. These
-commands take no switches, and `fliparms` takes no arguments.
+Use `rottorso <left|right|center>` (or `l`, `r`, `c`) to turn the torso one
+hexside (60 degrees). Torso, head and arm weapons turn with it; leg weapons follow
+the body heading. Turning in the opposite direction first returns it to center.
+`fliparms` toggles arm facing on chassis that support it: reversed arms fire only
+into the rear arc. A Mech cannot twist its torso and reverse its arms at the same
+time, so center the torso before `fliparms` and flip the arms forward before
+`rottorso` (Total Warfare p. 105). Both require a running, standing unit and its
+conscious pilot; quads cannot twist. Facing survives restart. These commands take
+no switches, and `fliparms` takes no arguments.
 
 Perception is automatic; there is nothing to switch. `sensor` shows how far and
 by what means your unit can perceive right now:
@@ -209,10 +213,11 @@ reveal positions from stale observations. `contacts` takes no switches.
 
 Use `lock #unit` to select a currently visible contact from `contacts`, or `lock -`
 to clear your target. Selection requires the running unit's conscious assigned
-pilot. Sensors take eight simulation seconds to settle; selecting again restarts
-that delay. A scanner update reporting your selected contact lost clears the lock.
-Shutdown and battlefield removal clear selection. `lock` takes no
-switches. Aimed-section commands are not yet available.
+pilot and takes effect at once. Your lock is your primary target and takes no
+to-hit modifier; firing at any other unit is a secondary attack at +1. Without
+a lock every shot is a secondary attack at +1. A scanner update reporting your
+selected contact lost clears the lock. Shutdown and battlefield removal clear
+selection. `lock` takes no switches. Aimed-section commands are not yet available.
 
 Use `lock x y` to select the unit currently occupying a coordinate. If it is empty
 when you fire, your shot goes to that coordinate. Add `I` to ignite woodland, `C`
@@ -284,8 +289,6 @@ Select numbers and ranges separated by commas without spaces, such as `0,2-4`.
 Reversed ranges work; repeated numbers toggle again. An invalid selection clause
 stops processing after earlier changes. Weapons that cannot toggle are skipped
 with an error. The command accepts no switches.
-For coolant guns, heat mode automatically cools your own unit when `fire` has no
-target argument. Supply a target ID or dbref to cool that recipient instead.
 
 
 Direct fire currently covers Inner Sphere small, medium and large lasers, ER
@@ -293,13 +296,8 @@ lasers, pulse and X-pulse lasers, standard/ER/light/heavy/Snub-Nosed PPCs,
 machine guns, flamers, SRM-2/4/6, Streak SRM-2/4/6, LRM-5/10/15/20, MRM-10/20/30/40
 and AC/2/5/10/20 in supported tactical bipeds. Pulse lasers reduce the target
 number by two. MRMs increase it by one and deliver damage in groups of up to five.
-Extended-range LRM-5/10/15/20 launchers are also supported. Below ten hexes they
-use the lowest two of three attack dice, in addition to the minimum-range penalty.
-Their short/medium/long ranges are 12/24/36 hexes.
-Dead-fire LR 5/10/15/20 and SR 2/4/6 launchers always use the lowest two of three
-attack dice. LR dead-fire missiles deal two damage each at 6/12/18 ranges with a
-four-hex minimum; SR dead-fire missiles deal three each at 2/4/6 ranges. Each
-missile hits a separate location.
+Extended-range LRM-5/10/15/20 launchers are also supported. Their
+short/medium/long ranges are 12/24/36 hexes.
 Standard, light and Magshot Gauss rifles are supported. Their ammunition does
 not explode, but a critical hit on a functional rifle destroys the entire mount
 and causes an internal explosion: 20 damage for standard, 16 for light, and 3
@@ -333,7 +331,10 @@ it also uses water ranges.
 
 
 `inferno <selection>` toggles a ready missile launcher between normal and inferno
-ammunition. It requires a matching bin to fire. Surviving inferno missiles add
+ammunition. Inferno rounds are an SRM munition (Total Warfare p. 141): only standard
+SRM launchers and MMLs loaded with SRM rounds carry them; LRM, Streak, MRM, rocket,
+ATM, Thunderbolt and Narc launchers do not. A matching bin is required to
+fire. Surviving inferno missiles add
 two heat points each to a Mech instead of armor damage, as in Total Warfare;
 outside heat is capped at fifteen points per turn. AMS can intercept them.
 One-shot launchers cannot change ammunition modes. `weapons` marks selected
@@ -392,8 +393,14 @@ uses no ammunition or heat.
 Successful locks hit with every missile; glancing rules do not reduce the salvo.
 Streak LRMs have no minimum range, cannot fire indirectly or hotload,
 and group their damage into five-point hits like other LRMs. Their recycle times are 15, 20, 25 and
-30 seconds respectively. Angel ECM disrupts their lock protection and makes
-them use the Clan LRM cluster tables.
+30 seconds respectively. Angel ECM negates the lock: a failed roll still launches
+nothing, and a successful one resolves on the ordinary cluster table like a
+standard launcher (Tactical Operations: AUE p. 91).
+
+Thunderbolt missiles strike as a single hit; inside the launcher's five-hex minimum
+range the unarmed warhead does half damage, rounded down (AUE p. 159). Extended LRMs
+inside ten hexes roll on the cluster column for half their rack, rounded up (AUE
+p. 139).
 
 
 `firecluster <selection>` (also `cluster`) toggles artillery between normal and cluster rounds.
@@ -403,9 +410,11 @@ selection by rejecting the change. Matching ammunition is required to fire.
 `lbx <selection>` toggles LB-X autocannons between slug and cluster ammunition.
 Use a weapon number, comma-separated numbers or a range, as with `flamerheat`.
 The assigned conscious pilot must have a running unit and an intact, recycled
-weapon. `weapons` marks cluster mode with `[LBX]`. Cluster fire receives a −3
-accuracy modifier against VTOLs (including landed ones), or −1 against other
-units, and resolves each pellet as one damage point. Slugs deal the
+weapon. `weapons` marks cluster mode with `[LBX]`. Cluster fire receives a −1
+accuracy modifier, or −3 against a target in the air: an airborne VTOL
+(hovering included), a jumping Mech or a dropping unit (flak, Total Warfare
+p. 114). A landed VTOL is an ordinary target. Each pellet resolves as one
+damage point. Slugs deal the
 weapon's normal damage in one hit. Only bins matching the selected mode supply
 ammunition; an empty selected bin does not switch to the other kind. The selected
 mode survives shutdown and restart.
@@ -432,49 +441,65 @@ preserves an active jump. Heavy-duty gyros weigh twice as much as standard gyros
 
 `artemis <selection>` toggles compatible missile ammunition on a recycled
 launcher with a working linked Artemis IV controller. Selection accepts weapon
-numbers, comma-separated numbers and ranges. One-shot and rocket launchers
-cannot change modes. Compatible rounds use their own bins; ordinary ammunition
+numbers, comma-separated numbers and ranges. Artemis rounds exist for standard
+LRM (including Enhanced LRM), SRM, MML and torpedo launchers only (Total Warfare
+p. 131); Streak, MRM, rocket, ATM, Thunderbolt, extended LRM and Narc
+launchers cannot use them, and an ATM's built-in guidance never stacks with
+Artemis. One-shot launchers cannot change modes. Compatible rounds use their own
+bins; ordinary ammunition
 is not substituted when those bins are empty. Artemis adds two to the missile
 hit-table roll, combined with the glancing-hit adjustment and capped at twelve.
-Controllers link within their own section. Mechs can also use a head controller
+Spotter-directed indirect fire gets no Artemis or Narc bonus (Total Warfare
+pp. 130, 139). Controllers link within their own section. Mechs can also use a head controller
 for a center-torso launcher; ground vehicles can use a rear controller for a
 turret launcher. VTOL controllers must be in the launcher’s section.
 
 `unjam <selection>` begins a 60-second attempt to clear a jammed ammunition feed.
 You must be walking or slower, on the ground, with no weapons recycling. Only
 one attempt can run at a time. Firing, jumping and running are blocked during
-recovery. A successful piloting check clears the jam and discards one round.
-Failure leaves the jam for another attempt. Empty supply clears it without a
-check. Shutdown or unconsciousness at completion ends the attempt without
-clearing the jam.
+recovery. Every jammed weapon is cleared the way a rotary autocannon is (Total
+Warfare p. 140, Tactical Operations p. 73): a successful Gunnery Skill Roll at +3
+clears the jam and discards one round. Failure leaves the jam for another
+attempt. Empty supply clears it without a check. Shutdown or unconsciousness at
+completion ends the attempt without clearing the jam. A feed that broke down (an
+Ultra double shot or a caseless round on a to-hit roll of 2) is useless for the
+rest of the game: `unjam` refuses it, and only repairing the mount restores it.
 
-`hotload <selection>` toggles hotloading on supported LRM, extended LRM and
-long-range dead-fire launchers. It removes the minimum-range penalty, or halves
+Every feed failure happens after the shot: the burst or round is still fired, its
+ammunition and heat are spent and its damage is resolved as rolled, and only
+then is the weapon disabled (Total Warfare p. 114).
+
+`hotload <selection>` toggles hotloading on supported LRM and extended LRM
+launchers. It removes the minimum-range penalty, or halves
 it when the game option requests that behavior. Cluster hits use the lowest two
-of three dice. Attack rolls of two or three jam the feed without spending a shot;
-use `unjam` to recover. A hotloaded launcher may explode when critically hit
-while ordinary ammunition remains. One-shot launchers cannot change modes.
+of three dice. Hotloaded launchers never jam (Tactical Operations p. 101). A
+hotloaded launcher may explode when critically hit while ordinary ammunition
+remains. One-shot launchers cannot change modes.
 
 `ultra <selection>` toggles double-shot firing on supported Ultra autocannons.
 Double shots spend two rounds and generate twice the normal heat, with one or
 two shells hitting separate locations. With only one round available, the
-weapon returns to normal firing. A loader failure in double-shot mode destroys
-the weapon; `unjam` cannot restore it.
+weapon returns to normal firing. A to-hit roll of 2 in double-shot mode fires
+both shots and then leaves the weapon useless for the rest of the game: the
+mount stays intact but its feed is jammed beyond field repair (Total Warfare
+p. 114).
 
 `rapidfire <selection>` toggles two-round firing on conventional and light
 IS autocannons. It spends twice the ammunition and heat, with one or two shells
 hitting independently. The weapon returns to normal mode if only one round
-remains. A jam requires `unjam`; a catastrophic misload destroys the weapon
-and damages internal structure in its mounting section.
+remains. A to-hit roll of 3 or 4 jams the feed after the burst; `unjam` clears
+it. A roll of 2 fires the burst and then the rounds explode in the barrel,
+destroying the weapon and dealing one shot's damage to the internal structure of
+its mounting section (Tactical Operations p. 98).
 
 `rac <selection> [1-6]` sets a rotary autocannon's burst length. Omitting
 the rate selects one round. Repeating a setting leaves it enabled. Bursts spend
 their full ammunition and heat even on a miss; each hitting shell lands
 independently. Short ammunition supply resets the weapon to single-shot mode.
 Longer bursts jam more easily: a to-hit roll of 2 jams a two- or three-round
-burst, 2-3 jams four or five rounds, and 2-4 jams six. A critical hit on a
-jammed rotary autocannon makes it explode for one shell's damage. Use `unjam`
-to recover; rotary recovery uses gunnery with a +3 penalty.
+burst, 2-3 jams four or five rounds, and 2-4 jams six. The burst that jams is
+still fired. A critical hit on a jammed rotary autocannon makes it explode for
+one shell's damage. Use `unjam` to recover with a Gunnery Skill Roll at +3.
 
 `gattling <selection>` toggles gatling fire on supported machine guns. Each
 attempt rolls damage and heat together, and spends three rounds per damage
@@ -484,7 +509,8 @@ or ammunition spent. The command retains the game's `gattling` spelling.
 
 `precision <selection>` toggles Precision ammunition on conventional and light
 IS autocannons. It uses separate half-capacity bins and reduces the target's
-movement modifier by two, to a minimum of zero. It can be combined with rapid
+movement modifier by two, to a minimum of zero; the −4 for an immobile target
+and the prone adjustments are untouched. It can be combined with rapid
 fire; weapon inspection shows both selections. It does not fall back to normal
 ammunition when Precision bins are empty.
 
@@ -500,14 +526,12 @@ penalty of -1 to -4 that grows as the autocannon gets smaller (Total Warfare
 p. 140). Hardened armor negates the roll. AP can be combined with rapid fire.
 
 `caseless <selection>` toggles caseless ammunition for conventional and light IS
-autocannons. Ordinary bins hold twice as many rounds. A firing roll of two or
-three jams the feed and checks for propellant ignition, which can destroy the
-weapon and cause internal damage. Surviving feed jams can be cleared with `unjam`.
-
-`incendiary <selection>` toggles incendiary ammunition for conventional and light
-IS autocannons. Against BattleMechs it deals ordinary shell damage. A critical
-hit on a recycling weapon can ignite its loaded rounds if matching ammunition
-remains, destroying the mount and causing internal damage.
+autocannons. Ordinary bins hold twice as many rounds. On a to-hit roll of 2 the
+feed breaks down (Tactical Operations: AUE p. 165): the round is spent and
+automatically misses, one roll on the Determining Critical Hits Table is applied
+to the autocannon's own slots, and the weapon is useless for the rest of the game.
+`unjam` cannot clear it; no internal damage or pilot injury results. Vehicles
+treat the breakdown as a Weapon Destroyed critical hit.
 
 ### Searchlights
 
@@ -527,7 +551,7 @@ Use `unitprefs SLWarn ON` to receive external searchlight entry/exit warnings, `
 
 `unitprefs ArmorWarn` and `unitprefs AmmoWarn` toggle combat warnings; append `ON` or `OFF` to choose explicitly. Both default to on and persist with the unit. Armor warnings report transitions to low, critical or breached protection separately for front and rear armor. Ammunition warnings use installed-bin weighting and the firing mode's warning window, including shots that miss. Lua exposes `btech.unit.armor_warning(unit, pilot, enabled)` and `btech.unit.ammunition_warning(unit, pilot, enabled)`.
 
-`unitprefs FFSafety ON` blocks non-coolant weapon fire at units on your team. Use `OFF` to disable it or omit the setting to toggle; the default is off. A battlefield with the no-friendly-fire flag (256) independently blocks these attacks. Coolant guns can still cool teammates or their own carrier. Lua provides `btech.unit.friendly_fire_safety(unit, pilot, enabled)`.
+`unitprefs FFSafety ON` blocks weapon fire at units on your team. Use `OFF` to disable it or omit the setting to toggle; the default is off. A battlefield with the no-friendly-fire flag (256) independently blocks these attacks. Lua provides `btech.unit.friendly_fire_safety(unit, pilot, enabled)`.
 
 ### Viewing unit markings
 
@@ -606,28 +630,36 @@ attack early if you are already in the target's hex.
 
 `ams` toggles all installed anti-missile systems on the unit. Defense starts on
 for newly built units with AMS installed.
-A running unit with defense enabled automatically uses one ready mount against
-an incoming missile attack that reaches its base target number. Missed attacks
-preserve defensive ammunition, heat and recycle time. Defensive weapons cannot
-be fired manually.
+A running unit with defense enabled automatically engages an incoming missile
+attack that reaches its base target number with one ready mount whose firing arc
+covers the attack direction (Total Warfare pp. 129-130). Missed attacks and
+attacks from outside every mount's arc preserve defensive ammunition, heat and
+recycle time. Defensive weapons cannot be fired manually.
 
-Inner Sphere AMS rolls one die for interception; Clan AMS rolls two. A successful
-interception reduces the missiles that reach the unit before damage is grouped.
-An empty bin prevents activation. Critical destruction disables AMS until its
-capability is restored. Lua can toggle with `btech.unit.ams(unit, pilot)` or set
-an explicit state with a third boolean argument.
+An engagement applies -4 to the attack's cluster roll, never below 2; a locked
+Streak launcher counts as a roll of 11 before the -4. A single-missile attack
+(Narc and iNarc pods, Thunderbolts) instead rolls one die and is destroyed on a
+1-3. Each engagement spends one round of ammunition and the system's heat, and
+the mount's recycle time is the once-per-turn limit. Inner Sphere and Clan
+systems follow the same rules. An empty bin prevents activation. Critical
+destruction disables AMS until its capability is restored. Lua can toggle with
+`btech.unit.ams(unit, pilot)` or set an explicit state with a third boolean
+argument.
 
 Laser AMS uses the same switch but needs no ammunition. Its recycle time is 25
-seconds; IS laser AMS generates 7 heat per activation and Clan laser AMS 5.
+seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
 
 ### Narc beacons
 
 IS and Clan Narc launchers fire homing pods. A pod attaches to a surviving section
-without damaging armor or structure. AMS can shoot it down. Destroying the marked
+without damaging armor or structure. AMS engages it as a single missile: one die,
+destroyed on a 1-3. Destroying the marked
 section removes its beacon; otherwise the mark persists across shutdowns and restarts.
 
-`narc <weapon>` toggles Narc-compatible ammunition on a missile launcher. Compatible
-missiles gain a cluster bonus against a marked target and require a matching bin.
+`narc <weapon>` toggles Narc-compatible ammunition on a standard LRM, SRM or MML
+launcher (Total Warfare pp. 141-142); Streak, MRM, rocket, ATM, Thunderbolt and extended
+LRM launchers fire only ordinary rounds. Compatible missiles gain a
+cluster bonus against a marked target and require a matching bin.
 `explosive <weapon>` toggles explosive ammunition on a Narc launcher: these rounds
 inflict damage instead of attaching a beacon. Narc launchers display explosive mode
 as `E`, while other launchers display compatible ammunition as `N`.
@@ -648,8 +680,8 @@ cancels protection, and friendly ECCM cancels disturbance; equal strength cancel
 Angel suites count twice. Team identifiers determine which units are friendly.
 
 Protection on a target or disturbance on a shooter suppresses Narc and Artemis
-guidance bonuses. Angel interference also confuses Streak homing: a failed lock
-can expend ammunition, and successful attacks use ordinary missile cluster rolls.
+guidance bonuses. Angel interference also negates Streak locks: a failed roll
+still launches nothing, and successful attacks use ordinary missile cluster rolls.
 
 Status includes suite selections and current field effects. Lua provides
 `btech.unit.ecm(unit, pilot)`, `eccm`, `angelecm`, and `angeleccm`, each returning
@@ -708,17 +740,17 @@ Active armor produces ten additional heat and disrupts your own electronic
 guidance. Enemy radar and probe sweeps take +4 to +7 against you (Tactical
 Operations ECM/Stealth table), so enemies mostly rely on sight, infrared,
 magscan and seismic sensors, or a Bloodhound probe. Enemies firing at you take
-range penalties of 3 at medium range, 6 at long range and 12 at extreme range.
-Short and minimum range are unchanged.
+range penalties of 3 at medium range and 6 at long range. Short and minimum
+range are unchanged.
 Shutdown or ECM damage disables active armor. A pending switch only completes
 if the unit is running and its ECM works when the delay expires.
 
 Lua provides `btech.unit.stealth(unit, pilot)`. Unit inspection exposes `stealth`,
 including its active selection and any pending switch.
 
-Firing at an active stealth target requires a settled lock on that unit. Missing,
-settling or different-target locks reject the shot before ammunition, heat,
-recovery or attack dice change. Normal visibility and firing checks still apply.
+Firing at an active stealth target requires a lock on that unit. Missing or
+different-target locks reject the shot before ammunition, heat, recovery or
+attack dice change. Normal visibility and firing checks still apply.
 
 ### Null signature system
 
@@ -726,11 +758,11 @@ recovery or attack dice change. Normal visibility and firing checks still apply.
 requires the assigned conscious pilot, a running placed unit, and intact devices.
 A repeated request does not restart a pending switch.
 
-Active NSS adds ten heat and raises enemy range penalties to 3 at medium range,
-6 at long range and 12 at extreme range. Enemy radar and probe sweeps take the
+Active NSS adds ten heat and raises enemy range penalties to 3 at medium range
+and 6 at long range. Enemy radar and probe sweeps take the
 Tactical Operations ECM/Stealth modifier against you; infrared, magscan and
 seismic sweeps do not. It does not create ECM interference or require enemies
-to settle a firing lock. If stealth armor is also active, the
+to hold a firing lock. If stealth armor is also active, the
 range penalty applies once and the two systems' heat adds together.
 
 Shutdown or device loss disables NSS. Pending switches only take effect if power
@@ -757,41 +789,66 @@ Your unit's radar sweeps with the rest of the suite: 8/16/24 hexes for Mechs,
 ECM and stealth systems add to the sweep roll. It has no special treatment of
 airborne targets.
 
-Use `tag ID` or `tag #unit` to illuminate an enemy within fifteen hexes with
-working TAG hardware and an unobstructed line of sight. Mechs and vehicles
-share this control, including TAG built into C3 master computers. TAG takes thirty seconds to settle;
-you cannot change it during that timer. Use `tag -` after settling to stop.
-Breaking a connection starts thirty seconds of recycling. Moving out of range,
-blocked sight, lost sensor contact, shutdown or lost equipment breaks the connection. Another tagger
-can take over the same target. TAG state appears in unit inspection.
-Lua uses `btech.unit.tag(unit, pilot, target)` and nil to stop.
+Use `tag ID` or `tag #unit` to make a TAG attack on an enemy within fifteen
+hexes with working TAG hardware and an unobstructed line of sight. Designating is
+a weapon attack (Total Warfare p. 142): it rolls 2d6 against your ordinary to-hit
+number with TAG's own range brackets of 5/9/15 hexes and no minimum range. Your
+movement, heat and sensor damage, the target's movement and cover, the light and
+the secondary-target penalty all count, as does a Haywire pod on your unit; TAG
+has no ammunition or targeting-computer terms. A miss designates nothing and the
+TAG recycles for thirty seconds like a fired weapon. Mechs and vehicles share
+this control, including TAG built into C3 master computers. A hit takes thirty
+seconds to settle; you cannot change it during that timer. Use `tag -` after
+settling to stop. Breaking a connection starts thirty seconds of recycling.
+Moving out of range, blocked sight, lost sensor contact, shutdown or lost
+equipment breaks the connection. Another tagger can take over the same target.
+TAG state appears in unit inspection. Lua uses `btech.unit.tag(unit, pilot,
+target)` and nil to stop.
 
-Use `sguided <weapon>` to select semi-guided rounds on a supported missile
-launcher; repeat it for normal rounds. A friendly unit's current TAG removes
-positive target-movement aiming penalties. Your own TAG does not provide this
-benefit, and losing the friendly TAG removes it. Negative movement modifiers
-remain. The launcher needs matching semi-guided ammunition; normal rounds are
-not substituted. Lua uses `btech.unit.sguided(unit, pilot, weapon)`.
+Use `sguided <weapon>` to select semi-guided rounds on a standard LRM launcher
+(IS, Clan or Enhanced) or an MML loaded with long-range rounds (Total Warfare
+p. 142); repeat it for normal rounds. Against a target a friendly unit's TAG
+designates, your own included, semi-guided missiles ignore the target's
+movement modifier; the −4 for an immobile target and the prone adjustments
+remain. Fired indirectly at such a target, they also ignore the +1 indirect
+modifier, the spotter's movement and the cover the spotter sees. Losing the TAG
+removes the benefit. The launcher needs matching semi-guided ammunition; normal
+rounds are not substituted. Lua uses `btech.unit.sguided(unit, pilot, weapon)`.
 
-Use `spot #your-unit` to declare yourself a spotter after weapons and limbs finish
-recycling. You cannot fire while spotting; `spot -` ends that role. A friendly unit
-can select you with `spot #your-unit` while it has an acquired contact with you.
-Selecting another spotter restricts firing to indirect-capable missiles and artillery
-until `spot -` clears the link. Lua uses `btech.unit.spot(unit, pilot, observer)`.
+Use `spot #your-unit` to declare yourself a spotter; `spot -` ends that role. A
+spotter keeps firing its own weapons (Total Warfare p. 111). While another unit
+fires through you, your own weapon attacks take +1, and an indirect shot you
+spot takes a further +1 if you launched a weapon within the last thirty seconds.
+A unit carrying an iNarc Haywire pod cannot spot, and neither can one that is
+charging or making a death from above attack, or did so within the last thirty
+seconds. A friendly unit selects you with `spot #your-unit`; it needs no sight
+of you, only a declared, running, conscious spotter on its battlefield.
+Selecting another spotter restricts firing to indirect-capable missiles and
+artillery until `spot -` clears the link. Lua uses `btech.unit.spot(unit, pilot,
+observer)`.
 
 For indirect missile fire, select a friendly spotter, clear your own target with
 `lock -`, and use `fire <weapon number>`. Your observer must have an acquired unit
-target. Its movement, sensor view, spotting skill and settling lock affect aim.
-Keeping your own unit target lock uses direct missile fire. Without that lock,
-your observer supplies the target even when you give `fire` an explicit target ID.
+target. Indirect fire adds +1, your observer's movement modifier (walked +1,
+ran +2, jumped +3, prone +2) and +1 if it also attacked this turn; terrain and
+cover come from the observer's view of the target, while range, including
+minimum range, is measured from you. An attacker that can see its target
+itself may not fire indirectly: with a spotter selected and no target lock,
+the observer still supplies the target, but the shot resolves as direct fire
+from your own sight of it. Keeping your own unit target lock uses direct missile
+fire. Without that lock, your observer supplies the target even when you give
+`fire` an explicit target ID.
 
 For artillery, your observer must select a visible hex. The observer must remain
 running, friendly, conscious and on your battlefield. Artillery uses the observer's
 hex and indirect aim, even if you can also see that hex. Clear any unit target lock
 before firing artillery. Retargeting the observer resets accumulated correction.
+Artillery reach follows Tactical Operations (p. 149): Arrow IV 8 mapsheets (Clan 9),
+Thumper 21, Sniper 18 and Long Tom 30, at seventeen hexes per mapsheet. Artillery
+cannons are direct-fire weapons with ordinary hex ranges.
 
 Use `lock x y` to select coordinates, or append H (hex), B (building), I (ignite),
-or C (clear). Coordinate locks settle in eight seconds even outside visibility.
+or C (clear). Coordinate locks take effect at once, even outside visibility.
 `lock -` clears the selection. With a plain coordinate lock, `fire <weapon>`
 attacks its current unit occupant under ordinary firing rules. The lock stays at
 the coordinates when that unit moves. Artillery always fires at the selected hex
@@ -859,9 +916,8 @@ recognition is reported only to you. Scanning does not detonate or remove mines.
 
 A plain `scan` follows your current lock: building locks report construction
 factor, hex locks check buildings and mines, and unit-at-hex, ignition or clearing
-locks inspect visible occupants. Scanning does not wait for or advance lock
-settling. Observer units may scan selected coordinates beyond hardware range,
-but still require visibility and working scanners.
+locks inspect visible occupants. Observer units may scan selected coordinates
+beyond hardware range, but still require visibility and working scanners.
 
 
 ## Brief unit reports
@@ -1121,28 +1177,13 @@ increases speed further and makes both devices' checks harder. `weapons` and
 `status` show the separate counters.
 
 
-Artillery also supports `hotload <selection>`. Hotloading can jam its loader on a
-low firing roll; a jammed launch spends no ammunition or heat. An intact hotloaded
-launcher can explode if critically hit while ordinary ammunition remains aboard.
+Artillery also supports `hotload <selection>`. Hotloaded launchers never jam. An
+intact hotloaded launcher can explode if critically hit while ordinary
+ammunition remains aboard.
 Hotloading leaves the selected artillery payload and its aiming rules unchanged.
 
-Use `stinger <weapon>` to select anti-air Stinger rounds on a supported indirect
-missile launcher. Repeat the command to return to normal ammunition. The weapon
-must be intact and recycled, and one-shot launchers cannot change modes. Matching
-Stinger ammunition is required to fire; ordinary rounds are not substituted.
-Stinger shots can engage airborne units but cannot target grounded units or hexes.
-They receive a −3 to-hit bonus against flying VTOLs and −1 against units in orbital
-descent, including descent controlled by jump jets after a cocoon opens. Jumping
-Mechs receive no additional Stinger bonus.
-Their maximum reach is seven hexes longer, with ordinary range penalties. Lua uses
-`btech.unit.stinger(unit, pilot, weapon)`.
-
-The `stinger` command and Lua operation also work in ground vehicles, including
-stationary turrets. Selected ammunition is saved independently of the template.
-Mechs and vehicles use the same Stinger targeting and firing rules.
-
 Ground vehicles also accept `lbx`, `sguided`, `precision`, `flechette`,
-`armorpiercing`, `caseless` and `incendiary`, with the same Lua operation names.
+`armorpiercing` and `caseless`, with the same Lua operation names.
 These change the ammunition selection on compatible, intact, recycled weapons.
 
 
@@ -1216,7 +1257,9 @@ knee, and must pass a piloting roll to get it off the ground again, otherwise it
 stays down with the time spent and may try again. Transition time depends on
 current maximum chassis speed. Finish standing or jump stabilization first.
 Lowering requests a stop. Speed, heading, standing and jumping controls are
-blocked while lowered or changing posture.
+blocked while lowered or changing posture. Leg-mounted weapons, including a
+quad's front legs, cannot fire while lowered (Tactical Operations p. 19); the
+other weapons fire normally.
 
 Hull-down adds protection when terrain already gives partial cover: aiming at a
 hull-down unit behind partial cover costs an extra +2, however it is perceived. Shutdown cancels a pending change
@@ -1314,21 +1357,28 @@ more severe fall. Reverse travel uses the same absolute-speed thresholds.
 Dropping into water can flood exposed compartments.
 The final ground contact also activates stepping mines.
 
+Firing when down adds +2 to your weapon attacks (Total Warfare p. 113); a biped
+propped on its only remaining arm takes +3 instead (Tactical Operations p. 83).
+A four-legged Mech with all four legs intact and no hip critical fires as
+though standing, with no prone modifier. Targets shooting at a prone Mech get
+−2 from an adjacent hex and +1 from farther away.
+
 
 ### Swarm missile ammunition
 
 `fireswarm <weapon>` selects Swarm rounds; `fireswarm1 <weapon>` selects Swarm-1.
 Repeat the same command to return to normal rounds. These commands accept the
 usual weapon selections and work on Mechs, ground vehicles and VTOLs. A matching
-ammunition bin is required to fire. Rockets and dead-fire launchers cannot use
-these modes.
+ammunition bin is required to fire. Swarm rounds are LRM munitions: only standard
+LRM launchers and MMLs loaded with long-range rounds can use these modes.
 
 After an initial hit, unused missiles can attack nearby units in map order.
 Ordinary Swarm can hit friends and return to its launcher. Swarm-1 excludes
 friendly secondary targets. Retargeting requires the previous target to see the
 next unit within 1.9 hexes. Combat-safe units are skipped as secondary targets.
 The flight stops when its missiles are spent, its cumulative range runs out, or
-it has attacked eleven distinct targets. AMS does not intercept these rounds.
+it has attacked eleven distinct targets. AMS engages the initial attack like
+any other LRM flight (Tactical Operations: AUE p. 181).
 An initial miss ends the flight; secondary misses retain the unused missiles.
 Empty-coordinate fire does not retarget.
 
@@ -1340,12 +1390,14 @@ Lua provides `btech.unit.fireswarm(unit, pilot, weapon)` and
 ### Smoke and mine missile modes
 
 `firesmoke <selection>` and `firemine <selection>` select Smoke or Mine ammunition
-on missile launchers. Repeat the selected command to return to normal ammunition.
-Matching supplies are required to fire. Both controls work on Mechs and vehicles;
-rockets, one-shot launchers and artillery are rejected.
+on missile launchers. Smoke rounds load in standard SRM, LRM and MML launchers;
+Mine (Thunder) rounds load in standard LRM launchers only. Repeat the selected
+command to return to normal ammunition. Matching supplies are required to fire.
+Both controls work on Mechs and vehicles; other launchers, one-shot launchers and
+artillery are rejected.
 
-These missile modes retain ordinary missile damage. Mine rounds bypass AMS;
-Smoke rounds can be intercepted. They do not create smoke clouds or minefields.
+These missile modes retain ordinary missile damage, and AMS engages both. They
+do not create smoke clouds or minefields.
 Artillery templates can separately carry Smoke and Mine payloads, which create
 their environmental effects on arrival. These cockpit controls follow the
 reference's missile eligibility rather than selecting those artillery payloads.
@@ -1445,7 +1497,9 @@ unless ECM interferes, and damage lands in five-point groups.
 9/18/27 hexes with a four-hex minimum. `atmexplosive <selection>` toggles High
 Explosive bins: three damage per missile at 3/6/9 hexes with no minimum range.
 A matching bin is required; toggle the command again to return to normal
-ammunition. Templates use the `ExtendedRange` and `HighExplosive` flags.
+ammunition. Templates use the `ExtendedRange` and `HighExplosive` flags. ATMs
+fire directly only: they cannot fire indirectly or hotload (Total Warfare p. 141),
+and they take no other special rounds.
 
 MML-3/5/7/9 launchers use dedicated MML ammunition. `mml <selection>` toggles
 between SRM and LRM supplies. SRMs use 3/6/9 range bands, no minimum range, and

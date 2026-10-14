@@ -23,9 +23,6 @@ mod btech_heat_cutoff;
 #[path = "../btech_hit.rs"]
 mod btech_hit;
 
-#[path = "../btech_incendiary.rs"]
-mod btech_incendiary;
-
 #[path = "../btech_loadout.rs"]
 mod btech_loadout;
 

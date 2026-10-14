@@ -1,7 +1,13 @@
-//! Shared observer links and target validation for Mech and vehicle indirect fire.
+//! Spotters for LRM indirect fire (Total Warfare p. 111): who may spot, which unit an
+//! observer link aims at, whether a shot through it is indirect at all, and the spotter's
+//! own contributions to the to-hit number. Mechs and vehicles share every rule here.
 use super::*;
 use crate::{Flag, ObjectId, World};
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, bail, ensure};
+
+/// One turn of the realtime game, in simulation seconds: the window within which a spotter
+/// "also attacked this turn" or "charged or made a DFA this turn".
+pub const TURN_SECONDS: i64 = 30;
 
 /// A validated spotter and its currently acquired unit target; no dice or derived aim is stored.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -16,12 +22,8 @@ impl Mech {
         self.spotter
     }
 
-    /// Read pending radio connections and periodic checks without advancing their clocks.
-    pub fn spotter_events(&self) -> &super::SpotterEvents {
-        &self.spotter_events
-    }
-
-    /// Spotting prohibits firing; a selected observer restricts fire to indirect-capable weapons.
+    /// A selected observer restricts fire to indirect-capable weapons; spotting itself does
+    /// not stop this unit firing.
     pub(super) fn check_spotter_fire(&self, id: ObjectId, index: usize) -> Result<()> {
         check_fire(
             self.spotter,
@@ -38,12 +40,7 @@ impl Vehicle {
         self.spotter
     }
 
-    /// Read pending radio connections and periodic checks without advancing their clocks.
-    pub fn spotter_events(&self) -> &super::SpotterEvents {
-        &self.spotter_events
-    }
-
-    /// Vehicle weapons obey the same spotting restrictions as Mech weapons.
+    /// Vehicle weapons obey the same observer restriction as Mech weapons.
     pub(super) fn check_spotter_fire(&self, id: ObjectId, index: usize) -> Result<()> {
         check_fire(
             self.spotter,
@@ -54,31 +51,19 @@ impl Vehicle {
     }
 }
 
-/// Fire restrictions depend on the observer role, not the shooter's anatomy.
+/// With another unit selected as observer, only weapons that can fire through it may fire.
 fn check_fire(
     spotter: Option<ObjectId>,
     id: ObjectId,
     weapon: Weapon,
     ammunition: AmmunitionMode,
 ) -> Result<()> {
-    check_role(spotter, id)?;
     ensure!(
-        spotter.is_none()
+        spotter.is_none_or(|spotter| spotter == id)
             || weapon.supports_indirect_ammunition(ammunition)
             || weapon.is_artillery(),
         "Remove your spotter to fire non-IDF weapons"
     );
-    Ok(())
-}
-
-/// Self-spotting rejects a firing attempt before weapon lookup or target parsing.
-pub(super) fn check_firing_role(world: &World, id: ObjectId) -> Result<()> {
-    check_role(selected(world, id), id)
-}
-
-/// Role admission is independent of the later weapon-family restriction.
-fn check_role(spotter: Option<ObjectId>, id: ObjectId) -> Result<()> {
-    ensure!(spotter != Some(id), "You cannot fire while spotting.");
     Ok(())
 }
 
@@ -98,13 +83,57 @@ pub(super) fn selected(world: &World, id: ObjectId) -> Option<ObjectId> {
         })
 }
 
+/// Whether `id` is declared a spotter and some other unit currently fires through it. Its
+/// own weapon attacks then take +1 (TW p. 111).
+pub(super) fn spotting_for_others(world: &World, id: ObjectId) -> bool {
+    selected(world, id) == Some(id)
+        && super::scanner::scanner_ids(world)
+            .into_iter()
+            .any(|other| other != id && selected(world, other) == Some(id))
+}
+
+/// Whether the unit launched a weapon within the last turn.
+pub(super) fn attacked_this_turn(world: &World, id: ObjectId) -> bool {
+    let now = world.btech.simulation_time();
+    world
+        .btech
+        .unit(id)
+        .and_then(|unit| unit.last_weapon_fire())
+        .is_some_and(|time| now.saturating_sub(time) < TURN_SECONDS)
+}
+
+/// Record a charge or death-from-above attack, which bars the unit from spotting for a turn.
+pub(super) fn record_physical_assault(world: &mut World, id: ObjectId) {
+    let now = world.btech.simulation_time();
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        unit.physical_assault_time = Some(now);
+    }
+}
+
+/// Why a unit may not spot right now (TW p. 111, p. 141), or `None` when it may: a Haywire
+/// pod attached, or a charge or death-from-above attack under way or made within the turn.
+pub(super) fn spotting_prohibited(world: &World, id: ObjectId) -> Option<&'static str> {
+    if super::narc::has_beacon(world, id, BeaconKind::Haywire) {
+        return Some("cannot spot with an iNarc Haywire pod attached");
+    }
+    let unit = world.btech.constructed_units().get(&id)?;
+    let now = world.btech.simulation_time();
+    let assaulting = unit.charge().target.is_some()
+        || unit
+            .flight()
+            .is_some_and(|flight| flight.dfa_target().is_some())
+        || unit
+            .physical_assault_time()
+            .is_some_and(|time| now.saturating_sub(time) < TURN_SECONDS);
+    assaulting.then_some("cannot spot in the turn of a charge or death from above attack")
+}
+
 /// Shared perception and movement contributions for both shooters and observer types.
 pub(super) fn indirect_aim(
     world: &World,
     source: super::fire_target::TargetSource,
     target: ObjectId,
     index: usize,
-    fasa_turning: bool,
 ) -> Result<Option<IndirectAim>> {
     let Some(link) = indirect_target_for_source(world, source, index)? else {
         return Ok(None);
@@ -113,33 +142,28 @@ pub(super) fn indirect_aim(
         link.target == target,
         "Target differs from the spotter's selected target"
     );
-    observer_aim(world, link.spotter, fasa_turning).map(Some)
+    observer_aim(world, link.spotter).map(Some)
 }
 
-/// Movement, skill and lock costs are shared by unit and empty-coordinate indirect shots.
-pub(super) fn observer_aim(
-    world: &World,
-    spotter: ObjectId,
-    fasa_turning: bool,
-) -> Result<IndirectAim> {
+/// The spotter's contributions to an indirect shot: its movement, and whether it attacked
+/// this turn. TAG guidance is decided by the shot's ammunition, not here.
+pub(super) fn observer_aim(world: &World, spotter: ObjectId) -> Result<IndirectAim> {
     let movement = crate::btech::with_unit!(world.btech.unit(spotter).unwrap(), |unit| {
-        unit.attacker_movement_modifier(fasa_turning)
+        unit.attacker_movement_modifier()
     });
     Ok(IndirectAim {
         spotter,
-        spotting: super::skills::unit_spotting_target(world, spotter)?,
         movement,
-        target_lock: if super::targeting::selection(world, spotter)
-            .is_some_and(|lock| lock.remaining() > 0)
-        {
-            2
-        } else {
-            0
-        },
+        spotter_attacked: attacked_this_turn(world, spotter),
+        tag_guided: false,
     })
 }
 
-/// Select an acquired friendly observer, declare self spotting, or clear either role.
+/// Select a friendly observer, declare self spotting, or clear either role.
+///
+/// An observer must be a declared spotter that is friendly, running, conscious and on the
+/// same battlefield; the firer needs no sight of it (TW p. 111 asks for nothing between
+/// attacker and spotter). A spotter may go on firing its own weapons.
 pub fn select_spotter(
     world: &mut World,
     id: ObjectId,
@@ -154,21 +178,13 @@ pub fn select_spotter(
             if self::selected(world, id) == Some(id) {
                 "You spot no longer.".into()
             } else {
-                "You disable the datalink to spotter.".into()
+                "You no longer have a spotter.".into()
             }
         }
         Some(target) if target == id => {
-            let recycling = if let Some(vehicle) = world.btech.vehicles().get(&id) {
-                vehicle
-                    .weapon_recycle()
-                    .values()
-                    .any(|seconds| *seconds > 0)
-            } else {
-                let unit = &world.btech.constructed_units()[&id];
-                unit.weapon_recycle().values().any(|seconds| *seconds > 0)
-                    || unit.limb_recycle().values().any(|seconds| *seconds > 0)
-            };
-            ensure!(!recycling, "You have weapons recycling!");
+            if let Some(reason) = spotting_prohibited(world, id) {
+                bail!("You {reason}.");
+            }
             "You are now set as a spotter.".into()
         }
         Some(target) => {
@@ -182,31 +198,19 @@ pub fn select_spotter(
                 self::selected(world, target) == Some(target),
                 "That unit is not set up as spotter!"
             );
-            let visible = visible_contact(world, id, target)?.is_some();
-            if !visible && artillery_available(world, id)? {
-                let range = super::unit_range(world, id, target)?.spatial;
-                let maximum = 2.0 * f64::from(super::unit_radio_capabilities(world, target)?.range);
-                let mut notices = vec![
-                    Notice {
-                        unit: target,
-                        text: "Someone is trying to establish a data link with you!".into(),
-                    },
-                    Notice {
-                        unit: id,
-                        text: "You attempt to establish a data link..... please stand by.".into(),
-                    },
-                ];
-                if range > maximum {
-                    notices.push(Notice {
-                        unit: id,
-                        text: "That target is our of data link range!".into(),
-                    });
-                } else {
-                    super::spotter_events::connect(world, id, target, range)?;
-                }
-                return Ok(notices);
-            }
-            ensure!(visible, "You do not have LOS to that target!");
+            ensure!(
+                observer.power == Power::Running && !observer.destroyed,
+                "That spotter is not running!"
+            );
+            ensure!(
+                unit.position.is_some()
+                    && unit.position.map(|p| p.map) == observer.position.map(|p| p.map),
+                "That spotter is on another battlefield!"
+            );
+            ensure!(
+                !unconscious_crew(world, target),
+                "That spotter is unconscious!"
+            );
             format!("#{0} set as spotter.", target.0)
         }
     };
@@ -217,8 +221,16 @@ pub fn select_spotter(
     Ok(vec![Notice { unit: id, text }])
 }
 
+/// Whether the unit's pilot is unconscious.
+fn unconscious_crew(world: &World, id: ObjectId) -> bool {
+    world
+        .btech
+        .unit(id)
+        .and_then(|unit| unit.pilot())
+        .is_some_and(|pilot| world.btech.unconscious(pilot))
+}
+
 /// Resolve a selected observer's unit target without requiring that the firer see the target.
-/// The initial firer-to-observer contact is only required when establishing the direct link.
 pub fn spotter_target(world: &World, firer: ObjectId) -> Result<SpotterTarget> {
     let spotter = active_observer(world, firer)?;
     let target = match super::targeting::selection(world, spotter) {
@@ -246,8 +258,9 @@ pub(super) fn coordinate_target(world: &World, observer: ObjectId) -> bool {
 pub(super) fn active_observer(world: &World, firer: ObjectId) -> Result<ObjectId> {
     let unit =
         super::scanner::scanner_unit(world, firer).context("Firing unit is not constructed")?;
-    let spotter = selected(world, firer).context("No spotter selected")?;
-    ensure!(spotter != firer, "You cannot fire while spotting.");
+    let spotter = selected(world, firer)
+        .filter(|spotter| *spotter != firer)
+        .context("No spotter selected")?;
     for id in [firer, spotter] {
         ensure!(
             world
@@ -276,24 +289,17 @@ pub(super) fn active_observer(world: &World, firer: ObjectId) -> Result<ObjectId
         "Spotter is not friendly"
     );
     ensure!(
-        !world
-            .btech
-            .vehicles()
-            .get(&spotter)
-            .and_then(Vehicle::pilot)
-            .or_else(|| world
-                .btech
-                .constructed_units()
-                .get(&spotter)
-                .and_then(Mech::pilot))
-            .is_some_and(|pilot| world.btech.unconscious(pilot)),
+        !unconscious_crew(world, spotter),
         "Your spotter is unconscious!"
     );
+    if let Some(reason) = spotting_prohibited(world, spotter) {
+        bail!("Your spotter {reason}.");
+    }
     Ok(spotter)
 }
 
-/// Resolve observer participation using the unit's lock and datalink.
-pub(super) fn indirect_target_for_source(
+/// The unit target a selected observer supplies, whether or not the shot ends up indirect.
+pub(super) fn observed_target_for_source(
     world: &World,
     source: super::fire_target::TargetSource,
     index: usize,
@@ -309,6 +315,26 @@ pub(super) fn indirect_target_for_source(
     spotter_target(world, firer).map(Some)
 }
 
+/// The observer link of a shot that is indirect: the observer supplies the target and the
+/// firer has no valid line of sight of its own to it. An attacker that can see its target
+/// fires directly (TW p. 111).
+pub(super) fn indirect_target_for_source(
+    world: &World,
+    source: super::fire_target::TargetSource,
+    index: usize,
+) -> Result<Option<SpotterTarget>> {
+    let Some(link) = observed_target_for_source(world, source, index)? else {
+        return Ok(None);
+    };
+    Ok((!attacker_sees(world, source.unit, link.target)?).then_some(link))
+}
+
+/// Whether the attacker itself perceives the target along a line of fire.
+fn attacker_sees(world: &World, firer: ObjectId, target: ObjectId) -> Result<bool> {
+    Ok(super::aim::perception_aim(world, firer, target, false)?
+        .is_some_and(|perception| perception.channel.is_some() && perception.direct_fire))
+}
+
 /// A direct unit lock overrides a selected observer for conventional weapons.
 fn uses_observer(
     world: &World,
@@ -319,12 +345,12 @@ fn uses_observer(
     let (weapon, ammunition) = installation(world, firer, index)?;
     Ok(weapon.supports_indirect_ammunition(ammunition)
         && !weapon.is_artillery()
-        && selected(world, firer).is_some()
+        && selected(world, firer).is_some_and(|spotter| spotter != firer)
         && !matches!(source.selection(world), Some(TargetSelection::Unit(_))))
 }
 
-/// Resolve observer participation using the unit's lock and datalink.
-pub(super) fn indirect_hex_for_source(
+/// The empty coordinate a selected observer supplies, whether or not the shot ends up indirect.
+pub(super) fn observed_hex_for_source(
     world: &World,
     source: super::fire_target::TargetSource,
     index: usize,
@@ -347,6 +373,19 @@ pub(super) fn indirect_hex_for_source(
     Ok(Some((observer, lock.hex)))
 }
 
+/// The observer link of an indirect shot at an empty coordinate; a firer that sees the hex
+/// itself fires at it directly.
+pub(super) fn indirect_hex_for_source(
+    world: &World,
+    source: super::fire_target::TargetSource,
+    index: usize,
+) -> Result<Option<(ObjectId, HexCoordinate)>> {
+    let Some((observer, hex)) = observed_hex_for_source(world, source, index)? else {
+        return Ok(None);
+    };
+    Ok((!super::hex_visible(world, source.unit, hex)?).then_some((observer, hex)))
+}
+
 /// Indirect fire cannot cross from a surface shooter into a submerged target's water layer.
 pub(super) fn check_indirect_water(
     world: &World,
@@ -367,7 +406,6 @@ pub(super) fn award_indirect_experience(
     world: &mut World,
     firer: ObjectId,
     link: SpotterTarget,
-    aim: &mut AimModifiers,
 ) -> Result<Vec<DiagnosticMessage>> {
     if coordinate_target(world, link.spotter) {
         return Ok(Vec::new());
@@ -418,10 +456,6 @@ pub(super) fn award_indirect_experience(
             ));
         }
     }
-    // A newly earned observer level applies to the shot that earned it.
-    if let Some(observer) = &mut aim.indirect {
-        observer.spotting = super::skills::unit_spotting_target(world, observer.spotter)?;
-    }
     Ok(messages)
 }
 
@@ -436,44 +470,6 @@ pub(super) fn installation(
         unit.weapon_readiness(index)?.weapon,
         unit.ammunition_mode(index)?,
     ))
-}
-
-/// Numbered artillery lookup ignores ammunition but rejects first-slot loss and recycling.
-fn artillery_available(world: &World, id: ObjectId) -> Result<bool> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return Ok(unit
-            .loadout()?
-            .weapons
-            .iter()
-            .enumerate()
-            .any(|(index, mount)| {
-                mount.weapon.is_artillery()
-                    && mount
-                        .criticals
-                        .first()
-                        .is_some_and(|&first| !unit.critical_unavailable(first))
-                    && unit.weapon_recycle().get(&index).copied().unwrap_or(0) == 0
-            }));
-    }
-    let unit = &world.btech.constructed_units()[&id];
-    Ok(unit
-        .loadout()?
-        .weapons
-        .iter()
-        .enumerate()
-        .any(|(index, mount)| {
-            mount.weapon.is_artillery()
-                && mount.criticals.first().is_some_and(|&first| {
-                    !unit.critical_unavailable(first)
-                        && unit
-                            .limb_recycle()
-                            .get(&first.section)
-                            .copied()
-                            .unwrap_or(0)
-                            == 0
-                })
-                && unit.weapon_recycle().get(&index).copied().unwrap_or(0) == 0
-        }))
 }
 
 #[cfg(test)]
@@ -491,5 +487,24 @@ mod tests {
         assert!(!Weapon::MediumLaser.supports_indirect_fire());
         assert!(Weapon::Lrm5.supports_indirect_fire());
         assert!(Weapon::Lrm5.supports_semiguided());
+    }
+
+    /// A declared spotter keeps every weapon; a selected observer restricts fire to weapons
+    /// that can use it.
+    #[test]
+    fn observer_selection_restricts_fire_but_spotting_does_not() {
+        let me = ObjectId(7);
+        let other = ObjectId(8);
+        for (weapon, ammunition) in [
+            (Weapon::MediumLaser, AmmunitionMode::Normal),
+            (Weapon::Lrm5, AmmunitionMode::Normal),
+        ] {
+            assert!(check_fire(None, me, weapon, ammunition).is_ok());
+            assert!(check_fire(Some(me), me, weapon, ammunition).is_ok());
+            assert_eq!(
+                check_fire(Some(other), me, weapon, ammunition).is_ok(),
+                weapon.supports_indirect_fire()
+            );
+        }
     }
 }

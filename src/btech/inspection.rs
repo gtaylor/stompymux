@@ -469,8 +469,7 @@ fn live_munition_bit(mode: super::AmmunitionMode, weapon: super::Weapon) -> Opti
         | super::AmmunitionMode::MmlLrmNarc
         | super::AmmunitionMode::MmlLrmSwarm
         | super::AmmunitionMode::MmlLrmSwarm1
-        | super::AmmunitionMode::MmlLrmSemiGuided
-        | super::AmmunitionMode::MmlLrmStinger => return None,
+        | super::AmmunitionMode::MmlLrmSemiGuided => return None,
         super::AmmunitionMode::Cluster => {
             if weapon.is_lbx() {
                 1
@@ -485,7 +484,6 @@ fn live_munition_bit(mode: super::AmmunitionMode, weapon: super::Weapon) -> Opti
         super::AmmunitionMode::SemiGuided => 524288,
         super::AmmunitionMode::Swarm => 128,
         super::AmmunitionMode::Swarm1 => 256,
-        super::AmmunitionMode::Stinger => 131072,
         super::AmmunitionMode::ExtendedRange => 1048576,
         super::AmmunitionMode::HighExplosive => 2097152,
         super::AmmunitionMode::INarcExplosive => 512,
@@ -496,7 +494,6 @@ fn live_munition_bit(mode: super::AmmunitionMode, weapon: super::Weapon) -> Opti
         super::AmmunitionMode::Flechette => 16384,
         super::AmmunitionMode::ArmorPiercing => 8192,
         super::AmmunitionMode::Caseless => 262144,
-        super::AmmunitionMode::Incendiary => 32768,
         super::AmmunitionMode::Inferno => 64,
         super::AmmunitionMode::ThunderAugmented => 8388608,
         super::AmmunitionMode::ThunderVibrabomb => 16777216,
@@ -1607,10 +1604,9 @@ pub fn inspect_template_status_text(
 pub fn inspect_template_weapon_text(
     world: &crate::World,
     template: &MechTemplate,
-    extended: bool,
 ) -> Result<String> {
     let (detached, id) = detached_template_world(world, template)?;
-    super::weapon_specification_text(&detached, id, extended).map(native_menu_controls)
+    super::weapon_specification_text(&detached, id).map(native_menu_controls)
 }
 
 /// Render immutable critical status through isolated contract construction.
@@ -1765,10 +1761,9 @@ pub fn inspect_vehicle_template_status_text(
 pub fn inspect_vehicle_template_weapon_text(
     world: &crate::World,
     template: &super::VehicleTemplate,
-    extended: bool,
 ) -> Result<String> {
     let (detached, id) = detached_vehicle_world(world, template)?;
-    super::weapon_specification_text(&detached, id, extended).map(native_menu_controls)
+    super::weapon_specification_text(&detached, id).map(native_menu_controls)
 }
 /// Render vehicle critical status through isolated temporary state.
 pub fn inspect_vehicle_template_critical_text(

@@ -62,7 +62,6 @@ fn targeting_computer_slots_mass_damage_and_flooding() {
         Weapon::HeavyGaussRifle,
         Weapon::HeavyFlamer,
         Weapon::VehicleFlamer,
-        Weapon::VehicleHeavyFlamer,
     ] {
         assert!(weapon.supports_targeting_computer());
     }

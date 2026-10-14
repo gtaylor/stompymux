@@ -70,6 +70,3 @@ mod btech_water_accuracy;
 
 #[path = "../btech_weight.rs"]
 mod btech_weight;
-
-#[path = "../btech_woods_accuracy.rs"]
-mod btech_woods_accuracy;

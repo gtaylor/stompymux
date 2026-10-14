@@ -130,19 +130,18 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
           btech.unit.ammunition_modes.SWARM_1,btech.unit.ammunition_modes.INARC_EXPLOSIVE,
           btech.unit.ammunition_modes.INARC_HAYWIRE,btech.unit.ammunition_modes.INARC_ECM,
           btech.unit.ammunition_modes.INARC_NEMESIS,btech.unit.ammunition_modes.ARMOR_PIERCING,
-          btech.unit.ammunition_modes.FLECHETTE,btech.unit.ammunition_modes.INCENDIARY,
-          btech.unit.ammunition_modes.PRECISION,btech.unit.ammunition_modes.STINGER,
+          btech.unit.ammunition_modes.FLECHETTE,btech.unit.ammunition_modes.PRECISION,
           btech.unit.ammunition_modes.CASELESS,btech.unit.ammunition_modes.SEMI_GUIDED,
           btech.unit.ammunition_modes.EXTENDED_RANGE,btech.unit.ammunition_modes.HIGH_EXPLOSIVE,
           btech.unit.ammunition_modes.MML_LRM}
         assert(select('#',btech.unit.set_weapon_modes(unit,0,{fire_modes=fire,ammunition_modes=ammo}))==0)
         local first=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)[1]
-        assert(#first.fire_modes==23 and #first.ammunition_modes==23 and not first.operational)
+        assert(#first.fire_modes==23 and #first.ammunition_modes==21 and not first.operational)
         assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1,half_ton=true,ammunition_modes={btech.unit.ammunition_modes.INFERNO}}))==0)
         assert(select('#',btech.unit.restock_ammunition(unit,btech.unit.sections.RIGHT_TORSO,1))==0)
         assert(select('#',btech.unit.install_special(unit,{section=btech.unit.sections.HEAD,slot=4}))==0)
         first=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)[1]
-        assert(#first.fire_modes==23 and #first.ammunition_modes==23)
+        assert(#first.fire_modes==23 and #first.ammunition_modes==21)
         assert(select('#',btech.unit.save_template(unit,'mode-contract'))==0)
         ok,err=mux.error.pcall(btech.unit.install_weapon,unit,{part={id=2047},section=btech.unit.sections.LEFT_TORSO,slots={1}})
         assert(not ok and err.code=='btech.part.not_found' and err.message:find("bad argument #2 to '?' (part was not found)",1,true) and err.detail.argument==2)
@@ -164,7 +163,7 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
         panic!("expected Mech template")
     };
     let modes = &saved.sections[&MechSection::LeftTorso].criticals[&0].modes;
-    assert_eq!(modes.len(), 46);
+    assert_eq!(modes.len(), 44);
 }
 
 #[tokio::test(flavor = "current_thread")]

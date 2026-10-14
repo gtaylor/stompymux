@@ -75,16 +75,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_moddamagewithwoods",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_hotloadaddshalfbthmod",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_nofusionvtolfuel",
         parser: "cf_int",
         permission: P::GOD,
@@ -141,11 +131,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "btech_xp_vrtmod",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_extendedmovemod",
         parser: "cf_int",
         permission: P::GOD,
     },
@@ -276,11 +261,6 @@ pub const DIRECTIVES: &[Directive] = &[
     },
     Directive {
         name: "btech_limitedrepairs",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
-        name: "btech_erange",
         parser: "cf_int",
         permission: P::GOD,
     },

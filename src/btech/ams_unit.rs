@@ -56,8 +56,10 @@ fn installed<L: Copy>(weapons: &[WeaponMount<L>], destroyed: impl Fn(L) -> bool)
     installed
 }
 
-/// Project temporary failure and bin state into the common mount-order selection.
-pub(super) fn select(world: &World, id: ObjectId) -> Result<Option<Defense>> {
+/// Project temporary failure, bin state and arc coverage into the common mount-order selection.
+/// Only a mount whose firing arc covers the attacker may engage (Total Warfare p. 129).
+pub(super) fn select(world: &World, id: ObjectId, attacker: ObjectId) -> Result<Option<Defense>> {
+    let covering = covering_mounts(world, id, attacker)?;
     super::with_unit!(
         world.btech.unit(id).context("Unit is unavailable")?,
         |unit| {
@@ -66,10 +68,11 @@ pub(super) fn select(world: &World, id: ObjectId) -> Result<Option<Defense>> {
                 &loadout.weapons,
                 &loadout.ammunition,
                 |index, mount| {
-                    mount
-                        .criticals
-                        .iter()
-                        .all(|location| !unit.critical_unavailable(*location))
+                    covering.contains(&index)
+                        && mount
+                            .criticals
+                            .iter()
+                            .all(|location| !unit.critical_unavailable(*location))
                         && !unit.weapon_failures.contains_key(&index)
                         && !unit.jammed_weapons.contains(&index)
                         && !unit.weapon_recycle.contains_key(&index)
@@ -81,6 +84,49 @@ pub(super) fn select(world: &World, id: ObjectId) -> Result<Option<Defense>> {
             ))
         }
     )
+}
+
+/// The defender's AMS mounts whose firing arcs cover the attacker's bearing.
+fn covering_mounts(
+    world: &World,
+    id: ObjectId,
+    attacker: ObjectId,
+) -> Result<std::collections::BTreeSet<usize>> {
+    if let Some(unit) = world.btech.vehicles().get(&id) {
+        let bearing = super::unit_range(world, id, attacker)?
+            .bearing
+            .unwrap_or(180.0);
+        return unit
+            .loadout()?
+            .weapons
+            .iter()
+            .enumerate()
+            .filter(|(_, mount)| mount.weapon.is_ams())
+            .filter_map(|(index, _)| match unit.weapon_bears_on(index, bearing) {
+                Ok(true) => Some(Ok(index)),
+                Ok(false) => None,
+                Err(error) => Some(Err(error)),
+            })
+            .collect();
+    }
+    let unit = world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .context("Unit is unavailable")?;
+    unit.loadout()?
+        .weapons
+        .iter()
+        .enumerate()
+        .filter(|(_, mount)| mount.weapon.is_ams())
+        .filter_map(
+            |(index, _)| match super::weapon_bears_on(world, id, attacker, index) {
+                Ok(true) => Some(Ok(index)),
+                Ok(false) => None,
+                Err(error) => Some(Err(error)),
+            },
+        )
+        .collect()
 }
 
 /// Select the first ready mount, then a matching bin with local-section preference. Laser AMS
@@ -124,19 +170,18 @@ fn first_defense<L: Copy + Ord>(
     })
 }
 
-/// Commit capped supply and recycle to its owner; both carriers store weapon heat. A mount
-/// without a bin spends no ammunition.
+/// Commit one engagement to its owner: one round from the selected bin (laser AMS none), the
+/// system's heat and the mount's recycle (Total Warfare p. 130). Returns the rounds spent.
 pub(super) fn expend(
     world: &mut World,
     id: ObjectId,
     index: usize,
     weapon: Weapon,
     bin: Option<usize>,
-    rounds: u16,
 ) -> Result<u16> {
     let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
     if let Some(unit) = world.btech.vehicles.get_mut(&id) {
-        let spent = bin.map_or(0, |bin| unit.ammunition()[bin].min(rounds));
+        let spent = bin.map_or(0, |bin| unit.ammunition()[bin].min(1));
         if let Some(bin) = bin {
             unit.expend_reserved_ammunition(bin, spent)?;
         }
@@ -149,7 +194,7 @@ pub(super) fn expend(
         .constructed
         .get_mut(&id)
         .context("Unit is unavailable")?;
-    let spent = bin.map_or(0, |bin| unit.ammunition[bin].min(rounds));
+    let spent = bin.map_or(0, |bin| unit.ammunition[bin].min(1));
     if let Some(bin) = bin {
         unit.ammunition[bin] -= spent;
     }

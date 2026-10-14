@@ -17,7 +17,6 @@ pub(super) struct HardwareSettings {
 impl HardwareSettings {
     /// Reject snapshots whose ranges exceed the supported hardware representation.
     pub(super) fn validate(self) -> Result<()> {
-        ensure!(self.targeting_mode <= 4, "Invalid targeting mode");
         ensure!(
             [self.tactical, self.long_range, self.scan]
                 .into_iter()
@@ -42,7 +41,6 @@ impl HardwareSettings {
             })
         };
         match field {
-            "targcomp" => candidate.targeting_mode = value.trim().parse()?,
             "tacrange" => candidate.tactical = Some(range()?),
             "lrsrange" => candidate.long_range = Some(range()?),
             "scanrange" => candidate.scan = Some(range()?),

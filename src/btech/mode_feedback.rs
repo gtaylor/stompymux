@@ -13,9 +13,6 @@ pub trait AmmunitionFeedback {
     /// Artillery cluster feedback retains its distinct normal-round wording.
     fn cluster_message(self, index: usize) -> String;
 
-    /// Cockpit feedback shared by native commands and Lua.
-    fn stinger_message(self, index: usize) -> String;
-
     /// Cockpit wording for the selected ATM ammunition.
     fn atm_message(self, index: usize) -> String;
 
@@ -39,9 +36,6 @@ pub trait AmmunitionFeedback {
 
     /// Shared cockpit feedback for normal and CASELESS rounds.
     fn caseless_message(self, index: usize) -> String;
-
-    /// Shared cockpit feedback for normal and Incendiary rounds.
-    fn incendiary_message(self, index: usize) -> String;
 
     /// Shared cockpit feedback for normal and Flechette rounds.
     fn flechette_message(self, index: usize) -> String;
@@ -80,13 +74,6 @@ impl AmmunitionFeedback for AmmunitionMode {
             return format!("Weapon {index} has been set to fire cluster rounds.");
         }
         format!("Weapon {index} has been set to fire normal rounds")
-    }
-
-    fn stinger_message(self, index: usize) -> String {
-        if self.munition() == Self::Stinger {
-            return format!("Weapon {index} has been set to fire stinger missiles.");
-        }
-        format!("Weapon {index} has been set to fire normal missiles")
     }
 
     fn atm_message(self, index: usize) -> String {
@@ -158,17 +145,6 @@ impl AmmunitionFeedback for AmmunitionMode {
             "Weapon {index} has been set to fire {} rounds",
             if self == Self::Caseless {
                 "CASELESS"
-            } else {
-                "normal"
-            }
-        )
-    }
-
-    fn incendiary_message(self, index: usize) -> String {
-        format!(
-            "Weapon {index} has been set to fire {} rounds",
-            if self == Self::Incendiary {
-                "Incendiary"
             } else {
                 "normal"
             }

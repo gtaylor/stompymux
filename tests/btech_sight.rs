@@ -95,28 +95,18 @@ async fn sight_all_chassis_targets_preserve_state_and_replay() {
     }
 }
 
-/// Gatling and dead-fire sighting consume their preparation dice despite empty ammunition bins.
+/// Gatling sighting consumes its preparation die despite empty ammunition bins.
 #[tokio::test]
 async fn sight_special_rolls_do_not_launch_or_spend() {
     for source in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/Demolisher.toml"),
     ] {
-        for weapon in [
-            Weapon::MachineGun,
-            Weapon::LrDfm5,
-            Weapon::Elrm5,
-            Weapon::ClanArrowIv,
-            Weapon::CoolantGun,
-        ] {
+        for weapon in [Weapon::MachineGun, Weapon::Elrm5, Weapon::ClanArrowIv] {
             let (_dir, config, mut world, shooter, _, index) = fixture(source, Some(weapon)).await;
             edit(&mut world, shooter, |state| {
                 for count in state["ammunition"].as_array_mut().unwrap() {
                     *count = 0.into();
-                }
-                if weapon == Weapon::CoolantGun {
-                    state["fire_modes"][index.to_string()] =
-                        serde_json::to_value(FireMode::Heat).unwrap();
                 }
                 if weapon == Weapon::MachineGun {
                     state["fire_modes"][index.to_string()] =
@@ -136,13 +126,7 @@ async fn sight_special_rolls_do_not_launch_or_spend() {
                 .unwrap();
             let mut dice = Dice::seeded([42; 32]);
             let gatling = (weapon == Weapon::MachineGun).then(|| dice.d6());
-            let roll = if matches!(weapon, Weapon::LrDfm5 | Weapon::Elrm5) {
-                let mut rolls = [dice.d6(), dice.d6(), dice.d6()];
-                rolls.sort();
-                rolls[0] + rolls[1]
-            } else {
-                dice.two_d6()
-            };
+            let roll = dice.two_d6();
             assert_eq!(actual, (roll, gatling));
             let mut expected = before;
             edit(&mut expected, shooter, |state| {
@@ -167,7 +151,6 @@ async fn sight_rejections_are_atomic_across_chassis() {
             "index",
             "target",
             "friendly",
-            "spotting",
         ] {
             let mut world = base.clone();
             let vehicle = world.btech.vehicles().contains_key(&shooter);
@@ -203,7 +186,6 @@ async fn sight_rejections_are_atomic_across_chassis() {
                         state["weapon_failures"][index.to_string()] = serde_json::json!("disabled")
                     }
                     "friendly" => state["friendly_fire_safety"] = true.into(),
-                    "spotting" => state["spotter"] = shooter.0.into(),
                     _ => (),
                 });
             }
@@ -235,71 +217,5 @@ async fn sight_rejections_are_atomic_across_chassis() {
             shooter.0
         ));
         assert!(result.unwrap_err().to_string().contains("defensive only"));
-    }
-}
-
-/// Both sighting and firing recognize airborne VTOLs before their different ammunition checks.
-#[tokio::test]
-async fn stinger_sight_and_fire_share_vtol_admission() {
-    for source in [
-        include_str!("../game/units/JR7-D.toml"),
-        include_str!("../game/units/Demolisher.toml"),
-    ] {
-        let (_dir, config, base, shooter, target, index) = fixture_with_target(
-            source,
-            Some(Weapon::Lrm5),
-            include_str!("../game/units/Kestrel.toml"),
-        )
-        .await;
-        for airborne in [false, true] {
-            let mut world = base.clone();
-            edit(&mut world, shooter, |state| {
-                state["ammunition_modes"][index.to_string()] =
-                    serde_json::to_value(AmmunitionMode::Stinger).unwrap()
-            });
-            if airborne {
-                edit(&mut world, target, |state| {
-                    state["vtol_flight"] = serde_json::to_value(VtolFlight {
-                        phase: VtolFlightPhase::Airborne,
-                        altitude: 1.0,
-                        ..Default::default()
-                    })
-                    .unwrap()
-                });
-            }
-            refresh_battle_contacts(&mut world, &[shooter]).unwrap();
-            let scripts = scripts(&config, &world);
-            let before = scripts.world().btech.clone();
-            let result = scripts.eval_callback::<mlua::Table>(&format!(
-                "return btech.unit.sight({},1,{index},{})",
-                shooter.0, target.0
-            ));
-            if airborne {
-                assert!(result.is_ok(), "{result:?}");
-            } else {
-                assert!(
-                    result
-                        .unwrap_err()
-                        .to_string()
-                        .contains("only engage airborne")
-                );
-                assert_eq!(scripts.world().btech, before);
-            }
-            let fired = scripts
-                .eval_callback::<mlua::Table>(&format!(
-                    "return btech.unit.fire({},1,{index},{})",
-                    shooter.0, target.0
-                ))
-                .unwrap_err()
-                .to_string();
-            assert!(
-                fired.contains(if airborne {
-                    "Weapon is not ready"
-                } else {
-                    "only engage airborne"
-                }),
-                "{fired}"
-            );
-        }
     }
 }

@@ -273,11 +273,6 @@ async fn mixed_network_reports_messages_and_range_share_one_path() {
             index,
             4,
             AimRules {
-                woods_damage: false,
-                fasa_turning: true,
-                extended_movement: false,
-                extended_ranges: false,
-                hotload_half_minimum: false,
                 override_weapon_arcs: false,
             },
         )
@@ -443,11 +438,6 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         .position(|mount| mount.weapon == Weapon::Lrm20)
         .unwrap();
     let rules = AimRules {
-        woods_damage: false,
-        fasa_turning: true,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
         override_weapon_arcs: false,
     };
     world
@@ -468,7 +458,7 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
     ] {
         select_battle_hex_target(&mut world, shooter, pilot, hex, mode).unwrap();
         let before = world.btech.clone();
-        let aim = battle_hex_aim_modifiers(&world, shooter, hex, index, 4, rules).unwrap();
+        let aim = battle_hex_aim_modifiers(&world, shooter, hex, index, 4).unwrap();
         assert!(aim.visible);
         assert_eq!(aim.mode, mode);
         assert_eq!(
@@ -492,8 +482,8 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
-        battle_hex_aim_modifiers(&world, shooter, hex, index, 4, rules).unwrap(),
-        battle_hex_aim_modifiers(&loaded, shooter, hex, index, 4, rules).unwrap()
+        battle_hex_aim_modifiers(&world, shooter, hex, index, 4).unwrap(),
+        battle_hex_aim_modifiers(&loaded, shooter, hex, index, 4).unwrap()
     );
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(loaded))).unwrap();
     let before = scripts.world().btech.clone();
@@ -509,21 +499,13 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
     assert!(
-        battle_hex_aim_modifiers(
-            &world,
-            shooter,
-            HexCoordinate { x: -1, y: 0 },
-            index,
-            4,
-            rules
-        )
-        .is_err()
+        battle_hex_aim_modifiers(&world, shooter, HexCoordinate { x: -1, y: 0 }, index, 4).is_err()
     );
 }
 
 /// Vehicle coordinate previews use the same C3 sighting selection as unit targets.
 #[tokio::test]
-async fn vehicle_hex_aim_shares_mixed_network_range_and_rejects_stinger() {
+async fn vehicle_hex_aim_shares_mixed_network_range() {
     let (_dir, _config, mut world, units) = field().await;
     let (shooter, pilot) = units[0];
     join_leave_battle_c3i(&mut world, shooter, pilot, Some(units[5].0)).unwrap();
@@ -534,35 +516,13 @@ async fn vehicle_hex_aim_shares_mixed_network_range_and_rejects_stinger() {
         .iter()
         .position(|mount| mount.weapon == Weapon::Lrm20)
         .unwrap();
-    let rules = AimRules {
-        woods_damage: false,
-        fasa_turning: true,
-        extended_movement: false,
-        extended_ranges: false,
-        hotload_half_minimum: false,
-        override_weapon_arcs: false,
-    };
     let hex = HexCoordinate { x: 10, y: 14 };
-    let aim = battle_hex_aim_modifiers(&world, shooter, hex, index, 4, rules).unwrap();
+    let aim = battle_hex_aim_modifiers(&world, shooter, hex, index, 4).unwrap();
     assert_eq!(
         aim.modifiers.network_range.unwrap().source,
         Some(units[5].0)
     );
     assert_eq!(aim.modifiers.range.unwrap().modifier, 0);
-    world
-        .btech
-        .rewrite_unit_record(shooter, |record| {
-            record["ammunition_modes"][index.to_string()] = "stinger".into();
-        })
-        .unwrap();
-    let before = world.btech.clone();
-    assert!(
-        battle_hex_aim_modifiers(&world, shooter, hex, index, 4, rules)
-            .unwrap_err()
-            .to_string()
-            .contains("Stinger")
-    );
-    assert_eq!(before, world.btech);
 }
 
 #[tokio::test]

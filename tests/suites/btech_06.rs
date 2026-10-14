@@ -59,9 +59,6 @@ mod btech_split;
 #[path = "../btech_stagger_landing.rs"]
 mod btech_stagger_landing;
 
-#[path = "../btech_targeting_mode.rs"]
-mod btech_targeting_mode;
-
 #[path = "../btech_template_specials.rs"]
 mod btech_template_specials;
 
