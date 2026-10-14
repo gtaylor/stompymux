@@ -16,8 +16,10 @@ pub struct VehicleSalvoRequest {
     pub glancing: bool,
     pub guidance_blocked: bool,
     pub angel_blocked: bool,
-    /// Missiles intercepted by a separately resolved defensive action.
-    pub intercepted: u8,
+    /// An anti-missile system engaged the flight, shifting the cluster roll.
+    pub ams_engaged: bool,
+    /// Spotter-directed indirect fire gets no Artemis or Narc cluster bonus.
+    pub indirect: bool,
 }
 
 /// One independently located packet and its complete vehicle consequences.
@@ -126,10 +128,6 @@ pub(super) fn resolve_with_context_in_candidate(
         "Vehicle beacon and thermal effects require dedicated target resolution"
     );
     ensure!(
-        request.intercepted <= weapon.profile().missiles,
-        "Invalid intercepted missile count"
-    );
-    ensure!(
         match (request.fire_mode, request.gatling_damage) {
             (FireMode::Gatling, Some(damage)) => (1..=6).contains(&damage),
             (FireMode::Gatling, None) => false,
@@ -153,6 +151,8 @@ pub(super) fn resolve_with_context_in_candidate(
             angel_blocked: request.angel_blocked,
             target_beacon,
             artemis_v,
+            ams_engaged: request.ams_engaged,
+            indirect: request.indirect,
         },
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;
@@ -163,14 +163,17 @@ pub(super) fn resolve_with_context_in_candidate(
         collapse: None,
         cluster_roll: packets.cluster_roll,
         missiles_before_defense: None,
+        missiles_intercepted: None,
         groups: Vec::new(),
         inferno: None,
         experience: Vec::new(),
         experience_messages: Vec::new(),
     };
-    if let Some((hits, surviving)) = packets.intercept(weapon, request.intercepted) {
-        report.missiles_before_defense = Some(hits as u8);
+    if weapon.profile().missiles > 0 {
+        report.missiles_before_defense = packets.missiles_before_defense;
+        report.missiles_intercepted = packets.missiles_intercepted;
         if request.ammunition == AmmunitionMode::Inferno {
+            let surviving = packets.missile_count();
             if surviving > 0 {
                 let arc = direction.current(world, target)?;
                 report.inferno = Some(super::vehicle_burning::resolve_inferno_from(

@@ -14,12 +14,21 @@ pub enum TargetSalvo {
 }
 
 impl TargetSalvo {
-    /// Actual missile cluster size before defensive interception, used to cap the defensive report.
+    /// Missile hits before an anti-missile engagement shifted the cluster roll.
     pub(super) fn missiles_before_defense(&self) -> Option<u8> {
         match self {
             Self::Mech(report) => report.missiles_before_defense,
             Self::Vehicle(report) => report.missiles_before_defense,
             Self::Swarm(report) => Some(report.launched),
+        }
+    }
+
+    /// Hits an anti-missile engagement removed from the Cluster Hits result.
+    pub(super) fn missiles_intercepted(&self) -> Option<u8> {
+        match self {
+            Self::Mech(report) => report.missiles_intercepted,
+            Self::Vehicle(report) => report.missiles_intercepted,
+            Self::Swarm(_) => None,
         }
     }
 }

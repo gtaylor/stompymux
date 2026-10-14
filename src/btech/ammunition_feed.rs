@@ -10,26 +10,6 @@ pub struct AmmunitionDraw {
     pub rounds: u16,
 }
 
-/// Spend an admitted feed plan after damage, capping each draw at the bin's surviving rounds.
-/// The plan must refer to this inventory; damage can empty bins but cannot change their indices.
-/// Preserve feed order and omit empty draws from the attack's expenditure report.
-pub(super) fn spend_surviving_draws(
-    inventory: &mut [u16],
-    draws: impl IntoIterator<Item = AmmunitionDraw>,
-) -> Vec<AmmunitionDraw> {
-    let mut spent = Vec::new();
-    for draw in draws {
-        let available = &mut inventory[draw.bin_index];
-        let rounds = draw.rounds.min(*available);
-        if rounds == 0 {
-            continue;
-        }
-        *available -= rounds;
-        spent.push(AmmunitionDraw { rounds, ..draw });
-    }
-    spent
-}
-
 impl Mech {
     /// Plan up to `rounds` compatible rounds without changing inventory, mode, heat or dice.
     /// Prefer the selected section, then the mount and canonical section/slot order; empty or unavailable bins are skipped.

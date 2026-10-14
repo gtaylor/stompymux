@@ -136,7 +136,7 @@ async fn sight_special_rolls_do_not_launch_or_spend() {
                 .unwrap();
             let mut dice = Dice::seeded([42; 32]);
             let gatling = (weapon == Weapon::MachineGun).then(|| dice.d6());
-            let roll = if matches!(weapon, Weapon::LrDfm5 | Weapon::Elrm5) {
+            let roll = if weapon == Weapon::LrDfm5 {
                 let mut rolls = [dice.d6(), dice.d6(), dice.d6()];
                 rolls.sort();
                 rolls[0] + rolls[1]

@@ -17,7 +17,8 @@ pub struct ArtilleryLaunchReport {
     pub launched: bool,
     pub jammed: bool,
     pub loader_destroyed: bool,
-    pub propellant_roll: Option<u8>,
+    pub feed_broken: bool,
+    pub feed_critical_roll: Option<u8>,
     pub expenditure: WeaponUse,
     pub misload: Option<LaunchMisload>,
     pub ammunition_warning: Option<String>,
@@ -29,12 +30,7 @@ pub struct ArtilleryLaunchReport {
 impl ArtilleryLaunchReport {
     /// Immediate shooter notices, excluding delayed impact feedback.
     pub fn notices(&self) -> Vec<Notice> {
-        let mut notices = self
-            .misload
-            .as_ref()
-            .map(LaunchMisload::notices)
-            .unwrap_or_default();
-        notices.extend(self.launch_notices.clone());
+        let mut notices = self.launch_notices.clone();
         if let Some(text) = &self.ammunition_warning {
             notices.push(Notice {
                 unit: self.shooter,
@@ -93,7 +89,8 @@ pub(super) fn resolve_in_action(
         launched,
         jammed,
         loader_destroyed,
-        propellant_roll,
+        feed_broken,
+        feed_critical_roll,
         expenditure,
         misload,
         ammunition_warning,
@@ -133,7 +130,8 @@ pub(super) fn resolve_in_action(
         launched,
         jammed,
         loader_destroyed,
-        propellant_roll,
+        feed_broken,
+        feed_critical_roll,
         expenditure,
         misload,
         ammunition_warning,
@@ -142,9 +140,8 @@ pub(super) fn resolve_in_action(
     };
     let explosions = observer_messages(world, shooter, "shudders from an internal explosion!");
     let mut private = Vec::new();
-    let messages = if let Some(messages) =
-        super::launch_feedback::failure_messages((&report).into(), explosions, &mut private)
-    {
+    let feedback: super::launch_feedback::LaunchFeedback = (&report).into();
+    let messages = if let Some(messages) = super::launch_feedback::failure_messages(&feedback) {
         messages
     } else {
         let name = weapon.name().split_once('.').unwrap().1;
@@ -166,6 +163,13 @@ pub(super) fn resolve_in_action(
                 .into_iter()
                 .map(|notice| (notice.unit, notice.text)),
         );
+        let base = messages.len();
+        messages.extend(super::launch_feedback::consequence_messages(
+            feedback,
+            explosions,
+            &mut private,
+            base,
+        ));
         messages
     };
     candidate.btech.validate_action(&candidate)?;

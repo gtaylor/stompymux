@@ -6556,7 +6556,8 @@ async fn character_misload_rolls_back_weapon_and_shooter_casualty() {
             resolve_battle_shot_action(&replay, &config, id, pilot, target, index, shot_rules())
                 .unwrap()
         );
-        assert!(!report.launched);
+        // The burst is fired before the rounds explode (Tactical Operations p. 98).
+        assert!(report.launched);
         assert!(report.loader_destroyed);
         let impact = report.misload.as_ref().unwrap();
         assert_eq!(impact.impact.character_injuries.len(), 1);
@@ -9054,13 +9055,11 @@ async fn unjam_control_experience_and_roll_traces() {
             install(&scripts, world);
             if case != "tactical" {
                 let before = scripts.world().btech.clone();
-                assert!(
-                    advance_battle_unjamming(&mut scripts.world_mut(), extended, extended).is_err()
-                );
+                assert!(advance_battle_unjamming(&mut scripts.world_mut(), extended).is_err());
                 assert_eq!(scripts.world().btech, before);
             }
             for _ in 0..59 {
-                advance_battle_unjamming_action(&scripts, &config, extended, extended).unwrap();
+                advance_battle_unjamming_action(&scripts, &config, extended).unwrap();
                 assert!(scripts.drain_outbox().is_empty());
             }
             assert_eq!(
@@ -9085,7 +9084,7 @@ async fn unjam_control_experience_and_roll_traces() {
                 before.objects[&ObjectId(1)].flags.clone();
             *scripts.world_mut() = restored;
             scripts.drain_traces_for_inspection();
-            advance_battle_unjamming_action(&scripts, &config, extended, extended).unwrap();
+            advance_battle_unjamming_action(&scripts, &config, extended).unwrap();
             let traces = scripts.drain_traces_for_inspection();
             let topic = |topic: logging::TraceTopic| {
                 traces
@@ -9103,14 +9102,13 @@ async fn unjam_control_experience_and_roll_traces() {
                 before.btech.constructed_units()[&id].ammunition()[0]
                     - u16::from(!matches!(case, "failed" | "empty"))
             );
+            // Clearing a jam is a Gunnery Skill Roll at +3 (Tactical Operations p. 73): it
+            // awards no piloting experience and traces no piloting roll.
             assert_eq!(
                 candidate.btech.character_values()[&ObjectId(1)][skill].experience_balance(),
-                if case == "success" { 2 } else { 0 }
+                0
             );
-            assert_eq!(
-                topic(logging::TraceTopic::PilotingExperience).len(),
-                usize::from(case == "success")
-            );
+            assert!(topic(logging::TraceTopic::PilotingExperience).is_empty());
             persistence::save(&config.database(), &candidate)
                 .await
                 .unwrap();
@@ -9119,20 +9117,15 @@ async fn unjam_control_experience_and_roll_traces() {
                 candidate.btech
             );
             let output = scripts.drain_outbox();
-            let rolled = !matches!(case, "empty" | "rotary" | "prone");
-            let rolls = topic(logging::TraceTopic::PilotingRolls);
-            assert_eq!(rolls.len(), usize::from(rolled));
-            if rolled {
-                assert!(rolls[0].contains("Attempting to make pilot (noxp) skill roll."));
-            }
-            if rolled && case != "disconnected" {
-                assert!(
-                    output
-                        .iter()
-                        .any(|(_, text)| text.source() == "You make a piloting skill roll!")
-                );
-            }
-            advance_battle_unjamming_action(&scripts, &config, extended, extended).unwrap();
+            let rolled = case != "empty";
+            assert!(topic(logging::TraceTopic::PilotingRolls).is_empty());
+            assert_eq!(
+                output
+                    .iter()
+                    .any(|(_, text)| text.source() == "You make a roll to unjam the weapon!"),
+                rolled
+            );
+            advance_battle_unjamming_action(&scripts, &config, extended).unwrap();
             assert_eq!(scripts.world().btech, candidate.btech);
             assert!(scripts.drain_outbox().is_empty());
         }
@@ -9205,7 +9198,8 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         let saved = heartbeats.until_saved(&config, 5, |saved| saved.btech.constructed_units()[&id].unjam().is_none()).await;
         assert!(!saved.btech.constructed_units()[&id].weapon_jammed(index).unwrap());
         assert_eq!(saved.btech.constructed_units()[&id].ammunition()[0], before.btech.constructed_units()[&id].ammunition()[0] - 1);
-        assert_eq!(saved.btech.character_values()[&ObjectId(1)][skill].experience_balance(), 2);
+        // A Gunnery Skill Roll clears the jam without awarding piloting experience.
+        assert_eq!(saved.btech.character_values()[&ObjectId(1)][skill].experience_balance(), 0);
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;

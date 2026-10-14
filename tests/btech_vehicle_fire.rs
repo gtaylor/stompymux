@@ -115,6 +115,9 @@ fn install_test_ams_at(
         .rewrite_unit_record(id, |record| {
             record["definition"] = serde_json::to_value(definition).unwrap();
             record["ammunition"] = serde_json::to_value(constructed.ammunition()).unwrap();
+            // Face the shooter one hex south so the arm-mounted defense covers the attack
+            // direction (Total Warfare p. 129).
+            record["motion"]["heading"] = 180.0.into();
         })
         .unwrap();
     let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
@@ -270,13 +273,13 @@ async fn vehicle_missiles_use_shooter_dice_for_mech_ams_only_on_admitted_hits() 
             world.validate(&config).unwrap();
             continue;
         }
-        let defense = dice.d6();
+        // A cluster engagement rolls no die and spends one round (Total Warfare p. 130).
         let ams = report.ams.unwrap();
-        assert_eq!(ams.roll, defense);
-        assert_eq!(ams.ammunition_spent, u16::from(defense));
+        assert_eq!(ams.roll, None);
+        assert_eq!(ams.ammunition_spent, 1);
         assert_eq!(
             world.btech.constructed_units()[&target].ammunition()[ams.ammunition_bin.unwrap()],
-            before[ams.ammunition_bin.unwrap()] - u16::from(defense)
+            before[ams.ammunition_bin.unwrap()] - 1
         );
         assert_eq!(roll_unit_dice(&mut world, shooter, 1).unwrap(), [dice.d6()]);
         world.validate(&config).unwrap();
@@ -411,18 +414,12 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
             let report =
                 fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                     .unwrap();
-            assert_eq!(report.expenditure.launched, active);
+            // A confused Streak still launches nothing on a failed roll (TacOps: AUE p. 91).
+            assert!(!report.expenditure.launched);
             assert!(!report.hit);
             assert!(report.salvo.is_none());
-            assert_eq!(
-                report
-                    .expenditure
-                    .ammunition
-                    .iter()
-                    .map(|draw| draw.rounds)
-                    .sum::<u16>(),
-                u16::from(active)
-            );
+            assert!(report.expenditure.ammunition.is_empty());
+            assert_eq!(report.streak_confused, active);
             world.validate(&config).unwrap();
         }
     }
@@ -693,6 +690,9 @@ fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: Weapon) {
             record["definition"] = serde_json::to_value(unit.definition()).unwrap();
             record["ammunition"] = serde_json::to_value(unit.ammunition()).unwrap();
             record["ams_enabled"] = serde_json::json!(true);
+            // Face the shooter one hex south so the turret defense covers the attack direction
+            // (Total Warfare p. 129).
+            record["motion"]["heading"] = 180.0.into();
         })
         .unwrap();
 }
@@ -753,14 +753,10 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 world.validate(&config).unwrap();
                 continue;
             }
-            let defense = if matches!(weapon, Weapon::ClanAntiMissileSystem | Weapon::ClanLaserAms)
-            {
-                dice.two_d6()
-            } else {
-                dice.d6()
-            };
+            // Every tech base engages the same way: no die of its own, one round, the
+            // system's heat and a -4 on the cluster roll (Total Warfare pp. 129-130).
             let ams = report.ams.as_ref().unwrap();
-            assert_eq!(ams.roll, defense);
+            assert_eq!(ams.roll, None);
             assert_eq!(
                 world.btech.vehicles()[&target].weapon_heat(),
                 f64::from(weapon.profile().heat)
@@ -770,7 +766,7 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 (0, fed.then_some(0))
             );
             if fed {
-                assert_eq!(ams.ammunition_spent, rounds.min(u16::from(defense.min(6))));
+                assert_eq!(ams.ammunition_spent, rounds.min(1));
                 assert_eq!(
                     world.btech.vehicles()[&target].ammunition()[0],
                     rounds - ams.ammunition_spent
@@ -786,7 +782,7 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
                 panic!("vehicle salvo missing")
             };
             let missiles = salvo.missiles_before_defense.unwrap();
-            assert_eq!(ams.shot_down, defense.min(missiles));
+            assert_eq!(salvo.missiles_intercepted, Some(ams.shot_down));
             assert_eq!(
                 salvo.groups.iter().map(|group| group.damage).sum::<u16>(),
                 u16::from(missiles - ams.shot_down) * 2
@@ -896,7 +892,7 @@ async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
             fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                 .unwrap();
         if matches!(condition, "first_busy" | "first_failed" | "first_bin_lost") {
-            assert_eq!(report.ams.as_ref().unwrap().roll, dice.d6());
+            assert_eq!(report.ams.as_ref().unwrap().roll, None);
             assert_eq!(
                 report.ams.as_ref().unwrap().weapon_index,
                 usize::from(condition != "first_bin_lost")
@@ -1418,7 +1414,8 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
         glancing: false,
         guidance_blocked: false,
         angel_blocked: false,
-        intercepted: 0,
+        ams_engaged: false,
+        indirect: false,
     };
     let enhanced = resolve_battle_vehicle_salvo(
         &mut world,

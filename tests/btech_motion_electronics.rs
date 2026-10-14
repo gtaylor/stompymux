@@ -40,6 +40,17 @@ fn install_test_ams(
     install_test_ams_at(world, id, weapon, stompymux_rs::MechSection::LeftArm)
 }
 
+/// Turn the shot fixture's target (one hex north of the shooter) to face south, so its arm-mounted
+/// defenses cover the attack direction (Total Warfare p. 129).
+fn face_attacker(world: &mut stompymux_rs::World, target: ObjectId) {
+    world
+        .btech
+        .rewrite_unit_record(target, |record| {
+            record["motion"]["heading"] = 180.0.into();
+        })
+        .unwrap();
+}
+
 /// Supply one arm-mounted defense for equipment selection scenarios.
 fn install_test_ams_at(
     world: &mut stompymux_rs::World,
@@ -81,13 +92,13 @@ fn install_test_ams_at(
 }
 
 /// Automatic defense uses one ready mount even on misses; a shortage limits cost, not capacity.
-async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, bool, f64, u16)]) {
+async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, f64, u16)]) {
     use stompymux_rs::*;
     let (_dir, config, pristine, _id, _target) = shot_fixture().await;
     let pristine_db = snapshot_database(&config);
     let mut probed_restart = false;
     let mut probed_save = false;
-    for (weapon, clan, heat, recycle) in entries.iter().copied() {
+    for (weapon, heat, recycle) in entries.iter().copied() {
         for case in [
             "hit",
             "miss",
@@ -116,6 +127,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, bool, f64, u1
                 advance_battle_units(&mut world, 0, true);
             }
             set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
+            face_attacker(&mut world, target);
             shot_skill(&mut world, if case == "miss" { 0 } else { 30 });
             set_battle_character_value(
                 &mut world,
@@ -245,21 +257,12 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, bool, f64, u1
             let mut expected_dice = Dice::seeded([seed; 32]);
             expected_dice.two_d6();
             if let Some(ams) = &report.ams {
-                let roll = if clan {
-                    expected_dice.two_d6()
-                } else {
-                    expected_dice.d6()
-                };
-                assert_eq!(ams.roll, roll);
-                assert_eq!(ams.shot_down, roll.min(4));
-                assert_eq!(
-                    ams.ammunition_spent,
-                    match case {
-                        _ if !fed => 0,
-                        "short" => 1,
-                        _ => u16::from(roll.min(4)),
-                    }
-                );
+                // A cluster engagement rolls no die of its own (Total Warfare p. 129): it shifts
+                // the target's cluster roll of 12 down to 8, which lands three of the four
+                // missiles, and spends one round whatever the system's tech base.
+                assert_eq!(ams.roll, None);
+                assert_eq!(ams.shot_down, 1);
+                assert_eq!(ams.ammunition_spent, u16::from(fed));
                 assert_eq!(
                     world.btech.constructed_units()[&target].weapon_recycle()[&ams_index],
                     recycle
@@ -277,10 +280,8 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, bool, f64, u1
                 }
                 let salvo = report.salvo.as_ref().unwrap().as_mech().unwrap();
                 assert_eq!(salvo.missiles_before_defense, Some(4));
-                assert_eq!(
-                    salvo.groups.iter().map(|g| g.damage).sum::<u16>(),
-                    u16::from(4 - ams.shot_down) * 2
-                );
+                assert_eq!(salvo.missiles_intercepted, Some(1));
+                assert_eq!(salvo.groups.iter().map(|g| g.damage).sum::<u16>(), 3 * 2);
             }
             let dice = &serde_json::to_value(&world.btech).unwrap()["constructed"]
                 [id.0.to_string()]["dice"];
@@ -300,25 +301,25 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, bool, f64, u1
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_ams() {
     use stompymux_rs::Weapon;
-    ams_interception_matrix(&[(Weapon::AntiMissileSystem, false, 1.0, 10)]).await;
+    ams_interception_matrix(&[(Weapon::AntiMissileSystem, 1.0, 10)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_clan_ams() {
     use stompymux_rs::Weapon;
-    ams_interception_matrix(&[(Weapon::ClanAntiMissileSystem, true, 1.0, 10)]).await;
+    ams_interception_matrix(&[(Weapon::ClanAntiMissileSystem, 1.0, 10)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_laser_ams() {
     use stompymux_rs::Weapon;
-    ams_interception_matrix(&[(Weapon::LaserAms, false, 7.0, 25)]).await;
+    ams_interception_matrix(&[(Weapon::LaserAms, 7.0, 25)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_clan_laser_ams() {
     use stompymux_rs::Weapon;
-    ams_interception_matrix(&[(Weapon::ClanLaserAms, true, 5.0, 25)]).await;
+    ams_interception_matrix(&[(Weapon::ClanLaserAms, 5.0, 25)]).await;
 }
 
 /// Native and Lua controls/firing share defense effects and rollback all expenditure on callback abort.
@@ -342,6 +343,7 @@ async fn ams_native_lua_controls_fire_and_rollback() {
             advance_battle_units(&mut world, 0, true);
         }
         set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
+        face_attacker(&mut world, target);
         shot_skill(&mut world, 30);
         set_battle_character_value(
             &mut world,
@@ -453,6 +455,7 @@ async fn ams_cluster_packets_and_streak_lock() {
             advance_battle_units(&mut world, 0, true);
         }
         set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
+        face_attacker(&mut world, target);
         let mut definition = world.btech.constructed_units()[&id].definition().clone();
         let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();
         let mut part = arm.criticals[&2].clone();
@@ -518,17 +521,20 @@ async fn ams_cluster_packets_and_streak_lock() {
                 before.btech.constructed_units()[&target]
             );
         } else {
-            assert_eq!(report.ams.as_ref().unwrap().shot_down, 4);
+            // The engagement shifts the cluster roll of 7 down to 3 (twelve to six LRMs), and
+            // treats the locked Streak as a roll of 11 shifted to 7 (six to four SRMs).
+            let (hits, shot_down, packets) = if weapon == Weapon::Lrm20 {
+                (12, 6, vec![5, 1])
+            } else {
+                (6, 2, vec![2, 2, 2, 2])
+            };
+            assert_eq!(report.ams.as_ref().unwrap().shot_down, shot_down);
             let salvo = report.salvo.as_ref().unwrap().as_mech().unwrap();
-            let hits = if weapon == Weapon::Lrm20 { 12 } else { 6 };
             assert_eq!(salvo.missiles_before_defense, Some(hits));
+            assert_eq!(salvo.missiles_intercepted, Some(shot_down));
             assert_eq!(
                 salvo.groups.iter().map(|g| g.damage).collect::<Vec<_>>(),
-                if weapon == Weapon::Lrm20 {
-                    vec![5, 3]
-                } else {
-                    vec![2, 2]
-                }
+                packets
             );
         }
         persistence::save(&config.database(), &world).await.unwrap();
@@ -572,6 +578,7 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
             advance_battle_units(&mut world, 0, true);
         }
         set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
+        face_attacker(&mut world, target);
         shot_skill(&mut world, 30);
         set_battle_character_value(
             &mut world,
@@ -649,14 +656,16 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
                 defense.ammunition_bin,
                 Some(if use_first { first_bin } else { second_bin })
             );
-            assert_eq!(defense.roll, if use_first { 6 } else { 12 });
-            assert_eq!(defense.shot_down, 4);
-            assert_eq!(defense.ammunition_spent, 4);
+            // One engagement: no die of its own, one round, one heat; the cluster roll of 12
+            // becomes 8 and three of the four missiles still land.
+            assert_eq!(defense.roll, None);
+            assert_eq!(defense.shot_down, 1);
+            assert_eq!(defense.ammunition_spent, 1);
             assert_eq!(
                 target_state.heat().stored,
                 before.btech.constructed_units()[&target].heat().stored + 1.0
             );
-            assert!(
+            assert_eq!(
                 report
                     .salvo
                     .as_ref()
@@ -664,7 +673,8 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
                     .as_mech()
                     .unwrap()
                     .groups
-                    .is_empty()
+                    .len(),
+                3
             );
             let unused_bin = if use_first { second_bin } else { first_bin };
             assert_eq!(
@@ -765,6 +775,7 @@ async fn narc_pod_outcomes_and_restart() {
                     advance_battle_units(&mut world, 0, true);
                 }
                 set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
+                face_attacker(&mut world, target);
             }
             if case == "explosive" {
                 assert_eq!(
@@ -772,10 +783,18 @@ async fn narc_pod_outcomes_and_restart() {
                     AmmunitionMode::Narc
                 );
             }
-            let seed = (0..=255)
-                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+            // A single-missile engagement rolls one die on the attacker's stream: 1-3
+            // destroys the pod (Total Warfare p. 129).
+            let seed = (0u32..65536)
+                .find_map(|value| {
+                    let mut bytes = [0; 32];
+                    bytes[..4].copy_from_slice(&value.to_le_bytes());
+                    let mut dice = Dice::seeded(bytes);
+                    (dice.two_d6() == 2 && (case != "intercepted" || dice.d6() <= 3))
+                        .then_some(bytes)
+                })
                 .unwrap();
-            shot_seed(&mut world, id, seed);
+            world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
             let target_seed = (0..=255)
                 .find(|seed| {
                     let mut dice = Dice::seeded([*seed; 32]);
@@ -798,7 +817,7 @@ async fn narc_pod_outcomes_and_restart() {
             } else {
                 let pod = report.narc.as_ref().unwrap();
                 assert_eq!(pod.hit, case != "miss");
-                assert_eq!(pod.intercepted, case == "intercepted");
+                assert_eq!(pod.intercepted, case == "intercepted", "{:?}", report.ams);
                 assert_eq!(pod.section.is_some(), case == "hit");
                 assert!(report.salvo.is_none());
                 assert_eq!(
@@ -1539,7 +1558,8 @@ async fn electronics_angel_disables_streak_homing() {
                 let angel = suite == ElectronicSuite::Angel;
                 assert_eq!(report.streak_confused, angel);
                 let landed = hit;
-                assert_eq!(report.launched, landed || angel);
+                // A confused Streak still launches nothing on a failed roll (TacOps: AUE p. 91).
+                assert_eq!(report.launched, landed);
                 assert_eq!(report.glancing, angel && glance);
                 assert!(
                     !report
@@ -1549,8 +1569,7 @@ async fn electronics_angel_disables_streak_homing() {
                 );
                 assert_eq!(
                     world.btech.constructed_units()[&id].ammunition()[0],
-                    before.btech.constructed_units()[&id].ammunition()[0]
-                        - u16::from(landed || angel)
+                    before.btech.constructed_units()[&id].ammunition()[0] - u16::from(landed)
                 );
                 if landed {
                     assert_eq!(
@@ -1804,6 +1823,7 @@ async fn inarc_outcomes_supply_and_restart() {
                     advance_battle_units(&mut world, 0, true);
                 }
                 set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
+                face_attacker(&mut world, target);
             }
             let bin = world.btech.constructed_units()[&id]
                 .loadout()
@@ -1820,10 +1840,18 @@ async fn inarc_outcomes_supply_and_restart() {
                     })
                     .unwrap();
             }
-            let seed = (0..=255)
-                .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+            // A single-missile engagement rolls one die on the attacker's stream: 1-3
+            // destroys the pod (Total Warfare p. 129).
+            let seed = (0u32..65536)
+                .find_map(|value| {
+                    let mut bytes = [0; 32];
+                    bytes[..4].copy_from_slice(&value.to_le_bytes());
+                    let mut dice = Dice::seeded(bytes);
+                    (dice.two_d6() == 2 && (case != "intercepted" || dice.d6() <= 3))
+                        .then_some(bytes)
+                })
                 .unwrap();
-            shot_seed(&mut world, id, seed);
+            world.btech.set_unit_dice(id, Dice::seeded(seed)).unwrap();
             shot_seed(&mut world, target, 0);
             let before = world.clone();
             let result =
@@ -1844,7 +1872,7 @@ async fn inarc_outcomes_supply_and_restart() {
                 let pod = report.narc.unwrap();
                 assert_eq!(pod.kind, kind);
                 assert_eq!(pod.hit, case != "miss");
-                assert_eq!(pod.intercepted, case == "intercepted");
+                assert_eq!(pod.intercepted, case == "intercepted", "{:?}", report.ams);
                 assert_eq!(
                     world.btech.constructed_units()[&target].has_beacon(kind),
                     case == "hit"
@@ -6286,6 +6314,7 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
         advance_battle_units(&mut base, 0, true);
     }
     set_battle_ams(&mut base, target, ObjectId(2), true).unwrap();
+    face_attacker(&mut base, target);
     let mut all = false;
     let mut partial = false;
     for seed in 0..64 {
@@ -6300,7 +6329,8 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
         };
         assert!(salvo.groups.is_empty());
         assert!(salvo.experience.is_empty());
-        let intercepted = report.ams.unwrap().shot_down;
+        let engaged = report.ams.is_some();
+        let intercepted = report.ams.map_or(0, |ams| ams.shot_down);
         let hits = salvo
             .missiles_before_defense
             .unwrap()
@@ -6309,8 +6339,8 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
             world.btech.constructed_units()[&target].sections(),
             before.btech.constructed_units()[&target].sections()
         );
-        // Firing the anti-missile system heats the defender (Total Warfare p. 129).
-        let ams_heat = if intercepted > 0 {
+        // Engaging the anti-missile system heats the defender (Total Warfare p. 130).
+        let ams_heat = if engaged {
             f64::from(Weapon::AntiMissileSystem.profile().heat)
         } else {
             0.0
@@ -6334,11 +6364,12 @@ async fn inferno_ammunition_interception_and_overflow_preserve_firing_transactio
                     + ams_heat
             );
         }
-        if all && partial {
+        if partial {
             break;
         }
     }
-    assert!(all && partial);
+    // The -4 on the cluster roll never stops a whole flight (Total Warfare p. 129).
+    assert!(partial && !all);
     base.validate(&config).unwrap();
 }
 
@@ -7798,12 +7829,13 @@ async fn rapid_misload_balance_feedback_stays_private() {
         assert!(
             pilot[..roll]
                 .iter()
-                .any(|text| text.contains("catastrophic misload"))
+                .any(|text| text.contains("explode in the barrel"))
         );
         assert!(pilot[roll + 1].starts_with("Modified Pilot Skill: BTH "));
-        assert!(output.iter().any(
-            |(who, text)| *who == ObjectId(2) && text.source().contains("catastrophic misload")
-        ));
+        assert!(
+            output.iter().any(|(who, text)| *who == ObjectId(2)
+                && text.source().contains("explode in the barrel"))
+        );
         assert!(
             !output.iter().any(|(who, text)| *who == ObjectId(2)
                 && text.source().starts_with("Modified Pilot Skill:"))

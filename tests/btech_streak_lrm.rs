@@ -192,6 +192,8 @@ async fn streak_lrm_automatic_defense_across_chassis() {
                 state["motion"]["point"] =
                     serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();
                 state["ams_enabled"] = true.into();
+                state["motion"]["heading"] = 180.0.into();
+                state["motion"]["desired_heading"] = 180.0.into();
             });
             let seed = (0..=255)
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)

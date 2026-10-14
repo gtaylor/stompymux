@@ -488,7 +488,7 @@ pub(super) fn resolve_environmental_damage(
     Ok(context.report)
 }
 
-/// Resolve a misload or propellant ignition inside its mounting section; nested explosions retain their own rules.
+/// Resolve rapid-fire rounds exploding in the barrel inside their mounting section; nested explosions retain their own rules.
 /// The shot transaction has already disabled the weapon and owns commit or rollback.
 pub(super) fn resolve_misload_in_candidate(
     world: &mut World,
@@ -1725,7 +1725,7 @@ fn resolve_dump_ignition(context: &mut ImpactContext<'_>, section: MechSection) 
 }
 
 /// Conventional 2d6 critical multiplicities; a 12 on an arm, leg or head blows it off instead.
-fn critical_count(roll: u8) -> u8 {
+pub(super) fn critical_count(roll: u8) -> u8 {
     match roll {
         8 | 9 => 1,
         10 | 11 => 2,

@@ -173,7 +173,7 @@ fn resolve(
     // Sighting still draws preparation intensity, with no supply check or cap.
     let gatling_roll = (mode == FireMode::Gatling).then(|| dice.d6());
     let rules = AimRules::configured(&config.battletech);
-    let (target, coordinate, aim, number, distance, partial_cover) = match target {
+    let (target, coordinate, aim, number, partial_cover) = match target {
         None => {
             let prepared =
                 super::artillery_firing::prepare(world, config, shooter, pilot, index, requested)?;
@@ -182,7 +182,6 @@ fn resolve(
                 Some(prepared.coordinate),
                 SightAim::Artillery(prepared.aim),
                 Some(prepared.aim.target_number).filter(|number| *number <= 900),
-                prepared.distance,
                 false,
             )
         }
@@ -202,8 +201,7 @@ fn resolve(
             )?;
             ensure!(aim.visible, "Target hex is not visible");
             let number = aim.subtotal();
-            let distance = aim.modifiers.distance;
-            (None, Some(hex), SightAim::Hex(aim), number, distance, false)
+            (None, Some(hex), SightAim::Hex(aim), number, false)
         }
         Some(super::fire_target::ResolvedFireTarget::Unit {
             unit: target,
@@ -233,18 +231,16 @@ fn resolve(
                     *number < 900
                 }
             });
-            let distance = aim.distance;
             (
                 Some(target),
                 coordinate,
                 SightAim::Unit(aim),
                 number,
-                distance,
                 partial_cover,
             )
         }
     };
-    let roll = super::launch_roll::attack_roll(weapon, distance, &mut dice);
+    let roll = super::launch_roll::attack_roll(weapon, &mut dice);
     crate::btech::with_unit_mut!(world.btech.unit_mut(shooter).unwrap(), |unit| {
         unit.dice = dice;
     });

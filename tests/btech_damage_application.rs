@@ -635,7 +635,7 @@ async fn replacement_reconciles_active_feed_recovery_without_consuming_early_rol
         begin_battle_unjam(&mut world, id, ObjectId(1), index).unwrap();
         for _ in 0..10 {
             assert!(
-                advance_battle_unjamming(&mut world, false, false)
+                advance_battle_unjamming(&mut world, false)
                     .unwrap()
                     .is_empty()
             );
@@ -651,15 +651,15 @@ async fn replacement_reconciles_active_feed_recovery_without_consuming_early_rol
         let mut continuing = saved.clone();
         for _ in 0..49 {
             assert!(
-                advance_battle_unjamming(&mut continuing, false, false)
+                advance_battle_unjamming(&mut continuing, false)
                     .unwrap()
                     .is_empty()
             );
         }
         for _ in 0..49 {
-            advance_battle_unjamming(&mut replay, false, false).unwrap();
+            advance_battle_unjamming(&mut replay, false).unwrap();
         }
-        let notices = advance_battle_unjamming(&mut continuing, false, false).unwrap();
+        let notices = advance_battle_unjamming(&mut continuing, false).unwrap();
         assert!(
             notices
                 .iter()
@@ -667,7 +667,7 @@ async fn replacement_reconciles_active_feed_recovery_without_consuming_early_rol
         );
         assert_eq!(
             notices,
-            advance_battle_unjamming(&mut replay, false, false).unwrap()
+            advance_battle_unjamming(&mut replay, false).unwrap()
         );
         assert_eq!(continuing.btech, replay.btech);
         continuing.validate(&config).unwrap();
@@ -685,7 +685,7 @@ async fn replacement_reconciles_active_feed_recovery_without_consuming_early_rol
         let checkpoint = cancelled.btech.clone();
         for _ in 0..60 {
             assert!(
-                advance_battle_unjamming(&mut cancelled, false, false)
+                advance_battle_unjamming(&mut cancelled, false)
                     .unwrap()
                     .is_empty()
             );

@@ -194,8 +194,7 @@ fn fire_with_rules(
         },
     )
     .unwrap();
-    let (salvo, ams) = stompymux_rs::by_chassis!(report, |report| (report.salvo, report.ams));
-    assert!(ams.is_none());
+    let salvo = stompymux_rs::by_chassis!(report, |report| report.salvo);
     salvo.map(|salvo| {
         let TargetSalvo::Swarm(report) = salvo else {
             panic!("Swarm report missing")
@@ -839,13 +838,15 @@ async fn aimed_swarm_matrix(source: &str) {
             };
             actual[key][shooter.0.to_string()]["aimed_section"] = serde_json::Value::Null;
             assert_eq!(actual, serde_json::to_value(&ordinary.btech).unwrap());
+            // Swarm rounds are not exempt from AMS (Tactical Operations: AUE p. 181): the
+            // initial target engages, while secondary hops are not engaged.
             for id in [target, second, third] {
                 let recycle = if let Some(unit) = world.btech.vehicles().get(&id) {
                     unit.weapon_recycle()
                 } else {
                     world.btech.constructed_units()[&id].weapon_recycle()
                 };
-                assert!(recycle.is_empty(), "Swarm must not activate AMS on any hop");
+                assert_eq!(recycle.is_empty(), id != target);
             }
             // Fidelity probe once per flight shape per shard.
             if !probed_fidelity[shape] {

@@ -30,12 +30,10 @@ pub(super) fn resolve_in_action(
         index,
         ShotRules::configured(&config.battletech, false),
     )?;
-    let mut failure_private = Vec::new();
-    if let Some(messages) =
-        super::launch_feedback::failure_messages((&report).into(), explosions, &mut failure_private)
-    {
+    let feedback: super::launch_feedback::LaunchFeedback = (&report).into();
+    if let Some(messages) = super::launch_feedback::failure_messages(&feedback) {
         return Ok(super::firing::FiringAction {
-            pilot_notices: failure_private,
+            pilot_notices: Vec::new(),
             report: report.into(),
             messages,
         });
@@ -57,6 +55,13 @@ pub(super) fn resolve_in_action(
     let mut pilot_notices = Vec::new();
     super::piloting::append_feedback(&mut pilot_notices, private, messages.len());
     messages.extend(notices.into_iter().map(|notice| (notice.unit, notice.text)));
+    let base = messages.len();
+    messages.extend(super::launch_feedback::consequence_messages(
+        feedback,
+        explosions,
+        &mut pilot_notices,
+        base,
+    ));
     Ok(super::firing::FiringAction {
         pilot_notices,
         report: report.into(),

@@ -225,21 +225,6 @@ impl AmmunitionMode {
 }
 
 impl AmmunitionMode {
-    /// These missile supplies do not trigger automatic defensive interception.
-    pub fn bypasses_ams(self) -> bool {
-        matches!(
-            self.munition(),
-            Self::Swarm
-                | Self::Swarm1
-                | Self::Mine
-                | Self::ThunderAugmented
-                | Self::ThunderVibrabomb
-                | Self::ThunderActive
-        )
-    }
-}
-
-impl AmmunitionMode {
     /// Whether this supply belongs to the MML long-range family, with or without a special round.
     pub fn is_mml_lrm(self) -> bool {
         matches!(

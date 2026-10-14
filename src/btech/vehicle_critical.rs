@@ -89,6 +89,7 @@ impl Vehicle {
         for (index, mount) in loadout.weapons.iter().enumerate() {
             if mount.criticals.contains(&location) {
                 self.jammed_weapons.remove(&index);
+                self.broken_feeds.remove(&index);
                 self.weapon_recycle.remove(&index);
                 self.weapon_failures.remove(&index);
             }

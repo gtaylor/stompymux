@@ -307,7 +307,6 @@ impl Server {
         }
         let unjam_result = crate::btech::unjam::advance_unjamming_in_action(
             &mut self.scripts.world.borrow_mut(),
-            self.config.battletech.extended_piloting != 0,
             self.config.battletech.extended_gunnery != 0,
         );
         let unjam_report = match unjam_result {

@@ -730,6 +730,8 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
                 edit(&mut world, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
+                    state["motion"]["heading"] = 180.0.into();
+                    state["motion"]["desired_heading"] = 180.0.into();
                     state["dice"] = serde_json::to_value(Dice::seeded(target_seed)).unwrap();
                 });
                 edit(&mut world, shooter, |state| {
@@ -829,6 +831,8 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                 edit(&mut base, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
+                    state["motion"]["heading"] = 180.0.into();
+                    state["motion"]["desired_heading"] = 180.0.into();
                     state["dice"] = serde_json::to_value(Dice::seeded([42; 32])).unwrap();
                 });
                 if ammunition != AmmunitionMode::Normal {
@@ -863,11 +867,8 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                     let value = serde_json::to_value(value).unwrap();
                     assert_eq!(value["glancing"], serde_json::json!(roll == threshold));
                     assert_eq!(value["salvo"].is_object(), roll >= threshold, "{value}");
-                    assert_eq!(
-                        value["ams"].is_object(),
-                        roll >= threshold && ammunition == AmmunitionMode::Normal,
-                        "{value}"
-                    );
+                    // Swarm rounds are not exempt from AMS (Tactical Operations: AUE p. 181).
+                    assert_eq!(value["ams"].is_object(), roll >= threshold, "{value}");
                     if roll < threshold {
                         let mut expected = world.clone();
                         roll_unit_dice(&mut expected, target, 2).unwrap();

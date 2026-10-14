@@ -340,7 +340,9 @@ async fn atm_ams_and_missing_supply() {
             )
             .await;
             firing::edit(&mut world, target, |state| {
-                state["ams_enabled"] = true.into()
+                state["ams_enabled"] = true.into();
+                state["motion"]["heading"] = 180.0.into();
+                state["motion"]["desired_heading"] = 180.0.into();
             });
             let seed = (0..=255)
                 .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)

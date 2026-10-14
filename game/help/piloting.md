@@ -401,8 +401,14 @@ uses no ammunition or heat.
 Successful locks hit with every missile; glancing rules do not reduce the salvo.
 Streak LRMs have no minimum range, cannot fire indirectly or hotload,
 and group their damage into five-point hits like other LRMs. Their recycle times are 15, 20, 25 and
-30 seconds respectively. Angel ECM disrupts their lock protection and makes
-them use the Clan LRM cluster tables.
+30 seconds respectively. Angel ECM negates the lock: a failed roll still launches
+nothing, and a successful one resolves on the ordinary cluster table like a
+standard launcher (Tactical Operations: AUE p. 91).
+
+Thunderbolt missiles strike as a single hit; inside the launcher's five-hex minimum
+range the unarmed warhead does half damage, rounded down (AUE p. 159). Extended LRMs
+inside ten hexes roll on the cluster column for half their rack, rounded up (AUE
+p. 139).
 
 
 `firecluster <selection>` (also `cluster`) toggles artillery between normal and cluster rounds.
@@ -451,45 +457,57 @@ Artemis. One-shot launchers cannot change modes. Compatible rounds use their own
 bins; ordinary ammunition
 is not substituted when those bins are empty. Artemis adds two to the missile
 hit-table roll, combined with the glancing-hit adjustment and capped at twelve.
-Controllers link within their own section. Mechs can also use a head controller
+Spotter-directed indirect fire gets no Artemis or Narc bonus (Total Warfare
+pp. 130, 139). Controllers link within their own section. Mechs can also use a head controller
 for a center-torso launcher; ground vehicles can use a rear controller for a
 turret launcher. VTOL controllers must be in the launcher’s section.
 
 `unjam <selection>` begins a 60-second attempt to clear a jammed ammunition feed.
 You must be walking or slower, on the ground, with no weapons recycling. Only
 one attempt can run at a time. Firing, jumping and running are blocked during
-recovery. A successful piloting check clears the jam and discards one round.
-Failure leaves the jam for another attempt. Empty supply clears it without a
-check. Shutdown or unconsciousness at completion ends the attempt without
-clearing the jam.
+recovery. Every jammed weapon is cleared the way a rotary autocannon is (Total
+Warfare p. 140, Tactical Operations p. 73): a successful Gunnery Skill Roll at +3
+clears the jam and discards one round. Failure leaves the jam for another
+attempt. Empty supply clears it without a check. Shutdown or unconsciousness at
+completion ends the attempt without clearing the jam. A feed that broke down (an
+Ultra double shot or a caseless round on a to-hit roll of 2) is useless for the
+rest of the game: `unjam` refuses it, and only repairing the mount restores it.
+
+Every feed failure happens after the shot: the burst or round is still fired, its
+ammunition and heat are spent and its damage is resolved as rolled, and only
+then is the weapon disabled (Total Warfare p. 114).
 
 `hotload <selection>` toggles hotloading on supported LRM, extended LRM and
 long-range dead-fire launchers. It removes the minimum-range penalty, or halves
 it when the game option requests that behavior. Cluster hits use the lowest two
-of three dice. Attack rolls of two or three jam the feed without spending a shot;
-use `unjam` to recover. A hotloaded launcher may explode when critically hit
-while ordinary ammunition remains. One-shot launchers cannot change modes.
+of three dice. Hotloaded launchers never jam (Tactical Operations p. 101). A
+hotloaded launcher may explode when critically hit while ordinary ammunition
+remains. One-shot launchers cannot change modes.
 
 `ultra <selection>` toggles double-shot firing on supported Ultra autocannons.
 Double shots spend two rounds and generate twice the normal heat, with one or
 two shells hitting separate locations. With only one round available, the
-weapon returns to normal firing. A loader failure in double-shot mode destroys
-the weapon; `unjam` cannot restore it.
+weapon returns to normal firing. A to-hit roll of 2 in double-shot mode fires
+both shots and then leaves the weapon useless for the rest of the game: the
+mount stays intact but its feed is jammed beyond field repair (Total Warfare
+p. 114).
 
 `rapidfire <selection>` toggles two-round firing on conventional and light
 IS autocannons. It spends twice the ammunition and heat, with one or two shells
 hitting independently. The weapon returns to normal mode if only one round
-remains. A jam requires `unjam`; a catastrophic misload destroys the weapon
-and damages internal structure in its mounting section.
+remains. A to-hit roll of 3 or 4 jams the feed after the burst; `unjam` clears
+it. A roll of 2 fires the burst and then the rounds explode in the barrel,
+destroying the weapon and dealing one shot's damage to the internal structure of
+its mounting section (Tactical Operations p. 98).
 
 `rac <selection> [1-6]` sets a rotary autocannon's burst length. Omitting
 the rate selects one round. Repeating a setting leaves it enabled. Bursts spend
 their full ammunition and heat even on a miss; each hitting shell lands
 independently. Short ammunition supply resets the weapon to single-shot mode.
 Longer bursts jam more easily: a to-hit roll of 2 jams a two- or three-round
-burst, 2-3 jams four or five rounds, and 2-4 jams six. A critical hit on a
-jammed rotary autocannon makes it explode for one shell's damage. Use `unjam`
-to recover; rotary recovery uses gunnery with a +3 penalty.
+burst, 2-3 jams four or five rounds, and 2-4 jams six. The burst that jams is
+still fired. A critical hit on a jammed rotary autocannon makes it explode for
+one shell's damage. Use `unjam` to recover with a Gunnery Skill Roll at +3.
 
 `gattling <selection>` toggles gatling fire on supported machine guns. Each
 attempt rolls damage and heat together, and spends three rounds per damage
@@ -516,9 +534,12 @@ penalty of -1 to -4 that grows as the autocannon gets smaller (Total Warfare
 p. 140). Hardened armor negates the roll. AP can be combined with rapid fire.
 
 `caseless <selection>` toggles caseless ammunition for conventional and light IS
-autocannons. Ordinary bins hold twice as many rounds. A firing roll of two or
-three jams the feed and checks for propellant ignition, which can destroy the
-weapon and cause internal damage. Surviving feed jams can be cleared with `unjam`.
+autocannons. Ordinary bins hold twice as many rounds. On a to-hit roll of 2 the
+feed breaks down (Tactical Operations: AUE p. 165): the round is spent and
+automatically misses, one roll on the Determining Critical Hits Table is applied
+to the autocannon's own slots, and the weapon is useless for the rest of the game.
+`unjam` cannot clear it; no internal damage or pilot injury results. Vehicles
+treat the breakdown as a Weapon Destroyed critical hit.
 
 `incendiary <selection>` toggles incendiary ammunition for conventional and light
 IS autocannons. Against BattleMechs it deals ordinary shell damage. A critical
@@ -622,24 +643,30 @@ attack early if you are already in the target's hex.
 
 `ams` toggles all installed anti-missile systems on the unit. Defense starts on
 for newly built units with AMS installed.
-A running unit with defense enabled automatically uses one ready mount against
-an incoming missile attack that reaches its base target number. Missed attacks
-preserve defensive ammunition, heat and recycle time. Defensive weapons cannot
-be fired manually.
+A running unit with defense enabled automatically engages an incoming missile
+attack that reaches its base target number with one ready mount whose firing arc
+covers the attack direction (Total Warfare pp. 129-130). Missed attacks and
+attacks from outside every mount's arc preserve defensive ammunition, heat and
+recycle time. Defensive weapons cannot be fired manually.
 
-Inner Sphere AMS rolls one die for interception; Clan AMS rolls two. A successful
-interception reduces the missiles that reach the unit before damage is grouped.
-An empty bin prevents activation. Critical destruction disables AMS until its
-capability is restored. Lua can toggle with `btech.unit.ams(unit, pilot)` or set
-an explicit state with a third boolean argument.
+An engagement applies -4 to the attack's cluster roll, never below 2; a locked
+Streak launcher counts as a roll of 11 before the -4. A single-missile attack
+(Narc and iNarc pods, Thunderbolts) instead rolls one die and is destroyed on a
+1-3. Each engagement spends one round of ammunition and the system's heat, and
+the mount's recycle time is the once-per-turn limit. Inner Sphere and Clan
+systems follow the same rules. An empty bin prevents activation. Critical
+destruction disables AMS until its capability is restored. Lua can toggle with
+`btech.unit.ams(unit, pilot)` or set an explicit state with a third boolean
+argument.
 
 Laser AMS uses the same switch but needs no ammunition. Its recycle time is 25
-seconds; IS laser AMS generates 7 heat per activation and Clan laser AMS 5.
+seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
 
 ### Narc beacons
 
 IS and Clan Narc launchers fire homing pods. A pod attaches to a surviving section
-without damaging armor or structure. AMS can shoot it down. Destroying the marked
+without damaging armor or structure. AMS engages it as a single missile: one die,
+destroyed on a 1-3. Destroying the marked
 section removes its beacon; otherwise the mark persists across shutdowns and restarts.
 
 `narc <weapon>` toggles Narc-compatible ammunition on a standard LRM, SRM or MML
@@ -666,8 +693,8 @@ cancels protection, and friendly ECCM cancels disturbance; equal strength cancel
 Angel suites count twice. Team identifiers determine which units are friendly.
 
 Protection on a target or disturbance on a shooter suppresses Narc and Artemis
-guidance bonuses. Angel interference also confuses Streak homing: a failed lock
-can expend ammunition, and successful attacks use ordinary missile cluster rolls.
+guidance bonuses. Angel interference also negates Streak locks: a failed roll
+still launches nothing, and successful attacks use ordinary missile cluster rolls.
 
 Status includes suite selections and current field effects. Lua provides
 `btech.unit.ecm(unit, pilot)`, `eccm`, `angelecm`, and `angeleccm`, each returning
@@ -1163,9 +1190,9 @@ increases speed further and makes both devices' checks harder. `weapons` and
 `status` show the separate counters.
 
 
-Artillery also supports `hotload <selection>`. Hotloading can jam its loader on a
-low firing roll; a jammed launch spends no ammunition or heat. An intact hotloaded
-launcher can explode if critically hit while ordinary ammunition remains aboard.
+Artillery also supports `hotload <selection>`. Hotloaded launchers never jam. An
+intact hotloaded launcher can explode if critically hit while ordinary
+ammunition remains aboard.
 Hotloading leaves the selected artillery payload and its aiming rules unchanged.
 
 Use `stinger <weapon>` to select anti-air Stinger rounds on a standard LRM launcher
@@ -1380,7 +1407,8 @@ Ordinary Swarm can hit friends and return to its launcher. Swarm-1 excludes
 friendly secondary targets. Retargeting requires the previous target to see the
 next unit within 1.9 hexes. Combat-safe units are skipped as secondary targets.
 The flight stops when its missiles are spent, its cumulative range runs out, or
-it has attacked eleven distinct targets. AMS does not intercept these rounds.
+it has attacked eleven distinct targets. AMS engages the initial attack like
+any other LRM flight (Tactical Operations: AUE p. 181).
 An initial miss ends the flight; secondary misses retain the unused missiles.
 Empty-coordinate fire does not retarget.
 
@@ -1398,8 +1426,8 @@ command to return to normal ammunition. Matching supplies are required to fire.
 Both controls work on Mechs and vehicles; other launchers, one-shot launchers and
 artillery are rejected.
 
-These missile modes retain ordinary missile damage. Mine rounds bypass AMS;
-Smoke rounds can be intercepted. They do not create smoke clouds or minefields.
+These missile modes retain ordinary missile damage, and AMS engages both. They
+do not create smoke clouds or minefields.
 Artillery templates can separately carry Smoke and Mine payloads, which create
 their environmental effects on arrival. These cockpit controls follow the
 reference's missile eligibility rather than selecting those artillery payloads.

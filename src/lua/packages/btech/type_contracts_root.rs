@@ -924,7 +924,8 @@
 
 // lua-types-begin btech 00188
 //|---@class MechSalvoReport
-//|---@field missiles_before_defense integer|nil Cluster hits before automatic defenses.
+//|---@field missiles_before_defense integer|nil Cluster hits before an anti-missile engagement shifted the roll.
+//|---@field missiles_intercepted integer|nil Hits the engagement removed from the Cluster Hits result.
 //|---@field cluster_roll integer|nil Original missile cluster roll; nil for direct non-missile hits.
 //|---@field inferno InfernoHit|nil Burning replaces armor damage.
 //|---@field groups SalvoGroup[]
@@ -983,9 +984,9 @@
 //|---@class AmsReport
 //|---@field weapon_index integer Zero-based defensive weapon index.
 //|---@field ammunition_bin integer|nil Selected normal-ammunition bin; nil for laser AMS, which uses none.
-//|---@field roll integer Interception capacity before rack and cluster limits.
-//|---@field ammunition_spent integer May be less than interception capacity.
-//|---@field shot_down integer Actual intercepted hits after the missile meets its base target number.
+//|---@field roll integer|nil The 1d6 against a single-missile attack (1-3 destroys it); nil for a cluster engagement, which shifts the Cluster Hits roll by -4 instead.
+//|---@field ammunition_spent integer One round per engagement; zero for laser AMS.
+//|---@field shot_down integer Missiles the engagement kept off the target: the single missile when destroyed, otherwise the hits the -4 removed.
 // lua-types-end
 
 // lua-types-begin btech 00194
@@ -1016,10 +1017,11 @@
 //|---@field roll integer
 //|---@field glancing boolean
 //|---@field recoil RecoilReport|nil Moving Heavy Gauss control check and fall.
-//|---@field jammed boolean Recoverable ammunition-feed failure without expenditure.
-//|---@field loader_destroyed boolean Permanent mount loss from loader failure or propellant ignition.
-//|---@field propellant_roll integer|nil Second caseless roll; eight or more ignites propellant.
-//|---@field misload TacticalImpact|nil Applied misload or propellant ignition damage.
+//|---@field jammed boolean The feed jammed after the shot; firing is blocked until it is cleared.
+//|---@field feed_broken boolean The jam is permanent for the rest of the game; unjam cannot clear it.
+//|---@field loader_destroyed boolean The mount's slots were destroyed after the shot.
+//|---@field feed_critical_roll integer|nil A caseless breakdown's Determining Critical Hits roll against the autocannon.
+//|---@field misload TacticalImpact|nil Internal damage from rapid-fire rounds exploding in the barrel.
 //|---@field launched boolean False for failed Streak lock: no heat/ammo expenditure, but weapon recycles.
 //|---@field hit boolean Launch classification; missile near misses may have no target effects.
 //|---@field expenditure WeaponUse
@@ -1047,9 +1049,10 @@
 //|---@field hit boolean Launch classification; missile near misses may have no target effects.
 //|---@field glancing boolean Tactical missile shots use the base target-number boundary.
 //|---@field recoil RecoilReport|nil Always nil: vehicles make no recoil control check.
-//|---@field jammed boolean Recoverable ammunition-feed failure without expenditure.
-//|---@field loader_destroyed boolean Permanent mount loss from loader failure or propellant ignition.
-//|---@field propellant_roll integer|nil Second caseless roll; eight or more ignites propellant.
+//|---@field jammed boolean The feed jammed after the shot; firing is blocked until it is cleared.
+//|---@field feed_broken boolean The jam is permanent for the rest of the game; unjam cannot clear it.
+//|---@field loader_destroyed boolean The mount was destroyed after the shot: rapid-fire rounds exploded or a caseless feed broke down.
+//|---@field feed_critical_roll integer|nil Always nil: a vehicle caseless breakdown destroys the weapon without a critical roll.
 //|---@field misload table|nil Shooter internal damage and critical consequences.
 //|---@field expenditure VehicleWeaponUse
 //|---@field ams AmsReport|nil
@@ -1077,6 +1080,7 @@
 //|---@field experience_messages table[] Ordered experience diagnostics.
 //|---@field cluster_roll integer|nil
 //|---@field missiles_before_defense integer|nil
+//|---@field missiles_intercepted integer|nil
 //|---@field groups table[] Located conventional damage packets.
 //|---@field inferno VehicleInfernoHit|nil Dedicated vehicle inferno outcome.
 // lua-types-end
@@ -1124,7 +1128,8 @@
 //|---@field launched boolean
 //|---@field jammed boolean
 //|---@field loader_destroyed boolean
-//|---@field propellant_roll integer|nil
+//|---@field feed_broken boolean
+//|---@field feed_critical_roll integer|nil
 //|---@field expenditure WeaponUse
 //|---@field misload {kind: "mech"|"vehicle", report: TacticalImpact|VehicleInternalDamage}|nil
 //|---@field ammunition_warning string|nil
@@ -1145,7 +1150,8 @@
 //|---@field launched boolean
 //|---@field jammed boolean
 //|---@field loader_destroyed boolean
-//|---@field propellant_roll integer|nil
+//|---@field feed_broken boolean
+//|---@field feed_critical_roll integer|nil
 //|---@field expenditure WeaponUse
 //|---@field misload {kind: "mech"|"vehicle", report: TacticalImpact|VehicleInternalDamage}|nil
 //|---@field ammunition_warning string|nil

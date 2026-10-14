@@ -160,10 +160,11 @@ async fn vehicle_artillery_payloads_and_hotload_use_common_launch_rules() {
             mode
         );
     }
-    for jam in [false, true] {
+    // Hot-loaded launchers never jam (Tactical Operations p. 101), even on a low firing roll.
+    for low_roll in [false, true] {
         let (_dir, config, mut world, map, shooter, index) = fixture(&[]).await;
         let seed = (0..=255)
-            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() <= 3) == jam)
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() <= 3) == low_roll)
             .unwrap();
         world
             .btech
@@ -178,28 +179,17 @@ async fn vehicle_artillery_payloads_and_hotload_use_common_launch_rules() {
             .eval_callback::<()>(&format!("btech.unit.hotload({},1,{index})", shooter.0))
             .unwrap();
         let result: (bool, bool, u8) = scripts.eval_callback(&format!("local r=btech.unit.fire({},1,{index}); return r.launched,r.jammed,r.expenditure.heat", shooter.0)).unwrap();
-        assert_eq!(
-            result,
-            (
-                !jam,
-                jam,
-                if jam {
-                    0
-                } else {
-                    Weapon::Sniper.profile().heat
-                }
-            )
-        );
+        assert_eq!(result, (true, false, Weapon::Sniper.profile().heat));
         assert_eq!(
             scripts.world().btech.maps()[&map].artillery_shots().len(),
-            usize::from(!jam)
+            1
         );
         assert_eq!(
             scripts.world().btech.vehicles()[&shooter]
                 .ammunition()
                 .iter()
                 .sum::<u16>(),
-            ammunition - u16::from(!jam)
+            ammunition - 1
         );
         let snapshot = scripts.world().clone();
         persistence::save(&config.database(), &snapshot)

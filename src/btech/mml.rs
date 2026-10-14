@@ -142,7 +142,7 @@ mod tests {
         );
         assert_eq!(Mode::MmlLrmNarc.with_munition(Mode::Normal), Mode::MmlLrm);
         assert_eq!(Mode::Narc.with_munition(Mode::Normal), Mode::Normal);
-        assert!(Mode::MmlLrmSwarm.bypasses_ams() && Mode::MmlLrmSwarm1.is_swarm());
+        assert!(Mode::MmlLrmSwarm.is_swarm() && Mode::MmlLrmSwarm1.is_swarm());
     }
 
     /// Long-range special rounds keep LRM damage and grouping; Artemis adds its cluster bonus.
@@ -179,6 +179,8 @@ mod tests {
                     angel_blocked: false,
                     target_beacon: beacon,
                     artemis_v: false,
+                    ams_engaged: false,
+                    indirect: false,
                 };
                 let actual =
                     roll_weapon_groups(request(mode), &mut Dice::seeded([seed; 32])).unwrap();
@@ -193,7 +195,7 @@ mod tests {
         }
     }
 
-    /// Interception removes missiles, not damage points, after shared hotload and glancing rolls.
+    /// An anti-missile engagement shifts the cluster roll after shared hotload and glancing rolls.
     #[test]
     fn interception_uses_ammunition_damage_and_preserves_dice() {
         for weapon in [Weapon::Mml3, Weapon::Mml5, Weapon::Mml7, Weapon::Mml9] {
@@ -211,7 +213,7 @@ mod tests {
                             } else {
                                 first + second
                             };
-                            let mut groups = roll_weapon_groups(
+                            let groups = roll_weapon_groups(
                                 WeaponGroupRequest {
                                     weapon,
                                     ammunition: mode,
@@ -223,6 +225,8 @@ mod tests {
                                     angel_blocked: false,
                                     target_beacon: false,
                                     artemis_v: false,
+                                    ams_engaged: false,
+                                    indirect: false,
                                 },
                                 &mut dice,
                             )
@@ -231,15 +235,46 @@ mod tests {
                             assert_eq!(groups.cluster_roll, Some(roll));
                             let per_missile = u16::from(weapon.profile_for_ammunition(mode).damage);
                             let hits = groups.damage.iter().sum::<u16>() / per_missile;
+                            assert_eq!(groups.missile_count(), hits);
+                            // An engaged AMS shifts the same cluster roll down four.
+                            let mut defended_dice = Dice::seeded([seed; 32]);
+                            let defended = roll_weapon_groups(
+                                WeaponGroupRequest {
+                                    weapon,
+                                    ammunition: mode,
+                                    fire_mode,
+                                    gatling_damage: None,
+                                    distance: Some(7.0),
+                                    glancing,
+                                    guidance_blocked: false,
+                                    angel_blocked: false,
+                                    target_beacon: false,
+                                    artemis_v: false,
+                                    ams_engaged: true,
+                                    indirect: false,
+                                },
+                                &mut defended_dice,
+                            )
+                            .unwrap();
+                            assert_eq!(defended_dice, expected);
+                            let shifted = (i16::from(roll) - if glancing { 4 } else { 0 } - 4)
+                                .clamp(2, 12) as u8;
+                            let expected_hits = weapon
+                                .damage_groups_for_ammunition_hit(
+                                    mode,
+                                    Some(shifted),
+                                    false,
+                                    Some(7.0),
+                                )
+                                .unwrap()
+                                .iter()
+                                .sum::<u16>()
+                                / per_missile;
+                            assert_eq!(defended.missile_count(), expected_hits);
                             assert_eq!(
-                                groups.intercept(weapon, 2),
-                                Some((hits, hits.saturating_sub(2)))
+                                defended.missiles_intercepted,
+                                Some((hits - expected_hits) as u8)
                             );
-                            assert_eq!(
-                                groups.damage.iter().sum::<u16>(),
-                                hits.saturating_sub(2) * per_missile
-                            );
-                            assert_eq!(dice, expected);
                         }
                     }
                 }

@@ -187,6 +187,9 @@ pub struct Vehicle {
     pub(super) unjam: Option<super::Unjam>,
     pub(super) pod_removal: Option<u8>,
     pub(super) jammed_weapons: std::collections::BTreeSet<usize>,
+    /// Jammed feeds that cannot be cleared in the field; a subset of `jammed_weapons`.
+    #[serde(default)]
+    pub(super) broken_feeds: std::collections::BTreeSet<usize>,
     #[serde(default)]
     pub(super) component_failures: Vec<super::ComponentFailure<super::VehicleCriticalLocation>>,
     pub(super) weapon_failures: BTreeMap<usize, super::EquipmentFailure>,
@@ -388,6 +391,8 @@ struct VehicleRecord {
     pod_removal: Option<u8>,
     jammed_weapons: std::collections::BTreeSet<usize>,
     #[serde(default)]
+    broken_feeds: std::collections::BTreeSet<usize>,
+    #[serde(default)]
     component_failures: Vec<super::ComponentFailure<super::VehicleCriticalLocation>>,
     weapon_failures: BTreeMap<usize, super::EquipmentFailure>,
     weapon_recycle: BTreeMap<usize, u16>,
@@ -486,6 +491,7 @@ super::saved_parts::saved_parts!(Vehicle {
         ammunition_modes,
         ammunition_sections,
         jammed_weapons,
+        broken_feeds,
         component_failures,
         weapon_failures,
         powered_down_weapons,
@@ -676,6 +682,7 @@ impl Vehicle {
         self.ammunition_sections = super::unit::remap_map(&remap, &self.ammunition_sections);
         self.weapon_recycle = super::unit::remap_map(&remap, &self.weapon_recycle);
         self.jammed_weapons = super::unit::remap_set(&remap, &self.jammed_weapons);
+        self.broken_feeds = super::unit::remap_set(&remap, &self.broken_feeds);
         self.spent_launchers = super::unit::remap_set(&remap, &self.spent_launchers);
         self.powered_down_weapons = super::unit::remap_set(&remap, &self.powered_down_weapons);
         self.weapon_failures = super::unit::remap_map(&remap, &self.weapon_failures);
@@ -812,6 +819,7 @@ impl Vehicle {
         if let Some(index) = weapon {
             self.weapon_failures.remove(&index);
             self.jammed_weapons.remove(&index);
+            self.broken_feeds.remove(&index);
             self.spent_launchers.remove(&index);
             self.powered_down_weapons.remove(&index);
             self.weapon_recycle.remove(&index);
@@ -1004,6 +1012,7 @@ impl Vehicle {
             unjam: None,
             pod_removal: None,
             jammed_weapons: Default::default(),
+            broken_feeds: Default::default(),
             component_failures: Vec::new(),
             weapon_failures: BTreeMap::new(),
             powered_down_weapons: Default::default(),
@@ -1544,18 +1553,6 @@ impl Vehicle {
         Ok(())
     }
 
-    /// Apply the common surviving-inventory rule after a misload has resolved vehicle damage.
-    pub(super) fn spend_surviving_draws(
-        &mut self,
-        draws: Vec<super::AmmunitionDraw>,
-    ) -> Vec<super::AmmunitionDraw> {
-        let spent = super::ammunition_feed::spend_surviving_draws(&mut self.ammunition, draws);
-        if !spent.is_empty() {
-            self.live_mass.invalidate();
-        }
-        spent
-    }
-
     /// Apply one protection phase, returning overflow for the combat caller to handle.
     /// Vehicle armor uses the selected hull face; the Mech rear-armor selector has no effect.
     /// This primitive does not transfer damage or roll criticals, and turret loss preserves the hull.
@@ -1611,6 +1608,8 @@ impl Vehicle {
                 self.turret_offset = 0.0;
             }
             self.jammed_weapons
+                .retain(|index| loadout.weapons[*index].criticals[0].section != section);
+            self.broken_feeds
                 .retain(|index| loadout.weapons[*index].criticals[0].section != section);
             self.weapon_failures
                 .retain(|index, _| loadout.weapons[*index].criticals[0].section != section);
@@ -1760,6 +1759,7 @@ impl Vehicle {
             unjam: record.unjam,
             pod_removal: record.pod_removal,
             jammed_weapons: record.jammed_weapons,
+            broken_feeds: record.broken_feeds,
             component_failures: record.component_failures,
             weapon_failures: record.weapon_failures,
             weapon_recycle: record.weapon_recycle,
@@ -2110,6 +2110,10 @@ impl Vehicle {
                 .is_some_and(|mount| mount.weapon.profile().ammunition_per_ton > 0
                     && !self.critical_unavailable(mount.criticals[0]))),
             "Invalid vehicle ammunition-feed jam"
+        );
+        ensure!(
+            self.broken_feeds.is_subset(&self.jammed_weapons),
+            "Broken feed without a jam"
         );
         ensure!(
             self.unjam

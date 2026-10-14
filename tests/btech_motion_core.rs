@@ -6090,12 +6090,7 @@ async fn conventional_direct_fire_matrix(weapons: &[stompymux_rs::Weapon]) {
             .unwrap();
         let mut attack_dice = Dice::seeded([1; 32]);
         let mut values = vec![attack_dice.d6(), attack_dice.d6()];
-        if weapon.is_dead_fire()
-            || (matches!(
-                weapon,
-                Weapon::Elrm5 | Weapon::Elrm10 | Weapon::Elrm15 | Weapon::Elrm20
-            ) && distance < 10.0)
-        {
+        if weapon.is_dead_fire() {
             values.push(attack_dice.d6());
             values.sort_unstable();
         }

@@ -1,18 +1,36 @@
-//! Automatic anti-missile defenses, with expenditure owned by the enclosing shot transaction.
+//! Anti-missile systems (Total Warfare pp. 129-130), with expenditure owned by the enclosing shot.
+//!
+//! An AMS whose firing arc covers the incoming attack may engage one missile attack per turn
+//! (the mount's recycle). Engaging applies -4 to the attack's Cluster Hits roll, never below 2;
+//! a Streak launcher is treated as a roll of 11 before the -4; a single-missile attack is
+//! destroyed on a 1d6 roll of 1-3. Each engagement spends one round of ammunition (laser AMS
+//! none) and the system's heat. The `ams` switch is the defender's standing choice to engage.
 use super::{Mech, Notice, Power, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::Serialize;
 
-/// One defensive activation against an admitted missile hit.
+/// One engagement against an admitted missile hit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct AmsReport {
     pub weapon_index: usize,
     /// Bin that fed the defense; laser AMS has none.
     pub ammunition_bin: Option<usize>,
-    pub roll: u8,
+    /// The 1d6 rolled against a single-missile attack (1-3 destroys it); a cluster engagement
+    /// rolls no die and shifts the Cluster Hits roll by -4 instead.
+    pub roll: Option<u8>,
+    /// One round per engagement when the system uses ammunition.
     pub ammunition_spent: u16,
+    /// Missiles the engagement kept off the target: the single missile when destroyed, otherwise
+    /// the hits the -4 removed from the Cluster Hits result. Filled in after cluster resolution.
     pub shot_down: u8,
+}
+
+impl AmsReport {
+    /// Whether a single-missile attack was destroyed before reaching the target.
+    pub fn destroyed_missile(&self) -> bool {
+        self.roll.is_some_and(|roll| roll <= 3)
+    }
 }
 
 impl Mech {
@@ -39,15 +57,15 @@ pub fn set_ams(world: &mut World, id: ObjectId, pilot: ObjectId, enabled: bool) 
     super::ams_unit::set_enabled(world, id, enabled)
 }
 
-/// Select the first ready mount, then its first usable normal-ammunition bin; one activation per attack.
-/// The attacker owns interception dice. A shortage caps expenditure, not interception capacity.
+/// Engage an admitted missile hit with the first ready mount whose arc covers the attacker,
+/// fed by its first usable normal-ammunition bin. The attacker owns the single-missile die.
 pub(super) fn intercept(
     world: &mut World,
     attacker: ObjectId,
     target: ObjectId,
-    incoming: u8,
+    weapon: Weapon,
 ) -> Result<Option<AmsReport>> {
-    if incoming == 0
+    if weapon.profile().missiles == 0
         || !super::ams_unit::enabled(world, target)?
         || super::scanner::scanner_unit(world, target)
             .is_none_or(|unit| unit.power != Power::Running)
@@ -55,33 +73,64 @@ pub(super) fn intercept(
     {
         return Ok(None);
     }
-    let Some(super::ams_unit::Defense { index, weapon, bin }) =
-        super::ams_unit::select(world, target)?
+    let Some(super::ams_unit::Defense {
+        index,
+        weapon: system,
+        bin,
+    }) = super::ams_unit::select(world, target, attacker)?
     else {
         return Ok(None);
     };
-    let clan = matches!(weapon, Weapon::ClanAntiMissileSystem | Weapon::ClanLaserAms);
-    let dice = super::dice::unit_dice_mut(world, attacker)?;
-    let roll = if clan { dice.generic_roll() } else { dice.d6() };
-    let count = roll.min(incoming);
-    let spent = super::ams_unit::expend(world, target, index, weapon, bin, u16::from(count))?;
+    let roll = (weapon.profile().missiles == 1)
+        .then(|| super::dice::unit_dice_mut(world, attacker).map(|dice| dice.d6()))
+        .transpose()?;
+    let spent = super::ams_unit::expend(world, target, index, system, bin)?;
     Ok(Some(AmsReport {
         weapon_index: index,
         ammunition_bin: bin,
         roll,
         ammunition_spent: spent,
-        shot_down: count,
+        shot_down: 0,
     }))
 }
 
 impl AmsReport {
-    /// Defense feedback after cluster resolution determines whether every potential hit was intercepted.
+    /// Defense feedback after cluster resolution determines how many hits the engagement removed.
+    /// `hits` is the cluster result before the engagement; None for a single missile.
     pub(super) fn notices(
         &self,
         attacker: ObjectId,
         target: ObjectId,
         hits: Option<u8>,
     ) -> Vec<Notice> {
+        if self.roll.is_some() {
+            return if self.destroyed_missile() {
+                vec![
+                    Notice {
+                        unit: attacker,
+                        text: "Your missile is shot down by the target!".into(),
+                    },
+                    Notice {
+                        unit: target,
+                        text:
+                            "Your Anti-Missile System activates and destroys the incoming missile!"
+                                .into(),
+                    },
+                ]
+            } else {
+                vec![
+                    Notice {
+                        unit: attacker,
+                        text: "The target's Anti-Missile System fails to stop your missile!".into(),
+                    },
+                    Notice {
+                        unit: target,
+                        text: "Your Anti-Missile System activates but the incoming missile gets through!"
+                            .into(),
+                    },
+                ]
+            };
+        }
         let Some(hits) = hits else {
             return vec![Notice {
                 unit: target,
@@ -163,4 +212,50 @@ pub(crate) fn command(
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Only a single-missile engagement's die decides destruction; cluster engagements shift the
+    /// Cluster Hits roll and report the hits removed instead.
+    #[test]
+    fn single_missile_destruction_follows_the_die() {
+        for roll in 1..=6 {
+            let report = AmsReport {
+                weapon_index: 0,
+                ammunition_bin: None,
+                roll: Some(roll),
+                ammunition_spent: 0,
+                shot_down: 0,
+            };
+            assert_eq!(report.destroyed_missile(), roll <= 3);
+            let notices = report.notices(ObjectId(1), ObjectId(2), None);
+            assert_eq!(notices.len(), 2);
+            assert_eq!(
+                notices[0].text.contains("shot down"),
+                report.destroyed_missile()
+            );
+        }
+        let cluster = AmsReport {
+            weapon_index: 0,
+            ammunition_bin: Some(0),
+            roll: None,
+            ammunition_spent: 1,
+            shot_down: 2,
+        };
+        assert!(!cluster.destroyed_missile());
+        let notices = cluster.notices(ObjectId(1), ObjectId(2), Some(5));
+        assert!(notices[0].text.contains("shoots down 2"));
+        let all = AmsReport {
+            shot_down: 5,
+            ..cluster
+        };
+        assert!(
+            all.notices(ObjectId(1), ObjectId(2), Some(5))[0]
+                .text
+                .starts_with("All of your missiles")
+        );
+    }
 }

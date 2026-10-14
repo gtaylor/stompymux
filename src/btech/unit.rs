@@ -265,6 +265,9 @@ pub struct Mech {
     pub(super) powered_down_weapons: std::collections::BTreeSet<usize>,
     #[serde(default)]
     pub(super) jammed_weapons: std::collections::BTreeSet<usize>,
+    /// Jammed feeds that cannot be cleared in the field; a subset of `jammed_weapons`.
+    #[serde(default)]
+    pub(super) broken_feeds: std::collections::BTreeSet<usize>,
     #[serde(default)]
     pub(super) unjam: Option<super::Unjam>,
     #[serde(default)]
@@ -389,6 +392,7 @@ super::saved_parts::saved_parts!(Mech {
         reconstructed_cooling,
         powered_down_weapons,
         jammed_weapons,
+        broken_feeds,
         spent_launchers,
         fire_modes,
         ammunition_modes,
@@ -685,6 +689,7 @@ impl Mech {
         if let Some(index) = weapon {
             self.weapon_failures.remove(&index);
             self.jammed_weapons.remove(&index);
+            self.broken_feeds.remove(&index);
             self.spent_launchers.remove(&index);
             self.powered_down_weapons.remove(&index);
             self.weapon_recycle.remove(&index);
@@ -755,6 +760,7 @@ impl Mech {
         self.ammunition_sections = remap_map(&remap, &self.ammunition_sections);
         self.weapon_recycle = remap_map(&remap, &self.weapon_recycle);
         self.jammed_weapons = remap_set(&remap, &self.jammed_weapons);
+        self.broken_feeds = remap_set(&remap, &self.broken_feeds);
         self.spent_launchers = remap_set(&remap, &self.spent_launchers);
         self.powered_down_weapons = remap_set(&remap, &self.powered_down_weapons);
         self.weapon_failures = remap_map(&remap, &self.weapon_failures);
@@ -979,6 +985,7 @@ impl Mech {
                 .collect(),
             weapon_recycle: BTreeMap::new(),
             jammed_weapons: Default::default(),
+            broken_feeds: Default::default(),
             unjam: None,
             dumping: None,
             spent_launchers: loadout
@@ -1392,6 +1399,10 @@ impl Mech {
                 .get(*index)
                 .is_some_and(|mount| mount.weapon.profile().ammunition_per_ton > 0)),
             "Invalid jammed weapon"
+        );
+        ensure!(
+            self.broken_feeds.is_subset(&self.jammed_weapons),
+            "Broken feed without a jam"
         );
         ensure!(
             self.unjam

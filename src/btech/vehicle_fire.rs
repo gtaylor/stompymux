@@ -198,11 +198,18 @@ fn fire_shot(
         angel_blocked,
     );
     launch.glancing = resolved.glancing;
-    let mut ams = if resolved.hit && weapon.profile().missiles > 0 && !ammunition.bypasses_ams() {
-        super::ams::intercept(&mut candidate, shooter, target, weapon.profile().missiles)?
+    let mut ams = if resolved.hit && weapon.profile().missiles > 0 {
+        super::ams::intercept(&mut candidate, shooter, target, weapon)?
     } else {
         None
     };
+    // A single missile the defense destroyed never reaches the target; a cluster engagement
+    // shifts the Cluster Hits roll instead.
+    let missile_destroyed = ams
+        .as_ref()
+        .is_some_and(super::AmsReport::destroyed_missile);
+    let ams_engaged = ams.is_some() && !missile_destroyed;
+    let indirect_fire = aim.indirect.is_some();
     let super::direct_effects::DirectEffects {
         narc,
         cooling,
@@ -219,7 +226,7 @@ fn fire_shot(
             fire_mode: launch.expenditure.fire_mode,
             hit: resolved.hit,
             launched: launch.expenditure.launched,
-            intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
+            intercepted: missile_destroyed,
             vehicle_impact: rules.shot.vehicle_impact,
             distance: aim.distance,
             gatling_damage: launch.expenditure.gatling_damage,
@@ -260,9 +267,15 @@ fn fire_shot(
                 glancing: resolved.glancing,
                 character,
                 experience,
+                ams_engaged,
             },
         )?))
-    } else if !resolved.hit || narc.is_some() || cooling.is_some() || heat_transfer > 0 {
+    } else if missile_destroyed
+        || !resolved.hit
+        || narc.is_some()
+        || cooling.is_some()
+        || heat_transfer > 0
+    {
         None
     } else if candidate.btech.vehicles().contains_key(&target) {
         Some(super::target_salvo::resolve_vehicle_target_in_candidate(
@@ -279,7 +292,8 @@ fn fire_shot(
                 guidance_blocked: source_field.blocks_outgoing_guidance()
                     || target_field.blocks_incoming_guidance(),
                 angel_blocked,
-                intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
+                ams_engaged,
+                indirect: indirect_fire,
             },
             rules.shot.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
@@ -305,20 +319,21 @@ fn fire_shot(
                 },
                 glancing: resolved.glancing,
                 character,
-                intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
+                ams_engaged,
+                indirect: indirect_fire,
                 experience,
             },
         )?))
     };
     if let Some(defense) = &mut ams {
-        defense.shot_down = defense.shot_down.min(if let Some(pod) = &narc {
-            u8::from(pod.hit)
+        defense.shot_down = if missile_destroyed {
+            1
         } else {
             salvo
                 .as_ref()
-                .and_then(TargetSalvo::missiles_before_defense)
+                .and_then(TargetSalvo::missiles_intercepted)
                 .unwrap_or(0)
-        });
+        };
     }
 
     super::shot_counters::record(
@@ -343,7 +358,8 @@ fn fire_shot(
         roll,
         loader_destroyed,
         jammed,
-        propellant_roll,
+        feed_broken,
+        feed_critical_roll,
         misload,
         hit,
         glancing,
@@ -361,7 +377,8 @@ fn fire_shot(
         hit,
         jammed,
         loader_destroyed,
-        propellant_roll,
+        feed_broken,
+        feed_critical_roll,
         misload,
         glancing,
         expenditure,
@@ -391,13 +408,6 @@ impl VehicleShotReport {
         &self,
         private: &mut Vec<super::PilotNotice>,
     ) -> Vec<Notice> {
-        if let Some(misload) = &self.misload {
-            super::piloting::append_feedback(private, misload.pilot_notices.iter().cloned(), 0);
-            return misload.notices.clone();
-        }
-        if self.jammed || self.loader_destroyed {
-            return Vec::new();
-        }
         if !self.expenditure.launched {
             let mut notices = self.launch_notices.clone();
             notices.extend(super::launch_feedback::streak_failure(self.shooter));

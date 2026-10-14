@@ -198,6 +198,8 @@ async fn defensive_recycle_and_battle_value_use_shared_settings() {
             .await;
             firing::edit(&mut world, target, |state| {
                 state["ams_enabled"] = true.into();
+                state["motion"]["heading"] = 180.0.into();
+                state["motion"]["desired_heading"] = 180.0.into();
                 state["fortified"] = true.into();
             });
             let weapons = battle_weapon_specifications(&world, target).unwrap();
@@ -224,7 +226,16 @@ async fn defensive_recycle_and_battle_value_use_shared_settings() {
             assert_eq!(scripts.world().btech, before);
             let report: mlua::Table = scripts.eval_callback(&format!("return {fire}")).unwrap();
             let ams: mlua::Table = report.get("ams").unwrap();
-            assert_eq!(ams.get::<u8>("shot_down").unwrap(), 2);
+            assert_eq!(ams.get::<u16>("ammunition_spent").unwrap(), 1);
+            let salvo: mlua::Table = report
+                .get::<mlua::Table>("salvo")
+                .unwrap()
+                .get("report")
+                .unwrap();
+            assert_eq!(
+                ams.get::<u8>("shot_down").unwrap(),
+                salvo.get::<u8>("missiles_intercepted").unwrap()
+            );
             assert_eq!(
                 recycle(&scripts.world(), target, ams.get("weapon_index").unwrap()),
                 Some(127)

@@ -1,4 +1,8 @@
 //! Timed ammunition-feed recovery on committed simulation seconds.
+//!
+//! Every jammed ballistic weapon is cleared with the rotary autocannon procedure (Total Warfare
+//! p. 140, Tactical Operations p. 73): declare the attempt, hold to walking speed with no weapon
+//! attacks, then make a Gunnery Skill Roll at +3. A broken feed cannot be cleared in the field.
 use super::{Mech, MessageTarget as Recipient, Power};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
@@ -48,6 +52,10 @@ pub fn begin_unjam(
         "The ammo feed mechanism for that weapon is not jammed."
     );
     ensure!(
+        !state.broken,
+        "The ammo feed on that weapon is broken beyond field repair."
+    );
+    ensure!(
         !state.jumping,
         "You can't unjam the ammo feed while jumping!"
     );
@@ -69,20 +77,16 @@ pub fn begin_unjam(
     ))
 }
 
-/// Recovery feedback and accepted XP diagnostics owned by the enclosing host transaction.
+/// Recovery feedback owned by the enclosing host transaction.
 #[derive(Default)]
 pub(crate) struct UnjamReport {
     messages: Vec<(Recipient, String)>,
-    /// Diagnostic records positioned before their corresponding cockpit message.
-    diagnostics: Vec<(usize, super::DiagnosticMessage)>,
-    experience_messages: Vec<super::DiagnosticMessage>,
 }
 
 /// Advance tactical attempts atomically. Character attempts require the host action.
-/// Expiry consumes one applicable skill roll and at most one discarded round.
+/// Expiry consumes one Gunnery Skill Roll at +3 and at most one discarded round.
 pub fn advance_unjamming(
     world: &mut World,
-    extended_piloting: bool,
     extended_gunnery: bool,
 ) -> Result<Vec<(Recipient, String)>> {
     ensure!(
@@ -106,24 +110,15 @@ pub fn advance_unjamming(
             }),
         "Character unjamming requires a host action"
     );
-    Ok(advance_unjamming_inner(world, extended_piloting, extended_gunnery, false)?.messages)
+    Ok(advance_unjamming_in_action(world, extended_gunnery)?.messages)
 }
 
 /// Resolve character-capable attempts without publishing; the simulation tick owns rollback.
+/// Every jammed weapon is cleared with the rotary autocannon procedure: a Gunnery Skill Roll
+/// at +3 (Total Warfare p. 140, Tactical Operations p. 73).
 pub(crate) fn advance_unjamming_in_action(
     world: &mut World,
-    extended_piloting: bool,
     extended_gunnery: bool,
-) -> Result<UnjamReport> {
-    advance_unjamming_inner(world, extended_piloting, extended_gunnery, true)
-}
-
-/// Shared countdown and recovery resolution for tactical and host-capable callers.
-fn advance_unjamming_inner(
-    world: &mut World,
-    extended_piloting: bool,
-    extended_gunnery: bool,
-    character: bool,
 ) -> Result<UnjamReport> {
     world.attempt(|world| {
         let ids: Vec<_> = world
@@ -146,8 +141,6 @@ fn advance_unjamming_inner(
             })
             .collect();
         let mut messages = Vec::new();
-        let mut diagnostics = Vec::new();
-        let mut experience_messages = Vec::new();
         for id in ids {
             let pending = super::unjam_unit::pending(world, id)?;
             let attempt = pending.as_mut().unwrap();
@@ -158,7 +151,11 @@ fn advance_unjamming_inner(
             let index = attempt.weapon_index;
             *pending = None;
             let state = super::unjam_unit::state(world, id, index)?;
-            if state.power != Power::Running || !state.ready.intact || !state.jammed {
+            if state.power != Power::Running
+                || !state.ready.intact
+                || !state.jammed
+                || state.broken
+            {
                 continue;
             }
             if state
@@ -178,34 +175,14 @@ fn advance_unjamming_inner(
                 .pilot
                 .map(Recipient::Player)
                 .unwrap_or(Recipient::Unit(id));
-            let success = if weapon.is_rotary() {
-                let target = super::unit_gunnery_target(world, id, index, extended_gunnery)? + 3;
-                let roll = super::dice::unit_dice_mut(world, id)?.generic_roll();
-                messages.push((recipient, "You make a roll to unjam the weapon!".into()));
-                messages.push((
-                    recipient,
-                    format!("Modified Gunnery Skill: BTH {target}\tRoll: {roll}"),
-                ));
-                i16::from(roll) >= target
-            } else {
-                let mut check = super::roll_piloting(world, id, 0, extended_piloting)?;
-                if let Some(diagnostic) = check.diagnostic(true) {
-                    diagnostics.push((messages.len(), diagnostic));
-                }
-                if character {
-                    experience_messages.extend(super::piloting::award_control_check(
-                        world,
-                        id,
-                        &mut check,
-                        extended_piloting,
-                    )?);
-                }
-                if let Some(feedback) = check.messages() {
-                    messages.extend(feedback.into_iter().map(|text| (recipient, text)));
-                }
-                check.success
-            };
-            if !success {
+            let target = super::unit_gunnery_target(world, id, index, extended_gunnery)? + 3;
+            let roll = super::dice::unit_dice_mut(world, id)?.generic_roll();
+            messages.push((recipient, "You make a roll to unjam the weapon!".into()));
+            messages.push((
+                recipient,
+                format!("Modified Gunnery Skill: BTH {target}\tRoll: {roll}"),
+            ));
+            if i16::from(roll) < target {
                 messages.push((Recipient::Unit(id), "Your attempt to remove the jammed slug fails. You'll need to try again to clear it.".into()));
                 continue;
             }
@@ -220,46 +197,27 @@ fn advance_unjamming_inner(
                     .map(|(id, text)| (Recipient::Unit(id), text)),
             );
         }
-        Ok(UnjamReport {
-            messages,
-            diagnostics,
-            experience_messages,
-    })
+        Ok(UnjamReport { messages })
     })
 }
 
-/// Publish feedback and diagnostics under the caller's checkpoint.
+/// Publish feedback under the caller's checkpoint.
 pub(crate) fn publish_unjamming(scripts: &crate::Scripts, report: &UnjamReport) -> Result<()> {
-    let mut diagnostics = report.diagnostics.iter().peekable();
-    for index in 0..=report.messages.len() {
-        while diagnostics
-            .peek()
-            .is_some_and(|(before, _)| *before == index)
-        {
-            let (_, diagnostic) = diagnostics.next().unwrap();
-            super::diagnostics::publish(scripts, std::slice::from_ref(diagnostic));
-        }
-        if let Some((recipient, text)) = report.messages.get(index) {
-            super::notify_message(scripts, *recipient, text)?;
-        }
+    for (recipient, text) in &report.messages {
+        super::notify_message(scripts, *recipient, text)?;
     }
-    super::diagnostics::publish(scripts, &report.experience_messages);
     Ok(())
 }
 
-/// Advance and publish recovery, restoring countdowns, ammunition, XP and output on failure.
+/// Advance and publish recovery, restoring countdowns, ammunition and output on failure.
 pub fn advance_unjamming_action(
     scripts: &crate::Scripts,
     config: &crate::Config,
-    extended_piloting: bool,
     extended_gunnery: bool,
 ) -> Result<()> {
     scripts.atomic(|_| {
-        let report = advance_unjamming_in_action(
-            &mut scripts.world.borrow_mut(),
-            extended_piloting,
-            extended_gunnery,
-        )?;
+        let report =
+            advance_unjamming_in_action(&mut scripts.world.borrow_mut(), extended_gunnery)?;
         publish_unjamming(scripts, &report)?;
         scripts.world.borrow().validate_action(config)
     })

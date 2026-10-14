@@ -908,7 +908,8 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 ## MechSalvoReport
 
-- `missiles_before_defense`: `integer|nil` — Cluster hits before automatic defenses.
+- `missiles_before_defense`: `integer|nil` — Cluster hits before an anti-missile engagement shifted the roll.
+- `missiles_intercepted`: `integer|nil` — Hits the engagement removed from the Cluster Hits result.
 - `cluster_roll`: `integer|nil` — Original missile cluster roll; nil for direct non-missile hits.
 - `inferno`: `InfernoHit|nil` — Burning replaces armor damage.
 - `groups`: `SalvoGroup[]`
@@ -963,9 +964,9 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `weapon_index`: `integer` — Zero-based defensive weapon index.
 - `ammunition_bin`: `integer|nil` — Selected normal-ammunition bin; nil for laser AMS, which uses none.
-- `roll`: `integer` — Interception capacity before rack and cluster limits.
-- `ammunition_spent`: `integer` — May be less than interception capacity.
-- `shot_down`: `integer` — Actual intercepted hits after the missile meets its base target number.
+- `roll`: `integer|nil` — The 1d6 against a single-missile attack (1-3 destroys it); nil for a cluster engagement, which shifts the Cluster Hits roll by -4 instead.
+- `ammunition_spent`: `integer` — One round per engagement; zero for laser AMS.
+- `shot_down`: `integer` — Missiles the engagement kept off the target: the single missile when destroyed, otherwise the hits the -4 removed.
 
 ## BeaconKind
 
@@ -997,10 +998,11 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `roll`: `integer`
 - `glancing`: `boolean`
 - `recoil`: `RecoilReport|nil` — Moving Heavy Gauss control check and fall.
-- `jammed`: `boolean` — Recoverable ammunition-feed failure without expenditure.
-- `loader_destroyed`: `boolean` — Permanent mount loss from loader failure or propellant ignition.
-- `propellant_roll`: `integer|nil` — Second caseless roll; eight or more ignites propellant.
-- `misload`: `TacticalImpact|nil` — Applied misload or propellant ignition damage.
+- `jammed`: `boolean` — The feed jammed after the shot; firing is blocked until it is cleared.
+- `feed_broken`: `boolean` — The jam is permanent for the rest of the game; unjam cannot clear it.
+- `loader_destroyed`: `boolean` — The mount's slots were destroyed after the shot.
+- `feed_critical_roll`: `integer|nil` — A caseless breakdown's Determining Critical Hits roll against the autocannon.
+- `misload`: `TacticalImpact|nil` — Internal damage from rapid-fire rounds exploding in the barrel.
 - `launched`: `boolean` — False for failed Streak lock: no heat/ammo expenditure, but weapon recycles.
 - `hit`: `boolean` — Launch classification; missile near misses may have no target effects.
 - `expenditure`: `WeaponUse`
@@ -1027,9 +1029,10 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `hit`: `boolean` — Launch classification; missile near misses may have no target effects.
 - `glancing`: `boolean` — Tactical missile shots use the base target-number boundary.
 - `recoil`: `RecoilReport|nil` — Always nil: vehicles make no recoil control check.
-- `jammed`: `boolean` — Recoverable ammunition-feed failure without expenditure.
-- `loader_destroyed`: `boolean` — Permanent mount loss from loader failure or propellant ignition.
-- `propellant_roll`: `integer|nil` — Second caseless roll; eight or more ignites propellant.
+- `jammed`: `boolean` — The feed jammed after the shot; firing is blocked until it is cleared.
+- `feed_broken`: `boolean` — The jam is permanent for the rest of the game; unjam cannot clear it.
+- `loader_destroyed`: `boolean` — The mount was destroyed after the shot: rapid-fire rounds exploded or a caseless feed broke down.
+- `feed_critical_roll`: `integer|nil` — Always nil: a vehicle caseless breakdown destroys the weapon without a critical roll.
 - `misload`: `table|nil` — Shooter internal damage and critical consequences.
 - `expenditure`: `VehicleWeaponUse`
 - `ams`: `AmsReport|nil`
@@ -1055,6 +1058,7 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `experience_messages`: `table[]` — Ordered experience diagnostics.
 - `cluster_roll`: `integer|nil`
 - `missiles_before_defense`: `integer|nil`
+- `missiles_intercepted`: `integer|nil`
 - `groups`: `table[]` — Located conventional damage packets.
 - `inferno`: `VehicleInfernoHit|nil` — Dedicated vehicle inferno outcome.
 
@@ -1102,7 +1106,8 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `launched`: `boolean`
 - `jammed`: `boolean`
 - `loader_destroyed`: `boolean`
-- `propellant_roll`: `integer|nil`
+- `feed_broken`: `boolean`
+- `feed_critical_roll`: `integer|nil`
 - `expenditure`: `WeaponUse`
 - `misload`: `{kind: "mech"|"vehicle", report: TacticalImpact|VehicleInternalDamage}|nil`
 - `ammunition_warning`: `string|nil`
@@ -1122,7 +1127,8 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `launched`: `boolean`
 - `jammed`: `boolean`
 - `loader_destroyed`: `boolean`
-- `propellant_roll`: `integer|nil`
+- `feed_broken`: `boolean`
+- `feed_critical_roll`: `integer|nil`
 - `expenditure`: `WeaponUse`
 - `misload`: `{kind: "mech"|"vehicle", report: TacticalImpact|VehicleInternalDamage}|nil`
 - `ammunition_warning`: `string|nil`

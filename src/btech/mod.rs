@@ -165,7 +165,7 @@ mod readiness;
 mod weapon_admission;
 pub use readiness::{WeaponReadiness, WeaponUse, advance_recycle, spend_weapon};
 mod salvo;
-pub use salvo::WeaponSalvo;
+pub use salvo::{GuidedHit, WeaponSalvo, cluster_hits};
 mod state;
 mod stun;
 pub use salvo::{MechSalvoReport, SalvoGroup, SalvoReport, resolve_salvo, resolve_tactical_salvo};

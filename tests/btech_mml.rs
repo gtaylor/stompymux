@@ -223,6 +223,8 @@ async fn mml_ams_and_missing_supply() {
                 }
                 firing::edit(&mut world, target, |state| {
                     state["ams_enabled"] = true.into();
+                    state["motion"]["heading"] = 180.0.into();
+                    state["motion"]["desired_heading"] = 180.0.into();
                     state["position"]["y"] = 4.into();
                     state["motion"]["point"] =
                         serde_json::to_value(HexCoordinate { x: 0, y: 4 }.center()).unwrap();

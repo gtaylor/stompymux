@@ -12,6 +12,7 @@ const CLUSTER_HITS: &[(u8, [u8; 11])] = &[
     (5, [1, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5]),
     (6, [2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6]),
     (7, [2, 2, 3, 4, 4, 4, 4, 6, 6, 7, 7]),
+    (8, [3, 3, 4, 4, 5, 5, 5, 6, 6, 8, 8]),
     (9, [3, 3, 4, 5, 5, 5, 5, 7, 7, 9, 9]),
     (10, [3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10]),
     (12, [4, 4, 5, 8, 8, 8, 8, 10, 10, 12, 12]),
@@ -20,6 +21,35 @@ const CLUSTER_HITS: &[(u8, [u8; 11])] = &[
     (30, [10, 10, 12, 18, 18, 18, 18, 24, 24, 30, 30]),
     (40, [12, 12, 18, 24, 24, 24, 24, 32, 32, 40, 40]),
 ];
+
+/// Read one Cluster Hits Table cell for a rack size and an already modified 2d6 roll.
+pub fn cluster_hits(size: u8, roll: u8) -> Result<u8> {
+    ensure!((2..=12).contains(&roll), "Invalid missile cluster roll");
+    let (_, row) = CLUSTER_HITS
+        .iter()
+        .find(|(rack, _)| *rack == size)
+        .context("Missing cluster table row")?;
+    Ok(row[usize::from(roll - 2)])
+}
+
+/// Guidance, defense and range facts that modify a missile or cluster hit's packet sizes.
+#[derive(Debug, Clone, Copy)]
+pub struct GuidedHit {
+    pub mode: super::AmmunitionMode,
+    pub cluster_roll: Option<u8>,
+    /// A glancing blow halves direct damage, or shifts the cluster roll down four.
+    pub glancing: bool,
+    /// Actual spatial range, which halves Thunderbolt damage and the extended LRM cluster column
+    /// inside their minimum ranges.
+    pub distance: Option<f64>,
+    /// Artemis V guidance adds three to the Artemis cluster bonus instead of two.
+    pub artemis_v: bool,
+    /// ECM blocks the ATM's integral guidance bonus.
+    pub guidance_blocked: bool,
+    /// An anti-missile system engaged the flight (Total Warfare p. 129): -4 on the cluster roll,
+    /// never below 2, with a locked Streak launcher treated as a roll of 11.
+    pub ams_engaged: bool,
+}
 
 /// Missile cluster hits and per-hit damage grouping for every weapon.
 pub trait WeaponSalvo {
@@ -59,16 +89,9 @@ pub trait WeaponSalvo {
     ) -> Result<Vec<u16>>;
 
     /// As [`Self::damage_groups_for_ammunition_hit`], with Artemis V guidance adding one more
-    /// to the Artemis cluster bonus. ATMs add their own guidance bonus unless ECM blocks it.
-    fn damage_groups_for_guided_hit(
-        self,
-        mode: super::AmmunitionMode,
-        cluster_roll: Option<u8>,
-        glancing: bool,
-        distance: Option<f64>,
-        artemis_v: bool,
-        guidance_blocked: bool,
-    ) -> Result<Vec<u16>>;
+    /// to the Artemis cluster bonus, ATMs adding their own guidance bonus unless ECM blocks it,
+    /// and an engaged anti-missile system shifting the cluster roll.
+    fn damage_groups_for_guided_hit(self, hit: GuidedHit) -> Result<Vec<u16>>;
 }
 
 impl WeaponSalvo for Weapon {
@@ -141,11 +164,7 @@ impl WeaponSalvo for Weapon {
             Self::Mrm40 => 40,
             _ => bail!("Weapon is not a missile launcher"),
         };
-        let (_, row) = CLUSTER_HITS
-            .iter()
-            .find(|(rack, _)| *rack == size)
-            .context("Missing cluster table row")?;
-        Ok(row[usize::from(roll - 2)])
+        cluster_hits(size, roll)
     }
 
     fn damage_groups(self, cluster_roll: Option<u8>) -> Result<Vec<u16>> {
@@ -186,18 +205,27 @@ impl WeaponSalvo for Weapon {
         glancing: bool,
         distance: Option<f64>,
     ) -> Result<Vec<u16>> {
-        self.damage_groups_for_guided_hit(mode, cluster_roll, glancing, distance, false, false)
+        self.damage_groups_for_guided_hit(GuidedHit {
+            mode,
+            cluster_roll,
+            glancing,
+            distance,
+            artemis_v: false,
+            guidance_blocked: false,
+            ams_engaged: false,
+        })
     }
 
-    fn damage_groups_for_guided_hit(
-        self,
-        mode: super::AmmunitionMode,
-        cluster_roll: Option<u8>,
-        glancing: bool,
-        distance: Option<f64>,
-        artemis_v: bool,
-        guidance_blocked: bool,
-    ) -> Result<Vec<u16>> {
+    fn damage_groups_for_guided_hit(self, hit: GuidedHit) -> Result<Vec<u16>> {
+        let GuidedHit {
+            mode,
+            cluster_roll,
+            glancing,
+            distance,
+            artemis_v,
+            guidance_blocked,
+            ams_engaged,
+        } = hit;
         ensure!(!self.is_artillery(), "Artillery damage requires an arrival");
         ensure!(
             mode.supports(self),
@@ -269,12 +297,32 @@ impl WeaponSalvo for Weapon {
         } else {
             0
         };
-        // The glancing modifier never takes the cluster roll below 2 (Tactical Operations p. 79).
-        let adjusted = i16::from(roll) + artemis_bonus + atm_bonus - if glancing { 4 } else { 0 };
+        // Neither the glancing modifier (Tactical Operations p. 79) nor the AMS modifier (Total
+        // Warfare p. 129) takes the cluster roll below 2.
+        let ams_penalty = if ams_engaged { 4 } else { 0 };
+        let adjusted = (i16::from(roll) + artemis_bonus + atm_bonus
+            - if glancing { 4 } else { 0 }
+            - ams_penalty)
+            .clamp(2, 12) as u8;
+        let inside_minimum = distance.is_some_and(|distance| {
+            distance < f64::from(self.profile_for_ammunition(mode).minimum_range)
+        });
         let mut hits = if self.is_streak() {
-            self.profile().missiles
+            // An engaged AMS treats a locked Streak launcher as a roll of 11 before its -4.
+            if ams_engaged {
+                cluster_hits(self.profile().missiles, 7)?
+            } else {
+                self.profile().missiles
+            }
+        } else if matches!(
+            self,
+            Self::Elrm5 | Self::Elrm10 | Self::Elrm15 | Self::Elrm20
+        ) && inside_minimum
+        {
+            // Boosters still burning: the column for half the rack, rounded up (TacOps: AUE p. 139).
+            cluster_hits(self.profile().missiles.div_ceil(2), adjusted)?
         } else {
-            self.missile_hits(adjusted.clamp(2, 12) as u8)?
+            self.missile_hits(adjusted)?
         };
         let group_size = if mode.is_mml_lrm()
             || matches!(
@@ -321,6 +369,9 @@ impl WeaponSalvo for Weapon {
         };
         let damage = if cluster {
             1
+        } else if self.is_thunderbolt() && inside_minimum {
+            // The warhead has not armed yet: half damage, rounded down (TacOps: AUE p. 159).
+            u16::from(self.profile().damage) / 2
         } else {
             u16::from(self.profile_for_ammunition(mode).damage)
         };
@@ -368,7 +419,10 @@ pub struct SalvoReport<G, I> {
     pub building: Option<super::BuildingCover>,
     /// The building's collapse once the groupings exhausted it.
     pub collapse: Option<super::SurfaceBreak>,
+    /// Missile hits before an anti-missile engagement shifted the cluster roll.
     pub missiles_before_defense: Option<u8>,
+    /// Hits the engagement removed from the Cluster Hits result.
+    pub missiles_intercepted: Option<u8>,
     pub cluster_roll: Option<u8>,
     pub inferno: Option<I>,
     pub groups: Vec<G>,
@@ -463,7 +517,10 @@ pub(super) struct ShotDamage<'a> {
     pub rules: super::FallRules,
     pub glancing: bool,
     pub character: bool,
-    pub intercepted: u8,
+    /// An anti-missile system engaged the flight, shifting the cluster roll.
+    pub ams_engaged: bool,
+    /// Spotter-directed indirect fire gets no Artemis or Narc cluster bonus.
+    pub indirect: bool,
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
 }
 
@@ -504,7 +561,8 @@ pub(super) fn resolve_salvo_in_candidate(
             shooter,
             fire_mode: weapon.fire_mode,
             gatling_damage: weapon.gatling_damage,
-            intercepted: damage.intercepted,
+            ams_engaged: damage.ams_engaged,
+            indirect: damage.indirect,
             incoming: damage.incoming,
         },
         effects,
@@ -552,7 +610,8 @@ enum HitGeometry {
         shooter: ObjectId,
         fire_mode: super::FireMode,
         gatling_damage: Option<u8>,
-        intercepted: u8,
+        ams_engaged: bool,
+        indirect: bool,
         incoming: Option<u8>,
     },
 }
@@ -698,6 +757,14 @@ fn resolve_salvo_with_effects(
             target_beacon: unit.has_beacon(super::BeaconKind::Narc)
                 || unit.has_beacon(super::BeaconKind::Homing),
             artemis_v,
+            ams_engaged: matches!(
+                geometry,
+                HitGeometry::Direct {
+                    ams_engaged: true,
+                    ..
+                }
+            ),
+            indirect: matches!(geometry, HitGeometry::Direct { indirect: true, .. }),
         },
         &mut unit.dice,
     )?;
@@ -710,19 +777,18 @@ fn resolve_salvo_with_effects(
         building: None,
         collapse: None,
         missiles_before_defense: None,
+        missiles_intercepted: None,
         cluster_roll: packets.cluster_roll,
         inferno: None,
         groups: Vec::new(),
         experience: Vec::new(),
         experience_messages: Vec::new(),
     };
-    let intercepted = match geometry {
-        HitGeometry::Direct { intercepted, .. } => intercepted,
-        HitGeometry::Fixed(_) => 0,
-    };
-    if let Some((hits, surviving)) = packets.intercept(weapon, intercepted) {
-        report.missiles_before_defense = Some(hits as u8);
+    if weapon.profile().missiles > 0 {
+        report.missiles_before_defense = packets.missiles_before_defense;
+        report.missiles_intercepted = packets.missiles_intercepted;
         if mode == super::AmmunitionMode::Inferno {
+            let surviving = packets.missile_count();
             if surviving > 0 {
                 report.inferno = Some(super::resolve_inferno_hit(world, target, surviving)?);
             }
@@ -898,7 +964,8 @@ fn resolve_salvo_with_effects(
 #[cfg(test)]
 mod tests {
     use super::Weapon as W;
-    use crate::btech::WeaponSalvo;
+    use super::cluster_hits;
+    use crate::btech::{GuidedHit, WeaponSalvo};
 
     #[test]
     fn snub_damage_uses_exact_range_before_glancing_rounding() {
@@ -1011,6 +1078,9 @@ mod tests {
         }
     }
 
+    /// A Thunderbolt always lands its single missile; glancing never removes it, and inside the
+    /// launcher's minimum range the unarmed warhead does half damage, rounded down
+    /// (Tactical Operations: AUE p. 159).
     #[test]
     fn thunderbolt_glancing_clusters_preserve_the_single_missile() {
         for weapon in [
@@ -1019,14 +1089,104 @@ mod tests {
             W::Thunderbolt15,
             W::Thunderbolt20,
         ] {
+            let minimum = f64::from(weapon.profile().minimum_range);
+            assert_eq!(minimum, 5.0);
             for roll in 2..=12 {
-                assert_eq!(
-                    weapon
-                        .damage_groups_for_hit(Some(roll), true, Some(1.0))
-                        .unwrap(),
-                    [u16::from(weapon.profile().damage)]
-                );
+                for glancing in [false, true] {
+                    let damage = u16::from(weapon.profile().damage);
+                    for (distance, expected) in [
+                        (0.0, damage / 2),
+                        (4.999, damage / 2),
+                        (5.0, damage),
+                        (12.0, damage),
+                    ] {
+                        assert_eq!(
+                            weapon
+                                .damage_groups_for_hit(Some(roll), glancing, Some(distance))
+                                .unwrap(),
+                            [expected],
+                            "{weapon:?} at {distance}"
+                        );
+                    }
+                    assert_eq!(
+                        weapon
+                            .damage_groups_for_hit(Some(roll), glancing, None)
+                            .unwrap(),
+                        [damage]
+                    );
+                }
             }
+        }
+    }
+
+    /// Inside ten hexes an extended LRM rolls on the Cluster Hits column for half its rack,
+    /// rounded up (Tactical Operations: AUE p. 139).
+    #[test]
+    fn extended_lrms_use_half_the_rack_inside_minimum_range() {
+        for (weapon, column) in [
+            (W::Elrm5, 3),
+            (W::Elrm10, 5),
+            (W::Elrm15, 8),
+            (W::Elrm20, 10),
+        ] {
+            assert_eq!(weapon.profile().minimum_range, 10);
+            for roll in 2..=12 {
+                let close: u16 = weapon
+                    .damage_groups_for_hit(Some(roll), false, Some(9.999))
+                    .unwrap()
+                    .iter()
+                    .sum();
+                assert_eq!(close, u16::from(cluster_hits(column, roll).unwrap()));
+                let far: u16 = weapon
+                    .damage_groups_for_hit(Some(roll), false, Some(10.0))
+                    .unwrap()
+                    .iter()
+                    .sum();
+                assert_eq!(far, u16::from(weapon.missile_hits(roll).unwrap()));
+            }
+        }
+        assert_eq!(cluster_hits(8, 2).unwrap(), 3);
+        assert_eq!(cluster_hits(8, 7).unwrap(), 5);
+        assert_eq!(cluster_hits(8, 12).unwrap(), 8);
+        assert!(cluster_hits(11, 7).is_err());
+    }
+
+    /// An engaged AMS shifts the cluster roll down four, never below 2, and treats a locked
+    /// Streak launcher as a roll of 11 (Total Warfare p. 129).
+    #[test]
+    fn ams_engagement_shifts_cluster_rolls_and_streak_flights() {
+        use super::super::AmmunitionMode as Mode;
+        let hit = |weapon: W, roll, ams_engaged, glancing| {
+            weapon
+                .damage_groups_for_guided_hit(GuidedHit {
+                    mode: Mode::Normal,
+                    cluster_roll: Some(roll),
+                    glancing,
+                    distance: Some(7.0),
+                    artemis_v: false,
+                    guidance_blocked: false,
+                    ams_engaged,
+                })
+                .unwrap()
+                .iter()
+                .sum::<u16>()
+        };
+        for roll in 2..=12u8 {
+            let shifted = roll.saturating_sub(4).max(2);
+            assert_eq!(
+                hit(W::Lrm20, roll, true, false),
+                hit(W::Lrm20, shifted, false, false)
+            );
+            // Glancing and the AMS shift stack, still floored at 2.
+            let doubled = roll.saturating_sub(8).max(2);
+            assert_eq!(
+                hit(W::Srm6, roll, true, true),
+                2 * u16::from(W::Srm6.missile_hits(doubled).unwrap())
+            );
+            assert_eq!(hit(W::StreakSrm6, roll, true, false), 2 * 4);
+            assert_eq!(hit(W::StreakSrm2, roll, true, false), 2);
+            assert_eq!(hit(W::ClanStreakLrm15, roll, true, false), 9);
+            assert_eq!(hit(W::StreakSrm6, roll, false, false), 12);
         }
     }
 
@@ -1037,14 +1197,15 @@ mod tests {
         for roll in 2..=12u8 {
             let landed = |guidance_blocked| {
                 W::ClanAtm12
-                    .damage_groups_for_guided_hit(
-                        Mode::Normal,
-                        Some(roll),
-                        false,
-                        None,
-                        false,
+                    .damage_groups_for_guided_hit(GuidedHit {
+                        mode: Mode::Normal,
+                        cluster_roll: Some(roll),
+                        glancing: false,
+                        distance: None,
+                        artemis_v: false,
                         guidance_blocked,
-                    )
+                        ams_engaged: false,
+                    })
                     .unwrap()
                     .iter()
                     .sum::<u16>()

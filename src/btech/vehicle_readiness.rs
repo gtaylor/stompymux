@@ -16,7 +16,7 @@ pub struct VehicleWeaponUse {
     pub fire_mode: FireMode,
     /// Supply-limited gatling damage rolled before the enclosing attack's hit dice.
     pub gatling_damage: Option<u8>,
-    /// False for a failed Streak lock or a loader failure; the launch result describes consequences.
+    /// False only for a failed Streak lock; a feed failure still fires the shot.
     pub launched: bool,
     /// Already applied weapon heat for this launch.
     pub heat: u8,

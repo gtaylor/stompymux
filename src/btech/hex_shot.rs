@@ -19,7 +19,8 @@ pub struct HexShotReport {
     pub launched: bool,
     pub jammed: bool,
     pub loader_destroyed: bool,
-    pub propellant_roll: Option<u8>,
+    pub feed_broken: bool,
+    pub feed_critical_roll: Option<u8>,
     pub expenditure: WeaponUse,
     pub misload: Option<LaunchMisload>,
     pub ammunition_warning: Option<String>,
@@ -224,6 +225,8 @@ fn resolve_hex_shot_inner(
                         angel_blocked: field.angel_disturbed,
                         target_beacon: false,
                         artemis_v: super::artemis::artemis_v(world, shooter),
+                        ams_engaged: false,
+                        indirect: false,
                     },
                     super::dice::unit_dice_mut(world, shooter)?,
                 )?;
@@ -322,7 +325,8 @@ fn resolve_hex_shot_inner(
             launched: launch.launched,
             jammed: launch.jammed,
             loader_destroyed: launch.loader_destroyed,
-            propellant_roll: launch.propellant_roll,
+            feed_broken: launch.feed_broken,
+            feed_critical_roll: launch.feed_critical_roll,
             expenditure: launch.expenditure,
             misload: launch.misload,
             ammunition_warning: launch.ammunition_warning,
@@ -348,13 +352,6 @@ impl HexShotReport {
         &self,
         private: &mut Vec<super::PilotNotice>,
     ) -> Vec<Notice> {
-        if let Some(misload) = &self.misload {
-            super::piloting::append_feedback(private, misload.pilot_notices().to_vec(), 0);
-            return misload.notices();
-        }
-        if self.jammed || self.loader_destroyed {
-            return Vec::new();
-        }
         if !self.launched {
             let mut notices = self.launch_notices.clone();
             notices.push(Notice {

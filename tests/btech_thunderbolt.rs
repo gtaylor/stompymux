@@ -45,9 +45,17 @@ fn thunderbolt_clusters_supply_and_mount_losses() {
             assert_eq!(weapon.missile_hits(roll).unwrap(), 1);
             assert_eq!(
                 weapon
-                    .damage_groups_for_ammunition(AmmunitionMode::Normal, Some(roll), 1.0)
+                    .damage_groups_for_ammunition(AmmunitionMode::Normal, Some(roll), 6.0)
                     .unwrap(),
                 [u16::from(p.damage)]
+            );
+            // Inside the minimum range the warhead has not armed: half damage, rounded
+            // down (Tactical Operations: AUE p. 159).
+            assert_eq!(
+                weapon
+                    .damage_groups_for_ammunition(AmmunitionMode::Normal, Some(roll), 1.0)
+                    .unwrap(),
+                [u16::from(p.damage) / 2]
             );
         }
         // Thunderbolts fire standard rounds only (Tactical Operations: Advanced Units &

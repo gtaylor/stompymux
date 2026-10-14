@@ -39,6 +39,8 @@ pub(super) struct SwarmRequest<'a> {
     pub glancing: bool,
     pub character: bool,
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
+    /// An anti-missile system engaged the initial attack; secondary hops are not engaged.
+    pub ams_engaged: bool,
 }
 
 /// Retargeting uses retained acquisition and clear terrain, without acquiring new contacts.
@@ -112,7 +114,8 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                         glancing: request.glancing,
                         guidance_blocked: false,
                         angel_blocked: false,
-                        intercepted: 0,
+                        ams_engaged: request.ams_engaged && report.hops.is_empty(),
+                        indirect: false,
                     },
                     request.rules.vehicle_impact,
                     super::vehicle_salvo::SalvoContext {
@@ -138,7 +141,8 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                         },
                         glancing: request.glancing,
                         character: request.character,
-                        intercepted: 0,
+                        ams_engaged: request.ams_engaged && report.hops.is_empty(),
+                        indirect: false,
                         experience,
                     },
                 )?)

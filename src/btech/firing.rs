@@ -460,12 +460,10 @@ pub(super) fn resolve_in_action(
             hex_messages,
         )
     };
-    let mut failure_private = Vec::new();
-    if let Some(messages) =
-        super::launch_feedback::failure_messages((&report).into(), observers, &mut failure_private)
-    {
+    let feedback: super::launch_feedback::LaunchFeedback = (&report).into();
+    if let Some(messages) = super::launch_feedback::failure_messages(&feedback) {
         return Ok(FiringAction {
-            pilot_notices: failure_private,
+            pilot_notices: Vec::new(),
             report: report.into(),
             messages,
         });
@@ -516,6 +514,13 @@ pub(super) fn resolve_in_action(
             messages.extend(super::observer_messages(&before, notice.unit, &notice.text));
         }
     }
+    let base = messages.len();
+    messages.extend(super::launch_feedback::consequence_messages(
+        feedback,
+        observers,
+        &mut private,
+        base,
+    ));
     Ok(FiringAction {
         pilot_notices: private,
         report: report.into(),

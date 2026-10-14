@@ -48,17 +48,19 @@ pub struct ShotReport<U, M> {
     pub target_number: Option<i32>,
     /// Attack result, including dead-fire and close-range extended-LRM dice rules.
     pub roll: u8,
-    /// False for a failed Streak lock or loader failure; loader failures consume only shooter dice.
+    /// False only for a failed Streak lock; a feed failure still fires the shot.
     pub launched: bool,
     /// Launch classification; a missile near miss can still be rejected by target resolution.
     pub hit: bool,
-    /// Recoverable ammunition feed failure; no expenditure or recycle.
+    /// The ammunition feed jammed after the shot; firing is blocked until it is cleared.
     pub jammed: bool,
-    /// Permanent mount loss from loader failure or propellant ignition.
+    /// The jam is permanent for the rest of the game: `unjam` cannot clear it.
+    pub feed_broken: bool,
+    /// The mount's slots were destroyed after the shot.
     pub loader_destroyed: bool,
-    /// Second shooter roll on a caseless feed failure; eight or more ignites the propellant.
-    pub propellant_roll: Option<u8>,
-    /// Internal damage and immediate consequences from misload or propellant ignition.
+    /// A caseless feed breakdown's Determining Critical Hits roll against the autocannon.
+    pub feed_critical_roll: Option<u8>,
+    /// Internal damage and immediate consequences from rapid-fire rounds exploding in the barrel.
     pub misload: Option<M>,
     /// A successful boundary hit with reduced damage or missile count.
     pub glancing: bool,
@@ -101,13 +103,6 @@ impl MechShotReport {
         &self,
         private: &mut Vec<super::PilotNotice>,
     ) -> Vec<super::Notice> {
-        if let Some(misload) = &self.misload {
-            super::piloting::append_feedback(private, misload.pilot_notices.clone(), 0);
-            return misload.notices.clone();
-        }
-        if self.jammed || self.loader_destroyed {
-            return Vec::new();
-        }
         if !self.launched {
             let mut notices = self.launch_notices.clone();
             notices.extend(super::launch_feedback::streak_failure(self.shooter));
@@ -426,8 +421,9 @@ fn resolve_shot_inner(
         roll,
         launched,
         jammed,
+        feed_broken,
         loader_destroyed,
-        propellant_roll,
+        feed_critical_roll,
         misload,
         expenditure,
         hit,
@@ -471,14 +467,18 @@ fn resolve_shot_inner(
         target_number,
         streak_confused,
     );
-    let mut ams = if resolved.hit
-        && weapon.profile().missiles > 0
-        && !expenditure.ammunition_mode.bypasses_ams()
-    {
-        super::ams::intercept(&mut candidate, shooter, target, weapon.profile().missiles)?
+    let mut ams = if resolved.hit && weapon.profile().missiles > 0 {
+        super::ams::intercept(&mut candidate, shooter, target, weapon)?
     } else {
         None
     };
+    // A single missile the defense destroyed never reaches the target; a cluster engagement
+    // shifts the Cluster Hits roll instead.
+    let missile_destroyed = ams
+        .as_ref()
+        .is_some_and(super::AmsReport::destroyed_missile);
+    let ams_engaged = ams.is_some() && !missile_destroyed;
+    let indirect_fire = aim.indirect.is_some();
     let super::direct_effects::DirectEffects {
         narc,
         cooling,
@@ -495,7 +495,7 @@ fn resolve_shot_inner(
             fire_mode: expenditure.fire_mode,
             hit: resolved.hit,
             launched,
-            intercepted: ams.as_ref().is_some_and(|ams| ams.shot_down > 0),
+            intercepted: missile_destroyed,
             vehicle_impact: rules.vehicle_impact,
             distance: aim.distance,
             gatling_damage: expenditure.gatling_damage,
@@ -538,9 +538,12 @@ fn resolve_shot_inner(
                 glancing: resolved.glancing,
                 character,
                 experience,
+                ams_engaged,
             },
         )?))
-    } else if resolved.hit && !pod && heat_transfer == 0 && cooling.is_none() && vehicle_target {
+    } else if missile_destroyed || !resolved.hit || pod || heat_transfer > 0 || cooling.is_some() {
+        None
+    } else if vehicle_target {
         Some(super::target_salvo::resolve_vehicle_target_in_candidate(
             &mut candidate,
             shooter,
@@ -554,7 +557,8 @@ fn resolve_shot_inner(
                 glancing: resolved.glancing,
                 guidance_blocked: false,
                 angel_blocked: false,
-                intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
+                ams_engaged,
+                indirect: indirect_fire,
             },
             rules.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
@@ -564,7 +568,7 @@ fn resolve_shot_inner(
                 aimed,
             },
         )?)
-    } else if resolved.hit && !pod && heat_transfer == 0 && cooling.is_none() {
+    } else {
         Some(super::TargetSalvo::Mech(
             super::salvo::resolve_salvo_in_candidate(
                 &mut candidate,
@@ -581,23 +585,22 @@ fn resolve_shot_inner(
                     },
                     glancing: resolved.glancing,
                     character,
-                    intercepted: ams.as_ref().map_or(0, |report| report.shot_down),
+                    ams_engaged,
+                    indirect: indirect_fire,
                     experience,
                 },
             )?,
         ))
-    } else {
-        None
     };
     if let Some(defense) = &mut ams {
-        defense.shot_down = defense.shot_down.min(if let Some(pod) = &narc {
-            u8::from(pod.hit)
+        defense.shot_down = if missile_destroyed {
+            1
         } else {
             salvo
                 .as_ref()
-                .and_then(super::TargetSalvo::missiles_before_defense)
+                .and_then(super::TargetSalvo::missiles_intercepted)
                 .unwrap_or(0)
-        });
+        };
     }
     let recoil = super::weapon_launch::resolve_recoil(
         &mut candidate,
@@ -634,8 +637,9 @@ fn resolve_shot_inner(
         launched,
         hit,
         jammed,
+        feed_broken,
         loader_destroyed,
-        propellant_roll,
+        feed_critical_roll,
         misload,
         glancing: resolved.glancing,
         expenditure,
