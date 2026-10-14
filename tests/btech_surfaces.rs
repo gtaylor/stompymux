@@ -3277,7 +3277,7 @@ async fn wet_running_controls_match_native_lua_and_preserve_rejected_throttle() 
             assert!(text.contains("You can't run through water!"));
             assert_eq!(native.world().btech, world.btech);
         }
-        let walking = maximum * 2.0 / 3.0;
+        let walking = world.btech.constructed_units()[&id].walking_speed();
         set_battle_speed(&mut world, id, ObjectId(1), walking + 0.1).unwrap();
         let before = world.btech.clone();
         assert_eq!(

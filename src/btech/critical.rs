@@ -490,13 +490,9 @@ impl Mech {
             self.weapon_recycle.clear();
             self.stun_remaining = 0;
         }
-        let maximum = self.movement_maximum_speed();
+        let envelope = self.speed_envelope();
         if let Some(motion) = &mut self.motion {
-            motion.speed = motion.speed.clamp(-maximum * 2.0 / 3.0, maximum);
-            motion.desired_speed = motion.desired_speed.clamp(-maximum * 2.0 / 3.0, maximum);
-            if maximum == 0.0 {
-                motion.desired_heading = motion.heading;
-            }
+            motion.limit_to(envelope);
         }
     }
 }

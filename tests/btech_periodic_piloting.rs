@@ -25,13 +25,14 @@ async fn control_feedback_is_ordered_and_respects_pilot_audience() {
                 if !assigned {
                     release_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
                 }
-                phase(&mut world, 7);
+                phase(&mut world, 0);
                 let speed = world.btech.constructed_units()[&unit]
                     .mobility()
                     .maximum_speed;
                 firing::edit(&mut world, unit, |state| {
                     state["motion"]["speed"] = speed.into();
                     state["motion"]["desired_speed"] = speed.into();
+                    state["turn_movement"]["ran"] = true.into();
                 });
                 seed(&mut world, unit, success);
                 let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -121,24 +122,42 @@ fn seed(world: &mut World, unit: ObjectId, success: bool) {
     });
 }
 
-/// Damaged-running checks happen off the turn boundary and failed checks use the ordinary fall engine.
+/// A 'Mech that runs in a turn with a damaged gyro makes one PSR at the turn's end (Total
+/// Warfare pp. 53 and 59). Only travel above the walking ceiling counts as running, the
+/// check happens on the boundary tick alone, and a failed check uses the ordinary fall engine.
 #[tokio::test]
-async fn damaged_running_checks_use_each_heartbeat_and_preserve_reverse_and_walk_gates() {
+async fn damaged_running_checks_happen_once_a_turn_after_running() {
     for template in firing::templates().into_iter().take(2) {
         let (_dir, config, mut base, unit, _, _) =
             firing::fixture_with_target(&template, None, &template).await;
         damage_gyro(&mut base, unit);
-        let maximum = base.btech.constructed_units()[&unit]
-            .mobility()
-            .maximum_speed;
-        let walk = maximum * 2.0 / 3.0;
-        for speed in [-walk, 0.0, walk, walk + 0.2] {
+        let walk = base.btech.constructed_units()[&unit].walking_speed();
+        for (speed, ran) in [
+            (-walk, false),
+            (0.0, false),
+            (walk, false),
+            (walk + 0.2, true),
+        ] {
+            let mut world = base.clone();
+            firing::edit(&mut world, unit, |s| {
+                s["motion"]["speed"] = speed.into();
+                s["motion"]["desired_speed"] = speed.into();
+            });
+            advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+            assert_eq!(
+                world.btech.constructed_units()[&unit].turn_movement().ran,
+                ran,
+                "{speed}"
+            );
+        }
+        for (tick, ran) in [(7, true), (29, true), (0, false), (0, true)] {
             for success in [false, true] {
                 let mut world = base.clone();
-                phase(&mut world, 7);
+                phase(&mut world, tick);
                 firing::edit(&mut world, unit, |s| {
-                    s["motion"]["speed"] = speed.into();
-                    s["motion"]["desired_speed"] = speed.into();
+                    s["motion"]["speed"] = (walk + 0.2).into();
+                    s["motion"]["desired_speed"] = (walk + 0.2).into();
+                    s["turn_movement"]["ran"] = ran.into();
                 });
                 seed(&mut world, unit, success);
                 persistence::save(&config.database(), &world).await.unwrap();
@@ -150,11 +169,13 @@ async fn damaged_running_checks_use_each_heartbeat_and_preserve_reverse_and_walk
                     advance_battle_periodic_piloting(&mut replay, &config).unwrap()
                 );
                 assert_eq!(world.btech, replay.btech);
-                if speed <= walk + 0.1 {
+                if tick != 0 || !ran {
                     assert!(reports.is_empty());
                     assert_eq!(world.btech, before);
                     continue;
                 }
+                // The boundary check consumes the turn's movement record.
+                assert!(!world.btech.constructed_units()[&unit].turn_movement().ran);
                 assert_eq!(reports.len(), 1);
                 assert_eq!(reports[0].check.situational, 0);
                 assert_eq!(reports[0].check.success, success);
@@ -195,9 +216,12 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
             .mobility()
             .maximum_speed;
         let legs = base.btech.constructed_units()[&unit].chassis().legs().len();
+        // The turn record holds the fastest excess over the normal running ceiling; a fraction
+        // of an MP over still counts as a whole point (Tactical Operations p. 53).
         firing::edit(&mut base, unit, |s| {
             s["motion"]["speed"] = (maximum + 1.0).into();
             s["motion"]["desired_speed"] = (maximum + 1.0).into();
+            s["turn_movement"]["gravity_excess"] = 1.0.into();
         });
         // A seed that fails the control check at low gravity without a critical hit or lost limb.
         let seeded = |n: u16| {
@@ -241,9 +265,11 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
                 phase(&mut world, tick);
                 let before = world.btech.clone();
                 let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
-                if gravity == 100 || ![0, 29].contains(&tick) {
+                if gravity == 100 || tick != 0 {
                     assert!(reports.is_empty());
-                    assert_eq!(world.btech, before);
+                    if tick != 0 {
+                        assert_eq!(world.btech, before);
+                    }
                     continue;
                 }
                 assert_eq!(reports.len(), 1);
@@ -282,31 +308,32 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
     }
 }
 
-/// The hot-myomer running threshold changes only on the guarded turn ticks.
+/// Hot myomer raises the walking ceiling by two MP (Total Warfare p. 139), so a speed that
+/// is a run just under nine heat is a walk at nine and records no run for the turn's check.
 #[tokio::test]
 async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
     let template = include_str!("../game/units/OTL-6D.toml");
     let (_dir, config, mut base, unit, _, _) =
         firing::fixture_with_target(template, None, template).await;
     damage_gyro(&mut base, unit);
-    let speed = base.btech.constructed_units()[&unit]
-        .mobility()
-        .maximum_speed
-        * 2.0
-        / 3.0
-        + 1.0;
-    firing::edit(&mut base, unit, |s| {
-        s["motion"]["speed"] = speed.into();
-        s["motion"]["desired_speed"] = speed.into();
-        s["heat"]["excess"] = 9.0.into();
-        s["heat"]["stored"] = 9.0.into();
-    });
-    for tick in [1, 28, 29, 0] {
+    let speed = base.btech.constructed_units()[&unit].walking_speed() + 1.0;
+    for (heat, ran) in [(8.999, true), (9.0, false)] {
         let mut world = base.clone();
-        phase(&mut world, tick);
+        firing::edit(&mut world, unit, |s| {
+            s["motion"]["speed"] = speed.into();
+            s["motion"]["desired_speed"] = speed.into();
+            s["heat"]["excess"] = heat.into();
+            s["heat"]["stored"] = heat.into();
+        });
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        assert_eq!(
+            world.btech.constructed_units()[&unit].turn_movement().ran,
+            ran
+        );
+        phase(&mut world, 0);
         seed(&mut world, unit, true);
         let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
-        assert_eq!(reports.is_empty(), [29, 0].contains(&tick));
+        assert_eq!(reports.is_empty(), !ran);
     }
     for template in firing::templates() {
         let (_dir, config, mut base, unit, _, _) =
@@ -358,8 +385,8 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
     tokio::task::LocalSet::new().run_until(async {
         let template = include_str!("../game/units/JR7-D.toml");
         let (_dir,config,mut world,unit,_,_) = firing::fixture_with_target(template,None,template).await;
-        damage_gyro(&mut world,unit); phase(&mut world,28); seed(&mut world,unit,false);
-        firing::edit(&mut world,unit,|s| {s["motion"]["speed"] = 100.0.into();s["motion"]["desired_speed"] = 100.0.into();});
+        damage_gyro(&mut world,unit); phase(&mut world,29); seed(&mut world,unit,false);
+        firing::edit(&mut world,unit,|s| {s["motion"]["speed"] = 100.0.into();s["motion"]["desired_speed"] = 100.0.into();s["turn_movement"]["ran"] = true.into();});
         world.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret",&config).unwrap());
         persistence::save(&config.database(),&world).await.unwrap();
         let before = world.btech.constructed_units()[&unit].clone();
@@ -370,7 +397,7 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
         client.until("Who are you? ").await; client.send("#1").await; client.until("Password: ").await; client.send("secret").await; client.until("Sighter").await;
         heartbeats.attempt().await;
         let loaded = persistence::load(&config.database()).await.unwrap();
-        assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],28);
+        assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],29);
         assert_eq!(&loaded.btech.constructed_units()[&unit],&before);
         client.send("look").await;
         let rejected = client.until("Sighter").await;
@@ -383,14 +410,14 @@ async fn server_clock_and_fall_retry_are_one_transaction() {
         assert!(accepted.contains("Modified Pilot Skill:"));
         let loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(loaded.btech.constructed_units()[&unit].posture(),Posture::Prone);
-        assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],29);
+        assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],0);
         shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
     }).await;
 }
 
-/// A damaged hip triggers the same heartbeat check without requiring gyro damage.
+/// A damaged hip triggers the same end-of-turn check without requiring gyro damage.
 #[tokio::test]
-async fn damaged_hips_use_running_threshold_for_both_mech_chassis() {
+async fn damaged_hips_use_the_turn_record_for_both_mech_chassis() {
     for template in firing::templates().into_iter().take(2) {
         let (_dir, config, mut base, unit, _, _) =
             firing::fixture_with_target(&template, None, &template).await;
@@ -408,21 +435,16 @@ async fn damaged_hips_use_running_threshold_for_both_mech_chassis() {
             .location;
         destroy_battle_critical(&mut base, unit, hip).unwrap();
         assert_eq!(base.btech.constructed_units()[&unit].gyro_damage(), 0);
-        let maximum = base.btech.constructed_units()[&unit]
-            .mobility()
-            .maximum_speed;
-        let threshold = 2.0 * maximum / 3.0 + 0.1;
-        for speed in [-maximum / 2.0, threshold, threshold + 0.01] {
+        for (tick, ran) in [(7, true), (0, false), (0, true)] {
             let mut world = base.clone();
-            phase(&mut world, 7);
+            phase(&mut world, tick);
             firing::edit(&mut world, unit, |s| {
-                s["motion"]["speed"] = speed.into();
-                s["motion"]["desired_speed"] = speed.into();
+                s["turn_movement"]["ran"] = ran.into();
             });
             seed(&mut world, unit, true);
             let before = world.btech.clone();
             let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
-            assert_eq!(reports.len(), usize::from(speed > threshold));
+            assert_eq!(reports.len(), usize::from(tick == 0 && ran));
             if reports.is_empty() {
                 assert_eq!(world.btech, before);
             } else {
@@ -457,10 +479,11 @@ async fn gravity_success_and_standard_gravity_preserve_material() {
                     record["gravity"] = gravity.into();
                 })
                 .unwrap();
-            phase(&mut world, 29);
+            phase(&mut world, 0);
             firing::edit(&mut world, unit, |s| {
                 s["motion"]["speed"] = (maximum + 1.0).into();
                 s["motion"]["desired_speed"] = (maximum + 1.0).into();
+                s["turn_movement"]["gravity_excess"] = 1.0.into();
             });
             seed(&mut world, unit, true);
             let before = world.btech.clone();
@@ -474,9 +497,14 @@ async fn gravity_success_and_standard_gravity_preserve_material() {
                 assert!(reports[0].check.success);
                 assert!(reports[0].impacts.is_empty());
                 assert!(reports[0].notices.is_empty());
-            } else {
-                assert_eq!(world.btech, before);
             }
+            assert!(!world.btech.constructed_units()[&unit].turn_movement().ran);
+            assert_eq!(
+                world.btech.constructed_units()[&unit]
+                    .turn_movement()
+                    .gravity_excess,
+                0.0
+            );
         }
     }
 }

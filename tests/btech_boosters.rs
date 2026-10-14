@@ -153,8 +153,11 @@ async fn powered_template(template: MechTemplate) -> (tempfile::TempDir, Config,
 #[tokio::test]
 async fn masc_toggle_speed_first_check_recovery_and_restart_are_shared() {
     let (_dir, config, mut world, id) = powered_masc().await;
+    // The Atlas walks 3 and runs 5; MASC doubles the walking figure to a run of 6.
     let base = world.btech.constructed_units()[&id].movement_maximum_speed();
-    set_battle_speed(&mut world, id, ObjectId(1), -base * 2.0 / 3.0).unwrap();
+    let walking = world.btech.constructed_units()[&id].walking_speed();
+    let boosted = walking * 2.0;
+    set_battle_speed(&mut world, id, ObjectId(1), -walking).unwrap();
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let before = scripts.world().btech.clone();
     assert!(
@@ -170,16 +173,11 @@ async fn masc_toggle_speed_first_check_recovery_and_restart_are_shared() {
         let unit = &snapshot.btech.constructed_units()[&id];
         assert!(unit.masc_active());
         assert_eq!(unit.masc().remaining, 1);
-        assert!((unit.movement_maximum_speed() - base * 4.0 / 3.0).abs() < 1e-9);
-        assert!((unit.motion().unwrap().desired_speed + base * 2.0 / 3.0 * 4.0 / 3.0).abs() < 1e-9);
+        assert!((unit.movement_maximum_speed() - boosted).abs() < 1e-9);
+        assert!(boosted > base);
+        assert!((unit.motion().unwrap().desired_speed + walking).abs() < 1e-9);
     }
-    set_battle_speed(
-        &mut scripts.world_mut(),
-        id,
-        ObjectId(1),
-        base * (4.0 / 3.0),
-    )
-    .unwrap();
+    set_battle_speed(&mut scripts.world_mut(), id, ObjectId(1), boosted).unwrap();
     for _ in 0..20 {
         advance_battle_motion(&mut scripts.world_mut(), MovementRules::STANDARD).unwrap();
     }
@@ -188,7 +186,7 @@ async fn masc_toggle_speed_first_check_recovery_and_restart_are_shared() {
             .motion()
             .unwrap()
             .speed
-            - base * (4.0 / 3.0))
+            - boosted)
             .abs()
             < 1e-9
     );
@@ -408,8 +406,10 @@ async fn combined_boosters_preserve_speed_envelopes_check_order_and_lua_rollback
     {
         let snapshot = scripts.world();
         let unit = &snapshot.btech.constructed_units()[&id];
-        assert!((unit.movement_maximum_speed() - base * (5.0 / 3.0)).abs() < 1e-9);
-        assert!((unit.motion().unwrap().desired_speed - base * (16.0 / 9.0)).abs() < 1e-9);
+        // Walk 3 under both boosters runs at 3 x 2.5 rounded up: 8 MP, and a forward throttle
+        // keeps pace with the ceiling through each toggle.
+        assert!((unit.movement_maximum_speed() - 86.0).abs() < 1e-9);
+        assert!((unit.motion().unwrap().desired_speed - 86.0).abs() < 1e-9);
     }
     let saved = scripts.world().clone();
     persistence::save(&config.database(), &saved).await.unwrap();
@@ -621,12 +621,14 @@ fn sample_booster_heat(world: &mut World, id: ObjectId, heat: f64) {
 #[tokio::test]
 async fn hot_myomer_replaces_the_extra_movement_boost_and_preserves_turning() {
     let (_dir, config, world, id) = powered_template(myomer_booster_design()).await;
-    // These ceilings follow the independent control and update conversions for the 7/11 chassis.
-    for (masc, compressor, control, update) in [
-        (false, false, 129.0, 150.5),
-        (true, false, 182.75, 193.5),
-        (false, true, 182.75, 193.5),
-        (true, true, 215.0, 225.75),
+    // A 7/11 at heat 9 walks 7 + 2 - 1 = 8 and runs 12; one booster doubles the walk to a
+    // run of 16, both multiply it by 2.5 for 20 (Total Warfare pp. 137 and 139). The unit
+    // accelerates by a twentieth of the ceiling it would have while cool, 9/14 and up.
+    for (masc, compressor, control, acceleration) in [
+        (false, false, 129.0, 150.5 / 20.0),
+        (true, false, 172.0, 193.5 / 20.0),
+        (false, true, 172.0, 193.5 / 20.0),
+        (true, true, 215.0, 247.25 / 20.0),
     ] {
         let mut trial = world.clone();
         sample_booster_heat(&mut trial, id, 9.0);
@@ -655,7 +657,7 @@ async fn hot_myomer_replaces_the_extra_movement_boost_and_preserves_turning() {
         );
         advance_battle_motion(&mut trial, MovementRules::STANDARD).unwrap();
         assert!(
-            (trial.btech.constructed_units()[&id].motion().unwrap().speed - update / 20.0).abs()
+            (trial.btech.constructed_units()[&id].motion().unwrap().speed - acceleration).abs()
                 < 1e-9
         );
         trial.validate(&config).unwrap();
@@ -673,11 +675,13 @@ async fn hot_throttle_toggle_rounding_survives_save_and_cooling() {
     ] {
         let mut trial = world.clone();
         sample_booster_heat(&mut trial, id, 9.0);
+        // Backward travel is limited to the walking ceiling, 86 km/h at heat 9.
+        let request = |ceiling: f64| if direction > 0.0 { ceiling } else { -86.0 };
         if intermediate {
             toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
-            set_battle_speed(&mut trial, id, ObjectId(1), 182.75 * direction).unwrap();
+            set_battle_speed(&mut trial, id, ObjectId(1), request(172.0)).unwrap();
         } else {
-            set_battle_speed(&mut trial, id, ObjectId(1), 129.0 * direction).unwrap();
+            set_battle_speed(&mut trial, id, ObjectId(1), request(129.0)).unwrap();
             toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
         }
         toggle_battle_supercharger(&mut trial, id, ObjectId(1)).unwrap();
@@ -685,12 +689,8 @@ async fn hot_throttle_toggle_rounding_survives_save_and_cooling() {
             .motion()
             .unwrap()
             .desired_speed;
-        let expected = if intermediate {
-            182.75 * (4.0 / 3.0)
-        } else {
-            129.0 * (16.0 / 9.0)
-        };
-        assert!((desired - expected * direction).abs() < 1e-9);
+        // A forward throttle follows the ceiling to 215; a reverse one is left alone.
+        assert!((desired - request(215.0)).abs() < 1e-9);
         trial.validate(&config).unwrap();
         persistence::save(&config.database(), &trial).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();

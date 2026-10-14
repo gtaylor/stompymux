@@ -58,13 +58,13 @@ impl Motion {
     /// p. 50 charges 1 MP per hexside instead; this rate-limited turn with the throttle cut in
     /// `motion_controls::turning_throttle` is the realtime adaptation of that cost, and it is
     /// the same for bipeds and quads.
-    pub(super) fn turn_toward(&mut self, maximum: f64) {
+    pub(super) fn turn_toward(&mut self, maximum: f64, walking: f64) {
         if maximum <= 0.0 {
             return;
         }
         let difference = (self.desired_heading - self.heading + 180.0).rem_euclid(360.0) - 180.0;
         let base = if self.speed.abs() < 1.0 { 1.5 } else { 1.0 } * maximum / 10.75;
-        let turn = if difference.abs() > base && self.speed > maximum * 2.0 / 3.0 + 0.1 {
+        let turn = if difference.abs() > base && self.speed > walking + 0.1 {
             base * (2.0 - 1.5 * self.speed / maximum)
         } else {
             base
@@ -91,7 +91,16 @@ impl Motion {
         };
     }
 
-    /// Reconcile a changed load while retaining paved-surface headroom where applicable.
+    /// Keep a Mech's controls inside its current envelope after its load or damage changed.
+    pub(super) fn limit_to(&mut self, envelope: super::SpeedEnvelope) {
+        self.desired_speed = envelope.clamp(self.desired_speed);
+        self.speed = envelope.clamp(self.speed);
+        if envelope.is_stopped() {
+            self.desired_heading = self.heading;
+        }
+    }
+
+    /// Reconcile a changed vehicle load while retaining paved-surface headroom where applicable.
     pub(super) fn limit_load(&mut self, maximum: f64, actual_maximum: f64) {
         self.desired_speed = self.desired_speed.clamp(-maximum * 2.0 / 3.0, maximum);
         self.speed = self
@@ -112,7 +121,28 @@ impl Motion {
         Ok(Self { speed: 0.0, ..self })
     }
 
-    /// Validate persistent motion before it can enter the simulation.
+    /// Validate persistent Mech motion against the widest envelope it may have retained:
+    /// backward no faster than walking, forward no faster than running.
+    pub(crate) fn validate_within(self, envelope: super::SpeedEnvelope) -> Result<()> {
+        self.point.range(self.point)?;
+        ensure!(
+            [self.heading, self.desired_heading]
+                .iter()
+                .all(|value| value.is_finite() && (0.0..360.0).contains(value)),
+            "Invalid unit heading"
+        );
+        ensure!(
+            [self.speed, self.desired_speed]
+                .iter()
+                .all(|value| value.is_finite()
+                    && *value >= -envelope.walking - 1e-6
+                    && *value <= envelope.running + 1e-6),
+            "Invalid unit speed"
+        );
+        Ok(())
+    }
+
+    /// Validate persistent vehicle motion before it can enter the simulation.
     pub(crate) fn validate(self, maximum: f64) -> Result<()> {
         self.point.range(self.point)?;
         ensure!(
@@ -232,22 +262,32 @@ fn set_speed_by_actor(
         unit.posture() != super::Posture::Prone,
         "Stand the unit up first"
     );
-    let maximum = super::motion_controls::throttle_configured(world, id, policy)?;
+    // Every "may not run" gate compares against the current walking ceiling, the
+    // template's walking MP after damage, heat and load (Total Warfare p. 53).
+    let envelope = super::motion_controls::throttle_envelope(world, id, policy)?;
+    // An autopilot steers in fractions of the running ceiling; its reverse requests are
+    // held to the walking ceiling rather than refused.
+    let speed = if matches!(actor, super::combat_operator::ControlActor::Autopilot) {
+        envelope.clamp(speed)
+    } else {
+        speed
+    };
+    let running = envelope.is_running(speed);
     ensure!(
-        unit.dumping().is_none() || speed <= maximum * 2.0 / 3.0 + 0.1,
+        unit.dumping().is_none() || !running,
         "You can not run while dumping ammo!"
     );
     ensure!(
-        unit.unjam().is_none() || speed <= maximum * 2.0 / 3.0 + 0.1,
+        unit.unjam().is_none() || !running,
         "You can not run while unjamming your weapon!"
     );
     ensure!(
-        speed.is_finite() && speed >= -maximum * 2.0 / 3.0 && speed <= maximum,
+        speed.is_finite() && speed >= -envelope.walking && speed <= envelope.running,
         "Speed exceeds unit limits"
     );
     super::motion_controls::require_reverse_allowed(world, id, speed)?;
     ensure!(
-        unit.stun_remaining() == 0 || speed <= maximum * 2.0 / 3.0 + 0.1,
+        unit.stun_remaining() == 0 || !running,
         "You cannot move faster than cruise speed while stunned!"
     );
     let mut motion = unit.motion().context("Unit is not placed")?;
@@ -255,10 +295,7 @@ fn set_speed_by_actor(
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
     let wet = tile.immerses(unit.elevation_level(tile));
-    ensure!(
-        !wet || speed <= maximum * 2.0 / 3.0 + 0.1,
-        "You can't run through water!"
-    );
+    ensure!(!wet || !running, "You can't run through water!");
     motion.desired_speed = speed;
     world.btech.constructed.get_mut(&id).unwrap().motion = Some(motion);
     Ok(Notice {
@@ -448,18 +485,27 @@ fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<
                 continue;
             }
         }
-        let maximum = world.btech.unit(id).expect("moving unit").maximum_speed();
-        let maximum = super::load::movement_maximum(world, id, maximum, rules.tsm_tow_bonus)?;
-        let maximum = if let Some(unit) = world.btech.constructed_units().get(&id) {
-            super::speed_bonus::on_map(world, unit.position(), unit.movement_maximum_at(maximum))?
-        } else {
-            super::speed_bonus::vehicle_on_map(
+        let (maximum, walking) = if world.btech.constructed_units().contains_key(&id) {
+            let envelope = super::motion_controls::throttle_envelope(
                 world,
-                world.btech.vehicles()[&id].position(),
-                maximum,
-            )?
+                id,
+                super::SpeedPolicy {
+                    tsm_tow_bonus: rules.tsm_tow_bonus,
+                },
+            )?;
+            (envelope.running, envelope.walking)
+        } else {
+            let vehicle = &world.btech.vehicles()[&id];
+            let maximum = super::load::movement_maximum(
+                world,
+                id,
+                vehicle.maximum_speed(),
+                rules.tsm_tow_bonus,
+            )?;
+            let maximum = super::speed_bonus::vehicle_on_map(world, vehicle.position(), maximum)?;
+            (maximum, maximum * 2.0 / 3.0)
         };
-        motion.turn_toward(maximum);
+        motion.turn_toward(maximum, walking);
         crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.motion = Some(motion);
         })
@@ -542,7 +588,10 @@ fn advance_motion_inner(
         let proposed = proposal.destination;
         // A unit that turned on pavement or ice must keep its footing before it moves on.
         let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-        let walking_ceiling = world.btech.constructed_units()[&id].movement_maximum_speed();
+        let walking_ceiling = world.btech.constructed_units()[&id].walking_speed();
+        let normal_running = world.btech.constructed_units()[&id]
+            .mobility()
+            .maximum_speed;
         let leaving = proposed.containing_hex().ok()
             != Some(super::HexCoordinate {
                 x: i32::from(position.x),
@@ -550,6 +599,8 @@ fn advance_motion_inner(
             });
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.motion = Some(motion);
+        unit.turn_movement
+            .observe(motion.speed, walking_ceiling, normal_running);
         unit.slick
             .observe(current.is_slick(), motion.speed != 0.0, motion.heading);
         let held = unit.slick.heading;
@@ -742,7 +793,7 @@ fn resolve_ground_segment(
     let map = &world.btech.maps()[&position.map];
     let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
     let traversed = trace_start.trace_positions(proposed)?;
-    let walking = unit.movement_maximum_speed() * 2.0 / 3.0 + 0.1;
+    let walking = unit.walking_speed() + 0.1;
     let mut destination = proposed.containing_hex().ok();
     let mut previous_height = current.surface_height();
     let mut previous_tile = current;

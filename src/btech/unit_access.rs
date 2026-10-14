@@ -108,14 +108,6 @@ impl<'a> UnitRef<'a> {
         }
     }
 
-    /// Top speed the chassis can reach in its current material condition, before load and terrain.
-    pub(super) fn maximum_speed(&self) -> f64 {
-        match *self {
-            Self::Mech(unit) => unit.mobility().maximum_speed,
-            Self::Vehicle(vehicle) => vehicle.maximum_speed(),
-        }
-    }
-
     /// Whether the unit is a BattleMech.
     pub fn is_mech(&self) -> bool {
         matches!(self, Self::Mech(_))

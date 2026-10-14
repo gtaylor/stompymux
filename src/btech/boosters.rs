@@ -79,16 +79,6 @@ impl Mech {
             && self.power() == super::Power::Running
             && self.supercharger_operational()
     }
-    /// Each active device adds one third of the unboosted running speed.
-    pub(super) fn booster_multiplier(&self) -> f64 {
-        1.0 + f64::from(u8::from(self.masc_active()) + u8::from(self.supercharger_active())) / 3.0
-    }
-    /// Successive toggles can temporarily request more than the combined effective ceiling.
-    pub(super) fn booster_speed_envelope(&self) -> f64 {
-        let count = u8::from(self.masc_installed().unwrap_or(false))
-            + u8::from(self.supercharger_installed());
-        (4.0_f64 / 3.0).powi(i32::from(count))
-    }
 }
 
 #[cfg(test)]

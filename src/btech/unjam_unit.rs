@@ -51,7 +51,7 @@ pub(super) fn state(world: &World, id: ObjectId, index: usize) -> Result<FeedSta
         pilot: unit.pilot(),
         jumping: unit.airborne(),
         desired_speed: unit.motion().map_or(0.0, |motion| motion.desired_speed),
-        cruise_speed: unit.movement_maximum_speed() * 2.0 / 3.0,
+        cruise_speed: unit.walking_speed(),
         recycling: !unit.weapon_recycle().is_empty(),
         pending: unit.unjam(),
         bin: unit

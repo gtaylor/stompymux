@@ -88,6 +88,9 @@ pub struct Mech {
     /// Heading held on the pavement or ice the unit is crossing, for the skid rule.
     #[serde(default)]
     pub(super) slick: super::SlickTrack,
+    /// Movement seen since the last turn-clock boundary, for the once-a-turn checks.
+    #[serde(default)]
+    pub(super) turn_movement: super::TurnMovement,
     #[serde(default)]
     pub(super) masc: super::BoosterState,
     /// Shared identity of a C3i network; peers are derived from world membership.
@@ -354,6 +357,7 @@ super::saved_parts::saved_parts!(Mech {
         hull_down,
         bogged_down,
         slick,
+        turn_movement,
         c3i_network,
         c3_network,
         network_automation,
@@ -471,8 +475,10 @@ impl Mech {
                 self.power() == super::Power::Running || !motion.translating(),
                 "Unpowered untowed unit cannot move"
             );
-            motion.validate(self.motion_speed_limit(self.definition().max_speed))?;
-            motion.validate(self.motion_speed_limit(self.mobility().maximum_speed))?;
+            motion.validate_within(self.motion_speed_limit(super::SpeedEnvelope::from_running(
+                self.definition().max_speed,
+            )))?;
+            motion.validate_within(self.motion_speed_limit(self.mobility().envelope()))?;
         }
         ensure!(
             self.ground_elevation
@@ -905,6 +911,7 @@ impl Mech {
             hull_down: Default::default(),
             bogged_down: false,
             slick: Default::default(),
+            turn_movement: Default::default(),
             masc: Default::default(),
             c3i_network: None,
             c3_network: None,
@@ -1144,6 +1151,7 @@ impl Mech {
         );
         self.validate_hull_down()?;
         self.slick.validate()?;
+        self.turn_movement.validate()?;
         ensure!(
             self.position().is_some() == self.map_slot.is_some(),
             "Battlefield placement and slot must coexist"
@@ -1329,9 +1337,9 @@ impl Mech {
         if let Some(motion) = self.motion {
             motion
                 .propelled(self.power)?
-                .validate(self.motion_speed_limit(
+                .validate_within(self.motion_speed_limit(super::SpeedEnvelope::from_running(
                     self.definition.max_speed.max(self.mobility().maximum_speed),
-                ))?;
+                )))?;
             let position = self
                 .position
                 .ok_or_else(|| anyhow::anyhow!("Motion requires placement"))?;
@@ -1558,7 +1566,7 @@ impl Mech {
         if let Some(motion) = self.motion {
             motion
                 .propelled(self.power)?
-                .validate(self.motion_speed_limit(self.mobility().maximum_speed))?;
+                .validate_within(self.motion_speed_limit(self.mobility().envelope()))?;
         }
         Ok(())
     }

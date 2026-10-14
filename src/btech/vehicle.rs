@@ -539,9 +539,7 @@ impl Vehicle {
         let Some(motion) = self.motion() else {
             return Ok(());
         };
-        motion.validate(
-            super::speed_bonus::saved_limit(self.maximum_speed(), false, false, false) + 10.75,
-        )?;
+        motion.validate(super::speed_bonus::saved_limit(self.maximum_speed()) + 10.75)?;
         ensure!(
             self.power() == super::Power::Running
                 || !motion.translating()
@@ -1964,7 +1962,7 @@ impl Vehicle {
                     .is_none_or(|motion| !motion.active()),
             "Rotorless aircraft retains horizontal motion"
         );
-        let maximum = super::speed_bonus::saved_limit(self.maximum_speed(), false, false, false);
+        let maximum = super::speed_bonus::saved_limit(self.maximum_speed());
         if let Some(motion) = self.motion {
             let propelled = motion.propelled(self.power)?;
             propelled.validate(maximum + 10.75)?;

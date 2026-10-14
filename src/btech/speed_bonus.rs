@@ -1,4 +1,5 @@
-//! Shared running-speed equipment bonuses after load and before environmental gravity.
+//! Shared load policy and the environmental speed rules applied after equipment: map gravity
+//! for everything, and extreme temperature for vehicles.
 use anyhow::{Result, ensure};
 
 /// Host policy shared by load accounting and myomer towing assistance.
@@ -21,44 +22,9 @@ impl SpeedPolicy {
     }
 }
 
-/// Live equipment inputs to the speed calculation.
-#[derive(Clone, Copy, Default)]
-pub(super) struct SpeedBonuses {
-    pub masc: bool,
-    pub supercharger: bool,
-    pub hot_myomer: bool,
-}
-
-impl SpeedBonuses {
-    /// Equipment boosts add to running MP before myomer rounding.
-    pub fn apply(self, maximum: f64) -> Result<f32> {
-        ensure!(
-            maximum.is_finite() && maximum >= 0.0,
-            "Invalid unloaded maximum speed"
-        );
-        let mut speed = maximum as f32;
-        let boosts = u8::from(self.masc) + u8::from(self.supercharger);
-        if boosts != 0 {
-            speed = (2.0 * speed / 3.0) * (1.5 + 0.5 * f32::from(boosts));
-        }
-        if self.hot_myomer {
-            speed = (((speed / 1.5 / 10.75).round_ties_even() + 1.0) * 1.5).ceil() * 10.75;
-        }
-        ensure!(speed.is_finite(), "Invalid effective speed");
-        Ok(speed)
-    }
-}
-
-/// Bound retained controls by installed equipment and the largest allowed gravity bonus.
-pub(super) fn saved_limit(base: f64, masc: bool, supercharger: bool, myomer: bool) -> f64 {
-    SpeedBonuses {
-        masc,
-        supercharger,
-        hot_myomer: myomer,
-    }
-    .apply(base)
-    .and_then(|speed| gravity(speed, Some(50)))
-    .unwrap_or(f64::NAN)
+/// Bound retained vehicle controls by the largest allowed gravity bonus.
+pub(super) fn saved_limit(base: f64) -> f64 {
+    gravity(base as f32, Some(50)).unwrap_or(f64::NAN)
 }
 
 /// Apply map gravity after chassis bonuses, preserving ordinary-map precision.
@@ -75,6 +41,19 @@ pub(super) fn on_map(
         Some(map) => gravity(speed as f32, Some(map.gravity)),
         None => Ok(speed),
     }
+}
+
+/// Apply map gravity to both ceilings of a Mech's envelope. Gravity is the last movement
+/// modifier (Tactical Operations p. 53), so it scales what equipment and heat left.
+pub(super) fn envelope_on_map(
+    world: &crate::World,
+    position: Option<super::Position>,
+    envelope: super::SpeedEnvelope,
+) -> Result<super::SpeedEnvelope> {
+    Ok(super::SpeedEnvelope {
+        walking: on_map(world, position, envelope.walking)?,
+        running: on_map(world, position, envelope.running)?,
+    })
 }
 
 /// Apply map gravity and then extreme temperature to a vehicle's speed: beyond −30 °C or
@@ -133,37 +112,14 @@ mod tests {
         assert_eq!(temperature_limited(0.0, i8::MIN), 0.0);
     }
 
-    /// Both equipment boosts add before environmental gravity scales the result.
+    /// Gravity scales speed inversely, no lighter than half a G; invalid gravity is rejected.
     #[test]
-    fn additive_boosts_and_gravity_order() {
-        for mask in 0..4u8 {
-            let bonus = SpeedBonuses {
-                masc: mask & 1 != 0,
-                supercharger: mask & 2 != 0,
-                ..Default::default()
-            };
-            let expected = [64.5, 86.0, 107.5][mask.count_ones() as usize];
-            assert_eq!(bonus.apply(64.5).unwrap(), expected);
-            for (g, multiplier) in [(0, 2.0), (49, 2.0), (50, 2.0), (100, 1.0), (200, 0.5)] {
-                assert_eq!(
-                    gravity(expected, Some(g)).unwrap(),
-                    f64::from(expected) * multiplier
-                );
-            }
+    fn gravity_scaling_and_bounds() {
+        for (g, multiplier) in [(0, 2.0), (49, 2.0), (50, 2.0), (100, 1.0), (200, 0.5)] {
+            assert_eq!(gravity(64.5, Some(g)).unwrap(), 64.5 * multiplier);
         }
-    }
-
-    /// Myomer walking-MP ties round to even; invalid speed and gravity are rejected.
-    #[test]
-    fn hot_myomer_rounding() {
-        let bonus = SpeedBonuses {
-            hot_myomer: true,
-            ..Default::default()
-        };
-        assert_eq!(bonus.apply(40.3125).unwrap(), 53.75);
-        assert_eq!(bonus.apply(56.4375).unwrap(), 86.0);
-        assert!(SpeedBonuses::default().apply(f64::INFINITY).is_err());
-        assert!(SpeedBonuses::default().apply(-1.0).is_err());
+        assert_eq!(saved_limit(64.5), 129.0);
         assert!(gravity(1.0, Some(256)).is_err());
+        assert!(gravity(f32::INFINITY, None).is_err());
     }
 }

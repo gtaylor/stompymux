@@ -145,7 +145,6 @@ pub(crate) fn configured_land(
         MovementRules {
             tsm_tow_bonus: settings.tsm_tow_bonus != 0,
             fall: super::FallRules::configured(config),
-            ..MovementRules::STANDARD
         },
     )
 }

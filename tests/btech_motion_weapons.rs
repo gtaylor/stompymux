@@ -5334,15 +5334,15 @@ async fn movement_control_feedback_routes_cockpit_and_replays_transactionally() 
     let maximum = world.btech.constructed_units()[&subject]
         .mobility()
         .maximum_speed;
+    let walking = world.btech.constructed_units()[&subject]
+        .mobility()
+        .walking_speed;
     for (command, method, value, text) in [
         (
             "speed walk".to_owned(),
             "speed",
-            maximum * 2.0 / 3.0,
-            format!(
-                "Desired speed changed to {} KPH.",
-                (maximum * 2.0 / 3.0) as i32
-            ),
+            walking,
+            format!("Desired speed changed to {} KPH.", walking as i32),
         ),
         (
             "speed run".to_owned(),
@@ -5353,11 +5353,8 @@ async fn movement_control_feedback_routes_cockpit_and_replays_transactionally() 
         (
             "speed back".to_owned(),
             "speed",
-            -maximum * 2.0 / 3.0,
-            format!(
-                "Desired speed changed to {} KPH.",
-                (-maximum * 2.0 / 3.0) as i32
-            ),
+            -walking,
+            format!("Desired speed changed to {} KPH.", (-walking) as i32),
         ),
         (
             "speed 10.125".to_owned(),

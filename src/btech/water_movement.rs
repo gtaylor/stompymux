@@ -37,7 +37,7 @@ pub(super) fn enter_water(
     if check && depth > 0 {
         // A 'Mech may not run into water (Total Warfare p. 54); movement stops a runner at the
         // edge, so entering only has to hold its throttle to a walk.
-        let walking = unit.movement_maximum_speed() * 2.0 / 3.0;
+        let walking = unit.walking_speed();
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         let motion = unit
             .motion

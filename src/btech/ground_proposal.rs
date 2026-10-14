@@ -47,17 +47,13 @@ pub fn propose_mech_ground_motion(
     );
     motion.point.range(motion.point)?;
     let current = map.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let base = super::load::movement_maximum(
-        world,
-        id,
-        unit.mobility().maximum_speed,
-        rules.tsm_tow_bonus,
-    )?;
-    let effective =
-        super::speed_bonus::on_map(world, Some(position), unit.movement_maximum_at(base))?;
-    let maximum = unit.update_from_maximum(effective);
+    let policy = super::SpeedPolicy {
+        tsm_tow_bonus: rules.tsm_tow_bonus,
+    };
+    let envelope = super::motion_controls::throttle_envelope(world, id, policy)?;
+    let maximum = envelope.running;
     if super::load::carries_load(world, id) {
-        motion.limit_load(maximum, maximum);
+        motion.limit_to(envelope);
     }
     if maximum == 0.0 {
         return Ok(GroundMotionProposal {
@@ -67,7 +63,7 @@ pub fn propose_mech_ground_motion(
         });
     }
     let old_heading = motion.heading;
-    motion.turn_toward(maximum);
+    motion.turn_toward(envelope.running, envelope.walking);
     // Fog adds to the cost of every hex a walker enters (Tactical Operations p. 55), and so
     // does the building it walks through (Total Warfare p. 167).
     let divisor = current.ground_speed_divisor(super::GroundMovement::Legged)
@@ -76,17 +72,19 @@ pub fn propose_mech_ground_motion(
             current,
             unit.elevation_level(current),
         ));
-    let desired = motion.desired_speed;
-    if unit.definition().has_triple_myomer() && motion.desired_speed >= maximum {
-        motion.desired_speed = maximum;
-    }
-    let mut target = desired * unit.movement_heat_multiplier(maximum) / divisor;
+    // Heat, damage and equipment cap the throttle rather than scaling it: a request within
+    // the current envelope is honoured as made (Total Warfare p. 159).
+    let mut target = envelope.clamp(motion.desired_speed) / divisor;
     if motion.heading != old_heading {
         let remaining = (motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0;
         target = super::motion_controls::turning_throttle(target, remaining);
     }
     target = unit.lateral_speed_at(target, maximum);
-    let acceleration = unit.ground_acceleration_at(world, maximum);
+    // Heat caps the throttle without slowing how quickly the unit reaches it.
+    let acceleration = unit.ground_acceleration_at(
+        world,
+        super::motion_controls::acceleration_ceiling(world, id, policy)?,
+    );
     motion.accelerate(target, acceleration, maximum);
     let rate = if map.movement_modifier > 0 {
         map.movement_modifier as f64 / 100.0

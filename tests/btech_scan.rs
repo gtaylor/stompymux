@@ -5515,15 +5515,17 @@ async fn movement_queries_and_speed_names_share_native_lua_controls() {
     assert_eq!(scripts.world().btech, before);
     assert!(scripts.drain_outbox().is_empty());
     let maximum = scripts.world().btech.constructed_units()[&source].movement_maximum_speed();
+    let walking = scripts.world().btech.constructed_units()[&source].walking_speed();
+    assert_eq!((walking, maximum), (75.25, 118.25));
     for (argument, expected) in [
-        ("walk", maximum * 2.0 / 3.0),
-        ("CRUISE", maximum * 2.0 / 3.0),
+        ("walk", walking),
+        ("CRUISE", walking),
         ("run", maximum),
         ("flank", maximum),
         ("stop", 0.0),
-        ("back", -maximum * 2.0 / 3.0),
+        ("back", -walking),
         ("100000", maximum),
-        ("-100000", -maximum * 2.0 / 3.0),
+        ("-100000", -walking),
     ] {
         let _ = support::run_text(
             &scripts,
@@ -5621,7 +5623,7 @@ async fn stunned_speed_controls_obey_saved_recovery_without_blocking_walking() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared).unwrap();
     let maximum = scripts.world().btech.constructed_units()[&source].movement_maximum_speed();
-    let walking = maximum * 2.0 / 3.0;
+    let walking = scripts.world().btech.constructed_units()[&source].walking_speed();
     for argument in ["run", "flank", "100000"] {
         let before = scripts.world().btech.clone();
         assert!(

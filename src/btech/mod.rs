@@ -142,6 +142,8 @@ mod loadout_context;
 mod map_flags;
 pub use stompymux_map::{MapFlag, format_map_flags, parse_map_flags};
 mod mobility;
+mod speed_envelope;
+pub use speed_envelope::{MP_KPH, SpeedEnvelope};
 mod motion;
 pub use ground_proposal::{
     GroundMotionProposal, propose_mech_ground_motion, propose_vehicle_ground_motion,
@@ -1416,7 +1418,7 @@ pub(crate) mod turn_clock;
 
 mod periodic_piloting;
 pub use periodic_piloting::{
-    PeriodicPiloting, advance_periodic_piloting, advance_periodic_piloting_action,
+    PeriodicPiloting, TurnMovement, advance_periodic_piloting, advance_periodic_piloting_action,
 };
 
 pub(crate) use jumping::{launch_dfa_action, launch_jump_action};

@@ -78,10 +78,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
             1.0
         };
         motion.point = motion.project_step(rate)?;
-        motion.validate(
-            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
-                + 10.75,
-        )?;
+        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
         Ok(motion)
     }
 
@@ -97,12 +94,8 @@ impl VehicleTemplateMotion for VehicleTemplate {
             "Invalid vehicle maximum speed"
         );
         // Roads increase actual speed, while commands retain the chassis throttle envelope.
-        motion.validate(
-            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
-                + 10.75,
-        )?;
-        let retained =
-            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false);
+        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
+        let retained = super::speed_bonus::saved_limit(self.max_speed.max(maximum));
         ensure!(
             motion.desired_speed >= -retained * 2.0 / 3.0 && motion.desired_speed <= retained,
             "Speed exceeds vehicle limits"
@@ -124,7 +117,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
             };
             motion.heading = (motion.heading + difference.clamp(-turn, turn)).rem_euclid(360.0);
         } else {
-            motion.turn_toward(maximum);
+            motion.turn_toward(maximum, maximum * 2.0 / 3.0);
         }
         let mut target = motion.desired_speed.abs()
             / (terrain_divisor(hex, self.movement, self.has_special("Waterproof_Tech"))
@@ -142,10 +135,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
         target *= motion.desired_speed.signum();
         let acceleration = maximum / 20.0 * if rules.speed_demon { 1.25 } else { 1.0 };
         motion.accelerate(target, acceleration, maximum);
-        motion.validate(
-            super::speed_bonus::saved_limit(self.max_speed.max(maximum), false, false, false)
-                + 10.75,
-        )?;
+        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
         Ok(motion)
     }
 }

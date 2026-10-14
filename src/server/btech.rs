@@ -352,7 +352,6 @@ impl Server {
                     extended_piloting: self.config.battletech.extended_piloting != 0,
                     toughness: false,
                 },
-                ..crate::MovementRules::STANDARD
             },
         ) {
             Ok(arrivals) => {

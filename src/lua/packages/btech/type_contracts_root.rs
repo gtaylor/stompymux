@@ -238,7 +238,8 @@
 
 // lua-types-begin btech 00042
 //|---@class Mobility
-//|---@field maximum_speed number Damage-adjusted maximum kph before terrain, heat and cargo.
+//|---@field walking_speed number Damage-adjusted walking kph before terrain, heat and cargo.
+//|---@field maximum_speed number Damage-adjusted running kph before terrain, heat and cargo.
 //|---@field piloting_modifier integer Damage modifier for subsequent piloting checks.
 // lua-types-end
 

@@ -71,11 +71,17 @@ fn toggle(world: &mut World, id: ObjectId, pilot: ObjectId, kind: Booster) -> Re
             "How much can you Supercharge if you can't move?"
         }
     );
+    // A forward throttle keeps its share of the running ceiling as the ceiling changes.
+    let before = unit.movement_maximum_speed();
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     kind.state_mut(unit).enabled = enabled;
     kind.state_mut(unit).remaining = if enabled { 1 } else { 60 };
     unit.supercharger_scheduled_last = kind == Booster::Supercharger;
-    unit.motion.as_mut().unwrap().desired_speed *= if enabled { 4.0 / 3.0 } else { 3.0 / 4.0 };
+    let after = unit.movement_maximum_speed();
+    let motion = unit.motion.as_mut().unwrap();
+    if motion.desired_speed > 0.0 && before > 0.0 {
+        motion.desired_speed *= after / before;
+    }
     Ok(Notice {
         unit: id,
         text: format!(

@@ -159,13 +159,13 @@ impl Mech {
         {
             return penalty;
         }
-        let maximum = self.template_speed()
-            + if self.triple_myomer_active() {
-                1.5 * 10.75
-            } else {
-                0.0
-            };
-        ground_attacker_movement(self.motion(), maximum)
+        // The template's walking MP, two higher while hot myomer is active (Total Warfare
+        // p. 139), separates walking from running fire.
+        let mut envelope = super::SpeedEnvelope::from_running(self.template_speed());
+        if self.triple_myomer_active() {
+            envelope = envelope.with_walking_mp_delta(2.0);
+        }
+        ground_attacker_movement(self.motion(), envelope.walking)
     }
 
     /// Firing when down (Total Warfare p. 113; Tactical Operations p. 83): +2 for a prone
@@ -264,14 +264,14 @@ impl Mech {
 }
 
 /// Ground firing penalties use the construction's walking threshold, including after motive damage.
-fn ground_attacker_movement(motion: Option<super::Motion>, maximum: f64) -> u8 {
+fn ground_attacker_movement(motion: Option<super::Motion>, walking: f64) -> u8 {
     let Some(motion) = motion else {
         return 0;
     };
     if motion.speed == 0.0 {
         return 0;
     }
-    if motion.speed > maximum * 2.0 / 3.0 + 0.1 {
+    if motion.speed > walking + 0.1 {
         return 2;
     }
     1
@@ -280,7 +280,7 @@ fn ground_attacker_movement(motion: Option<super::Motion>, maximum: f64) -> u8 {
 impl super::Vehicle {
     /// Ground speed and optional hull-turn penalty; turret rotation does not add a movement penalty.
     pub fn attacker_movement_modifier(&self) -> u8 {
-        ground_attacker_movement(self.motion(), self.template_speed())
+        ground_attacker_movement(self.motion(), self.template_speed() * 2.0 / 3.0)
     }
 }
 

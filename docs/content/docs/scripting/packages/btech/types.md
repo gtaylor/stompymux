@@ -205,7 +205,8 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 
 ## Mobility
 
-- `maximum_speed`: `number` — Damage-adjusted maximum kph before terrain, heat and cargo.
+- `walking_speed`: `number` — Damage-adjusted walking kph before terrain, heat and cargo.
+- `maximum_speed`: `number` — Damage-adjusted running kph before terrain, heat and cargo.
 - `piloting_modifier`: `integer` — Damage modifier for subsequent piloting checks.
 
 ## DetectionChannel

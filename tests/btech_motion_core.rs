@@ -245,13 +245,14 @@ async fn damage_clamps_live_controls_and_native_speed_uses_remaining_mobility() 
         },
     )
     .unwrap();
+    // A destroyed hip halves walking MP, rounding up: walk 4, run 6 (Total Warfare p. 125).
     let motion = world.btech.constructed_units()[&id].motion().unwrap();
-    assert_eq!(motion.speed, 59.125);
-    assert_eq!(motion.desired_speed, 59.125);
+    assert_eq!(motion.speed, 64.5);
+    assert_eq!(motion.desired_speed, 64.5);
     assert!(set_battle_speed(&mut world, id, ObjectId(1), 118.25).is_err());
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let text = support::run_text(&scripts, &config, ObjectId(1), 1, "speed run");
-    assert!(text.contains("Desired speed changed to 59 KPH."), "{text}");
+    assert!(text.contains("Desired speed changed to 64 KPH."), "{text}");
     assert_eq!(
         scripts
             .eval_callback::<f64>(&format!(
@@ -259,7 +260,7 @@ async fn damage_clamps_live_controls_and_native_speed_uses_remaining_mobility() 
                 id.0
             ))
             .unwrap(),
-        59.125
+        64.5
     );
     destroy_battle_critical(
         &mut scripts.world_mut(),
@@ -504,27 +505,34 @@ async fn heat_slows_motion_gradually_preserves_throttle_and_recovers_after_cooli
     }
     stompymux_rs::advance_battle_heat(&mut world);
     assert_eq!(world.btech.constructed_units()[&id].heat().excess, 26.0);
+    // Twenty-six heat costs five walking MP (Total Warfare p. 159): the 7/11 walks 2 and
+    // runs 3, backward no faster than its walking ceiling.
+    let unit = &world.btech.constructed_units()[&id];
+    assert_eq!(unit.walking_speed(), 21.5);
+    assert_eq!(unit.movement_maximum_speed(), 32.25);
     let mut reversing = world.clone();
-    set_battle_speed(&mut reversing, id, ObjectId(1), -59.125).unwrap();
+    assert!(set_battle_speed(&mut reversing, id, ObjectId(1), -59.125).is_err());
+    set_battle_speed(&mut reversing, id, ObjectId(1), -21.5).unwrap();
     for _ in 0..5 {
         advance_battle_motion(&mut reversing, RULES).unwrap();
     }
     let reverse_motion = reversing.btech.constructed_units()[&id].motion().unwrap();
-    assert!((reverse_motion.speed + 16.125).abs() < 1e-10);
-    assert_eq!(reverse_motion.desired_speed, -59.125);
+    assert!((reverse_motion.speed + 21.5).abs() < 1e-10);
+    assert_eq!(reverse_motion.desired_speed, -21.5);
 
-    set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
+    assert!(set_battle_speed(&mut world, id, ObjectId(1), 118.25).is_err());
+    set_battle_speed(&mut world, id, ObjectId(1), 32.25).unwrap();
     advance_battle_motion(&mut world, RULES).unwrap();
     assert_eq!(
         world.btech.constructed_units()[&id].motion().unwrap().speed,
         118.25 / 20.0
     );
-    for _ in 0..10 {
+    for _ in 0..25 {
         advance_battle_motion(&mut world, RULES).unwrap();
     }
     let motion = world.btech.constructed_units()[&id].motion().unwrap();
     assert!((motion.speed - 32.25).abs() < 1e-10);
-    assert_eq!(motion.desired_speed, 118.25);
+    assert_eq!(motion.desired_speed, 32.25);
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
@@ -534,10 +542,16 @@ async fn heat_slows_motion_gradually_preserves_throttle_and_recovers_after_cooli
     for _ in 0..150 {
         stompymux_rs::advance_battle_heat(&mut world);
     }
+    // Cooled off, the whole template envelope is available again.
+    assert_eq!(
+        world.btech.constructed_units()[&id].movement_maximum_speed(),
+        118.25
+    );
+    set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
     advance_battle_motion(&mut world, RULES).unwrap();
     let recovered = world.btech.constructed_units()[&id].motion().unwrap();
     assert!(recovered.speed > motion.speed);
-    assert_eq!(recovered.desired_speed, motion.desired_speed);
+    assert_eq!(recovered.desired_speed, 118.25);
 }
 
 #[tokio::test]
@@ -806,13 +820,13 @@ async fn stun_refreshes_expires_after_restart_and_blocks_expenditure_without_sto
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(unit.stun_remaining(), 10);
     assert_eq!(unit.motion().unwrap().speed, 118.25);
-    assert_eq!(unit.motion().unwrap().desired_speed, 118.25 * 2.0 / 3.0);
+    assert_eq!(unit.motion().unwrap().desired_speed, 75.25);
     assert!(!unit.weapon_readiness(0).unwrap().ready);
     let before = world.btech.clone();
     assert!(spend_battle_weapon(&mut world, id, ObjectId(1), 0).is_err());
     assert_eq!(world.btech, before);
     advance_battle_motion(&mut world, RULES).unwrap();
-    assert!(world.btech.constructed_units()[&id].motion().unwrap().speed > 118.25 * 2.0 / 3.0);
+    assert!(world.btech.constructed_units()[&id].motion().unwrap().speed > 75.25);
     for _ in 0..4 {
         assert!(advance_battle_stun(&mut world).is_empty());
     }
@@ -918,8 +932,8 @@ async fn hip_critical_clamps_desired_speed_to_the_new_maximum() {
             continue;
         }
         let unit = &trial.btech.constructed_units()[&id];
-        assert_eq!(unit.mobility().maximum_speed, 59.125);
-        assert_eq!(unit.motion().unwrap().desired_speed, 59.125);
+        assert_eq!(unit.mobility().maximum_speed, 64.5);
+        assert_eq!(unit.motion().unwrap().desired_speed, 64.5);
         assert_eq!(unit.stun_remaining(), 0);
         return;
     }
@@ -3119,9 +3133,6 @@ async fn careful_stand_failure_falls_again_and_requires_thirty_second_recovery()
         .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() < 4)
         .unwrap();
     shot_seed(&mut world, id, seed);
-    let before = world.btech.clone();
-    assert!(begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, fall_rules()).is_err());
-    assert_eq!(world.btech, before);
     let attempt =
         begin_battle_stand(&mut world, id, ObjectId(1), M::Careful, fall_rules()).unwrap();
     assert!(!attempt.check.success);

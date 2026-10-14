@@ -4,7 +4,50 @@
 use super::{MechFallReport, MechSection, Notice, PilotingCheck, Power, TacticalImpact};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+/// What a Mech did since the last turn-clock boundary, for the checks Total Warfare makes
+/// once a turn: a PSR for running with a damaged hip or gyro (p. 53) and the gravity
+/// strain check (Tactical Operations p. 53).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TurnMovement {
+    /// The unit travelled faster than its walking ceiling at some point this turn.
+    #[serde(default)]
+    pub ran: bool,
+    /// The fastest speed over the unit's normal running ceiling this turn, in km/h.
+    #[serde(default)]
+    pub gravity_excess: f64,
+}
+
+impl TurnMovement {
+    /// Note one second of travel at `speed` against the walking ceiling and the normal
+    /// (1 G, unboosted) running ceiling.
+    pub(super) fn observe(&mut self, speed: f64, walking: f64, normal_running: f64) {
+        if speed > walking + 0.1 {
+            self.ran = true;
+        }
+        if speed > normal_running {
+            self.gravity_excess = self.gravity_excess.max(speed - normal_running);
+        }
+    }
+
+    /// Saved values must be finite and non-negative.
+    pub(crate) fn validate(self) -> Result<()> {
+        anyhow::ensure!(
+            self.gravity_excess.is_finite() && self.gravity_excess >= 0.0,
+            "Invalid turn movement"
+        );
+        Ok(())
+    }
+}
+
+impl super::Mech {
+    /// What the unit has done since the last turn-clock boundary.
+    pub fn turn_movement(&self) -> TurnMovement {
+        self.turn_movement
+    }
+}
 
 /// Completed heartbeat check and all immediate consequences, suitable for deterministic replay.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -31,32 +74,41 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
     {
         return Ok(None);
     }
-    let speed = unit.motion().map_or(0.0, |m| m.speed);
-    let unloaded = unit.mobility().maximum_speed;
-    let mut maximum =
-        super::load::movement_maximum(world, id, unloaded, config.battletech.tsm_tow_bonus != 0)?;
+    let _ = config;
     let mut modifier = None;
     let mut gravity_damage = 0;
-    if world.btech.turn_clock.due() && unit.posture() != super::Posture::Prone && !unit.airborne() {
-        if unit.power() != Power::Running {
-            modifier = Some(3);
-        }
-        if unit.triple_myomer_active() {
-            maximum = (((maximum / 1.5 / 10.75).round_ties_even() + 1.0) * 1.5).ceil() * 10.75;
-        }
-        let map = &world.btech.maps()[&unit.position().unwrap().map];
-        if map.gravity != 100 && speed > unloaded {
-            modifier = Some(0);
-            gravity_damage =
-                (((speed - unloaded) / 10.75).trunc() + 1.0).min(f64::from(u16::MAX)) as u16;
-        }
+    if world.btech.turn_clock.due()
+        && unit.power() != Power::Running
+        && unit.posture() != super::Posture::Prone
+        && !unit.airborne()
+    {
+        modifier = Some(3);
     }
+    if !world.btech.turn_clock.starts_turn()
+        || unit.posture() == super::Posture::Prone
+        || unit.airborne()
+    {
+        return Ok(modifier.map(|modifier| (modifier, gravity_damage)));
+    }
+    let movement = unit.turn_movement;
+    // Moving faster than its normal running MP under light gravity strains a 'Mech's legs:
+    // one PSR at the turn's end, and on a failure one point of internal damage to each leg
+    // for every MP by which it exceeded that figure (Tactical Operations p. 53).
+    let map = &world.btech.maps()[&unit.position().unwrap().map];
+    if map.gravity != 100 && movement.gravity_excess > 0.0 {
+        modifier = Some(0);
+        gravity_damage = (movement.gravity_excess / super::MP_KPH)
+            .ceil()
+            .clamp(1.0, f64::from(u16::MAX)) as u16;
+    }
+    // A 'Mech that runs in a turn with a damaged hip or gyro makes one PSR at the end of
+    // that turn (Total Warfare pp. 53 and 59).
     let hips = unit.loadout()?.systems.iter().any(|part| {
         part.system == super::System::ShoulderOrHip
             && unit.chassis().legs().contains(&part.location.section)
             && unit.critical_unavailable(part.location)
     });
-    if speed > 2.0 * maximum / 3.0 + 0.1 && (unit.gyro_damage() > 0 || hips) {
+    if movement.ran && (unit.gyro_damage() > 0 || hips) {
         modifier = Some(0);
     }
     Ok(modifier.map(|modifier| (modifier, gravity_damage)))
@@ -80,8 +132,13 @@ pub fn advance_periodic_piloting(
         })
         .collect();
     let mut reports = Vec::new();
+    let boundary = world.btech.turn_clock.starts_turn();
     for id in ids {
-        let Some((modifier, gravity_damage)) = required(world, id, config)? else {
+        let required = required(world, id, config)?;
+        if boundary && let Some(unit) = world.btech.constructed.get_mut(&id) {
+            unit.turn_movement = TurnMovement::default();
+        }
+        let Some((modifier, gravity_damage)) = required else {
             continue;
         };
         let mut rules = super::FallRules::configured(config);

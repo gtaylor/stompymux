@@ -107,10 +107,13 @@ async fn myomer_movement_heat_and_native_lua_controls() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id) = fixture('.').await;
     install_test_myomer(&mut base, id);
+    // Heat takes a walking MP from five points up, hot myomer adds two from nine (Total
+    // Warfare pp. 139 and 159): the 7/11 walks 6 and runs 9 just under nine heat, and
+    // walks 8 and runs 12 at nine, and loses a second MP at ten for a 7/11 again.
     for (heat, maximum, steady) in [
-        (8.999, 118.25, 96.75),
+        (8.999, 96.75, 96.75),
         (9.0, 129.0, 129.0),
-        (10.0, 129.0, 129.0 * 118.25 / 150.5),
+        (10.0, 118.25, 118.25),
     ] {
         let mut world = base.clone();
         myomer_test_heat(&mut world, id, 30.0, heat);
@@ -146,7 +149,7 @@ async fn myomer_movement_heat_and_native_lua_controls() {
             .motion()
             .unwrap()
             .heading
-            - 20.25)
+            - 18.0)
             .abs()
             < 1e-9
     );
@@ -193,27 +196,30 @@ async fn myomer_cooling_restart_preserves_transition_motion() {
         world.btech.constructed_units()[&id].motion().unwrap().speed,
         129.0
     );
+    // Cooled below nine with eight heat left, the envelope is walk 6, run 9; the
+    // requested 129 km/h is kept and the throttle is capped at the ceiling.
+    assert_eq!(
+        world.btech.constructed_units()[&id].movement_maximum_speed(),
+        96.75
+    );
     world.validate(&config).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
-    for _ in 0..5 {
+    for _ in 0..10 {
         assert_eq!(
             advance_battle_motion(&mut world, RULES).unwrap(),
             advance_battle_motion(&mut loaded, RULES).unwrap()
         );
     }
     assert_eq!(world.btech, loaded.btech);
-    assert_eq!(
-        world.btech.constructed_units()[&id]
-            .motion()
-            .unwrap()
-            .desired_speed,
-        118.25
-    );
+    let motion = world.btech.constructed_units()[&id].motion().unwrap();
+    assert_eq!(motion.desired_speed, 129.0);
+    assert!((motion.speed - 96.75).abs() < 1e-9);
     world.validate(&config).unwrap();
 }
 
-/// The reference clamps only forward throttle when myomer cools; reverse controls remain bounded by installed capability.
+/// Cooling lowers the walking ceiling: a reverse throttle above it is kept but the unit slows
+/// toward the new ceiling, and the saved state stays valid.
 #[tokio::test]
 async fn myomer_reverse_cooling_retains_throttle_without_invalidating_state() {
     use stompymux_rs::*;
@@ -228,7 +234,8 @@ async fn myomer_reverse_cooling_retains_throttle_without_invalidating_state() {
     advance_battle_motion(&mut world, RULES).unwrap();
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(unit.movement_maximum_speed(), 118.25);
-    assert_eq!(unit.motion().unwrap().speed, -86.0);
+    assert_eq!(unit.walking_speed(), 75.25);
+    assert!((unit.motion().unwrap().speed - (-86.0 + 118.25 / 20.0)).abs() < 1e-9);
     assert_eq!(unit.motion().unwrap().desired_speed, -86.0);
     world.validate(&config).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -6957,12 +6964,13 @@ async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
     install_test_myomer(&mut world, id);
     let map_id = world.btech.constructed_units()[&id].position().unwrap().map;
     for (heat, gravity, expected) in [
-        (8.999, 100, 118.25),
+        (4.999, 100, 118.25),
+        (8.999, 100, 96.75),
         (9.0, 100, 129.0),
         (9.0, 50, 258.0),
         (9.0, 0, 258.0),
         (9.0, 200, 64.5),
-        (8.999, 200, 59.125),
+        (4.999, 200, 59.125),
     ] {
         myomer_test_heat(&mut world, id, 30.0, heat);
         world
@@ -6998,6 +7006,7 @@ async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
             record["sections"]["LeftLeg"]["armor"] = 0.into();
         })
         .unwrap();
+    myomer_test_heat(&mut world, id, 0.0, 0.0);
     let unit = &world.btech.constructed_units()[&id];
     assert!(unit.mass().unwrap().total < 35 * 1024);
     assert_eq!(unit.mobility().maximum_speed, 10.75);
