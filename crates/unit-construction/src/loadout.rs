@@ -56,6 +56,11 @@ impl AmmunitionBin {
             "Duplicate ammunition flags"
         );
         let half_ton = flags.iter().any(|mode| mode == "Halfton");
+        // TechManual p. 48: only machine guns may carry ammunition in half-ton lots.
+        ensure!(
+            !half_ton || weapon.allows_half_ton_bins(),
+            "Half-ton ammunition bins are limited to machine guns"
+        );
         let ammunition_flags: Vec<_> = flags
             .iter()
             .filter(|mode| !matches!(mode.as_str(), "Halfton" | "Hotload" | "OnTC"))
@@ -63,24 +68,7 @@ impl AmmunitionBin {
             .collect();
         let mode = super::AmmunitionMode::from_flags(weapon, &ammunition_flags)?;
         let full_capacity = weapon.profile_for_ammunition(mode).ammunition_per_ton;
-        let capacity = u16::from(
-            if half_ton
-                || matches!(
-                    mode,
-                    super::AmmunitionMode::Precision
-                        | super::AmmunitionMode::ArmorPiercing
-                        | super::AmmunitionMode::ThunderAugmented
-                        | super::AmmunitionMode::ThunderActive
-                )
-            {
-                full_capacity / 2
-            } else if mode == super::AmmunitionMode::Caseless {
-                full_capacity * 2
-            } else {
-                full_capacity
-            },
-        );
-        Ok((capacity, half_ton, mode))
+        Ok((bin_capacity(full_capacity, half_ton, mode), half_ton, mode))
     }
 
     pub fn configuration_contract(
@@ -111,25 +99,34 @@ impl AmmunitionBin {
         // projection uses its normal precedence while the critical retains every bit.
         let mode = super::AmmunitionMode::initial_selection(weapon, &ammunition_flags);
         let full_capacity = weapon.profile_for_ammunition(mode).ammunition_per_ton;
-        let capacity = u16::from(
-            if half_ton
-                || matches!(
-                    mode,
-                    super::AmmunitionMode::Precision
-                        | super::AmmunitionMode::ArmorPiercing
-                        | super::AmmunitionMode::ThunderAugmented
-                        | super::AmmunitionMode::ThunderActive
-                )
-            {
-                full_capacity / 2
-            } else if mode == super::AmmunitionMode::Caseless {
-                full_capacity * 2
-            } else {
-                full_capacity
-            },
-        );
-        Ok((capacity, half_ton, mode))
+        Ok((bin_capacity(full_capacity, half_ton, mode), half_ton, mode))
     }
+}
+
+/// Salvos one bin holds. A half-ton lot holds half a ton's rounds. Precision and armor-piercing
+/// autocannon rounds (Total Warfare p. 141) and the Augmented, Active and Vibrabomb Thunder
+/// rounds (Tactical Operations: Advanced Units & Equipment p. 228) pack half as many shots into
+/// a ton, and caseless rounds twice as many (p. 225).
+fn bin_capacity(full_capacity: u8, half_ton: bool, mode: super::AmmunitionMode) -> u16 {
+    use super::AmmunitionMode as Mode;
+    u16::from(
+        if half_ton
+            || matches!(
+                mode,
+                Mode::Precision
+                    | Mode::ArmorPiercing
+                    | Mode::ThunderAugmented
+                    | Mode::ThunderActive
+                    | Mode::ThunderVibrabomb
+            )
+        {
+            full_capacity / 2
+        } else if mode == Mode::Caseless {
+            full_capacity * 2
+        } else {
+            full_capacity
+        },
+    )
 }
 
 /// One system critical at its installed location.
@@ -777,6 +774,63 @@ fn split_criticals(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Half-ton lots are a machine-gun privilege (TechManual p. 48); other bins refuse the flag.
+    #[test]
+    fn half_ton_bins_are_limited_to_machine_guns() {
+        for weapon in [
+            Weapon::MachineGun,
+            Weapon::HeavyMachineGun,
+            Weapon::ClanLightMachineGun,
+        ] {
+            assert_eq!(
+                AmmunitionBin::configuration(weapon, &["Halfton".into()]).unwrap(),
+                (
+                    u16::from(weapon.profile().ammunition_per_ton / 2),
+                    true,
+                    super::super::AmmunitionMode::Normal
+                )
+            );
+        }
+        for weapon in [Weapon::Ac20, Weapon::Lrm5, Weapon::Srm2, Weapon::Lbx10] {
+            let error = AmmunitionBin::configuration(weapon, &["Halfton".into()]).unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .contains("Half-ton ammunition bins are limited to machine guns"),
+                "{weapon:?}: {error}"
+            );
+            let full = u16::from(weapon.profile().ammunition_per_ton);
+            assert_eq!(
+                AmmunitionBin::configuration(weapon, &[]).unwrap(),
+                (full, false, super::super::AmmunitionMode::Normal)
+            );
+        }
+    }
+
+    /// Thunder-Augmented, -Active and -Vibrabomb rounds all pack half as many shots into a ton
+    /// (Tactical Operations: Advanced Units & Equipment p. 228); plain Thunder rounds pack a full ton.
+    #[test]
+    fn thunder_variants_halve_shots_per_ton() {
+        use super::super::AmmunitionMode as Mode;
+        for (flag, mode, capacity) in [
+            ("Mine", Mode::Mine, 6),
+            ("ThunderAug", Mode::ThunderAugmented, 3),
+            ("ThunderActive", Mode::ThunderActive, 3),
+            ("ThunderVibra", Mode::ThunderVibrabomb, 3),
+        ] {
+            assert_eq!(
+                AmmunitionBin::configuration(Weapon::Lrm20, &[flag.into()]).unwrap(),
+                (capacity, false, mode),
+                "{flag}"
+            );
+            assert_eq!(
+                AmmunitionBin::configuration_contract(Weapon::Lrm20, &[flag.into()]).unwrap(),
+                (capacity, false, mode),
+                "{flag}"
+            );
+        }
+    }
 
     /// Automatic eligibility, explicit links, hardware loss and cluster exclusion compose independently.
     #[test]

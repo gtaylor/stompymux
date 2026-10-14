@@ -1,4 +1,4 @@
-//! Precision bin capacities, half-ton interaction, ordinary damage and saved contents.
+//! Precision bin capacities, half-ton rejection, ordinary damage and saved contents.
 use stompymux_rs::*;
 
 #[test]
@@ -37,7 +37,10 @@ fn precision_bins_have_half_capacity_without_double_halving() {
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             bin.modes = vec!["Precision".into()];
             if half {
+                // Half-ton lots are a machine-gun privilege (TechManual p. 48).
                 bin.modes.push("Halfton".into());
+                assert!(Mech::from_template(definition).is_err(), "{weapon:?}");
+                continue;
             }
             let unit = Mech::from_template(definition).unwrap();
             let loadout = unit.loadout().unwrap();

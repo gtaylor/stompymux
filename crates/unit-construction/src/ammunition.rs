@@ -56,6 +56,12 @@ pub enum AmmunitionMode {
 impl AmmunitionMode {
     /// Equipment compatibility, shared by templates, saved units, controls and damage grouping.
     /// Installed controllers and disposable-weapon restrictions belong to live controls.
+    ///
+    /// Missile munitions follow the launcher tables in Total Warfare pp. 130-142 and Tactical
+    /// Operations: Advanced Units & Equipment p. 228: standard LRM, SRM and MML launchers take
+    /// the special rounds, while Streak, MRM, rocket, ATM, Thunderbolt, Extended LRM, Narc and
+    /// dead-fire launchers fire only their ordinary rounds (ATMs also choose between their own
+    /// three missile types). An MML takes a round only in the family that round belongs to.
     pub fn supports(self, weapon: Weapon) -> bool {
         // Torpedo launchers carry ordinary or Artemis-guided torpedoes only.
         if weapon.is_torpedo() {
@@ -71,20 +77,33 @@ impl AmmunitionMode {
             | Self::MmlLrmSemiGuided
             | Self::MmlLrmStinger => weapon.is_mml(),
             Self::ExtendedRange | Self::HighExplosive => weapon.is_atm(),
-            Self::Inferno => weapon.profile().missiles > 0,
-            Self::SemiGuided | Self::Stinger => weapon.supports_semiguided(),
-            Self::Swarm | Self::Swarm1 => weapon.supports_semiguided() && !weapon.is_dead_fire(),
+            // Inferno rounds are an SRM munition (Total Warfare p. 141).
+            Self::Inferno => weapon.is_standard_srm() || weapon.is_mml(),
+            Self::SemiGuided | Self::Stinger | Self::Swarm | Self::Swarm1 => {
+                weapon.supports_semiguided()
+            }
             Self::INarcExplosive | Self::INarcHaywire | Self::INarcEcm | Self::INarcNemesis => {
                 weapon == Weapon::INarcBeacon
             }
             Self::Cluster => weapon.is_lbx() || weapon.is_artillery(),
-            Self::Smoke | Self::Mine => weapon.is_artillery() || weapon.profile().missiles > 0,
+            // Smoke SRMs and LRMs load in standard SRM, LRM and MML launchers.
+            Self::Smoke => {
+                weapon.is_artillery()
+                    || weapon.is_standard_srm()
+                    || weapon.is_standard_lrm()
+                    || weapon.is_mml()
+            }
+            // Plain mine rounds are the original Thunder munition: LRM launchers only.
+            Self::Mine => weapon.is_artillery() || weapon.supports_thunder(),
             Self::ThunderAugmented | Self::ThunderVibrabomb | Self::ThunderActive => {
                 weapon.supports_thunder()
             }
-            Self::Artemis => weapon.profile().missiles > 0,
+            Self::Artemis => weapon.accepts_artemis(),
+            // On a Narc launcher this flag selects explosive pods (Total Warfare p. 141), and
+            // the ballistic AMS reuses it for its own supply.
             Self::Narc => {
-                weapon.profile().missiles > 0
+                weapon.accepts_narc_rounds()
+                    || weapon.is_narc()
                     || matches!(
                         weapon,
                         Weapon::AntiMissileSystem | Weapon::ClanAntiMissileSystem
@@ -302,6 +321,129 @@ impl AmmunitionMode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use AmmunitionMode as M;
+    use Weapon as W;
+
+    /// Launchers the munition tables exclude from every special missile round.
+    const RESTRICTED_LAUNCHERS: [Weapon; 10] = [
+        W::StreakSrm6,
+        W::ClanStreakSrm2,
+        W::ClanStreakLrm20,
+        W::Mrm40,
+        W::Rocket20,
+        W::ClanAtm12,
+        W::Thunderbolt15,
+        W::Elrm10,
+        W::LrDfm20,
+        W::SrDfm6,
+    ];
+
+    /// Special missile rounds follow the launcher tables in Total Warfare pp. 130-142 and
+    /// Tactical Operations: Advanced Units & Equipment p. 228.
+    #[test]
+    fn missile_munitions_follow_the_launcher_tables() {
+        for weapon in RESTRICTED_LAUNCHERS {
+            for mode in [
+                M::Artemis,
+                M::Narc,
+                M::Inferno,
+                M::Smoke,
+                M::Mine,
+                M::SemiGuided,
+                M::Swarm,
+                M::Swarm1,
+                M::Stinger,
+                M::ThunderAugmented,
+                M::ThunderActive,
+                M::ThunderVibrabomb,
+            ] {
+                assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
+            }
+            assert!(M::Normal.supports(weapon));
+        }
+        for weapon in [W::Lrm20, W::ClanLrm5, W::Nlrm10] {
+            for mode in [
+                M::Artemis,
+                M::Narc,
+                M::Smoke,
+                M::Mine,
+                M::SemiGuided,
+                M::Swarm,
+                M::Swarm1,
+                M::Stinger,
+                M::ThunderAugmented,
+                M::ThunderActive,
+                M::ThunderVibrabomb,
+            ] {
+                assert!(mode.supports(weapon), "{weapon:?} {mode:?}");
+            }
+            assert!(!M::Inferno.supports(weapon), "{weapon:?}");
+        }
+        for weapon in [W::Srm6, W::ClanSrm2] {
+            for mode in [M::Artemis, M::Narc, M::Inferno, M::Smoke] {
+                assert!(mode.supports(weapon), "{weapon:?} {mode:?}");
+            }
+            for mode in [
+                M::Mine,
+                M::SemiGuided,
+                M::Swarm,
+                M::Swarm1,
+                M::Stinger,
+                M::ThunderActive,
+            ] {
+                assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
+            }
+        }
+        for weapon in [W::Lrt20, W::ClanSrt2] {
+            assert!(M::Artemis.supports(weapon));
+            for mode in [M::Narc, M::Inferno, M::Smoke, M::Mine, M::SemiGuided] {
+                assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
+            }
+        }
+        // Narc launchers fire beacons or explosive pods, selected through the Narc flag; iNarc
+        // launchers select their pods through the dedicated iNarc modes instead.
+        for weapon in [W::NarcBeacon, W::ClanNarcBeacon] {
+            assert!(M::Narc.supports(weapon));
+            for mode in [
+                M::Artemis,
+                M::Inferno,
+                M::Smoke,
+                M::Mine,
+                M::SemiGuided,
+                M::Swarm,
+            ] {
+                assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
+            }
+        }
+        assert!(M::ExtendedRange.supports(W::ClanAtm3));
+        assert!(M::HighExplosive.supports(W::ClanAtm3));
+        assert!(!M::ExtendedRange.supports(W::Lrm5));
+        assert!(M::Narc.supports(W::AntiMissileSystem));
+    }
+
+    /// An MML loads each special round only in the family that round belongs to; Thunder rounds
+    /// have no MML long-range variant and are refused outright.
+    #[test]
+    fn mml_families_split_srm_and_lrm_munitions() {
+        for (mode, short, long) in [
+            (M::Normal, Some(M::Normal), Some(M::MmlLrm)),
+            (M::Artemis, Some(M::Artemis), Some(M::MmlLrmArtemis)),
+            (M::Narc, Some(M::Narc), Some(M::MmlLrmNarc)),
+            (M::Inferno, Some(M::Inferno), None),
+            (M::Smoke, Some(M::Smoke), None),
+            (M::Mine, None, None),
+            (M::ThunderActive, None, None),
+            (M::SemiGuided, None, Some(M::MmlLrmSemiGuided)),
+            (M::Swarm, None, Some(M::MmlLrmSwarm)),
+            (M::Swarm1, None, Some(M::MmlLrmSwarm1)),
+            (M::Stinger, None, Some(M::MmlLrmStinger)),
+        ] {
+            assert_eq!(mode.with_mml_family(false), short, "{mode:?}");
+            assert_eq!(mode.with_mml_family(true), long, "{mode:?}");
+        }
+        assert!(!M::Mine.supports(W::Mml7));
+        assert!(!M::ThunderAugmented.supports(W::Mml7));
+    }
 
     #[test]
     fn bins_reject_conflicting_types_while_mounts_retain_selection_precedence() {

@@ -980,8 +980,9 @@ pub use btech::{
 };
 
 pub use btech::{
-    AMMUNITION_PART_OFFSET, PART_ID_LIMIT, Part, PartKind, WEAPON_PART_IDS,
-    inventory_mass as battle_inventory_mass, set_inventory_named as set_battle_inventory_named,
+    AMMUNITION_PART_OFFSET, ARTILLERY_MAPSHEET_HEXES, PART_ID_LIMIT, Part, PartKind,
+    WEAPON_PART_IDS, inventory_mass as battle_inventory_mass,
+    set_inventory_named as set_battle_inventory_named,
 };
 
 pub use btech::{

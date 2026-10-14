@@ -1,8 +1,8 @@
-//! Caseless bin capacities, half-ton interaction, ordinary damage and saved contents.
+//! Caseless bin capacities, half-ton rejection, ordinary damage and saved contents.
 use stompymux_rs::*;
 
 #[test]
-fn caseless_bins_have_double_capacity_and_half_ton_sizing() {
+fn caseless_bins_have_double_capacity_and_refuse_half_ton_lots() {
     for weapon in [
         Weapon::Ac2,
         Weapon::Ac5,
@@ -37,7 +37,10 @@ fn caseless_bins_have_double_capacity_and_half_ton_sizing() {
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             bin.modes = vec!["Caseless".into()];
             if half {
+                // Half-ton lots are a machine-gun privilege (TechManual p. 48).
                 bin.modes.push("Halfton".into());
+                assert!(Mech::from_template(definition).is_err(), "{weapon:?}");
+                continue;
             }
             let unit = Mech::from_template(definition).unwrap();
             let loadout = unit.loadout().unwrap();

@@ -1143,7 +1143,7 @@ mod artemis_tests {
     /// Combine both modifiers before clamping the roll to the table's rows.
     #[test]
     fn artemis_glancing_table_boundaries() {
-        for weapon in [Weapon::Srm6, Weapon::Lrm20, Weapon::Mrm40] {
+        for weapon in [Weapon::Srm6, Weapon::Lrm20, Weapon::ClanLrm20, Weapon::Mml9] {
             for roll in 2..=12 {
                 let actual = weapon
                     .damage_groups_for_ammunition_hit(
@@ -1160,13 +1160,19 @@ mod artemis_tests {
                 );
             }
         }
+        // Streak launchers land every missile and take no Artemis rounds (Total Warfare p. 130).
         assert_eq!(
             Weapon::StreakSrm6
-                .damage_groups_for_ammunition_hit(AmmunitionMode::Artemis, Some(2), true, Some(8.0))
+                .damage_groups_for_ammunition_hit(AmmunitionMode::Normal, Some(2), true, Some(8.0))
                 .unwrap()
                 .iter()
                 .sum::<u16>(),
             12
+        );
+        assert!(
+            Weapon::StreakSrm6
+                .damage_groups_for_ammunition_hit(AmmunitionMode::Artemis, Some(2), true, Some(8.0))
+                .is_err()
         );
     }
 }

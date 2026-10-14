@@ -164,13 +164,24 @@ fn head_controller_reports_both_matching_mounts() {
     }
 }
 
-/// The ammunition bonus shifts the missile table by two, capped at twelve, with ordinary packet grouping.
+/// The ammunition bonus shifts the missile table by two, capped at twelve, with ordinary packet
+/// grouping. Only standard LRM, SRM, MML and torpedo launchers take Artemis rounds (Total
+/// Warfare p. 131); every other missile launcher refuses them.
 #[test]
 fn artemis_missile_tables_and_existing_archer() {
     for &weapon in Weapon::ALL
         .iter()
-        .filter(|weapon| weapon.profile().missiles > 0)
+        .filter(|weapon| weapon.profile().missiles > 0 && !weapon.accepts_artemis())
     {
+        assert!(
+            weapon
+                .damage_groups_for_ammunition(AmmunitionMode::Artemis, Some(7), 8.0)
+                .is_err(),
+            "{weapon:?}"
+        );
+    }
+    for &weapon in Weapon::ALL.iter().filter(|weapon| weapon.accepts_artemis()) {
+        assert!(weapon.profile().missiles > 0);
         for roll in 2..=12 {
             assert_eq!(
                 weapon

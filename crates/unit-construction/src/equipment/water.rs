@@ -4,7 +4,8 @@ use crate::{RangeBracket, WeaponRange};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 
-/// Water-specific bands. Some small lasers have no long band or extreme extension.
+/// Water-specific bands from the Total Warfare Underwater Range Table (p. 109) and the Tactical
+/// Operations advanced-weapons table. Micro and some small lasers have no long band.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct WaterRanges {
     pub minimum_range: u8,
@@ -36,11 +37,13 @@ impl Weapon {
                 long_range: Some(profile.long_range),
             });
         }
+        // Total Warfare p. 109 rows, then the Tactical Operations advanced-weapons rows
+        // (X-pulse and Clan ER pulse lasers). The Clan plasma entry borrows the ER PPC row.
         let (minimum_range, short_range, medium_range, long_range) = match self {
-            Self::ClanErLargeLaser => (0, 5, 10, Some(15)),
+            Self::ClanErLargeLaser => (0, 5, 10, Some(16)),
             Self::ClanErMediumLaser => (0, 3, 7, Some(10)),
             Self::ClanErSmallLaser | Self::ClanSmallPulseLaser => (0, 1, 2, Some(4)),
-            Self::ClanErMicroLaser | Self::ClanMicroPulseLaser => (0, 1, 2, Some(2)),
+            Self::ClanErMicroLaser | Self::ClanMicroPulseLaser => (0, 1, 2, None),
             Self::ClanErPpc | Self::ErPpc | Self::ClanPlasmaRifle => (0, 4, 10, Some(16)),
             Self::ClanHeavyLargeLaser | Self::LargeLaser | Self::XLargePulseLaser => {
                 (0, 3, 6, Some(9))
@@ -52,16 +55,15 @@ impl Weapon {
             Self::ClanLargePulseLaser => (0, 4, 10, Some(14)),
             Self::ClanMediumPulseLaser => (0, 3, 5, Some(8)),
             Self::ClanErLargePulseLaser => (0, 4, 10, Some(16)),
-            Self::ClanErMediumPulseLaser => (0, 3, 6, Some(8)),
-            Self::ClanErSmallPulseLaser => (0, 2, 3, Some(4)),
-            Self::Ppc => (3, 4, 7, Some(10)),
-            Self::ErLargeLaser => (0, 3, 5, Some(12)),
+            Self::ClanErMediumPulseLaser => (0, 3, 6, Some(9)),
+            Self::ClanErSmallPulseLaser => (0, 1, 2, Some(4)),
+            Self::Ppc | Self::LightPpc | Self::HeavyPpc => (3, 4, 7, Some(10)),
+            Self::ErLargeLaser => (0, 3, 9, Some(12)),
             Self::ErMediumLaser => (0, 3, 5, Some(8)),
-            Self::ErSmallLaser => (0, 1, 2, Some(3)),
+            Self::ErSmallLaser | Self::XSmallPulseLaser => (0, 1, 2, Some(3)),
             Self::LargePulseLaser => (0, 2, 5, Some(7)),
             Self::MediumPulseLaser => (0, 2, 3, Some(4)),
             Self::SnubNosedPpc => (0, 6, 8, Some(9)),
-            Self::LightPpc | Self::HeavyPpc => (3, 4, 8, Some(10)),
             _ => return None,
         };
         Some(WaterRanges {
@@ -114,18 +116,17 @@ mod tests {
     /// Water eligibility is narrower than energy weapons, and differs between plasma designs.
     /// The fourteen torpedo launchers are the only missiles that fire underwater.
     #[test]
-    fn catalogue_admits_only_the_46_water_profiles() {
+    fn catalogue_admits_only_the_47_water_profiles() {
         assert_eq!(
             Weapon::ALL
                 .iter()
                 .filter(|w| w.water_ranges().is_some())
                 .count(),
-            46
+            47
         );
         for weapon in [
             Weapon::Flamer,
             Weapon::PlasmaRifle,
-            Weapon::XSmallPulseLaser,
             Weapon::Ac20,
             Weapon::Srm6,
         ] {
@@ -142,6 +143,57 @@ mod tests {
                 .effective_range(),
             16
         );
+    }
+
+    /// Every row matches the Underwater Range Table (Total Warfare p. 109) and the advanced
+    /// weapons table (Tactical Operations: Advanced Units & Equipment), as min/short/medium/long.
+    #[test]
+    fn water_rows_match_the_underwater_range_tables() {
+        for (weapon, minimum, short, medium, long) in [
+            (Weapon::SmallLaser, 0, 1, 2, None),
+            (Weapon::MediumLaser, 0, 2, 4, Some(6)),
+            (Weapon::LargeLaser, 0, 3, 6, Some(9)),
+            (Weapon::LightPpc, 3, 4, 7, Some(10)),
+            (Weapon::Ppc, 3, 4, 7, Some(10)),
+            (Weapon::HeavyPpc, 3, 4, 7, Some(10)),
+            (Weapon::SnubNosedPpc, 0, 6, 8, Some(9)),
+            (Weapon::ClanErMicroLaser, 0, 1, 2, None),
+            (Weapon::ClanErSmallLaser, 0, 1, 2, Some(4)),
+            (Weapon::ErSmallLaser, 0, 1, 2, Some(3)),
+            (Weapon::ClanErMediumLaser, 0, 3, 7, Some(10)),
+            (Weapon::ErMediumLaser, 0, 3, 5, Some(8)),
+            (Weapon::ClanErLargeLaser, 0, 5, 10, Some(16)),
+            (Weapon::ErLargeLaser, 0, 3, 9, Some(12)),
+            (Weapon::ClanErPpc, 0, 4, 10, Some(16)),
+            (Weapon::ErPpc, 0, 4, 10, Some(16)),
+            (Weapon::ClanMicroPulseLaser, 0, 1, 2, None),
+            (Weapon::ClanSmallPulseLaser, 0, 1, 2, Some(4)),
+            (Weapon::SmallPulseLaser, 0, 1, 2, None),
+            (Weapon::ClanMediumPulseLaser, 0, 3, 5, Some(8)),
+            (Weapon::MediumPulseLaser, 0, 2, 3, Some(4)),
+            (Weapon::ClanLargePulseLaser, 0, 4, 10, Some(14)),
+            (Weapon::LargePulseLaser, 0, 2, 5, Some(7)),
+            (Weapon::ClanHeavySmallLaser, 0, 1, 2, None),
+            (Weapon::ClanHeavyMediumLaser, 0, 2, 4, Some(6)),
+            (Weapon::ClanHeavyLargeLaser, 0, 3, 6, Some(9)),
+            (Weapon::ClanErSmallPulseLaser, 0, 1, 2, Some(4)),
+            (Weapon::ClanErMediumPulseLaser, 0, 3, 6, Some(9)),
+            (Weapon::ClanErLargePulseLaser, 0, 4, 10, Some(16)),
+            (Weapon::XSmallPulseLaser, 0, 1, 2, Some(3)),
+            (Weapon::XMediumPulseLaser, 0, 2, 4, Some(6)),
+            (Weapon::XLargePulseLaser, 0, 3, 6, Some(9)),
+        ] {
+            assert_eq!(
+                weapon.water_ranges(),
+                Some(WaterRanges {
+                    minimum_range: minimum,
+                    short_range: short,
+                    medium_range: medium,
+                    long_range: long,
+                }),
+                "{weapon:?}"
+            );
+        }
     }
 
     /// An absent long band caps small lasers at medium.

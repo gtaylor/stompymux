@@ -318,14 +318,14 @@ async fn critical_equipment_labels() {
         .criticals
         .get_mut(&0)
         .unwrap()
-        .modes = vec!["Halfton".into(), "Inferno".into()];
+        .modes = vec!["Inferno".into()];
     let (_dir, config, mut world, id) = fixture(UnitTemplate::Mech(template)).await;
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     assert!(
         battle_critical_status(&world, id, "rt")
             .unwrap()
-            .contains("SRM-4 Inferno Ammo [012/012]")
+            .contains("SRM-4 Inferno Ammo [025/025]")
     );
     assert!(
         battle_critical_status(&world, id, "h")
