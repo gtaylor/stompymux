@@ -627,14 +627,17 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
         } else {
             maximum
         };
+        // The towed Jenner keeps its 7/11 walking share of the loaded ceiling; vehicles cruise
+        // at two thirds of flank.
+        let walking_share = if index == 0 { 7.0 / 11.0 } else { 2.0 / 3.0 };
         for (argument, expected) in [
             ("run", horizontal),
             ("flank", horizontal),
-            ("walk", (maximum * 2.0 / 3.0).min(horizontal)),
-            ("cruise", (maximum * 2.0 / 3.0).min(horizontal)),
-            ("back", -horizontal * 2.0 / 3.0),
+            ("walk", (maximum * walking_share).min(horizontal)),
+            ("cruise", (maximum * walking_share).min(horizontal)),
+            ("back", -horizontal * walking_share),
             ("99999", horizontal),
-            ("-99999", -horizontal * 2.0 / 3.0),
+            ("-99999", -horizontal * walking_share),
         ] {
             let native = Scripts::new(
                 &config,

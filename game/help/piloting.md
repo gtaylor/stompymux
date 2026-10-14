@@ -26,8 +26,17 @@ reactor down until the next 30-second turn (Total Warfare p. 160).
 
 Startup progress survives restart. It pauses while the server is offline or
 unable to save progress. A running unit accepts `heading <degrees>` and
-`speed <kph|stop|walk|run|back>`. Turns and speed changes are gradual. Shutting down above 10.75 kph forward
-causes a fall and can cause crowding collisions. Reverse or slower motion stops
+`speed <kph|stop|walk|run|back>`. Walking speed is your template's walking MP at 10.75
+kph per point and running is walking x 1.5 rounded up (Total Warfare p. 53); you
+may back up no faster than walking. Heat takes one walking MP per five points and
+caps the throttle rather than scaling it, hot triple-strength myomer adds two walking
+MP, and MASC doubles the walking figure that is left, running refigured each time
+(TW pp. 137, 139, 159). A Mech that runs during a thirty-second turn with a damaged
+hip or gyro makes one piloting roll at the turn's end (TW p. 53), and one that
+exceeds its normal running MP under light gravity rolls once a turn against a point
+of leg damage per MP over (Tactical Operations p. 53). Turns and speed changes are
+gradual. Shutting down above 10.75 kph forward
+causes a fall, which can land you on another unit. Reverse or slower motion stops
 without that shutdown fall. Each hex costs movement for its ground, foliage, route, water and any ice,
 snow or mud, and your speed is divided by that cost, following the Total Warfare and
 Tactical Operations movement cost tables. A road or rail line replaces the

@@ -1092,10 +1092,6 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
             name: "NO_PHYSICAL_ATTACKS",
             value: 512,
         },
-        Entry {
-            name: "NO_STACKING",
-            value: 1024,
-        },
     ],
 };
 
