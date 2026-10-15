@@ -6,6 +6,9 @@ walk_mp = 2
 heat_sinks = 0
 radio = 2
 
+[construction]
+engine_rating = 190
+
 [sections.left_side]
 armor = 64
 slots = [

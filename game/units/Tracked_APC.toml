@@ -9,6 +9,7 @@ max_ton = 4
 
 [construction]
 engine = "ice"
+engine_rating = 60
 
 [sections.left_side]
 armor = 8

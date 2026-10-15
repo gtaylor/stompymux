@@ -9,6 +9,9 @@ scan_range = 30
 cargo_space = 800
 specials = ["CargoTech"]
 
+[construction]
+engine_rating = 180
+
 [sections.left_side]
 armor = 18
 

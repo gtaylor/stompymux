@@ -10,6 +10,7 @@ specials = ["OmniMech_Tech", "ArtemisIV"]
 
 [construction]
 engine = "xl"
+engine_rating = 270
 structure = "endo_steel"
 heat_sinks = "double"
 mixed_tech = true

@@ -6,6 +6,7 @@ walk_mp = 3
 
 [construction]
 engine = "xl"
+engine_rating = 220
 armor = "ferro_fibrous"
 
 [sections.left_side]

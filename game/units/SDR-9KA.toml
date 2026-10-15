@@ -9,6 +9,7 @@ radio = 4
 
 [construction]
 engine = "xl"
+engine_rating = 280
 armor = "ferro_fibrous"
 
 [sections.left_arm]

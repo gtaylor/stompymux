@@ -1453,12 +1453,14 @@ impl Vehicle {
             .insert("move_type".into(), name.into());
     }
 
-    /// Change nominal tonnage without rebuilding equipment, protection or crew state.
+    /// Change nominal tonnage without rebuilding equipment, protection or crew state. A
+    /// declared engine rating follows the new tonnage.
     pub(super) fn set_nominal_tonnage(&mut self, tons: u16) {
         self.definition.tons = tons;
         self.definition
             .attributes
             .insert("tons".into(), tons.to_string());
+        self.definition.restate_engine_rating();
     }
 
     /// Update the owned cargo installation; the shared load service reconciles motion.
@@ -2296,7 +2298,9 @@ pub fn damage_vehicle_motive(
 /// with two tons of ammunition, which brings it to exactly 50 tons. Autopilot encounter
 /// scenarios use it for their hovercraft too.
 pub(crate) fn hovercraft_variant(tracked: &str) -> String {
+    // The hovercraft's Final Engine Rating follows from its new tonnage and suspension.
     let hover = tracked
+        .replace("engine_rating = 240\n", "")
         .replace("movement = \"track\"", "movement = \"hover\"")
         .replace("tons = 80", "tons = 50")
         .replace(

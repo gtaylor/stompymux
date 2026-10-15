@@ -28,6 +28,9 @@ pub struct TemplateCheck {
     pub running_mp: u32,
     /// Engine rating: tonnage x walking MP (TM p. 48).
     pub engine_rating: u32,
+    /// The engine rating the template's `[construction]` table declares, which construction
+    /// requires to equal `engine_rating`; absent when the template derives it.
+    pub declared_engine_rating: Option<u32>,
     pub weapons: usize,
     pub ammunition_bins: usize,
     pub ammunition_adjustments: Vec<AmmunitionAdjustment>,
@@ -43,7 +46,8 @@ pub fn check_template(template: &MechTemplate) -> TemplateCheck {
         rejection: None,
         walking_mp: template.walking_mp(),
         running_mp: template.running_mp(),
-        engine_rating: super::rated_output(template.tons, template.walk_mp),
+        engine_rating: template.engine_rating(),
+        declared_engine_rating: template.declared_engine_rating().ok().flatten(),
         weapons: 0,
         ammunition_bins: 0,
         ammunition_adjustments: Vec::new(),

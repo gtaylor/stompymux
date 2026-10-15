@@ -8,6 +8,7 @@ radio = 4
 specials = ["SearchLight"]
 
 [construction]
+engine_rating = 120
 structure = "endo_steel"
 
 [sections.left_arm]

@@ -10,6 +10,7 @@ specials = ["ECM", "BeagleProbe"]
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 175
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

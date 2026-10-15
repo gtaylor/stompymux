@@ -9,6 +9,7 @@ radio = 4
 
 [construction]
 engine = "xl"
+engine_rating = 260
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

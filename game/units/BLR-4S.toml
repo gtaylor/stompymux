@@ -9,6 +9,7 @@ specials = ["ArtemisIV", "SearchLight"]
 
 [construction]
 engine = "light"
+engine_rating = 340
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

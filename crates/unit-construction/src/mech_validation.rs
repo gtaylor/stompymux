@@ -44,7 +44,8 @@ impl MechTemplate {
         for (field, value) in &self.attributes {
             match field.as_str() {
                 "name" | "reference" | "tons" | "walk_mp" | "max_speed" | "jump_speed"
-                | "heat_sinks" | "comment" | "hsengoverride" | "template_speed" => {}
+                | "heat_sinks" | "comment" | "hsengoverride" | "template_speed"
+                | "engine_rating" => {}
                 "type" => ensure!(value.eq_ignore_ascii_case("Mech"), "Unsupported unit type"),
                 "move_type" => ensure!(
                     value.eq_ignore_ascii_case("Biped") || value.eq_ignore_ascii_case("Quad"),

@@ -9,6 +9,7 @@ specials = ["C3MasterTech", "SearchLight"]
 
 [construction]
 engine = "xl"
+engine_rating = 340
 heat_sinks = "double"
 
 [sections.left_arm]

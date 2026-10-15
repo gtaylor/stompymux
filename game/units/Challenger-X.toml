@@ -15,6 +15,7 @@ specials = ["SearchLight"]
 
 [construction]
 engine = "xl"
+engine_rating = 270
 armor = "ferro_fibrous"
 
 [sections.left_side]

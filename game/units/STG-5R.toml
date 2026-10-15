@@ -7,6 +7,7 @@ jump_mp = 6
 radio = 4
 
 [construction]
+engine_rating = 120
 armor = "ferro_fibrous"
 
 [sections.left_arm]

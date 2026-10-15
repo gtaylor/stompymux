@@ -199,6 +199,7 @@ pub fn convert(source: &str) -> Result<Converted> {
     }
     let engine_header = file.required("engine")?;
     let engine_family = engine(engine_header)?;
+    let engine_rating = engine_rating(engine_header)?;
     construction.extend(engine_family.map(|engine| ("engine", engine)));
     construction.extend(gyro(file.field("gyro"))?.map(|gyro| ("gyro", gyro)));
     construction.extend(cockpit(file.field("cockpit"))?.map(|cockpit| ("cockpit", cockpit)));
@@ -337,6 +338,7 @@ pub fn convert(source: &str) -> Result<Converted> {
             tons,
             walk_mp: walk,
             jump_mp: jump,
+            engine_rating,
             heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
             construction,
             specials,
@@ -542,6 +544,18 @@ fn armor_tech(value: &str) -> Option<TechBase> {
     engine_tech(value)
 }
 
+/// The rating that leads an engine line such as `300 XL Engine(IS)`.
+fn engine_rating(value: &str) -> Result<u32> {
+    let digits: String = value
+        .trim()
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect();
+    digits
+        .parse()
+        .with_context(|| format!("engine {value} does not start with its rating"))
+}
+
 /// The engine family, or `None` for a standard fusion engine.
 fn engine(value: &str) -> Result<Option<&'static str>> {
     let kind = value
@@ -736,7 +750,11 @@ mod tests {
             assert!(template.contains(line), "{line} missing from\n{template}");
         }
         assert!(!template.contains("Engine"));
-        assert!(!template.contains("[construction]"));
+        // The engine line's rating, 100 tons x walking MP 3 (TM p. 48).
+        assert!(
+            template.contains("[construction]\nengine_rating = 300\n"),
+            "{template}"
+        );
     }
 
     #[test]
@@ -953,6 +971,9 @@ mod tests {
             heat_sinks("10 Single", TechBase::Clan).unwrap(),
             (10, HeatSinkKind::Single)
         );
+        assert_eq!(engine_rating("300 XL Engine(IS)").unwrap(), 300);
+        assert_eq!(engine_rating("85 Fusion Engine").unwrap(), 85);
+        assert!(engine_rating("XL Engine").is_err());
         assert!(heat_sinks("10 Laser", TechBase::InnerSphere).is_err());
         assert!(heat_sinks("10 Compact", TechBase::InnerSphere).is_err());
     }

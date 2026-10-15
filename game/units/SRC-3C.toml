@@ -7,6 +7,7 @@ heat_sinks = 13
 radio = 5
 
 [construction]
+engine_rating = 285
 heat_sinks = "double"
 
 [sections.front_left_leg]

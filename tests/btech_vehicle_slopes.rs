@@ -25,6 +25,7 @@ async fn fixture(
     )
     .unwrap();
     template.movement = movement;
+    template.restate_engine_rating();
     if movement == VehicleMovement::Hover {
         template.set_cruising_mp(4);
     }

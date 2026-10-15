@@ -10,6 +10,7 @@ specials = ["ECM", "BeagleProbe"]
 
 [construction]
 engine = "xl"
+engine_rating = 280
 structure = "endo_steel"
 
 [sections.left_arm]

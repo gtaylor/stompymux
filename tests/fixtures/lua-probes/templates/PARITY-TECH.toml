@@ -9,6 +9,7 @@ specials = ["ImprovedJJ_Tech"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 165
 gyro = "heavy_duty"
 armor = "hardened"
 

@@ -7,6 +7,9 @@ heat_sinks = 24
 radio = 4
 specials = ["SearchLight"]
 
+[construction]
+engine_rating = 340
+
 [sections.left_arm]
 armor = 26
 slots = [

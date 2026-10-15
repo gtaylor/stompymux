@@ -8,6 +8,7 @@ specials = ["SearchLight"]
 
 [construction]
 engine = "ice"
+engine_rating = 285
 
 [sections.left_side]
 armor = 25

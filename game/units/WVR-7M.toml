@@ -9,6 +9,7 @@ radio = 4
 
 [construction]
 engine = "xl"
+engine_rating = 275
 heat_sinks = "double"
 
 [sections.left_arm]

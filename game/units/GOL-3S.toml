@@ -9,6 +9,7 @@ specials = ["ArtemisIV"]
 
 [construction]
 engine = "light"
+engine_rating = 320
 heat_sinks = "double"
 
 [sections.front_left_leg]

@@ -9,6 +9,7 @@ specials = ["ECM"]
 
 [construction]
 engine = "xl"
+engine_rating = 180
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"

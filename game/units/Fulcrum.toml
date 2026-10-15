@@ -7,6 +7,7 @@ heat_sinks = 11
 
 [construction]
 engine = "xl"
+engine_rating = 265
 
 [sections.left_side]
 armor = 27

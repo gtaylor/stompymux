@@ -6,6 +6,7 @@ walk_mp = 5
 specials = ["SearchLight"]
 
 [construction]
+engine_rating = 155
 armor = "ferro_fibrous"
 
 [sections.left_side]

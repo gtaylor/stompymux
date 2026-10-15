@@ -1,7 +1,8 @@
 //! Fusion-engine identity derived from supported BattleMech installations, independent of live damage.
 use super::{MechLoadout, MechSection, System};
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use serde::Serialize;
+use std::collections::BTreeMap;
 
 /// Supported BattleMech fusion-engine construction families.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -120,6 +121,19 @@ pub fn running_mp_of_walking(walking_mp: u32) -> u32 {
 /// tonnage x cruising MP, for a combat vehicle (TM p. 100).
 pub fn rated_output(tons: u16, walking_mp: u32) -> u32 {
     u32::from(tons).saturating_mul(walking_mp)
+}
+
+/// The engine rating a template's `[construction]` table declares, if it declares one.
+pub fn declared_engine_rating(attributes: &BTreeMap<String, String>) -> Result<Option<u32>> {
+    attributes
+        .get(super::document::ENGINE_RATING)
+        .map(|rating| {
+            rating
+                .trim()
+                .parse()
+                .with_context(|| format!("Invalid declared engine rating {rating}"))
+        })
+        .transpose()
 }
 
 #[cfg(test)]

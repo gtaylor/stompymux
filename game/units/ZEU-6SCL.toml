@@ -8,6 +8,7 @@ specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 320
 armor = "ferro_fibrous"
 
 [sections.left_arm]

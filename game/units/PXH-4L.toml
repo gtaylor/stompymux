@@ -9,6 +9,7 @@ radio = 4
 specials = ["ECM"]
 
 [construction]
+engine_rating = 270
 structure = "endo_steel"
 armor = "stealth"
 heat_sinks = "double"

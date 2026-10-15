@@ -8,6 +8,7 @@ radio = 4
 
 [construction]
 engine = "xl"
+engine_rating = 210
 structure = "endo_steel"
 
 [sections.left_arm]

@@ -106,6 +106,9 @@ const MOVEMENT_POINTS: [(&str, &str); 1] = [("jump_mp", "jump_speed")];
 /// Largest movement point figure a document may state.
 const MOVEMENT_POINT_LIMIT: i64 = 100;
 
+/// Attribute holding the engine rating a `[construction]` table declares.
+pub const ENGINE_RATING: &str = "engine_rating";
+
 /// Internal attributes that a rendered document carries elsewhere or not at all.
 const UNRENDERED: &[&str] = &[
     "reference",
@@ -239,6 +242,9 @@ impl ParsedTemplate {
         let mut fields = BTreeMap::new();
         if !reference.is_empty() {
             fields.insert("reference".to_owned(), reference.to_owned());
+        }
+        if let Some(rating) = construction.engine_rating {
+            fields.insert(ENGINE_RATING.to_owned(), rating.to_string());
         }
         for (key, value) in document {
             if key == "walk_mp" {
@@ -701,6 +707,7 @@ pub fn render(
     for key in attributes.keys() {
         ensure!(
             UNRENDERED.contains(&key.as_str())
+                || key == ENGINE_RATING
                 || FIELDS.iter().any(|(_, attribute, _)| attribute == key),
             "unsupported template attribute {key}"
         );
@@ -714,7 +721,12 @@ pub fn render(
                 .collect()
         })
         .unwrap_or_default();
-    let (construction, specials) = Construction::from_flags(&flags)?;
+    let (mut construction, specials) = Construction::from_flags(&flags)?;
+    construction.engine_rating = attributes
+        .get(ENGINE_RATING)
+        .map(|rating| rating.trim().parse())
+        .transpose()
+        .with_context(|| format!("invalid {ENGINE_RATING}"))?;
     let class = attributes
         .get("type")
         .map(|class| RawUnitClass::parse(class))
@@ -1137,6 +1149,7 @@ specials = ["searchlight"]
 
 [construction]
 engine = "xl"
+engine_rating = 320
 heat_sinks = "double"
 
 [sections.left_arm]
@@ -1372,7 +1385,9 @@ placements = [
         assert!(rendered.contains("walk_mp = 4\n"));
         assert!(!rendered.contains("max_speed"));
         assert!(rendered.contains("specials = [\"SearchLight\"]\n"));
-        assert!(rendered.contains("[construction]\nengine = \"xl\"\nheat_sinks = \"double\"\n"));
+        assert!(rendered.contains(
+            "[construction]\nengine = \"xl\"\nengine_rating = 320\nheat_sinks = \"double\"\n"
+        ));
         assert!(rendered.contains("omit = [\"hand_actuator\"]"));
         assert!(rendered.contains("engine_at = 4"));
         assert!(!rendered.contains("internals"));

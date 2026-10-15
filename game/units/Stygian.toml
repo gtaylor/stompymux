@@ -8,6 +8,9 @@ cargo_space = 0
 max_suits = 0
 specials = ["SearchLight"]
 
+[construction]
+engine_rating = 185
+
 [sections.left_side]
 armor = 18
 

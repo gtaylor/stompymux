@@ -11,6 +11,7 @@ max_suits = 0
 specials = ["SearchLight"]
 
 [construction]
+engine_rating = 190
 armor = "ferro_fibrous"
 
 [sections.left_side]

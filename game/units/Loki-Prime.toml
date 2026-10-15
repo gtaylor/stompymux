@@ -9,6 +9,7 @@ specials = ["OmniMech_Tech", "SearchLight"]
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 325
 
 [sections.left_arm]
 armor = 11

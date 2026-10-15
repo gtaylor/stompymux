@@ -8,6 +8,9 @@ tac_range = 30
 lrs_range = 60
 scan_range = 30
 
+[construction]
+engine_rating = 115
+
 [sections.left_side]
 armor = 24
 

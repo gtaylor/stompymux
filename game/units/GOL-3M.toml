@@ -8,6 +8,7 @@ radio = 4
 
 [construction]
 engine = "xl"
+engine_rating = 320
 
 [sections.front_left_leg]
 armor = 26

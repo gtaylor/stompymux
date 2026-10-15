@@ -9,6 +9,7 @@ cargo_space = 0
 
 [construction]
 engine = "xl"
+engine_rating = 280
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

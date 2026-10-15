@@ -12,6 +12,9 @@ scan_range = 28
 cargo_space = 0
 max_suits = 0
 
+[construction]
+engine_rating = 60
+
 [sections.left_side]
 armor = 6
 

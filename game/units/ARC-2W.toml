@@ -4,6 +4,9 @@ movement = "biped"
 tons = 70
 walk_mp = 4
 
+[construction]
+engine_rating = 280
+
 [sections.left_arm]
 armor = 15
 slots = [

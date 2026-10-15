@@ -2045,6 +2045,7 @@ function btech_unit.cluster(dbref, pilot, weapon) end
 ---@field walking_mp integer Walking MP the template states.
 ---@field running_mp integer Walking MP x 1.5, rounded up.
 ---@field engine_rating integer Tonnage x walking MP.
+---@field declared_engine_rating integer|nil Rating the [construction] table declares; nil when derived.
 ---@field weapons integer Resolved weapon count on success; zero on rejection.
 ---@field ammunition_bins integer Resolved bin count on success; zero on rejection.
 ---@field ammunition_adjustments AmmunitionAdjustment[] Changes on successful construction.

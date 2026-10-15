@@ -8,6 +8,9 @@ heat_sinks = 21
 radio = 4
 specials = ["SearchLight"]
 
+[construction]
+engine_rating = 300
+
 [sections.left_arm]
 armor = 34
 omit = ["hand_actuator"]

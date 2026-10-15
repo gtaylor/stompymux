@@ -8,6 +8,7 @@ radio = 4
 specials = ["SearchLight"]
 
 [construction]
+engine_rating = 340
 heat_sinks = "double"
 
 [sections.left_arm]

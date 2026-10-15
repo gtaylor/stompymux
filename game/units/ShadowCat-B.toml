@@ -10,6 +10,7 @@ specials = ["OmniMech_Tech", "Masc", "ArtemisIV", "ECM", "BeagleProbe"]
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 270
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

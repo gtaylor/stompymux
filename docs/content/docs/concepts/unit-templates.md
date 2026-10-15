@@ -69,6 +69,7 @@ defaults to the standard choice shown first.
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 armor = "ferro_fibrous"
 ```
@@ -77,6 +78,7 @@ armor = "ferro_fibrous"
 | --- | --- |
 | `tech_base` | `inner_sphere`, `clan` |
 | `engine` | `standard`, `xl`, `light`, `xxl`, `compact`, `ice` |
+| `engine_rating` | Integer: the engine rating the record sheet states. For a mech it must be tonnage x `walk_mp` (TechManual p. 48); for a vehicle or VTOL it must be the Final Engine Rating, tonnage x cruising MP less the suspension factor, rounded up to a multiple of 5 and at least 10 (TechManual p. 100). A template without it derives the rating from its movement points; every shipped mech and vehicle declares it. |
 | `gyro` | `standard`, `xl`, `compact`, `heavy_duty` |
 | `cockpit` | `standard`, `small` |
 | `structure` | `standard`, `endo_steel`, `composite`, `reinforced` |
@@ -110,7 +112,7 @@ checks:
   under it (TechManual pp. 46, 57). Every item weighs its whole catalogue mass,
   and the engine, gyro, structure, armor and supercharger round up to the half ton.
 - `walk_mp` is at least 1, and the engine rating, tonnage x `walk_mp`, lies
-  between 10 and 500; ratings above 400 are large engines with eight
+  between 10 and 500 and equals `engine_rating` when the template declares one; ratings above 400 are large engines with eight
   centre torso slots (TechManual p. 48; Tactical Operations: Advanced Units &
   Equipment).
 - The engine fills its own layout: six centre torso slots (three for a compact
@@ -151,7 +153,8 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
 - Structure is standard; endo steel, composite and reinforced structure are
   Mech technologies.
 - The Engine Rating is the tonnage times the cruising MP, less the suspension
-  factor, at least 10 and rounded up to a multiple of 5; it may not exceed 400.
+  factor, at least 10 and rounded up to a multiple of 5; it may not exceed 400,
+  and a declared `engine_rating` must equal it.
   Any fusion engine weighs half again its listed weight; an `ice` engine weighs
   twice a standard fusion engine and needs power amplifiers (a tenth of the
   energy weapons' mass) for lasers and PPCs.
@@ -171,8 +174,9 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   the vehicle and the turret 10 percent of the items in it, both rounded up to
   the half ton.
 
-`@btech template-check <name>` reports a vehicle's verdict with its mass, item
-slots, armor and energy weapon heat against these limits. Stationary
+`@btech template-check <name>` reports a vehicle's verdict with its cruising
+MP, engine rating, mass, item slots, armor and energy weapon heat against these
+limits. Stationary
 installations (`movement = "none"`) are not combat vehicles and only have their
 mass calculated.
 

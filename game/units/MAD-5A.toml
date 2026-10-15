@@ -10,6 +10,7 @@ specials = ["SearchLight"]
 
 [construction]
 engine = "xl"
+engine_rating = 300
 
 [sections.left_arm]
 armor = 34

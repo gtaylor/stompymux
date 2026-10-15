@@ -6,6 +6,9 @@ walk_mp = 6
 radio = 5
 radio_type = 126
 
+[construction]
+engine_rating = 130
+
 [sections.left_side]
 armor = 19
 

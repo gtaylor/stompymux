@@ -9,6 +9,7 @@ specials = ["OmniMech_Tech"]
 
 [construction]
 engine = "xl"
+engine_rating = 360
 heat_sinks = "double"
 mixed_tech = true
 

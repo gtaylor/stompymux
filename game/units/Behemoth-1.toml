@@ -8,6 +8,7 @@ heat_sinks = 10
 
 [construction]
 tech_base = "clan"
+engine_rating = 300
 
 [sections.left_arm]
 armor = 32

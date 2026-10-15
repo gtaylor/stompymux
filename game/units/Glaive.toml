@@ -8,6 +8,9 @@ radio = 4
 cargo_space = 0
 max_suits = 0
 
+[construction]
+engine_rating = 205
+
 [sections.left_side]
 armor = 17
 

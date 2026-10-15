@@ -8,6 +8,7 @@ heat_sinks = 12
 radio = 4
 
 [construction]
+engine_rating = 250
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"

@@ -7,6 +7,7 @@ walk_mp = 9
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 180
 structure = "endo_steel"
 heat_sinks = "single"
 

@@ -10,6 +10,7 @@ cargo_space = 0
 
 [construction]
 engine = "xl"
+engine_rating = 225
 armor = "stealth"
 heat_sinks = "double"
 

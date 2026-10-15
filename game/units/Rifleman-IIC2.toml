@@ -9,6 +9,7 @@ specials = ["SearchLight"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 260
 structure = "endo_steel"
 
 [sections.left_arm]

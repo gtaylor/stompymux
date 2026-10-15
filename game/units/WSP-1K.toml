@@ -5,6 +5,9 @@ tons = 20
 walk_mp = 6
 jump_mp = 6
 
+[construction]
+engine_rating = 120
+
 [sections.left_arm]
 armor = 5
 

@@ -8,6 +8,7 @@ heat_sinks = 15
 radio = 4
 
 [construction]
+engine_rating = 320
 structure = "endo_steel"
 
 [sections.left_arm]

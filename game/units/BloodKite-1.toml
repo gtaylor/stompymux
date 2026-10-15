@@ -8,6 +8,7 @@ heat_sinks = 21
 
 [construction]
 tech_base = "clan"
+engine_rating = 255
 structure = "endo_steel"
 
 [sections.left_arm]

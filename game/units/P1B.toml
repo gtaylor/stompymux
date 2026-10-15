@@ -9,6 +9,7 @@ cargo_space = 0
 
 [construction]
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 heat_sinks = "double"
 

@@ -4,6 +4,9 @@ movement = "hover"
 tons = 25
 walk_mp = 11
 
+[construction]
+engine_rating = 145
+
 [sections.left_side]
 armor = 19
 

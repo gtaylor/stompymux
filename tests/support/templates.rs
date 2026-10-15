@@ -92,7 +92,7 @@ pub fn small_cockpit(template: &mut stompymux_rs::MechTemplate, flag: &str) {
 /// at most 50 tons (TechManual p. 96), so it keeps its armor and turret but carries one AC/20
 /// with two tons of ammunition, which brings it to exactly 50 tons.
 pub fn hovercraft(tracked: &str) -> String {
-    let hover = tracked
+    let hover = derived_engine_rating(tracked)
         .replace("movement = \"track\"", "movement = \"hover\"")
         .replace("tons = 80", "tons = 50")
         .replace(
@@ -118,6 +118,7 @@ pub fn hovercraft(tracked: &str) -> String {
 /// to 1 cruising MP and finally raises it to its motive type's maximum tonnage.
 pub fn fit_vehicle(template: &mut stompymux_rs::VehicleTemplate) {
     use stompymux_rs::{VehicleLoadout, VehicleSection, VehicleTemplate};
+    template.restate_engine_rating();
     let legal = |template: &VehicleTemplate| {
         stompymux_rs::check_battle_vehicle_template(template).constructible
     };
@@ -183,6 +184,7 @@ pub fn fit_vehicle(template: &mut stompymux_rs::VehicleTemplate) {
     if let Some(maximum) = template.movement.maximum_tonnage() {
         template.tons = template.tons.max(maximum);
     }
+    template.restate_engine_rating();
 }
 
 /// [`fit_vehicle`] applied to a template a test is about to construct.
@@ -208,7 +210,7 @@ pub fn with_movement(tracked: &str, movement: &str) -> String {
     if movement == "hover" {
         return hovercraft(tracked);
     }
-    tracked.replace(
+    derived_engine_rating(tracked).replace(
         "movement = \"track\"",
         &format!("movement = \"{movement}\""),
     )
@@ -225,7 +227,18 @@ pub fn demolisher(movement: stompymux_rs::VehicleMovement) -> stompymux_rs::Vehi
     };
     let mut template = stompymux_rs::VehicleTemplate::parse("Demolisher", &source).unwrap();
     template.movement = movement;
+    template.restate_engine_rating();
     template
+}
+
+/// A template document without its declared `engine_rating`, so the rating follows whatever
+/// tonnage, movement points and motive type a scenario gives the variant.
+pub fn derived_engine_rating(source: &str) -> String {
+    source
+        .lines()
+        .filter(|line| !line.starts_with("engine_rating = "))
+        .map(|line| format!("{line}\n"))
+        .collect()
 }
 
 /// Bring a scenario's edited Mech back within TechManual construction, so a test that adds or
@@ -255,6 +268,7 @@ pub fn book_legal_keeping(
     keep: Option<stompymux_rs::MechSection>,
 ) {
     use stompymux_rs::{MechLoadout, MechTemplate, System};
+    template.restate_engine_rating();
     let resolve = |template: &MechTemplate| {
         let mut normalized = template.clone();
         normalized.normalize_ammunition().ok()?;
@@ -638,13 +652,17 @@ pub fn legal(mut template: stompymux_rs::MechTemplate) -> stompymux_rs::MechTemp
     template
 }
 
-/// [`book_legal`] for a parsed unit of either class; vehicles pass through unchanged.
+/// [`book_legal`] for a parsed unit of either class; a vehicle only has a declared engine
+/// rating brought in line with its tonnage, movement and motive type.
 pub fn legal_unit(template: stompymux_rs::UnitTemplate) -> stompymux_rs::UnitTemplate {
     match template {
         stompymux_rs::UnitTemplate::Mech(template) => {
             stompymux_rs::UnitTemplate::Mech(legal(template))
         }
-        vehicle => vehicle,
+        stompymux_rs::UnitTemplate::Vehicle(mut vehicle) => {
+            vehicle.restate_engine_rating();
+            stompymux_rs::UnitTemplate::Vehicle(vehicle)
+        }
     }
 }
 

@@ -9,6 +9,7 @@ specials = ["ECM", "SearchLight"]
 
 [construction]
 engine = "xl"
+engine_rating = 280
 armor = "stealth"
 heat_sinks = "double"
 

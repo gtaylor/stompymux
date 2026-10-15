@@ -10,6 +10,7 @@ max_suits = 0
 
 [construction]
 engine = "xl"
+engine_rating = 180
 armor = "ferro_fibrous"
 
 [sections.left_arm]

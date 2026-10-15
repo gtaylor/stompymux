@@ -9,6 +9,7 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+engine_rating = 120
 armor = "ferro_fibrous"
 
 [sections.left_arm]

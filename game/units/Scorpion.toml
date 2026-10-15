@@ -6,6 +6,7 @@ walk_mp = 4
 
 [construction]
 engine = "ice"
+engine_rating = 100
 
 [sections.left_side]
 armor = 11

@@ -3012,6 +3012,22 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(
             expected["units"][id.0.to_string()]["tons"] = tons.into();
             expected[collection][id.0.to_string()]["definition"]["attributes"]["tons"] =
                 value.into();
+            // A declared engine rating follows the tonnage (TechManual pp. 48, 100).
+            let rating = if mech {
+                let walking = before.constructed_units()[&id].definition().walk_mp;
+                (u32::from(tons) * walking).to_string()
+            } else {
+                let vehicle = before.vehicles()[&id].definition();
+                vehicle
+                    .movement
+                    .final_engine_rating(tons, vehicle.walk_mp)
+                    .to_string()
+            };
+            let attributes =
+                &mut expected[collection][id.0.to_string()]["definition"]["attributes"];
+            if attributes.get("engine_rating").is_some() {
+                attributes["engine_rating"] = rating.into();
+            }
             assert_eq!(serde_json::to_value(&saved.btech).unwrap(), expected);
             let load = battle_unit_load(&saved, id, false).unwrap();
             assert_eq!(load.nominal_tons, tons);

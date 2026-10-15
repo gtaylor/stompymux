@@ -9,6 +9,7 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+engine_rating = 100
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

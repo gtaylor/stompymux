@@ -259,7 +259,8 @@ fn vtol_anatomy_requires_matching_type_movement_and_rotor() {
     assert_eq!(mass.engine, engine.installed_mass);
 }
 
-/// Every shipped vehicle and VTOL passes the TechManual combat vehicle construction check.
+/// Every shipped vehicle and VTOL passes the TechManual combat vehicle construction check and
+/// declares its engine rating.
 #[test]
 fn shipped_vehicle_templates_pass_the_construction_check() {
     let mut count = 0;
@@ -281,6 +282,13 @@ fn shipped_vehicle_templates_pass_the_construction_check() {
             "{}: {:?}",
             path.display(),
             report.rejection
+        );
+        // Every shipped vehicle with an engine states its Final Engine Rating.
+        assert!(
+            template.movement == VehicleMovement::Stationary
+                || report.declared_engine_rating.is_some(),
+            "{}: no declared engine_rating",
+            path.display()
         );
         count += 1;
     }

@@ -157,7 +157,10 @@ async fn rotor_damage_that_leaves_no_movement_forces_an_engine_damage_landing() 
     let slow = Vehicle::new(
         VehicleTemplate::parse(
             "Kestrel",
-            &include_str!("../game/units/Kestrel.toml").replace("walk_mp = 12", "walk_mp = 1"),
+            &crate::support::templates::derived_engine_rating(include_str!(
+                "../game/units/Kestrel.toml"
+            ))
+            .replace("walk_mp = 12", "walk_mp = 1"),
         )
         .unwrap(),
     )

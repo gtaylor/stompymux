@@ -5,6 +5,8 @@
 //! revalidation of a constructed Mech all run these rules, so a Mech that passes is one a
 //! record sheet could describe.
 use super::construction::{MIXED_TECH, SPEED_PER_MP};
+use super::document::ENGINE_RATING;
+use super::engine::declared_engine_rating;
 use super::{
     Engine, MechChassis, MechLoadout, MechSection, MechTemplate, System, rated_output,
     running_mp_of_walking,
@@ -95,10 +97,31 @@ impl MechTemplate {
         self.walk_mp
     }
 
-    /// State a new walking MP, with the running speed that follows from it.
+    /// State a new walking MP, with the running speed that follows from it. A declared engine
+    /// rating follows the new walking MP.
     pub fn set_walking_mp(&mut self, walking_mp: u32) {
         self.walk_mp = walking_mp;
         self.max_speed = f64::from(self.running_mp()) * SPEED_PER_MP;
+        self.restate_engine_rating();
+    }
+
+    /// Engine rating: tonnage x walking MP (TM p. 48).
+    pub fn engine_rating(&self) -> u32 {
+        rated_output(self.tons, self.walk_mp)
+    }
+
+    /// The engine rating the template's `[construction]` table declares, if any.
+    pub fn declared_engine_rating(&self) -> Result<Option<u32>> {
+        declared_engine_rating(&self.attributes)
+    }
+
+    /// Bring a declared engine rating back in line with the tonnage and walking MP after an
+    /// edit to either; a template that declares none keeps deriving it.
+    pub fn restate_engine_rating(&mut self) {
+        let rating = self.engine_rating();
+        if let Some(declared) = self.attributes.get_mut(ENGINE_RATING) {
+            *declared = rating.to_string();
+        }
     }
 
     /// Jumping MP declared by the template.
@@ -131,13 +154,20 @@ impl MechTemplate {
         self.validate_total_mass(loadout)
     }
 
-    /// The Mech walks at least one MP, and its engine rating, tonnage x walking MP, lies
-    /// within the Master Engine Table (TM p. 48; Tactical Operations: Advanced Units &
+    /// The Mech walks at least one MP, and its engine rating, tonnage x walking MP and the
+    /// rating the template declares, if it declares one, lies within the Master Engine Table (TM p. 48; Tactical Operations: Advanced Units &
     /// Equipment large engines).
     fn validate_movement(&self) -> Result<()> {
         let walking = self.walking_mp();
         ensure!(walking >= 1, "A Mech needs a walking MP of at least 1");
         let rating = rated_output(self.tons, walking);
+        if let Some(declared) = self.declared_engine_rating()? {
+            ensure!(
+                declared == rating,
+                "The declared engine rating {declared} is not tonnage x walking MP ({} x {walking} = {rating}) (TM p. 48)",
+                self.tons
+            );
+        }
         ensure!(
             (10..=MAXIMUM_ENGINE_RATING).contains(&rating),
             "Engine rating {rating} is outside 10-{MAXIMUM_ENGINE_RATING}"
@@ -676,9 +706,28 @@ mod tests {
             "{rejection}"
         );
         let mut fast = jenner.clone();
-        fast.walk_mp = 15;
+        fast.set_walking_mp(15);
         let rejection = check_template(&fast).rejection.unwrap();
         assert!(rejection.contains("Engine rating 525"), "{rejection}");
+    }
+
+    /// A declared engine rating must be tonnage x walking MP (TM p. 48) and follows a walking
+    /// MP edit; a template without one derives it.
+    #[test]
+    fn a_declared_engine_rating_matches_the_walking_mp() {
+        let jenner = MechTemplate::parse("JR7-D", JENNER).unwrap();
+        assert_eq!(jenner.declared_engine_rating().unwrap(), Some(245));
+        refused(
+            &JENNER.replace("engine_rating = 245", "engine_rating = 250"),
+            "declared engine rating 250 is not tonnage x walking MP (35 x 7 = 245)",
+        );
+        let derived =
+            MechTemplate::parse("JR7-D", &JENNER.replace("engine_rating = 245\n", "")).unwrap();
+        assert_eq!(derived.declared_engine_rating().unwrap(), None);
+        assert_eq!(check_template(&derived).rejection, None);
+        let mut slower = jenner;
+        slower.set_walking_mp(6);
+        assert_eq!(slower.declared_engine_rating().unwrap(), Some(210));
     }
 
     /// One jet per jumping MP, never more than the walking MP, in torsos and legs (TM p. 51).
@@ -695,7 +744,8 @@ mod tests {
                     "    { at = 11, item = \"IS.SRM-4\" },",
                     "    { at = 11, item = \"JumpJet\" },",
                 )
-                .replace("walk_mp = 7", "walk_mp = 5"),
+                .replace("walk_mp = 7", "walk_mp = 5")
+                .replace("engine_rating = 245", "engine_rating = 175"),
             "exceeds the walking MP of 5",
         );
         refused(
@@ -725,8 +775,8 @@ mod tests {
         let clan = MechTemplate::parse(
             "JR7-D",
             &JENNER.replacen(
-                "\n[sections.",
-                "\n[construction]\ntech_base = \"clan\"\n\n[sections.",
+                "[construction]\n",
+                "[construction]\ntech_base = \"clan\"\n",
                 1,
             ),
         )
@@ -815,11 +865,7 @@ mod tests {
             &clan,
             "CL.ERSmallLaser is Clan technology on an Inner Sphere Mech",
         );
-        let mixed = clan.replacen(
-            "\n[sections.",
-            "\n[construction]\nmixed_tech = true\n\n[sections.",
-            1,
-        );
+        let mixed = clan.replacen("[construction]\n", "[construction]\nmixed_tech = true\n", 1);
         // Lighter lasers leave the design two tons under its 35.
         refused(&mixed, "under the 35-ton chassis");
     }

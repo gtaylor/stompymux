@@ -5,6 +5,9 @@ tons = 20
 walk_mp = 5
 jump_mp = 5
 
+[construction]
+engine_rating = 100
+
 [sections.left_arm]
 armor = 6
 omit = ["lower_actuator", "hand_actuator"]

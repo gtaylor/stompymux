@@ -9,6 +9,9 @@ tac_range = 20
 lrs_range = 40
 scan_range = 20
 
+[construction]
+engine_rating = 245
+
 [sections.left_arm]
 armor = 4
 omit = ["lower_actuator", "hand_actuator"]

@@ -10,6 +10,7 @@ max_suits = 0
 
 [construction]
 engine = "xl"
+engine_rating = 360
 heat_sinks = "double"
 
 [sections.left_arm]

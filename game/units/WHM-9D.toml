@@ -10,6 +10,7 @@ specials = ["SearchLight"]
 
 [construction]
 engine = "xl"
+engine_rating = 350
 structure = "endo_steel"
 heat_sinks = "double"
 

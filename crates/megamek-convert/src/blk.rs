@@ -10,6 +10,7 @@ use crate::equipment::{self, Critical, TechBase};
 use crate::layout::{self, WeaponSpan};
 use anyhow::{Context, Result, bail, ensure};
 use std::collections::BTreeMap;
+use stompymux_unit_construction::VehicleMovement;
 
 /// MegaMek equipment blocks with a stompymux location, and the template heading each fills.
 const LOCATIONS: [(&str, &str); 6] = [
@@ -297,6 +298,11 @@ pub fn convert(source: &str) -> Result<Converted> {
     // for free (TechManual p. 104). Combat vehicles mount single heat sinks only, whatever
     // their technology base.
     let free = if engine == Some("ice") { 0 } else { 10 };
+    // A .blk file names the engine type only; the Final Engine Rating follows from the
+    // tonnage, cruising MP and suspension factor (TechManual p. 100).
+    let engine_rating =
+        u32::try_from(VehicleMovement::parse(movement)?.final_engine_rating(tons, cruise))
+            .context("engine rating is out of range")?;
     let heat_sinks = energy_heat.max(free);
 
     let mut sections = Vec::new();
@@ -329,6 +335,7 @@ pub fn convert(source: &str) -> Result<Converted> {
             tons,
             walk_mp: cruise,
             jump_mp: 0,
+            engine_rating,
             heat_sinks: (heat_sinks != free).then_some(heat_sinks),
             construction,
             specials,
@@ -392,7 +399,7 @@ mod tests {
         assert_eq!(reference, "Bulldog Medium Tank");
         for expected in [
             "class = \"vehicle\"\nmovement = \"track\"\ntons = 60\nwalk_mp = 4\nheat_sinks = 8\n",
-            "[construction]\nengine = \"ice\"\n",
+            "[construction]\nengine = \"ice\"\nengine_rating = 240\n",
             "[sections.front_side]\narmor = 24\nslots = [\n    { at = 1, item = \"IS.MachineGun\" },\n    \
              { at = 2, item = \"Ammo_IS.MachineGun\", rounds = 100, modes = [\"Halfton\"] },\n]",
             "[sections.turret]\narmor = 20\nslots = [\n    { at = \"1-2\", item = \"IS.SRM-4\" },\n    \
@@ -419,7 +426,12 @@ mod tests {
         assert!(template.contains("class = \"vtol\"\nmovement = \"vtol\""));
         assert!(template.contains("[sections.rotor]\narmor = 2\n"));
         assert!(!template.contains("heat_sinks"));
-        assert!(!template.contains("[construction]"));
+        // 30 tons x cruising MP 4 less the 140-point VTOL suspension factor rates at the
+        // minimum of 10 (TechManual p. 100).
+        assert!(
+            template.contains("[construction]\nengine_rating = 10\n"),
+            "{template}"
+        );
     }
 
     #[test]

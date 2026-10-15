@@ -9,6 +9,7 @@ max_suits = 0
 
 [construction]
 engine = "xl"
+engine_rating = 270
 
 [sections.left_side]
 armor = 60

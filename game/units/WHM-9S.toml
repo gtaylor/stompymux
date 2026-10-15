@@ -9,6 +9,7 @@ specials = ["SearchLight"]
 
 [construction]
 engine = "light"
+engine_rating = 280
 heat_sinks = "double"
 
 [sections.left_arm]

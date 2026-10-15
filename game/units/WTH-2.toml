@@ -7,6 +7,7 @@ jump_mp = 4
 radio = 4
 
 [construction]
+engine_rating = 160
 
 [sections.left_arm]
 armor = 12

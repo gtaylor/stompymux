@@ -5,6 +5,9 @@ tons = 80
 walk_mp = 4
 heat_sinks = 19
 
+[construction]
+engine_rating = 320
+
 [sections.left_arm]
 armor = 25
 slots = [

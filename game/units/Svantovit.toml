@@ -7,6 +7,7 @@ specials = ["CargoTech"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 175
 armor = "ferro_fibrous"
 
 [sections.left_side]

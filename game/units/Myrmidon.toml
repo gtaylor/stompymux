@@ -4,6 +4,9 @@ movement = "track"
 tons = 40
 walk_mp = 5
 
+[construction]
+engine_rating = 200
+
 [sections.left_side]
 armor = 25
 

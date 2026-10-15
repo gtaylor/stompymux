@@ -7,6 +7,9 @@ jump_mp = 2
 heat_sinks = 11
 radio = 3
 
+[construction]
+engine_rating = 60
+
 [sections.left_arm]
 armor = 10
 omit = ["lower_actuator", "hand_actuator"]

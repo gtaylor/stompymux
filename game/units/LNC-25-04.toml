@@ -10,6 +10,7 @@ max_suits = 0
 
 [construction]
 engine = "xl"
+engine_rating = 360
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"

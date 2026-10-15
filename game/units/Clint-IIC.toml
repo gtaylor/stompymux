@@ -8,6 +8,7 @@ jump_mp = 6
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 240
 structure = "endo_steel"
 heat_sinks = "single"
 

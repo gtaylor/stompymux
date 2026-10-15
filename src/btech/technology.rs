@@ -141,8 +141,8 @@ mod tests {
                 "{ at = 5, item = \"HeatSink\" }",
             )
             .replacen(
-                "\n[sections.",
-                "\n[construction]\ncockpit = \"small\"\n\n[sections.",
+                "[construction]\n",
+                "[construction]\ncockpit = \"small\"\n",
                 1,
             );
         let mut template = MechTemplate::parse("JR7-D", &small).unwrap();

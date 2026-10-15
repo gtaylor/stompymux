@@ -227,6 +227,16 @@ impl VehicleTemplate {
             "Combat vehicles use standard internal structure only (TechManual p. 98)"
         );
         let engine = self.engine()?;
+        if let Some(declared) = self.declared_engine_rating()? {
+            ensure!(
+                i64::from(declared) == i64::from(engine.weight_rating),
+                "The declared engine rating {declared} is not the Final Engine Rating {}: {} tons x cruising MP {} less suspension factor {}, rounded up to a multiple of 5 and at least 10 (TechManual p. 100)",
+                engine.weight_rating,
+                self.tons,
+                self.walk_mp,
+                engine.suspension
+            );
+        }
         ensure!(
             engine.weight_rating <= VEHICLE_MAXIMUM_ENGINE_RATING,
             "Engine Rating {} exceeds the combat vehicle maximum of {VEHICLE_MAXIMUM_ENGINE_RATING} (TechManual p. 100)",
@@ -307,6 +317,12 @@ pub struct VehicleTemplateCheck {
     pub cruising_mp: u32,
     /// Flanking MP: cruising MP x 1.5, rounded up (TechManual p. 100).
     pub flanking_mp: u32,
+    /// Final Engine Rating: tonnage x cruising MP less the suspension factor, rounded up to a
+    /// multiple of 5 and at least 10 (TechManual p. 100); zero for a stationary installation.
+    pub engine_rating: i32,
+    /// The engine rating the template's `[construction]` table declares, which construction
+    /// requires to equal `engine_rating`; absent when the template derives it.
+    pub declared_engine_rating: Option<u32>,
     pub weapons: usize,
     pub ammunition_bins: usize,
     /// Spending against the construction limits, present when the vehicle is constructible.
@@ -324,6 +340,8 @@ pub fn check_vehicle_template(template: &VehicleTemplate) -> VehicleTemplateChec
         rejection: None,
         cruising_mp: template.walk_mp,
         flanking_mp: super::running_mp_of_walking(template.walk_mp),
+        engine_rating: template.engine().map_or(0, |engine| engine.weight_rating),
+        declared_engine_rating: template.declared_engine_rating().ok().flatten(),
         weapons: 0,
         ammunition_bins: 0,
         construction: None,
@@ -591,6 +609,36 @@ slots = [
         let engine = tank.engine().unwrap();
         assert_eq!(engine.weight_rating, 130);
         assert_eq!(engine.engine_mass, 4 * 1024);
+    }
+
+    /// A declared engine rating must be the Final Engine Rating the tonnage, cruising MP and
+    /// suspension factor give (TechManual p. 100), and follows a cruising MP edit.
+    #[test]
+    fn a_declared_engine_rating_matches_the_final_engine_rating() {
+        let declare = |rating: u32| {
+            parse(&YELLOW_JACKET.replace(
+                "engine = \"ice\"\n",
+                &format!("engine = \"ice\"\nengine_rating = {rating}\n"),
+            ))
+        };
+        // 30 tons x 6 cruising MP less the 140-point VTOL suspension factor.
+        let jacket = declare(40);
+        assert_eq!(jacket.declared_engine_rating().unwrap(), Some(40));
+        assert!(jacket.construction_rules().is_ok());
+        let report = check_vehicle_template(&jacket);
+        assert_eq!(
+            (report.engine_rating, report.declared_engine_rating),
+            (40, Some(40))
+        );
+        assert!(
+            rejection(&declare(45))
+                .contains("declared engine rating 45 is not the Final Engine Rating 40")
+        );
+        let mut faster = jacket;
+        faster.set_cruising_mp(9);
+        assert_eq!(faster.declared_engine_rating().unwrap(), Some(130));
+        assert_eq!(faster.engine().unwrap().weight_rating, 130);
+        assert_eq!(parse(YELLOW_JACKET).declared_engine_rating().unwrap(), None);
     }
 
     /// ICE vehicles carry power amplifiers for energy weapons; fusion vehicles do not, and

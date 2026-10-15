@@ -5,6 +5,7 @@ tons = 25
 walk_mp = 8
 
 [construction]
+engine_rating = 60
 armor = "ferro_fibrous"
 
 [sections.left_side]

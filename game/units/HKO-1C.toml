@@ -13,6 +13,7 @@ cargo_space = 0
 
 [construction]
 engine = "xl"
+engine_rating = 260
 heat_sinks = "double"
 
 [sections.left_arm]

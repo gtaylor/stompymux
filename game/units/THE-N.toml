@@ -6,6 +6,7 @@ walk_mp = 6
 radio = 4
 
 [construction]
+engine_rating = 120
 structure = "endo_steel"
 
 [sections.left_arm]

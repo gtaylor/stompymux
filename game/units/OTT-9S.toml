@@ -9,6 +9,7 @@ specials = ["BeagleProbe", "ECM"]
 
 [construction]
 engine = "light"
+engine_rating = 280
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

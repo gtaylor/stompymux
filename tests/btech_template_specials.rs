@@ -8,9 +8,10 @@ const SOURCE: &str = include_str!("fixtures/btech/units/JR7-D.toml");
 fn template_specials_merge_canonically_after_construction_flags() {
     let source = format!(
         "specials = [\"searchlight\", \"CargoTech\", \"SEARCHLIGHT\"]\n{}",
-        SOURCE.replace(
-            "\n[sections.left_arm]",
-            "\n[construction]\ngyro = \"heavy_duty\"\n\n[sections.left_arm]",
+        SOURCE.replacen(
+            "[construction]\n",
+            "[construction]\ngyro = \"heavy_duty\"\n",
+            1
         )
     );
     let parsed = MechTemplate::parse("JR7-D", &source).unwrap();

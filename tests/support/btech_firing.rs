@@ -8,10 +8,13 @@ pub fn templates() -> Vec<String> {
         include_str!("../../game/units/JR7-D.toml").into(),
         include_str!("../../game/units/GOL-1H.toml").into(),
         tracked.into(),
-        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked
+            .replace("movement = \"track\"", "movement = \"wheel\"")
+            .replace("engine_rating = 240", "engine_rating = 220"),
         crate::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("engine_rating = 240\n", "")
             .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../../game/units/Kestrel.toml").into(),
     ]

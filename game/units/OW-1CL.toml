@@ -8,6 +8,7 @@ specials = ["OmniMech_Tech"]
 
 [construction]
 engine = "xl"
+engine_rating = 280
 mixed_tech = true
 
 [sections.left_arm]

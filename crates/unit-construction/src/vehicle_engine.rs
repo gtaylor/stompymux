@@ -60,13 +60,46 @@ impl VehicleMovement {
     }
 }
 
+impl VehicleMovement {
+    /// Final Engine Rating: tonnage x cruising MP less the suspension factor, never below 10
+    /// and rounded up to a multiple of 5 (TechManual p. 100). Stationary installations carry
+    /// no engine and rate 0.
+    pub fn final_engine_rating(self, tons: u16, cruising_mp: u32) -> i32 {
+        if self == Self::Stationary {
+            return 0;
+        }
+        let nominal = super::engine::rated_output(tons, cruising_mp);
+        let rating = i64::from(nominal) - i64::from(self.suspension(tons));
+        let rating = i32::try_from(rating).unwrap_or(i32::MAX);
+        let rating = rating.max(VEHICLE_MINIMUM_ENGINE_RATING);
+        rating.saturating_add(4) / 5 * 5
+    }
+}
+
 impl VehicleTemplate {
     /// State a new cruising MP, with the flanking speed that follows from it (TechManual
-    /// p. 100).
+    /// p. 100). A declared engine rating follows the new cruising MP.
     pub fn set_cruising_mp(&mut self, cruising_mp: u32) {
         self.walk_mp = cruising_mp;
         self.max_speed = f64::from(super::running_mp_of_walking(cruising_mp))
             * super::construction::SPEED_PER_MP;
+        self.restate_engine_rating();
+    }
+
+    /// The Final Engine Rating the template's `[construction]` table declares, if any.
+    pub fn declared_engine_rating(&self) -> Result<Option<u32>> {
+        super::engine::declared_engine_rating(&self.attributes)
+    }
+
+    /// Bring a declared engine rating back in line with the tonnage and cruising MP after an
+    /// edit to either; a template that declares none keeps deriving it.
+    pub fn restate_engine_rating(&mut self) {
+        let Ok(engine) = self.engine() else {
+            return;
+        };
+        if let Some(declared) = self.attributes.get_mut(super::document::ENGINE_RATING) {
+            *declared = engine.weight_rating.max(0).to_string();
+        }
     }
 
     /// Test a chassis technology by its full name or the reference's abbreviation.
@@ -92,14 +125,7 @@ impl VehicleTemplate {
     pub fn engine(&self) -> Result<VehicleEngine> {
         let nominal_rating = super::engine::rated_output(self.tons, self.walk_mp);
         let suspension = self.movement.suspension(self.tons);
-        let weight_rating = if self.movement == VehicleMovement::Stationary {
-            0
-        } else {
-            let rating = i64::from(nominal_rating) - i64::from(suspension);
-            let rating = i32::try_from(rating).unwrap_or(i32::MAX);
-            let rating = rating.max(VEHICLE_MINIMUM_ENGINE_RATING);
-            rating.saturating_add(4) / 5 * 5
-        };
+        let weight_rating = self.movement.final_engine_rating(self.tons, self.walk_mp);
         let standard_mass = u32::try_from(weight_rating)
             .ok()
             .map(super::mass::engine_mass)

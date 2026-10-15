@@ -7,6 +7,9 @@ jump_mp = 3
 heat_sinks = 29
 specials = ["SearchLight"]
 
+[construction]
+engine_rating = 300
+
 [sections.left_arm]
 armor = 34
 omit = ["hand_actuator"]

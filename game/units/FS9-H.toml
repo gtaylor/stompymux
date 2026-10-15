@@ -7,6 +7,9 @@ jump_mp = 6
 cargo_space = 0
 max_suits = 0
 
+[construction]
+engine_rating = 210
+
 [sections.left_arm]
 armor = 6
 omit = ["hand_actuator"]

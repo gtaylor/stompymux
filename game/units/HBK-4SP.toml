@@ -7,6 +7,9 @@ heat_sinks = 19
 cargo_space = 0
 max_suits = 0
 
+[construction]
+engine_rating = 200
+
 [sections.left_arm]
 armor = 16
 slots = [

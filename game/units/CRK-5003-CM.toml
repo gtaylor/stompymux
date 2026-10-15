@@ -8,6 +8,7 @@ heat_sinks = 20
 radio = 4
 
 [construction]
+engine_rating = 255
 
 [sections.left_arm]
 armor = 19

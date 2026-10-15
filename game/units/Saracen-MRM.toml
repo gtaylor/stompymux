@@ -9,6 +9,7 @@ scan_range = 30
 
 [construction]
 engine = "ice"
+engine_rating = 105
 armor = "ferro_fibrous"
 
 [sections.left_side]

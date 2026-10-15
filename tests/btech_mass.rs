@@ -191,7 +191,11 @@ fn jenner_with(construction: &str, slots: &str) -> (MechTemplate, MechMass) {
         .replace("    { at = 11, item = \"IS.SRM-4\" },\n    { at = 12, item = \"JumpJet\" },\n", slots);
     let template = MechTemplate::parse(
         "test",
-        &format!("{source}\n[construction]\n{construction}\n"),
+        &source.replacen(
+            "[construction]\n",
+            &format!("[construction]\n{construction}\n"),
+            1,
+        ),
     )
     .unwrap();
     let mass = template

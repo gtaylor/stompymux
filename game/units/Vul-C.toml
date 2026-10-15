@@ -8,6 +8,7 @@ heat_sinks = 12
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 300
 armor = "ferro_fibrous"
 
 [sections.left_arm]

@@ -7,6 +7,7 @@ heat_sinks = 12
 
 [construction]
 engine = "ice"
+engine_rating = 165
 
 [sections.left_side]
 armor = 23

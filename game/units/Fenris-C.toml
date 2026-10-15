@@ -9,6 +9,7 @@ specials = ["OmniMech_Tech", "SearchLight", "ArtemisIV"]
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 360
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

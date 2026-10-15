@@ -52,10 +52,13 @@ mod tests {
             include_str!("../../game/units/JR7-D.toml").to_owned(),
             include_str!("../../game/units/GOL-1H.toml").to_owned(),
             tracked.to_owned(),
-            tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+            tracked
+                .replace("movement = \"track\"", "movement = \"wheel\"")
+                .replace("engine_rating = 240", "engine_rating = 220"),
             crate::btech::vehicle::hovercraft_variant(tracked),
             tracked
                 .replace("movement = \"track\"", "movement = \"none\"")
+                .replace("engine_rating = 240\n", "")
                 .replace("walk_mp = 3", "walk_mp = 0"),
             include_str!("../../game/units/Kestrel.toml").to_owned(),
         ];

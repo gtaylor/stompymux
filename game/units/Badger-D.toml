@@ -9,6 +9,9 @@ max_suits = 0
 max_ton = 4
 specials = ["CargoTech"]
 
+[construction]
+engine_rating = 180
+
 [sections.left_side]
 armor = 18
 slots = [

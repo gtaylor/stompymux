@@ -7,6 +7,9 @@ cargo_space = 250
 max_suits = 0
 max_ton = 1
 
+[construction]
+engine_rating = 70
+
 [sections.left_side]
 armor = 5
 

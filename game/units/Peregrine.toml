@@ -4,6 +4,9 @@ movement = "vtol"
 tons = 30
 walk_mp = 12
 
+[construction]
+engine_rating = 220
+
 [sections.left_side]
 armor = 2
 slots = [

@@ -7,6 +7,7 @@ heat_sinks = 13
 radio = 4
 
 [construction]
+engine_rating = 255
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

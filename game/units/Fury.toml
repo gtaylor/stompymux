@@ -6,6 +6,9 @@ walk_mp = 4
 cargo_space = 250
 specials = ["SearchLight"]
 
+[construction]
+engine_rating = 320
+
 [sections.left_side]
 armor = 40
 

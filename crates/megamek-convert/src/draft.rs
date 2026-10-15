@@ -61,6 +61,9 @@ pub struct Draft {
     pub jump_mp: u32,
     /// Installed heat sinks, as the source counts them, when they differ from the default.
     pub heat_sinks: Option<u32>,
+    /// The engine rating the source declares: the `.mtf` engine line's rating, or a vehicle's
+    /// Final Engine Rating from its tonnage, cruising MP and motive type.
+    pub engine_rating: u32,
     /// `[construction]` keys and document spellings for every non-default choice.
     pub construction: Vec<(&'static str, &'static str)>,
     pub specials: Vec<&'static str>,
@@ -86,16 +89,24 @@ impl Draft {
         if !self.specials.is_empty() {
             let _ = writeln!(out, "specials = {}", list(&self.specials));
         }
-        if !self.construction.is_empty() {
-            out.push_str("\n[construction]\n");
-            for (key, value) in &self.construction {
-                // `mixed_tech` is the one boolean construction key.
-                if *key == "mixed_tech" {
-                    let _ = writeln!(out, "{key} = {value}");
-                    continue;
-                }
-                let _ = writeln!(out, "{key} = {}", quote(value));
+        out.push_str("\n[construction]\n");
+        // The rating follows the technology base and engine family, ahead of the other choices.
+        let mut rating = Some(self.engine_rating);
+        for (key, value) in &self.construction {
+            if !matches!(*key, "tech_base" | "mixed_tech" | "engine")
+                && let Some(rating) = rating.take()
+            {
+                let _ = writeln!(out, "engine_rating = {rating}");
             }
+            // `mixed_tech` is the one boolean construction key.
+            if *key == "mixed_tech" {
+                let _ = writeln!(out, "{key} = {value}");
+                continue;
+            }
+            let _ = writeln!(out, "{key} = {}", quote(value));
+        }
+        if let Some(rating) = rating {
+            let _ = writeln!(out, "engine_rating = {rating}");
         }
         for section in &self.sections {
             let _ = writeln!(out, "\n[sections.{}]", section.heading);
@@ -196,6 +207,7 @@ mod tests {
             walk_mp: 4,
             jump_mp: 0,
             heat_sinks: None,
+            engine_rating: 60,
             construction: vec![("engine", "ice")],
             specials: vec![],
             sections: vec![section],
@@ -204,7 +216,7 @@ mod tests {
         assert_eq!(
             draft.render(),
             "name = \"Truck\"\nclass = \"vehicle\"\nmovement = \"wheel\"\ntons = 20\nwalk_mp = 4\n\n\
-             [construction]\nengine = \"ice\"\n\n[sections.front_side]\narmor = 10\nslots = [\n    \
+             [construction]\nengine = \"ice\"\nengine_rating = 60\n\n[sections.front_side]\narmor = 10\nslots = [\n    \
              { at = 1, item = \"IS.LRM-5\" },\n    { at = 2, item = \"ArtemisIV\", link = 1 },\n    \
              { at = 3, item = \"Ammo_IS.LRM-5\", rounds = 24, modes = [\"Artemis/Mine\"] },\n]\n"
         );

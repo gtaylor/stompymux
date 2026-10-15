@@ -9,6 +9,7 @@ max_suits = 0
 
 [construction]
 engine = "ice"
+engine_rating = 115
 armor = "ferro_fibrous"
 
 [sections.left_side]

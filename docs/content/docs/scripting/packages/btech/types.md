@@ -1218,6 +1218,7 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `walking_mp`: `integer` — Walking MP the template states.
 - `running_mp`: `integer` — Walking MP x 1.5, rounded up.
 - `engine_rating`: `integer` — Tonnage x walking MP.
+- `declared_engine_rating`: `integer|nil` — Rating the [construction] table declares; nil when derived.
 - `weapons`: `integer` — Resolved weapon count on success; zero on rejection.
 - `ammunition_bins`: `integer` — Resolved bin count on success; zero on rejection.
 - `ammunition_adjustments`: `AmmunitionAdjustment[]` — Changes on successful construction.

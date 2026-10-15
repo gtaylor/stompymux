@@ -6,6 +6,9 @@ walk_mp = 5
 jump_mp = 5
 heat_sinks = 12
 
+[construction]
+engine_rating = 275
+
 [sections.left_arm]
 armor = 14
 

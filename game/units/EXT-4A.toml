@@ -6,6 +6,9 @@ walk_mp = 5
 jump_mp = 5
 heat_sinks = 11
 
+[construction]
+engine_rating = 325
+
 [sections.left_arm]
 armor = 18
 slots = [

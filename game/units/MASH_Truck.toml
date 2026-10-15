@@ -8,6 +8,9 @@ max_suits = 0
 max_ton = 100
 specials = ["Carrier_Tech"]
 
+[construction]
+engine_rating = 155
+
 [sections.left_side]
 armor = 16
 

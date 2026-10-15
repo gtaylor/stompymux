@@ -9,6 +9,7 @@ radio = 4
 specials = ["C3MasterTech", "SearchLight"]
 
 [construction]
+engine_rating = 255
 heat_sinks = "double"
 
 [sections.left_arm]

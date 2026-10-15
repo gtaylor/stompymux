@@ -7,6 +7,7 @@ heat_sinks = 24
 specials = ["SearchLight"]
 
 [construction]
+engine_rating = 285
 armor = "ferro_fibrous"
 
 [sections.left_side]

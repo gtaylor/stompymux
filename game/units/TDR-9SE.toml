@@ -10,6 +10,7 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+engine_rating = 260
 heat_sinks = "double"
 
 [sections.left_arm]

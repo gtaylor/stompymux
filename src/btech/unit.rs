@@ -1086,12 +1086,14 @@ impl Mech {
             .insert("move_type".into(), name.into());
     }
 
-    /// Change nominal tonnage without rebuilding equipment, protection or crew state.
+    /// Change nominal tonnage without rebuilding equipment, protection or crew state. A
+    /// declared engine rating follows the new tonnage.
     pub(super) fn set_nominal_tonnage(&mut self, tons: u16) {
         self.definition.tons = tons;
         self.definition
             .attributes
             .insert("tons".into(), tons.to_string());
+        self.definition.restate_engine_rating();
     }
 
     /// Update the owned cargo installation; the shared load service reconciles motion.

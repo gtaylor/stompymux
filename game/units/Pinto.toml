@@ -9,6 +9,7 @@ max_ton = 1
 specials = ["CargoTech"]
 
 [construction]
+engine_rating = 160
 armor = "ferro_fibrous"
 
 [sections.left_side]

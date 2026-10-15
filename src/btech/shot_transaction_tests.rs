@@ -124,7 +124,9 @@ fn shot_transactions_match_reference_across_chassis_and_rejections() {
     for source in [
         mech.to_owned(),
         tracked.to_owned(),
-        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
+        tracked
+            .replace("movement = \"track\"", "movement = \"wheel\"")
+            .replace("engine_rating = 240", "engine_rating = 220"),
         crate::btech::vehicle::hovercraft_variant(tracked),
     ] {
         for recipient in [mech, tracked] {

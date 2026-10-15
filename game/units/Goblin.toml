@@ -11,6 +11,7 @@ specials = ["CargoTech"]
 
 [construction]
 engine = "ice"
+engine_rating = 180
 
 [sections.left_side]
 armor = 24

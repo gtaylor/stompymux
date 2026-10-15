@@ -238,6 +238,12 @@ pub struct Construction {
     /// Components built from the other technology base, in [`Component::ALL`] order.
     pub mixed: Vec<Component>,
     pub engine: Engine,
+    /// The engine rating the template declares (`.mtf` `Engine:300 XL Engine`): tonnage x
+    /// walking MP for a Mech (TM p. 48), the Final Engine Rating for a vehicle (TM p. 100).
+    /// Construction derives the rating from movement points when it is absent and requires
+    /// the two to agree when it is present. It is not a chassis flag, so [`Self::from_flags`]
+    /// leaves it unset.
+    pub engine_rating: Option<u32>,
     pub gyro: Gyro,
     pub cockpit: Cockpit,
     pub structure: Structure,
@@ -254,6 +260,7 @@ struct ConstructionDocument {
     #[serde(default)]
     mixed_tech: bool,
     engine: Option<String>,
+    engine_rating: Option<u32>,
     gyro: Option<String>,
     cockpit: Option<String>,
     structure: Option<String>,
@@ -295,6 +302,7 @@ impl Construction {
             mixed_tech: document.mixed_tech,
             mixed,
             engine: choice(document.engine, Engine::parse, "engine")?,
+            engine_rating: document.engine_rating,
             gyro: choice(document.gyro, Gyro::parse, "gyro")?,
             cockpit: choice(document.cockpit, Cockpit::parse, "cockpit")?,
             structure: choice(document.structure, Structure::parse, "structure")?,
@@ -328,6 +336,7 @@ impl Construction {
             mixed_tech: has(MIXED_TECH),
             mixed,
             engine: engine_from_flags(flags)?,
+            engine_rating: None,
             gyro: Gyro::from_flags("gyro", flags)?,
             cockpit: Cockpit::from_flags("cockpit", flags)?,
             structure: Structure::from_flags("structure", flags)?,
@@ -382,11 +391,8 @@ impl Construction {
     /// Render the non-default choices as a `[construction]` table, or nothing.
     pub fn render(&self) -> String {
         let mut lines = String::new();
-        let mut line = |key: &str, value: &str| {
-            let _ = writeln!(lines, "{key} = \"{value}\"");
-        };
         if self.clan {
-            line("tech_base", "clan");
+            let _ = writeln!(lines, "tech_base = \"clan\"");
         }
         for (key, value, default) in [
             (
@@ -418,7 +424,12 @@ impl Construction {
             ),
         ] {
             if value != default {
-                line(key, value);
+                let _ = writeln!(lines, "{key} = \"{value}\"");
+            }
+            if key == "engine"
+                && let Some(rating) = self.engine_rating
+            {
+                let _ = writeln!(lines, "engine_rating = {rating}");
             }
         }
         if self.mixed_tech {
@@ -772,6 +783,7 @@ mod tests {
             mixed_tech: true,
             mixed: vec![Component::Engine, Component::Armor],
             engine: Engine::Xl,
+            engine_rating: None,
             gyro: Gyro::HeavyDuty,
             cockpit: Cockpit::Small,
             structure: Structure::EndoSteel,
@@ -945,8 +957,8 @@ mod tests {
                 "{ at = 5, item = \"HeatSink\" }",
             )
             .replacen(
-                "\n[sections.",
-                "\n[construction]\ncockpit = \"small\"\n\n[sections.",
+                "[construction]\n",
+                "[construction]\ncockpit = \"small\"\n",
                 1,
             );
         let template = crate::MechTemplate::parse("JR7-D", &small).unwrap();

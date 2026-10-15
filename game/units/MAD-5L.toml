@@ -8,6 +8,7 @@ radio = 4
 specials = ["ECM", "SearchLight"]
 
 [construction]
+engine_rating = 300
 armor = "stealth"
 heat_sinks = "double"
 myomer = "triple_strength"

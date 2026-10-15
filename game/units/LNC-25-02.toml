@@ -5,6 +5,9 @@ tons = 60
 walk_mp = 4
 heat_sinks = 19
 
+[construction]
+engine_rating = 240
+
 [sections.left_arm]
 armor = 14
 omit = ["lower_actuator", "hand_actuator"]

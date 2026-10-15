@@ -4,6 +4,9 @@ movement = "wheel"
 tons = 70
 walk_mp = 4
 
+[construction]
+engine_rating = 260
+
 [sections.left_side]
 armor = 32
 

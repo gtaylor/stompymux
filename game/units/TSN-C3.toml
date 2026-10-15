@@ -9,6 +9,7 @@ specials = ["C3SlaveTech"]
 
 [construction]
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"

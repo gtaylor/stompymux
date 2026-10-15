@@ -7,6 +7,7 @@ heat_sinks = 10
 
 [construction]
 engine = "xl"
+engine_rating = 350
 heat_sinks = "double"
 
 [sections.front_left_leg]

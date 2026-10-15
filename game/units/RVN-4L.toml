@@ -9,6 +9,7 @@ specials = ["BeagleProbe", "ECM"]
 
 [construction]
 engine = "xl"
+engine_rating = 210
 armor = "stealth"
 heat_sinks = "double"
 

@@ -322,8 +322,11 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         report.name, report.reference, report.weapons, report.ammunition_bins
                     ),
                     format!(
-                        "Walking MP {}, running MP {}; engine rating {}.",
-                        report.walking_mp, report.running_mp, report.engine_rating
+                        "Walking MP {}, running MP {}; engine rating {}{}.",
+                        report.walking_mp,
+                        report.running_mp,
+                        report.engine_rating,
+                        declared_rating(report.declared_engine_rating)
                     ),
                 ];
                 for change in report.ammunition_adjustments {
@@ -386,13 +389,15 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                     .map(|section| section.criticals.len())
                     .sum();
                 Ok(format!(
-                    "{} ({})\r\n{} tons; walking MP {}, running MP {} ({:.2} km/h); jump speed {:.2}; {} heat sinks\r\n{} sections; {slots} occupied critical slots\r\nAsset parsed; unit construction validates supported equipment and chassis rules.",
+                    "{} ({})\r\n{} tons; walking MP {}, running MP {} ({:.2} km/h); engine rating {}{}; jump speed {:.2}; {} heat sinks\r\n{} sections; {slots} occupied critical slots\r\nAsset parsed; unit construction validates supported equipment and chassis rules.",
                     template.name,
                     template.reference,
                     template.tons,
                     template.walking_mp(),
                     template.running_mp(),
                     template.max_speed,
+                    template.engine_rating(),
+                    declared_rating(template.declared_engine_rating()?),
                     template.jump_speed,
                     template.heat_sinks,
                     template.sections.len()
@@ -1307,6 +1312,15 @@ pub(crate) fn preferences_command(
     })
 }
 
+/// Whether a template-check report's engine rating is declared or derived from movement.
+fn declared_rating(declared: Option<u32>) -> &'static str {
+    if declared.is_some() {
+        " (declared)"
+    } else {
+        " (derived from movement)"
+    }
+}
+
 /// Operator text for a vehicle template check: the verdict, then what construction spends
 /// against the TechManual limits and any warnings.
 fn vehicle_template_check_text(report: &super::VehicleTemplateCheck) -> String {
@@ -1320,8 +1334,11 @@ fn vehicle_template_check_text(report: &super::VehicleTemplateCheck) -> String {
             report.weapons, report.ammunition_bins
         ),
         format!(
-            "Cruising MP {}, flanking MP {}.",
-            report.cruising_mp, report.flanking_mp
+            "Cruising MP {}, flanking MP {}; engine rating {}{}.",
+            report.cruising_mp,
+            report.flanking_mp,
+            report.engine_rating,
+            declared_rating(report.declared_engine_rating)
         ),
     ];
     if let Some(construction) = &report.construction {

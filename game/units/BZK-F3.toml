@@ -6,6 +6,7 @@ walk_mp = 5
 radio = 4
 
 [construction]
+engine_rating = 175
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

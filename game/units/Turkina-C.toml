@@ -10,6 +10,7 @@ radio = 5
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 285
 
 [sections.left_arm]
 armor = 32

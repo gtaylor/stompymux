@@ -4,6 +4,9 @@ movement = "biped"
 tons = 20
 walk_mp = 8
 
+[construction]
+engine_rating = 160
+
 [sections.left_arm]
 armor = 3
 omit = ["lower_actuator", "hand_actuator"]

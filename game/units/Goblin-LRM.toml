@@ -5,6 +5,9 @@ tons = 45
 walk_mp = 4
 cargo_space = 1024
 
+[construction]
+engine_rating = 180
+
 [sections.left_side]
 armor = 24
 

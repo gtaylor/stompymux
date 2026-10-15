@@ -8,6 +8,7 @@ specials = ["SearchLight"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 320
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
