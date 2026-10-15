@@ -1,8 +1,7 @@
 //! Derived Artemis and MRM "Apollo" fire-control links share matching and availability policy
 //! across unit anatomies.
 use super::{
-    CriticalLocation, Mech, System, SystemCritical, Vehicle, VehicleCriticalLocation,
-    VehicleSection, WeaponMount,
+    CriticalLocation, Mech, System, SystemCritical, Vehicle, VehicleCriticalLocation, WeaponMount,
 };
 use anyhow::{Result, ensure};
 use serde::Serialize;
@@ -173,7 +172,7 @@ impl Mech {
 }
 
 impl Vehicle {
-    /// Ground turrets can use rear controllers; VTOLs require a same-section controller.
+    /// A vehicle's controller serves launchers in its own location (TechManual p. 206).
     pub fn artemis_controllers(&self) -> Result<Vec<ArtemisController<VehicleCriticalLocation>>> {
         let loadout = self.loadout()?;
         controllers(
@@ -185,12 +184,7 @@ impl Vehicle {
                 Ok((link(&part.data)?, !self.critical_unavailable(location)))
             },
             |location| location.slot,
-            |controller, primary| {
-                controller.section == primary.section
-                    || (!self.definition().is_vtol()
-                        && controller.section == VehicleSection::Rear
-                        && primary.section == VehicleSection::Turret)
-            },
+            |controller, primary| controller.section == primary.section,
         )
     }
 

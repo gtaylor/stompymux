@@ -505,9 +505,8 @@ bins; ordinary ammunition
 is not substituted when those bins are empty. Artemis adds two to the missile
 hit-table roll, combined with the glancing-hit adjustment and capped at twelve.
 Spotter-directed indirect fire gets no Artemis or Narc bonus (Total Warfare
-pp. 130, 139). Controllers link within their own section. Mechs can also use a head controller
-for a center-torso launcher; ground vehicles can use a rear controller for a
-turret launcher. VTOL controllers must be in the launcher’s section.
+pp. 130, 139). On Mechs, vehicles and VTOLs alike, a controller sits in its
+launcher’s own section and serves only launchers there (TechManual p. 206).
 
 An MRM "Apollo" fire control system linked to an MRM launcher in its own
 section cancels the MRM's +1 to hit and takes one from its Cluster Hits roll

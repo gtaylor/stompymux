@@ -20,23 +20,34 @@ fn templates() -> Vec<String> {
     ]
 }
 
-/// Install one turret launcher and a controller without changing chassis identity.
-fn definition(source: &str, section: VehicleSection, link: &str) -> VehicleTemplate {
+/// Install one launcher and a controller, each in the given section, without changing
+/// chassis identity.
+fn definition(
+    source: &str,
+    launcher: VehicleSection,
+    section: VehicleSection,
+    link: &str,
+) -> VehicleTemplate {
     let mut template =
         crate::support::templates::fitted(VehicleTemplate::parse("test", source).unwrap());
     for section in template.sections.values_mut() {
         section.criticals.clear();
     }
-    let mut turret = template.sections[&VehicleSection::Front].clone();
-    turret.criticals.insert(
-        0,
-        CriticalDefinition {
-            equipment: "IS.LRM-5".into(),
-            data: "-".into(),
-            modes: vec![],
-        },
-    );
+    let turret = template.sections[&VehicleSection::Front].clone();
     template.sections.insert(VehicleSection::Turret, turret);
+    template
+        .sections
+        .get_mut(&launcher)
+        .unwrap()
+        .criticals
+        .insert(
+            0,
+            CriticalDefinition {
+                equipment: "IS.LRM-5".into(),
+                data: "-".into(),
+                modes: vec![],
+            },
+        );
     template
         .sections
         .get_mut(&section)
@@ -68,7 +79,8 @@ fn definition(source: &str, section: VehicleSection, link: &str) -> VehicleTempl
     template
 }
 
-/// Local links work on all classes; rear-to-turret routing belongs only to ground vehicles.
+/// A controller serves only a launcher in its own section on every vehicle class (TechManual
+/// p. 206); construction refuses one placed apart from its launcher on a combat vehicle.
 #[test]
 fn vehicle_artemis_links_loss_and_roundtrip() {
     for source in templates() {
@@ -78,23 +90,17 @@ fn vehicle_artemis_links_loss_and_roundtrip() {
             VehicleSection::Front,
         ] {
             let unit = Vehicle::new(crate::support::templates::fitted(definition(
-                &source, section, "1",
+                &source, section, section, "1",
             )))
             .unwrap();
-            let linked = section == VehicleSection::Turret
-                || (section == VehicleSection::Rear && !unit.definition().is_vtol());
-            assert_eq!(
+            assert!(
                 unit.artemis_operational(0).unwrap(),
-                linked,
                 "{section:?} {:?}",
                 unit.definition().movement
             );
             assert!(unit.artemis_operational(1).is_err());
             let controller = unit.artemis_controllers().unwrap().remove(0);
-            assert_eq!(
-                controller.weapon_indices,
-                if linked { vec![0] } else { vec![] }
-            );
+            assert_eq!(controller.weapon_indices, vec![0]);
             let mut state = serde_json::to_value(&unit).unwrap();
             let section_name = serde_json::to_value(section).unwrap();
             state["sections"][section_name.as_str().unwrap()] =
@@ -113,9 +119,35 @@ fn vehicle_artemis_links_loss_and_roundtrip() {
                 damaged.artemis_controllers().unwrap()
             );
         }
+        for section in [VehicleSection::Rear, VehicleSection::Front] {
+            let apart = crate::support::templates::fitted(definition(
+                &source,
+                VehicleSection::Turret,
+                section,
+                "1",
+            ));
+            // Stationary installations pass only anatomy and mass arithmetic, so the
+            // misplaced controller builds but guides nothing.
+            if apart.movement == VehicleMovement::Stationary {
+                let unit = Vehicle::new(apart).unwrap();
+                assert!(!unit.artemis_operational(0).unwrap());
+                assert!(
+                    unit.artemis_controllers().unwrap()[0]
+                        .weapon_indices
+                        .is_empty()
+                );
+                continue;
+            }
+            let error = format!("{:#}", Vehicle::new(apart).unwrap_err());
+            assert!(
+                error.contains("Artemis must serve every LRM, SRM and MML launcher"),
+                "{section:?}: {error}"
+            );
+        }
         for link in ["-", "0", "2", "255"] {
             let unit = Vehicle::new(crate::support::templates::fitted(definition(
                 &source,
+                VehicleSection::Turret,
                 VehicleSection::Turret,
                 link,
             )))
@@ -124,7 +156,15 @@ fn vehicle_artemis_links_loss_and_roundtrip() {
             assert!(unit.artemis_controllers().unwrap()[0].operational);
         }
         for link in ["bad", "-1", "256"] {
-            assert!(Vehicle::new(definition(&source, VehicleSection::Turret, link)).is_err());
+            assert!(
+                Vehicle::new(definition(
+                    &source,
+                    VehicleSection::Turret,
+                    VehicleSection::Turret,
+                    link
+                ))
+                .is_err()
+            );
         }
     }
 }
@@ -137,7 +177,12 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        crate::support::templates::fitted(definition(source, VehicleSection::Turret, "1")),
+        crate::support::templates::fitted(definition(
+            source,
+            VehicleSection::Turret,
+            VehicleSection::Turret,
+            "1",
+        )),
     )
     .unwrap();
     let map = world.create(&config, "Field".into(), Kind::Room);

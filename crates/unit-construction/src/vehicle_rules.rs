@@ -404,6 +404,7 @@ impl VehicleTemplate {
             !rotor,
             "No equipment may be mounted in the rotor (TechManual pp. 98, 106)"
         );
+        check_artemis(loadout)?;
         check_apollo(loadout)?;
         check_machine_gun_arrays(loadout)?;
         for part in &loadout.systems {
@@ -419,39 +420,70 @@ impl VehicleTemplate {
     }
 }
 
+/// Artemis IV or V serves every LRM, SRM and MML launcher or none, one system per launcher in
+/// the launcher's own location (TechManual p. 206), so a controller cannot guide a launcher in
+/// another location.
+fn check_artemis(loadout: &VehicleLoadout) -> Result<()> {
+    let Some((section, launchers, controllers)) = fire_control_mismatch(
+        loadout,
+        |system| matches!(system, System::ArtemisIv | System::ArtemisV),
+        Weapon::is_artemis_launcher,
+    ) else {
+        return Ok(());
+    };
+    bail!(
+        "Artemis must serve every LRM, SRM and MML launcher from its location: {} has {launchers} launchers and {controllers} Artemis systems (TechManual p. 206)",
+        section.name()
+    )
+}
+
 /// An MRM "Apollo" fire control system serves every MRM launcher or none, one per launcher in
 /// the launcher's location (Tactical Operations: Advanced Units & Equipment p. 142).
 fn check_apollo(loadout: &VehicleLoadout) -> Result<()> {
-    let apollo: Vec<VehicleSection> = loadout
+    let Some((section, launchers, controllers)) = fire_control_mismatch(
+        loadout,
+        |system| system == System::ApolloFcs,
+        Weapon::is_mrm,
+    ) else {
+        return Ok(());
+    };
+    bail!(
+        "An MRM Apollo fire control system must serve every MRM launcher from its location: {} has {launchers} launchers and {controllers} Apollo systems (Tactical Operations: Advanced Units & Equipment p. 142)",
+        section.name()
+    )
+}
+
+/// The first location whose fire-control systems do not match its served launchers one for
+/// one, as `(section, launchers, controllers)`. A vehicle without any such system has none.
+fn fire_control_mismatch(
+    loadout: &VehicleLoadout,
+    controls: impl Fn(System) -> bool,
+    serves: impl Fn(Weapon) -> bool,
+) -> Option<(VehicleSection, usize, usize)> {
+    let controllers: Vec<VehicleSection> = loadout
         .systems
         .iter()
-        .filter(|part| part.system == System::ApolloFcs)
+        .filter(|part| controls(part.system))
         .map(|part| part.location.section)
         .collect();
-    if apollo.is_empty() {
-        return Ok(());
+    if controllers.is_empty() {
+        return None;
     }
     let launchers: Vec<VehicleSection> = loadout
         .weapons
         .iter()
-        .filter(|mount| mount.weapon.is_mrm())
+        .filter(|mount| serves(mount.weapon))
         .map(|mount| mount.criticals[0].section)
         .collect();
-    let mut sections = apollo.clone();
+    let mut sections = controllers.clone();
     sections.extend(&launchers);
     sections.sort_unstable();
     sections.dedup();
-    for section in sections {
+    sections.into_iter().find_map(|section| {
         let count = |list: &[VehicleSection]| list.iter().filter(|s| **s == section).count();
-        ensure!(
-            count(&apollo) == count(&launchers),
-            "An MRM Apollo fire control system must serve every MRM launcher from its location: {} has {} launchers and {} Apollo systems (Tactical Operations: Advanced Units & Equipment p. 142)",
-            section.name(),
-            count(&launchers),
-            count(&apollo)
-        );
-    }
-    Ok(())
+        let (launchers, controllers) = (count(&launchers), count(&controllers));
+        (launchers != controllers).then_some((section, launchers, controllers))
+    })
 }
 
 /// Each machine gun array links two to four machine guns of one size class in its location,
@@ -1083,6 +1115,78 @@ slots = [
             ),
         ));
         assert!(rejection(&misplaced).contains("must serve every MRM launcher from its location"));
+    }
+
+    /// A fire-control system serves only launchers in its own location: a turret launcher
+    /// guided from the turret builds, while one guided from the rear is refused, for Artemis
+    /// IV and V (TechManual p. 206) and the MRM "Apollo" system (Tactical Operations:
+    /// Advanced Units & Equipment p. 142).
+    #[test]
+    fn fire_control_sits_in_its_launchers_location() {
+        // The SRM-6 moves into the turret, whose mass rises half a ton; with a ton of fire
+        // control, 24 points of front armor pay for both.
+        let turret = ZHUKOV
+            .replace("    { at = 1, item = \"IS.SRM-6\" },\n", "")
+            .replace(
+                "armor = 44\nslots = [\n    { at = 2",
+                "armor = 20\nslots = [\n    { at = 2",
+            )
+            .replace(
+                "{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },",
+                "{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },\n    { at = 5, item = \"IS.SRM-6\" },",
+            );
+        let mrm = turret
+            .replace("IS.SRM-6", "IS.MRM-10")
+            .replace("rounds = 15", "rounds = 24");
+        // A controller beside the turret launcher in slot 5, or alone in the rear.
+        let local = |source: &str, controller: &str| {
+            parse(&source.replace(
+                "    { at = 5, item = ",
+                &format!(
+                    "    {{ at = 6, item = \"{controller}\", link = 5 }},\n    {{ at = 5, item = "
+                ),
+            ))
+        };
+        let rear = |source: &str, controller: &str| {
+            parse(&source.replace(
+                "[sections.aft_side]\narmor = 24\n",
+                &format!(
+                    "[sections.aft_side]\narmor = 24\nslots = [{{ at = 1, item = \"{controller}\", link = 5 }}]\n"
+                ),
+            ))
+        };
+        for (source, controller, system) in [
+            (&turret, "ArtemisIV", System::ArtemisIv),
+            (&mrm, "ApolloFCS", System::ApolloFcs),
+        ] {
+            let guided = local(source, controller);
+            guided.construction_rules().unwrap();
+            let loadout = VehicleLoadout::resolve(&guided).unwrap();
+            assert_eq!(loadout.systems[0].system, system);
+            assert_eq!(loadout.systems[0].location.section, VehicleSection::Turret);
+        }
+        let refused = rejection(&rear(&turret, "ArtemisIV"));
+        assert!(
+            refused.contains(
+                "Artemis must serve every LRM, SRM and MML launcher from its location: Aft_Side has 0 launchers and 1 Artemis systems"
+            ),
+            "{refused}"
+        );
+        // Artemis V is Clan technology, so the Inner Sphere chassis declares mixed technology.
+        let mixed = turret.replace("engine = \"ice\"", "engine = \"ice\"\nmixed_tech = true");
+        let refused = rejection(&rear(&mixed, "ArtemisV"));
+        assert!(
+            refused
+                .contains("Artemis must serve every LRM, SRM and MML launcher from its location"),
+            "{refused}"
+        );
+        let refused = rejection(&rear(&mrm, "ApolloFCS"));
+        assert!(
+            refused.contains(
+                "An MRM Apollo fire control system must serve every MRM launcher from its location: Aft_Side has 0 launchers and 1 Apollo systems"
+            ),
+            "{refused}"
+        );
     }
 
     /// A machine gun array links two to four guns of one class beside it in its location and
