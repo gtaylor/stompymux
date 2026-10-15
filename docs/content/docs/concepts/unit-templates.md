@@ -172,13 +172,18 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   or compact one, and Clan armor is standard or Clan ferro-fibrous, never light
   or heavy ferro-fibrous (TechManual pp. 100, 105). An Inner Sphere XL engine on
   a Clan vehicle needs `mixed_tech` and `engine_tech = "inner_sphere"`.
+- Hardened armor is refused on hovercraft and VTOLs. Stealth armor is Inner
+  Sphere only, needs an ECM suite and generates 10 heat that the heat sinks must
+  cover besides the energy weapons (TacOps AUE pp. 92-93).
 - Heat sinks are single, at a ton each beyond the ten a fusion engine carries
   free, and must cover the heat of every energy weapon firing at once.
 - Armor may not exceed 3.5 points per ton plus 40, and a rotor carries at most
   2 points. Locations have a single armor value, so `rear` is refused.
 - The vehicle has 5 item slots plus 1 per 5 tons, less 2 for an Inner Sphere XL
   engine (1 for Clan XL or light), 2 for Inner Sphere ferro-fibrous armor (1
-  for Clan or light, 3 for heavy) and plus 1 for a compact engine. Each weapon
+  for Clan or light, 3 for heavy), 1 for hardened or laser-reflective armor, 2
+  for stealth armor, and plus 1 for a compact engine (TacOps AUE p. 92 for the
+  advanced armors). Each weapon
   and item takes a slot, as does each ammunition type and a cargo bay; heat
   sinks and power amplifiers take none.
 - Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or

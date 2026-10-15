@@ -15,6 +15,10 @@ use serde::Serialize;
 /// Most armor points a VTOL rotor may carry (TechManual p. 105).
 pub const ROTOR_MAXIMUM_ARMOR: u16 = 2;
 
+/// Heat vehicular stealth armor generates while active, which a combat vehicle's heat sinks
+/// must cover (Tactical Operations: Advanced Units & Equipment p. 92, Advanced Armor Table).
+pub const STEALTH_ARMOR_HEAT: u32 = 10;
+
 /// What a combat vehicle's construction spends against its limits, in 1/1024-ton units for
 /// mass. Only a vehicle that obeys every rule produces one.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -31,6 +35,9 @@ pub struct VehicleConstruction {
     pub maximum_armor: u32,
     /// Heat of every energy weapon firing at once, which the heat sinks must match.
     pub energy_heat: u32,
+    /// Heat of active stealth armor, which the heat sinks must cover besides the energy
+    /// weapons; zero without stealth armor.
+    pub stealth_heat: u32,
     /// Legal but notable facts, such as unspent tonnage.
     pub warnings: Vec<String>,
 }
@@ -86,7 +93,10 @@ impl VehicleTemplate {
     /// Item slots the chassis offers: 5 plus 1 per 5 full tons (TechManual p. 98), less the
     /// slots an XL or light engine claims and plus the one a compact engine frees (TechManual
     /// p. 101, Combat Vehicle Engine Space Table), less the slots ferro-fibrous armor claims
-    /// (TechManual p. 105, Combat Vehicle Armor Table).
+    /// (TechManual p. 105, Combat Vehicle Armor Table) and the slots the advanced armors claim
+    /// in the CV column of the Advanced Armor Table: 1 for hardened and for Inner Sphere or Clan
+    /// laser-reflective armor, 2 for vehicular stealth armor (Tactical Operations: Advanced
+    /// Units & Equipment p. 92).
     pub fn item_slot_limit(&self) -> u16 {
         let base = 5 + i32::from(self.tons) / 5;
         let engine = match self.engine_family() {
@@ -100,8 +110,13 @@ impl VehicleTemplate {
             if self.clan_armor() { -1 } else { -2 }
         } else if self.has_special("HvyFerroFibrous_Tech") {
             -3
-        } else if self.has_special("LtFerroFibrous_Tech") {
+        } else if self.has_special("LtFerroFibrous_Tech")
+            || self.has_technology(Technology::HardenedArmor)
+            || self.has_technology(Technology::LaserReflectiveArmor)
+        {
             -1
+        } else if self.has_special("StealthArmor_Tech") {
+            -2
         } else {
             0
         };
@@ -171,6 +186,11 @@ impl VehicleTemplate {
             armor,
             maximum_armor: vehicle_maximum_armor(self.tons),
             energy_heat: Self::energy_heat(&loadout),
+            stealth_heat: if self.has_special("StealthArmor_Tech") {
+                STEALTH_ARMOR_HEAT
+            } else {
+                0
+            },
             warnings: Vec::new(),
         };
         if self.movement == VehicleMovement::Stationary {
@@ -178,6 +198,7 @@ impl VehicleTemplate {
         }
         self.check_chassis()?;
         self.check_clan_availability()?;
+        self.check_advanced_armor(&loadout)?;
         self.check_equipment(&loadout)?;
         ensure!(
             report.armor <= report.maximum_armor,
@@ -197,6 +218,12 @@ impl VehicleTemplate {
             sinks >= report.energy_heat,
             "{sinks} heat sinks cannot vent the {} heat of the energy weapons (TechManual p. 104)",
             report.energy_heat
+        );
+        ensure!(
+            sinks >= report.energy_heat + report.stealth_heat,
+            "{sinks} heat sinks cannot vent the {} heat of the energy weapons and the {} of the stealth armor (Tactical Operations: Advanced Units & Equipment p. 92)",
+            report.energy_heat,
+            report.stealth_heat
         );
         let tonnage = u32::from(self.tons) * 1024;
         ensure!(
@@ -310,6 +337,30 @@ impl VehicleTemplate {
                     "Clan combat vehicles may not use {armor} armor; Clan vehicles use standard or Clan ferro-fibrous armor (TechManual p. 105)"
                 );
             }
+        }
+        Ok(())
+    }
+
+    /// The advanced armors of the Advanced Armor Table (Tactical Operations: Advanced Units &
+    /// Equipment p. 92) that combat vehicles may carry. Template validation already keeps
+    /// hardened armor off VTOL and hover vehicles. Vehicular stealth armor is Inner Sphere technology and needs a
+    /// working ECM suite of any type (Tactical Operations: Advanced Units & Equipment p. 93);
+    /// its heat is checked with the heat sinks. Laser-reflective armor has no vehicle
+    /// restriction. The table's ferro-lamellor, reactive and modular armors have no stompymux
+    /// armor type.
+    fn check_advanced_armor(&self, loadout: &VehicleLoadout) -> Result<()> {
+        if self.has_special("StealthArmor_Tech") {
+            ensure!(
+                !self.clan_armor(),
+                "Vehicular stealth armor is Inner Sphere technology (Tactical Operations: Advanced Units & Equipment p. 93)"
+            );
+            ensure!(
+                loadout
+                    .systems
+                    .iter()
+                    .any(|part| matches!(part.system, System::Ecm | System::AngelEcm)),
+                "Vehicular stealth armor needs an ECM suite (Tactical Operations: Advanced Units & Equipment p. 92)"
+            );
         }
         Ok(())
     }
@@ -628,6 +679,10 @@ slots = [
             ("Clan ICEEngine_Tech FerroFibrous_Tech", 10),
             ("ICEEngine_Tech LtFerroFibrous_Tech", 10),
             ("ICEEngine_Tech HvyFerroFibrous_Tech", 8),
+            ("ICEEngine_Tech HardenedArmor_Tech", 10),
+            ("ICEEngine_Tech LaserRefArmor_Tech", 10),
+            ("Clan ICEEngine_Tech LaserRefArmor_Tech", 10),
+            ("ICEEngine_Tech StealthArmor_Tech", 9),
         ] {
             let mut template = jacket.clone();
             template
@@ -694,6 +749,66 @@ slots = [
             "engine = \"light\"\narmor = \"heavy_ferro_fibrous\"\n",
         ));
         assert!(inner_sphere.check_clan_availability().is_ok());
+    }
+
+    /// Hardened armor stays off VTOLs and hovercraft; vehicular stealth armor needs an ECM
+    /// suite, heat sinks for its 10 heat and an Inner Sphere technology base (Tactical
+    /// Operations: Advanced Units & Equipment pp. 92-93).
+    #[test]
+    fn advanced_armors_follow_the_advanced_armor_table() {
+        let armored = |source: &str, armor: &str| {
+            parse(&source.replace(
+                "engine = \"ice\"\n",
+                &format!("engine = \"ice\"\narmor = \"{armor}\"\n"),
+            ))
+        };
+        let hardened = YELLOW_JACKET.replace(
+            "engine = \"ice\"\n",
+            "engine = \"ice\"\narmor = \"hardened\"\n",
+        );
+        let error = VehicleTemplate::parse("test", &hardened).unwrap_err();
+        assert!(format!("{error:#}").contains("cannot mount hardened armor"));
+        let tank = armored(ZHUKOV, "hardened");
+        assert!(
+            tank.check_advanced_armor(&VehicleLoadout::resolve(&tank).unwrap())
+                .is_ok()
+        );
+        let reflective = armored(YELLOW_JACKET, "laser_reflective");
+        assert!(
+            reflective
+                .check_advanced_armor(&VehicleLoadout::resolve(&reflective).unwrap())
+                .is_ok()
+        );
+        // Stealth armor without an ECM suite, then with one but no sinks for its heat.
+        let stealth = armored(ZHUKOV, "stealth");
+        assert!(rejection(&stealth).contains("needs an ECM suite"));
+        let with_ecm = |source: &str| {
+            source.replace(
+                "{ at = 2, item = \"Ammo_IS.SRM-6\", rounds = 15 },",
+                "{ at = 2, item = \"Ammo_IS.SRM-6\", rounds = 15 },\n    { at = 3, item = \"ECM\" },",
+            )
+        };
+        let mut cold = armored(&with_ecm(ZHUKOV), "stealth");
+        let error = rejection(&cold);
+        assert!(
+            error.contains("0 heat sinks cannot vent the 0 heat of the energy weapons and the 10 of the stealth armor"),
+            "{error}"
+        );
+        cold.heat_sinks = Some(10);
+        assert!(
+            cold.check_advanced_armor(&VehicleLoadout::resolve(&cold).unwrap())
+                .is_ok()
+        );
+        let clan = parse(&with_ecm(ZHUKOV).replace(
+            "engine = \"ice\"\n",
+            "tech_base = \"clan\"\nengine = \"ice\"\narmor = \"stealth\"\n",
+        ));
+        assert!(
+            clan.check_advanced_armor(&VehicleLoadout::resolve(&clan).unwrap())
+                .unwrap_err()
+                .to_string()
+                .contains("Inner Sphere technology")
+        );
     }
 
     /// The Final Engine Rating rounds up to a multiple of 5 and is never below 10, and fusion

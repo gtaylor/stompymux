@@ -1351,6 +1351,12 @@ fn vehicle_template_check_text(report: &super::VehicleTemplateCheck) -> String {
             construction.maximum_armor,
             construction.energy_heat
         ));
+        if construction.stealth_heat > 0 {
+            lines.push(format!(
+                "Stealth armor heat {}, covered by the heat sinks with the energy weapons.",
+                construction.stealth_heat
+            ));
+        }
         lines.extend(construction.warnings.iter().cloned());
     }
     lines.join("\r\n")

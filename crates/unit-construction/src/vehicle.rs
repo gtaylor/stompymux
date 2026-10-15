@@ -197,14 +197,15 @@ impl VehicleTemplate {
             },
             "Rotor anatomy must match the vehicle class"
         );
-        // Hardened armor is too heavy for craft that ride on air: hovercraft and VTOLs.
+        // Hardened armor may not be carried by VTOL, WiGE or hover combat vehicles (Tactical
+        // Operations: Advanced Units & Equipment p. 92, Advanced Armor Table).
         ensure!(
             !self.has_technology(super::Technology::HardenedArmor)
                 || !matches!(
                     self.movement,
                     VehicleMovement::Hover | VehicleMovement::Vtol
                 ),
-            "Hovercraft and VTOLs cannot mount hardened armor"
+            "Hovercraft and VTOLs cannot mount hardened armor (Tactical Operations: Advanced Units & Equipment p. 92)"
         );
         Ok(())
     }
