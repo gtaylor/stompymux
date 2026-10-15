@@ -14,7 +14,6 @@ impl MechTemplate {
     /// layout. [`MechTemplate::validate_loadout`] checks the installed equipment afterwards.
     pub fn validate_definition(&self) -> Result<()> {
         super::validate_unit_metadata(&self.attributes)?;
-        super::read_engine_sink_override(&self.attributes)?;
         super::read_template_speed(&self.attributes, self.max_speed)?;
         ensure!(
             (20..=100).contains(&self.tons) && self.tons.is_multiple_of(5),
@@ -44,8 +43,7 @@ impl MechTemplate {
         for (field, value) in &self.attributes {
             match field.as_str() {
                 "name" | "reference" | "tons" | "walk_mp" | "max_speed" | "jump_speed"
-                | "heat_sinks" | "comment" | "hsengoverride" | "template_speed"
-                | "engine_rating" => {}
+                | "heat_sinks" | "comment" | "template_speed" | "engine_rating" => {}
                 "type" => ensure!(value.eq_ignore_ascii_case("Mech"), "Unsupported unit type"),
                 "move_type" => ensure!(
                     value.eq_ignore_ascii_case("Biped") || value.eq_ignore_ascii_case("Quad"),

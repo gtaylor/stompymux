@@ -32,7 +32,6 @@ mod construction;
 mod cost;
 mod document;
 mod engine;
-mod engine_sink_override;
 mod equipment;
 mod fire_mode;
 mod gyro;
@@ -74,9 +73,6 @@ pub use cost::{
 };
 pub use document::ParsedTemplate;
 pub use engine::{Engine, rated_output, running_mp_of_walking};
-pub use engine_sink_override::{
-    parse_engine_sink_override, read_engine_sink_override, write_engine_sink_override,
-};
 pub use equipment::{
     ARTILLERY_MAPSHEET_HEXES, PhysicalBattleValue, RangeBracket, System, SystemContext,
     WaterRanges, Weapon, WeaponProfile, WeaponRange, strip_name_prefix,

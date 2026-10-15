@@ -75,7 +75,6 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("jump_speed", "jump_speed", Kind::Float),
     ("template_speed", "template_speed", Kind::Float),
     ("heat_sinks", "heat_sinks", Kind::Integer),
-    ("hs_engine_override", "hsengoverride", Kind::Integer),
     ("radio", "radio", Kind::Integer),
     ("radio_type", "radiotype", Kind::Integer),
     ("radio_range", "radio_range", Kind::Integer),
@@ -1238,6 +1237,7 @@ armor = 9
     fn malformed_documents_are_rejected() {
         for source in [
             "unknown = 1",
+            "hs_engine_override = 14",
             "tons = \"80\"",
             "tons = 2147483648",
             "class = \"Mech\"",

@@ -167,7 +167,6 @@ impl VehicleTemplate {
     pub fn validate_anatomy(&self) -> Result<()> {
         ensure!(self.tons > 0, "Vehicle tonnage must be positive");
         super::validate_unit_metadata(&self.attributes)?;
-        super::read_engine_sink_override(&self.attributes)?;
         super::read_template_speed(&self.attributes, self.max_speed)?;
         let kind = self
             .attributes

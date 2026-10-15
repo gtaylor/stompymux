@@ -1070,11 +1070,6 @@ impl Mech {
         super::write_template_speed(&mut self.definition.attributes, speed);
     }
 
-    /// Change only the authored engine allocation override; recalculation is a separate operation.
-    pub(super) fn set_engine_sink_override(&mut self, value: i32) {
-        super::write_engine_sink_override(&mut self.definition.attributes, value);
-    }
-
     /// Change limb roles while retaining their installed equipment and damage.
     pub(super) fn set_chassis(&mut self, chassis: super::MechChassis) {
         let name = match chassis {

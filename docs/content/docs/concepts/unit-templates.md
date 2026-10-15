@@ -46,7 +46,6 @@ specials = ["SearchLight"]
 | `jump_mp` | integer | Jumping movement points. Vehicles cannot jump. |
 | `max_speed`, `jump_speed` | number | Top and jumping speeds in km/h, for the few unconstructed units (aerospace, battle armor) whose speed is not whole movement points. Give either the speed or its movement points, not both. Mechs and vehicles must state `walk_mp`. |
 | `heat_sinks` | integer | Installed heat sinks, counted as the record sheet counts them ("Heat Sinks: 17 (34)" is 17), not the heat they dissipate. The `[construction]` `heat_sinks` kind sets the dissipation: one heat per single sink, two per double or laser sink (TechManual p. 52; Tactical Operations: Advanced Units & Equipment). Without it a mech carries the engine's ten free sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
-| `hs_engine_override` | integer | Engine heat sink override. |
 | `radio`, `radio_type`, `radio_range` | integer | Electronics. |
 | `tac_range`, `lrs_range`, `scan_range` | integer | Sensor ranges. |
 | `si`, `fuel`, `cargo_space`, `max_suits`, `max_ton`, `carrier_maximum_tonnage` | integer | Class-specific capacities. |

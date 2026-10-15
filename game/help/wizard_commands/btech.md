@@ -1078,11 +1078,6 @@ reserved administrative values. Both start at zero, accept signed 32-bit integer
 and survive restart. They do not change a unit's movement limits or throttle.
 Inspect them with `@viewunit base`; Lua uses the same unit field accessors.
 
-`@viewunit hsengoverride` reads the template's engine heat-sink allocation override.
-`@setunit hsengoverride <integer>` stores a signed 32-bit override, shared with Lua
-unit field access. It defaults to zero and survives restart. Updating it does not
-recalculate current cooling or repair damaged heat sinks.
-
 `StaggerDamage` is read-only and reports the Mech's saved action-time stagger
 value, which normally remains zero. It is separate from recent damage history.
 Positive twenty-point levels add to controlled-drop piloting rolls and produce

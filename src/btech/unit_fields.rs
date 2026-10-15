@@ -58,7 +58,6 @@ const FIELDS: &[&str] = &[
     "disabled_hs",
     "overheat",
     "dissheat",
-    "hsengoverride",
     "heatsinks",
     "last_startup",
     "C3iNetworkSize",
@@ -200,12 +199,6 @@ fn value(world: &World, id: ObjectId, field: &str) -> Result<Option<String>> {
         "StaggerDamage" => integer(mech.map_or(0, |unit| i64::from(unit.stagger().action_damage))),
         // Weapon admission derives physical arcs.
         "unusablearcs" => integer(0),
-        "hsengoverride" => integer(i64::from(super::read_engine_sink_override(
-            mech.map_or_else(
-                || &vehicle.unwrap().definition().attributes,
-                |unit| &unit.definition().attributes,
-            ),
-        )?)),
         "unitname" => Some(definition.into()),
         "unitref" => Some(reference.into()),
         "maxspeed" => float(mech.map_or_else(
@@ -631,13 +624,6 @@ pub fn set_unit_field_action(
                     field.eq_ignore_ascii_case("basewalkspeed"),
                     value,
                 )?;
-            }
-            "hsengoverride" => {
-                let value = super::parse_engine_sink_override(value)?;
-                let mut world = scripts.world_mut();
-                crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
-                    unit.set_engine_sink_override(value);
-                })
             }
             "pilotnum" | "target" => {
                 let reference = value

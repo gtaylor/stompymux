@@ -1421,11 +1421,6 @@ impl Vehicle {
         super::write_template_speed(&mut self.definition.attributes, speed);
     }
 
-    /// Change only the authored engine allocation override; recalculation is a separate operation.
-    pub(super) fn set_engine_sink_override(&mut self, value: i32) {
-        super::write_engine_sink_override(&mut self.definition.attributes, value);
-    }
-
     /// Keep the owned tank definition and live baseline capacity consistent, retaining fuel.
     pub(super) fn set_original_fuel_capacity(&mut self, capacity: u32) -> Result<()> {
         self.vtol_fuel
