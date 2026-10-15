@@ -2,7 +2,7 @@ name = "Plainsman"
 class = "vehicle"
 movement = "hover"
 tons = 35
-walk_mp = 14
+walk_mp = 9
 
 [construction]
 engine = "ice"

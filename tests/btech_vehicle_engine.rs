@@ -91,7 +91,7 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
     let mut template = tracked("-");
     template.movement = VehicleMovement::Hover;
     template.tons = 5;
-    template.max_speed = 16.125;
+    template.set_cruising_mp(1);
     // 5 - 40 is below the minimum, so the engine rates 10 (TechManual p. 100).
     let engine = template.engine().unwrap();
     assert_eq!(engine.weight_rating, 10);
@@ -102,8 +102,4 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
     template.tons = 11;
     assert_eq!(template.engine().unwrap().weight_rating, 15);
     assert_eq!(template.engine().unwrap().installed_mass, 1024);
-    for speed in [f64::NAN, f64::INFINITY, -1.0, f64::MAX] {
-        template.max_speed = speed;
-        assert!(template.engine().is_err());
-    }
 }

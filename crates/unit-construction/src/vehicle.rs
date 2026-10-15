@@ -109,6 +109,10 @@ pub struct VehicleTemplate {
     pub reference: String,
     pub movement: VehicleMovement,
     pub tons: u16,
+    /// Cruising MP the template states; the Base Engine Rating is tonnage x cruising MP
+    /// (TechManual p. 100).
+    pub walk_mp: u32,
+    /// Flanking speed in km/h, cruising MP x 1.5 rounded up: the realtime top speed.
     pub max_speed: f64,
     /// Absence is preserved; the eventual engine rules determine the installed cooling.
     pub heat_sinks: Option<u16>,
@@ -222,17 +226,7 @@ impl VehicleTemplate {
             .parse::<u16>()
             .context("invalid vehicle tonnage")?;
         ensure!(tons > 0, "vehicle tonnage must be positive");
-        let max_speed = parsed
-            .fields
-            .get("max_speed")
-            .map(String::as_str)
-            .unwrap_or("0")
-            .parse::<f64>()
-            .context("invalid vehicle speed")?;
-        ensure!(
-            max_speed.is_finite() && max_speed >= 0.0,
-            "invalid vehicle speed"
-        );
+        let (walk_mp, max_speed) = super::template_walking_mp(&parsed.fields)?;
         let heat_sinks = parsed
             .fields
             .get("heat_sinks")
@@ -271,6 +265,7 @@ impl VehicleTemplate {
             reference,
             movement,
             tons,
+            walk_mp,
             max_speed,
             heat_sinks,
             sections,

@@ -2,7 +2,7 @@ name = "Flatbed Truck"
 class = "vehicle"
 movement = "wheel"
 tons = 10
-walk_mp = 8
+walk_mp = 5
 specials = ["CargoTech"]
 
 [construction]

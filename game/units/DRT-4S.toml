@@ -2,7 +2,7 @@ name = "Dart"
 class = "mech"
 movement = "biped"
 tons = 25
-walk_mp = 14
+walk_mp = 9
 radio = 4
 
 [construction]

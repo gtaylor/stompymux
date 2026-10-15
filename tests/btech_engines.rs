@@ -19,7 +19,7 @@ fn flag(engine: Engine) -> &'static str {
 fn definition(center: u8, left: u8, right: u8, engine: Engine) -> MechTemplate {
     let mut template =
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
-    template.max_speed = 96.75;
+    template.set_walking_mp(6);
     template
         .attributes
         .insert("specials".into(), format!("FlipArms {}", flag(engine)));

@@ -2,7 +2,7 @@ name = "Savannah_Master"
 class = "vehicle"
 movement = "hover"
 tons = 5
-max_speed = 216.0
+walk_mp = 13
 
 [sections.left_side]
 armor = 6

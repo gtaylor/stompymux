@@ -2,7 +2,7 @@ name = "Ostsol"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 20
 radio = 4
 

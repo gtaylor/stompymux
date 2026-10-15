@@ -2,7 +2,7 @@ name = "Highlander"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 5
+walk_mp = 3
 jump_mp = 3
 heat_sinks = 24
 

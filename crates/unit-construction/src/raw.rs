@@ -54,6 +54,17 @@ impl RawUnitClass {
             Self::BattleSuit => "Battlesuit",
         }
     }
+
+    /// Top speed MP of the walking figure a template's `walk_mp` states: running MP for a
+    /// Mech (TM p. 48), flanking MP for a combat or naval vehicle (TM p. 100) and maximum
+    /// thrust for aerospace units, each the walking figure x 1.5 rounded up. Infantry and
+    /// battle armor have no faster gait, so their top speed is the walking figure.
+    pub fn top_speed_mp(self, walking_mp: u32) -> u32 {
+        match self {
+            Self::MechWarrior | Self::BattleSuit => walking_mp,
+            _ => super::running_mp_of_walking(walking_mp),
+        }
+    }
 }
 
 /// Movement types in the numeric order exposed by the native Lua contract.

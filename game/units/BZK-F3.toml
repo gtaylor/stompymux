@@ -2,7 +2,7 @@ name = "Hollander"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 8
+walk_mp = 5
 radio = 4
 
 [construction]

@@ -2,7 +2,7 @@ name = "Fulcrum"
 class = "vehicle"
 movement = "hover"
 tons = 50
-walk_mp = 15
+walk_mp = 10
 heat_sinks = 11
 
 [construction]

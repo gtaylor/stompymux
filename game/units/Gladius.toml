@@ -2,7 +2,7 @@ name = "Gladius"
 class = "vehicle"
 movement = "hover"
 tons = 40
-walk_mp = 12
+walk_mp = 8
 
 [construction]
 engine = "ice"

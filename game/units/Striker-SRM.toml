@@ -2,7 +2,7 @@ name = "Striker"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-walk_mp = 8
+walk_mp = 5
 
 [construction]
 engine = "ice"

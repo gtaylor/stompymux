@@ -2,7 +2,7 @@ name = "Karnov UR"
 class = "vtol"
 movement = "vtol"
 tons = 30
-walk_mp = 15
+walk_mp = 10
 cargo_space = 650
 specials = ["CargoTech"]
 

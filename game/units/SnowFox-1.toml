@@ -2,7 +2,7 @@ name = "Snow Fox"
 class = "mech"
 movement = "quad"
 tons = 20
-walk_mp = 12
+walk_mp = 8
 
 [construction]
 tech_base = "clan"

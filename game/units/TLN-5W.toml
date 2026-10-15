@@ -2,7 +2,7 @@ name = "Talon"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 12
+walk_mp = 8
 heat_sinks = 22
 radio = 4
 

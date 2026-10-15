@@ -2,7 +2,7 @@ name = "Thunder Stallion"
 class = "mech"
 movement = "quad"
 tons = 85
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 32
 
 [construction]

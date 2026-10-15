@@ -2,7 +2,7 @@ name = "Devastator"
 class = "mech"
 movement = "biped"
 tons = 100
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 28
 radio = 4
 

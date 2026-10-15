@@ -118,7 +118,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
     let hover = include_str!("../game/units/Pegasus.toml");
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("walk_mp = 5", "walk_mp = 0");
+        .replace("walk_mp = 3", "walk_mp = 0");
     for (source, vehicle) in [
         (include_str!("../game/units/JR7-D.toml"), false),
         (include_str!("../game/units/GOL-1H.toml"), false),

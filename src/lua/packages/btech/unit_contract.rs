@@ -415,7 +415,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 let (rating, suspension) = crate::btech::inspection_vehicle_engine_values(
                     tons,
                     movement,
-                    unit.definition().max_speed,
+                    unit.definition().walk_mp,
                 )
                 .map_err(mlua::Error::external)?;
                 result.raw_set("rating", rating)?;

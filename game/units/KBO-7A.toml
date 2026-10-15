@@ -2,7 +2,7 @@ name = "Kabuto"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 11
+walk_mp = 7
 radio = 4
 
 [construction]

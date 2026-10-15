@@ -2,7 +2,7 @@ name = "Coolant Truck"
 class = "vehicle"
 movement = "wheel"
 tons = 30
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 6
 
 [construction]

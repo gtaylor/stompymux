@@ -2,7 +2,7 @@ name = "Falcon_Hovertruck"
 class = "vehicle"
 movement = "hover"
 tons = 15
-walk_mp = 14
+walk_mp = 9
 specials = ["CargoTech"]
 
 [construction]

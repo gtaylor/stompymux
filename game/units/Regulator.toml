@@ -2,7 +2,7 @@ name = "Regulator"
 class = "vehicle"
 movement = "hover"
 tons = 45
-walk_mp = 14
+walk_mp = 9
 
 [construction]
 armor = "ferro_fibrous"

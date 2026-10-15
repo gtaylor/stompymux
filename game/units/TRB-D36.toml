@@ -2,7 +2,7 @@ name = "Thunderbird"
 class = "aerofighter"
 movement = "fly"
 tons = 100
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 25
 fuel = 750
 

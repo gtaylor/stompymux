@@ -2,7 +2,7 @@ name = "Mobile_HQ"
 class = "vehicle"
 movement = "wheel"
 tons = 25
-walk_mp = 9
+walk_mp = 6
 radio = 5
 radio_type = 126
 

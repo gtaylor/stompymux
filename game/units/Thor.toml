@@ -2,7 +2,7 @@ name = "Thor"
 class = "vehicle"
 movement = "wheel"
 tons = 55
-walk_mp = 8
+walk_mp = 5
 
 [construction]
 armor = "ferro_fibrous"

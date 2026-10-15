@@ -2,7 +2,7 @@ name = "Maelstrom"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 38
 radio = 4
 

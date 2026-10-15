@@ -303,6 +303,10 @@ pub struct VehicleTemplateCheck {
     pub vtol: bool,
     pub constructible: bool,
     pub rejection: Option<String>,
+    /// Cruising MP the template states (TechManual p. 100).
+    pub cruising_mp: u32,
+    /// Flanking MP: cruising MP x 1.5, rounded up (TechManual p. 100).
+    pub flanking_mp: u32,
     pub weapons: usize,
     pub ammunition_bins: usize,
     /// Spending against the construction limits, present when the vehicle is constructible.
@@ -318,6 +322,8 @@ pub fn check_vehicle_template(template: &VehicleTemplate) -> VehicleTemplateChec
         vtol: template.is_vtol(),
         constructible: false,
         rejection: None,
+        cruising_mp: template.walk_mp,
+        flanking_mp: super::running_mp_of_walking(template.walk_mp),
         weapons: 0,
         ammunition_bins: 0,
         construction: None,
@@ -360,7 +366,7 @@ name = "Yellow Jacket"
 class = "vtol"
 movement = "vtol"
 tons = 30
-walk_mp = 9
+walk_mp = 6
 
 [construction]
 engine = "ice"
@@ -392,7 +398,7 @@ name = "Zhukov"
 class = "vehicle"
 movement = "track"
 tons = 75
-walk_mp = 5
+walk_mp = 3
 
 [construction]
 engine = "ice"
@@ -508,7 +514,7 @@ slots = [
             .unwrap()
             .armor = 110;
         let mut fast = parse(ZHUKOV);
-        fast.max_speed = 9.0 * 10.75;
+        fast.walk_mp = 6;
         for (template, expected) in [
             (heavy_vtol, "weigh at most 30 tons (TechManual p. 96)"),
             (rotor_armor, "more than 2 (TechManual p. 105)"),
@@ -573,7 +579,7 @@ slots = [
         assert_eq!((engine.nominal_rating, engine.weight_rating), (132, 10));
         // A 21-ton VTOL at 9 cruising MP: 189 - 140 = 49, rounded up to 50.
         template.tons = 21;
-        template.max_speed = 14.0 * 10.75;
+        template.walk_mp = 9;
         assert_eq!(template.engine().unwrap().weight_rating, 50);
         // A 65-ton tank at 2 cruising MP has a 130 rating: the XL engine lists 2.5 tons and
         // weighs 4 with shielding, where shielding the standard weight first would give 3.5.
@@ -581,7 +587,7 @@ slots = [
         tank.attributes
             .insert("specials".into(), "XLEngine_Tech".into());
         tank.tons = 65;
-        tank.max_speed = 3.0 * 10.75;
+        tank.walk_mp = 2;
         let engine = tank.engine().unwrap();
         assert_eq!(engine.weight_rating, 130);
         assert_eq!(engine.engine_mass, 4 * 1024);

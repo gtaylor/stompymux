@@ -2,7 +2,7 @@ name = "Ishtar"
 class = "vehicle"
 movement = "wheel"
 tons = 65
-walk_mp = 5
+walk_mp = 3
 specials = ["ArtemisIV"]
 
 [construction]

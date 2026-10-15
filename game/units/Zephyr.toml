@@ -2,7 +2,7 @@ name = "Zephyr"
 class = "vehicle"
 movement = "hover"
 tons = 40
-walk_mp = 14
+walk_mp = 9
 
 [sections.left_side]
 armor = 24

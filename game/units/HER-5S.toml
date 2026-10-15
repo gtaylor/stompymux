@@ -2,7 +2,7 @@ name = "Hermes"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 9
+walk_mp = 6
 heat_sinks = 20
 radio = 4
 

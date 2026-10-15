@@ -2,7 +2,7 @@ name = "Trebuchet"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 11
 
 [sections.left_arm]

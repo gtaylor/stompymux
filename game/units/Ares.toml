@@ -2,7 +2,7 @@ name = "Ares"
 class = "vehicle"
 movement = "track"
 tons = 40
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 12
 specials = ["ArtemisIV"]
 

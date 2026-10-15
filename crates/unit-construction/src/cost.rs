@@ -158,6 +158,7 @@ fn raw_mech_template(template: &RawTemplate) -> Result<MechTemplate> {
         name: template.name.clone(),
         reference: template.reference.clone(),
         tons: u16::try_from(template.tons)?,
+        walk_mp: super::inspection_raw_walking_mp(template),
         max_speed: template.max_speed,
         jump_speed: template.jump_speed,
         heat_sinks: u16::try_from(template.heat_sinks)?,

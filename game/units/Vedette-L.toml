@@ -2,7 +2,7 @@ name = "Vedette"
 class = "vehicle"
 movement = "track"
 tons = 50
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 6
 specials = ["SearchLight"]
 

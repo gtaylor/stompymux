@@ -2,7 +2,7 @@ name = "Shamash"
 class = "vehicle"
 movement = "hover"
 tons = 11
-walk_mp = 20
+walk_mp = 13
 
 [construction]
 tech_base = "clan"

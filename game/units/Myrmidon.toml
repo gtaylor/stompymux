@@ -2,7 +2,7 @@ name = "Myrmidon"
 class = "vehicle"
 movement = "track"
 tons = 40
-walk_mp = 8
+walk_mp = 5
 
 [sections.left_side]
 armor = 25

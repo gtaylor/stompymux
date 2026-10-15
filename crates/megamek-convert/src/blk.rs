@@ -327,7 +327,7 @@ pub fn convert(source: &str) -> Result<Converted> {
             class,
             movement,
             tons,
-            max_mp: (cruise * 3).div_ceil(2),
+            walk_mp: cruise,
             jump_mp: 0,
             heat_sinks: (heat_sinks != free).then_some(heat_sinks),
             construction,
@@ -391,7 +391,7 @@ mod tests {
         let (reference, template) = template(BULLDOG).unwrap();
         assert_eq!(reference, "Bulldog Medium Tank");
         for expected in [
-            "class = \"vehicle\"\nmovement = \"track\"\ntons = 60\nwalk_mp = 6\nheat_sinks = 8\n",
+            "class = \"vehicle\"\nmovement = \"track\"\ntons = 60\nwalk_mp = 4\nheat_sinks = 8\n",
             "[construction]\nengine = \"ice\"\n",
             "[sections.front_side]\narmor = 24\nslots = [\n    { at = 1, item = \"IS.MachineGun\" },\n    \
              { at = 2, item = \"Ammo_IS.MachineGun\", rounds = 100, modes = [\"Halfton\"] },\n]",

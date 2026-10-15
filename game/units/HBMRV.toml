@@ -2,7 +2,7 @@ name = "Mech Recovery Vehicle"
 class = "vehicle"
 movement = "wheel"
 tons = 70
-walk_mp = 6
+walk_mp = 4
 specials = ["SalvageTech"]
 
 [construction]

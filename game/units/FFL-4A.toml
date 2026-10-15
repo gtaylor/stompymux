@@ -2,7 +2,7 @@ name = "Firefly"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 8
+walk_mp = 5
 jump_mp = 4
 
 [sections.left_arm]

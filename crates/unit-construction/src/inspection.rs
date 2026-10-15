@@ -488,30 +488,36 @@ pub fn inspection_raw_part(raw: &CriticalDefinition) -> Option<(InspectionPart, 
     inspection_template_part(&raw.equipment)
 }
 
-/// C-compatible nominal engine output for a template.
+/// Nominal engine output for a template: tonnage, after any administrative tonnage edit,
+/// times the walking MP the template states (TM p. 48).
 pub fn inspection_engine_rating(template: &MechTemplate) -> Result<u32> {
     let tons = administrative_template_tonnage(&template.attributes, template.tons);
-    anyhow::ensure!(
-        template.max_speed.is_finite() && template.max_speed >= 0.0,
-        "Invalid engine inputs"
-    );
-    if tons == 0 {
-        return Ok(0);
-    }
-    let walking = ((2.0 * template.max_speed as f32 / 10.75) / 3.0).round();
-    let rating = f64::from(walking) * f64::from(tons);
-    anyhow::ensure!(
-        rating.is_finite() && rating <= f64::from(i32::MAX),
-        "Engine rating is out of bounds"
-    );
-    Ok(rating as u32)
+    let rating = u64::from(tons) * u64::from(template.walk_mp);
+    u32::try_from(rating)
+        .ok()
+        .filter(|rating| i32::try_from(*rating).is_ok())
+        .context("Engine rating is out of bounds")
 }
 
-/// C-facing vehicle rating and suspension using the effective wide tonnage.
+/// Vehicle rating and suspension using the effective wide tonnage.
 pub fn inspection_vehicle_engine_rating(template: &VehicleTemplate) -> Result<(u32, u16)> {
     let tons = administrative_template_tonnage(&template.attributes, template.tons);
     let movement = administrative_template_movement(&template.attributes, template.movement);
-    inspection_vehicle_engine_values(tons, movement, template.max_speed)
+    inspection_vehicle_engine_values(tons, movement, template.walk_mp)
+}
+
+/// Walking MP of a class-neutral template: the `walk_mp` it states, or, for a unit whose
+/// speed was only ever given in km/h, the native loader's rounding of its top speed.
+pub fn inspection_raw_walking_mp(template: &RawTemplate) -> u32 {
+    if let Some(walking) = template
+        .attributes
+        .get("walk_mp")
+        .and_then(|walking| walking.trim().parse().ok())
+    {
+        return walking;
+    }
+    let speed = template.max_speed as f32;
+    ((2.0_f32 * speed / 10.75_f32) / 3.0_f32).round().max(0.0) as u32
 }
 
 /// Calculate the native engine row from class-neutral template scalars.
@@ -556,22 +562,19 @@ pub fn inspect_raw_template_engine(template: &RawTemplate) -> (i32, i32) {
     (rating, suspension_factor)
 }
 
-/// Calculate the vehicle engine projection from already-resolved administrative fields.
+/// Calculate the vehicle engine projection from already-resolved administrative fields: the
+/// Base Engine Rating, tonnage x cruising MP, and the suspension factor (TechManual p. 100).
 pub fn inspection_vehicle_engine_values(
     tons: u32,
     movement: VehicleMovement,
-    maximum_speed: f64,
+    cruising_mp: u32,
 ) -> Result<(u32, u16)> {
-    anyhow::ensure!(
-        tons > 0 && maximum_speed.is_finite() && maximum_speed >= 0.0,
-        "Invalid engine inputs"
-    );
-    let walking = ((2.0 * maximum_speed as f32 / 10.75) / 3.0).round();
-    let rating = f64::from(walking) * f64::from(tons);
-    anyhow::ensure!(
-        rating.is_finite() && rating <= f64::from(i32::MAX),
-        "Engine rating is out of bounds"
-    );
+    anyhow::ensure!(tons > 0, "Invalid engine inputs");
+    let rating = u64::from(tons) * u64::from(cruising_mp);
+    let rating = u32::try_from(rating)
+        .ok()
+        .filter(|rating| i32::try_from(*rating).is_ok())
+        .context("Engine rating is out of bounds")?;
     let suspension = match movement {
         VehicleMovement::Tracked | VehicleMovement::Stationary => 0,
         VehicleMovement::Wheeled => 20,
@@ -588,7 +591,7 @@ pub fn inspection_vehicle_engine_values(
             _ => 235,
         },
     };
-    Ok((rating as u32, suspension))
+    Ok((rating, suspension))
 }
 
 pub fn inspection_configured_technology(template: &MechTemplate, name: &str, group: &str) -> bool {

@@ -7,7 +7,7 @@
 use super::construction::{MIXED_TECH, SPEED_PER_MP};
 use super::{
     Engine, MechChassis, MechLoadout, MechSection, MechTemplate, System, heat_sink_count,
-    rated_output, running_mp_of_walking, walking_mp_of_running,
+    rated_output, running_mp_of_walking,
 };
 use anyhow::{Result, bail, ensure};
 use std::collections::BTreeMap;
@@ -85,14 +85,20 @@ fn physical_weapon(system: System, tons: u16) -> Option<PhysicalWeapon> {
 }
 
 impl MechTemplate {
-    /// Running MP, which templates store as the maximum speed.
-    pub fn running_mp(&self) -> Result<u32> {
-        whole_movement_points(self.max_speed, "Running speed")
+    /// Running MP: the walking MP x 1.5, rounded up (TM p. 48).
+    pub fn running_mp(&self) -> u32 {
+        running_mp_of_walking(self.walk_mp)
     }
 
-    /// Walking MP recovered from the stored running speed (TM p. 48).
-    pub fn walking_mp(&self) -> Result<u32> {
-        Ok(walking_mp_of_running(f64::from(self.running_mp()?)) as u32)
+    /// Walking MP the template states (TM p. 48).
+    pub fn walking_mp(&self) -> u32 {
+        self.walk_mp
+    }
+
+    /// State a new walking MP, with the running speed that follows from it.
+    pub fn set_walking_mp(&mut self, walking_mp: u32) {
+        self.walk_mp = walking_mp;
+        self.max_speed = f64::from(self.running_mp()) * SPEED_PER_MP;
     }
 
     /// Jumping MP declared by the template.
@@ -125,17 +131,13 @@ impl MechTemplate {
         self.validate_total_mass(loadout)
     }
 
-    /// The stored running speed is a legal running MP for a whole walking MP, and the engine
-    /// rating it implies lies within the Master Engine Table (TM p. 48; Tactical Operations:
-    /// Advanced Units & Equipment large engines).
+    /// The Mech walks at least one MP, and its engine rating, tonnage x walking MP, lies
+    /// within the Master Engine Table (TM p. 48; Tactical Operations: Advanced Units &
+    /// Equipment large engines).
     fn validate_movement(&self) -> Result<()> {
-        let running = self.running_mp()?;
-        let walking = self.walking_mp()?;
-        ensure!(
-            walking >= 1 && running_mp_of_walking(walking) == running,
-            "Running MP {running} is not walking MP x 1.5 rounded up for any walking MP"
-        );
-        let rating = u32::from(self.tons) * walking;
+        let walking = self.walking_mp();
+        ensure!(walking >= 1, "A Mech needs a walking MP of at least 1");
+        let rating = rated_output(self.tons, walking);
         ensure!(
             (10..=MAXIMUM_ENGINE_RATING).contains(&rating),
             "Engine rating {rating} is outside 10-{MAXIMUM_ENGINE_RATING}"
@@ -162,7 +164,7 @@ impl MechTemplate {
             installed == declared,
             "Installed {installed:?} engine slots do not match the declared {declared:?} engine"
         );
-        let rating = rated_output(self.tons, self.max_speed)?;
+        let rating = rated_output(self.tons, self.walk_mp);
         let large = rating > 400;
         ensure!(
             !large || installed != Engine::Compact,
@@ -194,9 +196,9 @@ impl MechTemplate {
             jets.len()
         );
         let ceiling = if improved {
-            self.running_mp()?
+            self.running_mp()
         } else {
-            self.walking_mp()?
+            self.walking_mp()
         };
         ensure!(
             jumping <= ceiling,
@@ -234,7 +236,7 @@ impl MechTemplate {
             "A Mech needs at least 10 heat sinks, not {sinks}"
         );
         let external = loadout.heat_sink_groups(self.heat_sink_slots())?.len() as u32;
-        let capacity = rated_output(self.tons, self.max_speed)? / 25;
+        let capacity = rated_output(self.tons, self.walk_mp) / 25;
         ensure!(
             external <= sinks && sinks - external <= capacity,
             "{sinks} heat sinks need {} in critical slots beside the {capacity} the engine holds; {external} are installed",
@@ -667,15 +669,22 @@ mod tests {
         assert_eq!(rejection(JENNER), None);
     }
 
-    /// Running MP is walking MP x 1.5 rounded up, and the rating stays within 10-500 (TM p. 48).
+    /// The template states walking MP, running MP is walking MP x 1.5 rounded up, and the
+    /// rating, tonnage x walking MP, stays within 10-500 (TM p. 48).
     #[test]
-    fn running_speed_must_follow_a_whole_walking_mp() {
-        refused(
-            &JENNER.replace("walk_mp = 11", "walk_mp = 10"),
-            "is not walking MP x 1.5",
+    fn the_engine_rating_follows_the_walking_mp() {
+        let jenner = MechTemplate::parse("JR7-D", JENNER).unwrap();
+        assert_eq!((jenner.walking_mp(), jenner.running_mp()), (7, 11));
+        assert_eq!(jenner.max_speed, 11.0 * 10.75);
+        let mut still = jenner.clone();
+        still.walk_mp = 0;
+        let rejection = check_template(&still).rejection.unwrap();
+        assert!(
+            rejection.contains("walking MP of at least 1"),
+            "{rejection}"
         );
-        let mut fast = MechTemplate::parse("JR7-D", JENNER).unwrap();
-        fast.max_speed = 23.0 * 10.75;
+        let mut fast = jenner.clone();
+        fast.walk_mp = 15;
         let rejection = check_template(&fast).rejection.unwrap();
         assert!(rejection.contains("Engine rating 525"), "{rejection}");
     }
@@ -694,7 +703,7 @@ mod tests {
                     "    { at = 11, item = \"IS.SRM-4\" },",
                     "    { at = 11, item = \"JumpJet\" },",
                 )
-                .replace("walk_mp = 11", "walk_mp = 8"),
+                .replace("walk_mp = 7", "walk_mp = 5"),
             "exceeds the walking MP of 5",
         );
         refused(
@@ -714,11 +723,11 @@ mod tests {
     #[test]
     fn heat_sinks_are_counted_in_sinks() {
         refused(
-            &JENNER.replace("walk_mp = 11", "walk_mp = 11\nheat_sinks = 9"),
+            &JENNER.replace("walk_mp = 7", "walk_mp = 7\nheat_sinks = 9"),
             "at least 10 heat sinks",
         );
         refused(
-            &JENNER.replace("walk_mp = 11", "walk_mp = 11\nheat_sinks = 12"),
+            &JENNER.replace("walk_mp = 7", "walk_mp = 7\nheat_sinks = 12"),
             "12 heat sinks need 3 in critical slots",
         );
         let clan = MechTemplate::parse(

@@ -2,7 +2,7 @@ name = "Cyrano"
 class = "vtol"
 movement = "vtol"
 tons = 30
-walk_mp = 18
+walk_mp = 12
 radio = 3
 
 [construction]

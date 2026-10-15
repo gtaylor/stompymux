@@ -324,7 +324,7 @@ name = "Demolisher"
 class = "vehicle"
 movement = "track"
 tons = 80
-walk_mp = 5
+walk_mp = 3
 
 [construction]
 engine = "ice"

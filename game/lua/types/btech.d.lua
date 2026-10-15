@@ -27,7 +27,8 @@
 ---@field name string
 ---@field reference string
 ---@field tons integer
----@field max_speed number
+---@field walk_mp integer Walking MP the template states; the engine rating is tons x walk_mp.
+---@field max_speed number Running speed in km/h: walk_mp x 1.5 rounded up, 10.75 km/h per MP.
 ---@field jump_speed number
 ---@field heat_sinks integer Cooling capacity; double sinks are already counted twice.
 ---@field sections table<MechSectionName, SectionDefinition>
@@ -2041,6 +2042,9 @@ function btech_unit.cluster(dbref, pilot, weapon) end
 ---@field reference string
 ---@field constructible boolean Passes currently implemented biped construction checks.
 ---@field rejection string|nil First construction failure; nil for a constructible template.
+---@field walking_mp integer Walking MP the template states.
+---@field running_mp integer Walking MP x 1.5, rounded up.
+---@field engine_rating integer Tonnage x walking MP.
 ---@field weapons integer Resolved weapon count on success; zero on rejection.
 ---@field ammunition_bins integer Resolved bin count on success; zero on rejection.
 ---@field ammunition_adjustments AmmunitionAdjustment[] Changes on successful construction.

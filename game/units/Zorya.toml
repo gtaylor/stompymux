@@ -2,7 +2,7 @@ name = "Zorya"
 class = "vehicle"
 movement = "track"
 tons = 35
-walk_mp = 6
+walk_mp = 4
 specials = ["ArtemisIV"]
 
 [construction]

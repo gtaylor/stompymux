@@ -2,7 +2,7 @@ name = "Piranha"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 14
+walk_mp = 9
 
 [construction]
 tech_base = "clan"

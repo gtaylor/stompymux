@@ -28,7 +28,7 @@ impl Mech {
         let definition = self.definition();
         let loadout = self.loadout()?;
         let survives = |section| self.sections()[&section].internal > 0;
-        let rating = rated_output(definition.tons, definition.max_speed)?;
+        let rating = rated_output(definition.tons, definition.walk_mp);
         // C derives the engine mass family from technology flags alone; reference
         // builds without engine criticals still carry a nominal engine mass.
         let engine_family = || {

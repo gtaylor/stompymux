@@ -2,7 +2,7 @@ name = "Zeus"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 19
 
 [sections.left_arm]

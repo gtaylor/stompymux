@@ -2,7 +2,7 @@ name = "Sirocco"
 class = "mech"
 movement = "quad"
 tons = 95
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 26
 radio = 5
 

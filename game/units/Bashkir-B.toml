@@ -2,7 +2,7 @@ name = "Bashkir"
 class = "aerofighter"
 movement = "fly"
 tons = 20
-walk_mp = 20
+walk_mp = 13
 heat_sinks = 22
 fuel = 450
 

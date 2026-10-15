@@ -2,7 +2,7 @@ name = "Seydlitz"
 class = "aerofighter"
 movement = "fly"
 tons = 20
-walk_mp = 17
+walk_mp = 11
 heat_sinks = 10
 fuel = 450
 

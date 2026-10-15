@@ -2,7 +2,7 @@ name = "Hetzer"
 class = "vehicle"
 movement = "wheel"
 tons = 40
-walk_mp = 6
+walk_mp = 4
 
 [construction]
 engine = "ice"

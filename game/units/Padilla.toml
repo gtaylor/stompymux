@@ -2,7 +2,7 @@ name = "Padilla"
 class = "vehicle"
 movement = "track"
 tons = 75
-walk_mp = 8
+walk_mp = 5
 
 [construction]
 engine = "xl"

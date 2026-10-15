@@ -2,7 +2,7 @@ name = "Galleon"
 class = "vehicle"
 movement = "track"
 tons = 30
-walk_mp = 11
+walk_mp = 7
 
 [construction]
 armor = "ferro_fibrous"

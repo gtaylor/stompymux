@@ -2,7 +2,7 @@ name = "Grand Dragon"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 12
 
 [sections.left_arm]

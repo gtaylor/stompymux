@@ -2,7 +2,7 @@ name = "Grasshopper"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
 heat_sinks = 22
 

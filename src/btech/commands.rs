@@ -316,10 +316,16 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         report.name, report.reference
                     ));
                 }
-                let mut lines = vec![format!(
-                    "{} ({}): constructible under current biped rules; {} weapons, {} ammunition bins.",
-                    report.name, report.reference, report.weapons, report.ammunition_bins
-                )];
+                let mut lines = vec![
+                    format!(
+                        "{} ({}): constructible under current biped rules; {} weapons, {} ammunition bins.",
+                        report.name, report.reference, report.weapons, report.ammunition_bins
+                    ),
+                    format!(
+                        "Walking MP {}, running MP {}; engine rating {}.",
+                        report.walking_mp, report.running_mp, report.engine_rating
+                    ),
+                ];
                 for change in report.ammunition_adjustments {
                     lines.push(format!(
                         "{} critical {}: ammunition {} -> {}{}",
@@ -380,10 +386,12 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                     .map(|section| section.criticals.len())
                     .sum();
                 Ok(format!(
-                    "{} ({})\r\n{} tons; max speed {:.2}; jump speed {:.2}; {} heat sinks\r\n{} sections; {slots} occupied critical slots\r\nAsset parsed; unit construction validates supported equipment and chassis rules.",
+                    "{} ({})\r\n{} tons; walking MP {}, running MP {} ({:.2} km/h); jump speed {:.2}; {} heat sinks\r\n{} sections; {slots} occupied critical slots\r\nAsset parsed; unit construction validates supported equipment and chassis rules.",
                     template.name,
                     template.reference,
                     template.tons,
+                    template.walking_mp(),
+                    template.running_mp(),
                     template.max_speed,
                     template.jump_speed,
                     template.heat_sinks,
@@ -1306,10 +1314,16 @@ fn vehicle_template_check_text(report: &super::VehicleTemplateCheck) -> String {
     if let Some(reason) = &report.rejection {
         return format!("{heading}: not constructible: {reason}");
     }
-    let mut lines = vec![format!(
-        "{heading}: constructible combat vehicle; {} weapons, {} ammunition bins.",
-        report.weapons, report.ammunition_bins
-    )];
+    let mut lines = vec![
+        format!(
+            "{heading}: constructible combat vehicle; {} weapons, {} ammunition bins.",
+            report.weapons, report.ammunition_bins
+        ),
+        format!(
+            "Cruising MP {}, flanking MP {}.",
+            report.cruising_mp, report.flanking_mp
+        ),
+    ];
     if let Some(construction) = &report.construction {
         lines.push(format!(
             "Mass {} tons; item slots {} of {}; armor {} of {} points; energy weapon heat {}.",

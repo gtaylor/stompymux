@@ -2,7 +2,7 @@ name = "Chevalier"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-walk_mp = 11
+walk_mp = 7
 
 [sections.left_side]
 armor = 14

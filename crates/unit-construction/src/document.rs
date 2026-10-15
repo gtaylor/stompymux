@@ -70,6 +70,7 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("class", "type", Kind::Text),
     ("movement", "move_type", Kind::Text),
     ("tons", "tons", Kind::Integer),
+    ("walk_mp", "walk_mp", Kind::Integer),
     ("max_speed", "max_speed", Kind::Float),
     ("jump_speed", "jump_speed", Kind::Float),
     ("template_speed", "template_speed", Kind::Float),
@@ -97,8 +98,13 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("infantry_specials", "infantryspecials", Kind::Flags),
 ];
 
-/// Movement point keys and the speed attribute each one sets.
-const MOVEMENT_POINTS: [(&str, &str); 2] = [("walk_mp", "max_speed"), ("jump_mp", "jump_speed")];
+/// Movement point keys stored directly as the speed attribute each one sets. `walk_mp` is
+/// not one of them: it is kept as the walking (cruising) figure, and the parser derives the
+/// running (flanking) speed from it.
+const MOVEMENT_POINTS: [(&str, &str); 1] = [("jump_mp", "jump_speed")];
+
+/// Largest movement point figure a document may state.
+const MOVEMENT_POINT_LIMIT: i64 = 100;
 
 /// Internal attributes that a rendered document carries elsewhere or not at all.
 const UNRENDERED: &[&str] = &[
@@ -235,11 +241,25 @@ impl ParsedTemplate {
             fields.insert("reference".to_owned(), reference.to_owned());
         }
         for (key, value) in document {
+            if key == "walk_mp" {
+                let toml::Value::Integer(points) = value else {
+                    bail!("{key} must be an integer");
+                };
+                ensure!(
+                    (0..=MOVEMENT_POINT_LIMIT).contains(&points),
+                    "{key} is out of range"
+                );
+                fields.insert(key, points.to_string());
+                continue;
+            }
             if let Some((_, speed)) = MOVEMENT_POINTS.iter().find(|(name, _)| *name == key) {
                 let toml::Value::Integer(points) = value else {
                     bail!("{key} must be an integer");
                 };
-                ensure!((0..=100).contains(&points), "{key} is out of range");
+                ensure!(
+                    (0..=MOVEMENT_POINT_LIMIT).contains(&points),
+                    "{key} is out of range"
+                );
                 ensure!(
                     fields
                         .insert(
@@ -276,6 +296,18 @@ impl ParsedTemplate {
             .get("type")
             .map(|class| RawUnitClass::parse(class))
             .transpose()?;
+        if let Some(walking) = fields.get("walk_mp") {
+            ensure!(
+                !fields.contains_key("max_speed"),
+                "give either walk_mp or max_speed, not both"
+            );
+            let walking: u32 = walking.parse().context("invalid walk_mp")?;
+            let top = class.unwrap_or(RawUnitClass::Mech).top_speed_mp(walking);
+            fields.insert(
+                "max_speed".to_owned(),
+                (f64::from(top) * SPEED_PER_MP).to_string(),
+            );
+        }
         let chassis = match class {
             Some(RawUnitClass::Mech) => fields
                 .get("move_type")
@@ -291,7 +323,7 @@ impl ParsedTemplate {
             chassis,
             tons,
             construction,
-            large_engine: large_engine(tons, fields.get("max_speed").map(String::as_str)),
+            large_engine: large_engine(tons, fields.get("walk_mp").map(String::as_str)),
         };
         let mut parsed = Self {
             fields,
@@ -702,13 +734,17 @@ pub fn render(
         chassis,
         tons,
         construction,
-        large_engine: large_engine(tons, attributes.get("max_speed").map(String::as_str)),
+        large_engine: large_engine(tons, attributes.get("walk_mp").map(String::as_str)),
     };
     let mut output = String::new();
     for (name, attribute, kind) in FIELDS {
         let Some(value) = attributes.get(*attribute) else {
             continue;
         };
+        // The running speed follows from the walking MP the document states.
+        if *attribute == "max_speed" && attributes.contains_key("walk_mp") {
+            continue;
+        }
         let rendered = match kind {
             Kind::Integer => value
                 .trim()
@@ -1096,7 +1132,7 @@ name = "Zeus"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 specials = ["searchlight"]
 
 [construction]
@@ -1236,7 +1272,7 @@ armor = 9
     fn vehicles_and_other_classes_keep_their_own_structure_rules() {
         let parsed = ParsedTemplate::parse(
             "Truck",
-            "class = \"vehicle\"\nmovement = \"wheel\"\ntons = 40\nwalk_mp = 5\n[construction]\nengine = \"ice\"\n[sections.front_side]\narmor = 10\n[sections.turret]\ninternals = 0\n",
+            "class = \"vehicle\"\nmovement = \"wheel\"\ntons = 40\nwalk_mp = 3\n[construction]\nengine = \"ice\"\n[sections.front_side]\narmor = 10\n[sections.turret]\ninternals = 0\n",
         )
         .unwrap();
         assert_eq!(parsed.fields["specials"], "ICEEngine_Tech");
@@ -1250,6 +1286,13 @@ armor = 9
         )
         .unwrap();
         assert_eq!(aero.sections["nose"].internal, 0);
+        // Battle armor has no faster gait than its ground MP.
+        let suit = ParsedTemplate::parse(
+            "Suit",
+            "class = \"battlesuit\"\nmovement = \"biped\"\ntons = 1\nwalk_mp = 2\n",
+        )
+        .unwrap();
+        assert_eq!(suit.fields["max_speed"], "21.5");
     }
 
     #[test]
@@ -1326,7 +1369,8 @@ placements = [
     fn rendering_states_choices_and_leaves_out_what_they_imply() {
         let parsed = ParsedTemplate::parse("ZEU-9S", ZEUS).unwrap();
         let rendered = render_mech(&parsed);
-        assert!(rendered.contains("walk_mp = 6\n"));
+        assert!(rendered.contains("walk_mp = 4\n"));
+        assert!(!rendered.contains("max_speed"));
         assert!(rendered.contains("specials = [\"SearchLight\"]\n"));
         assert!(rendered.contains("[construction]\nengine = \"xl\"\nheat_sinks = \"double\"\n"));
         assert!(rendered.contains("omit = [\"hand_actuator\"]"));

@@ -2,7 +2,7 @@ name = "Manticore"
 class = "vehicle"
 movement = "track"
 tons = 60
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 13
 
 [sections.left_side]

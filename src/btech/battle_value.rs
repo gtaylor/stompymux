@@ -557,7 +557,7 @@ impl Mech {
         // walking MP while the nine points of heat that activate it cost one (Total Warfare
         // pp. 143 and 159); MASC and superchargers run at twice the walking MP, both together
         // at two and a half times.
-        let mut envelope = SpeedEnvelope::from_running(definition.max_speed);
+        let mut envelope = SpeedEnvelope::from_walking_mp(f64::from(definition.walk_mp));
         let triple_myomer = definition.has_triple_myomer();
         if triple_myomer {
             envelope = envelope.with_walking_mp_delta(1.0);
@@ -750,7 +750,7 @@ impl super::Vehicle {
             0
         } else {
             whole_mp(
-                SpeedEnvelope::from_running(definition.max_speed)
+                SpeedEnvelope::from_walking_mp(f64::from(definition.walk_mp))
                     .with_boosters(boosters)
                     .running,
             )

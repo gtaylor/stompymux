@@ -2,7 +2,7 @@ name = "J Edgar"
 class = "vehicle"
 movement = "hover"
 tons = 25
-walk_mp = 17
+walk_mp = 11
 
 [sections.left_side]
 armor = 19

@@ -2,7 +2,7 @@ name = "Command_Van"
 class = "vehicle"
 movement = "wheel"
 tons = 15
-walk_mp = 9
+walk_mp = 6
 
 [sections.left_side]
 armor = 14

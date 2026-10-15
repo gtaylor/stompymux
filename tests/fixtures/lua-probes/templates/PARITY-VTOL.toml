@@ -2,7 +2,7 @@ name = "Parity VTOL"
 class = "vtol"
 movement = "vtol"
 tons = 25
-walk_mp = 10
+walk_mp = 6
 heat_sinks = 10
 specials = ["SearchLight"]
 

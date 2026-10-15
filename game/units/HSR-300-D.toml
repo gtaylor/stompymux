@@ -2,7 +2,7 @@ name = "Hussar"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 14
+walk_mp = 9
 
 [sections.left_arm]
 armor = 2

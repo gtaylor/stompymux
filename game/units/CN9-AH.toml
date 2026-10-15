@@ -2,7 +2,7 @@ name = "Centurion"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 6
+walk_mp = 4
 
 [sections.left_arm]
 armor = 16

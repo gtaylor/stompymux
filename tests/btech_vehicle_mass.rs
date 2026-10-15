@@ -126,7 +126,7 @@ fn vehicle_mass_applies_chassis_material_cooling_and_cargo_rules() {
     // An 11-ton tank at 1 cruising MP rates 11, rounded up to 15 (TechManual p. 100): a
     // half-ton standard engine, a ton with shielding.
     template.tons = 11;
-    template.max_speed = 16.125;
+    template.set_cruising_mp(1);
     assert_eq!(template.engine().unwrap().weight_rating, 15);
     assert_eq!(template.mass().unwrap().engine, 1024);
 }
@@ -190,7 +190,7 @@ fn vehicle_systems_use_whole_installation_mass_without_duplicate_sink_weight() {
 fn stationary_construction_has_no_propulsion_mass() {
     let mut template = vehicle("-");
     template.movement = VehicleMovement::Stationary;
-    template.max_speed = 0.0;
+    template.set_cruising_mp(0);
     let before = template.clone();
     let engine = template.engine().unwrap();
     assert_eq!(engine.nominal_rating, 0);
@@ -213,7 +213,7 @@ fn stationary_construction_has_no_propulsion_mass() {
     );
     template.movement = VehicleMovement::Stationary;
     template.tons = 11;
-    template.max_speed = 16.125;
+    template.set_cruising_mp(1);
     assert_eq!(template.mass().unwrap().engine, 0);
 }
 

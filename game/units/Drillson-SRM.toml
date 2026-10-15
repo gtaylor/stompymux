@@ -2,7 +2,7 @@ name = "Drillson"
 class = "vehicle"
 movement = "hover"
 tons = 50
-walk_mp = 14
+walk_mp = 9
 
 [sections.left_side]
 armor = 21

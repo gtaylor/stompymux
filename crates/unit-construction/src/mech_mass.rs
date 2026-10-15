@@ -86,7 +86,7 @@ impl MechTemplate {
     /// system at its whole catalogue mass, and heat sinks beyond the engine's free ten at a ton
     /// each (TM pp. 47-57).
     pub fn construction_mass(&self, loadout: &MechLoadout) -> Result<MechMass> {
-        let rating = rated_output(self.tons, self.max_speed)?;
+        let rating = rated_output(self.tons, self.walk_mp);
         let ice = self.has_special("ICEEngine_Tech");
         let engine = if ice {
             // Internal combustion engines weigh twice a standard fusion engine.

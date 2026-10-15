@@ -2,7 +2,7 @@ name = "Salamander"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 28
 radio = 4
 

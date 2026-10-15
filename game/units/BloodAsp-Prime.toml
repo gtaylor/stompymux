@@ -2,7 +2,7 @@ name = "Blood Asp"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 36
 specials = ["OmniMech_Tech"]
 

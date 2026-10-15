@@ -235,7 +235,7 @@ async fn safe_critproof_and_stationary_criticals_draw_no_dice_and_replay() {
         (
             include_str!("../game/units/Demolisher.toml")
                 .replace("movement = \"track\"", "movement = \"none\"")
-                .replace("walk_mp = 5", "walk_mp = 0"),
+                .replace("walk_mp = 3", "walk_mp = 0"),
             true,
         ),
     ] {

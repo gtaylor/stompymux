@@ -2,7 +2,7 @@ name = "Naga"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 24
 
 [construction]

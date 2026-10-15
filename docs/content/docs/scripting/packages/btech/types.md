@@ -33,7 +33,8 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `name`: `string`
 - `reference`: `string`
 - `tons`: `integer`
-- `max_speed`: `number`
+- `walk_mp`: `integer` — Walking MP the template states; the engine rating is tons x walk_mp.
+- `max_speed`: `number` — Running speed in km/h: walk_mp x 1.5 rounded up, 10.75 km/h per MP.
 - `jump_speed`: `number`
 - `heat_sinks`: `integer` — Cooling capacity; double sinks are already counted twice.
 - `sections`: `table<MechSectionName, SectionDefinition>`
@@ -1214,6 +1215,9 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `reference`: `string`
 - `constructible`: `boolean` — Passes currently implemented biped construction checks.
 - `rejection`: `string|nil` — First construction failure; nil for a constructible template.
+- `walking_mp`: `integer` — Walking MP the template states.
+- `running_mp`: `integer` — Walking MP x 1.5, rounded up.
+- `engine_rating`: `integer` — Tonnage x walking MP.
 - `weapons`: `integer` — Resolved weapon count on success; zero on rejection.
 - `ammunition_bins`: `integer` — Resolved bin count on success; zero on rejection.
 - `ammunition_adjustments`: `AmmunitionAdjustment[]` — Changes on successful construction.

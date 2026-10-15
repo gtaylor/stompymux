@@ -36,7 +36,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     let stationary = include_str!("../game/units/Demolisher.toml")
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("walk_mp = 5", "walk_mp = 0");
+        .replace("walk_mp = 3", "walk_mp = 0");
     let sources = [
         (include_str!("fixtures/btech/units/JR7-D.toml"), 'b'),
         (include_str!("../game/units/SCP-1N.toml"), 'q'),

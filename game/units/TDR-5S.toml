@@ -2,7 +2,7 @@ name = "Thunderbolt"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 15
 
 [sections.left_arm]

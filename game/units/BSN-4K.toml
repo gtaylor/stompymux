@@ -2,7 +2,7 @@ name = "Bishamon"
 class = "mech"
 movement = "quad"
 tons = 45
-walk_mp = 11
+walk_mp = 7
 heat_sinks = 20
 radio = 4
 

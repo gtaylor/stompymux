@@ -2,7 +2,7 @@ name = "Hellcat"
 class = "aerofighter"
 movement = "fly"
 tons = 60
-walk_mp = 9
+walk_mp = 6
 heat_sinks = 20
 fuel = 750
 

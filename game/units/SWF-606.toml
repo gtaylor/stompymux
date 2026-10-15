@@ -2,7 +2,7 @@ name = "Swift"
 class = "aerofighter"
 movement = "fly"
 tons = 25
-walk_mp = 20
+walk_mp = 13
 fuel = 450
 
 [sections.nose]

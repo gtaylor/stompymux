@@ -2,7 +2,7 @@ name = "Vixen"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 14
+walk_mp = 9
 heat_sinks = 20
 
 [construction]

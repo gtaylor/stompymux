@@ -22,16 +22,16 @@ fn running_mp(walking_mp: f64) -> f64 {
     (walking_mp * 1.5 - 1e-9).ceil().max(0.0)
 }
 
-/// Walking MP recovered from a running ceiling: the largest whole figure whose running
-/// MP is not above it, so a 5/8 walks at 5 and a 3/5 at 3. This is the construction
-/// rounding the engine rating uses too.
+/// Walking MP recovered from a live running ceiling, which administrative speed edits set
+/// in km/h: the largest whole figure whose running MP is not above it, so a 5/8 walks at 5
+/// and a 3/5 at 3. Templates state walking MP and need no recovery.
 fn walking_mp_of_running(running_kph: f64) -> f64 {
     let running_mp = running_kph / MP_KPH;
     if running_mp <= 1.0 {
         // A ceiling of one MP or less is a walk the unit cannot better (a lost leg).
         return running_mp.max(0.0);
     }
-    stompymux_unit_construction::walking_mp_of_running(running_mp)
+    (running_mp / 1.5 + 1e-6).floor().max(0.0)
 }
 
 impl SpeedEnvelope {
@@ -50,8 +50,8 @@ impl SpeedEnvelope {
         }
     }
 
-    /// The envelope a running ceiling implies: templates and administrative edits store
-    /// the running figure, from which the whole-MP walking figure is recovered. A running
+    /// The envelope a running ceiling implies: live units and administrative edits keep
+    /// the running figure in km/h, from which the whole-MP walking figure is recovered. A running
     /// ceiling that is not a whole number of recomputed MP keeps its excess as an offset.
     pub fn from_running(running_kph: f64) -> Self {
         let running_kph = running_kph.max(0.0);

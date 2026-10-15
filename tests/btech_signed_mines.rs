@@ -56,7 +56,7 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                 "vtol" => include_str!("../game/units/Kestrel.toml").to_owned(),
                 "stationary" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
-                    .replace("walk_mp = 5", "walk_mp = 0"),
+                    .replace("walk_mp = 3", "walk_mp = 0"),
                 "wheeled" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"wheel\""),
                 "hover" => crate::support::templates::hovercraft(include_str!(

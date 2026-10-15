@@ -2,7 +2,7 @@ name = "Goblin"
 class = "vehicle"
 movement = "track"
 tons = 45
-walk_mp = 6
+walk_mp = 4
 cargo_space = 100
 specials = ["CargoTech"]
 

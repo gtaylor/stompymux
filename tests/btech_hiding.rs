@@ -59,7 +59,7 @@ async fn hiding_native_lua_all_chassis_timing_and_restart() {
     let hover = crate::support::templates::hovercraft(tracked);
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("walk_mp = 5", "walk_mp = 0");
+        .replace("walk_mp = 3", "walk_mp = 0");
     for source in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/GOL-1H.toml"),
@@ -668,7 +668,7 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
         crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ];
     for source in chassis {

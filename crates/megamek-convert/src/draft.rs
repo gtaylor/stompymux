@@ -56,8 +56,8 @@ pub struct Draft {
     /// Template movement: `biped`, `quad`, `track`, `wheel`, `hover` or `vtol`.
     pub movement: &'static str,
     pub tons: u16,
-    /// Maximum (running or flank) movement points.
-    pub max_mp: u32,
+    /// Walking (Mech) or cruising (vehicle) movement points, as the source states them.
+    pub walk_mp: u32,
     pub jump_mp: u32,
     /// Total heat dissipation, when the unit states one.
     pub heat_sinks: Option<u32>,
@@ -76,7 +76,7 @@ impl Draft {
         let _ = writeln!(out, "class = {}", quote(self.class));
         let _ = writeln!(out, "movement = {}", quote(self.movement));
         let _ = writeln!(out, "tons = {}", self.tons);
-        let _ = writeln!(out, "walk_mp = {}", self.max_mp);
+        let _ = writeln!(out, "walk_mp = {}", self.walk_mp);
         if self.jump_mp > 0 {
             let _ = writeln!(out, "jump_mp = {}", self.jump_mp);
         }
@@ -193,7 +193,7 @@ mod tests {
             class: "vehicle",
             movement: "wheel",
             tons: 20,
-            max_mp: 6,
+            walk_mp: 4,
             jump_mp: 0,
             heat_sinks: None,
             construction: vec![("engine", "ice")],
@@ -203,7 +203,7 @@ mod tests {
         };
         assert_eq!(
             draft.render(),
-            "name = \"Truck\"\nclass = \"vehicle\"\nmovement = \"wheel\"\ntons = 20\nwalk_mp = 6\n\n\
+            "name = \"Truck\"\nclass = \"vehicle\"\nmovement = \"wheel\"\ntons = 20\nwalk_mp = 4\n\n\
              [construction]\nengine = \"ice\"\n\n[sections.front_side]\narmor = 10\nslots = [\n    \
              { at = 1, item = \"IS.LRM-5\" },\n    { at = 2, item = \"ArtemisIV\", link = 1 },\n    \
              { at = 3, item = \"Ammo_IS.LRM-5\", rounds = 24, modes = [\"Artemis/Mine\"] },\n]\n"

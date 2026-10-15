@@ -30,7 +30,7 @@ name = "Zeus"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 34
 radio = 4
 specials = ["SearchLight"]
@@ -42,8 +42,9 @@ specials = ["SearchLight"]
 | `class` | string | `mech`, `vehicle`, `vtol`, `naval`, `aerofighter`, `spheroid_dropship`, `aerodyne_dropship`, `mechwarrior` or `battlesuit`. |
 | `movement` | string | `biped`, `quad`, `track`, `wheel`, `hover`, `vtol`, `hull`, `foil`, `fly`, `sub` or `none`. |
 | `tons` | integer | Tonnage. |
-| `walk_mp`, `jump_mp` | integer | Top ground and jumping movement points; each is 10.75 km/h. For a mech `walk_mp` is the running MP, and the mech walks at the largest whole MP whose running MP, walking x 1.5 rounded up, is `walk_mp`; for a vehicle or VTOL it is the flank MP, and the cruising MP is the flank MP divided by 1.5 and rounded. Vehicles cannot jump. |
-| `max_speed`, `jump_speed` | number | Speeds in km/h, for the few units whose speed is not whole movement points. Give either the speed or its movement points, not both. |
+| `walk_mp` | integer | Walking movement points, as the record sheet states them; each is 10.75 km/h. For a mech it is the walking MP and the running MP is walking x 1.5 rounded up (TechManual p. 48); for a vehicle, VTOL or naval unit it is the cruising MP and the flanking MP is cruising x 1.5 rounded up (TechManual p. 100); for an aerospace unit it is the safe thrust and the maximum thrust follows the same way. Infantry and battle armor have no faster gait. The engine rating is tonnage x `walk_mp`. |
+| `jump_mp` | integer | Jumping movement points. Vehicles cannot jump. |
+| `max_speed`, `jump_speed` | number | Top and jumping speeds in km/h, for the few unconstructed units (aerospace, battle armor) whose speed is not whole movement points. Give either the speed or its movement points, not both. Mechs and vehicles must state `walk_mp`. |
 | `heat_sinks` | integer | Heat dissipation: one point per single heat sink, two per double. Without it a mech carries the engine's ten free sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
 | `hs_engine_override` | integer | Engine heat sink override. |
 | `radio`, `radio_type`, `radio_range` | integer | Electronics. |
@@ -108,8 +109,8 @@ checks:
 - The components weigh the tonnage: nothing over it, and no more than half a ton
   under it (TechManual pp. 46, 57). Every item weighs its whole catalogue mass,
   and the engine, gyro, structure, armor and supercharger round up to the half ton.
-- `walk_mp` is a legal running figure, and the engine rating, tonnage x walking
-  MP, lies between 10 and 500; ratings above 400 are large engines with eight
+- `walk_mp` is at least 1, and the engine rating, tonnage x `walk_mp`, lies
+  between 10 and 500; ratings above 400 are large engines with eight
   centre torso slots (TechManual p. 48; Tactical Operations: Advanced Units &
   Equipment).
 - The engine fills its own layout: six centre torso slots (three for a compact

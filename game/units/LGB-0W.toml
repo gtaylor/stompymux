@@ -2,7 +2,7 @@ name = "Longbow"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 13
 
 [sections.left_arm]

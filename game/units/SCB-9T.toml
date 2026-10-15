@@ -2,7 +2,7 @@ name = "Scarabus"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 15
+walk_mp = 10
 radio = 4
 
 [construction]

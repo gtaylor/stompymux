@@ -335,7 +335,7 @@ pub fn convert(source: &str) -> Result<Converted> {
             class: "mech",
             movement,
             tons,
-            max_mp: (walk * 3).div_ceil(2),
+            walk_mp: walk,
             jump_mp: jump,
             heat_sinks: Some(match sinks {
                 HeatSinkKind::Single => sink_count,
@@ -730,7 +730,7 @@ mod tests {
         for line in [
             "name = \"Atlas\"\n",
             "class = \"mech\"\n",
-            "walk_mp = 5\n",
+            "walk_mp = 3\n",
             "heat_sinks = 20\n",
             "rear = 14\n",
             "{ at = \"1-10\", item = \"IS.AC/20\" },",

@@ -1360,7 +1360,7 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
         include_str!("../game/units/Kestrel.toml").to_owned(),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
     ];
     for source in chassis.iter().take(6) {
         for target_source in &chassis {

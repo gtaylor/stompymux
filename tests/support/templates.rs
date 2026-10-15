@@ -176,7 +176,7 @@ pub fn fit_vehicle(template: &mut stompymux_rs::VehicleTemplate) {
     if legal(template) {
         return;
     }
-    template.max_speed = 2.0 * 10.75;
+    template.set_cruising_mp(1);
     if legal(template) {
         return;
     }
@@ -274,10 +274,7 @@ pub fn book_legal_keeping(
         .iter()
         .map(|(&section, layout)| (section, layout.armor))
         .collect();
-    while template
-        .walking_mp()
-        .is_ok_and(|walking| walking > 1 && walking * u32::from(template.tons) > 500)
-    {
+    while template.walking_mp() > 1 && template.walking_mp() * u32::from(template.tons) > 500 {
         slow_down(template);
     }
     if loadout
@@ -332,7 +329,7 @@ pub fn book_legal_keeping(
             let shed = match step {
                 Shed::Armor => shed_armor(template),
                 Shed::Speed => {
-                    let slower = template.walking_mp().is_ok_and(|walking| walking > 1);
+                    let slower = template.walking_mp() > 1;
                     if slower {
                         slow_down(template);
                     }
@@ -468,8 +465,7 @@ fn add_special(template: &mut stompymux_rs::MechTemplate, flag: &str) {
 
 /// Lower the walking MP by one, with the running speed that goes with it.
 fn slow_down(template: &mut stompymux_rs::MechTemplate) {
-    let walking = template.walking_mp().unwrap() - 1;
-    template.max_speed = f64::from((walking * 3).div_ceil(2)) * 10.75;
+    template.set_walking_mp(template.walk_mp - 1);
 }
 
 /// One empty critical slot: the critical definition construction expects there.
@@ -557,16 +553,14 @@ fn fit_jets_and_sinks(
     template: &mut stompymux_rs::MechTemplate,
     resolve: &impl Fn(&stompymux_rs::MechTemplate) -> Option<stompymux_rs::MechLoadout>,
 ) {
-    let Ok(walking) = template.walking_mp() else {
-        return;
-    };
+    let walking = template.walking_mp();
     let improved = template.has_special("ImprovedJJ_Tech");
     let Some(loadout) = resolve(template) else {
         return;
     };
     if let Ok(jets) = loadout.jump_jet_groups(improved) {
         let ceiling = if improved {
-            (walking * 3).div_ceil(2)
+            template.running_mp()
         } else {
             walking
         } as usize;

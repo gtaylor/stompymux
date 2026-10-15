@@ -2,7 +2,7 @@ name = "Mercury"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 12
+walk_mp = 8
 radio = 4
 
 [construction]

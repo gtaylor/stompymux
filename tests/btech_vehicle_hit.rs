@@ -119,7 +119,7 @@ fn motive_rolls_apply_direction_and_vehicle_type_modifiers() {
             include_str!("../game/units/Demolisher.toml"),
             movement,
         )
-        .replace("walk_mp = 5", "walk_mp = 8");
+        .replace("walk_mp = 3", "walk_mp = 5");
         let vehicle = Vehicle::new(crate::support::templates::fitted(
             VehicleTemplate::parse("test", &text).unwrap(),
         ))

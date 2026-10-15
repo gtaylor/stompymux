@@ -2,7 +2,7 @@ name = "Annihilator"
 class = "mech"
 movement = "biped"
 tons = 100
-walk_mp = 3
+walk_mp = 2
 heat_sinks = 18
 
 [sections.left_arm]

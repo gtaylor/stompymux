@@ -2,7 +2,7 @@ name = "Hunter"
 class = "vehicle"
 movement = "track"
 tons = 35
-walk_mp = 8
+walk_mp = 5
 specials = ["SearchLight"]
 
 [sections.left_side]

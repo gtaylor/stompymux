@@ -2,7 +2,7 @@ name = "Dasher"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 15
+walk_mp = 10
 heat_sinks = 20
 specials = ["Masc"]
 

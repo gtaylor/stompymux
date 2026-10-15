@@ -2,7 +2,7 @@ name = "Orion"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
+walk_mp = 4
 
 [sections.left_arm]
 armor = 24

@@ -72,7 +72,7 @@ pub use cost::{
     PartPrices, part_price, raw_template_base_cost, template_base_cost, vehicle_template_base_cost,
 };
 pub use document::ParsedTemplate;
-pub use engine::{Engine, rated_output, running_mp_of_walking, walking_mp_of_running};
+pub use engine::{Engine, rated_output, running_mp_of_walking};
 pub use engine_sink_override::{
     parse_engine_sink_override, read_engine_sink_override, write_engine_sink_override,
 };
@@ -89,8 +89,8 @@ pub use inspection::{
     inspection_compatible_template, inspection_compatible_vehicle_template,
     inspection_configured_technology, inspection_configured_technology_attributes,
     inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
-    inspection_raw_part, inspection_template_part, inspection_vehicle_engine_rating,
-    inspection_vehicle_engine_values,
+    inspection_raw_part, inspection_raw_walking_mp, inspection_template_part,
+    inspection_vehicle_engine_rating, inspection_vehicle_engine_values,
 };
 pub use loadout::{
     AmmunitionBin, CriticalLocation, MechLoadout, ResolvedLoadout, SystemCritical, WeaponMount,
@@ -114,7 +114,9 @@ pub use registry::{
     read_resolved_template, read_template_document, resolve_template_path,
     resolve_template_path_bytes_cached, resolve_template_path_cached, write_template,
 };
-pub use speed::{parse_template_speed, read_template_speed, write_template_speed};
+pub use speed::{
+    parse_template_speed, read_template_speed, template_walking_mp, write_template_speed,
+};
 pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
 pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
 pub use unit::UnitTemplate;

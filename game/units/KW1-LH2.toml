@@ -2,7 +2,7 @@ name = "Lineholder"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 14
 
 [construction]

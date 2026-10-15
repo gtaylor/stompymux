@@ -1,6 +1,6 @@
 //! Fusion-engine identity derived from supported BattleMech installations, independent of live damage.
 use super::{MechLoadout, MechSection, System};
-use anyhow::{Result, bail, ensure};
+use anyhow::{Result, bail};
 use serde::Serialize;
 
 /// Supported BattleMech fusion-engine construction families.
@@ -109,52 +109,29 @@ fn engine_slots(loadout: &MechLoadout) -> Result<[u8; 3]> {
     Ok([center, left, right])
 }
 
-/// Walking MP of a running figure: running MP is walking MP x 1.5 rounded up (TM p. 48),
-/// so the walking MP is the largest whole figure whose running MP is not above it. Every
-/// rule that recovers walking MP from the stored running speed uses this one rounding.
-pub fn walking_mp_of_running(running_mp: f64) -> f64 {
-    (running_mp / 1.5 + 1e-6).floor().max(0.0)
-}
-
-/// Running MP of a whole walking figure: x 1.5, rounded up (TM p. 48).
+/// Running MP of a whole walking figure: x 1.5, rounded up (TM p. 48). Combat vehicles
+/// take their flanking MP from cruising MP the same way (TM p. 100). Templates store the
+/// walking figure; every rule that needs the running figure derives it here.
 pub fn running_mp_of_walking(walking_mp: u32) -> u32 {
     (walking_mp * 3).div_ceil(2)
 }
 
-/// Engine rating from the stored running speed: tonnage x walking MP (TM p. 48).
-pub fn rated_output(tons: u16, max_speed: f64) -> Result<u32> {
-    ensure!(
-        tons > 0 && max_speed.is_finite() && max_speed >= 0.0,
-        "Invalid engine inputs"
-    );
-    let walking = walking_mp_of_running(max_speed / super::construction::SPEED_PER_MP);
-    let rating = walking * f64::from(tons);
-    ensure!(
-        rating.is_finite() && rating <= f64::from(i32::MAX),
-        "Engine rating is out of bounds"
-    );
-    Ok(rating as u32)
+/// Engine rating: tonnage x walking MP for a Mech (TM p. 48), or the Base Engine Rating,
+/// tonnage x cruising MP, for a combat vehicle (TM p. 100).
+pub fn rated_output(tons: u16, walking_mp: u32) -> u32 {
+    u32::from(tons).saturating_mul(walking_mp)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Walking MP comes back from every legal running figure, and the rating is tonnage x walk.
+    /// Running MP is walking x 1.5 rounded up, and the rating is tonnage x walking MP.
     #[test]
-    fn walking_mp_and_rating_follow_the_running_figure() {
-        for walking in 1..=20 {
-            let running = running_mp_of_walking(walking);
-            assert_eq!(
-                walking_mp_of_running(f64::from(running)),
-                f64::from(walking)
-            );
-            assert_eq!(
-                rated_output(50, f64::from(running) * 10.75).unwrap(),
-                50 * walking
-            );
-        }
-        assert_eq!(running_mp_of_walking(5), 8);
-        assert_eq!(rated_output(35, 11.0 * 10.75).unwrap(), 245);
+    fn running_mp_and_rating_follow_the_walking_figure() {
+        let running: Vec<_> = (0..=8).map(running_mp_of_walking).collect();
+        assert_eq!(running, [0, 2, 3, 5, 6, 8, 9, 11, 12]);
+        assert_eq!(rated_output(50, 5), 250);
+        assert_eq!(rated_output(35, 7), 245);
     }
 }

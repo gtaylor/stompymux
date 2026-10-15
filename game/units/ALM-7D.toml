@@ -2,7 +2,7 @@ name = "Fireball"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 17
+walk_mp = 11
 radio = 4
 
 [construction]

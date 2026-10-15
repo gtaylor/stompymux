@@ -11,15 +11,13 @@ use std::fmt::Write as _;
 /// Kilometres per hour for each movement point.
 pub const SPEED_PER_MP: f64 = 10.75;
 
-/// Whether a Mech's engine is a large engine, rated above 400: tonnage times the walking MP
-/// its stored running speed implies (TM p. 48; Tactical Operations: Advanced Units &
-/// Equipment large engines).
-pub fn large_engine(tons: i64, max_speed: Option<&str>) -> bool {
-    let Some(speed) = max_speed.and_then(|speed| speed.trim().parse::<f64>().ok()) else {
+/// Whether a Mech's engine is a large engine, rated above 400: tonnage times walking MP
+/// (TM p. 48; Tactical Operations: Advanced Units & Equipment large engines).
+pub fn large_engine(tons: i64, walking_mp: Option<&str>) -> bool {
+    let Some(walking) = walking_mp.and_then(|walking| walking.trim().parse::<i64>().ok()) else {
         return false;
     };
-    let walking = super::walking_mp_of_running(speed / SPEED_PER_MP);
-    walking * tons as f64 > 400.0
+    walking * tons > 400
 }
 
 /// Critical names of every item that construction places in a mech.

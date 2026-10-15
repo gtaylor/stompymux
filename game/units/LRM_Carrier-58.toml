@@ -2,7 +2,7 @@ name = "LRM Carrier"
 class = "vehicle"
 movement = "track"
 tons = 60
-walk_mp = 3
+walk_mp = 2
 
 [construction]
 engine = "ice"

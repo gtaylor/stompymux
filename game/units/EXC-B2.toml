@@ -2,7 +2,7 @@ name = "Excalibur"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 12
 radio = 4
 

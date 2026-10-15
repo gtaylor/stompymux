@@ -2,7 +2,7 @@ name = "Ku"
 class = "vehicle"
 movement = "wheel"
 tons = 50
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 14
 
 [construction]

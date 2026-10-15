@@ -2,7 +2,7 @@ name = "J-27"
 class = "vehicle"
 movement = "track"
 tons = 20
-walk_mp = 8
+walk_mp = 5
 cargo_space = 750
 specials = ["CargoTech"]
 

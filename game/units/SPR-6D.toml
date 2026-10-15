@@ -2,7 +2,7 @@ name = "Sparrowhawk"
 class = "aerofighter"
 movement = "fly"
 tons = 30
-walk_mp = 15
+walk_mp = 10
 fuel = 750
 
 [construction]

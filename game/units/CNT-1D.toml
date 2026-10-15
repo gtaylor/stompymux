@@ -2,7 +2,7 @@ name = "Centurion"
 class = "aerofighter"
 movement = "fly"
 tons = 30
-walk_mp = 15
+walk_mp = 10
 heat_sinks = 10
 fuel = 750
 

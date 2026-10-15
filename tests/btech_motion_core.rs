@@ -6843,7 +6843,7 @@ async fn fusion_engine_layout_mass_damage_and_restart() {
     ] {
         let mut template =
             MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
-        template.max_speed = 96.75;
+        template.set_walking_mp(6);
         // The engine family is a declared construction choice (TechManual p. 48).
         let flag = match engine {
             Engine::Standard => "",

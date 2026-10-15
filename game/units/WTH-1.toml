@@ -2,7 +2,7 @@ name = "Whitworth"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
 
 [sections.left_arm]

@@ -2,7 +2,7 @@ name = "Banshee"
 class = "mech"
 movement = "biped"
 tons = 95
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 12
 
 [sections.left_arm]

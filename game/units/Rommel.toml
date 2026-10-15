@@ -2,7 +2,7 @@ name = "Rommel"
 class = "vehicle"
 movement = "track"
 tons = 65
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 11
 
 [sections.left_side]

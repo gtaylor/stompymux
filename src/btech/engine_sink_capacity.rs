@@ -29,7 +29,7 @@ pub(super) fn reconstructed_capacity(unit: &Mech) -> Result<u16> {
         "Negative engine heat-sink allocation cannot be reconstructed"
     );
     let internal = if allocation == 0 {
-        rated_output(definition.tons, definition.max_speed)? / 25
+        rated_output(definition.tons, definition.walk_mp) / 25
     } else {
         allocation as u32
     };

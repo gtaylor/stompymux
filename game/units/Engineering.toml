@@ -2,7 +2,7 @@ name = "Engineering"
 class = "vehicle"
 movement = "track"
 tons = 40
-walk_mp = 9
+walk_mp = 6
 specials = ["CargoTech"]
 
 [construction]

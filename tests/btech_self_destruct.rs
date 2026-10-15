@@ -52,7 +52,7 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
                 )),
                 "stationary" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
-                    .replace("walk_mp = 5", "walk_mp = 0"),
+                    .replace("walk_mp = 3", "walk_mp = 0"),
                 _ => include_str!("../game/units/Demolisher.toml").to_owned(),
             };
             create_battle_vehicle(

@@ -2,7 +2,7 @@ name = "Longbow"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 22
 radio = 4
 

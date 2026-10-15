@@ -2,7 +2,7 @@ name = "Hachiman"
 class = "vehicle"
 movement = "track"
 tons = 50
-walk_mp = 6
+walk_mp = 4
 specials = ["ArtemisIV"]
 
 [construction]

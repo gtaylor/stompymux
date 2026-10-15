@@ -2,7 +2,7 @@ name = "SturmFeur"
 class = "vehicle"
 movement = "track"
 tons = 85
-walk_mp = 5
+walk_mp = 3
 
 [construction]
 engine = "ice"

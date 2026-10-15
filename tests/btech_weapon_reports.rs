@@ -20,7 +20,7 @@ fn templates() -> Vec<(&'static str, String)> {
             "Demolisher",
             vehicle
                 .replace("movement = \"track\"", "movement = \"none\"")
-                .replace("walk_mp = 5", "walk_mp = 0"),
+                .replace("walk_mp = 3", "walk_mp = 0"),
         ),
         ("Kestrel", include_str!("../game/units/Kestrel.toml").into()),
     ]

@@ -2,7 +2,7 @@ name = "Swift_Wind"
 class = "vehicle"
 movement = "wheel"
 tons = 8
-walk_mp = 15
+walk_mp = 10
 
 [sections.left_side]
 armor = 1

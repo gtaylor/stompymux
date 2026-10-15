@@ -33,6 +33,7 @@ fn unit_template_source(template: &MechTemplate) -> Result<String> {
         "Mech",
         default_movement,
         template.tons,
+        template.walk_mp,
     );
     let sections: Vec<_> = MechSection::ALL
         .into_iter()
@@ -52,7 +53,13 @@ fn vehicle_template_source(template: &VehicleTemplate) -> Result<String> {
     } else {
         ("Vehicle", "Track")
     };
-    let attributes = saved_attributes(&template.attributes, class, movement, template.tons);
+    let attributes = saved_attributes(
+        &template.attributes,
+        class,
+        movement,
+        template.tons,
+        template.walk_mp,
+    );
     let sections: Vec<_> = template
         .sections
         .iter()
@@ -65,14 +72,17 @@ fn vehicle_template_source(template: &VehicleTemplate) -> Result<String> {
     render(&attributes, &sections)
 }
 
-/// Fold administrative class, movement and tonnage edits over the authored identity.
+/// Fold administrative class, movement and tonnage edits over the authored identity, and
+/// state the walking (cruising) MP the template holds; the running speed follows from it.
 fn saved_attributes(
     attributes: &BTreeMap<String, String>,
     class: &str,
     movement: &str,
     tons: u16,
+    walk_mp: u32,
 ) -> BTreeMap<String, String> {
     let mut saved = attributes.clone();
+    saved.insert("walk_mp".into(), walk_mp.to_string());
     for (field, administrative, default) in [
         ("type", "administrative_unit_type", class.to_owned()),
         (

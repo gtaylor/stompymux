@@ -13,10 +13,10 @@ fn templates() -> Vec<String> {
         crate::support::templates::hovercraft(ground),
         ground
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         vtol.into(),
         vtol.replace("movement = \"vtol\"", "movement = \"none\"")
-            .replace("walk_mp = 18", "walk_mp = 0"),
+            .replace("walk_mp = 12", "walk_mp = 0"),
     ]
 }
 

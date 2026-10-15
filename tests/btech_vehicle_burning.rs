@@ -38,7 +38,7 @@ async fn fixture_movement(
     if movement == VehicleMovement::Stationary {
         text = text
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0");
+            .replace("walk_mp = 3", "walk_mp = 0");
     }
     create_battle_vehicle(
         &mut world,

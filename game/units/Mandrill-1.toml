@@ -2,7 +2,7 @@ name = "Mandrill"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
 heat_sinks = 20
 

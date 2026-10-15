@@ -2,7 +2,7 @@ name = "Dervish"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
 
 [sections.left_arm]

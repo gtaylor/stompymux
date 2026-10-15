@@ -2,7 +2,7 @@ name = "Hellion"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 11
+walk_mp = 7
 heat_sinks = 20
 specials = ["OmniMech_Tech", "Masc"]
 

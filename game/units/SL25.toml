@@ -2,7 +2,7 @@ name = "Samurai"
 class = "aerofighter"
 movement = "fly"
 tons = 50
-walk_mp = 11
+walk_mp = 7
 heat_sinks = 19
 fuel = 750
 

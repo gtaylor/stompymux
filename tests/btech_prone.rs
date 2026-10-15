@@ -406,7 +406,7 @@ async fn prone_rejects_vehicle_chassis() {
             )
         };
         let text = if movement == "none" {
-            text.replace("walk_mp = 5", "walk_mp = 0")
+            text.replace("walk_mp = 3", "walk_mp = 0")
         } else {
             text
         };

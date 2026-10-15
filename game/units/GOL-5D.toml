@@ -2,7 +2,7 @@ name = "Goliath"
 class = "mech"
 movement = "quad"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 24
 radio = 4
 

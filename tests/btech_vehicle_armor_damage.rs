@@ -392,7 +392,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
         crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ];
     for template in templates {

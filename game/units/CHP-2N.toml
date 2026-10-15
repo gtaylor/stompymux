@@ -2,7 +2,7 @@ name = "Champion"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 
 [sections.left_arm]
 armor = 10

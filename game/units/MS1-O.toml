@@ -2,7 +2,7 @@ name = "Men Shen"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 9
+walk_mp = 6
 heat_sinks = 20
 radio = 4
 

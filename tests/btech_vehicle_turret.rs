@@ -502,7 +502,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
         crate::support::templates::hovercraft(ground),
         ground
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         format!("{vtol}\n[sections.turret]\narmor = 1\ninternals = 1\n"),
         vtol.into(),
     ] {

@@ -2,7 +2,7 @@ name = "Sholagar"
 class = "aerofighter"
 movement = "fly"
 tons = 35
-walk_mp = 15
+walk_mp = 10
 heat_sinks = 11
 fuel = 750
 

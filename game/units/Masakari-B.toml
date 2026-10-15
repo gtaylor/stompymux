@@ -2,7 +2,7 @@ name = "Masakari"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 40
 specials = ["OmniMech_Tech"]
 

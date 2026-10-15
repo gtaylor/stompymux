@@ -2,7 +2,7 @@ name = "Scorpion"
 class = "vehicle"
 movement = "track"
 tons = 25
-walk_mp = 6
+walk_mp = 4
 
 [construction]
 engine = "ice"

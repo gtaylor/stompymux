@@ -13,7 +13,7 @@ fn templates() -> Vec<String> {
         crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
     ]
 }

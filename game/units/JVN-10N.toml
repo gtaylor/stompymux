@@ -2,7 +2,7 @@ name = "Javelin"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
 
 [sections.left_arm]

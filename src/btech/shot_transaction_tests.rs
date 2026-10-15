@@ -315,7 +315,7 @@ fn special_shot_effects_match_reference_validation() {
                     "item = \"IS.AC/20\" }",
                     "item = \"IS.Flamer\", modes = [\"Heat\"] }",
                 )
-                .replace("walk_mp = 5\n", "walk_mp = 5\nheat_sinks = 6\n"),
+                .replace("walk_mp = 3\n", "walk_mp = 3\nheat_sinks = 6\n"),
             crate::Weapon::Flamer,
         ),
         (

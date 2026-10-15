@@ -79,6 +79,9 @@ pub struct MechTemplate {
     pub name: String,
     pub reference: String,
     pub tons: u16,
+    /// Walking MP the template states (TM p. 48); the engine rating is tonnage x walking MP.
+    pub walk_mp: u32,
+    /// Running speed in km/h, walking MP x 1.5 rounded up: the realtime top speed.
     pub max_speed: f64,
     pub jump_speed: f64,
     pub heat_sinks: u16,
@@ -189,11 +192,13 @@ impl MechTemplate {
         );
         let tons = required("tons")?.parse().context("invalid tonnage")?;
         ensure!(tons > 0, "tonnage must be positive");
+        let (walk_mp, max_speed) = super::template_walking_mp(&fields)?;
         let mut template = Self {
             name: required("name")?,
             reference: required("reference")?,
             tons,
-            max_speed: speed("max_speed")?,
+            walk_mp,
+            max_speed,
             jump_speed: speed("jump_speed")?,
             heat_sinks: 0,
             sections,

@@ -2,7 +2,7 @@ name = "Berserker"
 class = "mech"
 movement = "biped"
 tons = 100
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 32
 radio = 4
 

@@ -2,7 +2,7 @@ name = "Typhoon"
 class = "vehicle"
 movement = "wheel"
 tons = 70
-walk_mp = 5
+walk_mp = 3
 specials = ["SearchLight"]
 
 [construction]

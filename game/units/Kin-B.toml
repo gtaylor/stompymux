@@ -2,7 +2,7 @@ name = "Kingfisher"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 34
 radio = 5
 

@@ -2779,7 +2779,7 @@ async fn weapons_hold_vehicle_shooters_warn_on_mech_damage_without_blocking_it()
         crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         let (_dir, config, mut base, _, [target, _, shooter, _]) = engagement(&source).await;
@@ -2825,7 +2825,7 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
         crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         let (_dir, config, initial, map, ids) = engagement(&source).await;

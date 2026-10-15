@@ -61,6 +61,14 @@ impl VehicleMovement {
 }
 
 impl VehicleTemplate {
+    /// State a new cruising MP, with the flanking speed that follows from it (TechManual
+    /// p. 100).
+    pub fn set_cruising_mp(&mut self, cruising_mp: u32) {
+        self.walk_mp = cruising_mp;
+        self.max_speed = f64::from(super::running_mp_of_walking(cruising_mp))
+            * super::construction::SPEED_PER_MP;
+    }
+
     /// Test a chassis technology by its full name or the reference's abbreviation.
     pub fn has_technology(&self, technology: super::Technology) -> bool {
         let (name, abbreviation) = technology.names();
@@ -82,7 +90,7 @@ impl VehicleTemplate {
     /// type's listed weight times 1.5, rounded up to the half ton; a hovercraft's engine weighs
     /// at least a fifth of the vehicle. Stationary installations carry no engine.
     pub fn engine(&self) -> Result<VehicleEngine> {
-        let nominal_rating = super::engine::rated_output(self.tons, self.max_speed)?;
+        let nominal_rating = super::engine::rated_output(self.tons, self.walk_mp);
         let suspension = self.movement.suspension(self.tons);
         let weight_rating = if self.movement == VehicleMovement::Stationary {
             0

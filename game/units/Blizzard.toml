@@ -2,7 +2,7 @@ name = "Blizzard"
 class = "vehicle"
 movement = "hover"
 tons = 25
-walk_mp = 14
+walk_mp = 9
 cargo_space = 600
 specials = ["CargoTech"]
 

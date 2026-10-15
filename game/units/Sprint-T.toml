@@ -2,7 +2,7 @@ name = "Sprint"
 class = "vtol"
 movement = "vtol"
 tons = 10
-walk_mp = 20
+walk_mp = 13
 cargo_space = 0
 specials = ["CargoTech"]
 

@@ -2,7 +2,7 @@ name = "Donar"
 class = "vtol"
 movement = "vtol"
 tons = 21
-walk_mp = 14
+walk_mp = 9
 heat_sinks = 12
 
 [construction]

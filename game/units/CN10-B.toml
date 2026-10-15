@@ -2,7 +2,7 @@ name = "Centurion"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 6
+walk_mp = 4
 radio = 4
 
 [construction]

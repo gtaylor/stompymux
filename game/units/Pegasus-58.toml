@@ -2,7 +2,7 @@ name = "Pegasus"
 class = "vehicle"
 movement = "hover"
 tons = 35
-walk_mp = 14
+walk_mp = 9
 specials = ["SearchLight"]
 
 [sections.left_side]
