@@ -168,6 +168,10 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   Any fusion engine weighs half again its listed weight; an `ice` engine weighs
   twice a standard fusion engine and needs power amplifiers (a tenth of the
   energy weapons' mass) for lasers and PPCs.
+- A Clan engine is an ICE, a standard fusion or a Clan XL engine, never a light
+  or compact one, and Clan armor is standard or Clan ferro-fibrous, never light
+  or heavy ferro-fibrous (TechManual pp. 100, 105). An Inner Sphere XL engine on
+  a Clan vehicle needs `mixed_tech` and `engine_tech = "inner_sphere"`.
 - Heat sinks are single, at a ton each beyond the ten a fusion engine carries
   free, and must cover the heat of every energy weapon firing at once.
 - Armor may not exceed 3.5 points per ton plus 40, and a rotor carries at most

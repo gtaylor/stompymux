@@ -177,6 +177,7 @@ impl VehicleTemplate {
             return Ok(report);
         }
         self.check_chassis()?;
+        self.check_clan_availability()?;
         self.check_equipment(&loadout)?;
         ensure!(
             report.armor <= report.maximum_armor,
@@ -274,6 +275,41 @@ impl VehicleTemplate {
                 "The rotor carries {} armor points, more than {ROTOR_MAXIMUM_ARMOR} (TechManual p. 105)",
                 rotor.armor
             );
+        }
+        Ok(())
+    }
+
+    /// Engine and armor types the Clans do not build. A Clan-made engine is a standard or
+    /// Clan XL fusion engine or an ICE, never a light or compact fusion engine (TechManual
+    /// p. 100, Combat Vehicle Engine Space Table); Clan-made armor is standard or Clan
+    /// ferro-fibrous, never light or heavy ferro-fibrous (TechManual p. 105). An Inner Sphere XL
+    /// engine on a Clan vehicle is an engine of the other technology base, which only a
+    /// `mixed_tech` design may build (TechManual p. 46). A mixed-technology design picks a
+    /// component's base with the `engine_tech` and `armor_tech` keys, so the types checked here
+    /// still follow the base each component is built from.
+    fn check_clan_availability(&self) -> Result<()> {
+        if self.clan_engine() {
+            let family = self.engine_family();
+            ensure!(
+                !matches!(family, Some(Engine::Light | Engine::Compact)),
+                "Clan combat vehicles may not use {} fusion engines; Clan engines are ICE, standard or Clan XL fusion (TechManual p. 100)",
+                if family == Some(Engine::Light) {
+                    "light"
+                } else {
+                    "compact"
+                }
+            );
+        }
+        if self.clan_armor() {
+            for (flag, armor) in [
+                ("LtFerroFibrous_Tech", "light ferro-fibrous"),
+                ("HvyFerroFibrous_Tech", "heavy ferro-fibrous"),
+            ] {
+                ensure!(
+                    !self.has_special(flag),
+                    "Clan combat vehicles may not use {armor} armor; Clan vehicles use standard or Clan ferro-fibrous armor (TechManual p. 105)"
+                );
+            }
         }
         Ok(())
     }
@@ -599,6 +635,65 @@ slots = [
                 .insert("specials".into(), specials.into());
             assert_eq!(template.item_slot_limit(), limit, "{specials}");
         }
+    }
+
+    /// Clan vehicles build no light or compact fusion engines and no light or heavy
+    /// ferro-fibrous armor (TechManual pp. 100, 105); an Inner Sphere XL engine on a Clan
+    /// chassis needs a mixed-technology design (TechManual p. 46).
+    #[test]
+    fn clan_vehicles_use_clan_engines_and_armor() {
+        let clan = |construction: &str| {
+            parse(&ZHUKOV.replace(
+                "[construction]\nengine = \"ice\"\n",
+                &format!("[construction]\ntech_base = \"clan\"\n{construction}"),
+            ))
+        };
+        for (construction, expected) in [
+            ("engine = \"light\"\n", "may not use light fusion engines"),
+            (
+                "engine = \"compact\"\n",
+                "may not use compact fusion engines",
+            ),
+            (
+                "armor = \"light_ferro_fibrous\"\n",
+                "may not use light ferro-fibrous armor",
+            ),
+            (
+                "armor = \"heavy_ferro_fibrous\"\n",
+                "may not use heavy ferro-fibrous armor",
+            ),
+            (
+                "engine = \"xl\"\nengine_tech = \"inner_sphere\"\n",
+                "The engine is not Clan technology",
+            ),
+        ] {
+            let error = rejection(&clan(construction));
+            assert!(error.contains(expected), "{construction}: {error}");
+        }
+        // Standard, Clan XL and ICE engines with standard or Clan ferro-fibrous armor pass the
+        // availability check; any refusal is some other rule.
+        for construction in [
+            "",
+            "engine = \"xl\"\n",
+            "engine = \"ice\"\narmor = \"ferro_fibrous\"\n",
+        ] {
+            assert!(
+                clan(construction).check_clan_availability().is_ok(),
+                "{construction}"
+            );
+        }
+        // A mixed-technology Clan design may build an Inner Sphere light engine, but not a
+        // Clan one, which does not exist.
+        let mixed = clan("mixed_tech = true\nengine = \"light\"\nengine_tech = \"inner_sphere\"\n");
+        assert!(mixed.check_clan_availability().is_ok());
+        let clan_light = clan("mixed_tech = true\nengine = \"light\"\n");
+        assert!(clan_light.check_clan_availability().is_err());
+        // Inner Sphere vehicles keep every TechManual engine and armor type.
+        let inner_sphere = parse(&ZHUKOV.replace(
+            "engine = \"ice\"\n",
+            "engine = \"light\"\narmor = \"heavy_ferro_fibrous\"\n",
+        ));
+        assert!(inner_sphere.check_clan_availability().is_ok());
     }
 
     /// The Final Engine Rating rounds up to a multiple of 5 and is never below 10, and fusion
