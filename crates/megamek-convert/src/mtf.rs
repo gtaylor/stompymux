@@ -625,6 +625,7 @@ fn cockpit(value: Option<&str>) -> Result<Option<&'static str>> {
     Ok(match value.to_ascii_lowercase().as_str() {
         "standard cockpit" | "standard" => None,
         "small cockpit" => Some("small"),
+        "torso-mounted cockpit" => Some("torso_mounted"),
         _ => bail!("unsupported cockpit {value}"),
     })
 }
@@ -1015,7 +1016,11 @@ mod tests {
         assert_eq!(armor("Standard(Inner Sphere)").unwrap(), None);
         assert!(armor("Reactive(Inner Sphere)").is_err());
         assert!(armor("Ferro-Lamellor(Clan)").is_err());
-        assert!(cockpit(Some("Torso-Mounted Cockpit")).is_err());
+        assert_eq!(
+            cockpit(Some("Torso-Mounted Cockpit")).unwrap(),
+            Some("torso_mounted")
+        );
+        assert!(cockpit(Some("Command Console")).is_err());
         assert_eq!(gyro(Some("Heavy Duty Gyro")).unwrap(), Some("heavy_duty"));
         assert_eq!(
             heat_sinks("10 Double", TechBase::Clan).unwrap(),

@@ -356,8 +356,12 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
         } else {
             400
         }) as f64;
+    // A torso-mounted cockpit costs 750,000 C-bills (Tactical Operations: Advanced Units &
+    // Equipment p. 218).
     total += if flag(template, "SmallCockpit_Tech") {
         175000.0
+    } else if flag(template, "TorsoCockpit_Tech") {
+        750000.0
     } else {
         200000.0
     };

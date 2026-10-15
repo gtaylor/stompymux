@@ -14,6 +14,10 @@ pub enum Technology {
     CompositeStructure,
     /// Two-ton cockpit that adds one to piloting rolls.
     SmallCockpit,
+    /// Four-ton cockpit in the center torso, with life support in the side torsos and a third
+    /// sensor package; it adds one to piloting rolls and outlives the head (Tactical
+    /// Operations: Advanced Units & Equipment pp. 112-113).
+    TorsoMountedCockpit,
     /// Clan heat sinks that glow in darkness; dissipation follows the chassis sink rules.
     LaserHeatSinks,
     /// Clan ECM suite that also works as an active probe.
@@ -49,11 +53,12 @@ impl DamageClass {
 
 impl Technology {
     /// Every technology handled here.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::HardenedArmor,
         Self::ReinforcedStructure,
         Self::CompositeStructure,
         Self::SmallCockpit,
+        Self::TorsoMountedCockpit,
         Self::LaserHeatSinks,
         Self::Watchdog,
         Self::LaserReflectiveArmor,
@@ -66,6 +71,7 @@ impl Technology {
             Self::ReinforcedStructure => ("ReinforcedInternal_Tech", "RINT"),
             Self::CompositeStructure => ("CompositeInternal_Tech", "CINT"),
             Self::SmallCockpit => ("SmallCockpit_Tech", "SMCPIT"),
+            Self::TorsoMountedCockpit => ("TorsoCockpit_Tech", "TCPIT"),
             Self::LaserHeatSinks => ("LaserHS_Tech", "LHS"),
             Self::Watchdog => ("WatchDog_Tech", "WDOG"),
             Self::LaserReflectiveArmor => ("LaserRefArmor_Tech", "LRARM"),

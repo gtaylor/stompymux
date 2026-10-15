@@ -342,21 +342,18 @@ fn sensor_profile(
     probe: Option<ProbeProfile>,
     jammed: bool,
 ) -> Result<SensorProfile> {
-    let (clan, hits) = match world.btech.constructed_units().get(&observer) {
-        Some(mech) => (
-            mech.definition().has_special("Clan"),
-            mech.system_hits(System::Sensors),
-        ),
+    let (clan, failed) = match world.btech.constructed_units().get(&observer) {
+        Some(mech) => (mech.definition().has_special("Clan"), mech.sensors_failed()),
         None => (
             world.btech.vehicles()[&observer]
                 .definition()
                 .has_special("Clan"),
-            0,
+            false,
         ),
     };
     let status = if map.perception_disabled(MapPerceptionFlag::Sensors) {
         PerceptionStatus::Disabled
-    } else if hits >= 2 {
+    } else if failed {
         PerceptionStatus::Damaged
     } else {
         PerceptionStatus::Ready

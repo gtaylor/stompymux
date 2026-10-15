@@ -495,6 +495,7 @@ mod experience;
 mod physical_experience;
 mod spikes;
 mod talons;
+mod torso_cockpit;
 pub use experience::{ExperienceAward, ExperienceRules, award_character_experience};
 
 pub(crate) mod skill_catalog;

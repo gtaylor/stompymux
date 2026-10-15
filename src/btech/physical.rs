@@ -469,6 +469,9 @@ pub struct PhysicalProfile {
     pub terrain: u8,
     /// Darkness on the target's map, less what searchlights offset.
     pub light: i16,
+    /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind
+    /// (Tactical Operations: Advanced Units & Equipment p. 113).
+    pub sensors: u8,
     /// Direct material damage; trips always have zero.
     pub damage: u16,
     /// Location table for direct impacts; unused by trips and against vehicles, which take the
@@ -987,6 +990,7 @@ fn attack_profile_inner(
     let obscured = map.hex(i64::from(target_position.x), i64::from(target_position.y))?;
     let terrain = obscured.woods_density() + obscured.smoke_density();
     let light = super::light_aim::modifier(world, target, true)?;
+    let sensors = source.blind_cockpit_modifier();
     let tons = source.definition().tons;
     let mut damage = match attack {
         PhysicalAttack::Punch { .. } => ArmAttack::Punch.damage(tons),
@@ -1037,7 +1041,8 @@ fn attack_profile_inner(
             + i32::from(attacker_movement)
             + i32::from(target_movement)
             + i32::from(terrain)
-            + i32::from(light),
+            + i32::from(light)
+            + i32::from(sensors),
         base,
         actuators,
         weapon_modifier,
@@ -1046,6 +1051,7 @@ fn attack_profile_inner(
         target_movement,
         terrain,
         light,
+        sensors,
         damage,
         hit_table: if victim.prone || victim.vehicle {
             HitTable::Weapon
@@ -1327,10 +1333,11 @@ fn resolve_attack_inner(
                     super::resolve_hit(victim, profile.hit_arc, roll, &mut dice)?
                 } else {
                     Hit {
-                        section: profile.hit_table.location(
-                            victim.chassis(),
+                        section: super::hit::d6_location(
+                            victim,
+                            profile.hit_table,
                             profile.hit_arc,
-                            dice.d6(),
+                            &mut dice,
                         )?,
                         rear_armor: profile.hit_arc == HitArc::Rear,
                         through_armor_critical: false,

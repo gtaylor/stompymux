@@ -59,14 +59,14 @@ impl Mech {
             -1024
         };
         let gyro = self.gyro().mass(gyro);
-        let cockpit = if survives(MechSection::Head) {
-            if definition.has_technology(Technology::SmallCockpit) {
-                2 * 1024
-            } else {
-                3 * 1024
-            }
-        } else {
+        let cockpit = if !survives(self.cockpit_section()) {
             0
+        } else if definition.has_technology(Technology::SmallCockpit) {
+            2 * 1024
+        } else if definition.has_technology(Technology::TorsoMountedCockpit) {
+            4 * 1024
+        } else {
+            3 * 1024
         };
         let original: u32 = definition
             .sections

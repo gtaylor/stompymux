@@ -79,7 +79,7 @@ armor = "ferro_fibrous"
 | `engine` | `standard`, `xl`, `light`, `xxl`, `compact`, `ice` |
 | `engine_rating` | Integer: the engine rating the record sheet states. For a mech it must be tonnage x `walk_mp` (TechManual p. 48); for a vehicle or VTOL it must be the Final Engine Rating, tonnage x cruising MP less the suspension factor, rounded up to a multiple of 5 and at least 10 (TechManual p. 100). A template without it derives the rating from its movement points; every shipped mech and vehicle declares it. |
 | `gyro` | `standard`, `xl`, `compact`, `heavy_duty` |
-| `cockpit` | `standard`, `small` |
+| `cockpit` | `standard`, `small`, `torso_mounted` (Tactical Operations: Advanced Units & Equipment p. 112: four tons in the center torso with a sensor package, a life support slot in each side torso and two sensors left in the head) |
 | `structure` | `standard`, `endo_steel`, `composite`, `reinforced` |
 | `armor` | `standard`, `ferro_fibrous`, `light_ferro_fibrous`, `heavy_ferro_fibrous`, `stealth`, `hardened`, `laser_reflective` |
 | `heat_sinks` | `single`, `double`, `laser`; Clan units default to doubles, and laser heat sinks are Clan only |
@@ -228,10 +228,12 @@ where a unit differs, such as a vehicle location with no structure
 In biped and quad mechs, construction places the fixed equipment, which
 `slots` then leaves out:
 
-- **Head:** life support, sensors and cockpit, laid out for the cockpit type.
-- **Centre torso:** engine and gyro slots for the engine and gyro types.
-- **Side torsos:** the engine's side slots, starting at slot 1 or at
-  `engine_at`.
+- **Head:** life support, sensors and cockpit, laid out for the cockpit type;
+  a torso-mounted cockpit leaves only the two sensors.
+- **Centre torso:** engine and gyro slots for the engine and gyro types, then a
+  torso-mounted cockpit and its sensor package.
+- **Side torsos:** a torso-mounted cockpit's life support slot first, then the
+  engine's side slots, starting at the next slot or at `engine_at`.
 - **Arms and legs:** shoulder or hip, then upper, lower and hand or foot
   actuators.
 
@@ -315,8 +317,7 @@ Every converted unit must load and construct exactly as the game would, so the
 tool refuses anything stompymux cannot field instead of dropping it: other unit
 types (LAMs, QuadVees, tripods, support and superheavy vehicles, naval and
 aerospace units, infantry), construction technology without a `[construction]`
-choice (such as fuel cell engines, torso-mounted cockpits or industrial
-structure), and weapons, equipment or ammunition munitions with no stompymux
+choice (such as fuel cell engines or industrial structure), and weapons, equipment or ammunition munitions with no stompymux
 item. A refused file is reported on standard error and writes nothing; the
 other files still convert, and the exit status is non-zero.
 

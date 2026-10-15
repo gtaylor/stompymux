@@ -611,11 +611,7 @@ pub(super) fn weapon_modifiers(
     )?;
     aim.attacker_movement = attacker.attacker_movement_modifier();
     aim.heat = attacker.heat().to_hit_modifier();
-    aim.sensors = match attacker.system_hits(System::Sensors) {
-        0 => 0,
-        1 => 2,
-        _ => 75,
-    };
+    aim.sensors = attacker.sensor_aim_modifier();
     aim.mounting_section = attacker.mounting_modifier(mount.criticals[0].section);
     aim.beacon_accuracy = i8::from(attacker.has_beacon(super::BeaconKind::Haywire));
     // A surviving MRM Apollo system negates the MRM's +1 to hit (Tactical Operations: Advanced

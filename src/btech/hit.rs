@@ -178,12 +178,18 @@ pub fn resolve_hit(target: &Mech, arc: HitArc, roll: u8, dice: &mut Dice) -> Res
     use MechSection::*;
     ensure!((2..=12).contains(&roll), "Invalid hit-location roll");
     let critical_proof = target.definition().has_special("CritProof_Tech");
-    let roll = if critical_proof {
+    let mut roll = if critical_proof {
         dice.generic_roll()
     } else {
         roll
     };
-    let section = HitTable::Weapon.location(target.chassis(), arc, roll)?;
+    let mut section = HitTable::Weapon.location(target.chassis(), arc, roll)?;
+    // A torso-mounted cockpit's Mech re-rolls hits on its destroyed head (Tactical Operations:
+    // Advanced Units & Equipment p. 113).
+    while section == Head && target.rerolls_head_hits() {
+        roll = dice.generic_roll();
+        section = HitTable::Weapon.location(target.chassis(), arc, roll)?;
+    }
     if target.combat_safe {
         return Ok(Hit {
             section: LeftArm,
@@ -198,4 +204,20 @@ pub fn resolve_hit(target: &Mech, arc: HitArc, roll: u8, dice: &mut Dice) -> Res
         rear_armor: arc == HitArc::Rear && matches!(section, LeftTorso | RightTorso | CenterTorso),
         through_armor_critical: critical,
     })
+}
+
+/// A d6 hit location on a punch or kick `table`, re-rolling hits on a torso-mounted cockpit
+/// Mech's destroyed head (Tactical Operations: Advanced Units & Equipment p. 113).
+pub(super) fn d6_location(
+    target: &Mech,
+    table: HitTable,
+    arc: HitArc,
+    dice: &mut Dice,
+) -> Result<MechSection> {
+    loop {
+        let section = table.location(target.chassis(), arc, dice.d6())?;
+        if section != MechSection::Head || !target.rerolls_head_hits() {
+            return Ok(section);
+        }
+    }
 }

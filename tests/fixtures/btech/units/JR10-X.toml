@@ -1,0 +1,81 @@
+name = "Jenner"
+class = "mech"
+movement = "biped"
+tons = 35
+walk_mp = 7
+jump_mp = 7
+
+[construction]
+tech_base = "inner_sphere"
+engine = "xl"
+engine_rating = 245
+gyro = "compact"
+cockpit = "torso_mounted"
+structure = "composite"
+armor = "light_ferro_fibrous"
+heat_sinks = "double"
+
+[sections.left_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = "5-6", item = "LtFerroFibrous" },
+    { at = 7, item = "NullSig_Device" },
+]
+
+[sections.right_arm]
+armor = 12
+omit = ["lower_actuator", "hand_actuator"]
+slots = [
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = "5-6", item = "LtFerroFibrous" },
+    { at = 7, item = "NullSig_Device" },
+]
+
+[sections.left_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-10", item = "JumpJet" },
+    { at = 11, item = "LtFerroFibrous" },
+    { at = 12, item = "NullSig_Device" },
+]
+
+[sections.right_torso]
+armor = 12
+rear = 4
+slots = [
+    { at = "5-6", item = "AngelEcm" },
+    { at = "7-9", item = "JumpJet" },
+    { at = 10, item = "LtFerroFibrous" },
+    { at = 11, item = "NullSig_Device" },
+]
+
+[sections.center_torso]
+armor = 16
+rear = 5
+slots = [
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "NullSig_Device" },
+]
+
+[sections.left_leg]
+armor = 16
+slots = [
+    { at = 5, item = "NullSig_Device" },
+]
+
+[sections.right_leg]
+armor = 16
+slots = [
+    { at = 5, item = "NullSig_Device" },
+]
+
+[sections.head]
+armor = 9
+slots = [
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = 5, item = "LtFerroFibrous" },
+]

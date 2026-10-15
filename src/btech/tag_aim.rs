@@ -2,7 +2,7 @@
 //! weapon attack: gunnery, the designator's range brackets (TAG 5/9/15, light TAG 3/6/9), attacker and target movement,
 //! heat, sensor and control damage, the multiple-targets rule, cover and light. TAG has no
 //! ammunition, mounting-section or targeting-computer terms.
-use super::{AimModifiers, AimRules, RangeBracket, StealthRange, System, WeaponRange};
+use super::{AimModifiers, AimRules, RangeBracket, StealthRange, WeaponRange};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
@@ -70,11 +70,7 @@ pub fn tag_aim_modifiers(
             (
                 mech.attacker_movement_modifier(),
                 mech.heat().to_hit_modifier(),
-                match mech.system_hits(System::Sensors) {
-                    0 => 0,
-                    1 => 2,
-                    _ => 75,
-                },
+                mech.sensor_aim_modifier(),
                 0,
                 mech.has_beacon(super::BeaconKind::Haywire),
             )

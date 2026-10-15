@@ -466,10 +466,20 @@ impl Mech {
         };
         let armor_modifier =
             armor_type_modifier(|technology| definition.has_technology(technology));
+        // A torso-mounted cockpit counts the center torso's armor, front and rear, twice
+        // (Tactical Operations: Advanced Units & Equipment p. 193).
+        let torso_cockpit = self.torso_mounted_cockpit();
         let armor: u32 = self
             .sections()
-            .values()
-            .map(|section| u32::from(section.armor) + u32::from(section.rear))
+            .iter()
+            .map(|(&section, state)| {
+                let points = u32::from(state.armor) + u32::from(state.rear);
+                if torso_cockpit && section == MechSection::CenterTorso {
+                    points * 2
+                } else {
+                    points
+                }
+            })
             .sum();
         let structure: u32 = self
             .sections()
@@ -638,7 +648,11 @@ impl Mech {
             equipment: physical,
             tonnage: f64::from(tons) * if triple_myomer { 1.5 } else { 1.0 },
             speed_mp: running + jumping.div_ceil(2),
-            final_multiplier: if definition.has_technology(Technology::SmallCockpit) {
+            // Small and torso-mounted cockpits multiply the final value by 0.95 (TechManual
+            // p. 303; Tactical Operations: Advanced Units & Equipment p. 193).
+            final_multiplier: if definition.has_technology(Technology::SmallCockpit)
+                || torso_cockpit
+            {
                 0.95
             } else {
                 1.0

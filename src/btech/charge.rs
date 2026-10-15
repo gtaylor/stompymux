@@ -289,7 +289,10 @@ fn charge_profile_for(
         })
         + i32::from(super::aim::ground_physical_target_modifier(world, victim))
         + i32::from(terrain)
-        + i32::from(super::light_aim::modifier(world, target, true)?);
+        + i32::from(super::light_aim::modifier(world, target, true)?)
+        // A blinded torso-mounted cockpit (Tactical Operations: Advanced Units & Equipment
+        // p. 113).
+        + i32::from(source.blind_cockpit_modifier());
     ensure!(
         target_number <= 12,
         "Charge: BTH {target_number}\tYou choose not to charge."
@@ -346,7 +349,7 @@ fn packets(
             super::resolve_hit(unit, arc, roll, &mut dice)?
         } else {
             Hit {
-                section: table.location(unit.chassis(), arc, dice.d6())?,
+                section: super::hit::d6_location(unit, table, arc, &mut dice)?,
                 rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
             }

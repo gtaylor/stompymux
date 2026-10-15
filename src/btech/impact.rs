@@ -1582,7 +1582,9 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             ignition_section = Some(section);
         }
 
-        if section == MechSection::Head {
+        // A torso-mounted cockpit spares its MechWarrior the head hits (Tactical Operations:
+        // Advanced Units & Equipment p. 113).
+        if section == MechSection::Head && !context.unit().torso_mounted_cockpit() {
             context.effect(ImpactEffect::HeadInjury)?;
         }
         if !internal_only {
@@ -1664,8 +1666,9 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             // Reinforced structure halves and composite structure doubles internal damage,
             // including any overflow that transfers onward.
             let structural = context.unit().structure_damage(damage);
-            let head_pilot =
-                (section == MechSection::Head).then(|| context.unit().pilot().is_some());
+            let head_pilot = (section == MechSection::Head
+                && !context.unit().torso_mounted_cockpit())
+            .then(|| context.unit().pilot().is_some());
             let phase = context.damage_phase(section, structural, DamagePhase::Internal)?;
             damage = phase.remaining;
             context.record_phase(phase)?;

@@ -142,6 +142,7 @@ choice!(
     Cockpit {
         Standard = "standard" => [],
         Small = "small" => ["SmallCockpit_Tech", "SMCPIT"],
+        TorsoMounted = "torso_mounted" => ["TorsoCockpit_Tech", "TCPIT"],
     }
 );
 
@@ -643,6 +644,9 @@ pub fn fixed_equipment(
                     (5, LIFE_SUPPORT),
                 ],
                 Cockpit::Small => &[(0, LIFE_SUPPORT), (1, SENSORS), (2, COCKPIT), (3, SENSORS)],
+                // A torso-mounted cockpit leaves the head only its two sensors (Tactical
+                // Operations: Advanced Units & Equipment p. 112).
+                Cockpit::TorsoMounted => &[(0, SENSORS), (1, SENSORS)],
             };
             items.extend(layout.iter().copied());
         }
@@ -667,9 +671,28 @@ pub fn fixed_equipment(
             items.extend((0..front).map(|slot| (slot, ENGINE)));
             items.extend((3..3 + gyro).map(|slot| (slot, GYRO)));
             items.extend((3 + gyro..engine + gyro).map(|slot| (slot, ENGINE)));
+            // A torso-mounted cockpit and its added sensor package follow the engine and gyro.
+            if construction.cockpit == Cockpit::TorsoMounted {
+                ensure!(
+                    engine + gyro + 2 <= 12,
+                    "a torso-mounted cockpit does not fit beside this engine and gyro"
+                );
+                items.insert(engine + gyro, COCKPIT);
+                items.insert(engine + gyro + 1, SENSORS);
+            }
         }
         LeftTorso | RightTorso => {
-            let first = plan.engine_at.unwrap_or(0);
+            // A torso-mounted cockpit moves one life support slot to each side torso, ahead of
+            // any engine slots there (Tactical Operations: Advanced Units & Equipment p. 112).
+            let torso_cockpit = construction.cockpit == Cockpit::TorsoMounted;
+            if torso_cockpit {
+                items.insert(0, LIFE_SUPPORT);
+            }
+            let first = plan.engine_at.unwrap_or(u8::from(torso_cockpit));
+            ensure!(
+                !torso_cockpit || first > 0,
+                "a torso-mounted cockpit's life support fills the first side torso slot"
+            );
             ensure!(
                 usize::from(first) + side_engine <= 12,
                 "engine slots run past the section"
@@ -960,6 +983,61 @@ mod tests {
                 .filter(|critical| critical.equipment == LIFE_SUPPORT)
                 .count(),
             1
+        );
+    }
+
+    /// A torso-mounted cockpit sits after the engine and gyro with its sensor package, moves
+    /// a life support slot to the top of each side torso and leaves the head two sensors
+    /// (Tactical Operations: Advanced Units & Equipment p. 112).
+    #[test]
+    fn torso_mounted_cockpits_move_into_the_torsos() {
+        use MechSection::*;
+        let jenner = include_str!("../tests/fixtures/JR7-D.toml");
+        let source = jenner
+            .replacen("[construction]\n", "[construction]\ncockpit = \"torso_mounted\"\n", 1)
+            .replace(
+                "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]",
+                "slots = [\n    { at = \"2-4\", item = \"JumpJet\" },\n]",
+            )
+            .replace(
+                "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"JumpJet\" },",
+                "    { at = 4, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"JumpJet\" },",
+            )
+            .replace(
+                "    { at = 11, item = \"IS.SRM-4\" },\n    { at = 12, item = \"JumpJet\" },\n",
+                "",
+            )
+            .replace(
+                "    { at = 4, item = \"HeatSink\" },",
+                "    { at = 3, item = \"IS.SRM-4\" },\n    { at = 4, item = \"HeatSink\" },",
+            );
+        let template = crate::MechTemplate::parse("JR7-D", &source).unwrap();
+        let slot = |section, slot: u8| {
+            template.sections[&section].criticals[&slot]
+                .equipment
+                .clone()
+        };
+        assert_eq!(
+            (slot(Head, 0), slot(Head, 1)),
+            (SENSORS.into(), SENSORS.into())
+        );
+        assert_eq!(slot(CenterTorso, 10), COCKPIT);
+        assert_eq!(slot(CenterTorso, 11), SENSORS);
+        assert_eq!(slot(LeftTorso, 0), LIFE_SUPPORT);
+        assert_eq!(slot(RightTorso, 0), LIFE_SUPPORT);
+        // Everything else passes; the cockpit's extra ton leaves the Jenner overweight.
+        let rejection = crate::check_template(&template)
+            .rejection
+            .unwrap_or_default();
+        assert!(rejection.contains("over the 35-ton chassis"), "{rejection}");
+        let rendered = template.to_document().unwrap();
+        assert!(rendered.contains("cockpit = \"torso_mounted\""));
+        assert!(!rendered.contains("engine_at"));
+        assert_eq!(
+            crate::MechTemplate::parse("JR7-D", &rendered)
+                .unwrap()
+                .sections,
+            template.sections
         );
     }
 

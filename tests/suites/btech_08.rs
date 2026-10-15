@@ -5,6 +5,9 @@ use stompymux_test_support as support;
 #[path = "../btech_aim.rs"]
 mod btech_aim;
 
+#[path = "../btech_torso_cockpit.rs"]
+mod btech_torso_cockpit;
+
 #[path = "../btech_apods.rs"]
 mod btech_apods;
 

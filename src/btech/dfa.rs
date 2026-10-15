@@ -15,6 +15,9 @@ pub struct DfaProfile {
     pub skill: i32,
     /// Darkness on the target's map, less what searchlights offset.
     pub light: i32,
+    /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind
+    /// (Tactical Operations: Advanced Units & Equipment p. 113).
+    pub sensors: i32,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -158,7 +161,8 @@ fn dfa_profile_inner(
             target,
             rules.fall.extended_piloting,
         )?);
-    let target_number = base + skill + attacker_movement + target_movement + light;
+    let sensors = i32::from(source.blind_cockpit_modifier());
+    let target_number = base + skill + attacker_movement + target_movement + light + sensors;
     ensure!(
         target_number <= 12,
         "DFA: BTH {target_number}\tYou choose not to attack and land from your jump."
@@ -177,6 +181,7 @@ fn dfa_profile_inner(
         target_movement,
         skill,
         light,
+        sensors,
         inflicted_damage,
         received_damage,
         target_arc: HitArc::from_bearing(
@@ -273,7 +278,7 @@ fn packets(
             super::resolve_hit(unit, arc, roll, &mut dice)?
         } else {
             Hit {
-                section: table.location(unit.chassis(), arc, dice.d6())?,
+                section: super::hit::d6_location(unit, table, arc, &mut dice)?,
                 rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
             }

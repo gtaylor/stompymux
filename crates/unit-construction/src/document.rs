@@ -838,12 +838,16 @@ fn fit_section(
         }
         _ => vec![Vec::new()],
     };
+    // Side torso engine slots start at the top, or after the life support slot a
+    // torso-mounted cockpit moves there; only a departure from that is stated.
+    let default_engine_at =
+        u8::from(unit.construction.cockpit == super::construction::Cockpit::TorsoMounted);
     let engine_at = layout
         .criticals
         .iter()
         .find(|(_, critical)| critical.equipment == "Engine")
         .map(|(slot, _)| *slot)
-        .filter(|slot| *slot != 0 && matches!(section, LeftTorso | RightTorso));
+        .filter(|slot| *slot != default_engine_at && matches!(section, LeftTorso | RightTorso));
     omissions.iter().find_map(|omit| {
         let plan = SectionPlan {
             omit,
