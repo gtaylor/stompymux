@@ -59,7 +59,7 @@ impl System {
     /// Multiplier applied to the BV of each missile launcher this fire control system serves:
     /// Artemis IV 1.2 (TechManual p. 317, note B), Artemis V 1.3 (Tactical Operations:
     /// Advanced Units & Equipment p. 197, note J) and the MRM "Apollo" system 1.15 (ibid.
-    /// p. 194, note L). The increase does not apply to ammunition.
+    /// p. 195, note L). The increase does not apply to ammunition.
     pub fn launcher_battle_value_multiplier(self) -> Option<f64> {
         match self {
             Self::ArtemisIv => Some(1.2),

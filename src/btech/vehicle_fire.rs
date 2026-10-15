@@ -179,24 +179,15 @@ fn fire_shot(
         prepared,
     )?;
     // The array's other guns spend their ammunition and recycle with the one fired.
-    if let Some(guns) = &volley {
-        for &gun in guns.iter().filter(|gun| **gun != weapon_index) {
-            // Vehicles shed weapon heat, so only the spent rounds and recycle matter here.
-            let _linked = super::vehicle_readiness::reserve_prepared_weapon(
-                &mut candidate,
-                shooter,
-                pilot,
-                gun,
-                launch.expenditure.launched,
-                None,
-            )?;
-        }
-        launch.launch_notices.push(Notice {
-            unit: shooter,
-            text: format!("Your machine gun array fires {} guns together.", guns.len()),
-        });
-    }
-    let array = volley.as_ref().map(|guns| guns.len() as u8);
+    let array = super::machine_gun_array::fire_linked_guns(
+        &mut candidate,
+        shooter,
+        pilot,
+        weapon_index,
+        volley.as_deref(),
+        launch.expenditure.launched,
+        &mut launch.launch_notices,
+    )?;
     let aimed = super::aimed_hit::prepare(
         &mut candidate,
         super::aimed_hit::AimedLaunch {

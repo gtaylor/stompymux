@@ -26,7 +26,7 @@ fn jenner(apollo: bool) -> MechTemplate {
 }
 
 /// The Apollo system serves the MRM in its location, raises the launcher's BV by 15 percent
-/// (Tactical Operations: Advanced Units & Equipment p. 194, note L), and every MRM needs one
+/// (Tactical Operations: Advanced Units & Equipment p. 195, note L), and every MRM needs one
 /// once any has one (ibid. p. 142).
 #[test]
 fn apollo_links_and_battle_value() {

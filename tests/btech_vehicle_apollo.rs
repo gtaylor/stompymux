@@ -175,7 +175,7 @@ async fn vehicle_apollo_takes_one_from_the_cluster_roll() {
 }
 
 /// A vehicle's Apollo system raises its launcher's BV by 15 percent (Tactical Operations:
-/// Advanced Units & Equipment p. 194, note L), and a machine gun array adds its guns' BV
+/// Advanced Units & Equipment p. 195, note L), and a machine gun array adds its guns' BV
 /// times 0.1 (Tactical Operations: Advanced Units & Equipment p. 197, note L), as on a 'Mech.
 #[test]
 fn vehicle_apollo_and_array_battle_value() {

@@ -717,9 +717,13 @@ on a Mech, vehicle or VTOL.
 Firing any linked gun fires every linked gun that is ready and not set to
 rapid fire, as one attack: one to-hit roll, then a roll on the Cluster Hits
 Table column for the number of guns, every hit striking one location. Each gun
-spends its own round and recycles. A gun in rapid fire, or one left alone after
-the others are destroyed or recycling, fires by itself, and so does every gun
-once the array is destroyed (Total Warfare p. 137).
+spends its own round and recycles. A shot at a hex fires the array the same way,
+its hits striking the hex as one blow. When the bins cannot feed every gun, the
+gun you fired draws first and only the guns that get a round fire; the Cluster
+Hits column follows the guns that fired, and you are told how many did. A gun
+in rapid fire, or one left alone after the others are destroyed or recycling,
+fires by itself, and so does every gun once the array is destroyed (Total
+Warfare p. 137).
 
 ### Torso-mounted cockpits
 
