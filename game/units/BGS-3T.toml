@@ -9,6 +9,7 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+engine = "xl"
 heat_sinks = "double"
 
 [sections.front_left_leg]
@@ -20,7 +21,6 @@ armor = 29
 [sections.left_torso]
 armor = 22
 rear = 7
-engine_slots = 3
 slots = [
     { at = "4-5", item = "IS.ERLargeLaser" },
 ]
@@ -28,15 +28,10 @@ slots = [
 [sections.right_torso]
 armor = 22
 rear = 7
-engine_slots = 1
-slots = [
-    { at = "2-12", item = "IS.HeavyGaussRifle" },
-]
 
 [sections.center_torso]
 armor = 31
 rear = 10
-engine_slots = 8
 
 [sections.rear_left_leg]
 armor = 29
@@ -52,3 +47,10 @@ slots = [
 
 [sections.head]
 armor = 9
+
+[[split_mounts]]
+item = "IS.HeavyGaussRifle"
+placements = [
+    { section = "right_torso", at = "4-12" },
+    { section = "center_torso", at = "11-12" },
+]

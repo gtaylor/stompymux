@@ -4,6 +4,7 @@ movement = "biped"
 tons = 85
 walk_mp = 6
 heat_sinks = 40
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,16 +15,17 @@ armor = "ferro_fibrous"
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "CL.GaussRifle", modes = ["OnTC"] },
-    { at = "9-10", item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = 11, item = "FerroFibrous" },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = 9, item = "CL.ERSmallLaser" },
+    { at = "10-11", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 28
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "4-6", item = "CL.ERMediumLaser" },
     { at = "7-11", item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
     { at = 12, item = "FerroFibrous" },
 ]
@@ -41,13 +43,13 @@ armor = 26
 rear = 10
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-8", item = "TargetingComputer" },
-    { at = "9-10", item = "CL.SRM-6" },
+    { at = "5-6", item = "CL.SRM-6" },
+    { at = "7-10", item = "TargetingComputer" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 34
+armor = 42
 rear = 10
 slots = [
     { at = 11, item = "CL.NarcBeacon" },

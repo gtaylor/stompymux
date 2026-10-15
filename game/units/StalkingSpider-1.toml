@@ -38,14 +38,14 @@ slots = [
 armor = 15
 rear = 4
 slots = [
-    { at = "1-2", item = "Masc" },
-    { at = "3-4", item = "CL.ERPPC" },
+    { at = "1-2", item = "CL.ERPPC" },
+    { at = "3-4", item = "Masc" },
     { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 21
-rear = 6
+rear = 5
 slots = [
     { at = 11, item = "JumpJet" },
     { at = 12, item = "FerroFibrous" },

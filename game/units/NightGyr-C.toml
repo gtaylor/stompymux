@@ -8,19 +8,19 @@ heat_sinks = 36
 radio = 5
 cargo_space = 0
 max_suits = 0
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
-heat_sinks = "laser"
 
 [sections.left_arm]
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "CL.UltraAC/2", modes = ["OnTC"] },
+    { at = "3-8", item = "CL.UltraAC/2" },
     { at = "9-10", item = "Ammo_CL.UltraAC/2", rounds = 45 },
     { at = "11-12", item = "FerroFibrous" },
 ]
@@ -29,8 +29,8 @@ slots = [
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERLargeLaser", modes = ["OnTC"] },
-    { at = "5-10", item = "HeatSink" },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-10", item = "CL.ERLargeLaser" },
     { at = "11-12", item = "EndoSteel" },
 ]
 
@@ -38,9 +38,9 @@ slots = [
 armor = 22
 rear = 10
 slots = [
-    { at = 3, item = "CL.ERMediumLaser", modes = ["OnTC"] },
-    { at = "4-7", item = "HeatSink" },
-    { at = "8-12", item = "FerroFibrous" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "CL.ERMediumLaser" },
+    { at = "8-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -48,11 +48,11 @@ armor = 22
 rear = 10
 slots = [
     { at = "3-7", item = "TargetingComputer" },
-    { at = "8-12", item = "EndoSteel" },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 34
+armor = 33
 rear = 10
 slots = [
     { at = "11-12", item = "HeatSink" },
@@ -73,5 +73,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = 4, item = "CL.ERMediumLaser" },
 ]

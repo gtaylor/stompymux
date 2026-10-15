@@ -10,24 +10,25 @@ cargo_space = 0
 [construction]
 engine = "xl"
 structure = "endo_steel"
+armor = "stealth"
 heat_sinks = "double"
 
 [sections.left_arm]
 armor = 9
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = "6-9", item = "EndoSteel" },
-    { at = "11-12", item = "StealthArmor" },
+    { at = "3-4", item = "IS.ERLargeLaser" },
+    { at = "5-8", item = "EndoSteel" },
+    { at = "9-10", item = "StealthArmor" },
 ]
 
 [sections.right_arm]
 armor = 9
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = "6-9", item = "EndoSteel" },
-    { at = "11-12", item = "StealthArmor" },
+    { at = "3-4", item = "IS.ERLargeLaser" },
+    { at = "5-8", item = "EndoSteel" },
+    { at = "9-10", item = "StealthArmor" },
 ]
 
 [sections.left_torso]

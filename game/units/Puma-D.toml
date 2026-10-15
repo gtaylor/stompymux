@@ -4,6 +4,7 @@ movement = "biped"
 tons = 35
 walk_mp = 9
 heat_sinks = 20
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -32,8 +33,8 @@ armor = 12
 rear = 4
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = 5, item = "CL.SRM-2" },
-    { at = 6, item = "Ammo_CL.SRM-2", rounds = 50 },
+    { at = 5, item = "CL.StreakSRM-2" },
+    { at = 6, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
     { at = 7, item = "EndoSteel" },
     { at = "8-9", item = "FerroFibrous" },
 ]
@@ -43,8 +44,8 @@ armor = 12
 rear = 4
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = 5, item = "CL.SRM-2" },
-    { at = 6, item = "Ammo_CL.SRM-2", rounds = 50 },
+    { at = 5, item = "CL.StreakSRM-2" },
+    { at = 6, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
     { at = 7, item = "EndoSteel" },
     { at = "8-9", item = "FerroFibrous" },
 ]

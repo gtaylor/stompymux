@@ -13,6 +13,7 @@ max_suits = 0
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
+myomer = "triple_strength"
 
 [sections.left_arm]
 armor = 20

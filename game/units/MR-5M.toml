@@ -47,9 +47,9 @@ slots = [
 
 [sections.center_torso]
 armor = 40
-rear = 16
+rear = 15
 slots = [
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 12, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
 ]
 

@@ -15,10 +15,11 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 11
+omit = ["hand_actuator"]
 slots = [
-    { at = "5-7", item = "IS.iNarcBeacon" },
-    { at = "8-10", item = "HeatSink" },
-    { at = "11-12", item = "Ammo_IS.iNarcBeacon", rounds = 4 },
+    { at = "4-6", item = "IS.iNarcBeacon" },
+    { at = "7-9", item = "HeatSink" },
+    { at = "10-12", item = "Ammo_IS.iNarcBeacon", rounds = 4 },
 ]
 
 [sections.right_arm]

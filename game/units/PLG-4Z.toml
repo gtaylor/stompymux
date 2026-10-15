@@ -10,13 +10,14 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+armor = "stealth"
 heat_sinks = "double"
 
 [sections.left_arm]
 armor = 34
 slots = [
     { at = "5-6", item = "Ecm" },
-    { at = "8-9", item = "StealthArmor" },
+    { at = "7-8", item = "StealthArmor" },
 ]
 
 [sections.right_arm]
@@ -30,8 +31,8 @@ slots = [
 armor = 32
 rear = 10
 slots = [
-    { at = "1-7", item = "IS.GaussRifle" },
-    { at = 8, item = "JumpJet" },
+    { at = 1, item = "JumpJet" },
+    { at = "2-8", item = "IS.GaussRifle" },
     { at = 9, item = "Ammo_IS.GaussRifle", rounds = 8 },
     { at = 10, item = "Case" },
     { at = "11-12", item = "StealthArmor" },
@@ -41,8 +42,8 @@ slots = [
 armor = 32
 rear = 10
 slots = [
-    { at = "1-7", item = "IS.GaussRifle" },
-    { at = 8, item = "JumpJet" },
+    { at = 1, item = "JumpJet" },
+    { at = "2-8", item = "IS.GaussRifle" },
     { at = 9, item = "Ammo_IS.GaussRifle", rounds = 8 },
     { at = 10, item = "Case" },
     { at = "11-12", item = "StealthArmor" },

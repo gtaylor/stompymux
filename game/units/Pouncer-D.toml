@@ -5,6 +5,7 @@ tons = 40
 walk_mp = 9
 jump_mp = 5
 heat_sinks = 24
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -15,51 +16,49 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 12
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = "6-8", item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "5-6", item = "HeatSink" },
+    { at = "7-9", item = "CL.ERMediumLaser" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 12
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = "6-8", item = "CL.ERMediumLaser", modes = ["OnTC"] },
-    { at = "9-12", item = "HeatSink" },
+    { at = "5-6", item = "HeatSink" },
+    { at = "7-9", item = "CL.ERMediumLaser" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 11
 rear = 7
-engine_at = 4
 slots = [
-    { at = 1, item = "EndoSteel" },
-    { at = "2-3", item = "FerroFibrous" },
-    { at = "6-7", item = "JumpJet" },
-    { at = 8, item = "TargetingComputer" },
-    { at = "9-10", item = "CL.StreakSRM-6" },
-    { at = 11, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = 12, item = "CL.ERSmallLaser", modes = ["RearMount"] },
+    { at = "3-4", item = "JumpJet" },
+    { at = "5-6", item = "CL.StreakSRM-6" },
+    { at = 7, item = "CL.ERSmallLaser", modes = ["RearMount"] },
+    { at = "8-9", item = "TargetingComputer" },
+    { at = 10, item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 11
 rear = 7
-engine_at = 4
 slots = [
-    { at = 1, item = "EndoSteel" },
-    { at = "2-3", item = "FerroFibrous" },
-    { at = "6-7", item = "JumpJet" },
-    { at = "8-9", item = "CL.StreakSRM-6" },
-    { at = 10, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = "11-12", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-6", item = "JumpJet" },
+    { at = "7-8", item = "CL.StreakSRM-6" },
+    { at = 9, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = 10, item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 12
 rear = 8
 slots = [
-    { at = 11, item = "EndoSteel" },
-    { at = 12, item = "JumpJet" },
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]

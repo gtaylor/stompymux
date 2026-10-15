@@ -33,7 +33,7 @@ rear = 10
 slots = [
     { at = "4-5", item = "IS.MediumPulseLaser" },
     { at = 6, item = "IS.MachineGun", modes = ["RearMount"] },
-    { at = "7-12", item = "FerroFibrous" },
+    { at = "7-11", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -42,14 +42,14 @@ rear = 10
 slots = [
     { at = "4-5", item = "IS.MediumPulseLaser" },
     { at = 6, item = "IS.MachineGun", modes = ["RearMount"] },
-    { at = "7-12", item = "FerroFibrous" },
+    { at = "7-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 35
 rear = 15
 slots = [
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 12, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
 ]
 

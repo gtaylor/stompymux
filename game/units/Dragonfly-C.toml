@@ -5,6 +5,7 @@ tons = 40
 walk_mp = 12
 jump_mp = 8
 heat_sinks = 20
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -35,7 +36,7 @@ slots = [
     { at = 5, item = "CL.Anti-MissileSystem" },
     { at = 6, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
     { at = "7-9", item = "EndoSteel" },
-    { at = "10-11", item = "FerroFibrous" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -44,9 +45,9 @@ rear = 7
 slots = [
     { at = "3-4", item = "JumpJet" },
     { at = "5-6", item = "CL.MachineGun" },
-    { at = 7, item = "Ammo_CL.MachineGun", rounds = 200 },
+    { at = 7, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = "8-10", item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

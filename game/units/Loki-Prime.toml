@@ -4,7 +4,7 @@ movement = "biped"
 tons = 65
 walk_mp = 8
 heat_sinks = 26
-specials = ["SearchLight"]
+specials = ["OmniMech_Tech", "SearchLight"]
 
 [construction]
 tech_base = "clan"
@@ -14,24 +14,24 @@ engine = "xl"
 armor = 11
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.ERPPC" },
 ]
 
 [sections.right_arm]
 armor = 11
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.ERPPC" },
 ]
 
 [sections.left_torso]
 armor = 14
 rear = 7
 slots = [
-    { at = "3-5", item = "TargetingComputer" },
-    { at = 6, item = "Ecm" },
-    { at = 7, item = "BeagleProbe" },
-    { at = "8-10", item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "3-5", item = "CL.ERMediumLaser" },
+    { at = 6, item = "BeagleProbe" },
+    { at = 7, item = "Ecm" },
+    { at = "8-10", item = "TargetingComputer" },
 ]
 
 [sections.right_torso]
@@ -39,9 +39,9 @@ armor = 14
 rear = 7
 slots = [
     { at = "3-4", item = "CL.StreakSRM-6" },
-    { at = "5-7", item = "CL.MachineGun" },
-    { at = 8, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = "5-6", item = "CL.MachineGun" },
+    { at = 7, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = 8, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.center_torso]
@@ -54,13 +54,13 @@ slots = [
 [sections.left_leg]
 armor = 15
 slots = [
-    { at = "5-6", item = "CL.A-Pod" },
+    { at = "5-6", item = "IS.A-Pod" },
 ]
 
 [sections.right_leg]
 armor = 15
 slots = [
-    { at = "5-6", item = "CL.A-Pod" },
+    { at = "5-6", item = "IS.A-Pod" },
 ]
 
 [sections.head]

@@ -14,7 +14,7 @@ armor = "ferro_fibrous"
 armor = 30
 slots = [
     { at = "5-6", item = "IS.SRM-6" },
-    { at = "7-12", item = "FerroFibrous" },
+    { at = "7-10", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -29,42 +29,49 @@ slots = [
 armor = 28
 rear = 10
 slots = [
-    { at = 1, item = "Case" },
+    { at = 1, item = "JumpJet" },
     { at = "2-6", item = "IS.LRM-20" },
-    { at = "7-8", item = "Ammo_IS.LRM-20", rounds = 6 },
-    { at = "9-10", item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 11, item = "JumpJet" },
+    { at = "7-8", item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 11, item = "Case" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 28
 rear = 10
 slots = [
-    { at = "1-2", item = "Ammo_IS.GaussRifle", rounds = 8 },
-    { at = "3-4", item = "IS.MediumLaser" },
-    { at = 5, item = "JumpJet" },
+    { at = 1, item = "JumpJet" },
+    { at = "2-3", item = "IS.MediumLaser" },
+    { at = "4-5", item = "Ammo_IS.GaussRifle", rounds = 8 },
     { at = 6, item = "Case" },
-    { at = "7-12", item = "FerroFibrous" },
+    { at = "7-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 40
-rear = 17
+rear = 16
 slots = [
     { at = 11, item = "JumpJet" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.left_leg]
 armor = 38
 slots = [
     { at = 5, item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 38
 slots = [
     { at = 5, item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

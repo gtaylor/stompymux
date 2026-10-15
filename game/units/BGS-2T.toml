@@ -7,45 +7,48 @@ heat_sinks = 22
 cargo_space = 0
 
 [construction]
+engine = "xl"
 heat_sinks = "double"
 
 [sections.front_left_leg]
-armor = 27
+armor = 29
 
 [sections.front_right_leg]
-armor = 27
+armor = 29
 
 [sections.left_torso]
-armor = 21
-rear = 6
-engine_slots = 4
+armor = 22
+rear = 7
 slots = [
-    { at = "5-7", item = "IS.ERPPC" },
+    { at = "4-6", item = "IS.ERPPC" },
 ]
 
 [sections.right_torso]
-armor = 21
-rear = 6
-engine_slots = 2
-slots = [
-    { at = "3-12", item = "IS.UltraAC/20" },
-]
+armor = 22
+rear = 7
 
 [sections.center_torso]
-armor = 30
-rear = 9
+armor = 33
+rear = 10
 
 [sections.rear_left_leg]
-armor = 26
+armor = 28
 slots = [
     { at = "5-6", item = "Ammo_IS.UltraAC/20", rounds = 5 },
 ]
 
 [sections.rear_right_leg]
-armor = 26
+armor = 28
 slots = [
     { at = "5-6", item = "Ammo_IS.UltraAC/20", rounds = 5 },
 ]
 
 [sections.head]
 armor = 9
+
+[[split_mounts]]
+item = "IS.UltraAC/20"
+placements = [
+    { section = "right_torso", at = "4-12" },
+    { section = "center_torso", at = 11 },
+]

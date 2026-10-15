@@ -7,6 +7,7 @@ heat_sinks = 20
 radio = 4
 
 [construction]
+engine = "xl"
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"
@@ -28,15 +29,10 @@ slots = [
 [sections.left_torso]
 armor = 13
 rear = 4
-engine_slots = 2
-slots = [
-    { at = "3-12", item = "IS.UltraAC/20" },
-]
 
 [sections.right_torso]
 armor = 13
 rear = 4
-engine_slots = 3
 slots = [
     { at = "4-7", item = "Ammo_IS.UltraAC/20", rounds = 5 },
     { at = "8-12", item = "FerroFibrous" },
@@ -45,7 +41,6 @@ slots = [
 [sections.center_torso]
 armor = 17
 rear = 5
-engine_slots = 7
 slots = [
     { at = 12, item = "EndoSteel" },
 ]
@@ -66,4 +61,11 @@ slots = [
 armor = 8
 slots = [
     { at = 4, item = "EndoSteel" },
+]
+
+[[split_mounts]]
+item = "IS.UltraAC/20"
+placements = [
+    { section = "left_torso", at = "4-12" },
+    { section = "center_torso", at = 11 },
 ]

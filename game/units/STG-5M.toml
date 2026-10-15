@@ -14,7 +14,6 @@ structure = "endo_steel"
 armor = 4
 slots = [
     { at = 5, item = "IS.Flamer" },
-    { at = 6, item = "EndoSteel" },
 ]
 
 [sections.right_arm]
@@ -30,7 +29,7 @@ rear = 2
 slots = [
     { at = 1, item = "HeatSink" },
     { at = "2-4", item = "JumpJet" },
-    { at = "7-12", item = "EndoSteel" },
+    { at = "5-10", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -40,7 +39,7 @@ slots = [
     { at = 1, item = "HeatSink" },
     { at = "2-4", item = "JumpJet" },
     { at = 5, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
-    { at = "6-12", item = "EndoSteel" },
+    { at = "6-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

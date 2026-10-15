@@ -17,16 +17,16 @@ heat_sinks = "double"
 armor = 9
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "FerroFibrous" },
-    { at = "4-12", item = "EndoSteel" },
+    { at = "3-11", item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 9
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.ERMediumLaser" },
-    { at = "5-7", item = "HeatSink" },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-7", item = "IS.ERMediumLaser" },
     { at = "8-12", item = "FerroFibrous" },
 ]
 
@@ -43,8 +43,8 @@ armor = 10
 rear = 3
 slots = [
     { at = "4-7", item = "JumpJet" },
-    { at = 8, item = "IS.ERMediumLaser" },
-    { at = 9, item = "IS.MediumPulseLaser" },
+    { at = 8, item = "IS.MediumPulseLaser" },
+    { at = 9, item = "IS.ERMediumLaser" },
     { at = "10-12", item = "FerroFibrous" },
 ]
 
@@ -68,7 +68,7 @@ slots = [
 ]
 
 [sections.head]
-armor = 9
+armor = 8
 slots = [
     { at = 4, item = "FerroFibrous" },
 ]

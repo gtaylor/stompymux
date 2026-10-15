@@ -3,7 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 45
 walk_mp = 9
-jump_mp = 5
+jump_mp = 6
 heat_sinks = 24
 radio = 4
 
@@ -24,7 +24,6 @@ armor = 14
 slots = [
     { at = "5-7", item = "HeatSink" },
     { at = "8-9", item = "IS.LargePulseLaser" },
-    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]

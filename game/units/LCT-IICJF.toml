@@ -15,7 +15,6 @@ armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "CL.StreakSRM-2" },
-    { at = 5, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.right_arm]
@@ -23,6 +22,7 @@ armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "CL.StreakSRM-2" },
+    { at = 5, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.left_torso]
@@ -30,8 +30,8 @@ armor = 8
 rear = 2
 slots = [
     { at = "1-2", item = "HeatSink" },
-    { at = "9-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "3-4", item = "EndoSteel" },
+    { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -39,13 +39,13 @@ armor = 8
 rear = 2
 slots = [
     { at = "1-2", item = "HeatSink" },
-    { at = "9-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "3-4", item = "EndoSteel" },
+    { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 10
-rear = 3
+rear = 2
 slots = [
     { at = 11, item = "CL.ERMediumLaser" },
     { at = 12, item = "EndoSteel" },
@@ -54,15 +54,15 @@ slots = [
 [sections.left_leg]
 armor = 10
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 10
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]

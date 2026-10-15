@@ -45,7 +45,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 10
+armor = 9
 rear = 3
 slots = [
     { at = 11, item = "CL.MediumPulseLaser" },

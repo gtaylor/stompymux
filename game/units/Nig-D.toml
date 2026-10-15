@@ -6,6 +6,7 @@ walk_mp = 6
 jump_mp = 4
 heat_sinks = 24
 radio = 5
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -18,7 +19,7 @@ armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "ArtemisIV" },
+    { at = 7, item = "ArtemisIV", link = 3 },
     { at = "8-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = "11-12", item = "FerroFibrous" },
 ]
@@ -28,7 +29,7 @@ armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "ArtemisIV" },
+    { at = 7, item = "ArtemisIV", link = 3 },
     { at = "8-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = "11-12", item = "EndoSteel" },
 ]
@@ -38,8 +39,8 @@ armor = 22
 rear = 10
 slots = [
     { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "ArtemisIV" },
-    { at = "8-12", item = "FerroFibrous" },
+    { at = 7, item = "ArtemisIV", link = 3 },
+    { at = "8-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -47,12 +48,12 @@ armor = 22
 rear = 10
 slots = [
     { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "ArtemisIV" },
-    { at = "8-12", item = "EndoSteel" },
+    { at = 7, item = "ArtemisIV", link = 3 },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 34
+armor = 33
 rear = 10
 slots = [
     { at = "11-12", item = "CL.LargePulseLaser" },

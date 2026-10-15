@@ -16,38 +16,39 @@ structure = "endo_steel"
 armor = 14
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "EndoSteel" },
+    { at = 4, item = "CL.SRM-6" },
     { at = 5, item = "CL.MediumPulseLaser" },
-    { at = 6, item = "CL.SRM-6" },
-    { at = 7, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = 6, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = 7, item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 14
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "EndoSteel" },
+    { at = 4, item = "CL.SRM-6" },
     { at = 5, item = "CL.MediumPulseLaser" },
-    { at = 6, item = "CL.SRM-6" },
-    { at = 7, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = 6, item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = 7, item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 5
 slots = [
-    { at = "3-4", item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
     { at = 5, item = "CL.ERMediumLaser" },
-    { at = "6-7", item = "HeatSink" },
+    { at = "6-7", item = "Masc" },
+    { at = "8-9", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 5
 slots = [
-    { at = "3-4", item = "EndoSteel" },
-    { at = "5-8", item = "CL.UltraAC/10" },
-    { at = "9-10", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+    { at = "3-6", item = "CL.UltraAC/10" },
+    { at = "7-8", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+    { at = "9-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -55,6 +56,7 @@ armor = 22
 rear = 7
 slots = [
     { at = 11, item = "JumpJet" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
@@ -71,6 +73,3 @@ slots = [
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "EndoSteel" },
-]

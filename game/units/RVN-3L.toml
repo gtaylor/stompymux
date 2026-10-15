@@ -33,23 +33,22 @@ armor = 11
 rear = 3
 slots = [
     { at = 4, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
-    { at = 5, item = "Case" },
-    { at = "6-7", item = "Ecm" },
-    { at = "8-9", item = "Ammo_IS.NarcBeacon", rounds = 6 },
+    { at = "5-6", item = "Ammo_IS.NarcBeacon", rounds = 6 },
+    { at = "7-8", item = "Ecm" },
+    { at = 9, item = "Case" },
 ]
 
 [sections.right_torso]
 armor = 11
 rear = 3
 slots = [
-    { at = 4, item = "IS.SRM-6", modes = ["Narc/Smoke"] },
-    { at = 5, item = "IS.SRM-6" },
+    { at = "4-5", item = "IS.SRM-6" },
     { at = 6, item = "TAG" },
 ]
 
 [sections.center_torso]
 armor = 11
-rear = 4
+rear = 3
 slots = [
     { at = "11-12", item = "BeagleProbe" },
 ]

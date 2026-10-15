@@ -3,10 +3,12 @@ class = "mech"
 movement = "biped"
 tons = 100
 walk_mp = 5
+heat_sinks = 20
 radio = 4
 
 [construction]
 engine = "xl"
+heat_sinks = "double"
 
 [sections.left_arm]
 armor = 34
@@ -53,4 +55,11 @@ armor = 42
 armor = 9
 slots = [
     { at = 4, item = "IS.MediumLaser" },
+]
+
+[[split_mounts]]
+item = "IS.ArrowIVSystem"
+placements = [
+    { section = "left_torso", at = "4-12" },
+    { section = "left_arm", at = "7-12" },
 ]

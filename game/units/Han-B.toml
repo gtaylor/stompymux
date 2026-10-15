@@ -6,6 +6,7 @@ walk_mp = 12
 jump_mp = 6
 heat_sinks = 20
 radio = 5
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,44 +17,42 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 7
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
-    { at = 7, item = "CL.MediumPulseLaser" },
-    { at = 8, item = "CL.ERMediumLaser" },
+    { at = 5, item = "CL.ERMediumLaser" },
+    { at = 6, item = "CL.MediumPulseLaser" },
+    { at = 7, item = "EndoSteel" },
+    { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 7
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "FerroFibrous" },
-    { at = 4, item = "EndoSteel" },
-    { at = "5-7", item = "CL.LB2-XAC" },
-    { at = 8, item = "CL.Flamer" },
+    { at = "3-5", item = "CL.LB2-XAC" },
+    { at = 6, item = "CL.Flamer" },
+    { at = 7, item = "EndoSteel" },
+    { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 8
 rear = 4
-engine_at = 6
 slots = [
-    { at = "1-2", item = "FerroFibrous" },
     { at = "3-5", item = "EndoSteel" },
-    { at = "8-9", item = "HeatSink" },
+    { at = "6-7", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 8
 rear = 4
-engine_at = 5
 slots = [
-    { at = "1-2", item = "FerroFibrous" },
-    { at = "3-4", item = "EndoSteel" },
-    { at = 7, item = "Ammo_CL.LB2-XAC", rounds = 45 },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "Ammo_CL.LB2-XAC", rounds = 45 },
+    { at = "6-7", item = "EndoSteel" },
+    { at = "8-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 9
+armor = 8
 rear = 5
 slots = [
     { at = "11-12", item = "JumpJet" },

@@ -5,6 +5,7 @@ tons = 50
 walk_mp = 8
 jump_mp = 5
 heat_sinks = 28
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -12,10 +13,11 @@ engine = "xl"
 
 [sections.left_arm]
 armor = 16
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.LB5-XAC" },
-    { at = 8, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = "3-6", item = "CL.LB5-XAC" },
+    { at = 7, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = 8, item = "Ammo_CL.LB5-XAC", rounds = 20, modes = ["LBX/Cluster"] },
 ]
 
 [sections.right_arm]
@@ -26,14 +28,14 @@ slots = [
 ]
 
 [sections.left_torso]
-armor = 15
+armor = 16
 rear = 8
 slots = [
     { at = "3-6", item = "HeatSink" },
 ]
 
 [sections.right_torso]
-armor = 15
+armor = 16
 rear = 8
 slots = [
     { at = "3-6", item = "HeatSink" },

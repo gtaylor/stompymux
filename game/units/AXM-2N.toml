@@ -22,17 +22,17 @@ slots = [
 [sections.right_arm]
 armor = 17
 slots = [
-    { at = "5-7", item = "IS.MediumLaser" },
-    { at = "8-12", item = "Axe" },
+    { at = "5-9", item = "Axe" },
+    { at = "10-12", item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 21
 rear = 6
 slots = [
-    { at = 4, item = "Case" },
-    { at = "5-7", item = "IS.LRM-15" },
-    { at = "8-9", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = "4-6", item = "IS.LRM-15" },
+    { at = "7-8", item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 9, item = "Case" },
     { at = "10-12", item = "FerroFibrous" },
 ]
 
@@ -40,9 +40,8 @@ slots = [
 armor = 21
 rear = 6
 slots = [
-    { at = "4-5", item = "FerroFibrous" },
-    { at = "6-8", item = "IS.LRM-15" },
-    { at = "9-11", item = "FerroFibrous" },
+    { at = "4-6", item = "IS.LRM-15" },
+    { at = "7-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

@@ -40,11 +40,11 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 6
+armor = 5
 rear = 2
 slots = [
-    { at = 11, item = "Case" },
-    { at = 12, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 11, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 12, item = "Case" },
 ]
 
 [sections.left_leg]

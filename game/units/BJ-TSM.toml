@@ -17,7 +17,6 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "IS.PPC" },
     { at = 6, item = "IS.MediumLaser" },
-    { at = "7-9", item = "TripleStrengthMyomer" },
 ]
 
 [sections.right_arm]
@@ -26,7 +25,6 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "IS.PPC" },
     { at = 6, item = "IS.MediumLaser" },
-    { at = "7-9", item = "TripleStrengthMyomer" },
 ]
 
 [sections.left_torso]

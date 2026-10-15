@@ -5,6 +5,7 @@ tons = 40
 walk_mp = 12
 jump_mp = 8
 heat_sinks = 20
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -34,7 +35,7 @@ slots = [
     { at = "3-4", item = "JumpJet" },
     { at = 5, item = "CL.SmallPulseLaser" },
     { at = "6-8", item = "EndoSteel" },
-    { at = "9-10", item = "FerroFibrous" },
+    { at = 9, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -44,7 +45,7 @@ slots = [
     { at = "3-4", item = "JumpJet" },
     { at = 5, item = "CL.Flamer" },
     { at = "6-8", item = "EndoSteel" },
-    { at = "9-10", item = "FerroFibrous" },
+    { at = 9, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

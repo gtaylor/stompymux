@@ -46,12 +46,12 @@ slots = [
     { at = 1, item = "HeatSink" },
     { at = 2, item = "JumpJet" },
     { at = 3, item = "IS.LRM-5" },
-    { at = "4-12", item = "EndoSteel" },
+    { at = "4-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 8
-rear = 4
+rear = 3
 slots = [
     { at = 11, item = "JumpJet" },
     { at = 12, item = "EndoSteel" },

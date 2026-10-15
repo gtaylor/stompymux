@@ -3,7 +3,8 @@ class = "mech"
 movement = "biped"
 tons = 70
 walk_mp = 6
-heat_sinks = 30
+heat_sinks = 40
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,32 +15,35 @@ structure = "endo_steel"
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "CL.LB10-XAC", modes = ["OnTC"] },
-    { at = "8-10", item = "CL.HeavyLargeLaser", modes = ["OnTC"] },
-    { at = "11-12", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-9", item = "CL.LB10-XAC" },
+    { at = "10-12", item = "CL.HeavyLargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "CL.HeavyLargeLaser", modes = ["OnTC"] },
-    { at = "9-12", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-12", item = "CL.HeavyLargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 23
 rear = 7
 slots = [
-    { at = 3, item = "Ammo_CL.LB10-XAC", rounds = 10 },
-    { at = 4, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "5-9", item = "TargetingComputer" },
-    { at = "10-11", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 6, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "7-11", item = "TargetingComputer" },
 ]
 
 [sections.right_torso]
 armor = 23
 rear = 7
+slots = [
+    { at = "3-12", item = "HeatSink" },
+]
 
 [sections.center_torso]
 armor = 35

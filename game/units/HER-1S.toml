@@ -14,33 +14,33 @@ armor = 9
 omit = ["hand_actuator"]
 slots = [
     { at = 4, item = "IS.Flamer" },
-    { at = "5-11", item = "EndoSteel" },
+    { at = "5-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 9
 slots = [
     { at = 5, item = "IS.MediumLaser" },
-    { at = "6-12", item = "EndoSteel" },
+    { at = "6-11", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 9
 rear = 4
 slots = [
-    { at = "1-7", item = "FerroFibrous" },
+    { at = "1-7", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 9
 rear = 4
 slots = [
-    { at = "1-7", item = "FerroFibrous" },
+    { at = "1-7", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 14
-rear = 5
+rear = 4
 slots = [
     { at = 11, item = "IS.MediumLaser" },
 ]

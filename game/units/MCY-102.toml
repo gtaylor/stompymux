@@ -40,10 +40,10 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 7
+armor = 6
 rear = 4
 slots = [
-    { at = 12, item = "Masc" },
+    { at = 11, item = "Masc" },
 ]
 
 [sections.left_leg]

@@ -42,8 +42,8 @@ rear = 4
 slots = [
     { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "6-9", item = "EndoSteel" },
-    { at = 10, item = "Case" },
+    { at = 6, item = "Case" },
+    { at = "7-9", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

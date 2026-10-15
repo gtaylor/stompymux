@@ -25,7 +25,7 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = 3, item = "CL.ERMediumLaser" },
+    { at = 3, item = "CL.MediumPulseLaser" },
     { at = "4-5", item = "CL.MachineGun" },
     { at = "6-7", item = "EndoSteel" },
     { at = "8-10", item = "FerroFibrous" },
@@ -35,7 +35,7 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = 3, item = "CL.ERMediumLaser" },
+    { at = 3, item = "CL.MediumPulseLaser" },
     { at = "4-5", item = "CL.MachineGun" },
     { at = "6-7", item = "EndoSteel" },
     { at = "8-9", item = "FerroFibrous" },
@@ -45,7 +45,7 @@ slots = [
 armor = 15
 rear = 5
 slots = [
-    { at = 11, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 11, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -65,6 +65,3 @@ slots = [
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "CL.MachineGun" },
-]

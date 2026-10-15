@@ -6,6 +6,7 @@ walk_mp = 9
 jump_mp = 6
 heat_sinks = 24
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 engine = "xl"
@@ -40,7 +41,6 @@ slots = [
 [sections.right_torso]
 armor = 16
 rear = 6
-config = "Case"
 slots = [
     { at = "4-6", item = "HeatSink" },
     { at = "7-9", item = "JumpJet" },
@@ -50,7 +50,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 18
+armor = 20
 rear = 7
 slots = [
     { at = 11, item = "IS.Flamer" },

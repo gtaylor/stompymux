@@ -19,8 +19,8 @@ armor = 6
 omit = ["hand_actuator"]
 slots = [
     { at = 4, item = "IS.ERMediumLaser" },
-    { at = "6-9", item = "EndoSteel" },
-    { at = "10-12", item = "FerroFibrous" },
+    { at = "5-8", item = "EndoSteel" },
+    { at = "9-11", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -28,8 +28,8 @@ armor = 6
 omit = ["hand_actuator"]
 slots = [
     { at = 4, item = "IS.ERMediumLaser" },
-    { at = "6-8", item = "EndoSteel" },
-    { at = "9-12", item = "FerroFibrous" },
+    { at = "5-7", item = "EndoSteel" },
+    { at = "8-11", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -37,8 +37,8 @@ armor = 8
 rear = 2
 slots = [
     { at = "1-3", item = "HeatSink" },
-    { at = "4-5", item = "C3i" },
-    { at = "6-7", item = "JumpJet" },
+    { at = "4-5", item = "JumpJet" },
+    { at = "6-7", item = "C3i" },
     { at = "8-9", item = "EndoSteel" },
     { at = "10-12", item = "FerroFibrous" },
 ]
@@ -55,10 +55,10 @@ slots = [
 
 [sections.center_torso]
 armor = 10
-rear = 3
+rear = 2
 slots = [
-    { at = 11, item = "IS.ERSmallLaser" },
-    { at = 12, item = "JumpJet" },
+    { at = 11, item = "JumpJet" },
+    { at = 12, item = "IS.ERSmallLaser" },
 ]
 
 [sections.left_leg]

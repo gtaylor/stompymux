@@ -47,7 +47,7 @@ slots = [
 ]
 
 [sections.left_leg]
-armor = 24
+armor = 23
 
 [sections.right_leg]
 armor = 24

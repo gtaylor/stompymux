@@ -6,11 +6,13 @@ walk_mp = 6
 jump_mp = 4
 heat_sinks = 20
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 engine = "xl"
 structure = "endo_steel"
 heat_sinks = "double"
+mixed_tech = true
 
 [sections.left_arm]
 armor = 14
@@ -22,19 +24,19 @@ slots = [
 
 [sections.right_arm]
 armor = 14
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-6", item = "HeatSink" },
-    { at = "7-9", item = "CL.MediumPulseLaser" },
-    { at = "10-11", item = "CL.LargePulseLaser" },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-7", item = "CL.LargePulseLaser" },
+    { at = "8-10", item = "CL.MediumPulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = "4-9", item = "EndoSteel" },
-    { at = "10-11", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = "4-5", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = "6-11", item = "EndoSteel" },
 ]
 
 [sections.right_torso]

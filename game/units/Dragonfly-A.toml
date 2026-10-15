@@ -5,6 +5,7 @@ tons = 40
 walk_mp = 12
 jump_mp = 8
 heat_sinks = 20
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -15,8 +16,9 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 12
 slots = [
-    { at = "5-6", item = "CL.StreakSRM-6" },
-    { at = 7, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = 5, item = "CL.SRM-6" },
+    { at = 6, item = "ArtemisIV", link = 5 },
+    { at = 7, item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
     { at = "8-9", item = "FerroFibrous" },
 ]
 
@@ -34,7 +36,7 @@ slots = [
     { at = "3-4", item = "JumpJet" },
     { at = "5-6", item = "CL.ERMediumLaser" },
     { at = "7-9", item = "EndoSteel" },
-    { at = "10-11", item = "FerroFibrous" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -44,7 +46,7 @@ slots = [
     { at = "3-4", item = "JumpJet" },
     { at = "5-6", item = "CL.ERMediumLaser" },
     { at = "7-9", item = "EndoSteel" },
-    { at = "10-11", item = "FerroFibrous" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

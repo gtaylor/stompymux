@@ -10,6 +10,7 @@ max_suits = 0
 [construction]
 engine = "xl"
 structure = "endo_steel"
+myomer = "triple_strength"
 
 [sections.left_arm]
 armor = 16
@@ -30,9 +31,8 @@ slots = [
 armor = 13
 rear = 6
 slots = [
-    { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
-    { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV" },
+    { at = "4-5", item = "IS.LRM-10" },
+    { at = 6, item = "ArtemisIV", link = 4 },
     { at = "7-10", item = "EndoSteel" },
 ]
 
@@ -40,8 +40,8 @@ slots = [
 armor = 13
 rear = 6
 slots = [
-    { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = "6-7", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
     { at = 8, item = "Case" },
     { at = "9-12", item = "EndoSteel" },

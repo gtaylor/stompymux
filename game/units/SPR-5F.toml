@@ -24,7 +24,7 @@ armor = 12
 omit = ["hand_actuator"]
 slots = [
     { at = "4-5", item = "IS.LargeLaser" },
-    { at = "6-10", item = "EndoSteel" },
+    { at = "6-9", item = "EndoSteel" },
 ]
 
 [sections.left_torso]

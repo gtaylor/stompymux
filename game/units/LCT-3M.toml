@@ -13,8 +13,8 @@ armor = "ferro_fibrous"
 armor = 4
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "IS.Anti-MissileSystem" },
-    { at = "4-5", item = "IS.SmallLaser" },
+    { at = "3-4", item = "IS.SmallLaser" },
+    { at = 5, item = "IS.Anti-MissileSystem" },
     { at = "6-11", item = "FerroFibrous" },
 ]
 
@@ -43,7 +43,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 7
+armor = 6
 rear = 2
 slots = [
     { at = 11, item = "IS.MediumLaser" },

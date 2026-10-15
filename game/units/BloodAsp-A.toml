@@ -3,8 +3,9 @@ class = "mech"
 movement = "biped"
 tons = 90
 walk_mp = 6
-jump_mp = 5
+jump_mp = 3
 heat_sinks = 50
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -15,9 +16,9 @@ structure = "endo_steel"
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC" },
+    { at = "3-4", item = "HeatSink" },
     { at = "5-7", item = "CL.HeavyLargeLaser" },
-    { at = "8-9", item = "HeatSink" },
+    { at = "8-9", item = "CL.ERPPC" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -25,9 +26,9 @@ slots = [
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC" },
-    { at = "5-7", item = "CL.HeavyLargeLaser" },
-    { at = "8-11", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-9", item = "CL.HeavyLargeLaser" },
+    { at = "10-11", item = "CL.ERPPC" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -44,9 +45,9 @@ slots = [
 armor = 24
 rear = 11
 slots = [
-    { at = "3-6", item = "TargetingComputer" },
-    { at = "7-10", item = "HeatSink" },
-    { at = 11, item = "JumpJet" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = "8-11", item = "TargetingComputer" },
     { at = 12, item = "EndoSteel" },
 ]
 

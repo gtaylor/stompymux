@@ -2,66 +2,64 @@ name = "Centurion"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 9
-heat_sinks = 10
+walk_mp = 6
 radio = 5
 
 [construction]
 engine = "xl"
-structure = "endo_steel"
+myomer = "triple_strength"
 
 [sections.left_arm]
-armor = 13
+armor = 16
 slots = [
     { at = "5-6", item = "IS.MediumPulseLaser" },
+    { at = "7-10", item = "Axe" },
+    { at = 11, item = "TripleStrengthMyomer" },
 ]
 
 [sections.right_arm]
-armor = 13
+armor = 16
 omit = ["hand_actuator"]
 slots = [
     { at = "4-10", item = "IS.GaussRifle" },
+    { at = 11, item = "TripleStrengthMyomer" },
 ]
 
 [sections.left_torso]
-armor = 18
-rear = 5
+armor = 13
+rear = 6
 slots = [
-    { at = "4-6", item = "TripleStrengthMyomer" },
-    { at = "7-10", item = "EndoSteel" },
+    { at = 4, item = "HeatSink" },
+    { at = 5, item = "TripleStrengthMyomer" },
 ]
 
 [sections.right_torso]
-armor = 18
-rear = 5
+armor = 13
+rear = 6
 slots = [
     { at = "4-5", item = "Ammo_IS.GaussRifle", rounds = 8 },
-    { at = "6-8", item = "TripleStrengthMyomer" },
-    { at = "9-12", item = "EndoSteel" },
+    { at = 6, item = "TripleStrengthMyomer" },
 ]
 
 [sections.center_torso]
-armor = 21
-rear = 6
+armor = 18
+rear = 7
 slots = [
-    { at = 11, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
-    { at = 12, item = "EndoSteel" },
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
 ]
 
 [sections.left_leg]
-armor = 18
+armor = 16
 slots = [
-    { at = "5-6", item = "EndoSteel" },
+    { at = 5, item = "TripleStrengthMyomer" },
 ]
 
 [sections.right_leg]
-armor = 18
+armor = 16
 slots = [
-    { at = "5-6", item = "EndoSteel" },
+    { at = 5, item = "TripleStrengthMyomer" },
 ]
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "EndoSteel" },
-]

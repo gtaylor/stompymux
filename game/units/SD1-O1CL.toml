@@ -5,10 +5,12 @@ tons = 90
 walk_mp = 6
 heat_sinks = 30
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 engine = "xl"
 heat_sinks = "double"
+mixed_tech = true
 
 [sections.left_arm]
 armor = 30

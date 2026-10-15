@@ -5,6 +5,7 @@ tons = 55
 walk_mp = 8
 jump_mp = 5
 heat_sinks = 20
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -46,7 +47,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 29
+armor = 28
 rear = 7
 slots = [
     { at = 11, item = "JumpJet" },

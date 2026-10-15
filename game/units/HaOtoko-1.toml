@@ -6,6 +6,10 @@ walk_mp = 6
 heat_sinks = 13
 radio = 5
 
+[construction]
+tech_base = "clan"
+heat_sinks = "single"
+
 [sections.left_arm]
 armor = 20
 slots = [

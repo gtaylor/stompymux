@@ -5,8 +5,6 @@ tons = 20
 walk_mp = 12
 radio = 4
 
-[construction]
-
 [sections.left_arm]
 armor = 4
 omit = ["lower_actuator", "hand_actuator"]
@@ -24,16 +22,10 @@ slots = [
 [sections.left_torso]
 armor = 8
 rear = 2
-slots = [
-    { at = "10-12", item = "TripleStrengthMyomer" },
-]
 
 [sections.right_torso]
 armor = 8
 rear = 2
-slots = [
-    { at = "10-12", item = "TripleStrengthMyomer" },
-]
 
 [sections.center_torso]
 armor = 10

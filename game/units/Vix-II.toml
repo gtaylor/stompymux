@@ -27,8 +27,8 @@ rear = 4
 slots = [
     { at = 3, item = "CL.MediumPulseLaser" },
     { at = "4-5", item = "CL.MachineGun" },
+    { at = "6-7", item = "EndoSteel" },
     { at = "8-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -37,8 +37,8 @@ rear = 4
 slots = [
     { at = 3, item = "CL.MediumPulseLaser" },
     { at = "4-5", item = "CL.MachineGun" },
-    { at = "9-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "6-7", item = "EndoSteel" },
+    { at = "8-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
@@ -52,19 +52,16 @@ slots = [
 [sections.left_leg]
 armor = 14
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 14
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "CL.MachineGun" },
-]

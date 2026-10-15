@@ -3,11 +3,11 @@ class = "mech"
 movement = "quad"
 tons = 20
 walk_mp = 12
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 armor = "ferro_fibrous"
+heat_sinks = "single"
 
 [sections.front_left_leg]
 armor = 5
@@ -16,9 +16,10 @@ armor = 5
 armor = 5
 
 [sections.left_torso]
-armor = 8
-rear = 2
+armor = 6
+rear = 1
 slots = [
+    { at = "1-2", item = "HeatSink" },
     { at = "3-5", item = "FerroFibrous" },
 ]
 
@@ -26,6 +27,7 @@ slots = [
 armor = 6
 rear = 1
 slots = [
+    { at = "1-2", item = "HeatSink" },
     { at = 3, item = "Ammo_CL.LRM-10", rounds = 12 },
     { at = "4-6", item = "FerroFibrous" },
 ]
@@ -46,3 +48,6 @@ armor = 5
 
 [sections.head]
 armor = 7
+slots = [
+    { at = 4, item = "CL.LRM-10" },
+]

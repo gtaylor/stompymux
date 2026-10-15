@@ -40,7 +40,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 13
+armor = 12
 rear = 4
 
 [sections.left_leg]

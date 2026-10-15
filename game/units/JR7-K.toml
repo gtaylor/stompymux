@@ -44,7 +44,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 9
+armor = 8
 rear = 3
 slots = [
     { at = 11, item = "JumpJet" },

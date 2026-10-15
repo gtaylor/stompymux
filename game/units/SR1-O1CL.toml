@@ -4,9 +4,11 @@ movement = "biped"
 tons = 40
 walk_mp = 9
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 structure = "endo_steel"
+mixed_tech = true
 
 [sections.left_arm]
 armor = 12
@@ -25,21 +27,19 @@ slots = [
 [sections.left_torso]
 armor = 14
 rear = 5
-config = "Case"
 slots = [
     { at = 1, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = "2-7", item = "EndoSteel" },
-    { at = 8, item = "Case" },
+    { at = 2, item = "Case" },
+    { at = "3-8", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 14
 rear = 5
-config = "Case"
 slots = [
     { at = 1, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = "2-7", item = "EndoSteel" },
-    { at = 8, item = "Case" },
+    { at = 2, item = "Case" },
+    { at = "3-8", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

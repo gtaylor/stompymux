@@ -5,6 +5,10 @@ tons = 30
 walk_mp = 5
 jump_mp = 3
 
+[construction]
+tech_base = "clan"
+heat_sinks = "single"
+
 [sections.left_arm]
 armor = 10
 omit = ["lower_actuator", "hand_actuator"]
@@ -30,7 +34,6 @@ slots = [
 [sections.right_torso]
 armor = 8
 rear = 4
-config = "Case"
 slots = [
     { at = 1, item = "HeatSink" },
     { at = 2, item = "JumpJet" },

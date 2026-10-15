@@ -4,7 +4,6 @@ movement = "biped"
 tons = 35
 walk_mp = 12
 jump_mp = 8
-heat_sinks = 10
 radio = 4
 specials = ["BeagleProbe", "ECM"]
 
@@ -53,10 +52,9 @@ slots = [
 
 [sections.center_torso]
 armor = 11
-rear = 4
+rear = 3
 slots = [
-    { at = 11, item = "TAG" },
-    { at = 12, item = "EndoSteel" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_leg]
@@ -69,12 +67,12 @@ slots = [
 [sections.right_leg]
 armor = 8
 slots = [
-    { at = 5, item = "EndoSteel" },
-    { at = 6, item = "IS.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
+    { at = 6, item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 7
 slots = [
-    { at = 4, item = "EndoSteel" },
+    { at = 4, item = "TAG" },
 ]

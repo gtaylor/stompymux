@@ -3,23 +3,23 @@ class = "mech"
 movement = "quad"
 tons = 65
 walk_mp = 6
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 structure = "endo_steel"
+heat_sinks = "single"
 
 [sections.front_left_leg]
 armor = 29
 slots = [
-    { at = 5, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.front_right_leg]
 armor = 29
 slots = [
-    { at = 5, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
     { at = 6, item = "EndoSteel" },
 ]
 
@@ -50,14 +50,14 @@ slots = [
 [sections.rear_left_leg]
 armor = 29
 slots = [
-    { at = 5, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.rear_right_leg]
 armor = 29
 slots = [
-    { at = 5, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
     { at = 6, item = "EndoSteel" },
 ]
 

@@ -4,7 +4,7 @@ movement = "biped"
 tons = 30
 walk_mp = 9
 heat_sinks = 20
-specials = ["SearchLight"]
+specials = ["OmniMech_Tech", "SearchLight"]
 
 [construction]
 tech_base = "clan"
@@ -16,8 +16,8 @@ armor = "ferro_fibrous"
 armor = 7
 slots = [
     { at = 5, item = "CL.ERLargeLaser" },
-    { at = "6-7", item = "CL.MachineGun" },
-    { at = 8, item = "CL.SmallPulseLaser" },
+    { at = 6, item = "CL.SmallPulseLaser" },
+    { at = "7-8", item = "CL.MachineGun" },
     { at = 9, item = "EndoSteel" },
     { at = 10, item = "FerroFibrous" },
 ]
@@ -39,8 +39,8 @@ rear = 4
 slots = [
     { at = "3-6", item = "HeatSink" },
     { at = 7, item = "Ammo_CL.MachineGun", rounds = 200 },
-    { at = "8-10", item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "8-9", item = "EndoSteel" },
+    { at = "10-11", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -54,7 +54,7 @@ slots = [
 
 [sections.center_torso]
 armor = 9
-rear = 5
+rear = 4
 slots = [
     { at = "11-12", item = "HeatSink" },
 ]
@@ -62,13 +62,13 @@ slots = [
 [sections.left_leg]
 armor = 8
 slots = [
-    { at = 5, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
 ]
 
 [sections.right_leg]
 armor = 8
 slots = [
-    { at = 5, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
 ]
 
 [sections.head]

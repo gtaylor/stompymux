@@ -11,6 +11,7 @@ max_suits = 0
 
 [construction]
 heat_sinks = "double"
+myomer = "triple_strength"
 
 [sections.left_arm]
 armor = 14
@@ -22,8 +23,8 @@ slots = [
 armor = 14
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
 ]
 
 [sections.left_torso]

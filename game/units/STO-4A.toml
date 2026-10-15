@@ -41,8 +41,8 @@ slots = [
 armor = 11
 rear = 4
 slots = [
-    { at = 3, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 4, item = "Ammo_IS.LRM-5", rounds = 24 },
     { at = 5, item = "Case" },
     { at = "6-12", item = "EndoSteel" },
 ]
@@ -68,4 +68,4 @@ slots = [
 ]
 
 [sections.head]
-armor = 9
+armor = 8
