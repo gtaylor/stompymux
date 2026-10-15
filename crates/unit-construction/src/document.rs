@@ -36,7 +36,7 @@
 use super::construction::{
     Construction, FLIP_ARMS, Omission, SPEED_PER_MP, SectionPlan, arms_flip,
     canonical_infantry_special, canonical_special, derives_internals, fixed_equipment,
-    is_fixed_item, mech_internal, movement_points, vehicle_internal,
+    is_fixed_item, large_engine, mech_internal, movement_points, vehicle_internal,
 };
 use super::{
     CriticalDefinition, MechChassis, MechSection, RawMovement, RawUnitClass, SectionDefinition,
@@ -125,7 +125,6 @@ struct SectionDocument {
     #[serde(default)]
     omit: Vec<String>,
     engine_at: Option<i64>,
-    engine_slots: Option<i64>,
     #[serde(default)]
     slots: Vec<SlotDocument>,
 }
@@ -204,6 +203,8 @@ struct Unit {
     chassis: Option<MechChassis>,
     tons: i64,
     construction: Construction,
+    /// The engine is rated above 400 and fills eight center torso slots.
+    large_engine: bool,
 }
 
 impl Unit {
@@ -281,14 +282,16 @@ impl ParsedTemplate {
                 .and_then(|movement| MechChassis::parse(movement).ok()),
             _ => None,
         };
+        let tons = fields
+            .get("tons")
+            .and_then(|tons| tons.parse().ok())
+            .unwrap_or_default();
         let unit = Unit {
             class,
             chassis,
-            tons: fields
-                .get("tons")
-                .and_then(|tons| tons.parse().ok())
-                .unwrap_or_default(),
+            tons,
             construction,
+            large_engine: large_engine(tons, fields.get("max_speed").map(String::as_str)),
         };
         let mut parsed = Self {
             fields,
@@ -344,11 +347,8 @@ impl ParsedTemplate {
             "only mech sections can be explicit"
         );
         ensure!(
-            constructed
-                || (section.omit.is_empty()
-                    && section.engine_at.is_none()
-                    && section.engine_slots.is_none()),
-            "omit, engine_at and engine_slots need constructed mech equipment"
+            constructed || (section.omit.is_empty() && section.engine_at.is_none()),
+            "omit and engine_at need constructed mech equipment"
         );
         let internal = match section.internals {
             Some(internal) => internal,
@@ -382,20 +382,10 @@ impl ParsedTemplate {
                     Ok(slot as u8 - 1)
                 })
                 .transpose()?;
-            let engine_slots = section
-                .engine_slots
-                .map(|count| {
-                    ensure!(
-                        (0..=12).contains(&count),
-                        "engine_slots must be from 0 to 12"
-                    );
-                    Ok(count as u8)
-                })
-                .transpose()?;
             let plan = SectionPlan {
                 omit: &omit,
                 engine_at,
-                engine_slots,
+                large_engine: unit.large_engine,
             };
             for (slot, item) in fixed_equipment(&unit.construction, chassis, mech, plan)? {
                 let critical = CriticalDefinition {
@@ -619,15 +609,16 @@ fn mech_section(heading: &str) -> Result<MechSection> {
         .or_else(|_| super::MechChassis::Quad.parse_section(heading))
 }
 
-/// Whether a split mount may continue from one section into the other.
+/// Whether a split mount may continue from one section into the other: two adjacent
+/// locations, not including the legs (TM p. 47).
 pub fn split_adjacent(primary: MechSection, extension: MechSection) -> bool {
     use MechSection::*;
     matches!(
         (primary, extension),
-        (LeftArm | LeftLeg | CenterTorso, LeftTorso)
-            | (LeftTorso, LeftArm | LeftLeg | CenterTorso)
-            | (RightArm | RightLeg | CenterTorso, RightTorso)
-            | (RightTorso, RightArm | RightLeg | CenterTorso)
+        (LeftArm | CenterTorso, LeftTorso)
+            | (LeftTorso, LeftArm | CenterTorso)
+            | (RightArm | CenterTorso, RightTorso)
+            | (RightTorso, RightArm | CenterTorso)
     )
 }
 
@@ -702,14 +693,16 @@ pub fn render(
             .and_then(|movement| MechChassis::parse(movement).ok()),
         _ => None,
     };
+    let tons = attributes
+        .get("tons")
+        .and_then(|tons| tons.trim().parse().ok())
+        .unwrap_or_default();
     let unit = Unit {
         class,
         chassis,
-        tons: attributes
-            .get("tons")
-            .and_then(|tons| tons.trim().parse().ok())
-            .unwrap_or_default(),
+        tons,
         construction,
+        large_engine: large_engine(tons, attributes.get("max_speed").map(String::as_str)),
     };
     let mut output = String::new();
     for (name, attribute, kind) in FIELDS {
@@ -777,7 +770,6 @@ pub fn render(
 struct SectionFit {
     omit: Vec<Omission>,
     engine_at: Option<u8>,
-    engine_slots: Option<u8>,
     placed: BTreeMap<u8, &'static str>,
 }
 
@@ -812,42 +804,30 @@ fn fit_section(
         }
         _ => vec![Vec::new()],
     };
-    let engines = layout
-        .criticals
-        .values()
-        .filter(|critical| critical.equipment == "Engine")
-        .count();
     let engine_at = layout
         .criticals
         .iter()
         .find(|(_, critical)| critical.equipment == "Engine")
         .map(|(slot, _)| *slot)
         .filter(|slot| *slot != 0 && matches!(section, LeftTorso | RightTorso));
-    let engine_counts: &[Option<u8>] = match section {
-        LeftTorso | RightTorso | CenterTorso => &[None, Some(engines as u8)],
-        _ => &[None],
-    };
     omissions.iter().find_map(|omit| {
-        engine_counts.iter().find_map(|&engine_slots| {
-            let plan = SectionPlan {
-                omit,
-                engine_at,
-                engine_slots,
-            };
-            let placed = fixed_equipment(&unit.construction, chassis, section, plan).ok()?;
-            let reproduced = placed.iter().all(|(slot, item)| {
-                layout.criticals.get(slot).is_some_and(|critical| {
-                    critical.equipment == *item && critical.data == "-" && critical.modes.is_empty()
-                })
-            }) && layout.criticals.iter().all(|(slot, critical)| {
-                !is_fixed_item(&critical.equipment) || placed.contains_key(slot)
-            });
-            reproduced.then(|| SectionFit {
-                omit: omit.clone(),
-                engine_at,
-                engine_slots,
-                placed,
+        let plan = SectionPlan {
+            omit,
+            engine_at,
+            large_engine: unit.large_engine,
+        };
+        let placed = fixed_equipment(&unit.construction, chassis, section, plan).ok()?;
+        let reproduced = placed.iter().all(|(slot, item)| {
+            layout.criticals.get(slot).is_some_and(|critical| {
+                critical.equipment == *item && critical.data == "-" && critical.modes.is_empty()
             })
+        }) && layout.criticals.iter().all(|(slot, critical)| {
+            !is_fixed_item(&critical.equipment) || placed.contains_key(slot)
+        });
+        reproduced.then(|| SectionFit {
+            omit: omit.clone(),
+            engine_at,
+            placed,
         })
     })
 }
@@ -980,9 +960,6 @@ fn render_section(
         }
         if let Some(slot) = fit.engine_at {
             writeln!(output, "engine_at = {}", slot + 1)?;
-        }
-        if let Some(count) = fit.engine_slots {
-            writeln!(output, "engine_slots = {count}")?;
         }
     }
     let in_mount = |slot: u8| {
@@ -1381,37 +1358,24 @@ placements = [
             .replace(
                 "[sections.left_leg]\narmor = 24\n",
                 "[sections.left_leg]\narmor = 24\nomit = [\"lower_actuator\"]\n",
-            )
-            .replace(
-                "[sections.right_torso]\narmor = 25\nrear = 6\n",
-                "[sections.right_torso]\narmor = 25\nrear = 6\nengine_slots = 1\n",
-            )
-            .replace(
-                "[sections.center_torso]\narmor = 26\nrear = 8\n",
-                "[sections.center_torso]\narmor = 26\nrear = 8\nengine_slots = 8\n",
             );
         let parsed = ParsedTemplate::parse("ZEU-9S", &source).unwrap();
         assert!(parsed.sections["right_arm"].criticals.is_empty());
         let leg = &parsed.sections["left_leg"];
         assert!(!leg.criticals.contains_key(&2));
         assert_eq!(leg.criticals[&3].equipment, "HandOrFootActuator");
-        let torso = &parsed.sections["right_torso"];
-        assert_eq!(torso.criticals.len(), 1);
-        let center = &parsed.sections["center_torso"];
-        let engines = center
-            .criticals
-            .values()
-            .filter(|critical| critical.equipment == "Engine")
-            .count();
-        assert_eq!(engines, 8);
-        assert_eq!(center.criticals[&11].equipment, "Engine");
+        // Engines fill only the TechManual layouts; a section cannot relocate engine slots.
+        let relocated = source.replace(
+            "[sections.right_torso]\narmor = 25\nrear = 6\n",
+            "[sections.right_torso]\narmor = 25\nrear = 6\nengine_slots = 1\n",
+        );
+        assert_ne!(relocated, source);
+        assert!(ParsedTemplate::parse("ZEU-9S", &relocated).is_err());
 
         let rendered = render_mech(&parsed);
         for line in [
             "omit = [\"shoulder\", \"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]\n",
             "omit = [\"lower_actuator\"]\n",
-            "engine_slots = 1\n",
-            "engine_slots = 8\n",
         ] {
             assert!(rendered.contains(line), "{line}");
         }

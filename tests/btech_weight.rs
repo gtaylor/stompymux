@@ -11,18 +11,11 @@ async fn weight_reports_share_design_accounting_and_survive_damage_and_restart()
         let (_dir, config, world, unit, _, _) =
             firing::fixture_with_supply(source, Some(Weapon::Srm2), source, false, Some("")).await;
         let expected = if index < 2 {
-            let design =
-                Mech::from_template(world.btech.constructed_units()[&unit].definition().clone())
-                    .unwrap();
-            let mass = design.mass().unwrap();
-            let bins: u32 = design
-                .loadout()
-                .unwrap()
-                .ammunition
-                .iter()
-                .map(|bin| if bin.half_ton { 512 } else { 1024 })
-                .sum();
-            i64::from(mass.total - mass.ammunition + bins)
+            // The report weighs the intact design by book rounding, every item whole
+            // (TechManual pp. 46-57).
+            let design = world.btech.constructed_units()[&unit].definition();
+            let loadout = world.btech.constructed_units()[&unit].loadout().unwrap();
+            i64::from(design.construction_mass(&loadout).unwrap().total)
         } else {
             i64::from(
                 world.btech.vehicles()[&unit]

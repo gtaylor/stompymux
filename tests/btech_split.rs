@@ -51,7 +51,7 @@ fn definition(weapon: Weapon, parent: MechSection, extension: MechSection) -> Me
             .criticals
             .insert(slot, part.clone());
     }
-    template
+    crate::support::templates::legal(template)
 }
 
 /// Both section traversal orders and every permitted link direction resolve a single mount.
@@ -65,20 +65,30 @@ fn split_mount_locations_metadata_and_critical_availability() {
         Weapon::UltraAc20,
         Weapon::ClanUltraAc20,
     ] {
+        // Splits join two adjacent locations other than the legs (TechManual p. 47); a heavy
+        // Gauss rifle splits only between a side and the center torso (TechManual p. 218).
+        for (parent, extension) in [(LeftTorso, LeftLeg), (RightTorso, RightLeg)] {
+            assert!(Mech::from_template(definition(weapon, parent, extension)).is_err());
+        }
         for (parent, extension) in [
             (LeftArm, LeftTorso),
             (RightArm, RightTorso),
             (LeftTorso, LeftArm),
             (RightTorso, RightArm),
-            (LeftTorso, LeftLeg),
-            (RightTorso, RightLeg),
             (LeftTorso, CenterTorso),
             (RightTorso, CenterTorso),
             (CenterTorso, LeftTorso),
             (CenterTorso, RightTorso),
         ] {
+            let arm =
+                matches!(parent, LeftArm | RightArm) || matches!(extension, LeftArm | RightArm);
+            if weapon == Weapon::HeavyGaussRifle && arm {
+                assert!(Mech::from_template(definition(weapon, parent, extension)).is_err());
+                continue;
+            }
             let template = definition(weapon, parent, extension);
-            let original = Mech::from_template(template.clone()).unwrap();
+            let original =
+                Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
             let loadout = original.loadout().unwrap();
             let mut mixed = template;
             for section in mixed.sections.values_mut() {
@@ -137,13 +147,13 @@ fn split_mount_locations_metadata_and_critical_availability() {
 #[test]
 fn invalid_split_links_are_rejected() {
     use MechSection::*;
-    let source = definition(Weapon::HeavyGaussRifle, LeftArm, LeftTorso);
+    let source = definition(Weapon::Ac20, LeftArm, LeftTorso);
     for variant in 0..8 {
         let mut template = source.clone();
         let child = template.sections.get_mut(&LeftTorso).unwrap();
         match variant {
             0 => {
-                child.criticals.remove(&4);
+                child.criticals.remove(&3);
             }
             1 => {
                 child.criticals.get_mut(&2).unwrap().data = "Left_Arm:5".into();
@@ -184,7 +194,7 @@ fn invalid_split_links_are_rejected() {
         .criticals
         .values_mut()
     {
-        if part.equipment == "IS.HeavyGaussRifle" {
+        if part.equipment == "IS.AC/20" {
             part.equipment = "IS.GaussRifle".into();
         }
     }
@@ -198,19 +208,24 @@ async fn split_gauss_explosion_origin_case_and_restart() {
     let (_dir, config, mut base) = support::isolated_world().await;
     let id = base.create(&config, "Split Gauss".into(), Kind::Thing);
     base.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut template = definition(Weapon::HeavyGaussRifle, LeftArm, LeftTorso);
+    let mut template = definition(Weapon::HeavyGaussRifle, LeftTorso, CenterTorso);
     template
         .sections
-        .get_mut(&LeftArm)
+        .get_mut(&LeftTorso)
         .unwrap()
         .criticals
-        .get_mut(&3)
-        .unwrap()
-        .equipment = "CASE".into();
-    create_battle_unit(&mut base, id, template).unwrap();
+        .insert(
+            2,
+            CriticalDefinition {
+                equipment: "CASE".into(),
+                data: "-".into(),
+                modes: vec![],
+            },
+        );
+    create_battle_unit(&mut base, id, crate::support::templates::legal(template)).unwrap();
     support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
     let hit = Hit {
-        section: LeftTorso,
+        section: CenterTorso,
         rear_armor: false,
         through_armor_critical: true,
     };
@@ -221,7 +236,7 @@ async fn split_gauss_explosion_origin_case_and_restart() {
         let mut fired = base.clone();
         let report = resolve_battle_impact(&mut fired, id, hit, 1).unwrap();
         if !report.criticals.iter().any(|(slot, loss)| {
-            slot.section == LeftTorso
+            slot.section == CenterTorso
                 && matches!(
                     loss,
                     CriticalLoss::Weapon {
@@ -232,12 +247,14 @@ async fn split_gauss_explosion_origin_case_and_restart() {
         }) {
             continue;
         }
+        // The rifle explodes in its left torso primary, whose CASE keeps the blast there.
         let unit = &fired.btech.constructed_units()[&id];
-        assert_eq!(unit.sections()[&LeftArm].internal, 0);
-        assert_eq!(unit.sections()[&LeftTorso].internal, 8);
+        assert_eq!(unit.sections()[&LeftTorso].internal, 0);
+        // The center torso takes no more than the impact's own point.
+        let center = &base.btech.constructed_units()[&id].sections()[&CenterTorso];
         assert_eq!(
-            unit.sections()[&CenterTorso],
-            base.btech.constructed_units()[&id].sections()[&CenterTorso]
+            unit.sections()[&CenterTorso].internal,
+            center.internal - u16::from(center.armor == 0)
         );
         assert_eq!(
             report

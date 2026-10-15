@@ -23,14 +23,15 @@ fn running_mp(walking_mp: f64) -> f64 {
 }
 
 /// Walking MP recovered from a running ceiling: the largest whole figure whose running
-/// MP is not above it, so a 5/8 walks at 5 and a 3/5 at 3.
+/// MP is not above it, so a 5/8 walks at 5 and a 3/5 at 3. This is the construction
+/// rounding the engine rating uses too.
 fn walking_mp_of_running(running_kph: f64) -> f64 {
     let running_mp = running_kph / MP_KPH;
     if running_mp <= 1.0 {
         // A ceiling of one MP or less is a walk the unit cannot better (a lost leg).
         return running_mp.max(0.0);
     }
-    (running_mp / 1.5 + 1e-6).floor()
+    stompymux_unit_construction::walking_mp_of_running(running_mp)
 }
 
 impl SpeedEnvelope {

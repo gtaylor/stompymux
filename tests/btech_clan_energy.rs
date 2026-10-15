@@ -22,7 +22,7 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         for slot in 2..2 + weapon.profile().critical_slots {
             arm.criticals.insert(slot, part.clone());
         }
-        let unit = Mech::from_template(template.clone()).unwrap();
+        let unit = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
         let loadout = unit.loadout().unwrap();
         let (index, mount) = loadout
             .weapons

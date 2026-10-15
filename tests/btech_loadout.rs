@@ -333,7 +333,8 @@ fn conventional_autocannon_profiles_bins_and_enforcer_construction() {
             .unwrap();
         bin.equipment = format!("Ammo_{}", weapon.name());
         bin.data = capacity.to_string();
-        let unit = Mech::from_template(definition.clone()).unwrap();
+        let unit =
+            Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
         assert_eq!(unit.ammunition(), &[u16::from(capacity)]);
         assert_eq!(unit.mass().unwrap().ammunition, 1024);
         assert_eq!(
@@ -349,7 +350,9 @@ fn conventional_autocannon_profiles_bins_and_enforcer_construction() {
         bin.data = (capacity + 1).to_string();
         assert!(MechLoadout::resolve(&definition).is_err());
         assert_eq!(
-            Mech::from_template(definition).unwrap().ammunition(),
+            Mech::from_template(crate::support::templates::legal(definition))
+                .unwrap()
+                .ammunition(),
             &[u16::from(capacity)]
         );
     }
@@ -776,9 +779,12 @@ async fn existing_arctic_fox_xl_engine_constructs() {
     misleading
         .attributes
         .insert("specials".into(), "XLEngine_Tech".into());
-    assert_eq!(
-        Mech::from_template(misleading).unwrap().engine().unwrap(),
-        Engine::Standard
+    // The declared engine must match the installed slots (TechManual p. 48).
+    assert!(
+        Mech::from_template(misleading)
+            .unwrap_err()
+            .to_string()
+            .contains("do not match the declared Xl engine")
     );
 }
 
@@ -1007,7 +1013,9 @@ fn triple_myomer_construction_slots_mass_and_critical_eligibility() {
                     );
             }
             let built = Mech::from_template(template);
-            let allowed = slots >= 6 || (slots == 0 && !explicit);
+            // Triple strength myomer is the declared myomer choice filling exactly six slots
+            // (TechManual p. 52).
+            let allowed = (slots == 6 && explicit) || (slots == 0 && !explicit);
             assert_eq!(built.is_ok(), allowed, "slots={slots}, explicit={explicit}");
             if let Ok(unit) = built {
                 assert_eq!(unit.mass().unwrap(), baseline.mass().unwrap());

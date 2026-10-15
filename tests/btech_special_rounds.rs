@@ -127,7 +127,7 @@ fn launcher(source: &str, artillery: bool) -> UnitTemplate {
             bins(unit.sections.get_mut(&VehicleSection::Rear).unwrap());
         }
     }
-    definition
+    crate::support::templates::legal_unit(definition)
 }
 
 /// The three commands share native/Lua state, rejection and effect rollback on every supported chassis.

@@ -192,6 +192,8 @@ impl<L> WeaponMount<L> {
                             | "Rotary_SixShot"
                     ) && weapon.is_rotary())
                     || mode == "OnTC"
+                    // TM p. 342: only LRM, SRM, MRM and Streak SRM launchers and Narc
+                    // and iNarc beacons come in one-shot versions.
                     || (matches!(mode.as_str(), "OneShot" | "OneShot_Used")
                         && (weapon.one_shot_capable() || weapon.is_rocket()))),
             "Unsupported weapon modes {:?}",

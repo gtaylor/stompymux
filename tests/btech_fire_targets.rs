@@ -23,8 +23,7 @@ async fn fixture(
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(&mut world, shooter)
         .unwrap();
     support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);

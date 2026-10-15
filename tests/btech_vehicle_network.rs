@@ -141,7 +141,7 @@ async fn field_with_classic(
             create_battle_vehicle(&mut world, id, crate::support::templates::fitted(vehicle))
                 .unwrap();
         } else {
-            create_battle_unit(&mut world, id, template).unwrap();
+            create_battle_unit(&mut world, id, crate::support::templates::legal(template)).unwrap();
         }
         place_battle_unit(
             &mut world,

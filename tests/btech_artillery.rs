@@ -376,5 +376,5 @@ fn artillery_catalogue_admits_delayed_launchers() {
             .retain(|_, part| part.equipment != "JumpJet");
     }
     template.jump_speed = 0.0;
-    assert!(Mech::from_template(template.clone()).is_ok());
+    assert!(Mech::from_template(crate::support::templates::legal(template.clone())).is_ok());
 }

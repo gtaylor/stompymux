@@ -220,7 +220,8 @@ fn anti_missile_system_value_and_mass() {
         part.equipment = format!("Ammo_{}", weapon.name());
         part.data = capacity.to_string();
         arm.criticals.insert(5, part);
-        let mut equipped = Mech::from_template(definition).unwrap();
+        let mut equipped =
+            Mech::from_template(crate::support::templates::legal(definition)).unwrap();
         assert_eq!(weapon.mass(), 512);
         assert!(!weapon.supports_targeting_computer());
         assert_eq!(
@@ -255,7 +256,8 @@ fn laser_anti_missile_system_value_and_mass() {
         for slot in 4..4 + weapon.profile().critical_slots {
             arm.criticals.insert(slot, part.clone());
         }
-        let mut equipped = Mech::from_template(definition).unwrap();
+        let mut equipped =
+            Mech::from_template(crate::support::templates::legal(definition)).unwrap();
         assert_eq!(weapon.mass(), mass);
         assert_eq!(weapon.profile().ammunition_per_ton, 0);
         assert!(weapon.supports_targeting_computer());

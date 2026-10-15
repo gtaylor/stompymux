@@ -459,6 +459,7 @@ async fn quad_status_labels_front_and_rear_legs() {
     let mut part = unit["definition"]["sections"]["LeftArm"]["criticals"]["0"].clone();
     part["equipment"] = "IS.MediumLaser".into();
     unit["definition"]["sections"]["LeftArm"]["criticals"]["5"] = part;
+    support::templates::book_legal_record(&mut unit);
     let mut encoded = serde_json::to_value(&world).unwrap();
     encoded["btech"]["constructed"][id.0.to_string()] = unit;
     let world: World = serde_json::from_value(encoded).unwrap();

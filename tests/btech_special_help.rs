@@ -24,8 +24,7 @@ async fn cockpit_help_matches_catalogue_without_mutation() {
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Help cockpit".into(), Kind::Thing);
-        UnitTemplate::parse("test", template)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", template).unwrap())
             .create(&mut world, unit)
             .unwrap();
         support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);

@@ -574,7 +574,7 @@ async fn experience_load_queries_honor_hot_myomer_configuration() {
     world
         .btech
         .rewrite_unit_record(attacker, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["heat"]["excess"] = 9.0.into();
         })
         .unwrap();

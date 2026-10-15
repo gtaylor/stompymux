@@ -245,8 +245,7 @@ async fn removal_handles_starting_stopped_and_unplaced_units() {
         let mut world = original;
         let new = world.create(&config, "Unplaced".into(), Kind::Thing);
         world.objects.get_mut(&new).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("test", &source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", &source).unwrap())
             .create(&mut world, new)
             .unwrap();
         support::seed_object_dice(&mut world, new, support::FIXTURE_DICE_SEED);

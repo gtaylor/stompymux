@@ -240,8 +240,7 @@ async fn scan_info_towing_uses_shared_relationship_and_literal_names() {
                 .await;
         let tow = world.create(&config, "Tow".into(), Kind::Thing);
         world.objects.get_mut(&tow).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("test", towed_template)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", towed_template).unwrap())
             .create(&mut world, tow)
             .unwrap();
         let map = world.btech.units()[&target].map.unwrap();

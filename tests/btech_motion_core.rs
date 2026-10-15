@@ -2695,7 +2695,12 @@ async fn direct_out_of_range_shot_still_rolls_and_spends_without_target_damage()
     {
         part.equipment = part.equipment.replace("IS.SRM-4", "IS.StreakSRM-4");
     }
-    world.btech.set_unit_definition(id, definition).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
     let report =
         stompymux_rs::resolve_battle_shot(&mut world, id, ObjectId(1), target, index, rules)
             .unwrap();
@@ -6042,7 +6047,7 @@ async fn conventional_direct_fire_matrix(weapons: &[stompymux_rs::Weapon]) {
                 if ammunition > 0 {
                     record["ammunition"][0] = ammunition.into();
                 }
-                record["definition"] = serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(record, definition);
             })
             .unwrap();
         let weapon_index = world.btech.constructed_units()[&id]
@@ -6211,8 +6216,10 @@ async fn flamer_heat_mode_native_lua_persistence_and_recycle_guards() {
         .get_mut(&2)
         .unwrap()
         .equipment = "IS.Flamer".into();
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
+    crate::support::templates::set_record_definition(
+        &mut state["constructed"][id.0.to_string()],
+        definition,
+    );
     world.btech = serde_json::from_value(state).unwrap();
     assert!(toggle_battle_flamer_heat(&mut world, id, ObjectId(1), 1).is_err());
     world.validate(&config).unwrap();
@@ -6365,7 +6372,7 @@ async fn flamer_heat_hits_glances_and_misses_do_not_roll_target_damage() {
                 if weapon.profile().ammunition_per_ton > 0 {
                     record["ammunition"][0] = weapon.profile().ammunition_per_ton.into();
                 }
-                record["definition"] = serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(record, definition);
             })
             .unwrap();
         toggle_battle_flamer_heat(&mut base, id, ObjectId(1), 0).unwrap();
@@ -6429,7 +6436,12 @@ async fn flamer_selections_preserve_order_partial_errors_and_transaction_rollbac
             .unwrap()
             .equipment = "IS.Flamer".into();
     }
-    world.btech.set_unit_definition(id, definition).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
     world.validate(&config).unwrap();
     let native = Scripts::new(
         &config,
@@ -6530,7 +6542,12 @@ async fn pulse_accuracy_changes_a_miss_to_a_glancing_hit() {
             .get_mut(&2)
             .unwrap()
             .equipment = weapon.name().into();
-        world.btech.set_unit_definition(id, definition).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                crate::support::templates::set_record_definition(record, definition)
+            })
+            .unwrap();
         world.validate(&config).unwrap();
         variants.push(world);
     }
@@ -6603,7 +6620,11 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
     for slot in [2, 3] {
         arm.criticals.get_mut(&slot).unwrap().equipment = "IS.SnubNosedPPC".into();
     }
-    base.btech.set_unit_definition(id, definition).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
     // Fix scanner and damage streams so range assertions cannot fail on random contact loss.
     shot_seed(&mut base, id, 1);
     shot_seed(&mut base, target, 1);
@@ -6688,7 +6709,8 @@ async fn double_heat_sinks_group_damage_mass_cooling_and_restart() {
     template
         .attributes
         .insert("specials".into(), "doublehs FlipArms".into());
-    template.heat_sinks = 24;
+    // Eleven double sinks: nine in the engine and the two installed groups (TechManual p. 53).
+    template.heat_sinks = 22;
     for slot in 2..8 {
         template
             .sections
@@ -6726,7 +6748,7 @@ async fn double_heat_sinks_group_damage_mass_cooling_and_restart() {
         world.btech.constructed_units()[&id]
             .heat_rates(&world)
             .dissipation,
-        24.0
+        22.0
     );
     let initial_mass = world.btech.constructed_units()[&id]
         .mass()
@@ -6746,7 +6768,7 @@ async fn double_heat_sinks_group_damage_mass_cooling_and_restart() {
         );
         let unit = &damaged.btech.constructed_units()[&id];
         assert_eq!(unit.system_hits(System::HeatSink), 2);
-        assert_eq!(unit.heat_rates(&damaged).dissipation, 22.0);
+        assert_eq!(unit.heat_rates(&damaged).dissipation, 20.0);
         assert_eq!(unit.mass().unwrap().equipment, initial_mass - 1023);
         for slot in 2..5 {
             assert!(unit.critical_destroyed(CriticalLocation {
@@ -6784,7 +6806,7 @@ async fn double_heat_sinks_group_damage_mass_cooling_and_restart() {
         wet.btech.constructed_units()[&id]
             .heat_rates(&wet)
             .dissipation,
-        20.0
+        18.0
     );
     spend_battle_weapon(&mut world, id, ObjectId(1), 0).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -6822,6 +6844,17 @@ async fn fusion_engine_layout_mass_damage_and_restart() {
         let mut template =
             MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         template.max_speed = 96.75;
+        // The engine family is a declared construction choice (TechManual p. 48).
+        let flag = match engine {
+            Engine::Standard => "",
+            Engine::Light => "LightEngine_Tech",
+            Engine::Xl => "XLEngine_Tech",
+            Engine::Xxl => "XXL_Tech",
+            Engine::Compact => "CompactEngine_Tech",
+        };
+        template
+            .attributes
+            .insert("specials".into(), format!("FlipArms {flag}"));
         let part = template.sections[&MechSection::CenterTorso].criticals[&0].clone();
         if compact {
             for slot in 7..10 {
@@ -6946,16 +6979,13 @@ async fn case_contains_ammunition_but_not_weapon_damage_or_xl_loss() {
         .sections
         .get_mut(&MechSection::RightTorso)
         .unwrap()
-        .configuration = Some("Case".into());
-    definition
-        .sections
-        .get_mut(&MechSection::RightTorso)
-        .unwrap()
         .criticals
         .insert(3, part);
     let mut state = serde_json::to_value(&baseline.btech).unwrap();
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(&definition).unwrap();
+    crate::support::templates::set_record_definition(
+        &mut state["constructed"][id.0.to_string()],
+        definition.clone(),
+    );
     let mut protected = baseline.clone();
     protected.btech = serde_json::from_value(state).unwrap();
     let unit = &protected.btech.constructed_units()[&id];
@@ -7024,8 +7054,14 @@ async fn case_contains_ammunition_but_not_weapon_damage_or_xl_loss() {
                 .insert(slot, engine.clone());
         }
     }
+    let specials = definition.attributes.entry("specials".into()).or_default();
+    specials.push_str(" XLEngine_Tech");
     let mut xl = before;
-    xl.btech.set_unit_definition(id, definition).unwrap();
+    xl.btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
     let center = xl.btech.constructed_units()[&id].sections()[&MechSection::CenterTorso].clone();
     let report = explode_battle_ammunition(&mut xl, id, 0, fall_rules()).unwrap();
     assert!(report.impact.destroyed);
@@ -7054,7 +7090,7 @@ async fn case_weapon_triggered_explosion_native_lua_and_rollback() {
         .insert(3, part);
     base.btech
         .rewrite_unit_record(target, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["sections"]["RightTorso"]["armor"] = 0.into();
         })
         .unwrap();
@@ -7155,7 +7191,11 @@ async fn streak_lock_failure_launch_boundaries_and_saved_recycle() {
     {
         part.equipment = part.equipment.replace("IS.SRM-4", "IS.StreakSRM-4");
     }
-    base.btech.set_unit_definition(id, definition).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
     let mut probe = base.clone();
     let threshold = resolve_battle_shot(&mut probe, id, ObjectId(1), target, index, shot_rules())
         .unwrap()
@@ -7283,7 +7323,7 @@ async fn mrm_accuracy_penalty_increases_target_number() {
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"][0] = 24.into();
         })
         .unwrap();
@@ -7309,7 +7349,11 @@ async fn gauss_weapon_explosion_native_lua_and_rollback() {
     for slot in 2..9 {
         arm.criticals.insert(slot, part.clone());
     }
-    base.btech.set_unit_definition(target, definition).unwrap();
+    base.btech
+        .rewrite_unit_record(target, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
     for value in 0..=u8::MAX {
         let mut before = base.clone();
         shot_seed(&mut before, target, value);
@@ -7427,7 +7471,7 @@ async fn heavy_gauss_recoil_matrix(classes: &[(u16, i32)]) {
     bin.data = "4".into();
     base.btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"][0] = 4.into();
         })
         .unwrap();
@@ -7480,6 +7524,10 @@ async fn heavy_gauss_recoil_matrix(classes: &[(u16, i32)]) {
                     }
                     let mut state = serde_json::to_value(&before.btech).unwrap();
                     state["constructed"][id.0.to_string()]["definition"]["tons"] = tons.into();
+                    // The heavier chassis carries the same equipment with spare tonnage.
+                    crate::support::templates::book_legal_record(
+                        &mut state["constructed"][id.0.to_string()],
+                    );
                     state["units"][id.0.to_string()]["tons"] = tons.into();
                     state["constructed"][id.0.to_string()]["motion"]["speed"] = speed.into();
                     before.btech = serde_json::from_value(state).unwrap();
@@ -7681,7 +7729,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
     .unwrap();
     base.btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"][0] = 4.into();
         })
         .unwrap();
@@ -7762,7 +7810,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
 
 /// The unchanged Cestus can fire and restart, with heat and destruction following relocated engine slots.
 #[tokio::test]
-async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
+async fn cestus_engine_damage_native_lua_fire_and_restart() {
     use stompymux_rs::*;
     let template =
         MechTemplate::parse("CES-4S", include_str!("../game/units/CES-4S.toml")).unwrap();
@@ -7838,7 +7886,9 @@ async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
     ))
     .unwrap();
     assert_eq!(native.world().btech, lua.world().btech);
-    for (section, hits) in [(MechSection::LeftTorso, 2), (MechSection::RightTorso, 0)] {
+    // The light engine puts two slots in each side torso (TechManual p. 50): losing either
+    // side costs two engine hits, and a third from the center torso destroys it.
+    for (section, hits) in [(MechSection::LeftTorso, 2), (MechSection::RightTorso, 2)] {
         let mut world = native.world().clone();
         apply_damage_phase(&mut world, id, section, 100, DamagePhase::Internal).unwrap();
         let unit = &world.btech.constructed_units()[&id];
@@ -7849,7 +7899,8 @@ async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, world.btech);
-        for slot in if hits == 2 { vec![10] } else { vec![10, 11, 0] } {
+        {
+            let slot = 0;
             destroy_battle_critical(
                 &mut world,
                 id,
@@ -7882,7 +7933,9 @@ async fn relocated_cestus_engine_damage_native_lua_fire_and_restart() {
 #[tokio::test]
 async fn split_weapon_native_lua_fire_guards_and_recycle_restart() {
     use stompymux_rs::*;
-    for weapon in [Weapon::Ac20, Weapon::HeavyGaussRifle, Weapon::Lbx20] {
+    // A heavy Gauss rifle never sits in an arm (TechManual p. 218), so the arm-to-torso split
+    // carries the autocannons.
+    for weapon in [Weapon::Ac20, Weapon::Lbx20] {
         let (_dir, config, mut base, id, target) = shot_fixture().await;
         shot_skill(&mut base, 30);
         set_battle_character_value(
@@ -7929,7 +7982,7 @@ async fn split_weapon_native_lua_fire_guards_and_recycle_restart() {
         bin.data = weapon.profile().ammunition_per_ton.to_string();
         base.btech
             .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(record, definition);
                 record["ammunition"][0] = weapon.profile().ammunition_per_ton.into();
             })
             .unwrap();

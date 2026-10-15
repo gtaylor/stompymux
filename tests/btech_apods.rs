@@ -42,7 +42,7 @@ fn apod_mass_and_battle_value() {
             Weapon::parse(&part.equipment).is_err() && !part.equipment.starts_with("Ammo_")
         });
     }
-    let baseline = Mech::from_template(template.clone()).unwrap();
+    let baseline = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
     for weapon in [Weapon::APod, Weapon::ClanAPod] {
         template
             .sections
@@ -57,7 +57,7 @@ fn apod_mass_and_battle_value() {
                     modes: vec![],
                 },
             );
-        let unit = Mech::from_template(template.clone()).unwrap();
+        let unit = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
         assert_eq!(
             unit.mass().unwrap().equipment,
             baseline.mass().unwrap().equipment + 512

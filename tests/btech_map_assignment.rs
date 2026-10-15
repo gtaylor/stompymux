@@ -112,8 +112,7 @@ async fn new_units_use_destination_surface() {
     for source in firing::templates() {
         let unit = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("test", &source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", &source).unwrap())
             .create(&mut world, unit)
             .unwrap();
         let report = reassign_battle_map(&mut world, unit, map, Some("AB")).unwrap();
@@ -141,10 +140,11 @@ async fn map_capacity_counts_all_chassis_and_allows_existing_members() {
     for index in 0..251 {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("test", &sources[index % sources.len()])
-            .unwrap()
-            .create(&mut world, id)
-            .unwrap();
+        crate::support::templates::legal_unit(
+            UnitTemplate::parse("test", &sources[index % sources.len()]).unwrap(),
+        )
+        .create(&mut world, id)
+        .unwrap();
         if index < 250 {
             place_battle_unit(&mut world, id, map, 0, 0).unwrap();
             first.get_or_insert(id);
@@ -231,8 +231,7 @@ async fn map_assignment_releases_tows_across_all_chassis_pairings() {
             let b = world.create(&config, "Tow".into(), Kind::Thing);
             for (id, source) in [(a, source), (b, target)] {
                 world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-                UnitTemplate::parse("test", source)
-                    .unwrap()
+                crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
                     .create(&mut world, id)
                     .unwrap();
                 place_battle_unit(&mut world, id, old, 0, 0).unwrap();

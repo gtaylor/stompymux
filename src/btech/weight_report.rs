@@ -44,7 +44,8 @@ impl WeightReport {
         }
         lines.push(line.clone());
         let tons = self.total as f64 / 1024.0;
-        let warning = if self.total / 1024 > i64::from(self.nominal_tons) {
+        // Any mass over the nominal tonnage is overweight (TM p. 46).
+        let warning = if self.total > i64::from(self.nominal_tons) * 1024 {
             "[fg=red bold]"
         } else {
             ""
@@ -136,38 +137,26 @@ pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<Wei
             .context("Unit construction state is unavailable")?
             .definition();
         let design = Mech::from_template(definition.clone())?;
-        let mass = design.mass()?;
+        // The intact design weighed by the construction rules template checks apply, so the
+        // report and the tonnage check agree (TM pp. 46-57).
+        let mass = definition.construction_mass(&design.loadout()?)?;
         component("Engine", i64::from(mass.engine));
         component("Cockpit", i64::from(mass.cockpit));
         component("Gyro", i64::from(mass.gyro));
         component("Internal Structure", i64::from(mass.structure));
         component("Armor", i64::from(mass.armor));
-        component("Heat Sinks", i64::from(design.cooling_mass()?));
+        component("Heat Sinks", i64::from(mass.heat_sinks));
         if mass.cargo > 0 {
             component("CargoSpace", i64::from(mass.cargo));
         }
-        let loadout = design.loadout()?;
-        for mount in &loadout.weapons {
-            let mass = mount.weapon.mass() / u32::from(mount.weapon.profile().critical_slots)
-                * mount.criticals.len() as u32;
-            add(&mut equipment, mount.weapon.name(), 1, mass);
-        }
-        for part in &loadout.systems {
-            let name = &definition.sections[&part.location.section].criticals[&part.location.slot]
-                .equipment;
-            add(
-                &mut equipment,
-                name,
-                1,
-                super::system_slot_mass(definition, part.system),
-            );
-        }
-        for bin in &loadout.ammunition {
-            add(
-                &mut equipment,
-                &format!("Ammo_{}", bin.weapon.name()),
-                1,
-                if bin.half_ton { 512 } else { 1024 },
+        for item in mass.items {
+            equipment.insert(
+                item.name.clone(),
+                WeightEntry {
+                    name: item.name,
+                    count: Some(item.count),
+                    mass: i64::from(item.mass),
+                },
             );
         }
         (definition.name.clone(), definition.tons)

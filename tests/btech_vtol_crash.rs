@@ -714,10 +714,11 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Controlled aircraft".into(), Kind::Thing);
-    UnitTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml"))
-        .unwrap()
-        .create(&mut world, id)
-        .unwrap();
+    crate::support::templates::legal_unit(
+        UnitTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
+    )
+    .create(&mut world, id)
+    .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     aircraft(&mut world, id, map, false);

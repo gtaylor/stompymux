@@ -19,7 +19,7 @@ fn definition(weapon: Weapon) -> MechTemplate {
         .unwrap();
     bin.equipment = format!("Ammo_{}", weapon.name());
     bin.data = weapon.profile().ammunition_per_ton.to_string();
-    template
+    crate::support::templates::legal(template)
 }
 
 /// Distinct catalog identities retain ordinary direct damage and ammunition hazards.
@@ -188,7 +188,7 @@ fn hyper_ac_construction_ranges_and_critical_supply() {
             }
             assert!(Mech::from_template(flagged).is_err(), "{weapon:?} {flag}");
         }
-        let unit = Mech::from_template(template).unwrap();
+        let unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
         let loadout = unit.loadout().unwrap();
         let (index, mount) = loadout
             .weapons

@@ -18,7 +18,7 @@ fn template_specials_merge_canonically_after_construction_flags() {
         parsed.attributes["specials"],
         "HDGyro_Tech SearchLight CargoTech FlipArms"
     );
-    let unit = Mech::from_template(parsed).unwrap();
+    let unit = Mech::from_template(crate::support::templates::legal(parsed)).unwrap();
     assert_eq!(unit.gyro(), Gyro::Hardened);
     for invalid in [
         format!("specials = [\"UnknownTechnology\"]\n{SOURCE}"),

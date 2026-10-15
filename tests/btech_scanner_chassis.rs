@@ -68,12 +68,18 @@ fn equipment(source: &str) -> UnitTemplate {
             },
         );
     }
-    template
+    crate::support::templates::legal_unit(template)
 }
 
 /// Change only explicitly selected scenario state, using the same representation as restart.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    world.btech.rewrite_unit_record(id, change).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            change(record);
+            crate::support::templates::book_legal_record(record);
+        })
+        .unwrap();
 }
 
 /// A running, equipped observer faces an ordinary target down a lane, optionally behind a hill.
@@ -301,6 +307,7 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
     );
     let (definition, ammunition, index) = match template {
         UnitTemplate::Mech(definition) => {
+            let definition = crate::support::templates::legal(definition);
             let unit = Mech::from_template(definition.clone()).unwrap();
             let index = unit
                 .loadout()

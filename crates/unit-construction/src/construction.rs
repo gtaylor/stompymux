@@ -11,6 +11,17 @@ use std::fmt::Write as _;
 /// Kilometres per hour for each movement point.
 pub const SPEED_PER_MP: f64 = 10.75;
 
+/// Whether a Mech's engine is a large engine, rated above 400: tonnage times the walking MP
+/// its stored running speed implies (TM p. 48; Tactical Operations: Advanced Units &
+/// Equipment large engines).
+pub fn large_engine(tons: i64, max_speed: Option<&str>) -> bool {
+    let Some(speed) = max_speed.and_then(|speed| speed.trim().parse::<f64>().ok()) else {
+        return false;
+    };
+    let walking = super::walking_mp_of_running(speed / SPEED_PER_MP);
+    walking * tons as f64 > 400.0
+}
+
 /// Critical names of every item that construction places in a mech.
 pub const FIXED_ITEMS: [&str; 9] = [
     SHOULDER_OR_HIP,
@@ -36,6 +47,14 @@ const SENSORS: &str = "Sensors";
 
 /// Chassis flag recording Clan technology.
 const CLAN: &str = "Clan";
+
+/// Chassis flag recording a mixed-technology design, whose weapons and equipment may come from
+/// either technology base (Tactical Operations: Advanced Units & Equipment p. 189). Without it a
+/// Mech mounts only weapons of its own technology base (TM p. 46).
+pub const MIXED_TECH: &str = "MixedTech";
+
+/// Chassis flag recording single heat sinks on a Clan Mech, whose default is double sinks.
+pub const SINGLE_HEAT_SINKS: &str = "SingleHS";
 
 /// Chassis flag recording flippable arms; it always follows the arm actuator layout.
 pub const FLIP_ARMS: &str = "FlipArms";
@@ -152,9 +171,10 @@ choice!(
 );
 
 choice!(
-    /// Heat sink family beyond the tech base default.
+    /// Heat sink family beyond the tech base default. Clan Mechs default to double sinks
+    /// but may use single sinks (TM p. 52), which the `SingleHS` flag records.
     HeatSinks {
-        Single = "single" => [],
+        Single = "single" => ["SingleHS"],
         Double = "double" => ["DoubleHS"],
         Laser = "laser" => ["LaserHS_Tech", "LHS"],
     }
@@ -215,6 +235,8 @@ fn tech_base(key: &str, value: &str) -> Result<bool> {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Construction {
     pub clan: bool,
+    /// The design mixes Inner Sphere and Clan weapons and equipment.
+    pub mixed_tech: bool,
     /// Components built from the other technology base, in [`Component::ALL`] order.
     pub mixed: Vec<Component>,
     pub engine: Engine,
@@ -231,6 +253,8 @@ pub struct Construction {
 #[serde(deny_unknown_fields)]
 struct ConstructionDocument {
     tech_base: Option<String>,
+    #[serde(default)]
+    mixed_tech: bool,
     engine: Option<String>,
     gyro: Option<String>,
     cockpit: Option<String>,
@@ -268,12 +292,9 @@ impl Construction {
             None => HeatSinks::Single,
             Some(value) => HeatSinks::parse("heat_sinks", value)?,
         };
-        ensure!(
-            !clan || heat_sinks != HeatSinks::Single,
-            "Clan units always have double heat sinks"
-        );
         Ok(Self {
             clan,
+            mixed_tech: document.mixed_tech,
             mixed,
             engine: choice(document.engine, Engine::parse, "engine")?,
             gyro: choice(document.gyro, Gyro::parse, "gyro")?,
@@ -288,11 +309,11 @@ impl Construction {
     /// Recover construction choices from chassis flags, returning the flags no choice owns.
     pub fn from_flags(flags: &[&str]) -> Result<(Self, Vec<String>)> {
         let clan = flags.iter().any(|flag| flag.eq_ignore_ascii_case(CLAN));
+        let has = |name: &str| flags.iter().any(|flag| flag.eq_ignore_ascii_case(name));
         let heat_sinks = match HeatSinks::from_flags("heat_sinks", flags)? {
-            HeatSinks::Single if clan => HeatSinks::Double,
+            HeatSinks::Single if clan && !has(SINGLE_HEAT_SINKS) => HeatSinks::Double,
             heat_sinks => heat_sinks,
         };
-        let has = |name: &str| flags.iter().any(|flag| flag.eq_ignore_ascii_case(name));
         let mut mixed = Vec::new();
         for component in Component::ALL {
             ensure!(
@@ -306,6 +327,7 @@ impl Construction {
         }
         let construction = Self {
             clan,
+            mixed_tech: has(MIXED_TECH),
             mixed,
             engine: engine_from_flags(flags)?,
             gyro: Gyro::from_flags("gyro", flags)?,
@@ -329,12 +351,20 @@ impl Construction {
         if self.clan {
             flags.push(CLAN);
         }
+        if self.mixed_tech {
+            flags.push(MIXED_TECH);
+        }
         flags.extend(self.engine.flags().first());
         flags.extend(self.gyro.flags().first());
         flags.extend(self.cockpit.flags().first());
         flags.extend(self.structure.flags().first());
         flags.extend(self.armor.flags().first());
-        if !(self.clan && self.heat_sinks == HeatSinks::Double) {
+        // Each technology base's default sink records no flag: single for the Inner Sphere,
+        // double for the Clans.
+        if !matches!(
+            (self.clan, self.heat_sinks),
+            (false, HeatSinks::Single) | (true, HeatSinks::Double)
+        ) {
             flags.extend(self.heat_sinks.flags().first());
         }
         flags.extend(self.myomer.flags().first());
@@ -393,6 +423,9 @@ impl Construction {
                 line(key, value);
             }
         }
+        if self.mixed_tech {
+            let _ = writeln!(lines, "mixed_tech = true");
+        }
         for component in &self.mixed {
             let _ = writeln!(
                 lines,
@@ -444,6 +477,7 @@ pub fn mixed_technology_flag(flag: &str) -> bool {
 /// Whether a flag is set by a construction choice or derived, so `specials` may not list it.
 pub fn owned_flag(flag: &str) -> bool {
     flag.eq_ignore_ascii_case(CLAN)
+        || flag.eq_ignore_ascii_case(MIXED_TECH)
         || mixed_technology_flag(flag)
         || Engine::ALL
             .iter()
@@ -540,8 +574,9 @@ pub struct SectionPlan<'a> {
     pub omit: &'a [Omission],
     /// Zero-based first engine slot in a side torso.
     pub engine_at: Option<u8>,
-    /// Engine slots the section holds when they differ from the engine type's count.
-    pub engine_slots: Option<u8>,
+    /// The engine is rated above 400 and fills two more center torso slots (Tactical
+    /// Operations: Advanced Units & Equipment, Advanced Engine Master Table).
+    pub large_engine: bool,
 }
 
 /// Fixed equipment construction places in one mech section, by zero-based slot.
@@ -602,11 +637,6 @@ pub fn fixed_equipment(
         _ => 0,
     };
     ensure!(
-        plan.engine_slots.is_none() || matches!(section, LeftTorso | RightTorso | CenterTorso),
-        "engine_slots applies only to torsos"
-    );
-    let side_engine = plan.engine_slots.map_or(side_engine, usize::from);
-    ensure!(
         plan.engine_at.is_none() || (matches!(section, LeftTorso | RightTorso) && side_engine > 0),
         "engine_at applies only to side torsos holding engine slots"
     );
@@ -632,12 +662,13 @@ pub fn fixed_equipment(
                 Gyro::Xl => 6,
                 Gyro::Compact => 2,
             };
-            let standard = if construction.engine == Engine::Compact {
+            let engine = if construction.engine == Engine::Compact {
                 3
+            } else if plan.large_engine {
+                8
             } else {
                 6
             };
-            let engine = plan.engine_slots.unwrap_or(standard);
             ensure!(
                 engine <= 12 - gyro,
                 "engine and gyro slots run past the section"
@@ -740,6 +771,7 @@ mod tests {
     fn choices_round_trip_through_flags() {
         let construction = Construction {
             clan: true,
+            mixed_tech: true,
             mixed: vec![Component::Engine, Component::Armor],
             engine: Engine::Xl,
             gyro: Gyro::HeavyDuty,
@@ -783,7 +815,19 @@ mod tests {
         assert_eq!(clan.flags(), ["Clan"]);
         assert_eq!(clan.render(), "\n[construction]\ntech_base = \"clan\"\n");
         assert_eq!(table("").unwrap().render(), "");
-        assert!(table("tech_base = \"clan\"\nheat_sinks = \"single\"").is_err());
+        // Clan Mechs may use single heat sinks (TM p. 52).
+        let single = table("tech_base = \"clan\"\nheat_sinks = \"single\"").unwrap();
+        assert_eq!(single.flags(), ["Clan", "SingleHS"]);
+        assert_eq!(
+            Construction::from_flags(&["Clan", "SingleHS"]).unwrap().0,
+            single
+        );
+        assert!(
+            !table("heat_sinks = \"single\"")
+                .unwrap()
+                .flags()
+                .contains(&"SingleHS")
+        );
         // A component from the other technology base round-trips; one from the chassis base is
         // the default and is not recorded.
         let mixed = table("engine_tech = \"clan\"\narmor_tech = \"inner_sphere\"").unwrap();

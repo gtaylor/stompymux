@@ -233,10 +233,11 @@ async fn carried_stock_affects_live_movement_and_adds_to_tow_load() {
         let (_dir, config, mut world, map, id) = fixture(&source, false).await;
         let unloaded = battle_throttle_maximum(&world, id, true).unwrap();
         let target = world.create(&config, "Tow target".into(), Kind::Thing);
-        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-            .unwrap()
-            .create(&mut world, target)
-            .unwrap();
+        crate::support::templates::legal_unit(
+            UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+        )
+        .create(&mut world, target)
+        .unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, target, map, 0, 0).unwrap();
         set_battle_tow(&mut world, id, Some(target)).unwrap();
@@ -298,16 +299,14 @@ async fn construction_rejects_unknown_stock_before_mutation() {
         set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 1).unwrap();
         let before = world.btech.clone();
         assert!(
-            UnitTemplate::parse("test", &source)
-                .unwrap()
+            crate::support::templates::legal_unit(UnitTemplate::parse("test", &source).unwrap())
                 .create(&mut world, id)
                 .is_err()
         );
         assert_eq!(world.btech, before);
         set_battle_inventory_quantity(&mut world, ObjectId(1), id, 384, 0).unwrap();
         set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 1).unwrap();
-        UnitTemplate::parse("test", &source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", &source).unwrap())
             .create(&mut world, id)
             .unwrap();
         assert_eq!(battle_inventory_mass(&world, id).unwrap(), 204);

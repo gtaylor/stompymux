@@ -1516,8 +1516,7 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         support::seed_object_dice(&mut world, replacement, support::FIXTURE_DICE_SEED);
         let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("test", &source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", &source).unwrap())
             .create(&mut world, unplaced)
             .unwrap();
         support::seed_object_dice(&mut world, unplaced, support::FIXTURE_DICE_SEED);
@@ -1814,6 +1813,26 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
         let native = &f.native;
         let lua = &f.lua;
         f.install(&world);
+        // A Mech's cargo installation counts toward its tonnage, so a wizard cannot add one
+        // to a design already at its weight (TechManual p. 46).
+        if world.btech.constructed_units().contains_key(&id) {
+            let before = lua.world().btech.clone();
+            for value in [123, 100_000] {
+                assert!(
+                    set_battle_unit_field_action(
+                        lua,
+                        config,
+                        ObjectId(1),
+                        id,
+                        "cargospace",
+                        &value.to_string()
+                    )
+                    .is_err()
+                );
+                assert_eq!(lua.world().btech, before);
+            }
+            continue;
+        }
         for value in [123, 100_000, 0] {
             let before = lua.world().btech.clone();
             lua.drain_outbox();

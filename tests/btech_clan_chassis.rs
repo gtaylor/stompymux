@@ -2,7 +2,9 @@
 use crate::support;
 use stompymux_rs::*;
 
-/// A complete Clan biped with two external double sinks and ordinary fusion construction.
+/// A complete Clan biped with three external double sinks beside the nine its engine holds,
+/// and ordinary fusion construction. Its arm lasers make room for the two tons of sinks
+/// beyond the engine's free ten.
 fn definition() -> MechTemplate {
     let mut template =
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
@@ -11,9 +13,11 @@ fn definition() -> MechTemplate {
         .insert("specials".into(), "Clan FlipArms".into());
     template.heat_sinks = 24;
     for section in template.sections.values_mut() {
-        section.criticals.retain(|_, p| p.equipment != "HeatSink");
+        section
+            .criticals
+            .retain(|_, p| p.equipment != "HeatSink" && p.equipment != "IS.MediumLaser");
     }
-    for slot in 2..6 {
+    for slot in 2..8 {
         template
             .sections
             .get_mut(&MechSection::LeftTorso)
@@ -28,7 +32,7 @@ fn definition() -> MechTemplate {
                 },
             );
     }
-    template
+    crate::support::templates::legal(template)
 }
 
 /// Two-slot loss removes two units of cooling; seven material slots activate Clan construction.
@@ -37,7 +41,7 @@ fn clan_sink_groups_containment_and_material_mass() {
     let template = definition();
     assert!(template.has_double_heat_sinks());
     assert_eq!(template.heat_sink_slots(), 2);
-    let original = Mech::from_template(template.clone()).unwrap();
+    let original = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
     for section in original.sections().keys() {
         assert!(original.has_case(*section));
     }
@@ -70,8 +74,12 @@ fn clan_sink_groups_containment_and_material_mass() {
         .criticals
         .remove(&3);
     assert!(Mech::from_template(incomplete).is_err());
+    // Clan endo steel and ferro-fibrous armor each fill exactly seven slots and are declared
+    // construction choices (TechManual pp. 47, 56).
     for count in [6, 7] {
         let mut advanced = template.clone();
+        let specials = advanced.attributes.entry("specials".into()).or_default();
+        specials.push_str(" EndoSteel_Tech FerroFibrous_Tech");
         for (section, name, start) in [
             (MechSection::RightTorso, "EndoSteel", 3),
             (MechSection::LeftArm, "FerroFibrous", 4),
@@ -92,15 +100,13 @@ fn clan_sink_groups_containment_and_material_mass() {
                     );
             }
         }
-        let unit = Mech::from_template(advanced).unwrap();
-        assert_eq!(
-            unit.mass().unwrap().structure,
-            if count == 7 { 2048 } else { 3584 }
-        );
-        assert_eq!(
-            unit.mass().unwrap().armor,
-            if count == 7 { 3584 } else { 4096 }
-        );
+        if count == 6 {
+            assert!(Mech::from_template(advanced).is_err());
+            continue;
+        }
+        let unit = Mech::from_template(crate::support::templates::legal(advanced)).unwrap();
+        assert_eq!(unit.mass().unwrap().structure, 2048);
+        assert_eq!(unit.mass().unwrap().armor, 3584);
     }
 }
 
@@ -217,7 +223,8 @@ fn laser_sink_designation_preserves_double_sink_behavior() {
     );
     {
         let mut template = definition();
-        let baseline = Mech::from_template(template.clone()).unwrap();
+        let baseline =
+            Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
         let specials = template.attributes.entry("specials".into()).or_default();
         specials.push_str(" LaserHS_Tech");
         let mut unit = Mech::from_template(template).unwrap();
@@ -295,15 +302,16 @@ async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
 /// Recognizing a designation does not bypass incomplete equipment checks.
 #[test]
 fn laser_sink_designation_does_not_accept_incomplete_clan_sinks() {
-    let mut template =
-        MechTemplate::parse("NightGyr-B", include_str!("../game/units/NightGyr-B.toml")).unwrap();
+    let mut template = definition();
+    let specials = template.attributes.entry("specials".into()).or_default();
+    specials.push_str(" LaserHS_Tech");
     assert!(Mech::from_template(template.clone()).is_ok());
     template
         .sections
-        .get_mut(&MechSection::LeftArm)
+        .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
-        .remove(&8);
+        .remove(&3);
     assert!(
         Mech::from_template(template)
             .unwrap_err()
@@ -312,36 +320,32 @@ fn laser_sink_designation_does_not_accept_incomplete_clan_sinks() {
     );
 }
 
-/// Declared cooling below twenty is preserved for Clan sinks instead of inventing additional dissipation.
+/// Clan Mechs may mount single heat sinks (TechManual p. 52): the Snow Fox carries ten,
+/// one point of dissipation each, while a double-sink Clan chassis needs at least ten double
+/// sinks, twenty points (TechManual p. 53).
 #[test]
-fn low_capacity_clan_cooling_constructs_and_replays() {
+fn clan_single_and_double_sink_minimums() {
     for source in [
         include_str!("../game/units/SnowFox-1.toml"),
         include_str!("../game/units/SnowFox-2.toml"),
     ] {
         let template = MechTemplate::parse("test", source).unwrap();
-        for capacity in [10, 12, 14, 16, 18, 20] {
-            let mut adjusted = template.clone();
-            adjusted.heat_sinks = capacity;
-            let unit = Mech::from_template(adjusted).unwrap();
-            assert!(unit.definition().has_double_heat_sinks());
-            assert_eq!(
-                unit.heat_rates(&World::default()).dissipation,
-                f64::from(capacity)
-            );
-            let restored: Mech =
-                serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
-            assert_eq!(restored.mass().unwrap(), unit.mass().unwrap());
-            assert_eq!(
-                restored.heat_rates(&World::default()),
-                unit.heat_rates(&World::default())
-            );
-        }
-        let mut invalid = template.clone();
-        invalid.heat_sinks = 11;
-        assert!(Mech::from_template(invalid).is_err());
-        let mut invalid = template;
-        invalid.heat_sinks = 8;
-        assert!(Mech::from_template(invalid).is_err());
+        assert!(!template.has_double_heat_sinks());
+        assert_eq!(template.heat_sink_slots(), 1);
+        let unit = Mech::from_template(template.clone()).unwrap();
+        assert_eq!(unit.heat_rates(&World::default()).dissipation, 10.0);
+        let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
+        assert_eq!(restored.mass().unwrap(), unit.mass().unwrap());
+        let mut fewer = template;
+        fewer.heat_sinks = 9;
+        assert!(Mech::from_template(fewer).is_err());
     }
+    let mut doubles = definition();
+    doubles.heat_sinks = 18;
+    assert!(
+        Mech::from_template(doubles)
+            .unwrap_err()
+            .to_string()
+            .contains("at least 10 heat sinks")
+    );
 }

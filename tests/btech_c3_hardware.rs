@@ -32,7 +32,7 @@ fn design(parts: &[(MechSection, u8, &str)]) -> Mech {
                 },
             );
     }
-    Mech::from_template(template).unwrap()
+    Mech::from_template(crate::support::templates::legal(template)).unwrap()
 }
 
 #[test]

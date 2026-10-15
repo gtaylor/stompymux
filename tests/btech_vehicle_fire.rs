@@ -109,11 +109,12 @@ fn install_test_ams_at(
     part.equipment = format!("Ammo_{}", weapon.name());
     part.data = weapon.profile().ammunition_per_ton.to_string();
     arm.criticals.insert(5, part);
-    let constructed = Mech::from_template(definition.clone()).unwrap();
+    let constructed =
+        Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"] = serde_json::to_value(constructed.ammunition()).unwrap();
             // Face the shooter one hex south so the arm-mounted defense covers the attack
             // direction (Total Warfare p. 129).
@@ -382,7 +383,7 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
         }
         base.btech
             .rewrite_unit_record(emitter, |record| {
-                record["definition"] = serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(record, definition);
                 record["signature"]["team"] = serde_json::json!(1);
             })
             .unwrap();
@@ -1883,11 +1884,12 @@ fn install_mech_launcher(
             },
         },
     );
-    let rebuilt = Mech::from_template(definition.clone()).unwrap();
+    let rebuilt =
+        Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
     world
         .btech
         .rewrite_unit_record(shooter, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"] = serde_json::to_value(rebuilt.ammunition()).unwrap();
         })
         .unwrap();

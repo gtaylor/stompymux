@@ -122,7 +122,7 @@ async fn double_sinks_count_complete_installations_and_two_points_per_internal_s
         }
         let id = world.create(&config, "Cooling".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, definition).unwrap();
+        create_battle_unit(&mut world, id, crate::support::templates::legal(definition)).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         set(&scripts, &config, id, "hsengoverride", "1");
         set(&scripts, &config, id, "unitdamage", "C:7/0");

@@ -89,6 +89,11 @@ impl Draft {
         if !self.construction.is_empty() {
             out.push_str("\n[construction]\n");
             for (key, value) in &self.construction {
+                // `mixed_tech` is the one boolean construction key.
+                if *key == "mixed_tech" {
+                    let _ = writeln!(out, "{key} = {value}");
+                    continue;
+                }
                 let _ = writeln!(out, "{key} = {}", quote(value));
             }
         }

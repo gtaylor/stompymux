@@ -42,7 +42,7 @@ fn precision_bins_have_half_capacity_without_double_halving() {
                 assert!(Mech::from_template(definition).is_err(), "{weapon:?}");
                 continue;
             }
-            let unit = Mech::from_template(definition).unwrap();
+            let unit = Mech::from_template(crate::support::templates::legal(definition)).unwrap();
             let loadout = unit.loadout().unwrap();
             let index = loadout
                 .weapons

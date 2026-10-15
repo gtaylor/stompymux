@@ -19,8 +19,15 @@ fn definition(weapon: Weapon, case: bool) -> MechTemplate {
         arm.criticals.insert(slot, part.clone());
     }
     if case {
+        // Inner Sphere CASE sits in a torso (TechManual p. 210); an arm weapon uses the
+        // adjacent torso's.
         part.equipment = "CASE".into();
-        arm.criticals.insert(11, part);
+        definition
+            .sections
+            .get_mut(&MechSection::LeftTorso)
+            .unwrap()
+            .criticals
+            .insert(11, part);
     }
     let bin = definition
         .sections
@@ -30,7 +37,7 @@ fn definition(weapon: Weapon, case: bool) -> MechTemplate {
         .unwrap();
     bin.equipment = format!("Ammo_{}", weapon.name());
     bin.data = weapon.profile().ammunition_per_ton.to_string();
-    definition
+    crate::support::templates::legal(definition)
 }
 
 /// Every critical on an intact mount produces one explosion; all its slots become unavailable together.
@@ -205,22 +212,20 @@ async fn gauss_explosion_cascades_case_and_restart() {
                     .iter()
                     .map(|(section, state)| state.internal - after.sections()[section].internal)
                     .sum();
-                assert_eq!(
-                    internal_loss,
-                    u16::from(if case {
-                        weapon.weapon_explosion_damage().min(6)
-                    } else {
-                        weapon.weapon_explosion_damage()
-                    })
-                );
+                // With CASE in the left torso the blast runs through the arm's 6 structure and
+                // the torso's 8 and stops there.
+                // The impact's own point reaches the structure of an unarmored arm.
+                let blast = u16::from(weapon.weapon_explosion_damage())
+                    + u16::from(before.sections()[&MechSection::LeftArm].armor == 0);
+                assert_eq!(internal_loss, if case { blast.min(14) } else { blast });
                 assert_eq!(
                     after.sections()[&MechSection::CenterTorso].armor,
                     before.sections()[&MechSection::CenterTorso].armor
                 );
                 if case {
                     assert_eq!(
-                        after.sections()[&MechSection::LeftTorso],
-                        before.sections()[&MechSection::LeftTorso]
+                        after.sections()[&MechSection::CenterTorso],
+                        before.sections()[&MechSection::CenterTorso]
                     );
                 }
                 persistence::save(&config.database(), &base).await.unwrap();

@@ -539,7 +539,9 @@ mod tests {
                 "{ at = \"11-12\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
                 &format!("{{ at = 11, item = \"Ammo_{item}\", rounds = {rounds} }}"),
             );
-        Mech::from_template(super::super::MechTemplate::parse("AS7-D", &source).unwrap()).unwrap()
+        let mut template = super::super::MechTemplate::parse("AS7-D", &source).unwrap();
+        super::super::test_designs::balance(&mut template, &[item]);
+        Mech::from_template(template).unwrap()
     }
 
     /// The explosion a critical hit on the right torso's first slot would release.

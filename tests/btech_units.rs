@@ -18,7 +18,10 @@ fn construction_sets_original_protection_and_independent_ammunition() {
     let atlas = Mech::from_template(MechTemplate::parse("AS7-D", ATLAS).unwrap()).unwrap();
     assert_eq!(atlas.ammunition(), &[15, 6, 6, 5, 5]);
     let ams_source = JENNER.replace("IS.MediumLaser", "CL.Anti-MissileSystem");
-    let ams = Mech::from_template(MechTemplate::parse("JR7-D", &ams_source).unwrap()).unwrap();
+    let ams = Mech::from_template(crate::support::templates::legal(
+        MechTemplate::parse("JR7-D", &ams_source).unwrap(),
+    ))
+    .unwrap();
     assert_eq!(
         ams.loadout()
             .unwrap()

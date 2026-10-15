@@ -630,10 +630,11 @@ async fn changed_target_class_preserves_selection_and_numeric_immobile_hits() {
             let map = base.btech.vehicles()[&selected].position().unwrap().map;
             let actual = base.create(&config, "Alternate Mech".into(), Kind::Thing);
             base.objects.get_mut(&actual).unwrap().home = Some(ObjectId(config.home()));
-            UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-                .unwrap()
-                .create(&mut base, actual)
-                .unwrap();
+            crate::support::templates::legal_unit(
+                UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+            )
+            .create(&mut base, actual)
+            .unwrap();
             support::seed_object_dice(&mut base, actual, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut base, actual, map, 0, 10).unwrap();
             edit(&mut base, shooter, |state| {

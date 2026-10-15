@@ -61,7 +61,7 @@ fn primary_only_modes_resolve_like_repeated_modes() {
             mount.criticals.len(),
             usize::from(weapon.profile().critical_slots)
         );
-        let unit = Mech::from_template(source.clone()).unwrap();
+        let unit = Mech::from_template(crate::support::templates::legal(source.clone())).unwrap();
         let index = loadout
             .weapons
             .iter()

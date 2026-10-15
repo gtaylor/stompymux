@@ -56,17 +56,79 @@ impl Weapon {
         u16::from(profile.long_range) * sheet
     }
 
-    /// Weapons whose installations may span adjacent Mech sections through explicit links.
+    /// Weapons whose installations may span adjacent Mech sections: any ranged weapon of
+    /// eight or more critical slots (TM p. 47).
     pub fn supports_split_mount(self) -> bool {
-        matches!(
-            self,
-            Self::Ac20
-                | Self::HeavyGaussRifle
-                | Self::Lbx20
-                | Self::UltraAc20
-                | Self::ClanUltraAc20
-                | Self::ArrowIv
-        )
+        self.profile().critical_slots >= 8
+    }
+
+    /// Whether the weapon is Clan technology, by its catalogue namespace.
+    pub fn is_clan(self) -> bool {
+        strip_name_prefix(self.name(), "CL.").is_some()
+    }
+
+    /// Direct-fire and pulse weapons whose tonnage sizes a targeting computer: every
+    /// non-missile heavy weapon except machine guns, flamers, artillery, anti-missile
+    /// systems and anti-personnel pods (TM p. 238).
+    pub fn is_direct_fire(self) -> bool {
+        self.profile().missiles == 0
+            && !self.is_artillery()
+            && !self.supports_gatling()
+            && !self.is_flamer()
+            && !matches!(
+                self,
+                Self::AntiMissileSystem
+                    | Self::ClanAntiMissileSystem
+                    | Self::LaserAms
+                    | Self::ClanLaserAms
+                    | Self::APod
+                    | Self::ClanAPod
+                    | Self::NarcBeacon
+                    | Self::ClanNarcBeacon
+                    | Self::INarcBeacon
+            )
+    }
+
+    /// Launchers an Artemis IV fire-control system applies to: standard LRM, SRM and MML
+    /// launchers and their torpedo versions (TM p. 206), and enhanced LRMs (Tactical
+    /// Operations: Advanced Units & Equipment).
+    pub fn is_artemis_launcher(self) -> bool {
+        self.is_mml()
+            || matches!(
+                self,
+                Self::Nlrm5 | Self::Nlrm10 | Self::Nlrm15 | Self::Nlrm20
+            )
+            || matches!(
+                self,
+                Self::Lrm5
+                    | Self::Lrm10
+                    | Self::Lrm15
+                    | Self::Lrm20
+                    | Self::ClanLrm5
+                    | Self::ClanLrm10
+                    | Self::ClanLrm15
+                    | Self::ClanLrm20
+                    | Self::Srm2
+                    | Self::Srm4
+                    | Self::Srm6
+                    | Self::ClanSrm2
+                    | Self::ClanSrm4
+                    | Self::ClanSrm6
+                    | Self::Lrt5
+                    | Self::Lrt10
+                    | Self::Lrt15
+                    | Self::Lrt20
+                    | Self::Srt2
+                    | Self::Srt4
+                    | Self::Srt6
+                    | Self::ClanLrt5
+                    | Self::ClanLrt10
+                    | Self::ClanLrt15
+                    | Self::ClanLrt20
+                    | Self::ClanSrt2
+                    | Self::ClanSrt4
+                    | Self::ClanSrt6
+            )
     }
 
     /// Flamers can transfer their damage as heat, independently of their ammunition supply.

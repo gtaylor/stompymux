@@ -49,8 +49,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     let mut ids = Vec::new();
     for (x, (source, _)) in sources.iter().enumerate() {
         let id = base.create(&config, "Formation unit".into(), Kind::Thing);
-        UnitTemplate::parse("test", source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
             .create(&mut base, id)
             .unwrap();
         support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);

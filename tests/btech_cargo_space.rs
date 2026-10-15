@@ -55,6 +55,10 @@ fn configured(source: &str, space: &str, flags: &str) -> UnitTemplate {
         },
     );
     attributes.insert("cargo_space".into(), space.into());
+    // A Mech's cargo installation comes out of its armor, so the design stays at its tonnage.
+    if space.parse::<u32>().is_ok_and(|space| space < 1_000_000) {
+        return crate::support::templates::legal_unit(template);
+    }
     template
 }
 
@@ -87,7 +91,12 @@ async fn cargo_space_mass_is_shared_and_persists_with_ordinary_stock() {
             configured(&source, "123", flags)
                 .create(&mut world, unit)
                 .unwrap();
-            let base = mass(&world, empty).1;
+            // A Mech gives up armor for the installation; a vehicle adds it to its weight.
+            let base = if world.btech.constructed_units().contains_key(&unit) {
+                mass(&world, unit).1 - expected
+            } else {
+                mass(&world, empty).1
+            };
             assert_eq!(mass(&world, unit), (expected, base + expected));
             let material = battle_unit_load(&world, unit, true).unwrap().material_mass;
             assert_eq!(material, base + expected);
@@ -152,7 +161,7 @@ fn mech_cargo_installation_survives_section_loss_and_does_not_enable_suits() {
     let UnitTemplate::Mech(template) = configured(&templates()[0], "500", "CargoTech") else {
         unreachable!()
     };
-    let unit = Mech::from_template(template.clone()).unwrap();
+    let unit = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
     let before = unit.mass().unwrap();
     assert_eq!(before.cargo, 5120);
     let mut saved = serde_json::to_value(&unit).unwrap();

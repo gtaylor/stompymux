@@ -1,24 +1,22 @@
 //! Targeting-computer installation, equipment eligibility and persistent slot damage.
 use stompymux_rs::*;
 
-/// Install a distributed computer; any individual computer slot loss disables assistance globally.
+/// Install a one-slot computer for the Jenner's four tons of medium lasers (TechManual p. 238).
 fn definition() -> MechTemplate {
     let mut template =
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
-    for section in [MechSection::LeftTorso, MechSection::RightTorso] {
-        let mut part = template.sections[&section].criticals[&1].clone();
-        part.equipment = "TargetingComputer".into();
-        template
-            .sections
-            .get_mut(&section)
-            .unwrap()
-            .criticals
-            .insert(4, part);
-    }
+    let mut part = template.sections[&MechSection::RightTorso].criticals[&1].clone();
+    part.equipment = "TargetingComputer".into();
     template
+        .sections
+        .get_mut(&MechSection::RightTorso)
+        .unwrap()
+        .criticals
+        .insert(4, part);
+    crate::support::templates::legal(template)
 }
 
-/// Computer mass remains after critical damage; a single lost or flooded slot disables all assistance.
+/// Computer mass remains after critical damage; a lost or flooded slot disables all assistance.
 #[test]
 fn targeting_computer_slots_mass_damage_and_flooding() {
     let ordinary = Mech::from_template(
@@ -30,9 +28,20 @@ fn targeting_computer_slots_mass_damage_and_flooding() {
     assert!(unit.targeting_computer_operational().unwrap());
     assert_eq!(
         unit.mass().unwrap().equipment,
-        ordinary.mass().unwrap().equipment + 2048
+        ordinary.mass().unwrap().equipment + 1024
     );
-    for section in [MechSection::LeftTorso, MechSection::RightTorso] {
+    // The computer is one contiguous run in one location, of exactly its size.
+    let mut split = definition();
+    let part = split.sections[&MechSection::RightTorso].criticals[&4].clone();
+    split
+        .sections
+        .get_mut(&MechSection::LeftTorso)
+        .unwrap()
+        .criticals
+        .insert(4, part);
+    assert!(Mech::from_template(split).is_err());
+    {
+        let section = MechSection::RightTorso;
         let location = CriticalLocation { section, slot: 4 };
         assert!(unit.critical_candidates(section).contains(&location));
         let mut damaged = unit.clone();
@@ -108,8 +117,6 @@ fn targeting_computer_black_knight_constructs_unchanged() {
 #[test]
 fn authored_links_construct_without_changing_automatic_eligibility() {
     for source in [
-        include_str!("../game/units/Goshawk-1.toml"),
-        include_str!("../game/units/Goshawk-2.toml"),
         include_str!("../game/units/Viper-2.toml"),
         include_str!("../game/units/Thor-D.toml"),
     ] {

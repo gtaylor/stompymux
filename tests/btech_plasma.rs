@@ -126,7 +126,7 @@ fn plasma_ammunition_is_inert_and_mount_facts_are_distinct() {
         .unwrap();
     bin.equipment = "Ammo_IS.PlasmaRifle".into();
     bin.data = "10".into();
-    let mut unit = Mech::from_template(template).unwrap();
+    let mut unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
     let loadout = unit.loadout().unwrap();
     let location = loadout.ammunition[0].location;
     let index = loadout

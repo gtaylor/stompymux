@@ -158,10 +158,11 @@ async fn encounter_fixture() -> EncounterFixture {
     for (index, slot) in units.iter_mut().enumerate() {
         let unit = world.create(&config, format!("Tactical friend {index}"), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-            .unwrap()
-            .create(&mut world, unit)
-            .unwrap();
+        crate::support::templates::legal_unit(
+            UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+        )
+        .create(&mut world, unit)
+        .unwrap();
         place_battle_unit(&mut world, unit, map, index as i64, 3).unwrap();
         *slot = unit;
     }
@@ -169,10 +170,11 @@ async fn encounter_fixture() -> EncounterFixture {
     assign_battle_pilot(&mut world, units[0], ObjectId(1)).unwrap();
     let enemy = world.create(&config, "Tactical local hostile".into(), Kind::Thing);
     world.objects.get_mut(&enemy).unwrap().home = Some(ObjectId(config.home()));
-    UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-        .unwrap()
-        .create(&mut world, enemy)
-        .unwrap();
+    crate::support::templates::legal_unit(
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+    )
+    .create(&mut world, enemy)
+    .unwrap();
     // Keep the hostile inside the perception range of at least one friendly so
     // this fixture exercises the production filtered-contact path.
     place_battle_unit(&mut world, enemy, map, 3, 3).unwrap();

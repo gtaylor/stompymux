@@ -53,7 +53,7 @@ async fn field(
         }
         let id = world.create(&config, format!("Topology unit {i}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, template).unwrap();
+        create_battle_unit(&mut world, id, crate::support::templates::legal(template)).unwrap();
         place_battle_unit(&mut world, id, map, 10, 5 + i as i64).unwrap();
         let pilot = if i == 0 {
             ObjectId(1)

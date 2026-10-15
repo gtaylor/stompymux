@@ -334,10 +334,17 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
     let object = baseline.objects.get_mut(&id).unwrap();
     object.location = Some(ObjectId(config.start()));
     object.home = Some(ObjectId(config.home()));
-    let source = include_str!("fixtures/btech/units/JR7-D.toml").replace(
-        "    { at = \"2-3\", item = \"JumpJet\" },\n]\n\n[sections.center_torso]",
-        "    { at = \"2-3\", item = \"JumpJet\" },\n    { at = 4, item = \"CASE-II\" },\n]\n\n[sections.center_torso]",
-    );
+    // The ton of CASE II replaces one of the left arm's medium lasers.
+    let source = include_str!("fixtures/btech/units/JR7-D.toml")
+        .replace(
+            "    { at = \"2-3\", item = \"JumpJet\" },\n]\n\n[sections.center_torso]",
+            "    { at = \"2-3\", item = \"JumpJet\" },\n    { at = 4, item = \"CASE-II\" },\n]\n\n[sections.center_torso]",
+        )
+        .replacen(
+            "{ at = \"3-4\", item = \"IS.MediumLaser\" }",
+            "{ at = 3, item = \"IS.MediumLaser\" }",
+            1,
+        );
     let template = MechTemplate::parse("JR7-D", &source).unwrap();
     assert!(
         template.sections[&Section::RightTorso]
@@ -345,7 +352,12 @@ async fn case_ii_vents_ammunition_explosion_through_local_armor() {
             .values()
             .any(|part| part.equipment == "CASE-II")
     );
-    create_battle_unit(&mut baseline, id, template).unwrap();
+    create_battle_unit(
+        &mut baseline,
+        id,
+        crate::support::templates::legal(template),
+    )
+    .unwrap();
     support::seed_object_dice(&mut baseline, id, support::FIXTURE_DICE_SEED);
     assert!(baseline.btech.constructed_units()[&id].has_case_ii(Section::RightTorso));
     for slot in [1, 2] {
@@ -424,6 +436,9 @@ async fn technology_fixture(
         let source = support::templates::with_flags(source, &[specials]);
         MechTemplate::parse("JR7-D", &source).unwrap()
     };
+    // Heavier technology comes out of the weapons, so every variant keeps the Jenner's armor.
+    let mut template = template;
+    support::templates::book_legal_keeping(&mut template, Some(Section::Head));
     create_battle_unit(&mut world, id, template).unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     seed(&mut world, id, 0);
@@ -500,14 +515,16 @@ async fn technology_flags_change_mech_mass() {
     }
 }
 
-/// Running laser heat sinks glow. The Nightgyr ships
-/// with laser heat sinks; the abbreviation behaves the same and removing the flag stops the glow.
+/// Running laser heat sinks glow; removing the choice stops the glow.
 #[tokio::test]
 async fn laser_heat_sinks_glow_while_running() {
-    let original = include_str!("../game/units/NightGyr-A.toml");
+    let original = include_str!("../game/units/NightGyr-A.toml").replace(
+        "armor = \"ferro_fibrous\"\n",
+        "armor = \"ferro_fibrous\"\nheat_sinks = \"laser\"\n",
+    );
     assert!(original.contains("heat_sinks = \"laser\"\n"));
     for (source, glows) in [
-        (original.to_string(), true),
+        (original.clone(), true),
         (original.replace("heat_sinks = \"laser\"\n", ""), false),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;

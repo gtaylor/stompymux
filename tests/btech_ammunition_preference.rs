@@ -80,7 +80,8 @@ async fn preferred_sections_controls_feed_and_restart() {
                 .unwrap()
                 .criticals
                 .insert(3, bin);
-            create_battle_unit(&mut world, id, definition).unwrap();
+            create_battle_unit(&mut world, id, crate::support::templates::legal(definition))
+                .unwrap();
             support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
             let weapon_type = loadout

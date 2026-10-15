@@ -30,10 +30,7 @@ impl MechTemplate {
                 && self.jump_speed <= self.max_speed,
             "Invalid jump speed"
         );
-        ensure!(
-            (10..=100).contains(&self.heat_sinks),
-            "Invalid heat sink count"
-        );
+        ensure!(self.heat_sinks <= 200, "Invalid heat sink count");
         ensure!(
             !self.name.is_empty()
                 && self.name.len() <= 128
@@ -88,7 +85,10 @@ impl MechTemplate {
                                 || flag.eq_ignore_ascii_case("C3I_Tech")
                                 || flag.eq_ignore_ascii_case("SuperCharger_Tech")
                                 || flag.eq_ignore_ascii_case("Clan")
+                                || flag.eq_ignore_ascii_case(super::construction::MIXED_TECH)
                                 || flag.eq_ignore_ascii_case("DoubleHS")
+                                || flag
+                                    .eq_ignore_ascii_case(super::construction::SINGLE_HEAT_SINKS)
                                 || flag.eq_ignore_ascii_case("LaserHS_Tech")
                                 || flag.eq_ignore_ascii_case("ImprovedJJ_Tech")
                                 || flag.eq_ignore_ascii_case("HDGYRO")
@@ -138,11 +138,13 @@ impl MechTemplate {
                 layout.criticals.keys().all(|&slot| slot < slots),
                 "Critical outside section capacity"
             );
+            // CASE is equipment in a critical slot, and Clan CASE is built into every location
+            // (TM p. 210); a section-wide CASE configuration has no book counterpart.
             ensure!(
                 layout
                     .configuration
                     .as_deref()
-                    .is_none_or(|value| value == "-" || value.eq_ignore_ascii_case("Case")),
+                    .is_none_or(|value| value == "-"),
                 "Unsupported section configuration"
             );
             ensure!(
@@ -158,7 +160,8 @@ impl MechTemplate {
 
     /// Check the installed equipment of a template that passed
     /// [`MechTemplate::validate_definition`]: a complete engine, one gyro technology, the
-    /// conventional cockpit systems, jump jet groups, heat sink criticals and cargo space.
+    /// conventional cockpit systems and cargo space, then the TechManual construction rules
+    /// of [`MechTemplate::validate_construction`].
     pub fn validate_loadout(&self, loadout: &MechLoadout) -> Result<()> {
         super::Engine::resolve(loadout, self.clan_engine())?;
         ensure!(
@@ -197,32 +200,6 @@ impl MechTemplate {
                 system
             );
         }
-        if self.has_special("ImprovedJJ_Tech") {
-            let jets = loadout.jump_jet_groups(true)?.len();
-            ensure!(
-                (self.jump_speed - jets as f64 * 10.75).abs() < 0.001,
-                "Improved jump jet capacity does not match installed groups"
-            );
-        }
-        if self.has_double_heat_sinks() {
-            ensure!(
-                self.heat_sinks.is_multiple_of(2),
-                "Invalid double heat sink capacity"
-            );
-        }
-        let sinks = loadout
-            .systems
-            .iter()
-            .filter(|critical| critical.system == System::HeatSink)
-            .count();
-        ensure!(
-            if self.has_double_heat_sinks() {
-                sinks / self.heat_sink_slots() * 2
-            } else {
-                sinks
-            } <= usize::from(self.heat_sinks),
-            "More heat sink criticals than declared heat sinks"
-        );
         // A declared cargo installation must weigh out; live mass is measured from the same rule.
         if self
             .attributes
@@ -235,7 +212,7 @@ impl MechTemplate {
                 self.has_special("CargoTech"),
             )?;
         }
-        Ok(())
+        self.validate_construction(loadout)
     }
 }
 

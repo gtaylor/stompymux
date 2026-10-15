@@ -42,9 +42,9 @@ specials = ["SearchLight"]
 | `class` | string | `mech`, `vehicle`, `vtol`, `naval`, `aerofighter`, `spheroid_dropship`, `aerodyne_dropship`, `mechwarrior` or `battlesuit`. |
 | `movement` | string | `biped`, `quad`, `track`, `wheel`, `hover`, `vtol`, `hull`, `foil`, `fly`, `sub` or `none`. |
 | `tons` | integer | Tonnage. |
-| `walk_mp`, `jump_mp` | integer | Top ground and jumping movement points; each is 10.75 km/h. For a mech `walk_mp` is the running MP; for a vehicle or VTOL it is the flank MP, and the cruising MP is the flank MP divided by 1.5 and rounded. Vehicles cannot jump. |
+| `walk_mp`, `jump_mp` | integer | Top ground and jumping movement points; each is 10.75 km/h. For a mech `walk_mp` is the running MP, and the mech walks at the largest whole MP whose running MP, walking x 1.5 rounded up, is `walk_mp`; for a vehicle or VTOL it is the flank MP, and the cruising MP is the flank MP divided by 1.5 and rounded. Vehicles cannot jump. |
 | `max_speed`, `jump_speed` | number | Speeds in km/h, for the few units whose speed is not whole movement points. Give either the speed or its movement points, not both. |
-| `heat_sinks` | integer | Installed heat sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
+| `heat_sinks` | integer | Heat dissipation: one point per single heat sink, two per double. Without it a mech carries the engine's ten free sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
 | `hs_engine_override` | integer | Engine heat sink override. |
 | `radio`, `radio_type`, `radio_range` | integer | Electronics. |
 | `tac_range`, `lrs_range`, `scan_range` | integer | Sensor ranges. |
@@ -80,19 +80,65 @@ armor = "ferro_fibrous"
 | `cockpit` | `standard`, `small` |
 | `structure` | `standard`, `endo_steel`, `composite`, `reinforced` |
 | `armor` | `standard`, `ferro_fibrous`, `light_ferro_fibrous`, `heavy_ferro_fibrous`, `stealth`, `hardened`, `laser_reflective` |
-| `heat_sinks` | `single`, `double`, `laser`; Clan units default to and require doubles or better, and laser heat sinks are Clan only |
+| `heat_sinks` | `single`, `double`, `laser`; Clan units default to doubles, and laser heat sinks are Clan only |
 | `myomer` | `standard`, `triple_strength` |
 | `engine_tech`, `structure_tech`, `armor_tech` | `inner_sphere`, `clan`; default to `tech_base` |
+| `mixed_tech` | `true` for a mixed-technology design, whose weapons may come from either technology base |
 
 Endo steel and ferro-fibrous slots are still listed in the sections: where
 they go is a design choice, not a consequence of the type. Inner Sphere endo
-steel and ferro-fibrous armor fill fourteen slots and Clan versions seven.
+steel and ferro-fibrous armor fill exactly fourteen slots and Clan versions seven;
+light ferro-fibrous fills seven, heavy ferro-fibrous twenty-one and stealth armor
+twelve, two in each arm, leg and side torso. A mech lists those slots only when it
+declares the matching choice.
 
 A mixed-technology unit may take its engine, structure or armor from the other
 technology base. An Inner Sphere Mech with a Clan XL engine sets
 `engine_tech = "clan"`, giving the engine two slots in each side torso and the
 Clan XL engine's mass; a Clan Mech with Inner Sphere ferro-fibrous armor sets
-`armor_tech = "inner_sphere"`.
+`armor_tech = "inner_sphere"`. Its weapons must still come from its own
+technology base unless it also sets `mixed_tech = true`.
+
+### Construction rules
+
+A mech template constructs only as the TechManual builds a BattleMech, and the
+`template-check` command, the template loader and every live unit apply the same
+checks:
+
+- The components weigh the tonnage: nothing over it, and no more than half a ton
+  under it (TechManual pp. 46, 57). Every item weighs its whole catalogue mass,
+  and the engine, gyro, structure, armor and supercharger round up to the half ton.
+- `walk_mp` is a legal running figure, and the engine rating, tonnage x walking
+  MP, lies between 10 and 500; ratings above 400 are large engines with eight
+  centre torso slots (TechManual p. 48; Tactical Operations: Advanced Units &
+  Equipment).
+- The engine fills its own layout: six centre torso slots (three for a compact
+  engine), plus three per side torso for an Inner Sphere XL, two for a Clan XL or
+  light engine, six for an Inner Sphere XXL and four for a Clan XXL (TechManual
+  p. 50).
+- `jump_mp` equals the installed jump jets (improved jets: pairs of slots), is at
+  most the walking MP (improved: running MP), and jets sit only in torsos and
+  legs (TechManual p. 51).
+- At least ten heat sinks; the engine holds up to its rating / 25 of them and the
+  rest fill critical slots (TechManual pp. 52-53).
+- Each location's armor, front and rear together, is at most twice its internal
+  structure, nine on the head (TechManual p. 54).
+- MASC fills 5% (Inner Sphere) or 4% (Clan) of the tonnage, rounded to the nearest
+  slot, in one run; triple strength myomer fills six slots, is never combined with
+  MASC and is not available to Clan mechs (TechManual p. 52). A supercharger is
+  one slot beside engine slots together with `SuperCharger_Tech`.
+- A targeting computer fills one slot per ton of direct-fire weapons / 4 (Clan:
+  / 5), rounded up, in one run (TechManual p. 238).
+- Hatchets, swords, maces, claws, lances and the other melee weapons sit in biped
+  arms with the actuators they need, one per arm, at their tonnage-dependent slot
+  counts (TechManual pp. 220, 237; Tactical Operations: Advanced Units &
+  Equipment).
+- Artemis IV serves every standard LRM, SRM and MML launcher from its location or
+  none; Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
+  or the head; a Heavy Gauss Rifle sits in the torsos (TechManual pp. 46, 206,
+  210, 218).
+- `OneShot` applies only to LRM, SRM, MRM and Streak SRM launchers and Narc and
+  iNarc beacons (TechManual p. 342).
 
 ### Combat vehicles
 
@@ -140,7 +186,6 @@ headings for the unit's anatomy: `left_arm` through `head` for bipeds,
 [sections.left_torso]
 armor = 25
 rear = 6
-config = "Case"
 engine_at = 4
 slots = [
     { at = "1-3", item = "HeatSink" },
@@ -173,7 +218,6 @@ A section adjusts that with:
 | --- | --- |
 | `omit` | Actuators the section lacks, in any combination: `shoulder`, `upper_actuator`, `lower_actuator`, and `hand_actuator` (biped arms) or `foot_actuator` (legs). The others keep their usual slots. |
 | `engine_at` | The side torso slot where the engine's slots begin. |
-| `engine_slots` | How many engine slots a torso holds when that differs from the engine type's count. Centre torso slots fill the three ahead of the gyro, then those after it. |
 | `explicit` | `true` when the section's layout is irregular: nothing is placed, and `slots` lists the fixed equipment too. |
 
 Listing a fixed item in a constructed section, or a slot that collides with
@@ -211,9 +255,10 @@ placements = [
 
 The first placement is the weapon's primary location; the second is the
 adjacent section it continues into. Permitted pairs are a side torso with its
-arm, its leg or the centre torso, in either direction. Only weapons that support
-split mounting (the AC/20 family, Heavy Gauss Rifle and Arrow IV) load, and the
-slots across both placements must add up to the weapon's size.
+arm or the centre torso, in either direction; legs never take a split mount
+(TechManual p. 47). Only ranged weapons of eight or more critical slots split, a
+Heavy Gauss Rifle only between a side torso and the centre torso (TechManual
+p. 218), and the slots across both placements must add up to the weapon's size.
 
 ## Converting MegaMek units
 
@@ -237,8 +282,9 @@ single file.
 
 OmniMechs get the `OmniMech_Tech` special and a searchlight design quirk the
 `SearchLight` special; other quirks have no stompymux counterpart and are not
-converted. Mixed-technology units keep a Clan or Inner Sphere engine,
-structure or armor through the `[construction]` technology keys. CASE II, ECM
+converted. Mixed-technology units set `mixed_tech = true` and keep a Clan or
+Inner Sphere engine, structure or armor through the `[construction]` technology
+keys. CASE II, ECM
 suites and active probes take their technology from the chassis in stompymux,
 so one built from the other technology base is refused.
 

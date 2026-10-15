@@ -1864,6 +1864,8 @@ mod tests {
                 );
             }
         }
+        // The technology's extra mass comes out of the weapons, keeping the armor under test.
+        super::super::test_designs::balance(&mut template, &[]);
         let mut unit = Mech::from_template(template).unwrap();
         unit.dice = super::super::Dice::seeded([seed; 32]);
         let mut world = World::default();
@@ -2095,6 +2097,7 @@ mod tests {
                 },
             );
         }
+        super::super::test_designs::balance(&mut template, &["IS.SRM-4"]);
         let pristine = Mech::from_template(template).unwrap();
         assert!(pristine.has_case_ii(MechSection::LeftArm));
         let mut exercised = false;

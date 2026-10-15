@@ -40,10 +40,11 @@ async fn mech_fixture(
     crate::support::seed_object_dice(&mut world, map, crate::support::FIXTURE_DICE_SEED);
     let unit = world.create(&config, "Autopilot audit mech".into(), Kind::Thing);
     world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-    UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-        .unwrap()
-        .create(&mut world, unit)
-        .unwrap();
+    crate::support::templates::legal_unit(
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+    )
+    .create(&mut world, unit)
+    .unwrap();
     crate::support::seed_object_dice(&mut world, unit, crate::support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, unit, map, start.0, start.1).unwrap();
 
@@ -231,10 +232,11 @@ async fn competing_routes_make_progress_without_permanent_congestion_block() {
     let (_directory, config, mut world, map, first) = mech_fixture(&map_asset, (3, 6)).await;
     let second = world.create(&config, "Autopilot congestion follower".into(), Kind::Thing);
     world.objects.get_mut(&second).unwrap().home = Some(ObjectId(config.home()));
-    UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-        .unwrap()
-        .create(&mut world, second)
-        .unwrap();
+    crate::support::templates::legal_unit(
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+    )
+    .create(&mut world, second)
+    .unwrap();
     crate::support::seed_object_dice(&mut world, second, crate::support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, second, map, 5, 6).unwrap();
     world.btech.set_unit_power(second, Power::Running).unwrap();

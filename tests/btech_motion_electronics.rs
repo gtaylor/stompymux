@@ -72,11 +72,12 @@ fn install_test_ams_at(
         part.data = weapon.profile().ammunition_per_ton.to_string();
         arm.criticals.insert(4 + slots, part);
     }
-    let constructed = Mech::from_template(definition.clone()).unwrap();
+    let constructed =
+        Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"] = serde_json::to_value(constructed.ammunition()).unwrap();
         })
         .unwrap();
@@ -189,6 +190,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, f64, u16)]) {
                             .remove("5");
                         record["ammunition"] = serde_json::json!([25]);
                     }
+                    crate::support::templates::book_legal_record(record);
                 })
                 .unwrap();
             if case == "disabled" {
@@ -476,7 +478,7 @@ async fn ams_cluster_packets_and_streak_lock() {
         world
             .btech
             .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(record, definition);
                 record["ammunition"][0] = weapon.profile().ammunition_per_ton.into();
             })
             .unwrap();
@@ -722,11 +724,12 @@ fn install_test_narc(
             },
         );
     }
-    let constructed = Mech::from_template(definition.clone()).unwrap();
+    let constructed =
+        Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"] = serde_json::to_value(constructed.ammunition()).unwrap();
         })
         .unwrap();
@@ -1101,8 +1104,13 @@ fn install_test_electronics(
                 },
             );
     }
-    Mech::from_template(definition.clone()).unwrap();
-    world.btech.set_unit_definition(id, definition).unwrap();
+    Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
 }
 
 /// Operating modes, team-sensitive fields and damage/shutdown loss survive database round trips.
@@ -1348,8 +1356,10 @@ async fn electronics_suppress_narc_and_artemis_guidance() {
                     .into(),
                 ];
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][id.0.to_string()]["definition"] =
-                    serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(
+                    &mut state["constructed"][id.0.to_string()],
+                    definition,
+                );
                 state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
                 state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
                 state["constructed"][target.0.to_string()]["beacons"] =
@@ -1500,8 +1510,10 @@ async fn electronics_angel_disables_streak_homing() {
                     .unwrap();
                 bin.equipment = format!("Ammo_{}", weapon.name());
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][id.0.to_string()]["definition"] =
-                    serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(
+                    &mut state["constructed"][id.0.to_string()],
+                    definition,
+                );
                 state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
                 state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
                 world.btech = serde_json::from_value(state).unwrap();
@@ -1769,11 +1781,11 @@ fn install_test_inarc(world: &mut stompymux_rs::World, id: ObjectId) -> usize {
             },
         );
     }
-    let unit = Mech::from_template(definition.clone()).unwrap();
+    let unit = Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"] = serde_json::to_value(unit.ammunition()).unwrap();
         })
         .unwrap();
@@ -2138,7 +2150,7 @@ fn prepare_test_pod_removal(
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["beacons"] = serde_json::to_value(std::collections::BTreeMap::from([(
                 section,
                 std::collections::BTreeSet::from([kind]),
@@ -2455,7 +2467,12 @@ fn install_test_stealth(world: &mut stompymux_rs::World, id: ObjectId) {
                 },
             );
     }
-    world.btech.set_unit_definition(id, definition).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
 }
 
 /// Saved switches complete at thirty ticks; damage/shutdown clear effects and invalid expiries are consumed.
@@ -2718,7 +2735,12 @@ fn install_test_nss(world: &mut stompymux_rs::World, id: ObjectId) {
                 },
             );
     }
-    world.btech.set_unit_definition(id, definition).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
 }
 
 /// Device loss, shutdown and unavailable expiries clear NSS without supplying any ECM noise.
@@ -3007,10 +3029,12 @@ fn install_test_tag(world: &mut stompymux_rs::World, id: ObjectId, target: Objec
                 modes: vec![],
             },
         );
-    Mech::from_template(definition.clone()).unwrap();
+    Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
+    crate::support::templates::set_record_definition(
+        &mut state["constructed"][id.0.to_string()],
+        definition,
+    );
     state["constructed"][target.0.to_string()]["signature"]["team"] = 2.into();
     world.btech = serde_json::from_value(state).unwrap();
     refresh_battle_contacts(world, &[id]).unwrap();
@@ -3483,7 +3507,12 @@ async fn semiguided_fixture() -> (
     ordinary.modes.clear();
     torso.criticals.insert(3, ordinary);
     let shooter = world.create(&config, "Semi-guided shooter".into(), Kind::Thing);
-    create_battle_unit(&mut world, shooter, definition).unwrap();
+    create_battle_unit(
+        &mut world,
+        shooter,
+        crate::support::templates::legal(definition),
+    )
+    .unwrap();
     support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
     let map = world.btech.constructed_units()[&tagger]
         .position()
@@ -5187,7 +5216,7 @@ async fn hex_fire_character_recoil_native_lua_and_abort() {
     world
         .btech
         .rewrite_unit_record(shooter, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"][0] = 4.into();
             record["motion"]["speed"] = 1.0.into();
         })
@@ -6381,6 +6410,7 @@ async fn inferno_ammunition_heat_penalty_selects_inferno_before_larger_bins() {
             bin["modes"] = serde_json::json!([]);
             record["definition"]["sections"]["CenterTorso"]["criticals"]["11"] = bin;
             record["ammunition"] = serde_json::json!([1, 25]);
+            crate::support::templates::book_legal_record(record);
         })
         .unwrap();
     base.validate(&config).unwrap();
@@ -6849,7 +6879,12 @@ async fn apod_live_fire_and_restart() {
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         let target = world.create(&config, "A-Pod target".into(), Kind::Thing);
         world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, target, template).unwrap();
+        create_battle_unit(
+            &mut world,
+            target,
+            crate::support::templates::legal(template),
+        )
+        .unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, target, map, 5, 5).unwrap();
         set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
@@ -7327,6 +7362,8 @@ async fn edited_hardened_protection_controls_live_hit_messages_and_balance() {
         .btech
         .rewrite_unit_record(id, |record| {
             record["definition"]["attributes"]["specials"] = "HDGYRO".into();
+            // The gyro's three extra tons come out of the weapons, keeping the armor.
+            crate::support::templates::book_legal_record_keeping(record, Some(MechSection::Head));
         })
         .unwrap();
     let slots: Vec<_> = world.btech.constructed_units()[&id]
@@ -7570,7 +7607,7 @@ async fn rapid_misload_balance_feedback_stays_private() {
     bin.data = "45".into();
     base.btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"][0] = 45.into();
         })
         .unwrap();

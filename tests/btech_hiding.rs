@@ -32,8 +32,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Hiding unit".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(&mut world, id)
         .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -165,10 +164,11 @@ async fn hiding_authority_and_cached_observer_rules() {
             begin_battle_hiding(&mut world, id, ObjectId(2)).unwrap();
             let observer = world.create(&config, "Observer".into(), Kind::Thing);
             world.objects.get_mut(&observer).unwrap().home = Some(ObjectId(config.home()));
-            UnitTemplate::parse("Hunter", include_str!("../game/units/Hunter.toml"))
-                .unwrap()
-                .create(&mut world, observer)
-                .unwrap();
+            crate::support::templates::legal_unit(
+                UnitTemplate::parse("Hunter", include_str!("../game/units/Hunter.toml")).unwrap(),
+            )
+            .create(&mut world, observer)
+            .unwrap();
             support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut world, observer, map, 1, 0).unwrap();
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);

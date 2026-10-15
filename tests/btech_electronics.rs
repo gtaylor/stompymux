@@ -25,7 +25,7 @@ fn installed(name: &str, slots: u8, clan: bool) -> Mech {
             },
         );
     }
-    Mech::from_template(template).unwrap()
+    Mech::from_template(crate::support::templates::legal(template)).unwrap()
 }
 
 /// Guardian mass differs by technology; Angel mass is one ton per slot. Complete suites add
@@ -41,8 +41,16 @@ fn electronics_construction_mass_value_and_damage() {
         ("AngelEcm", 2, false, Angel, true, 2048, 140.0),
         ("AngelEcm", 2, true, Angel, true, 2048, 140.0),
     ] {
-        let base = installed(name, 0, clan);
         let mut unit = installed(name, slots, clan);
+        // The same design without the suite, keeping the armor the suite displaced, so the
+        // difference is the suite's alone.
+        let mut bare = unit.definition().clone();
+        bare.sections
+            .get_mut(&MechSection::LeftTorso)
+            .unwrap()
+            .criticals
+            .retain(|_, part| part.equipment != name);
+        let base = Mech::from_template(crate::support::templates::legal(bare)).unwrap();
         assert_eq!(unit.electronics(), Electronics::default());
         assert_eq!(unit.electronic_suite_available(suite).unwrap(), available);
         assert_eq!(

@@ -53,8 +53,7 @@ async fn fixture(
     )
     .unwrap();
     let id = world.create(&config, "Traveler".into(), Kind::Thing);
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(&mut world, id)
         .unwrap();
     place_battle_unit(&mut world, id, exterior, 0, 0).unwrap();
@@ -876,8 +875,7 @@ async fn in_character_unpiloted_exits_warn_without_inventing_destruction() {
 /// Add a shutdown passenger unit to a carrier's battlefield without pickup gameplay policy.
 fn attach(world: &mut World, config: &Config, carrier: ObjectId, source: &str) -> ObjectId {
     let target = world.create(config, "Tow target".into(), Kind::Thing);
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(world, target)
         .unwrap();
     support::seed_object_dice(world, target, support::FIXTURE_DICE_SEED);
@@ -1252,7 +1250,7 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["heat"]["excess"] = 9.0.into();
         })
         .unwrap();

@@ -353,8 +353,7 @@ async fn setxy_moves_complete_tow_pairs() {
             let b = world.create(&config, "Tow".into(), Kind::Thing);
             for (id, source) in [(a, carrier), (b, target)] {
                 world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-                UnitTemplate::parse("test", source)
-                    .unwrap()
+                crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
                     .create(&mut world, id)
                     .unwrap();
                 place_battle_unit(&mut world, id, map, 0, 0).unwrap();

@@ -74,6 +74,31 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
     }
 }
 
+/// Mass of `slots` installed critical slots of `system`, rounded per whole item rather than
+/// per slot, so a complete installation weighs exactly its book mass: three Bloodhound slots
+/// weigh two tons and five wrecking-ball slots four (TM pp. 341-344; Tactical Operations:
+/// Advanced Units & Equipment pp. 217-221).
+pub fn system_mass(definition: &super::MechTemplate, system: System, slots: usize) -> u32 {
+    let (item_mass, item_slots) = match system {
+        System::BloodhoundProbe => (2048, 3),
+        System::WreckingBall => (4096, 5),
+        System::Sword => (
+            u32::from(definition.tons.div_ceil(10)) * 512,
+            u32::from(definition.tons.div_ceil(15)),
+        ),
+        System::RetractableBlade => (
+            512 + half_ton((u32::from(definition.tons) * 1024).div_ceil(20)),
+            u32::from(definition.tons.div_ceil(20)) + 1,
+        ),
+        _ => (system_slot_mass(definition, system), 1),
+    };
+    let slots = slots as u64;
+    u32::try_from(
+        (slots * u64::from(item_mass) + u64::from(item_slots) / 2) / u64::from(item_slots),
+    )
+    .unwrap_or(u32::MAX)
+}
+
 /// A one-shot launcher weighs half a ton more than the launcher it adapts; rocket launchers are
 /// built as one-shot weapons and their catalogue mass already counts it.
 pub fn one_shot_mass<L>(mount: &super::WeaponMount<L>) -> u32 {

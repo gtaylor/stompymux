@@ -19,7 +19,13 @@ pub fn templates() -> Vec<String> {
 
 /// Edit only explicitly selected saved test state, retaining the normal validation path.
 pub fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    world.btech.rewrite_unit_record(id, change).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            change(record);
+            crate::templates::book_legal_record(record);
+        })
+        .unwrap();
 }
 
 /// A configurable recipient supports both ground and airborne target admission cases.
@@ -133,8 +139,11 @@ pub fn supply_fixture_on(
             );
         }
     }
-    if let UnitTemplate::Vehicle(definition) = &mut template {
-        crate::templates::fit_vehicle(definition);
+    match &mut template {
+        UnitTemplate::Vehicle(definition) => crate::templates::fit_vehicle(definition),
+        UnitTemplate::Mech(definition) => {
+            crate::templates::book_legal_keeping(definition, Some(MechSection::LeftTorso))
+        }
     }
     let shooter = world.create(config, "Sighter".into(), Kind::Thing);
     let target = world.create(config, "Target".into(), Kind::Thing);
@@ -143,8 +152,9 @@ pub fn supply_fixture_on(
     }
     template.create(&mut world, shooter).unwrap();
     let mut target_template = UnitTemplate::parse("target", target_source).unwrap();
-    if let UnitTemplate::Vehicle(definition) = &mut target_template {
-        crate::templates::fit_vehicle(definition);
+    match &mut target_template {
+        UnitTemplate::Vehicle(definition) => crate::templates::fit_vehicle(definition),
+        UnitTemplate::Mech(definition) => crate::templates::book_legal(definition),
     }
     target_template.create(&mut world, target).unwrap();
     for id in [shooter, target] {

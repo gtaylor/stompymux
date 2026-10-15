@@ -141,7 +141,7 @@ fn launcher(source: &str, mode: &str) -> UnitTemplate {
             );
         }
     }
-    definition
+    crate::support::templates::legal_unit(definition)
 }
 
 /// Seed an attack independently from cluster and target damage streams.
@@ -719,7 +719,7 @@ fn swarm_template_modes_cover_compatible_catalogue() {
             bin.equipment = format!("Ammo_{}", weapon.name());
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             bin.modes = vec![flag.into()];
-            let unit = Mech::from_template(template).unwrap();
+            let unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
             let loadout = unit.loadout().unwrap();
             let index = loadout
                 .weapons

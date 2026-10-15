@@ -50,7 +50,7 @@ fn launcher() -> UnitTemplate {
             },
         );
     }
-    definition
+    crate::support::templates::legal_unit(definition)
 }
 
 /// A launcher and a target on a strip whose north end is a deep lake with a shallow southern

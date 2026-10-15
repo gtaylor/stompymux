@@ -447,10 +447,11 @@ async fn self_destruct_order_and_failed_tick_replay() {
             "    { at = 4, item = \"HeatSink\" },",
             "    { at = 4, item = \"Ammo_IS.SRM-4\", rounds = 25 },",
         );
+    // The displaced heat sink moves into a free slot elsewhere.
     create_battle_unit(
         &mut world,
         second,
-        MechTemplate::parse("JR7-D", &template).unwrap(),
+        crate::support::templates::legal(MechTemplate::parse("JR7-D", &template).unwrap()),
     )
     .unwrap();
     support::seed_object_dice(&mut world, second, support::FIXTURE_DICE_SEED);

@@ -33,7 +33,7 @@ fn unit() -> Mech {
         .unwrap()
         .criticals
         .insert(6, jet);
-    let unit = Mech::from_template(template).unwrap();
+    let unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
     let mut state = serde_json::to_value(&unit).unwrap();
     for (i, bin) in unit.loadout().unwrap().ammunition.iter().enumerate() {
         state["ammunition"][i] = match bin.location.section {

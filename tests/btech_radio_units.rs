@@ -33,10 +33,11 @@ async fn targeted_radio_mixed_pairs_share_visibility_delivery_and_restart() {
                 (target_template, listener, 1),
             ] {
                 let id = world.create(&config, "Radio unit".into(), Kind::Thing);
-                UnitTemplate::parse("test", template)
-                    .unwrap()
-                    .create(&mut world, id)
-                    .unwrap();
+                crate::support::templates::legal_unit(
+                    UnitTemplate::parse("test", template).unwrap(),
+                )
+                .create(&mut world, id)
+                .unwrap();
                 support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
                 place_battle_unit(&mut world, id, map, x, 0).unwrap();
                 let player = world.objects.get_mut(&pilot).unwrap();
@@ -189,10 +190,12 @@ async fn channel_radio_rotates_mixed_transmitters_relays_and_receivers() {
             .unwrap();
             support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
             let id = world.create(&config, "Radio unit".into(), Kind::Thing);
-            UnitTemplate::parse("test", &templates[(index + rotation) % templates.len()])
-                .unwrap()
-                .create(&mut world, id)
-                .unwrap();
+            crate::support::templates::legal_unit(
+                UnitTemplate::parse("test", &templates[(index + rotation) % templates.len()])
+                    .unwrap(),
+            )
+            .create(&mut world, id)
+            .unwrap();
             support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut world, id, map, (index * 2) as i64, 0).unwrap();
             let player = world.objects.get_mut(&pilot).unwrap();

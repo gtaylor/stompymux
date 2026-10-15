@@ -345,7 +345,7 @@ async fn hardened_gyro_replacement_rebuilds_damage_without_stale_loss_baselines(
         ObjectId(1),
         id,
         "unitdamage",
-        "A:2/1,C:4/3,C:4/4",
+        "A:1/1,C:4/3,C:4/4",
     )
     .unwrap();
     let previous = serde_json::to_value(&before.constructed_units()[&id]).unwrap();

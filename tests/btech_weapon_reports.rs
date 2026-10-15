@@ -35,8 +35,7 @@ async fn fixture(
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Equipment report".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    UnitTemplate::parse(reference, source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse(reference, source).unwrap())
         .create(&mut world, id)
         .unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);

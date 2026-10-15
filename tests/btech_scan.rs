@@ -147,7 +147,7 @@ fn sensor_defaults_follow_technology_base_and_critical_halving() {
                     .retain(|_, part| part.equipment != "HeatSink");
             }
         }
-        let mut unit = Mech::from_template(template).unwrap();
+        let mut unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
         assert_eq!(
             unit.sensor_ranges(),
             SensorRanges {
@@ -4088,6 +4088,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
             record["definition"]["sections"]["LeftTorso"]["criticals"]["8"] =
                 serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
             record["sensor_sweep"] = serde_json::json!(7);
+            crate::support::templates::book_legal_record(record);
         })
         .unwrap();
     assert!(

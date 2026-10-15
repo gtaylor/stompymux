@@ -141,7 +141,7 @@ async fn replacement_critical_groups_and_weapon_failures_resolve_installed_slots
     }
     let id = world.create(&config, "Replacement groups".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, id, template).unwrap();
+    create_battle_unit(&mut world, id, crate::support::templates::legal(template)).unwrap();
     let before = world.btech.clone();
     let replacement = prepare_battle_damage_field(&world, id, "C:2/0,C:1/7").unwrap();
     assert_eq!(

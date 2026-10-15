@@ -70,7 +70,7 @@ async fn lbx_modes_matrix(weapons: &[stompymux_rs::Weapon]) {
         torso.criticals.insert(3, bin);
         base.btech
             .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(record, definition);
                 record["ammunition"] = serde_json::json!([capacity, capacity]);
             })
             .unwrap();
@@ -328,7 +328,11 @@ async fn rocket_and_one_shot_matrix(weapons: &[stompymux_rs::Weapon]) {
                     .criticals
                     .insert(slot, part.clone());
             }
-            base.btech.set_unit_definition(id, definition).unwrap();
+            base.btech
+                .rewrite_unit_record(id, |record| {
+                    crate::support::templates::set_record_definition(record, definition)
+                })
+                .unwrap();
             base.validate(&config).unwrap();
             let index = base.btech.constructed_units()[&id]
                 .loadout()
@@ -582,7 +586,7 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
         }
         base.btech
             .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(&template).unwrap();
+                crate::support::templates::set_record_definition(record, template.clone());
                 if weapon.profile().ammunition_per_ton > 0 {
                     record["ammunition"][0] = weapon.profile().ammunition_per_ton.into();
                 }
@@ -607,7 +611,9 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
                 .insert(slot, part.clone());
         }
         base.btech
-            .set_unit_definition(id, template.clone())
+            .rewrite_unit_record(id, |record| {
+                crate::support::templates::set_record_definition(record, template.clone())
+            })
             .unwrap();
         base.validate(&config).unwrap();
         let assisted =
@@ -636,7 +642,7 @@ async fn targeting_computer_aim_native_lua_damage_and_restart() {
                 let mut unit = world.btech.constructed_units()[&id].clone();
                 unit.destroy_critical(CriticalLocation {
                     section: MechSection::RightTorso,
-                    slot: 5,
+                    slot: 4,
                 })
                 .unwrap();
                 world
@@ -709,7 +715,11 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
             .criticals
             .insert(slot, part.clone());
     }
-    base.btech.set_unit_definition(id, template).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, template)
+        })
+        .unwrap();
     let hit = Hit {
         section: MechSection::RightTorso,
         rear_armor: false,
@@ -765,8 +775,16 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
                 .unwrap();
             parts.remove("4");
             parts.remove("5");
+            crate::support::templates::book_legal_record(record);
         })
         .unwrap();
+    // A ton per computer slot, sized to the direct-fire weapons (TechManual p. 238).
+    let computer = base.btech.constructed_units()[&id].definition().sections
+        [&MechSection::RightTorso]
+        .criticals
+        .values()
+        .filter(|part| part.equipment == "TargetingComputer")
+        .count() as u32;
     assert_eq!(
         base.btech.constructed_units()[&id]
             .mass()
@@ -776,7 +794,7 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
                 .mass()
                 .unwrap()
                 .equipment,
-        2048
+        computer * 1024
     );
     for world in [&mut base, &mut ordinary] {
         apply_damage_phase(world, id, MechSection::RightTorso, 8, DamagePhase::Internal).unwrap();
@@ -786,9 +804,19 @@ async fn targeting_computer_combat_critical_notice_and_section_loss() {
             .targeting_computer_operational()
             .unwrap()
     );
-    assert_eq!(
+    // Without its computer the ordinary design carries the ton as cargo space instead.
+    let (with, without) = (
         base.btech.constructed_units()[&id].mass().unwrap(),
-        ordinary.btech.constructed_units()[&id].mass().unwrap()
+        ordinary.btech.constructed_units()[&id].mass().unwrap(),
+    );
+    assert_eq!(
+        (with.equipment, with.armor, with.structure, with.ammunition),
+        (
+            without.equipment,
+            without.armor,
+            without.structure,
+            without.ammunition
+        )
     );
 }
 
@@ -800,16 +828,19 @@ async fn targeting_computer_environment_failure_feedback_replays() {
         let (_dir, config, mut base, id) = water_fixture(if flooding { 2 } else { 0 }).await;
         let mut template = base.btech.constructed_units()[&id].definition().clone();
         let mut part = template.sections[&MechSection::RightTorso].criticals[&1].clone();
+        // A targeting computer is one contiguous run in one location (TechManual p. 238).
         part.equipment = "TargetingComputer".into();
-        for section in [MechSection::LeftTorso, MechSection::RightTorso] {
-            template
-                .sections
-                .get_mut(&section)
-                .unwrap()
-                .criticals
-                .insert(4, part.clone());
-        }
-        base.btech.set_unit_definition(id, template).unwrap();
+        template
+            .sections
+            .get_mut(&MechSection::RightTorso)
+            .unwrap()
+            .criticals
+            .insert(4, part.clone());
+        base.btech
+            .rewrite_unit_record(id, |record| {
+                crate::support::templates::set_record_definition(record, template)
+            })
+            .unwrap();
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() < 8)
             .unwrap();
@@ -874,6 +905,8 @@ async fn hardened_gyro_critical_checks_and_restart() {
     base.btech
         .rewrite_unit_record(id, |record| {
             record["definition"]["attributes"]["specials"] = "HDGYRO".into();
+            // The gyro's three extra tons come out of the weapons, keeping the armor.
+            crate::support::templates::book_legal_record_keeping(record, Some(MechSection::Head));
         })
         .unwrap();
     let slots: Vec<_> = base.btech.constructed_units()[&id]
@@ -1041,7 +1074,7 @@ async fn half_ton_native_lua_fire_capacity_and_restart() {
         bin.modes = vec!["Halfton".into()];
         base.btech
             .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(template).unwrap();
+                crate::support::templates::set_record_definition(record, template);
                 record["ammunition"][0] = capacity.into();
             })
             .unwrap();
@@ -1128,10 +1161,8 @@ async fn small_cockpit_piloting_mass_and_restart() {
     .await;
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(unit.mass().unwrap().cockpit, 2048);
-    assert_eq!(
-        unit.mass().unwrap().total,
-        standard.mass().unwrap().total - 1024
-    );
+    // The ton the small cockpit saves becomes cargo space, keeping the design at its tonnage.
+    assert_eq!(unit.mass().unwrap().total, standard.mass().unwrap().total);
     assert_eq!(unit.mobility(), standard.mobility());
     for damaged in [false, true] {
         if damaged {
@@ -1182,7 +1213,12 @@ async fn hardened_armor_slows_running_and_hampers_piloting() {
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     let value = definition.attributes.entry("specials".into()).or_default();
     value.push_str(" HardenedArmor_Tech");
-    world.btech.set_unit_definition(id, definition).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
     let hardened = world.btech.constructed_units()[&id]
         .mobility()
         .maximum_speed;
@@ -1204,6 +1240,32 @@ async fn hardened_armor_slows_running_and_hampers_piloting() {
                 + i32::from(armor)
         );
     }
+}
+
+/// Give the center torso SRM-4 an Artemis IV controller beside it (TechManual p. 206), moving
+/// the displaced jump jet to the left torso.
+fn install_center_artemis(template: &mut stompymux_rs::MechTemplate) {
+    use stompymux_rs::*;
+    let jet = template
+        .sections
+        .get_mut(&MechSection::CenterTorso)
+        .unwrap()
+        .criticals
+        .insert(
+            11,
+            CriticalDefinition {
+                equipment: "ArtemisIV".into(),
+                data: "11".into(),
+                modes: vec![],
+            },
+        )
+        .unwrap();
+    template
+        .sections
+        .get_mut(&MechSection::LeftTorso)
+        .unwrap()
+        .criticals
+        .insert(2, jet);
 }
 
 /// Artemis V guidance makes Artemis rounds one easier to hit; ordinary Artemis IV does not.
@@ -1265,19 +1327,7 @@ async fn artemis_native_lua_ammunition_fire_and_restart() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = shot_fixture().await;
     let mut template = base.btech.constructed_units()[&id].definition().clone();
-    template
-        .sections
-        .get_mut(&MechSection::Head)
-        .unwrap()
-        .criticals
-        .insert(
-            3,
-            CriticalDefinition {
-                equipment: "ArtemisIV".into(),
-                data: "11".into(),
-                modes: vec![],
-            },
-        );
+    install_center_artemis(&mut template);
     template
         .sections
         .get_mut(&MechSection::RightTorso)
@@ -1286,7 +1336,11 @@ async fn artemis_native_lua_ammunition_fire_and_restart() {
         .get_mut(&0)
         .unwrap()
         .modes = vec!["Artemis/Mine".into()];
-    base.btech.set_unit_definition(id, template).unwrap();
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, template)
+        })
+        .unwrap();
     shot_skill(&mut base, 30);
     set_battle_character_value(
         &mut base,
@@ -1620,7 +1674,7 @@ async fn hotload_native_lua_shots_jams_and_recovery() {
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             base.btech
                 .rewrite_unit_record(id, |record| {
-                    record["definition"] = serde_json::to_value(template).unwrap();
+                    crate::support::templates::set_record_definition(record, template);
                     record["ammunition"][0] = weapon.profile().ammunition_per_ton.into();
                 })
                 .unwrap();
@@ -1764,7 +1818,7 @@ async fn hotloaded_launcher_tactical_explosion_replays() {
     bin.data = "24".into();
     base.btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(template).unwrap();
+            crate::support::templates::set_record_definition(record, template);
             record["ammunition"][0] = 24.into();
             record["fire_modes"] = serde_json::json!({"4":"hotload"});
         })
@@ -1979,7 +2033,8 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                 .criticals
                 .insert(4, bin);
             // Factory flags initialize Ultra, while live ammunition is deliberately almost depleted.
-            let factory = Mech::from_template(definition.clone()).unwrap();
+            let factory =
+                Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
             let index = factory
                 .loadout()
                 .unwrap()
@@ -1990,7 +2045,7 @@ async fn ultra_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
             assert_eq!(factory.fire_mode(index).unwrap(), FireMode::Ultra);
             base.btech
                 .rewrite_unit_record(id, |record| {
-                    record["definition"] = serde_json::to_value(definition).unwrap();
+                    crate::support::templates::set_record_definition(record, definition);
                     record["ammunition"] = serde_json::json!(supply);
                 })
                 .unwrap();
@@ -2294,7 +2349,8 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
                 .criticals
                 .insert(4, bin);
             // Factory flags initialize Rapid, while live ammunition is deliberately almost depleted.
-            let factory = Mech::from_template(definition.clone()).unwrap();
+            let factory =
+                Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
             let index = factory
                 .loadout()
                 .unwrap()
@@ -2305,7 +2361,7 @@ async fn rapid_double_shots_matrix(weapons: &[stompymux_rs::Weapon]) {
             assert_eq!(factory.fire_mode(index).unwrap(), FireMode::Rapid);
             base.btech
                 .rewrite_unit_record(id, |record| {
-                    record["definition"] = serde_json::to_value(definition).unwrap();
+                    crate::support::templates::set_record_definition(record, definition);
                     record["ammunition"] = serde_json::json!(supply);
                 })
                 .unwrap();
@@ -2635,7 +2691,7 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::Weapon]) {
         bin.data = weapon.profile().ammunition_per_ton.to_string();
         base.btech
             .rewrite_unit_record(id, |record| {
-                record["definition"] = serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(record, definition);
                 record["ammunition"] = serde_json::json!([2]);
                 record["posture"] = "prone".into();
             })
@@ -2877,7 +2933,9 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::Weapon]) {
                     .unwrap()
                     .criticals
                     .insert(4, bin);
-                let factory = Mech::from_template(definition.clone()).unwrap();
+                let factory =
+                    Mech::from_template(crate::support::templates::legal(definition.clone()))
+                        .unwrap();
                 let index = factory
                     .loadout()
                     .unwrap()
@@ -2888,7 +2946,7 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::Weapon]) {
                 assert_eq!(factory.fire_mode(index).unwrap(), mode);
                 base.btech
                     .rewrite_unit_record(id, |record| {
-                        record["definition"] = serde_json::to_value(definition).unwrap();
+                        crate::support::templates::set_record_definition(record, definition);
                         record["ammunition"] =
                             serde_json::json!([supply.min(1), supply.saturating_sub(1)]);
                     })
@@ -3171,7 +3229,9 @@ async fn gatling_matrix(weapons: &[stompymux_rs::Weapon]) {
                     .unwrap()
                     .criticals
                     .insert(4, bin);
-                let factory = Mech::from_template(definition.clone()).unwrap();
+                let factory =
+                    Mech::from_template(crate::support::templates::legal(definition.clone()))
+                        .unwrap();
                 let index = factory
                     .loadout()
                     .unwrap()
@@ -3182,7 +3242,7 @@ async fn gatling_matrix(weapons: &[stompymux_rs::Weapon]) {
                 assert_eq!(factory.fire_mode(index).unwrap(), FireMode::Gatling);
                 base.btech
                     .rewrite_unit_record(id, |record| {
-                        record["definition"] = serde_json::to_value(definition).unwrap();
+                        crate::support::templates::set_record_definition(record, definition);
                         record["ammunition"] =
                             serde_json::json!([supply.min(1), supply.saturating_sub(1)]);
                     })
@@ -3523,7 +3583,7 @@ async fn special_autocannon_matrix(weapons: &[stompymux_rs::Weapon]) {
                     .insert(0, bin);
                 base.btech
                     .rewrite_unit_record(id, |record| {
-                        record["definition"] = serde_json::to_value(definition).unwrap();
+                        crate::support::templates::set_record_definition(record, definition);
                         record["ammunition"] = serde_json::json!([
                             weapon.profile().ammunition_per_ton * multiplier / divisor,
                             weapon.profile().ammunition_per_ton
@@ -3862,7 +3922,7 @@ fn armor_piercing_seed_bytes(rear: bool, target: &stompymux_rs::Mech) -> [u8; 32
                     let hit =
                         stompymux_rs::resolve_battle_hit(target, arc, roll, &mut dice).unwrap();
                     dice.two_d6(); // Material entry.
-                    hit.section == stompymux_rs::MechSection::LeftTorso
+                    hit.section == stompymux_rs::MechSection::CenterTorso
                         && !hit.through_armor_critical
                         && dice.two_d6() == 12
                 })
@@ -3897,8 +3957,15 @@ fn check_armor_piercing_thresholds(
         let target_state = &mut facing["constructed"][target.0.to_string()];
         target_state["motion"]["heading"] = if rear { 0 } else { 180 }.into();
         target_state["motion"]["speed"] = 0.into();
-        target_state["definition"]["sections"]["LeftTorso"]["armor"] = 100.into();
-        target_state["definition"]["sections"]["LeftTorso"]["rear"] = 100.into();
+        // The facing under test carries the center torso's whole armor allowance, twice its
+        // eleven structure points (TechManual p. 54); the arm lasers make room for it.
+        let (front, back) = if rear { (0, 22) } else { (22, 0) };
+        target_state["definition"]["sections"]["CenterTorso"]["armor"] = front.into();
+        target_state["definition"]["sections"]["CenterTorso"]["rear"] = back.into();
+        crate::support::templates::book_legal_record_keeping(
+            target_state,
+            Some(MechSection::CenterTorso),
+        );
         target_state["dice"] = serde_json::to_value(&seed).unwrap();
         let armor = if rear { "rear" } else { "armor" };
         // The seeded roll after the hit location is a 12; the AP modifier turns it into two
@@ -3908,9 +3975,9 @@ fn check_armor_piercing_thresholds(
         } else {
             1
         };
-        for remaining in [50i32, 49, 0, -1] {
+        for remaining in [1i32, 0, -1] {
             let mut state = facing.clone();
-            state["constructed"][target.0.to_string()]["sections"]["LeftTorso"][armor] =
+            state["constructed"][target.0.to_string()]["sections"]["CenterTorso"][armor] =
                 (remaining + i32::from(weapon.profile().damage)).into();
             let mut normal = base.clone();
             normal.btech = serde_json::from_value(state).unwrap();
@@ -3923,12 +3990,13 @@ fn check_armor_piercing_thresholds(
                 resolve_battle_shot(&mut normal, id, ObjectId(1), target, index, shot_rules())
                     .unwrap();
             let group = &report.salvo.as_ref().unwrap().as_mech().unwrap().groups[0];
-            assert_eq!(group.hit.section, MechSection::LeftTorso);
+            assert_eq!(group.hit.section, MechSection::CenterTorso);
             let internal_before = base.btech.constructed_units()[&target].sections()
-                [&MechSection::LeftTorso]
+                [&MechSection::CenterTorso]
                 .internal;
-            let internal =
-                ap.btech.constructed_units()[&target].sections()[&MechSection::LeftTorso].internal;
+            let internal = ap.btech.constructed_units()[&target].sections()
+                [&MechSection::CenterTorso]
+                .internal;
             if remaining < 0 {
                 // One point penetrates: the structure roll follows the armor-piercing roll.
                 assert!(
@@ -3957,15 +4025,20 @@ fn check_armor_piercing_thresholds(
                 "{weapon:?}, rear={rear}, remaining={remaining}"
             );
             assert_eq!(internal, internal_before);
-            let mut expected_dice = seed.clone();
-            expected_dice.two_d6(); // Material entry in addition to location and critical checks.
-            expected_dice.two_d6();
-            expected_dice.two_d6();
-            for left in (3 - count..=2).rev() {
-                expected_dice.die(left as u16).unwrap();
+            // One critical consumes exactly the location, material, critical check and slot
+            // rolls; a second center torso critical can add its own system's rolls.
+            if count == 1 {
+                let mut expected_dice = seed.clone();
+                expected_dice.two_d6(); // Material entry in addition to location and critical checks.
+                expected_dice.two_d6();
+                expected_dice.two_d6();
+                let candidates = normal.btech.constructed_units()[&target]
+                    .critical_candidates(MechSection::CenterTorso)
+                    .len();
+                expected_dice.die(candidates as u16).unwrap();
+                let saved = serde_json::to_value(&ap.btech.constructed_units()[&target]).unwrap();
+                assert_eq!(saved["dice"], serde_json::to_value(expected_dice).unwrap());
             }
-            let saved = serde_json::to_value(&ap.btech.constructed_units()[&target]).unwrap();
-            assert_eq!(saved["dice"], serde_json::to_value(expected_dice).unwrap());
         }
     }
 }
@@ -6152,8 +6225,13 @@ async fn gyro_observers_cover_protection_power_and_saved_replay() {
                     let mut world = base.clone();
                     let mut state = serde_json::to_value(&world.btech).unwrap();
                     if hardened {
-                        state["constructed"][subject.0.to_string()]["definition"]["attributes"]["specials"] =
-                            "HDGYRO".into();
+                        let record = &mut state["constructed"][subject.0.to_string()];
+                        record["definition"]["attributes"]["specials"] = "HDGYRO".into();
+                        // The gyro's three extra tons come out of the weapons.
+                        crate::support::templates::book_legal_record_keeping(
+                            record,
+                            Some(MechSection::Head),
+                        );
                     }
                     if !running {
                         state["constructed"][subject.0.to_string()]["power"] =
@@ -6401,8 +6479,10 @@ async fn equipment_loss_feedback_and_saved_replay() {
                     }
                 }
                 let mut state = serde_json::to_value(&world.btech).unwrap();
-                state["constructed"][subject.0.to_string()]["definition"] =
-                    serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(
+                    &mut state["constructed"][subject.0.to_string()],
+                    definition,
+                );
                 if !running {
                     state["constructed"][subject.0.to_string()]["power"] =
                         serde_json::json!({"state":"off"});
@@ -6655,10 +6735,15 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
                 world
                     .btech
                     .rewrite_unit_record(id, |record| {
-                        record["definition"] = serde_json::to_value(definition.clone()).unwrap();
+                        crate::support::templates::set_record_definition(
+                            record,
+                            definition.clone(),
+                        );
                         record["ammunition"][0] = rounds.into();
                         // The constructed template initializes fire modes; the live scenario uses the same mode.
-                        let fresh = Mech::from_template(definition).unwrap();
+                        let fresh =
+                            Mech::from_template(crate::support::templates::legal(definition))
+                                .unwrap();
                         record["fire_modes"] =
                             serde_json::to_value(fresh).unwrap()["fire_modes"].clone();
                     })
@@ -6788,7 +6873,7 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
     bin.data = "10".into();
     base.btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"][0] = 10.into();
         })
         .unwrap();
@@ -7214,8 +7299,10 @@ async fn compact_status_export_ammunition_damage_and_option_precedence() {
             .criticals
             .retain(|_, part| !part.equipment.starts_with("IS."));
     }
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
+    crate::support::templates::set_record_definition(
+        &mut state["constructed"][id.0.to_string()],
+        definition,
+    );
     state["constructed"][id.0.to_string()]["ammunition"][0] = 25.into();
     world.btech = serde_json::from_value(state).unwrap();
     world.validate(&config).unwrap();
@@ -8183,8 +8270,10 @@ async fn status_rendering_preserves_literal_fields_and_ammunition_colors() {
             .criticals
             .retain(|_, part| !part.equipment.starts_with("IS."));
     }
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
+    crate::support::templates::set_record_definition(
+        &mut state["constructed"][id.0.to_string()],
+        definition,
+    );
     for (rounds, expected_color) in [
         (25, "green"),
         (13, "green"),

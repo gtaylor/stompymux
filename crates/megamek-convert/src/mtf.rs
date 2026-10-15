@@ -183,7 +183,8 @@ pub fn convert(source: &str) -> Result<Converted> {
         "quad" => "quad",
         _ => bail!("unsupported unit type: {config} BattleMech"),
     };
-    let tech = tech_base(file.required("techbase")?)?;
+    let tech_header = file.required("techbase")?;
+    let tech = tech_base(tech_header)?;
     let tons: u16 = file
         .number("mass")?
         .try_into()
@@ -191,6 +192,10 @@ pub fn convert(source: &str) -> Result<Converted> {
     let mut construction = Vec::new();
     if tech == TechBase::Clan {
         construction.push(("tech_base", "clan"));
+    }
+    // A mixed-technology design may mount weapons of either base.
+    if tech_header.trim().to_ascii_lowercase().starts_with("mixed") {
+        construction.push(("mixed_tech", "true"));
     }
     let engine_header = file.required("engine")?;
     let engine_family = engine(engine_header)?;
@@ -242,6 +247,10 @@ pub fn convert(source: &str) -> Result<Converted> {
     match sinks {
         HeatSinkKind::Double(TechBase::InnerSphere) => construction.push(("heat_sinks", "double")),
         HeatSinkKind::Laser => construction.push(("heat_sinks", "laser")),
+        // Clan Mechs default to double sinks; single sinks are named (TM p. 52).
+        HeatSinkKind::Single if tech == TechBase::Clan => {
+            construction.push(("heat_sinks", "single"))
+        }
         _ => {}
     }
     construction.extend(myomer(file.field("myomer"))?.map(|myomer| ("myomer", myomer)));
@@ -679,9 +688,6 @@ fn heat_sinks(value: &str, tech: TechBase) -> Result<(u32, HeatSinkKind)> {
         bail!("unsupported heat sinks {value}")
     };
     match (tech, kind) {
-        (TechBase::Clan, HeatSinkKind::Single) => {
-            bail!("Clan chassis with single heat sinks are unsupported")
-        }
         (TechBase::Clan, HeatSinkKind::Double(TechBase::InnerSphere)) => {
             bail!("Clan chassis with Inner Sphere double heat sinks are unsupported")
         }
@@ -885,7 +891,7 @@ mod tests {
             (
                 "techbase:Inner Sphere",
                 "techbase:Clan",
-                "Clan chassis with single heat sinks",
+                "Inner Sphere technology on a Clan Mech",
             ),
             (
                 "Autocannon/20\nIS Ammo",
@@ -946,7 +952,10 @@ mod tests {
             heat_sinks("14 IS Double", TechBase::InnerSphere).unwrap(),
             (14, HeatSinkKind::Double(TechBase::InnerSphere))
         );
-        assert!(heat_sinks("10 Single", TechBase::Clan).is_err());
+        assert_eq!(
+            heat_sinks("10 Single", TechBase::Clan).unwrap(),
+            (10, HeatSinkKind::Single)
+        );
         assert!(heat_sinks("10 Laser", TechBase::InnerSphere).is_err());
         assert!(heat_sinks("10 Compact", TechBase::InnerSphere).is_err());
     }

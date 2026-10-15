@@ -48,7 +48,7 @@ fn launcher() -> UnitTemplate {
             },
         );
     }
-    definition
+    crate::support::templates::legal_unit(definition)
 }
 
 /// A piloted launcher at the south end of an open field, facing the target hex.

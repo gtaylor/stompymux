@@ -155,6 +155,8 @@ mod tests {
                 .entry("specials".into())
                 .or_default()
                 .push_str(" HDGYRO");
+            // The gyro's three extra tons come out of the weapons.
+            super::super::test_designs::balance(&mut template, &[]);
         }
         Mech::from_template(template).unwrap()
     }

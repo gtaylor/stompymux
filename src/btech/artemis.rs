@@ -1,6 +1,6 @@
 //! Derived Artemis links share matching and availability policy across unit anatomies.
 use super::{
-    CriticalLocation, Mech, MechSection, System, SystemCritical, Vehicle, VehicleCriticalLocation,
+    CriticalLocation, Mech, System, SystemCritical, Vehicle, VehicleCriticalLocation,
     VehicleSection, WeaponMount,
 };
 use anyhow::{Result, ensure};
@@ -89,7 +89,7 @@ fn operational<L>(controllers: &[ArtemisController<L>], index: usize) -> bool {
 }
 
 impl Mech {
-    /// Mechs permit same-section links and a head controller for a center-torso launcher.
+    /// A Mech's controller serves launchers in its own location (TechManual p. 206).
     pub fn artemis_controllers(&self) -> Result<Vec<ArtemisController>> {
         let loadout = self.loadout()?;
         controllers(
@@ -100,11 +100,7 @@ impl Mech {
                 Ok((link(&part.data)?, !self.critical_unavailable(location)))
             },
             |location| location.slot,
-            |controller, primary| {
-                controller.section == primary.section
-                    || (controller.section == MechSection::Head
-                        && primary.section == MechSection::CenterTorso)
-            },
+            |controller, primary| controller.section == primary.section,
         )
     }
 

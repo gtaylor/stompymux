@@ -49,8 +49,7 @@ async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {
         )
         .unwrap();
         let id = world.create(&config, "Traveler".into(), Kind::Thing);
-        UnitTemplate::parse("test", source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
             .create(&mut world, id)
             .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);

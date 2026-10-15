@@ -88,13 +88,19 @@ pub struct MechTemplate {
 }
 
 impl MechTemplate {
-    /// Clan chassis always use double-efficiency heat sinks.
+    /// Double-efficiency heat sinks: Inner Sphere double sinks, or a Clan chassis's sinks
+    /// unless it declares single sinks (TM p. 52).
     pub fn has_double_heat_sinks(&self) -> bool {
-        self.has_special("Clan") || self.has_special("DoubleHS")
+        (self.has_special("Clan") && !self.has_special(super::construction::SINGLE_HEAT_SINKS))
+            || self.has_special("DoubleHS")
     }
 
-    /// Number of contiguous critical slots occupied by one installed heat sink.
+    /// Number of contiguous critical slots occupied by one installed heat sink: one for a
+    /// single sink, three for an Inner Sphere double and two for a Clan double (TM p. 53).
     pub fn heat_sink_slots(&self) -> usize {
+        if self.has_special(super::construction::SINGLE_HEAT_SINKS) {
+            return 1;
+        }
         if self.has_special("Clan") {
             return 2;
         }
@@ -189,14 +195,16 @@ impl MechTemplate {
             tons,
             max_speed: speed("max_speed")?,
             jump_speed: speed("jump_speed")?,
-            heat_sinks: fields
-                .get("heat_sinks")
-                .map(String::as_str)
-                .unwrap_or("10")
-                .parse()
-                .context("invalid heat sinks")?,
+            heat_sinks: 0,
             sections,
             attributes: fields,
+        };
+        // Without a heat_sinks line a Mech carries the engine's ten free sinks (TM p. 53):
+        // twenty points of dissipation when they are double sinks.
+        template.heat_sinks = match template.attributes.get("heat_sinks") {
+            Some(value) => value.parse().context("invalid heat sinks")?,
+            None if template.has_double_heat_sinks() => 20,
+            None => 10,
         };
         // The reference load always forces the tonnage-chart internal structure
         // (mech_int_check) while reading the template file, overriding authored

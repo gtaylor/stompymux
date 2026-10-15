@@ -40,6 +40,8 @@ mod inspection;
 mod loadout;
 mod mass;
 mod mech;
+mod mech_mass;
+mod mech_rules;
 mod mech_validation;
 mod metadata;
 mod part_forms;
@@ -70,7 +72,7 @@ pub use cost::{
     PartPrices, part_price, raw_template_base_cost, template_base_cost, vehicle_template_base_cost,
 };
 pub use document::ParsedTemplate;
-pub use engine::{Engine, rated_output};
+pub use engine::{Engine, rated_output, running_mp_of_walking, walking_mp_of_running};
 pub use engine_sink_override::{
     parse_engine_sink_override, read_engine_sink_override, write_engine_sink_override,
 };
@@ -95,9 +97,11 @@ pub use loadout::{
 };
 pub use mass::{
     armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
-    structure_mass, system_slot_mass,
+    structure_mass, system_mass, system_slot_mass,
 };
 pub use mech::{CriticalDefinition, MechSection, MechTemplate, SectionDefinition};
+pub use mech_mass::{MassItem, MechMass, armor_denominator, heat_sink_count, structure_divisor};
+pub use mech_rules::{MAXIMUM_ENGINE_RATING, MAXIMUM_HEAD_ARMOR};
 pub use metadata::{unit_metadata, validate_unit_metadata};
 pub use part_forms::{
     PartForm, PartNames, part_abbreviation, part_catalogue, part_names, part_short_name,

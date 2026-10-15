@@ -25,15 +25,15 @@ async fn fixture(
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
     let target = world.create(&config, "Target".into(), Kind::Thing);
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(&mut world, observer)
         .unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
-    UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-        .unwrap()
-        .create(&mut world, target)
-        .unwrap();
+    crate::support::templates::legal_unit(
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+    )
+    .create(&mut world, target)
+    .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     place_battle_unit(&mut world, target, map, 0, 60).unwrap();

@@ -5,6 +5,8 @@ mod special_commands;
 pub(crate) mod special_dispatch;
 mod special_help;
 mod special_registration;
+#[cfg(test)]
+mod test_designs;
 pub(crate) use special_registration::unregister_special;
 pub(crate) mod unit_lifecycle;
 pub use special_commands::{CommandClass, SpecialCommand, SpecialType};
@@ -270,8 +272,8 @@ pub use stompymux_map::{HexCoordinate, Point};
 pub use stompymux_unit_construction::{
     AMMUNITION_PART_OFFSET, ARTILLERY_MAPSHEET_HEXES, AmmunitionAdjustment, AmmunitionBin,
     AmmunitionMode, CriticalDefinition, CriticalLocation, DamageClass, Engine, FireMode, Gyro,
-    InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon, MechChassis,
-    MechLoadout, MechSection, MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part, PartForm,
+    InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon, MassItem, MechChassis,
+    MechLoadout, MechMass, MechSection, MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part, PartForm,
     PartKind, PartNames, PartPrices, PhysicalBattleValue, RangeBracket, RawMovement,
     RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout, SectionDefinition, System,
     SystemContext, SystemCritical, Technology, TemplateCheck, TemplateRegistryCache, UnitTemplate,
