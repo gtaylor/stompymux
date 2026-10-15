@@ -29,7 +29,7 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System, clan: 
         | System::Mace
         | System::DualSaw
         | System::Claw => 1024,
-        System::ArtemisIv => 1024,
+        System::ArtemisIv | System::ApolloFcs => 1024,
         // An Artemis V controller weighs a ton and a half across two slots (Tactical
         // Operations: Advanced Units & Equipment p. 217).
         System::ArtemisV => 768,

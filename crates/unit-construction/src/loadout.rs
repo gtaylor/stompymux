@@ -478,7 +478,11 @@ impl MechLoadout {
                         critical.data == "-"
                             || (matches!(
                                 super::System::named(&critical.equipment),
-                                Some(super::System::ArtemisIv | super::System::ArtemisV)
+                                Some(
+                                    super::System::ArtemisIv
+                                        | super::System::ArtemisV
+                                        | super::System::ApolloFcs
+                                )
                             ) && critical.data.parse::<u8>().is_ok()),
                         "Unsupported critical data {}",
                         critical.data

@@ -526,6 +526,8 @@ pub(super) struct ShotDamage<'a> {
     pub ams_engaged: bool,
     /// Spotter-directed indirect fire gets no Artemis or Narc cluster bonus.
     pub indirect: bool,
+    /// An MRM "Apollo" fire-control system guided the launcher.
+    pub apollo: bool,
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
 }
 
@@ -568,6 +570,7 @@ pub(super) fn resolve_salvo_in_candidate(
             gatling_damage: weapon.gatling_damage,
             ams_engaged: damage.ams_engaged,
             indirect: damage.indirect,
+            apollo: damage.apollo,
             incoming: damage.incoming,
         },
         effects,
@@ -617,6 +620,7 @@ enum HitGeometry {
         gatling_damage: Option<u8>,
         ams_engaged: bool,
         indirect: bool,
+        apollo: bool,
         incoming: Option<u8>,
     },
 }
@@ -785,6 +789,7 @@ fn resolve_salvo_with_effects(
                 }
             ),
             indirect: matches!(geometry, HitGeometry::Direct { indirect: true, .. }),
+            apollo: matches!(geometry, HitGeometry::Direct { apollo: true, .. }),
         },
         &mut unit.dice,
     )?;

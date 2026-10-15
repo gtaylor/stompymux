@@ -101,6 +101,7 @@ pub const STOCK: &[(i32, &str, u32, PartKind)] = &[
     (454, "LaserReflective", 0, PartKind::Component),
     (455, "ArtemisV", 768, PartKind::Component),
     (456, "LightTAG", 512, PartKind::Component),
+    (457, "ApolloFCS", 1024, PartKind::Component),
     (512, "Ammo_LBX2", 1024, PartKind::Commodity),
     (513, "Ammo_LBX5_LBX", 1024, PartKind::Commodity),
     (514, "Ammo_LBX10_LBX", 1024, PartKind::Commodity),

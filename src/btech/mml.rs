@@ -180,6 +180,7 @@ mod tests {
                     artemis_v: false,
                     ams_engaged: false,
                     indirect: false,
+                    apollo: false,
                 };
                 let actual =
                     roll_weapon_groups(request(mode), &mut Dice::seeded([seed; 32])).unwrap();
@@ -226,6 +227,7 @@ mod tests {
                                     artemis_v: false,
                                     ams_engaged: false,
                                     indirect: false,
+                                    apollo: false,
                                 },
                                 &mut dice,
                             )
@@ -251,6 +253,7 @@ mod tests {
                                     artemis_v: false,
                                     ams_engaged: true,
                                     indirect: false,
+                                    apollo: false,
                                 },
                                 &mut defended_dice,
                             )

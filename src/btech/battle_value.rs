@@ -592,7 +592,10 @@ impl Mech {
         let offense = Offense::gather(
             settings,
             &loadout,
-            artemis_multipliers(&loadout, &self.artemis_controllers()?),
+            artemis_multipliers(
+                &loadout,
+                &[self.artemis_controllers()?, self.apollo_controllers()?].concat(),
+            ),
             |location: CriticalLocation, rear_mount| match location.section {
                 MechSection::LeftArm | MechSection::RightArm if !quad => Arc::Unaffected,
                 _ if rear_mount => Arc::Rear,

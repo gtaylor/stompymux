@@ -579,7 +579,8 @@ impl MechTemplate {
     }
 
     /// Artemis IV or V serves every applicable launcher or none, from the launcher's location
-    /// (TM p. 206); CASE goes in torsos (TM p. 210); rear-firing weapons sit in
+    /// (TM p. 206), as the MRM Apollo system serves every MRM launcher (Tactical Operations:
+    /// Advanced Units & Equipment p. 142); CASE goes in torsos (TM p. 210); rear-firing weapons sit in
     /// torsos, legs or the head (TM p. 46); a heavy Gauss rifle sits in the torsos, splitting
     /// only between a side and the center torso (TM p. 218); and only ranged weapons of eight
     /// or more slots split, across two adjacent locations other than the legs (TM p. 47).
@@ -623,6 +624,34 @@ impl MechTemplate {
                 ensure!(
                     controllers == launchers,
                     "Artemis IV must serve every LRM, SRM and MML launcher from its location: {name} has {launchers} launchers and {controllers} Artemis systems"
+                );
+            }
+        }
+        // An MRM "Apollo" fire control system serves every MRM launcher or none, one per
+        // launcher in the launcher's location (Tactical Operations: Advanced Units & Equipment
+        // p. 142).
+        let apollo = |section: Option<MechSection>| {
+            loadout
+                .systems
+                .iter()
+                .filter(|part| {
+                    part.system == System::ApolloFcs
+                        && section.is_none_or(|s| part.location.section == s)
+                })
+                .count()
+        };
+        if apollo(None) > 0 {
+            for section in MechSection::ALL {
+                let launchers = loadout
+                    .weapons
+                    .iter()
+                    .filter(|mount| mount.weapon.is_mrm() && mount.criticals[0].section == section)
+                    .count();
+                ensure!(
+                    apollo(Some(section)) == launchers,
+                    "An MRM Apollo fire control system must serve every MRM launcher from its location: {} has {launchers} launchers and {} Apollo systems",
+                    chassis.section_name(section),
+                    apollo(Some(section))
                 );
             }
         }

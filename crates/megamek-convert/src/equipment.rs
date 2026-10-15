@@ -78,6 +78,9 @@ pub enum Critical {
     /// One slot of a Clan Artemis V fire-control system, linked like Artemis IV; a BattleMech
     /// installation fills two slots (Tactical Operations: Advanced Units & Equipment p. 217).
     ArtemisV,
+    /// An MRM "Apollo" fire-control system, linked to an MRM launcher in its section like
+    /// Artemis IV (Tactical Operations: Advanced Units & Equipment p. 142).
+    Apollo,
     /// A searchlight, which stompymux records as a chassis special rather than a slot.
     Searchlight,
 }
@@ -93,6 +96,7 @@ impl Critical {
             Self::Ammo { weapon, .. } => format!("Ammo_{}", weapon.name()),
             Self::Artemis => "ArtemisIV".to_owned(),
             Self::ArtemisV => "ArtemisV".to_owned(),
+            Self::Apollo => "ApolloFCS".to_owned(),
         })
     }
 
@@ -435,6 +439,7 @@ fn parse_equipment(name: &str, chassis: TechBase) -> Result<Critical> {
         match *base {
             "artemisiv" | "artemisivfcs" => return Ok(Critical::Artemis),
             "artemisv" | "artemisvfcs" => return Ok(Critical::ArtemisV),
+            "apollo" | "mrmapollofcs" | "apollofcs" => return Ok(Critical::Apollo),
             "searchlight" | "mountedsearchlight" => return Ok(Critical::Searchlight),
             _ => {}
         }
@@ -834,6 +839,7 @@ mod tests {
             ("Clan Endo Steel", Critical::System("EndoSteel")),
             ("ISGuardianECMSuite", Critical::System("Ecm")),
             ("ISArtemisIV", Critical::Artemis),
+            ("ISApollo (OMNIPOD)", Critical::Apollo),
             ("CLArtemisV", Critical::ArtemisV),
             ("CLLightTAG", Critical::System("LightTAG")),
         ] {

@@ -387,6 +387,10 @@ fn resolve_shot_inner(
     let target_number = aim.subtotal();
     candidate.btech.constructed.get_mut(&shooter).unwrap().dice = aim_dice;
     let weapon = mount.weapon;
+    // A surviving Apollo system takes one from the launcher's Cluster Hits roll (Tactical
+    // Operations: Advanced Units & Equipment p. 143).
+    let apollo = weapon.is_mrm()
+        && world.btech.constructed_units()[&shooter].apollo_operational(weapon_index)?;
     let streak_confused = weapon.is_streak()
         && (super::electronic_field(world, shooter)?.angel_disturbed
             || super::electronic_field(world, target)?.angel_protected);
@@ -536,6 +540,7 @@ fn resolve_shot_inner(
                 angel_blocked: false,
                 ams_engaged,
                 indirect: indirect_fire,
+                apollo,
             },
             rules.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
@@ -564,6 +569,7 @@ fn resolve_shot_inner(
                     character,
                     ams_engaged,
                     indirect: indirect_fire,
+                    apollo,
                     experience,
                 },
             )?,

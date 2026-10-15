@@ -133,6 +133,12 @@ impl Weapon {
             )
     }
 
+    /// Medium-range missile launchers, the launchers an MRM "Apollo" fire-control system serves
+    /// (Tactical Operations: Advanced Units & Equipment p. 142).
+    pub fn is_mrm(self) -> bool {
+        matches!(self, Self::Mrm10 | Self::Mrm20 | Self::Mrm30 | Self::Mrm40)
+    }
+
     /// Flamers can transfer their damage as heat, independently of their ammunition supply.
     pub fn is_flamer(self) -> bool {
         matches!(
@@ -441,6 +447,10 @@ pub enum System {
     /// Clan Artemis V fire control: one and a half tons in two slots per launcher (Tactical
     /// Operations: Advanced Units & Equipment p. 217).
     ArtemisV,
+    /// Inner Sphere MRM "Apollo" fire control: a ton in one slot per MRM launcher, linked to
+    /// its launcher like Artemis IV (Tactical Operations: Advanced Units & Equipment pp. 142,
+    /// 219).
+    ApolloFcs,
     Ecm,
     AngelEcm,
     StealthArmor,
@@ -524,6 +534,7 @@ impl System {
             name if name.eq_ignore_ascii_case("TargetingComputer") => Some(Self::TargetingComputer),
             name if name.eq_ignore_ascii_case("ArtemisIV") => Some(Self::ArtemisIv),
             name if name.eq_ignore_ascii_case("ArtemisV") => Some(Self::ArtemisV),
+            name if name.eq_ignore_ascii_case("ApolloFCS") => Some(Self::ApolloFcs),
             name if name.eq_ignore_ascii_case("Ecm") => Some(Self::Ecm),
             name if name.eq_ignore_ascii_case("AngelEcm") => Some(Self::AngelEcm),
             name if name.eq_ignore_ascii_case("StealthArmor") => Some(Self::StealthArmor),

@@ -61,8 +61,8 @@ impl TechBase {
 impl System {
     /// The one technology base that builds this system, or `None` when both bases build it
     /// under the same critical name. The Bloodhound probe, C3, the null signature system,
-    /// Angel ECM, triple strength myomer, stealth armor and light and heavy ferro-fibrous
-    /// armor are Inner Sphere only, and so is CASE as an item: Clan CASE is built into every
+    /// Angel ECM, triple strength myomer, stealth armor, light and heavy ferro-fibrous armor
+    /// and the MRM "Apollo" fire control system are Inner Sphere only, and so is CASE as an item: Clan CASE is built into every
     /// location of a Clan-structure unit rather than installed (TechManual p. 210). The light
     /// active probe, light TAG and Artemis V are Clan only (TechManual pp. 204-245; Tactical
     /// Operations: Advanced Units & Equipment).
@@ -78,6 +78,7 @@ impl System {
             | Self::StealthArmor
             | Self::LightFerroFibrous
             | Self::HeavyFerroFibrous
+            | Self::ApolloFcs
             | Self::Case => Some(TechBase::InnerSphere),
             Self::LightProbe | Self::LightTag | Self::ArtemisV => Some(TechBase::Clan),
             _ => None,

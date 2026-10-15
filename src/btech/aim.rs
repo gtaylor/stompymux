@@ -618,6 +618,11 @@ pub(super) fn weapon_modifiers(
     };
     aim.mounting_section = attacker.mounting_modifier(mount.criticals[0].section);
     aim.beacon_accuracy = i8::from(attacker.has_beacon(super::BeaconKind::Haywire));
+    // A surviving MRM Apollo system negates the MRM's +1 to hit (Tactical Operations: Advanced
+    // Units & Equipment p. 143).
+    if mount.weapon.is_mrm() && attacker.apollo_operational(weapon_index)? {
+        aim.weapon_accuracy -= 1;
+    }
     let loadout = attacker.loadout()?;
     if mount.computer_assists(
         ammunition,

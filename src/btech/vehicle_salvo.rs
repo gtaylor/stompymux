@@ -20,6 +20,9 @@ pub struct VehicleSalvoRequest {
     pub ams_engaged: bool,
     /// Spotter-directed indirect fire gets no Artemis or Narc cluster bonus.
     pub indirect: bool,
+    /// An MRM "Apollo" fire-control system guided the launcher: -1 on the Cluster Hits roll
+    /// (Tactical Operations: Advanced Units & Equipment p. 143).
+    pub apollo: bool,
 }
 
 /// One independently located packet and its complete vehicle consequences.
@@ -158,6 +161,7 @@ pub(super) fn resolve_with_context_in_candidate(
             artemis_v,
             ams_engaged: request.ams_engaged,
             indirect: request.indirect,
+            apollo: request.apollo,
         },
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;

@@ -53,12 +53,14 @@ impl System {
     }
 
     /// Multiplier applied to the BV of each missile launcher this fire control system serves:
-    /// Artemis IV 1.2 (TechManual p. 317, note B) and Artemis V 1.3 (Tactical Operations:
-    /// Advanced Units & Equipment p. 197, note J). The increase does not apply to ammunition.
+    /// Artemis IV 1.2 (TechManual p. 317, note B), Artemis V 1.3 (Tactical Operations:
+    /// Advanced Units & Equipment p. 197, note J) and the MRM "Apollo" system 1.15 (ibid.
+    /// p. 194, note L). The increase does not apply to ammunition.
     pub fn launcher_battle_value_multiplier(self) -> Option<f64> {
         match self {
             Self::ArtemisIv => Some(1.2),
             Self::ArtemisV => Some(1.3),
+            Self::ApolloFcs => Some(1.15),
             _ => None,
         }
     }
@@ -90,7 +92,7 @@ impl System {
     pub fn installation_slots(self, context: SystemContext) -> Option<u16> {
         let tons = context.tons;
         Some(match self {
-            Self::Case | Self::CaseIi | Self::C3Slave | Self::ArtemisIv => 1,
+            Self::Case | Self::CaseIi | Self::C3Slave | Self::ArtemisIv | Self::ApolloFcs => 1,
             Self::Tag | Self::LightTag | Self::LightProbe | Self::Supercharger => 1,
             Self::TargetingComputer | Self::Axe | Self::Masc => 1,
             Self::BeagleProbe if context.clan => 1,
@@ -134,6 +136,7 @@ impl System {
             Self::C3i => 750_000.0,
             Self::ArtemisIv => 100_000.0,
             Self::ArtemisV => 250_000.0,
+            Self::ApolloFcs => 125_000.0,
             Self::Tag => 50_000.0,
             Self::LightTag => 40_000.0,
             Self::NullSignature => 1_400_000.0,
@@ -259,6 +262,11 @@ mod tests {
             System::ArtemisV.launcher_battle_value_multiplier(),
             Some(1.3)
         );
+        assert_eq!(
+            System::ApolloFcs.launcher_battle_value_multiplier(),
+            Some(1.15)
+        );
+        assert_eq!(System::ApolloFcs.slot_price(IS), Some(125_000.0));
         assert_eq!(
             System::Axe.physical_battle_value(),
             Some(PhysicalBattleValue::DamageTimes(1.5))
