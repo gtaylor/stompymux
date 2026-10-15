@@ -418,8 +418,10 @@ fn artemis_multipliers<L: Copy + PartialEq>(
     multipliers
 }
 
-/// Machine gun arrays are each worth the BV of the guns they link times 0.67 (TechManual
-/// p. 317, note F), on 'Mechs and vehicles alike.
+/// Machine gun arrays are each worth the BV of the guns they link, but not their ammunition,
+/// times 0.1 (Tactical Operations: Advanced Units & Equipment p. 197, note L), on 'Mechs and
+/// vehicles alike. That addendum supersedes TechManual p. 317, note F's 0.67. The figure is a
+/// surcharge: the linked guns still count their own BV in full.
 fn machine_gun_array_value<S: Copy + Ord>(loadout: &ResolvedLoadout<CriticalLocation<S>>) -> f64 {
     loadout
         .machine_gun_arrays()
@@ -430,7 +432,7 @@ fn machine_gun_array_value<S: Copy + Ord>(loadout: &ResolvedLoadout<CriticalLoca
                 .iter()
                 .map(|&index| u32::from(loadout.weapons[index].weapon.battle_value()))
                 .sum();
-            0.67 * f64::from(guns)
+            0.1 * f64::from(guns)
         })
         .sum()
 }

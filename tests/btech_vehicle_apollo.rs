@@ -175,8 +175,8 @@ async fn vehicle_apollo_takes_one_from_the_cluster_roll() {
 }
 
 /// A vehicle's Apollo system raises its launcher's BV by 15 percent (Tactical Operations:
-/// Advanced Units & Equipment p. 194, note L), and a machine gun array is worth its guns' BV
-/// times 0.67 (TechManual p. 317, note F), as on a 'Mech.
+/// Advanced Units & Equipment p. 194, note L), and a machine gun array adds its guns' BV
+/// times 0.1 (Tactical Operations: Advanced Units & Equipment p. 197, note L), as on a 'Mech.
 #[test]
 fn vehicle_apollo_and_array_battle_value() {
     let vehicle = |source: &str| {
@@ -200,6 +200,6 @@ fn vehicle_apollo_and_array_battle_value() {
     let [loose, _] = shooters(&guns.replace("{ at = 4, item = \"IS.MGA\" },\n    ", ""));
     let gained = vehicle(&linked).battle_value().unwrap().offensive
         - vehicle(&loose).battle_value().unwrap().offensive;
-    let value = 0.67 * 3.0 * f64::from(Weapon::MachineGun.battle_value());
+    let value = 0.1 * 3.0 * f64::from(Weapon::MachineGun.battle_value());
     assert!((gained - value).abs() < 0.001, "{gained}");
 }
