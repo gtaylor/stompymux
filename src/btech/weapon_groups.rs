@@ -55,7 +55,10 @@ pub(super) fn roll_weapon_groups(
         indirect,
     } = request;
     let burst = fire_mode.rounds_per_cycle() > 1;
-    let cluster_roll = (burst || weapon.profile().missiles > 0 || mode == AmmunitionMode::Cluster)
+    let cluster_roll = (burst
+        || weapon.profile().missiles > 0
+        || weapon.is_hag()
+        || mode == AmmunitionMode::Cluster)
         .then(|| {
             if fire_mode == FireMode::Hotload {
                 let first = dice.d6();
@@ -66,13 +69,26 @@ pub(super) fn roll_weapon_groups(
                 dice.generic_roll()
             }
         });
-    let missile_damage = if mode == AmmunitionMode::Cluster {
+    let missile_damage = if mode == AmmunitionMode::Cluster || weapon.is_hag() {
         1
     } else {
         weapon.profile_for_ammunition(mode).damage
     };
+    // A plasma cannon deals 3D6 to a target that does not track heat, in five-point groups
+    // (Total Warfare p. 139); heat-tracking targets take its heat instead of these packets.
+    let plasma = (weapon == Weapon::ClanPlasmaCannon).then(|| dice.d6() + dice.d6() + dice.d6());
     let resolve = |ams_engaged: bool| -> Result<Vec<u16>> {
-        let mut damage = if let Some(damage) = gatling_damage {
+        let mut damage = if let Some(total) = plasma {
+            let total = if glancing { total / 2 } else { total };
+            let mut remaining = u16::from(total);
+            let mut groups = Vec::new();
+            while remaining > 0 {
+                let group = remaining.min(5);
+                groups.push(group);
+                remaining -= group;
+            }
+            groups
+        } else if let Some(damage) = gatling_damage {
             vec![if glancing {
                 u16::from(damage) / 2
             } else {

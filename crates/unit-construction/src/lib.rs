@@ -74,8 +74,8 @@ pub use engine_sink_override::{
     parse_engine_sink_override, read_engine_sink_override, write_engine_sink_override,
 };
 pub use equipment::{
-    ARTILLERY_MAPSHEET_HEXES, RangeBracket, System, WaterRanges, Weapon, WeaponProfile,
-    WeaponRange, strip_name_prefix,
+    ARTILLERY_MAPSHEET_HEXES, PhysicalBattleValue, RangeBracket, System, SystemContext,
+    WaterRanges, Weapon, WeaponProfile, WeaponRange, strip_name_prefix,
 };
 pub use fire_mode::FireMode;
 pub use gyro::Gyro;

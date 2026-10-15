@@ -265,13 +265,8 @@ impl VehicleTemplate {
                     1536
                 }
             }
-            System::ArtemisIv => {
-                if self.has_technology(super::Technology::ArtemisV) {
-                    1536
-                } else {
-                    1024
-                }
-            }
+            System::ArtemisIv => 1024,
+            System::ArtemisV => 1536,
             System::RetractableBlade => {
                 512 + super::mass::half_ton((u32::from(self.tons) * 1024).div_ceil(20))
             }
@@ -287,7 +282,7 @@ impl VehicleTemplate {
                     1536
                 }
             }
-            System::Case | System::LightProbe => 512,
+            System::Case | System::LightProbe | System::LightTag => 512,
             System::CaseIi => {
                 if self.has_special("Clan") {
                     512

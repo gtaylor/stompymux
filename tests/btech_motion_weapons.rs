@@ -1210,7 +1210,7 @@ async fn hardened_armor_slows_running_and_hampers_piloting() {
 #[tokio::test]
 async fn artemis_v_guidance_improves_aim() {
     use stompymux_rs::*;
-    for (specials, accuracy) in [(None, 0), (Some("ArtemisV_Tech"), -1), (Some("AV"), -1)] {
+    for (controller, accuracy) in [("ArtemisIV", 0), ("ArtemisV", -1)] {
         let (_dir, _config, mut world, id, target) = shot_fixture().await;
         let mut template = world.btech.constructed_units()[&id].definition().clone();
         template
@@ -1221,7 +1221,7 @@ async fn artemis_v_guidance_improves_aim() {
             .insert(
                 3,
                 CriticalDefinition {
-                    equipment: "ArtemisIV".into(),
+                    equipment: controller.into(),
                     data: "11".into(),
                     modes: vec![],
                 },
@@ -1234,11 +1234,6 @@ async fn artemis_v_guidance_improves_aim() {
             .get_mut(&0)
             .unwrap()
             .modes = vec!["Artemis/Mine".into()];
-        if let Some(flag) = specials {
-            let value = template.attributes.entry("specials".into()).or_default();
-            value.push(' ');
-            value.push_str(flag);
-        }
         world.btech.set_unit_definition(id, template).unwrap();
         let srm = world.btech.constructed_units()[&id]
             .loadout()
@@ -1259,7 +1254,7 @@ async fn artemis_v_guidance_improves_aim() {
                 .unwrap()
                 .beacon_accuracy,
             before + accuracy,
-            "{specials:?}"
+            "{controller}"
         );
     }
 }

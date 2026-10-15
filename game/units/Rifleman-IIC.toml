@@ -5,7 +5,7 @@ tons = 65
 walk_mp = 5
 jump_mp = 3
 heat_sinks = 38
-specials = ["SearchLight", "AntiAircraft"]
+specials = ["SearchLight"]
 
 [construction]
 tech_base = "clan"

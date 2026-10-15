@@ -5,7 +5,7 @@ tons = 60
 walk_mp = 6
 radio = 4
 cargo_space = 0
-specials = ["SearchLight", "AntiAircraft"]
+specials = ["SearchLight"]
 
 [construction]
 

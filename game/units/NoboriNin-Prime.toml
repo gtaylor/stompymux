@@ -5,7 +5,7 @@ tons = 50
 walk_mp = 8
 jump_mp = 5
 heat_sinks = 20
-specials = ["CL_AMS", "ArtemisIV", "BeagleProbe"]
+specials = ["ArtemisIV", "BeagleProbe"]
 
 [construction]
 tech_base = "clan"

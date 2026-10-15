@@ -4,7 +4,6 @@ movement = "track"
 tons = 80
 walk_mp = 5
 cargo_space = 0
-specials = ["AntiAircraft"]
 
 [sections.left_side]
 armor = 26

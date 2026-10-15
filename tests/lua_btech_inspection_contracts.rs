@@ -187,7 +187,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
       local engine=btech.template.engine('jr7-d')
       assert(engine.rating==245 and engine.suspension_factor==0,'engine')
       assert(#btech.template.weapons('jr7-d')==5,'weapons')
-      assert(btech.template.base_cost('jr7-d')==2962125,'cost')
+      assert(btech.template.base_cost('jr7-d')==3161925,'cost')
       local value=btech.template.battle_value('jr7-d')
       assert(value.total==875 and math.abs(value.offensive-525.96)<0.000001,'bv')
       assert(#btech.template.technologies('jr7-d')==1,'technologies')

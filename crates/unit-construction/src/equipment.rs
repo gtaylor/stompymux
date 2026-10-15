@@ -5,9 +5,11 @@ use serde::{Deserialize, Serialize};
 mod catalogue;
 mod families;
 mod range;
+mod system_values;
 mod water;
 pub use catalogue::Weapon;
 pub use range::{RangeBracket, WeaponRange};
+pub use system_values::{PhysicalBattleValue, SystemContext};
 pub use water::WaterRanges;
 
 /// Match ASCII equipment namespaces while retaining the original asset text for diagnostics.
@@ -85,6 +87,7 @@ impl Weapon {
         matches!(
             self,
             Self::MachineGun
+                | Self::LightMachineGun
                 | Self::HeavyMachineGun
                 | Self::ClanMachineGun
                 | Self::ClanLightMachineGun
@@ -207,15 +210,62 @@ impl Weapon {
         }
     }
 
-    /// Internal damage released by the first critical hit on a functional Gauss weapon.
+    /// Internal damage released by the first critical hit on a functional Gauss weapon. A
+    /// hyper-assault Gauss rifle explodes for 10, 15 or 20 points and an anti-personnel Gauss
+    /// rifle for 3 (Total Warfare p. 135).
     pub fn weapon_explosion_damage(self) -> u8 {
         match self {
             Self::HeavyGaussRifle => 25,
-            Self::GaussRifle | Self::ClanGaussRifle => 20,
+            Self::GaussRifle | Self::ClanGaussRifle | Self::ClanHag40 => 20,
             Self::LightGaussRifle => 16,
-            Self::MagshotGaussRifle => 3,
+            Self::ClanHag30 => 15,
+            Self::ClanHag20 => 10,
+            Self::MagshotGaussRifle | Self::ClanApGaussRifle => 3,
             _ => 0,
         }
+    }
+
+    /// Whether a BattleMech may mount this weapon. The Long Tom's Mech space is "NA"
+    /// (Tactical Operations: Advanced Units & Equipment p. 217): only vehicles and larger
+    /// units carry it.
+    pub fn mech_mountable(self) -> bool {
+        self != Self::LongTom
+    }
+
+    /// Whether this launcher has a one-shot (OS) version: the BV tables list a second, OS
+    /// figure for exactly those launchers (TechManual p. 317; Tactical Operations: Advanced
+    /// Units & Equipment pp. 194-197). Rocket launchers are built one-shot and have no
+    /// separate OS version.
+    pub fn one_shot_capable(self) -> bool {
+        self.one_shot_battle_value().is_some()
+    }
+
+    /// Critical slots this weapon counts as a Gauss weapon when the Defensive Battle Rating
+    /// subtracts one point per exposed Gauss slot (TechManual p. 302): every Gauss rifle,
+    /// hyper-assault and anti-personnel Gauss rifle by its full slot count, and a
+    /// hyper-velocity autocannon as one slot (Tactical Operations: Advanced Units & Equipment
+    /// p. 195, note Q). `None` for every other weapon.
+    pub fn defensive_gauss_slots(self) -> Option<u8> {
+        if matches!(self, Self::HyperAc2 | Self::HyperAc5 | Self::HyperAc10) {
+            return Some(1);
+        }
+        (self.weapon_explosion_damage() > 0).then_some(self.profile().critical_slots)
+    }
+
+    /// Weapons whose BV counts toward the Defensive Battle Rating rather than the offensive
+    /// rating (the † entries of TechManual pp. 317-318 and Tactical Operations: Advanced Units
+    /// & Equipment p. 194): anti-missile systems, laser anti-missile systems and A-Pods.
+    pub fn is_defensive_equipment(self) -> bool {
+        self.is_ams() || matches!(self, Self::APod | Self::ClanAPod)
+    }
+
+    /// Whether this weapon's ammunition is explosive for the Defensive Battle Rating
+    /// (TechManual pp. 317-318, § entries): Gauss and plasma ammunition is not, nor is the
+    /// ammunition of a weapon that has none.
+    pub fn ammunition_is_explosive(self) -> bool {
+        self.profile().ammunition_per_ton > 0
+            && self.weapon_explosion_damage() == 0
+            && !self.is_plasma()
     }
 
     /// Damage a critical hit releases from this weapon while its feed is jammed: a jammed
@@ -312,6 +362,9 @@ pub enum System {
     CaseIi,
     TargetingComputer,
     ArtemisIv,
+    /// Clan Artemis V fire control: one and a half tons in two slots per launcher (Tactical
+    /// Operations: Advanced Units & Equipment p. 217).
+    ArtemisV,
     Ecm,
     AngelEcm,
     StealthArmor,
@@ -320,6 +373,8 @@ pub enum System {
     NullSignature,
     BeagleProbe,
     Tag,
+    /// Clan light TAG: half a ton in one slot with a 3/6/9 range (TechManual p. 343).
+    LightTag,
     LightProbe,
     BloodhoundProbe,
     Axe,
@@ -385,12 +440,14 @@ impl System {
             name if name.eq_ignore_ascii_case("JumpJet") => Some(Self::JumpJet),
             name if name.eq_ignore_ascii_case("TargetingComputer") => Some(Self::TargetingComputer),
             name if name.eq_ignore_ascii_case("ArtemisIV") => Some(Self::ArtemisIv),
+            name if name.eq_ignore_ascii_case("ArtemisV") => Some(Self::ArtemisV),
             name if name.eq_ignore_ascii_case("Ecm") => Some(Self::Ecm),
             name if name.eq_ignore_ascii_case("AngelEcm") => Some(Self::AngelEcm),
             name if name.eq_ignore_ascii_case("StealthArmor") => Some(Self::StealthArmor),
             name if name.eq_ignore_ascii_case("LaserReflective") => Some(Self::LaserReflective),
             name if name.eq_ignore_ascii_case("NullSig_Device") => Some(Self::NullSignature),
             name if name.eq_ignore_ascii_case("TAG") => Some(Self::Tag),
+            name if name.eq_ignore_ascii_case("LightTAG") => Some(Self::LightTag),
             name if name.eq_ignore_ascii_case("BeagleProbe") => Some(Self::BeagleProbe),
             name if name.eq_ignore_ascii_case("Light_BAP") => Some(Self::LightProbe),
             name if name.eq_ignore_ascii_case("BloodhoundProbe") => Some(Self::BloodhoundProbe),
@@ -494,6 +551,62 @@ mod tests {
             assert_eq!(weapon.effective_range(), hexes, "{weapon:?}");
         }
         assert_eq!(W::Thumper.profile().heat, 6);
+    }
+
+    /// A BattleMech cannot mount a Long Tom (Tactical Operations: Advanced Units & Equipment
+    /// p. 217), and only launchers with a one-shot version take the OneShot mode (TechManual
+    /// p. 291 and the BV tables' one-shot figures).
+    #[test]
+    fn mech_mounting_follows_mech_space_and_one_shot_versions() {
+        let jenner = |weapon: W, modes: &[&str]| {
+            let mut template =
+                crate::MechTemplate::parse("JR7-D", include_str!("../tests/fixtures/JR7-D.toml"))
+                    .unwrap();
+            let critical = template
+                .sections
+                .get_mut(&crate::MechSection::CenterTorso)
+                .unwrap()
+                .criticals
+                .get_mut(&10)
+                .unwrap();
+            critical.equipment = weapon.name().into();
+            critical.modes = modes.iter().map(|mode| (*mode).into()).collect();
+            crate::MechLoadout::resolve(&template)
+        };
+        assert!(!W::LongTom.mech_mountable());
+        let error = format!("{:#}", jenner(W::LongTom, &[]).unwrap_err());
+        assert!(
+            error.contains("cannot be mounted on a BattleMech"),
+            "{error}"
+        );
+        assert!(jenner(W::Srm4, &["OneShot"]).is_ok());
+        assert!(jenner(W::ClanAtm3, &["OneShot"]).is_err());
+        assert!(jenner(W::Mml3, &["OneShot"]).is_err());
+        for weapon in [W::Lrm20, W::ClanStreakSrm2, W::NarcBeacon, W::Thunderbolt5] {
+            assert!(weapon.one_shot_capable(), "{weapon:?}");
+        }
+        for weapon in [W::ClanAtm12, W::Mml9, W::Rocket10, W::MediumLaser] {
+            assert!(!weapon.one_shot_capable(), "{weapon:?}");
+        }
+    }
+
+    /// Gauss-type weapons count their slots against the Defensive Battle Rating, the
+    /// hyper-velocity autocannon as a single slot; their ammunition is inert.
+    #[test]
+    fn defensive_battle_rating_facts_follow_the_bv_notes() {
+        assert_eq!(W::GaussRifle.defensive_gauss_slots(), Some(7));
+        assert_eq!(W::ClanHag40.defensive_gauss_slots(), Some(10));
+        assert_eq!(W::ClanApGaussRifle.defensive_gauss_slots(), Some(1));
+        assert_eq!(W::HyperAc10.defensive_gauss_slots(), Some(1));
+        assert_eq!(W::Ac20.defensive_gauss_slots(), None);
+        assert!(W::Ac20.ammunition_is_explosive());
+        assert!(!W::GaussRifle.ammunition_is_explosive());
+        assert!(!W::ClanPlasmaCannon.ammunition_is_explosive());
+        assert!(!W::MediumLaser.ammunition_is_explosive());
+        assert!(W::AntiMissileSystem.is_defensive_equipment());
+        assert!(W::ClanLaserAms.is_defensive_equipment());
+        assert!(W::APod.is_defensive_equipment());
+        assert!(!W::Lrm5.is_defensive_equipment());
     }
 
     /// Energy weapons are the ones reflective armor deflects.

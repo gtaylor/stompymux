@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 75
 walk_mp = 6
-specials = ["AntiAircraft"]
 
 [sections.left_arm]
 armor = 24

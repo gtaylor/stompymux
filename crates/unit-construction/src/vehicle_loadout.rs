@@ -54,8 +54,10 @@ impl VehicleLoadout {
                             critical.data == "-" || critical.data.parse::<i32>().is_ok()
                         } else {
                             critical.data == "-"
-                                || (critical.equipment.eq_ignore_ascii_case("ArtemisIV")
-                                    && critical.data.parse::<u8>().is_ok())
+                                || (matches!(
+                                    super::System::named(&critical.equipment),
+                                    Some(super::System::ArtemisIv | super::System::ArtemisV)
+                                ) && critical.data.parse::<u8>().is_ok())
                         },
                         "Unsupported critical data {}",
                         critical.data

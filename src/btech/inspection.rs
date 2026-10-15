@@ -1132,8 +1132,10 @@ pub struct InspectionTechnology {
 pub fn inspect_technologies(template: &MechTemplate) -> Result<Vec<InspectionTechnology>> {
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) =
-            super::administrative_technology(code).expect("complete unit technology catalogue");
+        // Codes of removed house flags no longer name a technology.
+        let Some((flag, group)) = super::administrative_technology(code) else {
+            continue;
+        };
         let configured = inspection_configured_technology(template, flag, group);
         let loaded = template.infers_technology(code);
         if configured || loaded {
@@ -1153,6 +1155,7 @@ pub fn inspect_technologies(template: &MechTemplate) -> Result<Vec<InspectionTec
         (super::System::C3Master, 7, "C3MasterTech"),
         (super::System::C3Slave, 8, "C3SlaveTech"),
         (super::System::ArtemisIv, 9, "ArtemisIV"),
+        (super::System::ArtemisV, 48, "ArtemisV_Tech"),
         (super::System::Ecm, 10, "ECM"),
         (super::System::BeagleProbe, 11, "BeagleProbe"),
         (super::System::LightProbe, 15, "LightBAP"),
@@ -1160,6 +1163,7 @@ pub fn inspect_technologies(template: &MechTemplate) -> Result<Vec<InspectionTec
         (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
         (super::System::AngelEcm, 43, "AngelECM_Tech"),
         (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::LightTag, 46, "TAG_Tech"),
         (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if loadout.systems.iter().any(|part| part.system == system)
@@ -1183,8 +1187,10 @@ pub fn inspect_raw_template_technologies(
 ) -> Result<Vec<InspectionTechnology>> {
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) =
-            super::administrative_technology(code).expect("complete unit technology catalogue");
+        // Codes of removed house flags no longer name a technology.
+        let Some((flag, group)) = super::administrative_technology(code) else {
+            continue;
+        };
         if inspection_configured_technology_attributes(&template.attributes, flag, group) {
             rows.push(InspectionTechnology {
                 code,
@@ -1226,6 +1232,7 @@ pub fn inspect_raw_template_technologies(
         (super::System::C3Master, 7, "C3MasterTech"),
         (super::System::C3Slave, 8, "C3SlaveTech"),
         (super::System::ArtemisIv, 9, "ArtemisIV"),
+        (super::System::ArtemisV, 48, "ArtemisV_Tech"),
         (super::System::Ecm, 10, "ECM"),
         (super::System::BeagleProbe, 11, "BeagleProbe"),
         (super::System::LightProbe, 15, "LightBAP"),
@@ -1233,6 +1240,7 @@ pub fn inspect_raw_template_technologies(
         (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
         (super::System::AngelEcm, 43, "AngelECM_Tech"),
         (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::LightTag, 46, "TAG_Tech"),
         (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if systems.contains(&system) && !rows.iter().any(|row| row.code == code) {
@@ -1259,8 +1267,10 @@ pub fn inspect_vehicle_technologies(
         .unwrap_or("");
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) =
-            super::administrative_technology(code).expect("complete unit technology catalogue");
+        // Codes of removed house flags no longer name a technology.
+        let Some((flag, group)) = super::administrative_technology(code) else {
+            continue;
+        };
         if specials
             .split_ascii_whitespace()
             .any(|item| item.eq_ignore_ascii_case(flag))
@@ -1282,6 +1292,7 @@ pub fn inspect_vehicle_technologies(
         (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
         (super::System::AngelEcm, 43, "AngelECM_Tech"),
         (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::LightTag, 46, "TAG_Tech"),
         (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if loadout.systems.iter().any(|part| part.system == system)

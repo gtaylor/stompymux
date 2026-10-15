@@ -18,20 +18,23 @@ pub struct ArtemisController<L = CriticalLocation> {
 }
 
 /// Whether a unit's Artemis controllers are Artemis V, which adds one more to the Artemis
-/// cluster bonus and one to hit. Either unit class reads its chassis technology flag.
+/// cluster bonus and one to hit. Artemis V is its own two-slot system (Tactical Operations:
+/// Advanced Units & Equipment p. 217); either unit class checks its installed systems.
 pub(super) fn artemis_v(world: &crate::World, id: crate::ObjectId) -> bool {
-    let technology = super::Technology::ArtemisV;
+    let installed = |systems: Vec<System>| systems.contains(&System::ArtemisV);
     world
         .btech
         .constructed_units()
         .get(&id)
-        .map(|unit| unit.definition().has_technology(technology))
+        .and_then(|unit| unit.loadout().ok())
+        .map(|loadout| installed(loadout.systems.iter().map(|part| part.system).collect()))
         .or_else(|| {
             world
                 .btech
                 .vehicles()
                 .get(&id)
-                .map(|vehicle| vehicle.definition().has_technology(technology))
+                .and_then(|vehicle| vehicle.loadout().ok())
+                .map(|loadout| installed(loadout.systems.iter().map(|part| part.system).collect()))
         })
         .unwrap_or(false)
 }
@@ -46,7 +49,7 @@ fn controllers<L: Copy>(
 ) -> Result<Vec<ArtemisController<L>>> {
     systems
         .iter()
-        .filter(|part| part.system == System::ArtemisIv)
+        .filter(|part| matches!(part.system, System::ArtemisIv | System::ArtemisV))
         .map(|part| {
             let (link, operational) = describe(part.location)?;
             let weapon_indices = weapons

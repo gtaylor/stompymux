@@ -1141,11 +1141,13 @@ async fn vehicle_beacon_launchers_reuse_attachment_interception_and_replay() {
     }
 }
 
+/// A Clan plasma cannon deals a Mech no damage but 2D6 outside heat, and any other target 3D6
+/// damage in five-point groups (Total Warfare p. 139).
 #[tokio::test]
-async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
-    // Clan plasma is conventional damage in the shared catalogue, without IS plasma heating.
-    let template =
-        include_str!("../game/units/Demolisher.toml").replace("\"IS.AC/20\"", "\"CL.PlasmaRifle\"");
+async fn clan_plasma_cannon_heats_mechs_and_damages_vehicles() {
+    let template = include_str!("../game/units/Demolisher.toml")
+        .replace("\"IS.AC/20\"", "\"CL.PlasmaCannon\"")
+        .replace("\"Ammo_IS.AC/20\"", "\"Ammo_CL.PlasmaCannon\"");
     let (_dir, config, mut world, _, [mech, _, shooter, vehicle]) = engagement(&template).await;
     let value = (0..=255)
         .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
@@ -1163,18 +1165,19 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
         )
         .unwrap();
         assert!(report.hit);
-        assert_eq!(report.heat_transfer, None);
         assert!(report.narc.is_none());
-        match report.salvo.unwrap() {
-            TargetSalvo::Swarm(_) => panic!("Direct explosive ammunition cannot retarget"),
-            TargetSalvo::Mech(salvo) => assert_eq!(
-                salvo.groups.iter().map(|group| group.damage).sum::<u16>(),
-                10
-            ),
-            TargetSalvo::Vehicle(salvo) => assert_eq!(
-                salvo.groups.iter().map(|group| group.damage).sum::<u16>(),
-                10
-            ),
+        if target == mech {
+            let heat = report.heat_transfer.expect("plasma heat");
+            assert!((2..=12).contains(&heat), "{heat}");
+            assert!(report.salvo.is_none());
+        } else {
+            assert_eq!(report.heat_transfer, None);
+            let Some(TargetSalvo::Vehicle(salvo)) = report.salvo else {
+                panic!("a vehicle target takes plasma cannon damage");
+            };
+            let damage: Vec<_> = salvo.groups.iter().map(|group| group.damage).collect();
+            assert!(damage.iter().all(|&group| (1..=5).contains(&group)));
+            assert!((3..=18).contains(&damage.iter().sum::<u16>()), "{damage:?}");
         }
         candidate.validate(&config).unwrap();
     }

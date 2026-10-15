@@ -193,7 +193,7 @@ impl<L> WeaponMount<L> {
                     ) && weapon.is_rotary())
                     || mode == "OnTC"
                     || (matches!(mode.as_str(), "OneShot" | "OneShot_Used")
-                        && weapon.profile().missiles > 0)),
+                        && (weapon.one_shot_capable() || weapon.is_rocket()))),
             "Unsupported weapon modes {:?}",
             critical.modes
         );
@@ -463,8 +463,10 @@ impl MechLoadout {
                     }
                     ensure!(
                         critical.data == "-"
-                            || (critical.equipment.eq_ignore_ascii_case("ArtemisIV")
-                                && critical.data.parse::<u8>().is_ok()),
+                            || (matches!(
+                                super::System::named(&critical.equipment),
+                                Some(super::System::ArtemisIv | super::System::ArtemisV)
+                            ) && critical.data.parse::<u8>().is_ok()),
                         "Unsupported critical data {}",
                         critical.data
                     );
@@ -473,6 +475,11 @@ impl MechLoadout {
                         || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
                     {
                         let weapon = Weapon::parse(&equipment)?;
+                        ensure!(
+                            weapon.mech_mountable(),
+                            "{} cannot be mounted on a BattleMech",
+                            weapon.name()
+                        );
                         let mut mount = WeaponMount::from_critical(weapon, critical, Vec::new())?;
                         let count = weapon.profile().critical_slots;
                         let extension = split.remove(&location).unwrap_or_default();

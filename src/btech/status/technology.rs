@@ -199,11 +199,6 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
         lines.push(format!("AdvTech: {}", parts.join("")));
     }
     let mut sensors = Vec::new();
-    if world.btech.unit(id).is_some_and(|unit| {
-        btech::with_unit!(unit, |unit| unit.definition().has_special("AntiAircraft"))
-    }) {
-        sensors.push("Radar");
-    }
     for (system, label) in [
         (System::BeagleProbe, "BeagleProbe"),
         (System::BloodhoundProbe, "BloodhoundProbe"),

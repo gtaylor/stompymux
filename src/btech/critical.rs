@@ -361,7 +361,7 @@ impl Mech {
         if matches!(
             loss,
             CriticalLoss::System {
-                system: System::ArtemisIv
+                system: System::ArtemisIv | System::ArtemisV
             }
         ) {
             // The reference critical handler uses the raw value as a same-section zero-based slot.

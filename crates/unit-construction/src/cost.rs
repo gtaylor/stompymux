@@ -1,4 +1,10 @@
-//! Source-derived FASA construction cost for supported BattleMech templates.
+//! Construction cost in C-bills for BattleMech, vehicle and raw templates, following the
+//! TechManual cost rules (pp. 275-285) and equipment tables (pp. 290-294), with Tactical
+//! Operations: Advanced Units & Equipment prices for advanced equipment.
+//!
+//! Component costs keep their fractions; only the final cost is rounded, up to the next whole
+//! C-bill (TechManual p. 275 rounds up to the nearest 0.01 C-bill, which a whole-C-bill result
+//! cannot represent). Ammunition is not part of a unit's cost (TechManual p. 283).
 use super::*;
 use anyhow::{Result, ensure};
 use std::collections::BTreeMap;
@@ -11,38 +17,26 @@ pub fn part_price(prices: &PartPrices, part_id: i32) -> Result<u64> {
     ensure!(Part::from_id(part_id).is_some(), "Unknown inventory part");
     Ok(prices.get(&part_id).copied().unwrap_or(0))
 }
-const WEAPON_COST: [u64; 196] = [
-    1500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 200000, 80000, 11250, 10000, 300000, 7500, 250000, 100000, 20000, 175000, 60000,
-    16000, 12500, 400000, 150000, 30000, 100000, 300000, 150000, 250000, 400000, 600000, 5000,
-    5000, 7500, 120000, 200000, 320000, 480000, 450000, 50000, 125000, 225000, 350000, 30000,
-    100000, 175000, 250000, 100000, 10000, 60000, 80000, 200000, 100000, 40000, 11250, 7500,
-    300000, 200000, 80000, 11250, 175000, 60000, 16000, 275000, 110000, 31000, 300000, 150000,
-    250000, 75000, 125000, 200000, 300000, 7500, 5000, 100000, 300000, 275000, 500000, 150000,
-    250000, 400000, 600000, 175000, 275000, 120000, 200000, 320000, 480000, 450000, 300000, 187500,
-    20000, 100000, 150000, 650000, 475000, 200000, 7500, 260000, 45000, 75000, 105000, 125000,
-    30000, 100000, 175000, 250000, 10000, 60000, 80000, 50000, 125000, 225000, 350000, 100000,
-    250000, 15000, 90000, 120000, 15000, 30000, 45000, 50000, 175000, 325000, 450000, 0, 0, 0, 0,
-    0, 0, 0, 8500, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    // Enhanced LRM-5, -10, -15 and -20.
-    60000, 125000, 175000, 250000,
-    // Inner Sphere LRT-5 to -20 and SRT-2 to -6, then the Clan launchers.
-    30000, 100000, 175000, 250000, 10000, 60000, 80000, 30000, 100000, 175000, 250000, 10000, 60000,
-    80000,
-];
-const AMMO_COST: [u64; 196] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2000, 20000, 2000, 9000, 12000, 20000,
-    1000, 500, 1000, 1000, 9000, 12000, 20000, 10000, 75000, 75000, 75000, 75000, 30000, 30000,
-    30000, 30000, 6000, 27000, 27000, 27000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    1000, 4500, 6000, 10000, 1000, 1000, 2000, 20000, 20000, 20000, 2000, 9000, 12000, 20000, 3000,
-    12000, 1000, 9000, 12000, 20000, 1000, 6000, 4500, 2000, 2000, 5000, 20000, 15000, 10000, 1000,
-    10000, 27000, 27000, 27000, 27000, 30000, 30000, 30000, 30000, 27000, 27000, 27000, 5000, 5000,
-    5000, 5000, 6000, 7500, 54000, 54000, 54000, 0, 0, 0, 50000, 50000, 50000, 50000, 0, 0, 0, 0,
-    0, 0, 0, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31000, 31000, 31000,
-    31000, 30000, 30000, 30000, 30000, 27000, 27000, 27000, 30000, 30000, 30000, 30000, 27000,
-    27000, 27000,
-];
+
+/// Omni technology multiplies a unit's cost before the final multiplier (TechManual p. 285).
+const OMNI_MULTIPLIER: f64 = 1.25;
+
+/// A one-shot launcher costs half its launcher (TechManual p. 291). Rocket launchers are built
+/// one-shot and their listed price already reflects it.
+fn weapon_mount_price<L>(mount: &WeaponMount<L>) -> f64 {
+    let price = mount.weapon.cost() as f64;
+    if mount.one_shot && !mount.weapon.is_rocket() {
+        price * 0.5
+    } else {
+        price
+    }
+}
+
+/// The final rounding: up to the next whole C-bill.
+fn final_cost(total: f64) -> u64 {
+    total.max(0.0).ceil() as u64
+}
+
 fn flag(template: &MechTemplate, name: &str) -> bool {
     ["specials", "specials2"]
         .iter()
@@ -57,6 +51,7 @@ fn flag(template: &MechTemplate, name: &str) -> bool {
             })
         })
 }
+
 fn half(value: u32) -> u32 {
     value.div_ceil(512) * 512
 }
@@ -72,12 +67,8 @@ fn raw_flag(template: &RawTemplate, name: &str) -> bool {
         })
 }
 
-fn raw_weapon_cost(id: i32) -> u64 {
-    usize::try_from(id - 1)
-        .ok()
-        .and_then(|index| WEAPON_COST.get(index))
-        .copied()
-        .unwrap_or_default()
+fn raw_weapon_cost(id: i32) -> f64 {
+    Weapon::from_part_id(id).map_or(0.0, |weapon| weapon.cost() as f64)
 }
 
 fn raw_weapon_mass(id: i32) -> u32 {
@@ -99,38 +90,36 @@ fn raw_weapon_is_energy(id: i32) -> bool {
         || matches!(id, 175 | 176)
 }
 
-fn raw_ammunition_cost(template: &RawTemplate) -> Result<f64> {
-    let mut total = 0.0;
-    for section in RawSectionCode::for_unit(template.class, template.movement) {
-        for row in inspect_raw_template_criticals(template, *section)? {
-            let Some(part) = row.part else { continue };
-            let Some(weapon_id) = Part::ammunition_weapon_id(part.id) else {
-                continue;
-            };
-            let Some((_, maximum)) = row.ammunition else {
-                continue;
-            };
-            let Some(weapon) = Weapon::from_part_id(weapon_id) else {
-                continue;
-            };
-            let per_ton = u64::from(weapon.profile().ammunition_per_ton);
-            if per_ton == 0 || maximum == 0 {
-                continue;
-            }
-            let cost = AMMO_COST[(weapon_id - 1) as usize];
-            total += if u64::from(maximum) < per_ton {
-                (cost / (per_ton / u64::from(maximum))) as f64
-            } else {
-                (cost * (u64::from(maximum) / per_ton)) as f64
-            };
-        }
-    }
-    Ok(total)
+/// Power amplifiers weigh a tenth of the energy weapons they feed and turrets a tenth of the
+/// items they carry, each rounded up to the half ton (TechManual pp. 102-104); returns tons.
+fn tenth_rounded_to_half_ton(mass: u64) -> f64 {
+    let tenth = u32::try_from(mass.div_ceil(10)).unwrap_or(u32::MAX);
+    f64::from(half(tenth)) / 1024.0
 }
 
-fn raw_equipment_cost(prices: &PartPrices, template: &RawTemplate) -> Result<f64> {
+/// Price vehicle and raw-template equipment one entry per installation.
+fn vehicle_system_price(
+    prices: &PartPrices,
+    system: System,
+    context: SystemContext,
+    equipment: &str,
+) -> Result<f64> {
+    if let Some(price) = system.installation_price(context) {
+        return Ok(price);
+    }
+    Ok(Part::parse(equipment)
+        .ok()
+        .map(|part| part_price(prices, part.part_id))
+        .transpose()?
+        .unwrap_or(0) as f64)
+}
+
+fn raw_equipment_cost(
+    prices: &PartPrices,
+    template: &RawTemplate,
+    context: SystemContext,
+) -> Result<f64> {
     let mut total = 0.0;
-    let mut bloodhound = 0_u64;
     for definition in template.sections.values() {
         for critical in definition.criticals.values() {
             let Some(part) = Part::parse(&critical.equipment).ok() else {
@@ -140,59 +129,7 @@ fn raw_equipment_cost(prices: &PartPrices, template: &RawTemplate) -> Result<f64
                 continue;
             }
             total += if let Some(system) = System::named(&critical.equipment) {
-                match system {
-                    System::Case => 50000.0,
-                    System::CaseIi => 175000.0,
-                    System::BeagleProbe => 100000.0,
-                    System::LightProbe => 50000.0,
-                    System::BloodhoundProbe => {
-                        bloodhound += 1;
-                        0.0
-                    }
-                    System::ArtemisIv => {
-                        if raw_flag(template, "ArtemisV_Tech") {
-                            250000.0
-                        } else {
-                            100000.0
-                        }
-                    }
-                    System::AngelEcm => 375000.0,
-                    System::C3Master => 300000.0,
-                    System::C3Slave => 250000.0,
-                    System::C3i => 375000.0,
-                    System::Ecm => {
-                        if raw_flag(template, "WatchDog_Tech") {
-                            500000.0
-                        } else {
-                            100000.0
-                        }
-                    }
-                    System::Tag => 50000.0,
-                    System::TargetingComputer => 10000.0,
-                    System::Axe => 5000.0,
-                    System::ShoulderOrHip
-                    | System::UpperActuator
-                    | System::LowerActuator
-                    | System::HandOrFootActuator
-                    | System::LifeSupport
-                    | System::Sensors
-                    | System::Cockpit
-                    | System::Engine
-                    | System::Gyro
-                    | System::HeatSink
-                    | System::JumpJet
-                    | System::FerroFibrous
-                    | System::LightFerroFibrous
-                    | System::EndoSteel
-                    | System::TripleStrengthMyomer
-                    | System::StealthArmor
-                    | System::LaserReflective
-                    | System::Masc
-                    | System::Sword => 0.0,
-                    _ => part_price(prices, part.part_id)? as f64,
-                }
-            } else if part.part_id == 427 {
-                175000.0
+                vehicle_system_price(prices, system, context, &critical.equipment)?
             } else if (443..=445).contains(&part.part_id) {
                 0.0
             } else {
@@ -200,7 +137,7 @@ fn raw_equipment_cost(prices: &PartPrices, template: &RawTemplate) -> Result<f64
             };
         }
     }
-    Ok(total + (bloodhound / 3 * 500000) as f64)
+    Ok(total)
 }
 
 fn raw_mech_template(template: &RawTemplate) -> Result<MechTemplate> {
@@ -246,9 +183,9 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
         }
     }
     if ice {
-        total += (20000 * (amplifier_mass / 1024) / 10) as f64;
+        total += 20000.0 * tenth_rounded_to_half_ton(amplifier_mass);
     }
-    total += (5000 * (turret_mass / 10) / 1024) as f64;
+    total += 5000.0 * tenth_rounded_to_half_ton(turret_mass);
     if matches!(
         template.movement,
         RawMovement::Hover | RawMovement::Foil | RawMovement::Submarine
@@ -273,7 +210,7 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
         5000
     };
     let engine_size = u64::try_from(i64::from(rating) - i64::from(suspension))?;
-    total += (engine_base * engine_size * tons).div_ceil(75) as f64;
+    total += (engine_base * engine_size * tons) as f64 / 75.0;
     let clan = raw_flag(template, "Clan");
     let double = clan || raw_flag(template, "DoubleHS");
     let sinks = u64::try_from(template.heat_sinks.max(0))? / if double { 2 } else { 1 };
@@ -308,10 +245,18 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
     };
     total += f64::from(half(armor * 1024 / 16)) / 1024.0 * f64::from(armor_cost);
     for mount in &weapons {
-        total += raw_weapon_cost(mount.part.id) as f64;
+        total += raw_weapon_cost(mount.part.id);
     }
-    total += raw_ammunition_cost(template)?;
-    total += raw_equipment_cost(prices, template)?;
+    let context = SystemContext {
+        clan,
+        watchdog: raw_flag(template, "WatchDog_Tech"),
+        tons: u16::try_from(tons).unwrap_or(u16::MAX),
+        engine_rating: u16::try_from(rating.max(0)).unwrap_or(u16::MAX),
+    };
+    total += raw_equipment_cost(prices, template, context)?;
+    if raw_flag(template, "OmniMech_Tech") {
+        total *= OMNI_MULTIPLIER;
+    }
     let modifier = match template.movement {
         RawMovement::Tracked => 1.0 + tons as f64 / 100.0,
         RawMovement::Wheeled | RawMovement::Hull => 1.0 + tons as f64 / 200.0,
@@ -320,7 +265,7 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
         RawMovement::Foil => 1.0 + tons as f64 / 75.0,
         _ => 1.0,
     };
-    Ok((total * modifier) as u64)
+    Ok(final_cost(total * modifier))
 }
 
 /// Calculate native construction cost without requiring a combat runtime class.
@@ -331,22 +276,23 @@ pub fn raw_template_base_cost(prices: &PartPrices, template: &RawTemplate) -> Re
             raw_vehicle_base_cost(prices, template)
         }
         RawUnitClass::BattleSuit => {
-            let weapons: u64 = inspect_raw_template_weapons(template)?
+            let weapons: f64 = inspect_raw_template_weapons(template)?
                 .into_iter()
                 .map(|weapon| raw_weapon_cost(weapon.part.id))
                 .sum();
-            let base = if raw_flag(template, "Clan") {
-                3_500_000
-            } else {
-                2_400_000
+            let clan = raw_flag(template, "Clan");
+            let base = if clan { 3_500_000.0 } else { 2_400_000.0 };
+            let context = SystemContext {
+                clan,
+                watchdog: raw_flag(template, "WatchDog_Tech"),
+                tons: u16::try_from(template.tons.max(0)).unwrap_or(u16::MAX),
+                engine_rating: 0,
             };
-            let mut total = (base + weapons) as f64
-                + raw_ammunition_cost(template)?
-                + raw_equipment_cost(prices, template)?;
+            let mut total = base + weapons + raw_equipment_cost(prices, template, context)?;
             if raw_flag(template, "OmniMech_Tech") {
-                total *= 1.25;
+                total *= OMNI_MULTIPLIER;
             }
-            Ok((total * 0.75) as u64)
+            Ok(final_cost(total * 0.75))
         }
         RawUnitClass::SpheroidDropship
         | RawUnitClass::AeroFighter
@@ -388,7 +334,8 @@ fn inspection_loadout(template: &MechTemplate) -> Result<(MechLoadout, Vec<Inspe
     }
     Ok((MechLoadout::resolve(&compatible)?, raw))
 }
-/// Calculate the legacy MaxTech/FASA construction estimate from pristine material.
+
+/// Calculate a BattleMech's construction cost from pristine material (TechManual pp. 275-285).
 pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Result<u64> {
     let (loadout, raw_parts) = inspection_loadout(template)?;
     let tons = u64::from(administrative_template_tonnage(
@@ -459,16 +406,17 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
     } else {
         5000
     };
-    total += (engine_base * rating * tons).div_ceil(75) as f64;
-    // `do_sub_magic` replaces the authored speed with the count admitted by
-    // the critical layout before `mech_fasa_cost` observes it. Improved jets
-    // consume two criticals per MP and use the running-MP ceiling. Preserve
-    // the source's integer `2 / 3` standard-jet multiplier as well.
+    total += (engine_base * rating * tons) as f64 / 75.0;
+    // Jump jets cost 200 (improved 500) x jump MP squared x tons (TechManual p. 278); each
+    // installed jet gives one MP, and improved jets fill two slots per MP.
     let improved_jump = flag(template, "ImprovedJJ_Tech");
-    let normalized_jump =
-        (inspection_normalized_jump_speed(template) as f32 * 0.093_023_3_f32).trunc() as u64;
-    total +=
-        (tons * normalized_jump * normalized_jump * if improved_jump { 500 } else { 200 }) as f64;
+    let jets = loadout
+        .systems
+        .iter()
+        .filter(|part| part.system == System::JumpJet)
+        .count() as u64;
+    let jump = if improved_jump { jets / 2 } else { jets };
+    total += (tons * jump * jump * if improved_jump { 500 } else { 200 }) as f64;
     let double = clan || flag(template, "DoubleHS");
     let sinks = if double {
         u64::from(template.heat_sinks) / 2
@@ -514,91 +462,28 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
     };
     total += armor_tons * f64::from(armor_cost);
     for mount in &loadout.weapons {
-        total += WEAPON_COST[(mount.weapon.part_id() - 1) as usize] as f64;
+        total += weapon_mount_price(mount);
     }
     for (part, is_weapon, _) in &raw_parts {
-        if *is_weapon && (1..=178).contains(&part.id) {
-            total += WEAPON_COST[(part.id - 1) as usize] as f64;
+        if *is_weapon {
+            total += raw_weapon_cost(part.id);
         }
     }
-    for bin in &loadout.ammunition {
-        let per = u64::from(
-            bin.weapon
-                .profile_for_ammunition(bin.mode)
-                .ammunition_per_ton,
-        );
-        let cost = AMMO_COST[(bin.weapon.part_id() - 1) as usize];
-        total += if u64::from(bin.capacity) < per {
-            (cost / (per / u64::from(bin.capacity))) as f64
-        } else {
-            (cost
-                * (u64::from(bin.capacity) / per)
-                * if bin.mode.munition() == AmmunitionMode::Artemis {
-                    2
-                } else {
-                    1
-                }) as f64
-        };
-    }
-    let mut masc = 0u64;
-    let mut bloodhound = 0u64;
-    let mut sword = false;
-    let mut clan_case = std::collections::BTreeSet::new();
+    let context = SystemContext {
+        clan,
+        watchdog: flag(template, "WatchDog_Tech"),
+        tons: u16::try_from(tons).unwrap_or(u16::MAX),
+        engine_rating: u16::try_from(rating).unwrap_or(u16::MAX),
+    };
     for part in &loadout.systems {
-        match part.system {
-            System::Masc => masc += 1,
-            System::Sword => sword = true,
-            System::Case => total += 50000.0,
-            System::CaseIi => total += 175000.0,
-            System::BeagleProbe => total += 100000.0,
-            System::LightProbe => total += 50000.0,
-            System::BloodhoundProbe => bloodhound += 1,
-            System::ArtemisIv => {
-                total += if flag(template, "ArtemisV_Tech") {
-                    250000.0
-                } else {
-                    100000.0
-                }
-            }
-            System::AngelEcm => total += 375000.0,
-            System::C3Master => total += 300000.0,
-            System::C3Slave => total += 250000.0,
-            System::C3i => total += 375000.0,
-            System::Ecm => {
-                total += if flag(template, "WatchDog_Tech") {
-                    500000.0
-                } else {
-                    100000.0
-                }
-            }
-            System::Tag => total += 50000.0,
-            System::TargetingComputer => total += 10000.0,
-            System::Axe => total += 5000.0,
-            System::ShoulderOrHip
-            | System::UpperActuator
-            | System::LowerActuator
-            | System::HandOrFootActuator
-            | System::LifeSupport
-            | System::Sensors
-            | System::Cockpit
-            | System::Engine
-            | System::Gyro
-            | System::HeatSink
-            | System::JumpJet
-            | System::FerroFibrous
-            | System::LightFerroFibrous
-            | System::EndoSteel
-            | System::TripleStrengthMyomer
-            | System::StealthArmor
-            | System::LaserReflective => {}
-            _ => {
-                if let Ok(part_id) = Part::parse(
-                    &template.sections[&part.location.section].criticals[&part.location.slot]
-                        .equipment,
-                ) {
-                    total += part_price(prices, part_id.part_id)? as f64;
-                }
-            }
+        if let Some(price) = part.system.slot_price(context) {
+            total += price;
+            continue;
+        }
+        if let Ok(stock) = Part::parse(
+            &template.sections[&part.location.section].criticals[&part.location.slot].equipment,
+        ) {
+            total += part_price(prices, stock.part_id)? as f64;
         }
     }
     for (part, is_weapon, is_payload) in &raw_parts {
@@ -611,26 +496,22 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
             id => part_price(prices, id)? as f64,
         };
     }
+    // Clan CASE is built into every location that holds ammunition.
     if clan {
-        for bin in &loadout.ammunition {
-            clan_case.insert(bin.location.section);
-        }
-        total += (clan_case.len() as f64) * 50000.0
-    }
-    total += (bloodhound / 3 * 500000 + masc * rating * 1000) as f64;
-    if sword {
-        total += f64::from(half(
-            administrative_template_tonnage(&template.attributes, template.tons) * 1024 / 20,
-        )) / 1024.0
-            * 10000.0
+        let sections: std::collections::BTreeSet<_> = loadout
+            .ammunition
+            .iter()
+            .map(|bin| bin.location.section)
+            .collect();
+        total += (sections.len() as f64) * 50000.0;
     }
     if flag(template, "OmniMech_Tech") {
-        total *= 1.25
+        total *= OMNI_MULTIPLIER;
     }
-    Ok((total * (1.0 + tons as f64 / 100.0)) as u64)
+    Ok(final_cost(total * (1.0 + tons as f64 / 100.0)))
 }
 
-/// Calculate the legacy vehicle/VTOL branch of the FASA construction estimate.
+/// Calculate a combat vehicle's construction cost (TechManual pp. 279 and 285).
 pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplate) -> Result<u64> {
     let compatible = inspection_compatible_vehicle_template(template);
     let loadout = VehicleLoadout::resolve(&compatible)?;
@@ -652,9 +533,9 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
         }
     }
     if ice {
-        total += (20000 * (amplifier_mass / 1024) / 10) as f64
+        total += 20000.0 * tenth_rounded_to_half_ton(amplifier_mass);
     }
-    total += (5000 * (turret_mass / 10) / 1024) as f64;
+    total += 5000.0 * tenth_rounded_to_half_ton(turret_mass);
     if movement == VehicleMovement::Hover {
         total += (2000 * tons) as f64
     }
@@ -676,7 +557,7 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
         5000
     };
     let size = u64::try_from((i64::from(rating) - i64::from(suspension)).max(0))?;
-    total += (base * size * tons).div_ceil(75) as f64;
+    total += (base * size * tons) as f64 / 75.0;
     let double = flag_vehicle(template, "DoubleHS") || flag_vehicle(template, "Clan");
     let sinks = u64::from(template.heat_sinks.unwrap_or(0)) / if double { 2 } else { 1 };
     total += (if double || ice {
@@ -714,84 +595,23 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
     };
     total += f64::from(half(armor * 1024 / 16)) / 1024.0 * f64::from(armor_cost);
     for mount in &loadout.weapons {
-        total += WEAPON_COST[(mount.weapon.part_id() - 1) as usize] as f64
+        total += weapon_mount_price(mount);
     }
-    for bin in &loadout.ammunition {
-        let per = u64::from(
-            bin.weapon
-                .profile_for_ammunition(bin.mode)
-                .ammunition_per_ton,
-        );
-        let cost = AMMO_COST[(bin.weapon.part_id() - 1) as usize];
-        total += if u64::from(bin.capacity) < per {
-            (cost / (per / u64::from(bin.capacity))) as f64
-        } else {
-            (cost
-                * (u64::from(bin.capacity) / per)
-                * if bin.mode.munition() == AmmunitionMode::Artemis {
-                    2
-                } else {
-                    1
-                }) as f64
-        }
-    }
-    let mut bloodhound = 0_u64;
+    let context = SystemContext {
+        clan,
+        watchdog: flag_vehicle(template, "WatchDog_Tech"),
+        tons: u16::try_from(tons).unwrap_or(u16::MAX),
+        engine_rating: u16::try_from(rating).unwrap_or(u16::MAX),
+    };
+    // Vehicle templates list each system once, whatever its BattleMech slot count.
     for part in &loadout.systems {
-        total += match part.system {
-            System::Case => 50000.0,
-            System::CaseIi => 175000.0,
-            System::BeagleProbe => 100000.0,
-            System::LightProbe => 50000.0,
-            System::BloodhoundProbe => {
-                bloodhound += 1;
-                0.0
-            }
-            System::ArtemisIv => {
-                if flag_vehicle(template, "ArtemisV_Tech") {
-                    250000.0
-                } else {
-                    100000.0
-                }
-            }
-            System::AngelEcm => 375000.0,
-            System::C3Master => 300000.0,
-            System::C3Slave => 250000.0,
-            System::C3i => 375000.0,
-            System::Ecm => {
-                if flag_vehicle(template, "WatchDog_Tech") {
-                    500000.0
-                } else {
-                    100000.0
-                }
-            }
-            System::Tag => 50000.0,
-            System::TargetingComputer => 10000.0,
-            System::ShoulderOrHip
-            | System::UpperActuator
-            | System::LowerActuator
-            | System::HandOrFootActuator
-            | System::LifeSupport
-            | System::Sensors
-            | System::Cockpit
-            | System::Engine
-            | System::Gyro
-            | System::HeatSink
-            | System::JumpJet
-            | System::FerroFibrous
-            | System::LightFerroFibrous
-            | System::EndoSteel
-            | System::TripleStrengthMyomer
-            | System::StealthArmor
-            | System::LaserReflective => 0.0,
-            _ => Part::parse(
-                &template.sections[&part.location.section].criticals[&part.location.slot].equipment,
-            )
-            .ok()
-            .and_then(|part| part_price(prices, part.part_id).ok())
-            .unwrap_or(0) as f64,
-        };
+        let equipment =
+            &template.sections[&part.location.section].criticals[&part.location.slot].equipment;
+        total += vehicle_system_price(prices, part.system, context, equipment)?;
     }
-    total += (bloodhound / 3 * 500000) as f64;
+    if flag_vehicle(template, "OmniMech_Tech") {
+        total *= OMNI_MULTIPLIER;
+    }
     let modifier = match movement {
         VehicleMovement::Tracked => 1.0 + tons as f64 / 100.0,
         VehicleMovement::Wheeled => 1.0 + tons as f64 / 200.0,
@@ -799,8 +619,9 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
         VehicleMovement::Vtol => 1.0 + tons as f64 / 30.0,
         VehicleMovement::Stationary => 1.0,
     };
-    Ok((total * modifier) as u64)
+    Ok(final_cost(total * modifier))
 }
+
 fn flag_vehicle(template: &VehicleTemplate, name: &str) -> bool {
     ["specials", "specials2"]
         .iter()
@@ -809,4 +630,66 @@ fn flag_vehicle(template: &VehicleTemplate, name: &str) -> bool {
             v.split_ascii_whitespace()
                 .any(|v| flag_spells_technology(v, name))
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn jenner() -> MechTemplate {
+        MechTemplate::parse("JR7-D", include_str!("../tests/fixtures/JR7-D.toml")).unwrap()
+    }
+
+    /// The JR7-D priced by hand from TechManual pp. 277-285: structure 14,000, cockpit 200,000,
+    /// life support 50,000, sensors and musculature 70,000 each, two upper arm actuators
+    /// 7,000, two legs 24,500, a 3-ton gyro 900,000, the 245 engine 571,666.67, five jump jets
+    /// 175,000, 4 tons of armor 40,000, four medium lasers 160,000 and an SRM-4 60,000. The
+    /// ammunition is free (p. 283), and the 2,342,166.67 total times 1.35 rounds up to
+    /// 3,161,925.
+    #[test]
+    fn jenner_costs_its_book_price() {
+        assert_eq!(
+            template_base_cost(&PartPrices::new(), &jenner()).unwrap(),
+            3_161_925
+        );
+    }
+
+    /// One-shot launchers cost half their launcher (TechManual p. 291), and equipment prices
+    /// follow the book whatever the slot layout.
+    #[test]
+    fn one_shot_launchers_and_equipment_follow_the_price_table() {
+        let base = template_base_cost(&PartPrices::new(), &jenner()).unwrap() as f64;
+        let mut one_shot = jenner();
+        one_shot
+            .sections
+            .get_mut(&MechSection::CenterTorso)
+            .unwrap()
+            .criticals
+            .get_mut(&10)
+            .unwrap()
+            .modes
+            .push("OneShot".into());
+        let cost = template_base_cost(&PartPrices::new(), &one_shot).unwrap() as f64;
+        assert!(
+            (base - cost - 30_000.0 * 1.35).abs() <= 1.0,
+            "{base} {cost}"
+        );
+        let mut beagle = jenner();
+        let torso = beagle.sections.get_mut(&MechSection::LeftTorso).unwrap();
+        for slot in [4, 5] {
+            torso.criticals.insert(
+                slot,
+                CriticalDefinition {
+                    equipment: "BeagleProbe".into(),
+                    data: "-".into(),
+                    modes: Vec::new(),
+                },
+            );
+        }
+        let cost = template_base_cost(&PartPrices::new(), &beagle).unwrap() as f64;
+        assert!(
+            (cost - base - 200_000.0 * 1.35).abs() <= 1.0,
+            "{base} {cost}"
+        );
+    }
 }

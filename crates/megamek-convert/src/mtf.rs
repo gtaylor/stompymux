@@ -266,8 +266,8 @@ pub fn convert(source: &str) -> Result<Converted> {
             .with_context(|| format!("missing {mtf} critical slots"))?;
         let mut resolved = Vec::new();
         for (slot, line) in lines.iter().enumerate() {
-            let critical =
-                equipment::parse(line).with_context(|| format!("{heading} slot {}", slot + 1))?;
+            let critical = equipment::parse_for(line, tech)
+                .with_context(|| format!("{heading} slot {}", slot + 1))?;
             match critical {
                 Critical::HeatSink(kind) if !same_family(kind, sinks) => {
                     bail!(

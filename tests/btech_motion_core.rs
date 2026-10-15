@@ -5892,7 +5892,7 @@ const CONVENTIONAL_DIRECT_FIRE_WEAPONS: [stompymux_rs::Weapon; 98] = [
     stompymux_rs::Weapon::ClanErLargePulseLaser,
     stompymux_rs::Weapon::ClanErMediumPulseLaser,
     stompymux_rs::Weapon::ClanErSmallPulseLaser,
-    stompymux_rs::Weapon::ClanPlasmaRifle,
+    stompymux_rs::Weapon::ClanHag20,
     stompymux_rs::Weapon::ClanGaussRifle,
     stompymux_rs::Weapon::ClanMachineGun,
     stompymux_rs::Weapon::ClanLightMachineGun,

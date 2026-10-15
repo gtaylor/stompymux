@@ -4,10 +4,9 @@ use stompymux_rs::*;
 /// Construct each supported Clan energy identity without requiring unrelated Clan chassis flags.
 #[test]
 fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
-    for &weapon in Weapon::ALL
-        .iter()
-        .filter(|w| w.name().starts_with("CL.") && w.gunnery_skill(true) == "Gunnery-Laser")
-    {
+    for &weapon in Weapon::ALL.iter().filter(|w| {
+        w.name().starts_with("CL.") && w.gunnery_skill(true) == "Gunnery-Laser" && !w.is_plasma()
+    }) {
         assert_eq!(weapon.gunnery_skill(true), "Gunnery-Laser");
         assert_eq!(weapon.profile().ammunition_per_ton, 0);
         assert_eq!(weapon.profile().missiles, 0);
@@ -76,6 +75,6 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         assert_eq!(weapon.accuracy_modifier(), accuracy);
     }
     assert_eq!(Weapon::ClanFlamer.mass(), Weapon::Flamer.mass() / 2);
-    assert!(!Weapon::ClanPlasmaRifle.is_flamer());
-    assert_eq!(Weapon::ClanPlasmaRifle.weapon_explosion_damage(), 0);
+    assert!(!Weapon::ClanPlasmaCannon.is_flamer());
+    assert_eq!(Weapon::ClanPlasmaCannon.weapon_explosion_damage(), 0);
 }

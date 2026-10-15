@@ -69,7 +69,7 @@ impl Mech {
             self.loadout()?
                 .systems
                 .into_iter()
-                .filter(|part| part.system == System::Tag)
+                .filter(|part| matches!(part.system, System::Tag | System::LightTag))
                 .map(|part| !self.critical_unavailable(part.location)),
             self.c3_hardware()?,
         ))
@@ -93,11 +93,63 @@ impl Vehicle {
             self.loadout()?
                 .systems
                 .into_iter()
-                .filter(|part| part.system == System::Tag)
+                .filter(|part| matches!(part.system, System::Tag | System::LightTag))
                 .map(|part| !self.critical_unavailable(part.location)),
             self.c3_hardware()?,
         ))
     }
+}
+
+impl Mech {
+    /// The designator's range brackets: standard TAG (or a C3 master's) reaches 5/9/15, a unit
+    /// with only a light TAG 3/6/9 (TechManual p. 343).
+    pub(super) fn tag_ranges(&self) -> Result<[u8; 3]> {
+        let systems: Vec<_> = self
+            .loadout()?
+            .systems
+            .iter()
+            .map(|part| part.system)
+            .collect();
+        Ok(ranges(&systems, self.c3_hardware()?))
+    }
+}
+
+impl Vehicle {
+    /// The designator's range brackets, as for a Mech.
+    pub(super) fn tag_ranges(&self) -> Result<[u8; 3]> {
+        let systems: Vec<_> = self
+            .loadout()?
+            .systems
+            .iter()
+            .map(|part| part.system)
+            .collect();
+        Ok(ranges(&systems, self.c3_hardware()?))
+    }
+}
+
+/// Light TAG's reach applies only when no standard designator is installed.
+fn ranges(systems: &[System], computers: C3Hardware) -> [u8; 3] {
+    if computers.masters == 0
+        && !systems.contains(&System::Tag)
+        && systems.contains(&System::LightTag)
+    {
+        super::tag_aim::LIGHT_TAG_RANGES
+    } else {
+        super::tag_aim::TAG_RANGES
+    }
+}
+
+/// A unit's TAG range brackets through either chassis adapter.
+pub(super) fn unit_ranges(world: &World, id: ObjectId) -> Result<[u8; 3]> {
+    if let Some(vehicle) = world.btech.vehicles().get(&id) {
+        return vehicle.tag_ranges();
+    }
+    world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .context("Unit is unavailable")?
+        .tag_ranges()
 }
 
 /// Losing either installed system disables TAG, including a combined TAG/C3 installation.
@@ -160,7 +212,8 @@ pub(super) fn validate(state: &BtechState) -> Result<()> {
     Ok(())
 }
 
-/// A live link requires a running, operational tagger and an acquired contact with unblocked geometry within fifteen hexes.
+/// A live link requires a running, operational tagger and an acquired contact with unblocked
+/// geometry within the designator's long range.
 fn link_valid(world: &World, source: ObjectId, target: ObjectId) -> bool {
     if source == target {
         return false;
@@ -179,7 +232,9 @@ fn link_valid(world: &World, source: ObjectId, target: ObjectId) -> bool {
     unit.power == Power::Running
         && !unit.destroyed
         && unit_hardware(world, source).is_ok_and(|(_, available)| available)
-        && unit_range(world, source, target).is_ok_and(|range| range.spatial <= 15.0)
+        && unit_ranges(world, source).is_ok_and(|[_, _, long]| {
+            unit_range(world, source, target).is_ok_and(|range| range.spatial <= f64::from(long))
+        })
         && visible_contact(world, source, target).is_ok_and(|contact| contact.is_some())
         && super::visibility::unit_unblocked(world, source, target).unwrap_or(false)
 }

@@ -238,7 +238,7 @@ pub fn convert(source: &str) -> Result<Converted> {
         );
         ensure!(heading != "rotor", "rotor-mounted equipment is unsupported");
         for line in lines {
-            let critical = vehicle_critical(line).with_context(|| format!("<{tag}>"))?;
+            let critical = vehicle_critical(line, tech).with_context(|| format!("<{tag}>"))?;
             if critical == Critical::Searchlight {
                 push_special(&mut specials, "SearchLight");
                 continue;
@@ -247,7 +247,7 @@ pub fn convert(source: &str) -> Result<Converted> {
         }
     }
     for line in file.lines("body equipment") {
-        let critical = vehicle_critical(line).context("<body equipment>")?;
+        let critical = vehicle_critical(line, tech).context("<body equipment>")?;
         let heading = match &critical {
             Critical::Searchlight => {
                 push_special(&mut specials, "SearchLight");
@@ -339,8 +339,8 @@ pub fn convert(source: &str) -> Result<Converted> {
 }
 
 /// Resolve one vehicle equipment line, refusing mech-only equipment.
-fn vehicle_critical(line: &str) -> Result<Critical> {
-    let critical = equipment::parse(line)?;
+fn vehicle_critical(line: &str, tech: TechBase) -> Result<Critical> {
+    let critical = equipment::parse_for(line, tech)?;
     match &critical {
         Critical::Fixed(_) | Critical::HeatSink(_) => {
             bail!("{line} cannot be mounted on a vehicle")

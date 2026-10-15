@@ -3346,11 +3346,8 @@ async fn long_field_fixture() -> (
     ObjectId,
 ) {
     use stompymux_rs::*;
-    let mut template =
+    let template =
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
-    template
-        .attributes
-        .insert("specials".into(), "AntiAircraft".into());
     let source = format!("200 12\n{}", format!("{}\n", ".0".repeat(200)).repeat(12));
     let (dir, config, mut world, id) = fixture_assets(&source, template).await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
