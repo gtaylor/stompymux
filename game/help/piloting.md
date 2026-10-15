@@ -509,11 +509,11 @@ pp. 130, 139). Controllers link within their own section. Mechs can also use a h
 for a center-torso launcher; ground vehicles can use a rear controller for a
 turret launcher. VTOL controllers must be in the launcher’s section.
 
-An MRM "Apollo" fire control system linked to an MRM launcher cancels the
-MRM's +1 to hit and takes one from its Cluster Hits roll (never below 2); it
-needs no special ammunition and ECM does not affect it. Once destroyed, the
-launcher fires as a plain MRM (Tactical Operations: Advanced Units & Equipment
-p. 143).
+An MRM "Apollo" fire control system linked to an MRM launcher in its own
+section cancels the MRM's +1 to hit and takes one from its Cluster Hits roll
+(never below 2), on Mechs, vehicles and VTOLs alike; it needs no special
+ammunition and ECM does not affect it. Once destroyed, the launcher fires as a
+plain MRM (Tactical Operations: Advanced Units & Equipment p. 143).
 
 `unjam <selection>` begins a 60-second attempt to clear a jammed ammunition feed.
 You must be walking or slower, on the ground, with no weapons recycling. Only
@@ -713,7 +713,8 @@ seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
 ### Machine gun arrays
 
 A machine gun array links the two to four machine guns of one size class in the
-slots directly above it in its location (or, with none above, directly below).
+slots directly above it in its location (or, with none above, directly below),
+on a Mech, vehicle or VTOL.
 Firing any linked gun fires every linked gun that is ready and not set to
 rapid fire, as one attack: one to-hit roll, then a roll on the Cluster Hits
 Table column for the number of guns, every hit striking one location. Each gun
@@ -752,7 +753,8 @@ yours that holds a cluster loses it on 9 or more on 2d6.
 A-Pods and B-Pods are one-shot defenses against infantry, which this game does
 not field, so neither has a target and firing one does nothing. A B-Pod weighs
 a ton in one slot anywhere on the Mech (TechManual p. 204); a critical hit on
-it releases 2 points of damage in its location (Total Warfare p. 130).
+it, on a Mech or a vehicle, releases 2 points of damage in its location (Total
+Warfare p. 130).
 
 ### Narc beacons
 

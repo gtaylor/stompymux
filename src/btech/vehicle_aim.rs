@@ -110,6 +110,11 @@ pub(super) fn weapon_modifiers(
     aim.attacker_movement = attacker.weapon_movement_modifier(weapon_index)?;
     aim.control_damage = attacker.gunnery_damage();
     aim.beacon_accuracy = i8::from(attacker.has_beacon(super::BeaconKind::Haywire));
+    // A surviving MRM Apollo system negates the MRM's +1 to hit (Tactical Operations: Advanced
+    // Units & Equipment p. 143).
+    if weapon.is_mrm() && attacker.apollo_operational(weapon_index)? {
+        aim.weapon_accuracy -= 1;
+    }
     if loadout.weapons[weapon_index].computer_assists(
         ammunition,
         loadout

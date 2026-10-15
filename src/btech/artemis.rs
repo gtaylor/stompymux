@@ -202,4 +202,48 @@ impl Vehicle {
         );
         Ok(operational(&self.artemis_controllers()?, index))
     }
+
+    /// The MRM "Apollo" fire-control systems and the launchers in their own location they
+    /// serve (Tactical Operations: Advanced Units & Equipment p. 142).
+    pub fn apollo_controllers(&self) -> Result<Vec<ArtemisController<VehicleCriticalLocation>>> {
+        let loadout = self.loadout()?;
+        controllers(
+            FireControl::Apollo,
+            &loadout.weapons,
+            &loadout.systems,
+            |location| {
+                let part = &self.definition().sections[&location.section].criticals[&location.slot];
+                Ok((link(&part.data)?, !self.critical_unavailable(location)))
+            },
+            |location| location.slot,
+            |controller, primary| controller.section == primary.section,
+        )
+    }
+
+    /// Whether a surviving Apollo system guides the MRM launcher at `index`. A destroyed one
+    /// leaves the launcher firing as a plain MRM (Tactical Operations: Advanced Units &
+    /// Equipment p. 143).
+    pub fn apollo_operational(&self, index: usize) -> Result<bool> {
+        ensure!(
+            index < self.loadout()?.weapons.len(),
+            "Weapon index out of bounds"
+        );
+        Ok(operational(&self.apollo_controllers()?, index))
+    }
+}
+
+/// Whether a surviving Apollo system guides the MRM launcher at `index` on either unit class;
+/// false for any other weapon or an unknown unit.
+pub(super) fn apollo_operational(
+    world: &crate::World,
+    id: crate::ObjectId,
+    index: usize,
+) -> Result<bool> {
+    if let Some(unit) = world.btech.constructed_units().get(&id) {
+        return unit.apollo_operational(index);
+    }
+    if let Some(vehicle) = world.btech.vehicles().get(&id) {
+        return vehicle.apollo_operational(index);
+    }
+    Ok(false)
 }

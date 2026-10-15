@@ -149,6 +149,12 @@ fn fire_shot(
     let source_field = electronic_field(world, shooter)?;
     let target_field = electronic_field(world, target)?;
     let angel_blocked = source_field.angel_disturbed || target_field.angel_protected;
+    // A surviving Apollo system takes one from the launcher's Cluster Hits roll (Tactical
+    // Operations: Advanced Units & Equipment p. 143).
+    let apollo = weapon.is_mrm() && attacker.apollo_operational(weapon_index)?;
+    // Firing a gun its machine gun array links fires every ready linked gun as one attack
+    // (Total Warfare p. 137).
+    let volley = attacker.array_volley(weapon_index)?;
     drop(loadouts);
     drop(admission);
     let mut candidate = super::shot_transaction::ShotCandidate::new(world);
@@ -172,6 +178,25 @@ fn fire_shot(
         },
         prepared,
     )?;
+    // The array's other guns spend their ammunition and recycle with the one fired.
+    if let Some(guns) = &volley {
+        for &gun in guns.iter().filter(|gun| **gun != weapon_index) {
+            // Vehicles shed weapon heat, so only the spent rounds and recycle matter here.
+            let _linked = super::vehicle_readiness::reserve_prepared_weapon(
+                &mut candidate,
+                shooter,
+                pilot,
+                gun,
+                launch.expenditure.launched,
+                None,
+            )?;
+        }
+        launch.launch_notices.push(Notice {
+            unit: shooter,
+            text: format!("Your machine gun array fires {} guns together.", guns.len()),
+        });
+    }
+    let array = volley.as_ref().map(|guns| guns.len() as u8);
     let aimed = super::aimed_hit::prepare(
         &mut candidate,
         super::aimed_hit::AimedLaunch {
@@ -288,8 +313,8 @@ fn fire_shot(
                 angel_blocked,
                 ams_engaged,
                 indirect: indirect_fire,
-                apollo: false,
-                array: None,
+                apollo,
+                array,
             },
             rules.shot.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
@@ -317,8 +342,8 @@ fn fire_shot(
                 character,
                 ams_engaged,
                 indirect: indirect_fire,
-                apollo: false,
-                array: None,
+                apollo,
+                array,
                 experience,
             },
         )?))

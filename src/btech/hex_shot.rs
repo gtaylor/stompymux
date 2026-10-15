@@ -228,13 +228,7 @@ fn resolve_hex_shot_inner(
                         ams_engaged: false,
                         indirect: false,
                         apollo: weapon.is_mrm()
-                            && world
-                                .btech
-                                .constructed_units()
-                                .get(&shooter)
-                                .map(|unit| unit.apollo_operational(weapon_index))
-                                .transpose()?
-                                .unwrap_or(false),
+                            && super::artemis::apollo_operational(world, shooter, weapon_index)?,
                         array: None,
                     },
                     super::dice::unit_dice_mut(world, shooter)?,
