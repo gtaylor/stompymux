@@ -2679,7 +2679,7 @@ async fn rotary_unjam_matrix(weapons: &[stompymux_rs::Weapon]) {
             definition
                 .attributes
                 .insert("specials".into(), "Clan FlipArms".into());
-            definition.heat_sinks = 20;
+            definition.heat_sinks = 10;
             for section in definition.sections.values_mut() {
                 section
                     .criticals
@@ -2916,7 +2916,7 @@ async fn rotary_burst_matrix(weapons: &[stompymux_rs::Weapon]) {
                     definition
                         .attributes
                         .insert("specials".into(), "Clan FlipArms".into());
-                    definition.heat_sinks = 20;
+                    definition.heat_sinks = 10;
                     for section in definition.sections.values_mut() {
                         section
                             .criticals
@@ -6485,7 +6485,7 @@ async fn equipment_loss_feedback_and_saved_replay() {
                     definition
                         .attributes
                         .insert("specials".into(), "DoubleHS FlipArms".into());
-                    definition.heat_sinks = 24;
+                    definition.heat_sinks = 12;
                     for slot in 2..8 {
                         definition
                             .sections

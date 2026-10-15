@@ -3,7 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 75
 walk_mp = 5
-heat_sinks = 30
+heat_sinks = 15
 specials = ["OmniMech_Tech"]
 
 [construction]

@@ -140,7 +140,7 @@ fn sensor_defaults_follow_technology_base_and_critical_halving() {
             template
                 .attributes
                 .insert("specials".into(), "Clan FlipArms".into());
-            template.heat_sinks = 20;
+            template.heat_sinks = 10;
             for section in template.sections.values_mut() {
                 section
                     .criticals

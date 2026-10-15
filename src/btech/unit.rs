@@ -1198,14 +1198,14 @@ impl Mech {
         if let Some(capacity) = self.reconstructed_cooling {
             ensure!(
                 capacity
-                    <= self.definition.heat_sinks
+                    <= self.definition.heat_dissipation()
                         + super::engine_sink_capacity::external_capacity(self)?,
                 "Invalid reconstructed cooling capacity"
             );
         }
         self.heat_cutoff.validate(
             self.reconstructed_cooling
-                .unwrap_or(self.definition.heat_sinks)
+                .unwrap_or(self.definition.heat_dissipation())
                 / self.heat_sink_points_each(),
         )?;
         ensure!(

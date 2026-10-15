@@ -98,11 +98,7 @@ impl super::Mech {
 
     /// Heat points one heat sink dissipates a turn: two for double heat sinks.
     pub(super) fn heat_sink_points_each(&self) -> u16 {
-        if self.definition().has_double_heat_sinks() {
-            2
-        } else {
-            1
-        }
+        self.definition().heat_per_sink()
     }
 
     /// Heat sinks that still work, whether or not the pilot has shut any off.

@@ -84,6 +84,9 @@ pub struct MechTemplate {
     /// Running speed in km/h, walking MP x 1.5 rounded up: the realtime top speed.
     pub max_speed: f64,
     pub jump_speed: f64,
+    /// Installed heat sinks, counted as the record sheet counts them (TM p. 52), not the heat
+    /// they dissipate; [`Self::heat_dissipation`] gives the cooling. Ten, the engine's free
+    /// sinks (TM p. 53), when the template has no `heat_sinks` line.
     pub heat_sinks: u16,
     pub sections: BTreeMap<MechSection, SectionDefinition>,
     /// All unit-level fields, including features awaiting domain implementation.
@@ -96,6 +99,23 @@ impl MechTemplate {
     pub fn has_double_heat_sinks(&self) -> bool {
         (self.has_special("Clan") && !self.has_special(super::construction::SINGLE_HEAT_SINKS))
             || self.has_special("DoubleHS")
+    }
+
+    /// Heat one installed sink dissipates a turn: two for double and laser heat sinks, one for
+    /// single sinks (TM p. 52; Tactical Operations: Advanced Units & Equipment laser heat
+    /// sinks).
+    pub fn heat_per_sink(&self) -> u16 {
+        if self.has_double_heat_sinks() || self.has_technology(super::Technology::LaserHeatSinks) {
+            2
+        } else {
+            1
+        }
+    }
+
+    /// Heat the intact Mech's sinks dissipate a turn: the sink count times the heat each one
+    /// dissipates. The live heat model works in these points.
+    pub fn heat_dissipation(&self) -> u16 {
+        self.heat_sinks.saturating_mul(self.heat_per_sink())
     }
 
     /// Number of contiguous critical slots occupied by one installed heat sink: one for a
@@ -200,15 +220,13 @@ impl MechTemplate {
             walk_mp,
             max_speed,
             jump_speed: speed("jump_speed")?,
-            heat_sinks: 0,
+            heat_sinks: 10,
             sections,
             attributes: fields,
         };
-        // Without a heat_sinks line a Mech carries the engine's ten free sinks (TM p. 53):
-        // twenty points of dissipation when they are double sinks.
+        // Without a heat_sinks line a Mech carries the engine's ten free sinks (TM p. 53).
         template.heat_sinks = match template.attributes.get("heat_sinks") {
             Some(value) => value.parse().context("invalid heat sinks")?,
-            None if template.has_double_heat_sinks() => 20,
             None => 10,
         };
         // The reference load always forces the tonnage-chart internal structure

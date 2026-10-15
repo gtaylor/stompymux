@@ -17,8 +17,8 @@ fn with_masc(count: usize, clan: bool) -> (MechTemplate, Vec<CriticalLocation>) 
                 .criticals
                 .retain(|_, part| part.equipment != "HeatSink");
         }
-        template.heat_sinks = 20;
-        template.attributes.insert("heat_sinks".into(), "20".into());
+        template.heat_sinks = 10;
+        template.attributes.insert("heat_sinks".into(), "10".into());
     }
     let mut locations = Vec::new();
     for section in [

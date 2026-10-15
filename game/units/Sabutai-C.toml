@@ -3,7 +3,7 @@ class = "aerofighter"
 movement = "fly"
 tons = 75
 walk_mp = 6
-heat_sinks = 54
+heat_sinks = 27
 fuel = 450
 
 [construction]

@@ -4,7 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 24
+heat_sinks = 12
 radio = 4
 specials = ["OmniMech_Tech", "ArtemisIV"]
 

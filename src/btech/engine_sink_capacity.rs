@@ -12,12 +12,7 @@ pub(super) fn external_capacity(unit: &Mech) -> Result<u16> {
         .iter()
         .filter(|part| part.system == System::HeatSink)
         .count();
-    Ok((slots / definition.heat_sink_slots()
-        * if definition.has_double_heat_sinks() {
-            2
-        } else {
-            1
-        }) as u16)
+    Ok((slots / definition.heat_sink_slots() * usize::from(definition.heat_per_sink())) as u16)
 }
 
 /// Reconstruct total cooling from owned external equipment and the selected engine allocation.
@@ -33,11 +28,8 @@ pub(super) fn reconstructed_capacity(unit: &Mech) -> Result<u16> {
     } else {
         allocation as u32
     };
-    let efficiency = if definition.has_double_heat_sinks() {
-        2
-    } else {
-        1
-    };
-    let internal = u32::from(definition.heat_sinks).min(internal.saturating_mul(efficiency));
+    let efficiency = u32::from(definition.heat_per_sink());
+    let internal =
+        u32::from(definition.heat_dissipation()).min(internal.saturating_mul(efficiency));
     Ok(external_capacity(unit)? + internal as u16)
 }

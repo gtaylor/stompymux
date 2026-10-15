@@ -117,7 +117,7 @@ impl Mech {
     /// Surviving physical cooling before intentionally disabling any heat points.
     pub fn cooling_capacity(&self) -> u16 {
         self.reconstructed_cooling
-            .unwrap_or(self.definition().heat_sinks)
+            .unwrap_or(self.definition().heat_dissipation())
             .saturating_sub(u16::from(self.system_hits(System::HeatSink)))
     }
 
@@ -161,11 +161,7 @@ impl Mech {
             // (Total Warfare p. 159). Wading puts only the leg sinks under; deeper water, or
             // lying in it, puts them all under.
             let wading = elevation == i32::from(tile.water_line()) - 1;
-            let points_each = if self.definition().has_double_heat_sinks() {
-                2.0
-            } else {
-                1.0
-            };
+            let points_each = f64::from(self.heat_sink_points_each());
             let submerged_points = if wading && self.posture() != super::Posture::Prone {
                 self.leg_heat_sinks() as f64 * points_each
             } else {

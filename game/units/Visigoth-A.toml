@@ -3,7 +3,7 @@ class = "aerofighter"
 movement = "fly"
 tons = 60
 walk_mp = 7
-heat_sinks = 32
+heat_sinks = 16
 fuel = 750
 specials = ["ArtemisIV"]
 

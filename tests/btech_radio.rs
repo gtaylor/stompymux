@@ -40,7 +40,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
                 definition
                     .attributes
                     .insert("specials".into(), "Clan FlipArms".into());
-                definition.heat_sinks = 24;
+                definition.heat_sinks = 12;
                 for section in definition.sections.values_mut() {
                     section
                         .criticals

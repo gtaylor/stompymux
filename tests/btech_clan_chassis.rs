@@ -11,7 +11,7 @@ fn definition() -> MechTemplate {
     template
         .attributes
         .insert("specials".into(), "Clan FlipArms".into());
-    template.heat_sinks = 24;
+    template.heat_sinks = 12;
     for section in template.sections.values_mut() {
         section
             .criticals
@@ -271,7 +271,7 @@ async fn night_gyr_laser_sink_assets_construct_and_replay_damage() {
         include_str!("../game/units/NightGyr-D.toml"),
     ] {
         let template = MechTemplate::parse("test", source).unwrap();
-        let cooling = f64::from(template.heat_sinks);
+        let cooling = f64::from(template.heat_dissipation());
         let id = world.create(&config, template.name.clone(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         create_battle_unit(&mut world, id, template).unwrap();
@@ -341,7 +341,7 @@ fn clan_single_and_double_sink_minimums() {
         assert!(Mech::from_template(fewer).is_err());
     }
     let mut doubles = definition();
-    doubles.heat_sinks = 18;
+    doubles.heat_sinks = 9;
     assert!(
         Mech::from_template(doubles)
             .unwrap_err()

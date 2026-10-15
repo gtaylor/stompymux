@@ -4,7 +4,7 @@ movement = "quad"
 tons = 25
 walk_mp = 8
 jump_mp = 8
-heat_sinks = 20
+heat_sinks = 10
 radio = 4
 
 [construction]

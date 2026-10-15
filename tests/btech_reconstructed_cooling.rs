@@ -95,7 +95,7 @@ async fn double_sinks_count_complete_installations_and_two_points_per_internal_s
         let (_dir, config, mut world) = support::isolated_world().await;
         let mut definition =
             MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
-        definition.heat_sinks = 20;
+        definition.heat_sinks = 10;
         definition.attributes.insert(
             "specials".into(),
             if clan { "Clan DoubleHS" } else { "DoubleHS" }.into(),

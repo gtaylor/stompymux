@@ -4,7 +4,7 @@ movement = "biped"
 tons = 95
 walk_mp = 3
 jump_mp = 3
-heat_sinks = 38
+heat_sinks = 19
 radio = 5
 
 [construction]

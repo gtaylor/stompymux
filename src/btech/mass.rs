@@ -194,15 +194,12 @@ impl Mech {
         let definition = self.definition();
         let loadout = self.loadout()?;
         let survives = |section| self.sections()[&section].internal > 0;
+        // Surviving dissipation, in heat points, converted back to sinks below.
         let sinks = definition
-            .heat_sinks
+            .heat_dissipation()
             .saturating_sub(u16::from(self.system_hits(System::HeatSink)));
         let sink_slots = definition.heat_sink_slots() as u32;
-        let sink_efficiency = if definition.has_double_heat_sinks() {
-            2
-        } else {
-            1
-        };
+        let sink_efficiency = u32::from(definition.heat_per_sink());
         // Keep per-critical integer rounding, including 341 units per IS double-sink slot.
         let slot_mass = 1024 / sink_slots;
         // Fusion engines carry ten heat sinks for free; combustion engines carry none.

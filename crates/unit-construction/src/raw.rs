@@ -331,6 +331,7 @@ pub struct RawTemplate {
     pub tons: i32,
     pub max_speed: f64,
     pub jump_speed: f64,
+    /// Installed heat sinks as the record sheet counts them, not the heat they dissipate.
     pub heat_sinks: i32,
     pub sections: BTreeMap<RawSectionCode, SectionDefinition>,
     pub attributes: BTreeMap<String, String>,

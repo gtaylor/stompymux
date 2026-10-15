@@ -42,7 +42,7 @@ const QUAD: [Location; 8] = [
     ("head", "head", "hd", None),
 ];
 
-/// Heat dissipation stompymux assumes for a mech template that states none.
+/// Heat sinks stompymux assumes for a mech template that states none: the engine's free ten.
 const DEFAULT_HEAT_SINKS: u32 = 10;
 
 /// Every location heading an `.mtf` file may use, including ones stompymux refuses.
@@ -337,11 +337,7 @@ pub fn convert(source: &str) -> Result<Converted> {
             tons,
             walk_mp: walk,
             jump_mp: jump,
-            heat_sinks: Some(match sinks {
-                HeatSinkKind::Single => sink_count,
-                HeatSinkKind::Double(_) | HeatSinkKind::Laser => sink_count * 2,
-            })
-            .filter(|dissipation| *dissipation != DEFAULT_HEAT_SINKS),
+            heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
             construction,
             specials,
             sections,

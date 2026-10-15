@@ -413,8 +413,9 @@ jump jet also causes a fall, but leaves no thrust for the collision damage rule.
 
 
 Inner Sphere double heat sinks are supported. Each installed sink occupies three
-critical slots and loses two cooling capacity if hit. The unit's listed heat-sink
-capacity already includes their doubled cooling. Sink damage persists across
+critical slots and loses two cooling capacity if hit. Templates and the template
+report count heat sinks as the record sheet does, one per sink; each double sink
+dissipates two heat. Sink damage persists across
 restart; double sinks can coexist with arm-flipping equipment.
 
 

@@ -4,7 +4,7 @@ movement = "biped"
 tons = 40
 walk_mp = 6
 jump_mp = 5
-heat_sinks = 24
+heat_sinks = 12
 specials = ["OmniMech_Tech"]
 
 [construction]

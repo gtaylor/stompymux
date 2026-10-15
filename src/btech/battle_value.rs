@@ -580,11 +580,11 @@ impl Mech {
         };
         let target_modifier = ground.max(jump) + concealment;
 
-        // Heat efficiency: 6 + heat sink capacity - movement heat. Running makes 2 heat and
+        // Heat efficiency: 6 + heat dissipation - movement heat. Running makes 2 heat and
         // jumping 1 per MP with a minimum of 3 (Total Warfare p. 159); stealth armor adds 10.
         let jump_heat = if jumping > 0 { jumping.max(3) } else { 0 };
         let movement_heat = f64::from(jump_heat.max(2)) + if stealth { 10.0 } else { 0.0 };
-        let heat_efficiency = 6.0 + f64::from(definition.heat_sinks) - movement_heat;
+        let heat_efficiency = 6.0 + f64::from(definition.heat_dissipation()) - movement_heat;
 
         let offense = Offense::gather(
             settings,

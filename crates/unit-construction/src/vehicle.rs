@@ -114,7 +114,9 @@ pub struct VehicleTemplate {
     pub walk_mp: u32,
     /// Flanking speed in km/h, cruising MP x 1.5 rounded up: the realtime top speed.
     pub max_speed: f64,
-    /// Absence is preserved; the eventual engine rules determine the installed cooling.
+    /// Installed heat sinks as the record sheet counts them. Vehicles mount single sinks only
+    /// (TechManual p. 104), so this is also the heat they dissipate. Absence is preserved; the
+    /// engine rules determine the installed cooling.
     pub heat_sinks: Option<u16>,
     pub sections: BTreeMap<VehicleSection, SectionDefinition>,
     /// Preserve unit-level fields, including cargo, specials and equipment awaiting implementation.
@@ -122,7 +124,8 @@ pub struct VehicleTemplate {
 }
 
 impl VehicleTemplate {
-    /// Installed cooling capacity; fusion vehicles retain ten sinks when omitted or zero.
+    /// Installed heat sinks, which dissipate one heat each; fusion vehicles retain ten sinks
+    /// when omitted or zero.
     pub fn heat_sink_capacity(&self) -> u16 {
         match self.heat_sinks.unwrap_or(0) {
             0 if !self.has_special("ICEEngine_Tech") => 10,

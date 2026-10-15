@@ -59,7 +59,7 @@ pub struct Draft {
     /// Walking (Mech) or cruising (vehicle) movement points, as the source states them.
     pub walk_mp: u32,
     pub jump_mp: u32,
-    /// Total heat dissipation, when the unit states one.
+    /// Installed heat sinks, as the source counts them, when they differ from the default.
     pub heat_sinks: Option<u32>,
     /// `[construction]` keys and document spellings for every non-default choice.
     pub construction: Vec<(&'static str, &'static str)>,

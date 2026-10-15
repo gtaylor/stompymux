@@ -40,7 +40,7 @@
 //|---@field walk_mp integer Walking MP the template states; the engine rating is tons x walk_mp.
 //|---@field max_speed number Running speed in km/h: walk_mp x 1.5 rounded up, 10.75 km/h per MP.
 //|---@field jump_speed number
-//|---@field heat_sinks integer Cooling capacity; double sinks are already counted twice.
+//|---@field heat_sinks integer Installed heat sinks as the record sheet counts them; double and laser sinks each dissipate two heat.
 //|---@field sections table<MechSectionName, SectionDefinition>
 //|---@field attributes table<string, string> Unit-level source fields; not validated simulation capabilities.
 // lua-types-end

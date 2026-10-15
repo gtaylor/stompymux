@@ -579,11 +579,6 @@ fn fit_jets_and_sinks(
     let Ok(groups) = loadout.heat_sink_groups(template.heat_sink_slots()) else {
         return;
     };
-    let efficiency = if template.has_double_heat_sinks() {
-        2
-    } else {
-        1
-    };
     let capacity = (walking * u32::from(template.tons) / 25) as u16;
     let mut external = groups.len() as u16;
     // An engine too small for ten sinks needs the rest in critical slots.
@@ -602,11 +597,11 @@ fn fit_jets_and_sinks(
         }
         external += 1;
     }
-    let sinks = (template.heat_sinks / efficiency)
+    template.heat_sinks = template
+        .heat_sinks
         .max(10)
         .max(external)
         .min(external + capacity);
-    template.heat_sinks = sinks * efficiency;
 }
 
 /// [`book_legal`] for a template document.

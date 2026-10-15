@@ -7,7 +7,7 @@ fn installed(name: &str, slots: u8, clan: bool) -> Mech {
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
     if clan {
         template.attributes.insert("specials".into(), "Clan".into());
-        template.heat_sinks = 20;
+        template.heat_sinks = 10;
         for section in template.sections.values_mut() {
             section
                 .criticals

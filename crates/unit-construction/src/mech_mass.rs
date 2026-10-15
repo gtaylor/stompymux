@@ -70,16 +70,6 @@ pub fn structure_divisor(template: &MechTemplate) -> u32 {
     2
 }
 
-/// Heat sinks a template declares, counted in sinks rather than dissipation: a double sink
-/// dissipates two points of heat (TM p. 53).
-pub fn heat_sink_count(template: &MechTemplate) -> u16 {
-    if template.has_double_heat_sinks() {
-        template.heat_sinks / 2
-    } else {
-        template.heat_sinks
-    }
-}
-
 impl MechTemplate {
     /// Construction mass of the intact Mech with `loadout`, by book rounding: the engine,
     /// gyro, structure, armor and supercharger rounded up to the half ton, every weapon and
@@ -110,7 +100,7 @@ impl MechTemplate {
         let armor = armor_mass(protection, armor_denominator(self));
         // Fusion engines carry ten heat sinks for free; combustion engines carry none.
         let free = if ice { 0 } else { 10 };
-        let heat_sinks = u32::from(heat_sink_count(self)).saturating_sub(free) * 1024;
+        let heat_sinks = u32::from(self.heat_sinks).saturating_sub(free) * 1024;
         let cargo = cargo_space_mass(
             self.attributes.get("cargo_space").map(String::as_str),
             self.has_special("Carrier_Tech"),

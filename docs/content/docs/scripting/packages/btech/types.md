@@ -36,7 +36,7 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `walk_mp`: `integer` — Walking MP the template states; the engine rating is tons x walk_mp.
 - `max_speed`: `number` — Running speed in km/h: walk_mp x 1.5 rounded up, 10.75 km/h per MP.
 - `jump_speed`: `number`
-- `heat_sinks`: `integer` — Cooling capacity; double sinks are already counted twice.
+- `heat_sinks`: `integer` — Installed heat sinks as the record sheet counts them; double and laser sinks each dissipate two heat.
 - `sections`: `table<MechSectionName, SectionDefinition>`
 - `attributes`: `table<string, string>` — Unit-level source fields; not validated simulation capabilities.
 

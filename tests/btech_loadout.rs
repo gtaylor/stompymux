@@ -701,7 +701,7 @@ async fn existing_double_sink_designs_construct() {
         include_str!("../game/units/APL-1R.toml"),
     ] {
         let template = MechTemplate::parse("test", source).unwrap();
-        let capacity = template.heat_sinks;
+        let capacity = template.heat_dissipation();
         let id = world.create(&config, template.name.clone(), stompymux_rs::Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         stompymux_rs::create_battle_unit(&mut world, id, template).unwrap();

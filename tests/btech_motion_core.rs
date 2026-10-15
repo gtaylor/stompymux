@@ -6005,7 +6005,7 @@ async fn conventional_direct_fire_matrix(weapons: &[stompymux_rs::Weapon]) {
             definition
                 .attributes
                 .insert("specials".into(), "Clan FlipArms".into());
-            definition.heat_sinks = 20;
+            definition.heat_sinks = 10;
             for section in definition.sections.values_mut() {
                 section
                     .criticals
@@ -6710,7 +6710,7 @@ async fn double_heat_sinks_group_damage_mass_cooling_and_restart() {
         .attributes
         .insert("specials".into(), "doublehs FlipArms".into());
     // Eleven double sinks: nine in the engine and the two installed groups (TechManual p. 53).
-    template.heat_sinks = 22;
+    template.heat_sinks = 11;
     for slot in 2..8 {
         template
             .sections

@@ -132,7 +132,7 @@ fn clan_engine_layouts_mass_and_side_loss() {
         template
             .attributes
             .insert("specials".into(), format!("Clan FlipArms {}", flag(engine)));
-        template.heat_sinks = 20;
+        template.heat_sinks = 10;
         for section in template.sections.values_mut() {
             section
                 .criticals
@@ -159,7 +159,7 @@ fn clan_engine_layouts_mass_and_side_loss() {
         template
             .attributes
             .insert("specials".into(), format!("Clan FlipArms {}", flag(engine)));
-        template.heat_sinks = 20;
+        template.heat_sinks = 10;
         for section in template.sections.values_mut() {
             section
                 .criticals

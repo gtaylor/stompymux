@@ -6,8 +6,8 @@
 //! record sheet could describe.
 use super::construction::{MIXED_TECH, SPEED_PER_MP};
 use super::{
-    Engine, MechChassis, MechLoadout, MechSection, MechTemplate, System, heat_sink_count,
-    rated_output, running_mp_of_walking,
+    Engine, MechChassis, MechLoadout, MechSection, MechTemplate, System, rated_output,
+    running_mp_of_walking,
 };
 use anyhow::{Result, bail, ensure};
 use std::collections::BTreeMap;
@@ -219,18 +219,10 @@ impl MechTemplate {
         Ok(())
     }
 
-    /// At least ten heat sinks, counted in sinks rather than dissipation; the engine holds up
-    /// to its rating / 25 (rounded down) of them and every other sink fills critical slots
-    /// (TM pp. 52-53).
+    /// At least ten heat sinks; the engine holds up to its rating / 25 (rounded down) of them
+    /// and every other sink fills critical slots (TM pp. 52-53).
     fn validate_heat_sinks(&self, loadout: &MechLoadout) -> Result<()> {
-        if self.has_double_heat_sinks() {
-            ensure!(
-                self.heat_sinks.is_multiple_of(2),
-                "Double heat sink dissipation {} is not a whole number of sinks",
-                self.heat_sinks
-            );
-        }
-        let sinks = u32::from(heat_sink_count(self));
+        let sinks = u32::from(self.heat_sinks);
         ensure!(
             sinks >= 10,
             "A Mech needs at least 10 heat sinks, not {sinks}"
@@ -739,7 +731,7 @@ mod tests {
             ),
         )
         .unwrap();
-        assert_eq!(clan.heat_sinks, 20);
+        assert_eq!((clan.heat_sinks, clan.heat_dissipation()), (10, 20));
     }
 
     /// Endo steel fills exactly its slots, and only when declared (TM p. 47).

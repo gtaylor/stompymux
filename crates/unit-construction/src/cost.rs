@@ -213,9 +213,9 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
     let engine_size = u64::try_from(i64::from(rating) - i64::from(suspension))?;
     total += (engine_base * engine_size * tons) as f64 / 75.0;
     let clan = raw_flag(template, "Clan");
-    // A Clan Mech's sinks are double unless it declares single sinks (TechManual p. 52).
-    let double = (clan && !raw_flag(template, "SingleHS")) || raw_flag(template, "DoubleHS");
-    let sinks = u64::try_from(template.heat_sinks.max(0))? / if double { 2 } else { 1 };
+    // Vehicles mount single heat sinks whatever their technology base (TechManual p. 104).
+    let double = raw_flag(template, "DoubleHS");
+    let sinks = u64::try_from(template.heat_sinks.max(0))?;
     total += (if double || ice {
         sinks
     } else {
@@ -421,11 +421,7 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
     total += (tons * jump * jump * if improved_jump { 500 } else { 200 }) as f64;
     // A Clan Mech's sinks are double unless it declares single sinks (TechManual p. 52).
     let double = template.has_double_heat_sinks();
-    let sinks = if double {
-        u64::from(template.heat_sinks) / 2
-    } else {
-        u64::from(template.heat_sinks)
-    };
+    let sinks = u64::from(template.heat_sinks);
     total += (if double || flag(template, "CompactHS") || flag(template, "ICEEngine_Tech") {
         sinks
     } else {
@@ -561,8 +557,10 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
     };
     let size = u64::try_from((i64::from(rating) - i64::from(suspension)).max(0))?;
     total += (base * size * tons) as f64 / 75.0;
-    let double = flag_vehicle(template, "DoubleHS") || flag_vehicle(template, "Clan");
-    let sinks = u64::from(template.heat_sinks.unwrap_or(0)) / if double { 2 } else { 1 };
+    // Combat vehicles mount single heat sinks only, whatever their technology base
+    // (TechManual p. 104).
+    let double = flag_vehicle(template, "DoubleHS");
+    let sinks = u64::from(template.heat_sinks.unwrap_or(0));
     total += (if double || ice {
         sinks
     } else {
@@ -664,7 +662,7 @@ mod tests {
             let mut template = jenner();
             let specials = template.attributes.entry("specials".into()).or_default();
             specials.push_str(sinks);
-            template.heat_sinks = if sinks.contains("SingleHS") { 12 } else { 24 };
+            template.heat_sinks = 12;
             for section in template.sections.values_mut() {
                 section
                     .criticals
