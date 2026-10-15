@@ -103,7 +103,9 @@ pub(super) fn disable_section(
             SectionExposure::Vacuum => format!("Your {name} has been breached!"),
         },
     }];
-    if cause == SectionExposure::Vacuum && section == MechSection::Head {
+    if cause == SectionExposure::Vacuum
+        && section == world.btech.constructed_units()[&id].cockpit_section()
+    {
         notices.push(Notice {
             unit: id,
             text: "You are exposed to vacuum!".into(),

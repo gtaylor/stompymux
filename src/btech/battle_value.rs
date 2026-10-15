@@ -374,19 +374,22 @@ fn physical_weapon_value(attack: ArmAttack, tons: u16, triple_myomer: bool) -> f
 fn defensive_system_value<L>(
     loadout: &ResolvedLoadout<L>,
     context: SystemContext,
-    slots: impl Fn(System) -> u16,
+    slots: impl Fn(System, SystemContext) -> u16,
 ) -> f64 {
-    let mut counts: BTreeMap<System, usize> = BTreeMap::new();
+    // Each installation is valued and sized by its own technology base.
+    let mut counts: BTreeMap<(System, Option<super::TechBase>), usize> = BTreeMap::new();
     for part in &loadout.systems {
+        let context = context.for_installation(part.tech_base);
         if part.system.defensive_battle_value(context).is_some() {
-            *counts.entry(part.system).or_default() += 1;
+            *counts.entry((part.system, part.tech_base)).or_default() += 1;
         }
     }
     counts
         .into_iter()
-        .map(|(system, count)| {
+        .map(|((system, base), count)| {
+            let context = context.for_installation(base);
             let value = system.defensive_battle_value(context).unwrap_or(0);
-            let size = usize::from(slots(system).max(1));
+            let size = usize::from(slots(system, context).max(1));
             (count / size) as f64 * f64::from(value)
         })
         .sum()
@@ -463,10 +466,20 @@ impl Mech {
         };
         let armor_modifier =
             armor_type_modifier(|technology| definition.has_technology(technology));
+        // A torso-mounted cockpit counts the center torso's armor, front and rear, twice
+        // (Tactical Operations: Advanced Units & Equipment p. 193).
+        let torso_cockpit = self.torso_mounted_cockpit();
         let armor: u32 = self
             .sections()
-            .values()
-            .map(|section| u32::from(section.armor) + u32::from(section.rear))
+            .iter()
+            .map(|(&section, state)| {
+                let points = u32::from(state.armor) + u32::from(state.rear);
+                if torso_cockpit && section == MechSection::CenterTorso {
+                    points * 2
+                } else {
+                    points
+                }
+            })
             .sum();
         let structure: u32 = self
             .sections()
@@ -488,8 +501,9 @@ impl Mech {
             watchdog: definition.has_technology(Technology::Watchdog),
             tons,
             engine_rating: 0,
+            legs: if quad { 4 } else { 2 },
         };
-        let defensive_equipment = defensive_system_value(&loadout, context, |system| {
+        let defensive_equipment = defensive_system_value(&loadout, context, |system, context| {
             system.installation_slots(context).unwrap_or(1)
         }) + defensive_weapon_value(
             settings,
@@ -589,7 +603,10 @@ impl Mech {
         let offense = Offense::gather(
             settings,
             &loadout,
-            artemis_multipliers(&loadout, &self.artemis_controllers()?),
+            artemis_multipliers(
+                &loadout,
+                &[self.artemis_controllers()?, self.apollo_controllers()?].concat(),
+            ),
             |location: CriticalLocation, rear_mount| match location.section {
                 MechSection::LeftArm | MechSection::RightArm if !quad => Arc::Unaffected,
                 _ if rear_mount => Arc::Rear,
@@ -606,6 +623,26 @@ impl Mech {
                 }
             }
         }
+        // Talons are worth their kick's final damage, after triple strength myomer and the
+        // talons' own half again (Tactical Operations: Advanced Units & Equipment p. 196).
+        if loadout
+            .systems
+            .iter()
+            .any(|part| part.system == System::Talons)
+        {
+            let kick = tons / 5 * if triple_myomer { 2 } else { 1 };
+            physical += f64::from(super::talons::raise(kick));
+        }
+        // A machine gun array is worth the BV of the guns it links times 0.67 (TechManual
+        // p. 317, note F).
+        for array in loadout.machine_gun_arrays() {
+            let guns: u32 = array
+                .weapon_indices
+                .iter()
+                .map(|&index| u32::from(loadout.weapons[index].weapon.battle_value()))
+                .sum();
+            physical += 0.67 * f64::from(guns);
+        }
         Ok(Valuation {
             chassis: Chassis::Mech {
                 gyro,
@@ -621,7 +658,11 @@ impl Mech {
             equipment: physical,
             tonnage: f64::from(tons) * if triple_myomer { 1.5 } else { 1.0 },
             speed_mp: running + jumping.div_ceil(2),
-            final_multiplier: if definition.has_technology(Technology::SmallCockpit) {
+            // Small and torso-mounted cockpits multiply the final value by 0.95 (TechManual
+            // p. 303; Tactical Operations: Advanced Units & Equipment p. 193).
+            final_multiplier: if definition.has_technology(Technology::SmallCockpit)
+                || torso_cockpit
+            {
                 0.95
             } else {
                 1.0
@@ -720,8 +761,9 @@ impl super::Vehicle {
             watchdog: definition.has_technology(Technology::Watchdog),
             tons: definition.tons,
             engine_rating: 0,
+            legs: 0,
         };
-        let defensive_equipment = defensive_system_value(&loadout, context, |_| 1)
+        let defensive_equipment = defensive_system_value(&loadout, context, |_, _| 1)
             + defensive_weapon_value(
                 settings,
                 loadout.weapons.iter().map(|mount| mount.weapon),

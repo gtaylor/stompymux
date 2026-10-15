@@ -4,13 +4,15 @@
 use super::System;
 
 /// Chassis facts that size or price a system: technology base, the Watchdog flag that turns
-/// ECM slots into a Watchdog CEWS, tonnage and engine rating.
+/// ECM slots into a Watchdog CEWS, tonnage, engine rating and legs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SystemContext {
     pub clan: bool,
     pub watchdog: bool,
     pub tons: u16,
     pub engine_rating: u16,
+    /// Legs a Mech stands on (two or four); zero for other units.
+    pub legs: u16,
 }
 
 /// How a physical weapon's Battle Value is found (TechManual p. 317; Tactical Operations:
@@ -23,13 +25,26 @@ pub enum PhysicalBattleValue {
     DamageTimes(f64),
 }
 
+impl SystemContext {
+    /// The context of one installation whose slot states `base`: a stated base replaces the
+    /// chassis's for the facts it sizes.
+    pub fn for_installation(self, base: Option<super::super::TechBase>) -> Self {
+        Self {
+            clan: base.map_or(self.clan, |base| base == super::super::TechBase::Clan),
+            ..self
+        }
+    }
+}
+
 impl System {
     /// Defensive Battle Value of one installation of this system (the † entries of
     /// TechManual pp. 317-318 and Tactical Operations: Advanced Units & Equipment pp. 195-197):
     /// Beagle 10, Clan active probe 12, light active probe 7, Bloodhound 25, Guardian or Clan
-    /// ECM 61, Watchdog CEWS 68 and Angel ECM 100. `None` for systems without a defensive BV.
+    /// ECM 61, Watchdog CEWS 68 and Angel ECM 100, and a spike cluster 4 (Tactical Operations:
+    /// Advanced Units & Equipment p. 194). `None` for systems without a defensive BV.
     pub fn defensive_battle_value(self, context: SystemContext) -> Option<u16> {
         Some(match self {
+            Self::Spikes => 4,
             Self::BeagleProbe if context.clan => 12,
             Self::BeagleProbe => 10,
             Self::LightProbe => 7,
@@ -42,12 +57,14 @@ impl System {
     }
 
     /// Multiplier applied to the BV of each missile launcher this fire control system serves:
-    /// Artemis IV 1.2 (TechManual p. 317, note B) and Artemis V 1.3 (Tactical Operations:
-    /// Advanced Units & Equipment p. 197, note J). The increase does not apply to ammunition.
+    /// Artemis IV 1.2 (TechManual p. 317, note B), Artemis V 1.3 (Tactical Operations:
+    /// Advanced Units & Equipment p. 197, note J) and the MRM "Apollo" system 1.15 (ibid.
+    /// p. 194, note L). The increase does not apply to ammunition.
     pub fn launcher_battle_value_multiplier(self) -> Option<f64> {
         match self {
             Self::ArtemisIv => Some(1.2),
             Self::ArtemisV => Some(1.3),
+            Self::ApolloFcs => Some(1.15),
             _ => None,
         }
     }
@@ -79,7 +96,7 @@ impl System {
     pub fn installation_slots(self, context: SystemContext) -> Option<u16> {
         let tons = context.tons;
         Some(match self {
-            Self::Case | Self::CaseIi | Self::C3Slave | Self::ArtemisIv => 1,
+            Self::Case | Self::CaseIi | Self::C3Slave | Self::ArtemisIv | Self::ApolloFcs => 1,
             Self::Tag | Self::LightTag | Self::LightProbe | Self::Supercharger => 1,
             Self::TargetingComputer | Self::Axe | Self::Masc => 1,
             Self::BeagleProbe if context.clan => 1,
@@ -91,8 +108,10 @@ impl System {
             Self::NullSignature | Self::DualSaw => 7,
             Self::Flail | Self::LargeVibroblade => 4,
             Self::WreckingBall => 5,
-            Self::SmallVibroblade => 1,
+            Self::SmallVibroblade | Self::Spikes | Self::MachineGunArray => 1,
             Self::MediumVibroblade => 2,
+            // Talons fill two slots in each leg as one installation.
+            Self::Talons => 2 * context.legs.max(2),
             Self::Sword | Self::Claw => tons.div_ceil(15),
             Self::Mace => tons.div_ceil(10),
             Self::Lance => tons.div_ceil(20),
@@ -123,6 +142,7 @@ impl System {
             Self::C3i => 750_000.0,
             Self::ArtemisIv => 100_000.0,
             Self::ArtemisV => 250_000.0,
+            Self::ApolloFcs => 125_000.0,
             Self::Tag => 50_000.0,
             Self::LightTag => 40_000.0,
             Self::NullSignature => 1_400_000.0,
@@ -142,6 +162,12 @@ impl System {
             Self::SmallVibroblade => 150_000.0,
             Self::MediumVibroblade => 400_000.0,
             Self::LargeVibroblade => 750_000.0,
+            // Talons and spikes are priced by the Mech's tonnage (Tactical Operations: Advanced
+            // Units & Equipment p. 217).
+            Self::Talons => 300.0 * tons,
+            Self::Spikes => 50.0 * tons,
+            // TechManual p. 292.
+            Self::MachineGunArray => 1_250.0,
             Self::DualSaw => 100_000.0,
             Self::WreckingBall => 80_000.0,
             Self::Masc => 1_000.0 * rating,
@@ -187,6 +213,7 @@ mod tests {
         watchdog: false,
         tons: 65,
         engine_rating: 260,
+        legs: 2,
     };
 
     /// Complete installations sum to the TechManual p. 291 and Tactical Operations: Advanced
@@ -212,6 +239,9 @@ mod tests {
             (System::ArtemisV, clan, 2, 250_000.0),
             (System::Mace, IS, 7, 130_000.0),
             (System::Sword, IS, 5, 40_000.0),
+            (System::Talons, IS, 4, 19_500.0),
+            (System::Talons, SystemContext { legs: 4, ..IS }, 8, 19_500.0),
+            (System::Spikes, IS, 1, 3_250.0),
         ] {
             assert_eq!(
                 system.installation_slots(context),
@@ -244,10 +274,16 @@ mod tests {
         assert_eq!(System::Ecm.defensive_battle_value(watchdog), Some(68));
         assert_eq!(System::AngelEcm.defensive_battle_value(IS), Some(100));
         assert_eq!(System::Tag.defensive_battle_value(IS), None);
+        assert_eq!(System::Spikes.defensive_battle_value(IS), Some(4));
         assert_eq!(
             System::ArtemisV.launcher_battle_value_multiplier(),
             Some(1.3)
         );
+        assert_eq!(
+            System::ApolloFcs.launcher_battle_value_multiplier(),
+            Some(1.15)
+        );
+        assert_eq!(System::ApolloFcs.slot_price(IS), Some(125_000.0));
         assert_eq!(
             System::Axe.physical_battle_value(),
             Some(PhysicalBattleValue::DamageTimes(1.5))

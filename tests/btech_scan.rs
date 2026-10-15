@@ -44,6 +44,9 @@ async fn fixture_with_ranges(
         for &(field, value) in ranges {
             template.attributes.insert(field.into(), value.into());
         }
+        if ranges.contains(&("move_type", "Quad")) {
+            support::templates::quad_ready_arms(&mut template);
+        }
         create_battle_unit(&mut world, id, template).unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 1, y).unwrap();

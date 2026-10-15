@@ -1,9 +1,9 @@
 //! Live heat-sink capacity of a constructed Mech, reconstructed from installed equipment and
-//! the template's engine heat-sink allocation.
-use super::{Mech, System, rated_output, read_engine_sink_override};
+//! the heat sinks its engine holds.
+use super::{Mech, System, rated_output};
 use anyhow::Result;
 
-/// Installed external cooling capacity is independent of an engine-allocation correction.
+/// Cooling of the heat sinks installed in critical slots, counting complete installations.
 pub(super) fn external_capacity(unit: &Mech) -> Result<u16> {
     let definition = unit.definition();
     let slots = unit
@@ -15,19 +15,12 @@ pub(super) fn external_capacity(unit: &Mech) -> Result<u16> {
     Ok((slots / definition.heat_sink_slots() * usize::from(definition.heat_per_sink())) as u16)
 }
 
-/// Reconstruct total cooling from owned external equipment and the selected engine allocation.
+/// Reconstruct total cooling from the surviving external sinks and the sinks the engine holds:
+/// its rating / 25, rounded down (TechManual pp. 52-53), never more than the template's
+/// dissipation.
 pub(super) fn reconstructed_capacity(unit: &Mech) -> Result<u16> {
     let definition = unit.definition();
-    let allocation = read_engine_sink_override(&definition.attributes)?;
-    anyhow::ensure!(
-        allocation >= 0,
-        "Negative engine heat-sink allocation cannot be reconstructed"
-    );
-    let internal = if allocation == 0 {
-        rated_output(definition.tons, definition.walk_mp) / 25
-    } else {
-        allocation as u32
-    };
+    let internal = rated_output(definition.tons, definition.walk_mp) / 25;
     let efficiency = u32::from(definition.heat_per_sink());
     let internal =
         u32::from(definition.heat_dissipation()).min(internal.saturating_mul(efficiency));

@@ -894,6 +894,11 @@ impl<'a> ImpactContext<'a> {
                     System::LargeVibroblade => Some("Your large vibroblade has been destroyed!"),
                     System::ArtemisIv => Some("Your Artemis IV system has been destroyed!"),
                     System::ArtemisV => Some("Your Artemis V system has been destroyed!"),
+                    System::Talons => Some("Your talons have been destroyed!"),
+                    System::Spikes => Some("Your spikes have been destroyed!"),
+                    System::ApolloFcs => {
+                        Some("Your MRM Apollo fire control system has been destroyed!")
+                    }
                     System::Ecm => Some("Your ECM system has been destroyed!"),
                     System::NullSignature => Some("Your Null Signature System has been destroyed!"),
                     System::Tag => Some("Your TAG system has been destroyed!"),
@@ -940,6 +945,10 @@ impl<'a> ImpactContext<'a> {
                     let name = weapon.name().split_once('.').expect("catalog namespace").1;
                     let detail = if weapon.weapon_explosion_damage() > 0 {
                         format!("It explodes for {explosion} points damage.")
+                    } else if weapon.is_b_pod() {
+                        format!(
+                            "[fg=red bold]Your B-Pod explodes for {explosion} points of damage![reset]"
+                        )
                     } else if weapon.jammed_explosion_damage() > 0 {
                         format!(
                             "[fg=red bold]Your jammed autocannon explodes for {explosion} points of damage![reset]"
@@ -980,6 +989,8 @@ impl<'a> ImpactContext<'a> {
                             .replace('_', " ");
                         Some(if weapon.weapon_explosion_damage() > 0 {
                             format!("'s {section} is covered in a large electrical discharge!")
+                        } else if weapon.is_b_pod() {
+                            format!("'s {section} is rocked by a pod explosion!")
                         } else if weapon.jammed_explosion_damage() > 0 {
                             "loses an autocannon in a brilliant explosion!".to_owned()
                         } else {
@@ -1571,7 +1582,9 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             ignition_section = Some(section);
         }
 
-        if section == MechSection::Head {
+        // A torso-mounted cockpit spares its MechWarrior the head hits (Tactical Operations:
+        // Advanced Units & Equipment p. 113).
+        if section == MechSection::Head && !context.unit().torso_mounted_cockpit() {
             context.effect(ImpactEffect::HeadInjury)?;
         }
         if !internal_only {
@@ -1653,8 +1666,9 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             // Reinforced structure halves and composite structure doubles internal damage,
             // including any overflow that transfers onward.
             let structural = context.unit().structure_damage(damage);
-            let head_pilot =
-                (section == MechSection::Head).then(|| context.unit().pilot().is_some());
+            let head_pilot = (section == MechSection::Head
+                && !context.unit().torso_mounted_cockpit())
+            .then(|| context.unit().pilot().is_some());
             let phase = context.damage_phase(section, structural, DamagePhase::Internal)?;
             damage = phase.remaining;
             context.record_phase(phase)?;

@@ -46,7 +46,6 @@ specials = ["SearchLight"]
 | `jump_mp` | integer | Jumping movement points. Vehicles cannot jump. |
 | `max_speed`, `jump_speed` | number | Top and jumping speeds in km/h, for the few unconstructed units (aerospace, battle armor) whose speed is not whole movement points. Give either the speed or its movement points, not both. Mechs and vehicles must state `walk_mp`. |
 | `heat_sinks` | integer | Installed heat sinks, counted as the record sheet counts them ("Heat Sinks: 17 (34)" is 17), not the heat they dissipate. The `[construction]` `heat_sinks` kind sets the dissipation: one heat per single sink, two per double or laser sink (TechManual p. 52; Tactical Operations: Advanced Units & Equipment). Without it a mech carries the engine's ten free sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
-| `hs_engine_override` | integer | Engine heat sink override. |
 | `radio`, `radio_type`, `radio_range` | integer | Electronics. |
 | `tac_range`, `lrs_range`, `scan_range` | integer | Sensor ranges. |
 | `si`, `fuel`, `cargo_space`, `max_suits`, `max_ton`, `carrier_maximum_tonnage` | integer | Class-specific capacities. |
@@ -80,7 +79,7 @@ armor = "ferro_fibrous"
 | `engine` | `standard`, `xl`, `light`, `xxl`, `compact`, `ice` |
 | `engine_rating` | Integer: the engine rating the record sheet states. For a mech it must be tonnage x `walk_mp` (TechManual p. 48); for a vehicle or VTOL it must be the Final Engine Rating, tonnage x cruising MP less the suspension factor, rounded up to a multiple of 5 and at least 10 (TechManual p. 100). A template without it derives the rating from its movement points; every shipped mech and vehicle declares it. |
 | `gyro` | `standard`, `xl`, `compact`, `heavy_duty` |
-| `cockpit` | `standard`, `small` |
+| `cockpit` | `standard`, `small`, `torso_mounted` (Tactical Operations: Advanced Units & Equipment p. 112: four tons in the center torso with a sensor package, a life support slot in each side torso and two sensors left in the head) |
 | `structure` | `standard`, `endo_steel`, `composite`, `reinforced` |
 | `armor` | `standard`, `ferro_fibrous`, `light_ferro_fibrous`, `heavy_ferro_fibrous`, `stealth`, `hardened`, `laser_reflective` |
 | `heat_sinks` | `single`, `double`, `laser`; Clan units default to doubles, and laser heat sinks are Clan only |
@@ -109,8 +108,18 @@ only the other base builds. The Bloodhound probe, C3, the null signature system,
 Angel ECM, triple strength myomer, stealth armor and light and heavy
 ferro-fibrous armor are Inner Sphere equipment; the light active probe, light
 TAG, Artemis V, laser heat sinks and the Watchdog suite are Clan equipment.
-Heat sinks, jump jets, CASE, ECM, the active probe, MASC, targeting computers
-and Artemis IV share one name on both bases and take the chassis's base.
+CASE is an Inner Sphere item that goes in a torso; Clan CASE is built into
+every location of a Clan-structure unit rather than installed (TechManual p.
+210).
+
+CASE II, ECM suites, active probes, MASC, targeting computers, Artemis IV, jump
+jets and machine gun arrays (`MGA`) are built by both bases to their own
+specifications under one name.
+An unprefixed slot is built from the chassis's base; a slot may instead state
+its base with an `IS.` or `CL.` prefix, as `CL.Ecm` (the one-slot, one-ton Clan
+ECM suite rather than the Guardian), `CL.Masc` (4% of the tonnage rather than
+5%) or `IS.TargetingComputer` (a ton per four tons of weapons rather than
+five). A stated base other than the chassis's needs `mixed_tech`.
 
 ### Construction rules
 
@@ -270,10 +279,12 @@ where a unit differs, such as a vehicle location with no structure
 In biped and quad mechs, construction places the fixed equipment, which
 `slots` then leaves out:
 
-- **Head:** life support, sensors and cockpit, laid out for the cockpit type.
-- **Centre torso:** engine and gyro slots for the engine and gyro types.
-- **Side torsos:** the engine's side slots, starting at slot 1 or at
-  `engine_at`.
+- **Head:** life support, sensors and cockpit, laid out for the cockpit type;
+  a torso-mounted cockpit leaves only the two sensors.
+- **Centre torso:** engine and gyro slots for the engine and gyro types, then a
+  torso-mounted cockpit and its sensor package.
+- **Side torsos:** a torso-mounted cockpit's life support slot first, then the
+  engine's side slots, starting at the next slot or at `engine_at`.
 - **Arms and legs:** shoulder or hip, then upper, lower and hand or foot
   actuators.
 
@@ -281,7 +292,7 @@ A section adjusts that with:
 
 | Key | Meaning |
 | --- | --- |
-| `omit` | Actuators the section lacks, in any combination: `shoulder`, `upper_actuator`, `lower_actuator`, and `hand_actuator` (biped arms) or `foot_actuator` (legs). The others keep their usual slots. |
+| `omit` | Actuators a biped arm lacks: `hand_actuator`, or `lower_actuator` with `hand_actuator`. These are the only actuators a Mech may remove; shoulders, upper arm actuators and every leg actuator are mandatory (TechManual p. 45). The others keep their usual slots. |
 | `engine_at` | The side torso slot where the engine's slots begin. |
 | `explicit` | `true` when the section's layout is irregular: nothing is placed, and `slots` lists the fixed equipment too. |
 
@@ -349,16 +360,16 @@ OmniMechs get the `OmniMech_Tech` special and a searchlight design quirk the
 `SearchLight` special; other quirks have no stompymux counterpart and are not
 converted. Mixed-technology units set `mixed_tech = true` and keep a Clan or
 Inner Sphere engine, structure or armor through the `[construction]` technology
-keys. CASE II, ECM
-suites and active probes take their technology from the chassis in stompymux,
-so one built from the other technology base is refused.
+keys. A CASE II, ECM suite, active probe, MASC, targeting computer, Artemis IV
+or jump jet of the other technology base keeps its base as an `IS.` or `CL.`
+prefix on its item. A machine gun array is written after the machine guns it
+links, which it finds in the slots directly above it.
 
 Every converted unit must load and construct exactly as the game would, so the
 tool refuses anything stompymux cannot field instead of dropping it: other unit
 types (LAMs, QuadVees, tripods, support and superheavy vehicles, naval and
 aerospace units, infantry), construction technology without a `[construction]`
-choice (such as fuel cell engines, torso-mounted cockpits or industrial
-structure), and weapons, equipment or ammunition munitions with no stompymux
+choice (such as fuel cell engines or industrial structure), and weapons, equipment or ammunition munitions with no stompymux
 item. A refused file is reported on standard error and writes nothing; the
 other files still convert, and the exit status is non-zero.
 

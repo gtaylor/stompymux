@@ -232,8 +232,11 @@ fn advance_overheat_inner(
                             .to_owned(),
                     });
                 }
-                let hits =
-                    life_support_injury(heat, unit.system_hits(super::System::LifeSupport) > 0);
+                let hits = life_support_injury(
+                    heat,
+                    unit.system_hits(super::System::LifeSupport) > 0,
+                    unit.torso_mounted_cockpit(),
+                );
                 if hits > 0 && unit.pilot().is_some() {
                     report.notices.push(Notice {
                         unit: id,
@@ -269,18 +272,25 @@ fn advance_overheat_inner(
 }
 
 /// MechWarrior hits from heat with a destroyed life support system (Total Warfare p. 41, 160):
-/// one per turn at 15 or more heat, two at 26 or more. Intact life support never injures.
-fn life_support_injury(heat: f64, life_support_destroyed: bool) -> u8 {
+/// one per turn at 15 or more heat, two at 26 or more. Beside the engine, a torso-mounted
+/// cockpit's MechWarrior instead takes one at 1-14 heat and two at 15 or more (Tactical
+/// Operations: Advanced Units & Equipment p. 113). Intact life support never injures.
+fn life_support_injury(heat: f64, life_support_destroyed: bool, torso_cockpit: bool) -> u8 {
     if !life_support_destroyed {
         return 0;
     }
-    if heat >= 26.0 {
-        return 2;
+    let (one, two) = if torso_cockpit {
+        (1.0, 15.0)
+    } else {
+        (15.0, 26.0)
+    };
+    if heat >= two {
+        2
+    } else if heat >= one {
+        1
+    } else {
+        0
     }
-    if heat >= 15.0 {
-        return 1;
-    }
-    0
 }
 
 /// Roll the inferno and ordinary Ammunition Avoid Rolls due at this heat and detonate the
@@ -641,8 +651,12 @@ mod tests {
     #[test]
     fn life_support_injuries_follow_the_heat_scale() {
         for (heat, hits) in [(14.99, 0), (15.0, 1), (25.99, 1), (26.0, 2), (40.0, 2)] {
-            assert_eq!(life_support_injury(heat, true), hits, "{heat}");
-            assert_eq!(life_support_injury(heat, false), 0, "{heat}");
+            assert_eq!(life_support_injury(heat, true, false), hits, "{heat}");
+            assert_eq!(life_support_injury(heat, false, false), 0, "{heat}");
+        }
+        for (heat, hits) in [(0.5, 0), (1.0, 1), (14.99, 1), (15.0, 2), (40.0, 2)] {
+            assert_eq!(life_support_injury(heat, true, true), hits, "{heat}");
+            assert_eq!(life_support_injury(heat, false, true), 0, "{heat}");
         }
     }
 

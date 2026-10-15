@@ -755,3 +755,46 @@ pub fn install_jump_jets(template: &mut stompymux_rs::MechTemplate, count: usize
     }
     assert_eq!(installed, count, "no room for {count} jump jets");
 }
+
+/// Give a biped's arms the four leg actuators a quad's front legs need (TechManual p. 45),
+/// moving the arm's other equipment, in order, into the slots after them. Scenarios that turn
+/// a biped into a quad start from this.
+pub fn quad_ready_arms(template: &mut stompymux_rs::MechTemplate) {
+    use stompymux_rs::{CriticalDefinition, MechSection};
+    const ACTUATORS: [&str; 4] = [
+        "ShoulderOrHip",
+        "UpperActuator",
+        "LowerActuator",
+        "HandOrFootActuator",
+    ];
+    for section in [MechSection::LeftArm, MechSection::RightArm] {
+        let Some(layout) = template.sections.get_mut(&section) else {
+            continue;
+        };
+        let equipment: Vec<CriticalDefinition> = std::mem::take(&mut layout.criticals)
+            .into_values()
+            .filter(|critical| !ACTUATORS.contains(&critical.equipment.as_str()))
+            .collect();
+        for (slot, actuator) in ACTUATORS.into_iter().enumerate() {
+            layout.criticals.insert(
+                slot as u8,
+                CriticalDefinition {
+                    equipment: actuator.into(),
+                    data: "-".into(),
+                    modes: Vec::new(),
+                },
+            );
+        }
+        for (offset, critical) in equipment.into_iter().enumerate() {
+            layout.criticals.insert(4 + offset as u8, critical);
+        }
+    }
+}
+
+/// [`quad_ready_arms`] applied to a saved unit record's design.
+pub fn quad_ready_record(record: &mut serde_json::Value) {
+    let mut definition =
+        serde_json::from_value::<stompymux_rs::MechTemplate>(record["definition"].clone()).unwrap();
+    quad_ready_arms(&mut definition);
+    set_record_definition(record, definition);
+}

@@ -1,4 +1,5 @@
-//! Derived Artemis links share matching and availability policy across unit anatomies.
+//! Derived Artemis and MRM "Apollo" fire-control links share matching and availability policy
+//! across unit anatomies.
 use super::{
     CriticalLocation, Mech, System, SystemCritical, Vehicle, VehicleCriticalLocation,
     VehicleSection, WeaponMount,
@@ -39,8 +40,36 @@ pub(super) fn artemis_v(world: &crate::World, id: crate::ObjectId) -> bool {
         .unwrap_or(false)
 }
 
+/// Which fire-control systems a set of controllers covers and the launchers they serve.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FireControl {
+    /// Artemis IV and V serve missile launchers.
+    Artemis,
+    /// The MRM "Apollo" system serves MRM launchers.
+    Apollo,
+}
+
+impl FireControl {
+    /// Whether `system` is one of these controllers.
+    fn controls(self, system: System) -> bool {
+        match self {
+            Self::Artemis => matches!(system, System::ArtemisIv | System::ArtemisV),
+            Self::Apollo => system == System::ApolloFcs,
+        }
+    }
+
+    /// Whether `weapon` is a launcher these controllers serve.
+    fn serves(self, weapon: super::Weapon) -> bool {
+        match self {
+            Self::Artemis => weapon.profile().missiles > 0,
+            Self::Apollo => weapon.is_mrm(),
+        }
+    }
+}
+
 /// Match authored links once; callers supply only section relationships and equipment availability.
 fn controllers<L: Copy>(
+    kind: FireControl,
     weapons: &[WeaponMount<L>],
     systems: &[SystemCritical<L>],
     describe: impl Fn(L) -> Result<(u8, bool)>,
@@ -49,7 +78,7 @@ fn controllers<L: Copy>(
 ) -> Result<Vec<ArtemisController<L>>> {
     systems
         .iter()
-        .filter(|part| matches!(part.system, System::ArtemisIv | System::ArtemisV))
+        .filter(|part| kind.controls(part.system))
         .map(|part| {
             let (link, operational) = describe(part.location)?;
             let weapon_indices = weapons
@@ -57,7 +86,7 @@ fn controllers<L: Copy>(
                 .enumerate()
                 .filter(|(_, mount)| {
                     let primary = mount.criticals[0];
-                    mount.weapon.profile().missiles > 0
+                    kind.serves(mount.weapon)
                         && slot(primary) + 1 == link
                         && sections_match(part.location, primary)
                 })
@@ -93,6 +122,7 @@ impl Mech {
     pub fn artemis_controllers(&self) -> Result<Vec<ArtemisController>> {
         let loadout = self.loadout()?;
         controllers(
+            FireControl::Artemis,
             &loadout.weapons,
             &loadout.systems,
             |location| {
@@ -112,6 +142,34 @@ impl Mech {
         );
         Ok(operational(&self.artemis_controllers()?, index))
     }
+
+    /// The MRM "Apollo" fire-control systems and the launchers in their own location they
+    /// serve (Tactical Operations: Advanced Units & Equipment p. 142).
+    pub fn apollo_controllers(&self) -> Result<Vec<ArtemisController>> {
+        let loadout = self.loadout()?;
+        controllers(
+            FireControl::Apollo,
+            &loadout.weapons,
+            &loadout.systems,
+            |location| {
+                let part = &self.definition().sections[&location.section].criticals[&location.slot];
+                Ok((link(&part.data)?, !self.critical_unavailable(location)))
+            },
+            |location| location.slot,
+            |controller, primary| controller.section == primary.section,
+        )
+    }
+
+    /// Whether a surviving Apollo system guides the MRM launcher at `index`. A destroyed one
+    /// leaves the launcher firing as a plain MRM (Tactical Operations: Advanced Units &
+    /// Equipment p. 143).
+    pub fn apollo_operational(&self, index: usize) -> Result<bool> {
+        ensure!(
+            index < self.loadout()?.weapons.len(),
+            "Weapon index out of bounds"
+        );
+        Ok(operational(&self.apollo_controllers()?, index))
+    }
 }
 
 impl Vehicle {
@@ -119,6 +177,7 @@ impl Vehicle {
     pub fn artemis_controllers(&self) -> Result<Vec<ArtemisController<VehicleCriticalLocation>>> {
         let loadout = self.loadout()?;
         controllers(
+            FireControl::Artemis,
             &loadout.weapons,
             &loadout.systems,
             |location| {

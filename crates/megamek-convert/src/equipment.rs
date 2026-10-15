@@ -18,8 +18,9 @@ pub enum TechBase {
 }
 
 impl TechBase {
-    /// The namespace stompymux weapon and ammunition names carry.
-    fn namespace(self) -> &'static str {
+    /// The namespace stompymux weapon and ammunition names carry, and that a system both
+    /// bases build carries when its base differs from the chassis's.
+    pub fn namespace(self) -> &'static str {
         match self {
             Self::InnerSphere => "IS",
             Self::Clan => "CL",
@@ -77,6 +78,9 @@ pub enum Critical {
     /// One slot of a Clan Artemis V fire-control system, linked like Artemis IV; a BattleMech
     /// installation fills two slots (Tactical Operations: Advanced Units & Equipment p. 217).
     ArtemisV,
+    /// An MRM "Apollo" fire-control system, linked to an MRM launcher in its section like
+    /// Artemis IV (Tactical Operations: Advanced Units & Equipment p. 142).
+    Apollo,
     /// A searchlight, which stompymux records as a chassis special rather than a slot.
     Searchlight,
 }
@@ -92,6 +96,7 @@ impl Critical {
             Self::Ammo { weapon, .. } => format!("Ammo_{}", weapon.name()),
             Self::Artemis => "ArtemisIV".to_owned(),
             Self::ArtemisV => "ArtemisV".to_owned(),
+            Self::Apollo => "ApolloFCS".to_owned(),
         })
     }
 
@@ -166,6 +171,14 @@ const SYSTEMS: &[(&str, &str)] = &[
     ("c3iunit", "C3i"),
     ("improvedc3computer", "C3i"),
     ("masc", "Masc"),
+    ("talons", "Talons"),
+    ("mga", "MGA"),
+    ("lmga", "MGA"),
+    ("hmga", "MGA"),
+    ("machinegunarray", "MGA"),
+    ("lightmachinegunarray", "MGA"),
+    ("heavymachinegunarray", "MGA"),
+    ("spikes", "Spikes"),
     ("tsm", "TripleStrengthMyomer"),
     ("triplestrengthmyomer", "TripleStrengthMyomer"),
     ("hatchet", "Axe"),
@@ -232,6 +245,7 @@ const WEAPON_ALIASES: &[(&str, &str)] = &[
     ("sniperartillery", "sniper"),
     ("thumperartillery", "thumper"),
     ("antipersonnelpod", "apod"),
+    ("antibattlearmorpod", "bpod"),
     ("smallxpulselaser", "xsmallpulselaser"),
     ("mediumxpulselaser", "xmediumpulselaser"),
     ("largexpulselaser", "xlargepulselaser"),
@@ -380,15 +394,32 @@ pub fn parse_for(raw: &str, chassis: TechBase) -> Result<Critical> {
     }
 }
 
-/// The technology base a slot's system implies, for the systems whose Inner Sphere and Clan
-/// versions differ in mass or reach while stompymux reads their technology from the chassis:
-/// CASE II, ECM suites and active probes. `None` when the slot names no such system or does
-/// not say which base built it.
+/// The technology base a slot's system states, for the systems both bases build to their own
+/// specifications under one stompymux name: CASE II, ECM suites, active probes, MASC,
+/// targeting computers, Artemis IV and jump jets (see `System::built_by_either_base`). `None`
+/// when the slot names no such system or does not say which base built it.
 pub fn system_tech(raw: &str) -> Option<TechBase> {
     let name = raw.split(['(', ':']).next().unwrap_or_default();
     for (tech, base) in readings(&key(name)) {
         match base {
-            "caseii" | "ecmsuite" | "activeprobe" if tech.is_some() => return tech,
+            "caseii"
+            | "ecmsuite"
+            | "activeprobe"
+            | "masc"
+            | "targetingcomputer"
+            | "artemisiv"
+            | "artemisivfcs"
+            | "jumpjet"
+            | "mga"
+            | "lmga"
+            | "hmga"
+            | "machinegunarray"
+            | "lightmachinegunarray"
+            | "heavymachinegunarray"
+                if tech.is_some() =>
+            {
+                return tech;
+            }
             "guardianecm" | "guardianecmsuite" | "beagleactiveprobe" => {
                 return Some(TechBase::InnerSphere);
             }
@@ -428,6 +459,7 @@ fn parse_equipment(name: &str, chassis: TechBase) -> Result<Critical> {
         match *base {
             "artemisiv" | "artemisivfcs" => return Ok(Critical::Artemis),
             "artemisv" | "artemisvfcs" => return Ok(Critical::ArtemisV),
+            "apollo" | "mrmapollofcs" | "apollofcs" => return Ok(Critical::Apollo),
             "searchlight" | "mountedsearchlight" => return Ok(Critical::Searchlight),
             _ => {}
         }
@@ -743,6 +775,9 @@ mod tests {
             ("CLPlasmaCannon", "CL.PlasmaCannon"),
             ("CLLightMG", "CL.LightMachineGun"),
             ("ISLightMG", "IS.LightMachineGun"),
+            ("ISBPod", "IS.B-Pod"),
+            ("CLBPod", "CL.B-Pod"),
+            ("Anti-BattleArmor Pod", "IS.B-Pod"),
         ] {
             assert_eq!(weapon(name).0.name(), expected, "{name}");
         }
@@ -824,6 +859,14 @@ mod tests {
             ("Clan Endo Steel", Critical::System("EndoSteel")),
             ("ISGuardianECMSuite", Critical::System("Ecm")),
             ("ISArtemisIV", Critical::Artemis),
+            ("ISApollo (OMNIPOD)", Critical::Apollo),
+            ("Talons (OMNIPOD)", Critical::System("Talons")),
+            ("Spikes", Critical::System("Spikes")),
+            ("ISLMGA", Critical::System("MGA")),
+            (
+                "Clan Heavy Machine Gun Array (OMNIPOD)",
+                Critical::System("MGA"),
+            ),
             ("CLArtemisV", Critical::ArtemisV),
             ("CLLightTAG", Critical::System("LightTAG")),
         ] {

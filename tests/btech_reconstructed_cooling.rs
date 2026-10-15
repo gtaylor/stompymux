@@ -1,4 +1,5 @@
-//! Cooling reconstruction adopts engine allocation only on critical changes and retains future losses.
+//! Cooling reconstruction adopts the engine's heat sinks only on critical changes and retains
+//! future losses.
 use crate::support;
 use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
@@ -7,6 +8,16 @@ use stompymux_rs::*;
 /// Set one trusted administrative field under normal authorization and rollback.
 fn set(scripts: &Scripts, config: &Config, id: ObjectId, field: &str, value: &str) {
     set_battle_unit_field_action(scripts, config, ObjectId(1), id, field, value).unwrap();
+}
+
+/// Cooling of the sinks a unit's engine holds: its rating / 25, rounded down (TechManual
+/// pp. 52-53), at each sink's dissipation and never more than the template's.
+fn engine_cooling(scripts: &Scripts, id: ObjectId) -> u16 {
+    let world = scripts.world();
+    let definition = world.btech.constructed_units()[&id].definition();
+    let sinks = definition.engine_rating() / 25;
+    (sinks * u32::from(definition.heat_per_sink())).min(u32::from(definition.heat_dissipation()))
+        as u16
 }
 
 #[tokio::test]
@@ -18,7 +29,7 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         set(&scripts, &config, id, "heat", "7");
         set(&scripts, &config, id, "dissheat", "3");
-        set(&scripts, &config, id, "hsengoverride", "1");
+        let engine = engine_cooling(&scripts, id);
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
             original
@@ -29,21 +40,15 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
             original
         );
         set(&scripts, &config, id, "unitdamage", "C:7/0");
-        let first = external + 1;
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
-            first
-        );
-        set(&scripts, &config, id, "hsengoverride", "2");
-        assert_eq!(
-            scripts.world().btech.constructed_units()[&id].cooling_capacity(),
-            first
+            external + engine
         );
         set(&scripts, &config, id, "unitdamage", "C:7/1");
         {
             let world = scripts.world();
             let unit = &world.btech.constructed_units()[&id];
-            assert_eq!(unit.cooling_capacity(), external + 2);
+            assert_eq!(unit.cooling_capacity(), external + engine);
             assert_eq!(
                 unit.sampled_heat_rates(),
                 HeatRates {
@@ -51,7 +56,10 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
                     dissipation: 3.0
                 }
             );
-            assert_eq!(unit.heat_rates(&world).dissipation, f64::from(external + 2));
+            assert_eq!(
+                unit.heat_rates(&world).dissipation,
+                f64::from(external + engine)
+            );
         }
         let sink = scripts.world().btech.constructed_units()[&id]
             .loadout()
@@ -64,7 +72,7 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
         destroy_battle_critical(&mut scripts.world_mut(), id, sink).unwrap();
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
-            external + 1
+            external + engine - 1
         );
         let saved = scripts.world().clone();
         persistence::save(&config.database(), &saved).await.unwrap();
@@ -72,14 +80,6 @@ async fn single_sink_reconstruction_preserves_samples_and_applies_later_damage()
             persistence::load(&config.database()).await.unwrap().btech,
             saved.btech
         );
-        set(&scripts, &config, id, "hsengoverride", "-1");
-        let before = scripts.world().btech.clone();
-        assert!(
-            set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "unitdamage", "")
-                .is_err()
-        );
-        assert_eq!(scripts.world().btech, before);
-        set(&scripts, &config, id, "hsengoverride", "0");
         set(&scripts, &config, id, "unitdamage", "");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
@@ -124,27 +124,16 @@ async fn double_sinks_count_complete_installations_and_two_points_per_internal_s
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         create_battle_unit(&mut world, id, crate::support::templates::legal(definition)).unwrap();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        set(&scripts, &config, id, "hsengoverride", "1");
+        let engine = engine_cooling(&scripts, id);
         set(&scripts, &config, id, "unitdamage", "C:7/0");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
-            4
+            engine + 2
         );
         set(&scripts, &config, id, "unitdamage", "C:1/6");
         assert_eq!(
             scripts.world().btech.constructed_units()[&id].cooling_capacity(),
-            2
-        );
-        set(&scripts, &config, id, "unitdamage", "");
-        assert_eq!(
-            scripts.world().btech.constructed_units()[&id].cooling_capacity(),
-            4
-        );
-        set(&scripts, &config, id, "hsengoverride", "2147483647");
-        set(&scripts, &config, id, "unitdamage", "C:7/0");
-        assert_eq!(
-            scripts.world().btech.constructed_units()[&id].cooling_capacity(),
-            22
+            engine
         );
         scripts.world().validate(&config).unwrap();
     }

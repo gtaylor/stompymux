@@ -142,6 +142,7 @@ choice!(
     Cockpit {
         Standard = "standard" => [],
         Small = "small" => ["SmallCockpit_Tech", "SMCPIT"],
+        TorsoMounted = "torso_mounted" => ["TorsoCockpit_Tech", "TCPIT"],
     }
 );
 
@@ -543,33 +544,23 @@ fn technology_names(codes: std::ops::RangeInclusive<i32>) -> impl Iterator<Item 
     codes.filter_map(|code| super::administrative_technology(code).map(|(name, _)| name))
 }
 
-/// Actuators a section may leave out of its standard installation.
+/// Actuators a biped arm may leave out of its standard installation: only the lower arm and
+/// hand actuators, and an arm without its lower arm actuator has no hand actuator either.
+/// Shoulders, upper arm actuators and every leg actuator are mandatory (TechManual p. 45).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Omission {
-    Shoulder,
-    Upper,
     Lower,
     Hand,
-    Foot,
 }
 
 impl Omission {
-    const ALL: [Self; 5] = [
-        Self::Shoulder,
-        Self::Upper,
-        Self::Lower,
-        Self::Hand,
-        Self::Foot,
-    ];
+    const ALL: [Self; 2] = [Self::Lower, Self::Hand];
 
     /// Document spelling.
     pub fn spelling(self) -> &'static str {
         match self {
-            Self::Shoulder => "shoulder",
-            Self::Upper => "upper_actuator",
             Self::Lower => "lower_actuator",
             Self::Hand => "hand_actuator",
-            Self::Foot => "foot_actuator",
         }
     }
 
@@ -578,7 +569,11 @@ impl Omission {
         Self::ALL
             .into_iter()
             .find(|omission| omission.spelling() == value)
-            .with_context(|| format!("unknown omitted actuator {value}"))
+            .with_context(|| {
+                format!(
+                    "cannot omit {value}: a Mech may omit only its lower arm and hand actuators (TechManual p. 45)"
+                )
+            })
     }
 }
 
@@ -602,44 +597,27 @@ pub fn fixed_equipment(
 ) -> Result<BTreeMap<u8, &'static str>> {
     use MechSection::*;
     let mut items = BTreeMap::new();
-    let limb = |items: &mut BTreeMap<u8, &'static str>, last: &'static str, omit_last: Omission| {
-        if !plan.omit.contains(&Omission::Shoulder) {
-            items.insert(0, SHOULDER_OR_HIP);
-        }
-        if !plan.omit.contains(&Omission::Upper) {
-            items.insert(1, UPPER_ACTUATOR);
-        }
+    let limb = |items: &mut BTreeMap<u8, &'static str>| {
+        items.insert(0, SHOULDER_OR_HIP);
+        items.insert(1, UPPER_ACTUATOR);
         if !plan.omit.contains(&Omission::Lower) {
             items.insert(2, LOWER_ACTUATOR);
         }
-        if !plan.omit.contains(&omit_last) {
-            items.insert(3, last);
+        if !plan.omit.contains(&Omission::Hand) {
+            items.insert(3, HAND_OR_FOOT);
         }
     };
     let arm = chassis == MechChassis::Biped && matches!(section, LeftArm | RightArm);
-    let allowed: &[Omission] = match section {
-        LeftArm | RightArm if arm => &[
-            Omission::Shoulder,
-            Omission::Upper,
-            Omission::Lower,
-            Omission::Hand,
-        ],
-        LeftArm | RightArm | LeftLeg | RightLeg => &[
-            Omission::Shoulder,
-            Omission::Upper,
-            Omission::Lower,
-            Omission::Foot,
-        ],
-        _ => &[],
-    };
-    for omission in plan.omit {
-        ensure!(
-            allowed.contains(omission),
-            "{} has no {}",
-            section.name(),
-            omission.spelling()
-        );
-    }
+    ensure!(
+        plan.omit.is_empty() || arm,
+        "{} keeps all its actuators: only a biped arm may omit its lower arm and hand actuators (TechManual p. 45)",
+        chassis.section_name(section)
+    );
+    ensure!(
+        !plan.omit.contains(&Omission::Lower) || plan.omit.contains(&Omission::Hand),
+        "{} omits its lower arm actuator, so it must omit its hand actuator too (TechManual p. 45)",
+        section.name()
+    );
     let side_engine = match (
         construction.engine,
         construction.clan_component(Component::Engine),
@@ -655,8 +633,7 @@ pub fn fixed_equipment(
         "engine_at applies only to side torsos holding engine slots"
     );
     match section {
-        LeftArm | RightArm if arm => limb(&mut items, HAND_OR_FOOT, Omission::Hand),
-        LeftArm | RightArm | LeftLeg | RightLeg => limb(&mut items, HAND_OR_FOOT, Omission::Foot),
+        LeftArm | RightArm | LeftLeg | RightLeg => limb(&mut items),
         Head => {
             let layout: &[(u8, &str)] = match construction.cockpit {
                 Cockpit::Standard => &[
@@ -667,6 +644,9 @@ pub fn fixed_equipment(
                     (5, LIFE_SUPPORT),
                 ],
                 Cockpit::Small => &[(0, LIFE_SUPPORT), (1, SENSORS), (2, COCKPIT), (3, SENSORS)],
+                // A torso-mounted cockpit leaves the head only its two sensors (Tactical
+                // Operations: Advanced Units & Equipment p. 112).
+                Cockpit::TorsoMounted => &[(0, SENSORS), (1, SENSORS)],
             };
             items.extend(layout.iter().copied());
         }
@@ -691,9 +671,28 @@ pub fn fixed_equipment(
             items.extend((0..front).map(|slot| (slot, ENGINE)));
             items.extend((3..3 + gyro).map(|slot| (slot, GYRO)));
             items.extend((3 + gyro..engine + gyro).map(|slot| (slot, ENGINE)));
+            // A torso-mounted cockpit and its added sensor package follow the engine and gyro.
+            if construction.cockpit == Cockpit::TorsoMounted {
+                ensure!(
+                    engine + gyro + 2 <= 12,
+                    "a torso-mounted cockpit does not fit beside this engine and gyro"
+                );
+                items.insert(engine + gyro, COCKPIT);
+                items.insert(engine + gyro + 1, SENSORS);
+            }
         }
         LeftTorso | RightTorso => {
-            let first = plan.engine_at.unwrap_or(0);
+            // A torso-mounted cockpit moves one life support slot to each side torso, ahead of
+            // any engine slots there (Tactical Operations: Advanced Units & Equipment p. 112).
+            let torso_cockpit = construction.cockpit == Cockpit::TorsoMounted;
+            if torso_cockpit {
+                items.insert(0, LIFE_SUPPORT);
+            }
+            let first = plan.engine_at.unwrap_or(u8::from(torso_cockpit));
+            ensure!(
+                !torso_cockpit || first > 0,
+                "a torso-mounted cockpit's life support fills the first side torso slot"
+            );
             ensure!(
                 usize::from(first) + side_engine <= 12,
                 "engine slots run past the section"
@@ -984,6 +983,61 @@ mod tests {
                 .filter(|critical| critical.equipment == LIFE_SUPPORT)
                 .count(),
             1
+        );
+    }
+
+    /// A torso-mounted cockpit sits after the engine and gyro with its sensor package, moves
+    /// a life support slot to the top of each side torso and leaves the head two sensors
+    /// (Tactical Operations: Advanced Units & Equipment p. 112).
+    #[test]
+    fn torso_mounted_cockpits_move_into_the_torsos() {
+        use MechSection::*;
+        let jenner = include_str!("../tests/fixtures/JR7-D.toml");
+        let source = jenner
+            .replacen("[construction]\n", "[construction]\ncockpit = \"torso_mounted\"\n", 1)
+            .replace(
+                "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]",
+                "slots = [\n    { at = \"2-4\", item = \"JumpJet\" },\n]",
+            )
+            .replace(
+                "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"JumpJet\" },",
+                "    { at = 4, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"JumpJet\" },",
+            )
+            .replace(
+                "    { at = 11, item = \"IS.SRM-4\" },\n    { at = 12, item = \"JumpJet\" },\n",
+                "",
+            )
+            .replace(
+                "    { at = 4, item = \"HeatSink\" },",
+                "    { at = 3, item = \"IS.SRM-4\" },\n    { at = 4, item = \"HeatSink\" },",
+            );
+        let template = crate::MechTemplate::parse("JR7-D", &source).unwrap();
+        let slot = |section, slot: u8| {
+            template.sections[&section].criticals[&slot]
+                .equipment
+                .clone()
+        };
+        assert_eq!(
+            (slot(Head, 0), slot(Head, 1)),
+            (SENSORS.into(), SENSORS.into())
+        );
+        assert_eq!(slot(CenterTorso, 10), COCKPIT);
+        assert_eq!(slot(CenterTorso, 11), SENSORS);
+        assert_eq!(slot(LeftTorso, 0), LIFE_SUPPORT);
+        assert_eq!(slot(RightTorso, 0), LIFE_SUPPORT);
+        // Everything else passes; the cockpit's extra ton leaves the Jenner overweight.
+        let rejection = crate::check_template(&template)
+            .rejection
+            .unwrap_or_default();
+        assert!(rejection.contains("over the 35-ton chassis"), "{rejection}");
+        let rendered = template.to_document().unwrap();
+        assert!(rendered.contains("cockpit = \"torso_mounted\""));
+        assert!(!rendered.contains("engine_at"));
+        assert_eq!(
+            crate::MechTemplate::parse("JR7-D", &rendered)
+                .unwrap()
+                .sections,
+            template.sections
         );
     }
 

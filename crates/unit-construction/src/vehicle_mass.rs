@@ -277,7 +277,7 @@ impl VehicleTemplate {
                     1536
                 }
             }
-            System::ArtemisIv => 1024,
+            System::ArtemisIv | System::ApolloFcs => 1024,
             System::ArtemisV => 1536,
             System::RetractableBlade => {
                 512 + super::mass::half_ton((u32::from(self.tons) * 1024).div_ceil(20))
@@ -328,7 +328,16 @@ impl VehicleTemplate {
             | System::LightFerroFibrous
             | System::StealthArmor
             | System::LaserReflective
-            | System::NullSignature => 0,
+            | System::NullSignature
+            | System::Talons
+            | System::Spikes => 0,
+            System::MachineGunArray => {
+                if self.has_special("Clan") {
+                    256
+                } else {
+                    512
+                }
+            }
         }
     }
 }

@@ -18,8 +18,9 @@ impl ActiveProbe {
     /// Every family, longest reach first.
     pub const BY_REACH: [Self; 4] = [Self::Bloodhound, Self::Watchdog, Self::Beagle, Self::Light];
 
-    /// Hardware reach before the stationary-installation bonus. On a Clan chassis the
-    /// Beagle slot is the Clan active probe, which reaches as far as the Watchdog.
+    /// Hardware reach before the stationary-installation bonus. A Clan Beagle slot (a Clan
+    /// chassis's, or one stated `CL.BeagleProbe`) is the Clan active probe, which reaches as
+    /// far as the Watchdog.
     pub fn range(self, clan: bool) -> u8 {
         match self {
             Self::Beagle if clan => 5,

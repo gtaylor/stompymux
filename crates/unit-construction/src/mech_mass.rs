@@ -86,8 +86,12 @@ impl MechTemplate {
             half_ton(family.unrounded_mass(engine_mass(rating)))
         };
         let gyro = Gyro::from_definition(self).mass(rating.div_ceil(100) as i32 * 1024) as u32;
+        // A small cockpit weighs two tons, a torso-mounted one four (Tactical Operations:
+        // Advanced Units & Equipment p. 112) and a standard one three.
         let cockpit = if self.has_technology(Technology::SmallCockpit) {
             2 * 1024
+        } else if self.has_technology(Technology::TorsoMountedCockpit) {
+            4 * 1024
         } else {
             3 * 1024
         };
@@ -137,7 +141,12 @@ impl MechTemplate {
             *systems.entry((part.system, name.clone())).or_default() += 1;
         }
         for ((system, name), slots) in systems {
-            add(&name, slots as u32, system_mass(self, system, slots));
+            let clan = System::installation(&name)
+                .and_then(|(_, base)| base)
+                .map_or(self.has_special("Clan"), |base| {
+                    base == super::TechBase::Clan
+                });
+            add(&name, slots as u32, system_mass(self, system, clan, slots));
         }
         for bin in &loadout.ammunition {
             add(

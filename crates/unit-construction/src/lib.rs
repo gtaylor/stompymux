@@ -32,12 +32,12 @@ mod construction;
 mod cost;
 mod document;
 mod engine;
-mod engine_sink_override;
 mod equipment;
 mod fire_mode;
 mod gyro;
 mod inspection;
 mod loadout;
+mod machine_gun_array;
 mod mass;
 mod mech;
 mod mech_mass;
@@ -75,9 +75,6 @@ pub use cost::{
 };
 pub use document::ParsedTemplate;
 pub use engine::{Engine, rated_output, running_mp_of_walking};
-pub use engine_sink_override::{
-    parse_engine_sink_override, read_engine_sink_override, write_engine_sink_override,
-};
 pub use equipment::{
     ARTILLERY_MAPSHEET_HEXES, PhysicalBattleValue, RangeBracket, System, SystemContext,
     WaterRanges, Weapon, WeaponProfile, WeaponRange, strip_name_prefix,
@@ -97,6 +94,7 @@ pub use inspection::{
 pub use loadout::{
     AmmunitionBin, CriticalLocation, MechLoadout, ResolvedLoadout, SystemCritical, WeaponMount,
 };
+pub use machine_gun_array::{ARRAY_GUNS, MachineGunArray, MachineGunClass};
 pub use mass::{
     armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
     structure_mass, system_mass, system_slot_mass,
@@ -119,7 +117,7 @@ pub use registry::{
 pub use speed::{
     parse_template_speed, read_template_speed, template_walking_mp, write_template_speed,
 };
-pub use tech_base::{TechBase, TechnologyInventory, check_technology_base};
+pub use tech_base::{SystemInstallation, TechBase, TechnologyInventory, check_technology_base};
 pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
 pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
 pub use transport_bay::{BaySize, TRANSPORT_BAYS, TransportBay, TransportBays};

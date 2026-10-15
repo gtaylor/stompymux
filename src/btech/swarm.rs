@@ -116,6 +116,8 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                         angel_blocked: false,
                         ams_engaged: request.ams_engaged && report.hops.is_empty(),
                         indirect: false,
+                        apollo: false,
+                        array: None,
                     },
                     request.rules.vehicle_impact,
                     super::vehicle_salvo::SalvoContext {
@@ -143,6 +145,8 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                         character: request.character,
                         ams_engaged: request.ams_engaged && report.hops.is_empty(),
                         indirect: false,
+                        apollo: false,
+                        array: None,
                         experience,
                     },
                 )?)

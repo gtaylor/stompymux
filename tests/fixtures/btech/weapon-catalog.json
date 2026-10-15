@@ -191,6 +191,44 @@
   },
   {
     "accuracy": 0,
+    "mass": 1024,
+    "name": "IS.B-Pod",
+    "profile": {
+      "ammunition_per_ton": 0,
+      "critical_slots": 1,
+      "damage": 0,
+      "heat": 0,
+      "long_range": 1,
+      "medium_range": 1,
+      "minimum_range": 0,
+      "missiles": 0,
+      "recycle_seconds": 30,
+      "short_range": 1
+    },
+    "skill": "Gunnery-Laser",
+    "weapon": "b_pod"
+  },
+  {
+    "accuracy": 0,
+    "mass": 1024,
+    "name": "CL.B-Pod",
+    "profile": {
+      "ammunition_per_ton": 0,
+      "critical_slots": 1,
+      "damage": 0,
+      "heat": 0,
+      "long_range": 1,
+      "medium_range": 1,
+      "minimum_range": 0,
+      "missiles": 0,
+      "recycle_seconds": 30,
+      "short_range": 1
+    },
+    "skill": "Gunnery-Laser",
+    "weapon": "clan_b_pod"
+  },
+  {
+    "accuracy": 0,
     "mass": 5120,
     "name": "IS.iNarcBeacon",
     "profile": {

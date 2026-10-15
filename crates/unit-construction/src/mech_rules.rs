@@ -87,6 +87,103 @@ fn physical_weapon(system: System, tons: u16) -> Option<PhysicalWeapon> {
     })
 }
 
+/// Every limb carries its shoulder or hip and upper actuator, and every leg its lower and
+/// foot actuators too. Only a biped arm may leave out its lower arm and hand actuators, and
+/// one without its lower arm actuator has no hand actuator either (TechManual p. 45).
+fn validate_actuators(loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
+    for section in [
+        MechSection::LeftArm,
+        MechSection::RightArm,
+        MechSection::LeftLeg,
+        MechSection::RightLeg,
+    ] {
+        let has = |system| {
+            loadout
+                .systems
+                .iter()
+                .any(|part| part.system == system && part.location.section == section)
+        };
+        let name = chassis.section_name(section);
+        let arm = !chassis.is_leg(section);
+        let (lower, hand) = (has(System::LowerActuator), has(System::HandOrFootActuator));
+        ensure!(
+            has(System::ShoulderOrHip) && has(System::UpperActuator),
+            "{name} lacks its {} actuators; only lower arm and hand actuators may be removed (TechManual p. 45)",
+            if arm {
+                "shoulder and upper arm"
+            } else {
+                "hip and upper leg"
+            }
+        );
+        ensure!(
+            arm || (lower && hand),
+            "{name} lacks its lower leg or foot actuator; only lower arm and hand actuators may be removed (TechManual p. 45)"
+        );
+        ensure!(
+            lower || !hand,
+            "{name} keeps its hand actuator without a lower arm actuator (TechManual p. 45)"
+        );
+    }
+    Ok(())
+}
+
+/// Talons fill two slots in every leg and nowhere else; a location holds at most one spike
+/// cluster (Tactical Operations: Advanced Units & Equipment p. 100).
+fn validate_talons_and_spikes(loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
+    let count = |system, section| {
+        loadout
+            .systems
+            .iter()
+            .filter(|part| part.system == system && part.location.section == section)
+            .count()
+    };
+    if loadout
+        .systems
+        .iter()
+        .any(|part| part.system == System::Talons)
+    {
+        for section in MechSection::ALL {
+            let expected = if chassis.is_leg(section) { 2 } else { 0 };
+            ensure!(
+                count(System::Talons, section) == expected,
+                "Talons fill two slots in every leg and nowhere else; {} has {}",
+                chassis.section_name(section),
+                count(System::Talons, section)
+            );
+        }
+    }
+    for section in MechSection::ALL {
+        ensure!(
+            count(System::Spikes, section) <= 1,
+            "{} mounts more than one spike cluster",
+            chassis.section_name(section)
+        );
+    }
+    Ok(())
+}
+
+/// Each machine gun array links two to four machine guns of one size class in its location,
+/// and a gun belongs to one array at most (TechManual p. 228).
+fn validate_machine_gun_arrays(loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
+    let mut linked = std::collections::BTreeSet::new();
+    for array in loadout.machine_gun_arrays() {
+        let name = chassis.section_name(array.location.section);
+        ensure!(
+            super::ARRAY_GUNS.contains(&array.weapon_indices.len()),
+            "A machine gun array in {name} slot {} links {} machine guns; it links two to four of one size class beside it",
+            array.location.slot + 1,
+            array.weapon_indices.len()
+        );
+        for index in array.weapon_indices {
+            ensure!(
+                linked.insert(index),
+                "A machine gun in {name} is linked to two machine gun arrays"
+            );
+        }
+    }
+    Ok(())
+}
+
 impl MechTemplate {
     /// Running MP: the walking MP x 1.5, rounded up (TM p. 48).
     pub fn running_mp(&self) -> u32 {
@@ -130,10 +227,27 @@ impl MechTemplate {
         whole_movement_points(self.jump_speed, "Jumping speed")
     }
 
-    /// Critical slots, and tons, of MASC: 5% of an Inner Sphere Mech's tonnage or 4% of a
-    /// Clan Mech's, rounded to the nearest whole number (TM p. 52).
+    /// Whether the installed `system` is Clan technology: the base its slots' `IS.` or `CL.`
+    /// prefix states, or the chassis's base when they state none.
+    pub fn installation_is_clan(&self, system: System) -> bool {
+        let declared = self
+            .sections
+            .values()
+            .flat_map(|section| section.criticals.values())
+            .filter_map(|critical| System::installation(&critical.equipment))
+            .find(|(installed, _)| *installed == system)
+            .and_then(|(_, base)| base);
+        declared.map_or(self.has_special("Clan"), |base| base == TechBase::Clan)
+    }
+
+    /// Critical slots, and tons, of MASC: 5% of the tonnage for Inner Sphere MASC or 4% for
+    /// Clan MASC, rounded to the nearest whole number (TM p. 52).
     pub fn masc_slots(&self) -> usize {
-        let percent = if self.has_special("Clan") { 4 } else { 5 };
+        let percent = if self.installation_is_clan(System::Masc) {
+            4
+        } else {
+            5
+        };
         usize::from((self.tons * percent + 50) / 100).max(1)
     }
 
@@ -143,6 +257,7 @@ impl MechTemplate {
         let chassis = self.chassis()?;
         self.validate_movement()?;
         self.validate_engine(loadout)?;
+        validate_actuators(loadout, chassis)?;
         self.validate_jump_jets(loadout, chassis)?;
         self.validate_heat_sinks(loadout)?;
         self.validate_technology_slots(loadout, chassis)?;
@@ -150,6 +265,8 @@ impl MechTemplate {
         self.validate_myomer_and_boosters(loadout)?;
         self.validate_targeting_computer(loadout)?;
         self.validate_physical_weapons(loadout, chassis)?;
+        validate_talons_and_spikes(loadout, chassis)?;
+        validate_machine_gun_arrays(loadout, chassis)?;
         self.validate_weapon_mounting(loadout, chassis)?;
         self.validate_technology_base(loadout)?;
         self.validate_total_mass(loadout)
@@ -426,41 +543,37 @@ impl MechTemplate {
     }
 
     /// A targeting computer weighs, and fills as many contiguous slots in one location as,
-    /// the tonnage of the direct-fire weapons divided by 4 (Inner Sphere) or 5 (Clan),
-    /// rounded up (TM p. 238).
+    /// the tonnage of the direct-fire weapons divided by 4 for an Inner Sphere computer or 5
+    /// for a Clan one, rounded up (TM p. 238).
     fn validate_targeting_computer(&self, loadout: &MechLoadout) -> Result<()> {
         let computer: Vec<_> = loadout
             .systems
             .iter()
             .filter(|part| part.system == System::TargetingComputer)
-            .map(|part| part.location)
             .collect();
         if computer.is_empty() {
             return Ok(());
         }
+        let clan = computer[0].is_clan(self.has_special("Clan"));
+        ensure!(
+            computer
+                .iter()
+                .all(|part| part.is_clan(self.has_special("Clan")) == clan),
+            "A targeting computer is built from one technology base"
+        );
         let weapons: u32 = loadout
             .weapons
             .iter()
             .filter(|mount| mount.weapon.is_direct_fire())
             .map(|mount| mount.weapon.mass())
             .sum();
-        let size = |divisor: u32| weapons.div_ceil(1024 * divisor) as usize;
-        let expected = if self.has_special("Clan") {
-            size(5)
-        } else {
-            size(4)
-        };
-        // A mixed-technology Mech may carry either base's computer.
-        let other = if self.has_special("Clan") {
-            size(4)
-        } else {
-            size(5)
-        };
+        let divisor = if clan { 5 } else { 4 };
+        let expected = weapons.div_ceil(1024 * divisor) as usize;
+        let locations: Vec<_> = computer.iter().map(|part| part.location).collect();
         ensure!(
-            (computer.len() == expected
-                || (self.has_special(MIXED_TECH) && computer.len() == other))
-                && contiguous(&computer),
-            "A targeting computer for {:.1} tons of direct-fire weapons needs {expected} contiguous critical slots in one location; found {}",
+            computer.len() == expected && contiguous(&locations),
+            "A{} targeting computer for {:.1} tons of direct-fire weapons needs {expected} contiguous critical slots in one location; found {}",
+            if clan { " Clan" } else { "n Inner Sphere" },
             f64::from(weapons) / 1024.0,
             computer.len()
         );
@@ -525,7 +638,8 @@ impl MechTemplate {
     }
 
     /// Artemis IV or V serves every applicable launcher or none, from the launcher's location
-    /// (TM p. 206); Inner Sphere CASE goes in torsos (TM p. 210); rear-firing weapons sit in
+    /// (TM p. 206), as the MRM Apollo system serves every MRM launcher (Tactical Operations:
+    /// Advanced Units & Equipment p. 142); CASE goes in torsos (TM p. 210); rear-firing weapons sit in
     /// torsos, legs or the head (TM p. 46); a heavy Gauss rifle sits in the torsos, splitting
     /// only between a side and the center torso (TM p. 218); and only ranged weapons of eight
     /// or more slots split, across two adjacent locations other than the legs (TM p. 47).
@@ -572,15 +686,43 @@ impl MechTemplate {
                 );
             }
         }
-        if !self.has_special("Clan") {
-            ensure!(
-                loadout
-                    .systems
+        // An MRM "Apollo" fire control system serves every MRM launcher or none, one per
+        // launcher in the launcher's location (Tactical Operations: Advanced Units & Equipment
+        // p. 142).
+        let apollo = |section: Option<MechSection>| {
+            loadout
+                .systems
+                .iter()
+                .filter(|part| {
+                    part.system == System::ApolloFcs
+                        && section.is_none_or(|s| part.location.section == s)
+                })
+                .count()
+        };
+        if apollo(None) > 0 {
+            for section in MechSection::ALL {
+                let launchers = loadout
+                    .weapons
                     .iter()
-                    .all(|part| part.system != System::Case || torso(part.location.section)),
-                "Inner Sphere CASE may only be mounted in torso locations"
-            );
+                    .filter(|mount| mount.weapon.is_mrm() && mount.criticals[0].section == section)
+                    .count();
+                ensure!(
+                    apollo(Some(section)) == launchers,
+                    "An MRM Apollo fire control system must serve every MRM launcher from its location: {} has {launchers} launchers and {} Apollo systems",
+                    chassis.section_name(section),
+                    apollo(Some(section))
+                );
+            }
         }
+        // CASE as an item is Inner Sphere CASE wherever it is mounted; Clan CASE is built into
+        // Clan structure (TM p. 210).
+        ensure!(
+            loadout
+                .systems
+                .iter()
+                .all(|part| part.system != System::Case || torso(part.location.section)),
+            "Inner Sphere CASE may only be mounted in torso locations"
+        );
         for mount in &loadout.weapons {
             let primary = mount.criticals[0].section;
             let name = mount.weapon.name();
@@ -631,6 +773,17 @@ impl MechTemplate {
             clan || mixed_tech || !self.has_technology(super::Technology::Watchdog),
             "The Watchdog suite is Clan technology on an Inner Sphere Mech; declare mixed_tech in [construction]"
         );
+        // CASE as a BattleMech item is Inner Sphere CASE: Clan CASE is built into every
+        // location of a Clan-structure Mech rather than installed (TechManual p. 210).
+        ensure!(
+            !clan
+                || mixed_tech
+                || loadout
+                    .systems
+                    .iter()
+                    .all(|part| part.system != System::Case),
+            "Case is Inner Sphere technology on a Clan Mech, whose CASE is built in; declare mixed_tech in [construction]"
+        );
         check_technology_base(TechnologyInventory {
             unit: "Mech",
             base: TechBase::of(clan),
@@ -640,7 +793,10 @@ impl MechTemplate {
                 .filter(|component| self.has_special(component.flag(!clan)))
                 .collect(),
             weapons: loadout.weapons.iter().map(|mount| mount.weapon),
-            systems: loadout.systems.iter().map(|part| part.system),
+            systems: loadout
+                .systems
+                .iter()
+                .map(|part| (part.system, part.tech_base)),
         })
     }
 
@@ -879,6 +1035,174 @@ mod tests {
         refused(
             &JENNER.replacen("item = \"IS.MediumLaser\"", "item = \"LightTAG\"", 1),
             "LightTag is Clan technology on an Inner Sphere Mech",
+        );
+    }
+
+    /// A slot may state the base of equipment both bases build, which then sizes it and must
+    /// match the chassis unless the design is mixed technology.
+    #[test]
+    fn stated_technology_bases_size_shared_equipment() {
+        let with = |item: &str, at: &str| {
+            JENNER.replace(
+                "    { at = \"1-2\", item = \"JumpJet\" },\n]",
+                &format!(
+                    "    {{ at = \"1-2\", item = \"JumpJet\" }},\n    {{ at = \"{at}\", item = \"{item}\" }},\n]"
+                ),
+            )
+        };
+        refused(
+            &with("CL.Ecm", "3"),
+            "CL.Ecm is Clan technology on an Inner Sphere Mech",
+        );
+        let mixed = |source: String| {
+            source.replacen("[construction]\n", "[construction]\nmixed_tech = true\n", 1)
+        };
+        // Clan MASC fills 4% of the 35 tons, rounded: one slot (TM p. 52).
+        let clan_masc = MechTemplate::parse("JR7-D", &mixed(with("CL.Masc", "3"))).unwrap();
+        assert_eq!(clan_masc.masc_slots(), 1);
+        assert!(clan_masc.installation_is_clan(crate::System::Masc));
+        let inner_masc = MechTemplate::parse("JR7-D", &with("Masc", "3-4")).unwrap();
+        assert_eq!(inner_masc.masc_slots(), 2);
+        refused(
+            &mixed(with("CL.TargetingComputer", "3-4")),
+            "A Clan targeting computer for 4.0 tons of direct-fire weapons needs 1",
+        );
+    }
+
+    /// Talons fill two slots in each leg, weighing a ton per fifteen tons of Mech; a location
+    /// holds one spike cluster (Tactical Operations: Advanced Units & Equipment p. 100).
+    #[test]
+    fn talons_fill_every_leg_and_spikes_one_per_location() {
+        let mixed = |source: String| {
+            source.replacen("[construction]\n", "[construction]\nmixed_tech = true\n", 1)
+        };
+        let leg = |section: &str, slots: &str| {
+            format!("[sections.{section}]\narmor = 6\nslots = [\n{slots}]\n")
+        };
+        let talons = "    { at = \"5-6\", item = \"Talons\" },\n";
+        let one_leg =
+            mixed(JENNER.replace("[sections.left_leg]\narmor = 6\n", &leg("left_leg", talons)));
+        refused(
+            &one_leg,
+            "Talons fill two slots in every leg and nowhere else; Right_Leg has 0",
+        );
+        let both = one_leg.replace(
+            "[sections.right_leg]\narmor = 6\n",
+            &leg("right_leg", talons),
+        );
+        let template = MechTemplate::parse("JR7-D", &both).unwrap();
+        let loadout = crate::MechLoadout::resolve(&template).unwrap();
+        // A 35-ton Mech's talons weigh 3 tons in all.
+        assert_eq!(
+            template.construction_mass(&loadout).unwrap().total
+                - MechTemplate::parse("JR7-D", JENNER)
+                    .unwrap()
+                    .construction_mass(
+                        &crate::MechLoadout::resolve(
+                            &MechTemplate::parse("JR7-D", JENNER).unwrap()
+                        )
+                        .unwrap()
+                    )
+                    .unwrap()
+                    .total,
+            3 * 1024
+        );
+        let error = rejection(&both.replace("mixed_tech = true\n", "")).unwrap_or_default();
+        assert!(error.contains("Talons is Clan technology"), "{error}");
+        refused(
+            &JENNER.replace(
+                "[sections.left_leg]\narmor = 6\n",
+                &leg(
+                    "left_leg",
+                    "    { at = 5, item = \"Spikes\" },\n    { at = 6, item = \"Spikes\" },\n",
+                ),
+            ),
+            "Left_Leg mounts more than one spike cluster",
+        );
+    }
+
+    /// A machine gun array needs two to four machine guns beside it (TechManual p. 228), and
+    /// weighs half a ton, or a quarter ton built by the Clans.
+    #[test]
+    fn machine_gun_arrays_link_two_to_four_guns() {
+        let torso = |slots: &str| {
+            JENNER.replace(
+                "slots = [\n    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"JumpJet\" },\n]",
+                &format!("slots = [\n    {{ at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 }},\n    {{ at = \"2-3\", item = \"JumpJet\" }},\n{slots}]"),
+            )
+        };
+        refused(
+            &torso(
+                "    { at = 4, item = \"IS.MachineGun\" },\n    { at = 5, item = \"IS.MGA\" },\n",
+            ),
+            "links 1 machine guns",
+        );
+        let pair = torso(
+            "    { at = \"4-5\", item = \"IS.MachineGun\" },\n    { at = 6, item = \"IS.MGA\" },\n",
+        );
+        // Everything else passes: two guns and the array add 2.5 tons to a full Jenner.
+        refused(&pair, "over the 35-ton chassis");
+        let template = MechTemplate::parse("JR7-D", &pair).unwrap();
+        let loadout = crate::MechLoadout::resolve(&template).unwrap();
+        let clan = MechTemplate::parse("JR7-D", &pair.replace("IS.MGA", "CL.MGA")).unwrap();
+        let clan_loadout = crate::MechLoadout::resolve(&clan).unwrap();
+        assert_eq!(
+            template.construction_mass(&loadout).unwrap().total
+                - clan.construction_mass(&clan_loadout).unwrap().total,
+            256
+        );
+    }
+
+    /// Only a biped arm's lower arm and hand actuators may be removed, the hand with the lower
+    /// arm (TM p. 45).
+    #[test]
+    fn only_lower_arm_and_hand_actuators_may_be_omitted() {
+        for omit in [
+            "[\"shoulder\", \"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]",
+            "[\"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]",
+        ] {
+            let source = JENNER.replacen(
+                "omit = [\"lower_actuator\", \"hand_actuator\"]",
+                &format!("omit = {omit}"),
+                1,
+            );
+            let error = format!("{:#}", MechTemplate::parse("JR7-D", &source).unwrap_err());
+            assert!(
+                error.contains("may omit only its lower arm and hand"),
+                "{error}"
+            );
+        }
+        let lower_only = JENNER.replacen(
+            "omit = [\"lower_actuator\", \"hand_actuator\"]",
+            "omit = [\"lower_actuator\"]",
+            1,
+        );
+        let error = format!(
+            "{:#}",
+            MechTemplate::parse("JR7-D", &lower_only).unwrap_err()
+        );
+        assert!(error.contains("must omit its hand actuator too"), "{error}");
+        let leg = JENNER.replace(
+            "[sections.left_leg]\narmor = 6\n",
+            "[sections.left_leg]\narmor = 6\nomit = [\"hand_actuator\"]\n",
+        );
+        let error = format!("{:#}", MechTemplate::parse("JR7-D", &leg).unwrap_err());
+        assert!(
+            error.contains("Left_Leg keeps all its actuators"),
+            "{error}"
+        );
+        // A section listing its slots explicitly is held to the same rule.
+        let mut shoulderless = MechTemplate::parse("JR7-D", JENNER).unwrap();
+        shoulderless
+            .sections
+            .get_mut(&crate::MechSection::LeftArm)
+            .unwrap()
+            .criticals
+            .remove(&0);
+        let rejection = check_template(&shoulderless).rejection.unwrap_or_default();
+        assert!(
+            rejection.contains("Left_Arm lacks its shoulder and upper arm actuators"),
+            "{rejection}"
         );
     }
 

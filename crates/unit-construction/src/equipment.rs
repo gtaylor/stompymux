@@ -83,6 +83,8 @@ impl Weapon {
                     | Self::ClanLaserAms
                     | Self::APod
                     | Self::ClanAPod
+                    | Self::BPod
+                    | Self::ClanBPod
                     | Self::NarcBeacon
                     | Self::ClanNarcBeacon
                     | Self::INarcBeacon
@@ -129,6 +131,12 @@ impl Weapon {
                     | Self::ClanSrt4
                     | Self::ClanSrt6
             )
+    }
+
+    /// Medium-range missile launchers, the launchers an MRM "Apollo" fire-control system serves
+    /// (Tactical Operations: Advanced Units & Equipment p. 142).
+    pub fn is_mrm(self) -> bool {
+        matches!(self, Self::Mrm10 | Self::Mrm20 | Self::Mrm30 | Self::Mrm40)
     }
 
     /// Flamers can transfer their damage as heat, independently of their ammunition supply.
@@ -259,7 +267,12 @@ impl Weapon {
     /// plasma weapons. Anti-personnel pods and laser anti-missile systems never strike armor.
     pub fn is_energy(self) -> bool {
         match self {
-            Self::APod | Self::ClanAPod | Self::LaserAms | Self::ClanLaserAms => false,
+            Self::APod
+            | Self::ClanAPod
+            | Self::BPod
+            | Self::ClanBPod
+            | Self::LaserAms
+            | Self::ClanLaserAms => false,
             Self::HeavyFlamer | Self::VehicleFlamer | Self::PlasmaRifle => true,
             _ => self.gunnery_skill(true) == "Gunnery-Laser",
         }
@@ -295,13 +308,26 @@ impl Weapon {
         self.one_shot_battle_value().is_some()
     }
 
+    /// Anti-battle armor pods (TechManual p. 204; Total Warfare p. 130).
+    pub fn is_b_pod(self) -> bool {
+        matches!(self, Self::BPod | Self::ClanBPod)
+    }
+
+    /// Damage an unexpended B-Pod releases when a critical hit destroys it: 2 points (Total
+    /// Warfare p. 130). Zero for every other weapon; Gauss weapons explode by
+    /// [`Weapon::weapon_explosion_damage`].
+    pub fn pod_explosion_damage(self) -> u8 {
+        if self.is_b_pod() { 2 } else { 0 }
+    }
+
     /// Critical slots this weapon counts as a Gauss weapon when the Defensive Battle Rating
     /// subtracts one point per exposed Gauss slot (TechManual p. 302): every Gauss rifle,
     /// hyper-assault and anti-personnel Gauss rifle by its full slot count, and a
     /// hyper-velocity autocannon as one slot (Tactical Operations: Advanced Units & Equipment
-    /// p. 195, note Q). `None` for every other weapon.
+    /// p. 195, note Q), and a B-Pod by its one slot (TechManual p. 317, note ‡). `None` for
+    /// every other weapon.
     pub fn defensive_gauss_slots(self) -> Option<u8> {
-        if matches!(self, Self::HyperAc2 | Self::HyperAc5 | Self::HyperAc10) {
+        if matches!(self, Self::HyperAc2 | Self::HyperAc5 | Self::HyperAc10) || self.is_b_pod() {
             return Some(1);
         }
         (self.weapon_explosion_damage() > 0).then_some(self.profile().critical_slots)
@@ -309,9 +335,10 @@ impl Weapon {
 
     /// Weapons whose BV counts toward the Defensive Battle Rating rather than the offensive
     /// rating (the † entries of TechManual pp. 317-318 and Tactical Operations: Advanced Units
-    /// & Equipment p. 194): anti-missile systems, laser anti-missile systems and A-Pods.
+    /// & Equipment p. 194): anti-missile systems, laser anti-missile systems, A-Pods and
+    /// B-Pods.
     pub fn is_defensive_equipment(self) -> bool {
-        self.is_ams() || matches!(self, Self::APod | Self::ClanAPod)
+        self.is_ams() || matches!(self, Self::APod | Self::ClanAPod) || self.is_b_pod()
     }
 
     /// Whether this weapon's ammunition is explosive for the Defensive Battle Rating
@@ -420,6 +447,10 @@ pub enum System {
     /// Clan Artemis V fire control: one and a half tons in two slots per launcher (Tactical
     /// Operations: Advanced Units & Equipment p. 217).
     ArtemisV,
+    /// Inner Sphere MRM "Apollo" fire control: a ton in one slot per MRM launcher, linked to
+    /// its launcher like Artemis IV (Tactical Operations: Advanced Units & Equipment pp. 142,
+    /// 219).
+    ApolloFcs,
     Ecm,
     AngelEcm,
     StealthArmor,
@@ -445,6 +476,18 @@ pub enum System {
     SmallVibroblade,
     MediumVibroblade,
     LargeVibroblade,
+    /// Clan talons: two slots in every leg, a ton per fifteen tons of Mech in all, raising
+    /// kick and death from above damage by half (Tactical Operations: Advanced Units &
+    /// Equipment pp. 100, 103).
+    Talons,
+    /// A machine gun array: one slot linking two to four machine guns of one size class in its
+    /// location, half a ton (Inner Sphere) or a quarter ton (Clan) (TechManual pp. 228,
+    /// 341-343).
+    MachineGunArray,
+    /// An Inner Sphere spike cluster: half a ton in one slot, at most one per location,
+    /// blunting physical attacks against its location (Tactical Operations: Advanced Units &
+    /// Equipment pp. 100, 103).
+    Spikes,
 }
 
 impl System {
@@ -472,12 +515,19 @@ impl System {
         Ok(system)
     }
 
-    /// Look up a system slot name, or `None` for weapons, ammunition and unknown parts.
+    /// Look up a system slot name, or `None` for weapons, ammunition and unknown parts. A
+    /// system both technology bases build may carry an `IS.` or `CL.` prefix stating its base
+    /// (see [`System::installation`]).
     ///
     /// Validation and critical-slot scans ask this of every slot on a unit, most of which
     /// are not systems, so the miss returns no error: building one per slot would format a
     /// message and, when backtraces are enabled, capture a stack trace each time.
     pub fn named(name: &str) -> Option<Self> {
+        Self::installation(name).map(|(system, _)| system)
+    }
+
+    /// Look up a system slot name without a technology prefix.
+    pub(crate) fn unprefixed(name: &str) -> Option<Self> {
         match name {
             name if name.eq_ignore_ascii_case("ShoulderOrHip") => Some(Self::ShoulderOrHip),
             name if name.eq_ignore_ascii_case("UpperActuator") => Some(Self::UpperActuator),
@@ -496,6 +546,7 @@ impl System {
             name if name.eq_ignore_ascii_case("TargetingComputer") => Some(Self::TargetingComputer),
             name if name.eq_ignore_ascii_case("ArtemisIV") => Some(Self::ArtemisIv),
             name if name.eq_ignore_ascii_case("ArtemisV") => Some(Self::ArtemisV),
+            name if name.eq_ignore_ascii_case("ApolloFCS") => Some(Self::ApolloFcs),
             name if name.eq_ignore_ascii_case("Ecm") => Some(Self::Ecm),
             name if name.eq_ignore_ascii_case("AngelEcm") => Some(Self::AngelEcm),
             name if name.eq_ignore_ascii_case("StealthArmor") => Some(Self::StealthArmor),
@@ -519,6 +570,9 @@ impl System {
             name if name.eq_ignore_ascii_case("Small_Vibroblade") => Some(Self::SmallVibroblade),
             name if name.eq_ignore_ascii_case("Medium_Vibroblade") => Some(Self::MediumVibroblade),
             name if name.eq_ignore_ascii_case("Large_Vibroblade") => Some(Self::LargeVibroblade),
+            name if name.eq_ignore_ascii_case("Talons") => Some(Self::Talons),
+            name if name.eq_ignore_ascii_case("Spikes") => Some(Self::Spikes),
+            name if name.eq_ignore_ascii_case("MGA") => Some(Self::MachineGunArray),
             name if name.eq_ignore_ascii_case("FerroFibrous") => Some(Self::FerroFibrous),
             name if name.eq_ignore_ascii_case("EndoSteel") => Some(Self::EndoSteel),
             name if name.eq_ignore_ascii_case("TripleStrengthMyomer") => {
@@ -661,6 +715,12 @@ mod tests {
         assert!(W::AntiMissileSystem.is_defensive_equipment());
         assert!(W::ClanLaserAms.is_defensive_equipment());
         assert!(W::APod.is_defensive_equipment());
+        assert!(W::ClanBPod.is_defensive_equipment());
+        assert_eq!(W::BPod.defensive_gauss_slots(), Some(1));
+        assert_eq!(W::BPod.pod_explosion_damage(), 2);
+        assert_eq!(W::BPod.weapon_explosion_damage(), 0);
+        assert!(!W::BPod.is_direct_fire() && !W::BPod.is_energy());
+        assert_eq!((W::BPod.mass(), W::BPod.cost()), (1024, 2500));
         assert!(!W::Lrm5.is_defensive_equipment());
     }
 

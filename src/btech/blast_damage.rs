@@ -227,9 +227,7 @@ pub(super) fn resolve_packet(
         location
     } else {
         Hit {
-            section: request
-                .table
-                .location(unit.chassis(), request.arc, dice.d6())?,
+            section: super::hit::d6_location(unit, request.table, request.arc, &mut dice)?,
             rear_armor: rear,
             through_armor_critical: false,
         }

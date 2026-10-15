@@ -254,6 +254,7 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
         watchdog: raw_flag(template, "WatchDog_Tech"),
         tons: u16::try_from(tons).unwrap_or(u16::MAX),
         engine_rating: u16::try_from(rating.max(0)).unwrap_or(u16::MAX),
+        legs: 0,
     };
     total += raw_equipment_cost(prices, template, context)?;
     if raw_flag(template, "OmniMech_Tech") {
@@ -289,6 +290,7 @@ pub fn raw_template_base_cost(prices: &PartPrices, template: &RawTemplate) -> Re
                 watchdog: raw_flag(template, "WatchDog_Tech"),
                 tons: u16::try_from(template.tons.max(0)).unwrap_or(u16::MAX),
                 engine_rating: 0,
+                legs: 0,
             };
             let mut total = base + weapons + raw_equipment_cost(prices, template, context)?;
             if raw_flag(template, "OmniMech_Tech") {
@@ -354,8 +356,12 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
         } else {
             400
         }) as f64;
+    // A torso-mounted cockpit costs 750,000 C-bills (Tactical Operations: Advanced Units &
+    // Equipment p. 218).
     total += if flag(template, "SmallCockpit_Tech") {
         175000.0
+    } else if flag(template, "TorsoCockpit_Tech") {
+        750000.0
     } else {
         200000.0
     };
@@ -473,9 +479,17 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
         watchdog: flag(template, "WatchDog_Tech"),
         tons: u16::try_from(tons).unwrap_or(u16::MAX),
         engine_rating: u16::try_from(rating).unwrap_or(u16::MAX),
+        legs: if template.chassis()? == super::MechChassis::Quad {
+            4
+        } else {
+            2
+        },
     };
     for part in &loadout.systems {
-        if let Some(price) = part.system.slot_price(context) {
+        if let Some(price) = part
+            .system
+            .slot_price(context.for_installation(part.tech_base))
+        {
             total += price;
             continue;
         }
@@ -603,6 +617,7 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
         watchdog: flag_vehicle(template, "WatchDog_Tech"),
         tons: u16::try_from(tons).unwrap_or(u16::MAX),
         engine_rating: u16::try_from(rating).unwrap_or(u16::MAX),
+        legs: 0,
     };
     // Vehicle templates list each system once, whatever its BattleMech slot count.
     for part in &loadout.systems {

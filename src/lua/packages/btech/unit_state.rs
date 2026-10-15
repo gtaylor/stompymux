@@ -392,6 +392,16 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                     .map_err(|e| error::failure("btech.operation.failed", e))?,
             )?,
         )?;
+        state.set(
+            "machine_gun_arrays",
+            detached(
+                lua,
+                &unit
+                    .loadout()
+                    .map_err(|e| error::failure("btech.operation.failed", e))?
+                    .machine_gun_arrays(),
+            )?,
+        )?;
         state.set("mobility", detached(lua, &unit.mobility())?)?;
         state.set("flight", detached(lua, &unit.flight())?)?;
         state.set(

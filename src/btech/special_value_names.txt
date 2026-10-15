@@ -29,7 +29,6 @@ BTech fields available to view and set:
 	0	disabled_hs
 	0	overheat
 	0	dissheat
-	0	hsengoverride
 	0	heatsinks
 	0	last_startup
 	0	C3iNetworkSize

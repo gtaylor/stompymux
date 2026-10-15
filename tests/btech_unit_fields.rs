@@ -1334,7 +1334,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
     }
 }
 
-/// Administrative movement and engine allocation fields round-trip without changing live physics.
+/// Administrative movement fields round-trip without changing live physics.
 async fn construction_fields_share_storage_authority_and_restart_without_changing_physics_scenario(
     f: &UnitFields,
 ) {
@@ -1345,13 +1345,12 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
         let lua = &f.lua;
         f.install(&world);
         let original = view_battle_unit_fields_action(native, config, ObjectId(1), id, "").unwrap();
-        for name in ["basewalkspeed", "baserunspeed", "hsengoverride"] {
+        for name in ["basewalkspeed", "baserunspeed"] {
             assert_eq!(field(&original, name), Some("0"));
         }
         for (name, value) in [
             ("basewalkspeed", "-2147483648"),
             ("baserunspeed", "2147483647"),
-            ("hsengoverride", "12"),
         ] {
             commands::run(
                 native,
@@ -1403,32 +1402,6 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
             persistence::load(&config.database()).await.unwrap().btech,
             snapshot.btech
         );
-    }
-}
-
-/// Authored overrides survive construction, while invalid template values fail before unit insertion.
-async fn engine_sink_override_validates_authored_values_across_chassis_scenario(f: &UnitFields) {
-    let config = &f.config;
-    for source in firing::templates() {
-        let authored = format!("hs_engine_override = 14\n{source}");
-        let (mut world, id, _, _) = f.pair(&authored, &source);
-        let candidate = world.create(config, "Invalid construction".into(), Kind::Thing);
-        let before = world.btech.clone();
-        // Typed TOML values reject non-integers and values outside a signed 32-bit range.
-        for value in ["\"no\"", "2147483648", "-2147483649", "1.5"] {
-            let template =
-                UnitTemplate::parse("test", &format!("hs_engine_override = {value}\n{source}"));
-            let result = template.and_then(|template| template.create(&mut world, candidate));
-            let error = format!("{:#}", result.unwrap_err());
-            assert!(error.contains("hs_engine_override"), "{error}");
-            assert_eq!(world.btech, before);
-        }
-        let scripts = &f.native;
-        support::install(scripts, world.clone());
-        let report =
-            view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "hsengoverride")
-                .unwrap();
-        assert_eq!(field(&report, "hsengoverride"), Some("14"));
     }
 }
 
@@ -3096,6 +3069,25 @@ async fn movement_fields_preserve_material_and_validate_anatomy_scenario(f: &Uni
         let native = &f.native;
         let lua = &f.lua;
         f.install(&world);
+        if mech
+            && world.btech.constructed_units()[&id]
+                .definition()
+                .chassis()
+                .unwrap()
+                == MechChassis::Biped
+        {
+            // Arms without lower arm and hand actuators cannot become a quad's front legs,
+            // which keep all their actuators (TechManual p. 45).
+            let error =
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "unitmovetype", "Quad")
+                    .unwrap_err();
+            assert!(
+                format!("{error:#}").contains("TechManual p. 45"),
+                "{error:#}"
+            );
+            firing::edit(&mut world, id, crate::support::templates::quad_ready_record);
+            f.install(&world);
+        }
         let values: &[&str] = if mech {
             &["Biped", "Quad", "Biped"]
         } else if vtol {
@@ -3316,7 +3308,6 @@ async fn unit_fields_preferences_values_and_construction_harness() {
     battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(&f).await;
     construction_fields_share_storage_authority_and_restart_without_changing_physics_scenario(&f)
         .await;
-    engine_sink_override_validates_authored_values_across_chassis_scenario(&f).await;
     inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scenario(&f).await;
     crew_and_target_fields_share_native_lua_validation_and_restart_scenario(&f).await;
 }

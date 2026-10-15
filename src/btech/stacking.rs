@@ -414,7 +414,7 @@ fn apply_collision(
             super::resolve_hit(unit, arc, dice.generic_roll(), &mut dice)?
         } else {
             Hit {
-                section: table.location(unit.chassis(), arc, dice.d6())?,
+                section: super::hit::d6_location(unit, table, arc, &mut dice)?,
                 rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
             }

@@ -14,7 +14,6 @@ impl MechTemplate {
     /// layout. [`MechTemplate::validate_loadout`] checks the installed equipment afterwards.
     pub fn validate_definition(&self) -> Result<()> {
         super::validate_unit_metadata(&self.attributes)?;
-        super::read_engine_sink_override(&self.attributes)?;
         super::read_template_speed(&self.attributes, self.max_speed)?;
         ensure!(
             (20..=100).contains(&self.tons) && self.tons.is_multiple_of(5),
@@ -44,8 +43,7 @@ impl MechTemplate {
         for (field, value) in &self.attributes {
             match field.as_str() {
                 "name" | "reference" | "tons" | "walk_mp" | "max_speed" | "jump_speed"
-                | "heat_sinks" | "comment" | "hsengoverride" | "template_speed"
-                | "engine_rating" => {}
+                | "heat_sinks" | "comment" | "template_speed" | "engine_rating" => {}
                 "type" => ensure!(value.eq_ignore_ascii_case("Mech"), "Unsupported unit type"),
                 "move_type" => ensure!(
                     value.eq_ignore_ascii_case("Biped") || value.eq_ignore_ascii_case("Quad"),
@@ -173,13 +171,15 @@ impl MechTemplate {
                 <= 1,
             "Conflicting gyro technologies"
         );
+        let torso_cockpit = self.has_technology(super::Technology::TorsoMountedCockpit);
         for (system, count) in [
             (
                 System::Gyro,
                 super::Gyro::from_definition(self).critical_slots(),
             ),
             (System::Cockpit, 1),
-            (System::Sensors, 2),
+            // A torso-mounted cockpit adds a sensor package beside it to the head's two.
+            (System::Sensors, if torso_cockpit { 3 } else { 2 }),
             // A small cockpit fits one life support slot beside its two sensors.
             (
                 System::LifeSupport,
@@ -201,6 +201,7 @@ impl MechTemplate {
                 system
             );
         }
+        self.validate_cockpit_placement(loadout)?;
         // A declared cargo installation must weigh out; live mass is measured from the same rule.
         if self
             .attributes
@@ -214,6 +215,38 @@ impl MechTemplate {
             )?;
         }
         self.validate_construction(loadout)
+    }
+}
+
+impl MechTemplate {
+    /// The cockpit sits in the head with its life support and sensors, or, torso-mounted, in
+    /// the center torso beside one sensor package with a life support slot in each side torso
+    /// and two sensors left in the head (Tactical Operations: Advanced Units & Equipment
+    /// p. 112).
+    fn validate_cockpit_placement(&self, loadout: &MechLoadout) -> Result<()> {
+        let count = |system, section| {
+            loadout
+                .systems
+                .iter()
+                .filter(|part| part.system == system && part.location.section == section)
+                .count()
+        };
+        if !self.has_technology(super::Technology::TorsoMountedCockpit) {
+            ensure!(
+                count(System::Cockpit, MechSection::Head) == 1,
+                "The cockpit belongs in the head"
+            );
+            return Ok(());
+        }
+        ensure!(
+            count(System::Cockpit, MechSection::CenterTorso) == 1
+                && count(System::Sensors, MechSection::CenterTorso) == 1
+                && count(System::Sensors, MechSection::Head) == 2
+                && count(System::LifeSupport, MechSection::LeftTorso) == 1
+                && count(System::LifeSupport, MechSection::RightTorso) == 1,
+            "A torso-mounted cockpit sits in the center torso with one sensor package, a life support slot in each side torso and two sensors in the head"
+        );
+        Ok(())
     }
 }
 
