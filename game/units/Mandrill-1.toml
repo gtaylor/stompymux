@@ -2,13 +2,14 @@ name = "Mandrill"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 20
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 120
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

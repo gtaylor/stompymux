@@ -56,8 +56,8 @@ fn vehicle_template_validation_and_shared_syntax() {
         DEMOLISHER.replace("[sections.left_side]", "[sections.left_arm]"),
         DEMOLISHER.replace("[sections.turret]", "[sections.rotor]"),
         DEMOLISHER.replace("tons = 80", "tons = 0"),
-        DEMOLISHER.replace("walk_mp = 5", "max_speed = nan"),
-        DEMOLISHER.replace("walk_mp = 5", "walk_mp = -1"),
+        DEMOLISHER.replace("walk_mp = 3", "max_speed = nan"),
+        DEMOLISHER.replace("walk_mp = 3", "walk_mp = -1"),
         DEMOLISHER.replace("at = \"1-2\"", "at = \"1-13\""),
         DEMOLISHER.replace("at = \"3-6\"", "at = \"2-6\""),
         format!("slots = [{{ at = 1, item = \"IS.MediumLaser\" }}]\n{DEMOLISHER}"),
@@ -75,8 +75,8 @@ fn vehicle_template_validation_and_shared_syntax() {
     );
     let custom = DEMOLISHER
         .replace(
-            "walk_mp = 5\n",
-            "walk_mp = 5\nspecials = [\"CargoTech\", \"cargotech\"]\n",
+            "walk_mp = 3\n",
+            "walk_mp = 3\nspecials = [\"CargoTech\", \"cargotech\"]\n",
         )
         .replace(
             "item = \"IS.AC/20\" }",
@@ -127,12 +127,12 @@ fn vehicle_assets_accept_multiple_ammunition_mode_words() {
     }
 }
 
-/// Bare system entries in existing artillery carriers receive the ordinary empty metadata.
+/// Bare system entries in existing vehicles receive the ordinary empty metadata.
 #[test]
-fn artillery_vehicle_assets_decode_abbreviated_ecm() {
+fn vehicle_assets_decode_abbreviated_ecm() {
     for source in [
-        include_str!("../game/units/Huey.toml"),
-        include_str!("../game/units/Huitzilopochtli.toml"),
+        include_str!("../game/units/Schiltron.toml"),
+        include_str!("../game/units/Fulcrum.toml"),
     ] {
         let definition = VehicleTemplate::parse("test", source).unwrap();
         let vehicle = Vehicle::new(definition).unwrap();
@@ -218,7 +218,7 @@ fn vtol_assets_share_vehicle_anatomy_and_equipment_without_ground_admission() {
         // Parsed aircraft share material construction; world admission is checked separately.
         count += 1;
     }
-    assert_eq!(count, 34);
+    assert_eq!(count, 31);
 }
 
 /// Type/locomotion mismatches and missing rotors must not create ambiguous chassis definitions.
@@ -254,6 +254,55 @@ fn vtol_anatomy_requires_matching_type_movement_and_rotor() {
     assert_eq!(engine.weight_rating, 160);
     let mass = template.mass().unwrap();
     assert_eq!(mass.components, 2560);
-    assert_eq!(mass.cockpit, 1280);
+    // Controls weigh 5 percent, rounded up to the half ton (TechManual p. 102).
+    assert_eq!(mass.cockpit, 1536);
     assert_eq!(mass.engine, engine.installed_mass);
+}
+
+/// Every shipped vehicle and VTOL passes the TechManual combat vehicle construction check and
+/// declares its engine rating and technology base; the failures are listed together, so a rule change and the
+/// templates it rejects land together.
+#[test]
+fn shipped_vehicle_templates_pass_the_construction_check() {
+    let mut count = 0;
+    let mut rejected = Vec::new();
+    let mut entries: Vec<_> =
+        std::fs::read_dir(crate::support::repository_root().join("game/units"))
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+    entries.sort();
+    for path in entries {
+        let source = std::fs::read_to_string(&path).unwrap();
+        if !source
+            .lines()
+            .any(|line| line == "class = \"vehicle\"" || line == "class = \"vtol\"")
+        {
+            continue;
+        }
+        let reference = path.file_stem().unwrap().to_str().unwrap();
+        let template = VehicleTemplate::parse(reference, &source)
+            .unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
+        let report = check_battle_vehicle_template(&template);
+        count += 1;
+        if let Some(rejection) = report.rejection {
+            rejected.push(format!("{reference}: {rejection}"));
+        }
+        // Every shipped vehicle with an engine states its Final Engine Rating.
+        if template.movement != VehicleMovement::Stationary
+            && report.declared_engine_rating.is_none()
+        {
+            rejected.push(format!("{reference}: no declared engine_rating"));
+        }
+        if !source.lines().any(|line| line.starts_with("tech_base = ")) {
+            rejected.push(format!("{reference}: no declared tech_base"));
+        }
+    }
+    assert_eq!(count, 255);
+    assert!(
+        rejected.is_empty(),
+        "{} of {count} shipped vehicle templates are rejected:\n{}",
+        rejected.len(),
+        rejected.join("\n")
+    );
 }

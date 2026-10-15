@@ -280,12 +280,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.xp.use_pilot_bv_mod",
-        legacy: "btech_xp_usePilotBVMod",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.xp.oldxpsystem",
         legacy: "btech_oldxpsystem",
         kind: "i64",

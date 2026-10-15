@@ -2,10 +2,12 @@ name = "Scorpion"
 class = "vehicle"
 movement = "track"
 tons = 25
-walk_mp = 6
+walk_mp = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 100
 
 [sections.left_side]
 armor = 13
@@ -14,17 +16,17 @@ armor = 13
 armor = 13
 
 [sections.front_side]
-armor = 18
+armor = 14
 slots = [
     { at = 1, item = "IS.MachineGun" },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
 ]
 
 [sections.aft_side]
 armor = 11
 
 [sections.turret]
-armor = 17
+armor = 13
 slots = [
     { at = 1, item = "IS.MRM-20" },
     { at = "2-3", item = "Ammo_IS.MRM-20", rounds = 12 },

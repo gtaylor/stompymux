@@ -134,6 +134,17 @@ fn bin_capacity(full_capacity: u8, half_ton: bool, mode: super::AmmunitionMode) 
 pub struct SystemCritical<L = CriticalLocation> {
     pub location: L,
     pub system: System,
+    /// The technology base the slot's `IS.` or `CL.` prefix states; `None` builds the system
+    /// from the chassis's base (see [`System::installation`]).
+    pub tech_base: Option<super::TechBase>,
+}
+
+impl<L> SystemCritical<L> {
+    /// Whether this slot is Clan technology on a chassis of the given base.
+    pub fn is_clan(&self, clan_chassis: bool) -> bool {
+        self.tech_base
+            .map_or(clan_chassis, |base| base == super::TechBase::Clan)
+    }
 }
 
 impl<L> WeaponMount<L> {
@@ -192,8 +203,10 @@ impl<L> WeaponMount<L> {
                             | "Rotary_SixShot"
                     ) && weapon.is_rotary())
                     || mode == "OnTC"
+                    // TM p. 342: only LRM, SRM, MRM and Streak SRM launchers and Narc
+                    // and iNarc beacons come in one-shot versions.
                     || (matches!(mode.as_str(), "OneShot" | "OneShot_Used")
-                        && weapon.profile().missiles > 0)),
+                        && (weapon.one_shot_capable() || weapon.is_rocket()))),
             "Unsupported weapon modes {:?}",
             critical.modes
         );
@@ -463,16 +476,28 @@ impl MechLoadout {
                     }
                     ensure!(
                         critical.data == "-"
-                            || (critical.equipment.eq_ignore_ascii_case("ArtemisIV")
-                                && critical.data.parse::<u8>().is_ok()),
+                            || (matches!(
+                                super::System::named(&critical.equipment),
+                                Some(
+                                    super::System::ArtemisIv
+                                        | super::System::ArtemisV
+                                        | super::System::ApolloFcs
+                                )
+                            ) && critical.data.parse::<u8>().is_ok()),
                         "Unsupported critical data {}",
                         critical.data
                     );
                     let equipment = critical.equipment.clone();
-                    if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
-                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
+                    if (super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
+                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some())
+                        && System::named(&equipment).is_none()
                     {
                         let weapon = Weapon::parse(&equipment)?;
+                        ensure!(
+                            weapon.mech_mountable(),
+                            "{} cannot be mounted on a BattleMech",
+                            weapon.name()
+                        );
                         let mut mount = WeaponMount::from_critical(weapon, critical, Vec::new())?;
                         let count = weapon.profile().critical_slots;
                         let extension = split.remove(&location).unwrap_or_default();
@@ -514,8 +539,13 @@ impl MechLoadout {
                         return Ok(());
                     }
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    let system = System::parse(&critical.equipment)?;
-                    loadout.systems.push(SystemCritical { location, system });
+                    let (system, tech_base) = System::installation(&critical.equipment)
+                        .with_context(|| format!("Unsupported equipment {}", critical.equipment))?;
+                    loadout.systems.push(SystemCritical {
+                        location,
+                        system,
+                        tech_base,
+                    });
                     Ok(())
                 })()
                 .with_context(|| {
@@ -591,8 +621,9 @@ impl MechLoadout {
                         critical.data
                     );
                     let equipment = critical.equipment.clone();
-                    if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
-                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
+                    if (super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
+                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some())
+                        && System::named(&equipment).is_none()
                     {
                         let weapon = match Weapon::parse(&equipment) {
                             Ok(weapon) => weapon,
@@ -655,8 +686,8 @@ impl MechLoadout {
                         loadout.weapons.push(mount);
                         return Ok(());
                     }
-                    let system = match System::named(&critical.equipment) {
-                        Some(system) => system,
+                    let (system, tech_base) = match System::installation(&critical.equipment) {
+                        Some(installation) => installation,
                         None if super::Part::parse(&critical.equipment).is_ok_and(|part| {
                             matches!(
                                 part.kind,
@@ -669,7 +700,11 @@ impl MechLoadout {
                         None => bail!("Unsupported equipment {}", critical.equipment),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    loadout.systems.push(SystemCritical { location, system });
+                    loadout.systems.push(SystemCritical {
+                        location,
+                        system,
+                        tech_base,
+                    });
                     Ok(())
                 })()
                 .with_context(|| {

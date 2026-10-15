@@ -2,13 +2,15 @@ name = "Main Gauche"
 class = "vehicle"
 movement = "track"
 tons = 30
-walk_mp = 9
+walk_mp = 6
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 180
 
 [sections.left_side]
 armor = 19
@@ -17,7 +19,7 @@ armor = 19
 armor = 19
 
 [sections.front_side]
-armor = 30
+armor = 29
 slots = [
     { at = 1, item = "IS.LightGaussRifle" },
     { at = "2-3", item = "IS.MachineGun" },

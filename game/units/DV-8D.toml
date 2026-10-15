@@ -2,15 +2,17 @@ name = "Dervish"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 20
+heat_sinks = 10
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 275
 structure = "endo_steel"
 heat_sinks = "double"
 

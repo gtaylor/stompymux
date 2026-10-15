@@ -2,13 +2,15 @@ name = "Sirocco"
 class = "mech"
 movement = "quad"
 tons = 95
-walk_mp = 5
-heat_sinks = 24
+walk_mp = 3
+heat_sinks = 12
 radio = 5
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 285
 heat_sinks = "double"
 
 [sections.front_left_leg]

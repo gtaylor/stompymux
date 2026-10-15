@@ -2,7 +2,11 @@ name = "Command_Van"
 class = "vehicle"
 movement = "wheel"
 tons = 15
-walk_mp = 9
+walk_mp = 6
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 70
 
 [sections.left_side]
 armor = 14

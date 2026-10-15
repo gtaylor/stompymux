@@ -2,13 +2,15 @@ name = "Ferret"
 class = "vtol"
 movement = "vtol"
 tons = 5
-walk_mp = 23
+walk_mp = 15
 cargo_space = 0
 max_suits = 0
 max_ton = 10
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 25
 
 [sections.left_side]
 armor = 6

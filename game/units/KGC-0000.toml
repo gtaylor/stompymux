@@ -2,8 +2,12 @@ name = "King Crab"
 class = "mech"
 movement = "biped"
 tons = 100
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 15
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 
 [sections.left_arm]
 armor = 33

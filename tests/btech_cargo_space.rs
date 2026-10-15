@@ -3,16 +3,27 @@ use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// All admitted movement classes use the same cargo-space definition.
+/// All admitted movement classes use the same cargo-space definition. The vehicles give up
+/// ammunition so that their cargo bays fit within their tonnage (TechManual p. 97).
 fn templates() -> Vec<String> {
-    let ground = include_str!("../game/units/Demolisher.toml");
+    let demolisher = include_str!("../game/units/Demolisher.toml");
+    let hover = support::templates::hovercraft(demolisher).replace(
+        "    { at = \"3-4\", item = \"Ammo_IS.AC/20\", rounds = 5 },\n",
+        "",
+    );
+    let ground = demolisher.replace(
+        "{ at = \"3-6\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
+        "{ at = \"3-4\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
+    );
     vec![
         include_str!("../game/units/JR7-D.toml").into(),
         include_str!("../game/units/GOL-1H.toml").into(),
-        ground.into(),
-        ground.replace("Tracked", "Wheeled"),
-        ground.replace("Tracked", "Hover"),
-        ground.replace("Tracked", "None"),
+        ground.clone(),
+        ground.replace("movement = \"track\"", "movement = \"wheel\""),
+        hover,
+        ground
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
@@ -44,6 +55,10 @@ fn configured(source: &str, space: &str, flags: &str) -> UnitTemplate {
         },
     );
     attributes.insert("cargo_space".into(), space.into());
+    // A Mech's cargo installation comes out of its armor, so the design stays at its tonnage.
+    if space.parse::<u32>().is_ok_and(|space| space < 1_000_000) {
+        return crate::support::templates::legal_unit(template);
+    }
     template
 }
 
@@ -76,7 +91,12 @@ async fn cargo_space_mass_is_shared_and_persists_with_ordinary_stock() {
             configured(&source, "123", flags)
                 .create(&mut world, unit)
                 .unwrap();
-            let base = mass(&world, empty).1;
+            // A Mech gives up armor for the installation; a vehicle adds it to its weight.
+            let base = if world.btech.constructed_units().contains_key(&unit) {
+                mass(&world, unit).1 - expected
+            } else {
+                mass(&world, empty).1
+            };
             assert_eq!(mass(&world, unit), (expected, base + expected));
             let material = battle_unit_load(&world, unit, true).unwrap().material_mass;
             assert_eq!(material, base + expected);
@@ -141,7 +161,7 @@ fn mech_cargo_installation_survives_section_loss_and_does_not_enable_suits() {
     let UnitTemplate::Mech(template) = configured(&templates()[0], "500", "CargoTech") else {
         unreachable!()
     };
-    let unit = Mech::from_template(template.clone()).unwrap();
+    let unit = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
     let before = unit.mass().unwrap();
     assert_eq!(before.cargo, 5120);
     let mut saved = serde_json::to_value(&unit).unwrap();
@@ -155,20 +175,38 @@ fn mech_cargo_installation_survives_section_loss_and_does_not_enable_suits() {
     assert!(Mech::from_template(template).is_err());
 }
 
-/// An empty but overweight cargo installation participates in the common propulsion limit.
+/// A cargo bay heavier than the chassis can carry is a construction error for a combat
+/// vehicle (TechManual p. 97); an empty installation is never a speed penalty.
 #[tokio::test]
-async fn cargo_installation_alone_applies_load_speed_limits() {
+async fn overweight_cargo_installations_are_refused_rather_than_slowed() {
     for source in templates() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Cargo".into(), Kind::Thing);
-        configured(&source, "50000", "CargoTech")
-            .create(&mut world, unit)
-            .unwrap();
-        assert_eq!(battle_inventory_mass(&world, unit).unwrap(), 0);
-        assert_eq!(
-            battle_unit_load(&world, unit, true).unwrap().carried_mass,
-            0
+        let template = configured(&source, "50000", "CargoTech");
+        let stationary = matches!(
+            &template,
+            UnitTemplate::Vehicle(vehicle) if vehicle.movement == VehicleMovement::Stationary
         );
-        assert_eq!(battle_throttle_maximum(&world, unit, true).unwrap(), 0.0);
+        let vehicle = matches!(template, UnitTemplate::Vehicle(_));
+        match template.create(&mut world, unit) {
+            Err(error) => {
+                // A Mech's installation counts toward its tonnage (TechManual p. 46).
+                let expected = if vehicle {
+                    "TechManual p. 97"
+                } else {
+                    "-ton chassis"
+                };
+                assert!(!stationary, "{error:#}");
+                assert!(format!("{error:#}").contains(expected), "{error:#}");
+            }
+            Ok(()) => {
+                assert!(!vehicle || stationary);
+                assert_eq!(
+                    battle_unit_load(&world, unit, true).unwrap().carried_mass,
+                    0
+                );
+                assert!(battle_throttle_maximum(&world, unit, true).unwrap() > 0.0 || stationary);
+            }
+        }
     }
 }

@@ -2,13 +2,17 @@ name = "Sunder"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 6
-heat_sinks = 30
+walk_mp = 4
+heat_sinks = 15
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 360
 heat_sinks = "double"
+mixed_tech = true
 
 [sections.left_arm]
 armor = 30

@@ -111,7 +111,8 @@ async fn mech_inspection_projects_exact_record_shapes_and_keeps_the_old_report()
       local engine=btech.unit.engine(unit)
       assert(engine.rating==245 and engine.suspension_factor==0)
       local bv=btech.unit.battle_value(unit)
-      assert(math.abs(bv.total-564.29998779297)<0.000001 and bv.offensive==215 and math.abs(bv.defensive-349.29998779297)<0.000001)
+      -- JR7-D: Battle Value 2.0 (TechManual p. 302) is 875.
+      assert(bv.total==875 and math.abs(bv.offensive-525.96)<0.000001 and math.abs(bv.defensive-349.3)<0.000001)
       local rr=btech.unit.radio_channels(unit); assert(#rr==4); for i,row in ipairs(rr) do assert(row.channel==i and row.frequency==0 and row.title=='' and #row.modes==0) end
       local installed=btech.unit.installed_parts(unit)
       local medium_lasers,srm,ammo=0,0,0
@@ -186,8 +187,9 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
       local engine=btech.template.engine('jr7-d')
       assert(engine.rating==245 and engine.suspension_factor==0,'engine')
       assert(#btech.template.weapons('jr7-d')==5,'weapons')
-      assert(btech.template.base_cost('jr7-d')==2962125,'cost')
-      assert(btech.template.battle_value('jr7-d').offensive==238,'bv')
+      assert(btech.template.base_cost('jr7-d')==3161925,'cost')
+      local value=btech.template.battle_value('jr7-d')
+      assert(value.total==875 and math.abs(value.offensive-525.96)<0.000001,'bv')
       assert(#btech.template.technologies('jr7-d')==1,'technologies')
       assert(fails(btech.template.armor,'jr7-d')=='ok','armor')
       assert(fails(btech.template.critical_slots,'jr7-d',btech.unit.sections.HEAD)=='ok','criticals')

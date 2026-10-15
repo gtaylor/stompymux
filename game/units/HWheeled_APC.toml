@@ -2,14 +2,16 @@ name = "Wheeled APC"
 class = "vehicle"
 movement = "wheel"
 tons = 20
-walk_mp = 9
+walk_mp = 6
 cargo_space = 600
 max_suits = 0
 max_ton = 5
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 100
 
 [sections.left_side]
 armor = 13

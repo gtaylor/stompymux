@@ -2,13 +2,14 @@ name = "Cougar"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 8
-heat_sinks = 20
-specials = ["ArtemisIV"]
+walk_mp = 5
+heat_sinks = 10
+specials = ["OmniMech_Tech", "ArtemisIV"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 175
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -35,7 +36,7 @@ armor = 12
 rear = 4
 slots = [
     { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "ArtemisIV" },
+    { at = 7, item = "ArtemisIV", link = 3 },
     { at = "8-12", item = "EndoSteel" },
 ]
 
@@ -45,13 +46,13 @@ rear = 4
 slots = [
     { at = "3-4", item = "HeatSink" },
     { at = "5-8", item = "CL.LRM-20" },
-    { at = 9, item = "ArtemisIV" },
+    { at = 9, item = "ArtemisIV", link = 5 },
     { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 14
-rear = 6
+rear = 5
 slots = [
     { at = "11-12", item = "EndoSteel" },
 ]

@@ -2,8 +2,11 @@ name = "JagerMech"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 6
-specials = ["AntiAircraft"]
+walk_mp = 4
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 260
 
 [sections.left_arm]
 armor = 11

@@ -2,14 +2,15 @@ name = "Thor"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 40
+heat_sinks = 20
 specials = ["SearchLight"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 350
 armor = "ferro_fibrous"
 
 [sections.left_arm]

@@ -113,9 +113,10 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
     }
     match observer {
         Observer::Vehicle(equipment) => {
-            let mut definition =
+            let mut definition = crate::support::templates::fitted(
                 VehicleTemplate::parse("test", include_str!("../game/units/Demolisher.toml"))
-                    .unwrap();
+                    .unwrap(),
+            );
             if let Some(equipment) = equipment {
                 let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
                 front.criticals.clear();
@@ -128,7 +129,12 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
                     },
                 );
             }
-            create_battle_vehicle(&mut world, observer_id, definition).unwrap();
+            create_battle_vehicle(
+                &mut world,
+                observer_id,
+                crate::support::templates::fitted(definition),
+            )
+            .unwrap();
         }
         Observer::Mech => {
             // The lane's Jenner carries a searchlight so night sight can be exercised.

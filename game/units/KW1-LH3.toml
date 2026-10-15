@@ -2,11 +2,13 @@ name = "Lineholder"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 14
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 275
 
 [sections.left_arm]
 armor = 18

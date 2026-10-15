@@ -25,7 +25,7 @@ fn definition(weapon: Weapon, cluster: bool) -> MechTemplate {
     torso.criticals.insert(0, bin.clone());
     bin.modes.push("LBX/Cluster".into());
     torso.criticals.insert(3, bin);
-    template
+    crate::support::templates::legal(template)
 }
 
 /// Slug profiles and cluster probabilities remain distinct even though they share one weapon.

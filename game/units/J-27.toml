@@ -2,12 +2,14 @@ name = "J-27"
 class = "vehicle"
 movement = "track"
 tons = 20
-walk_mp = 8
-cargo_space = 3072
+walk_mp = 5
+cargo_space = 750
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 100
 
 [sections.left_side]
 armor = 5

@@ -2,12 +2,14 @@ name = "Thug"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
-heat_sinks = 34
+walk_mp = 4
+heat_sinks = 17
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 320
 structure = "endo_steel"
 heat_sinks = "double"
 

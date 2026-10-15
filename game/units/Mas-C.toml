@@ -2,29 +2,32 @@ name = "Masakari"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 6
-heat_sinks = 44
+walk_mp = 4
+heat_sinks = 23
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 340
 armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 28
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.ERPPC", modes = ["OnTC"] },
-    { at = "8-9", item = "HeatSink" },
-    { at = 10, item = "FerroFibrous" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-10", item = "CL.ERPPC" },
+    { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 28
+omit = ["hand_actuator"]
 slots = [
-    { at = "5-8", item = "CL.LargePulseLaser", modes = ["OnTC"] },
-    { at = "9-10", item = "HeatSink" },
-    { at = 11, item = "FerroFibrous" },
+    { at = "4-5", item = "HeatSink" },
+    { at = "6-9", item = "CL.LargePulseLaser" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -38,11 +41,10 @@ slots = [
 [sections.right_torso]
 armor = 26
 rear = 10
-engine_at = 7
 slots = [
-    { at = "1-6", item = "TargetingComputer" },
-    { at = "9-10", item = "HeatSink" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-9", item = "TargetingComputer" },
+    { at = "10-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

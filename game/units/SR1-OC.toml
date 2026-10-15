@@ -2,11 +2,13 @@ name = "Strider"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 9
+walk_mp = 6
 radio = 4
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 240
 structure = "endo_steel"
 
 [sections.left_arm]

@@ -2,13 +2,15 @@ name = "Enforcer"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
 heat_sinks = 12
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 250
 armor = "ferro_fibrous"
 
 [sections.left_arm]

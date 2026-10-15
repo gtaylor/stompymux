@@ -2,14 +2,16 @@ name = "Champion"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
-heat_sinks = 22
+walk_mp = 5
+heat_sinks = 11
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 heat_sinks = "double"
 

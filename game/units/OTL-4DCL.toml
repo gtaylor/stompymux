@@ -2,11 +2,12 @@ name = "Ostsol"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
-heat_sinks = 30
+walk_mp = 5
+heat_sinks = 15
 
 [construction]
 tech_base = "clan"
+engine_rating = 300
 armor = "ferro_fibrous"
 
 [sections.left_arm]

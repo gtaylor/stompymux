@@ -10,10 +10,10 @@ fn templates() -> Vec<String> {
         include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
@@ -44,9 +44,9 @@ async fn fixture(
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         (if index == 0 {
-            launcher(source, artillery)
+            crate::support::templates::fitted_unit(launcher(source, artillery))
         } else {
-            UnitTemplate::parse("test", source).unwrap()
+            crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap())
         })
         .create(&mut world, id)
         .unwrap();
@@ -72,7 +72,8 @@ fn launcher(source: &str, artillery: bool) -> UnitTemplate {
     } else {
         Weapon::ClanLrm20
     };
-    let mut definition = UnitTemplate::parse("test", source).unwrap();
+    let mut definition =
+        crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap());
     let part = CriticalDefinition {
         equipment: weapon.name().into(),
         data: "-".into(),
@@ -126,7 +127,7 @@ fn launcher(source: &str, artillery: bool) -> UnitTemplate {
             bins(unit.sections.get_mut(&VehicleSection::Rear).unwrap());
         }
     }
-    definition
+    crate::support::templates::legal_unit(definition)
 }
 
 /// The three commands share native/Lua state, rejection and effect rollback on every supported chassis.

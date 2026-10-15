@@ -36,7 +36,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
     let stationary = include_str!("../game/units/Demolisher.toml")
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("walk_mp = 5", "walk_mp = 0");
+        .replace("walk_mp = 3", "walk_mp = 0");
     let sources = [
         (include_str!("fixtures/btech/units/JR7-D.toml"), 'b'),
         (include_str!("../game/units/SCP-1N.toml"), 'q'),
@@ -49,8 +49,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
     let mut ids = Vec::new();
     for (x, (source, _)) in sources.iter().enumerate() {
         let id = base.create(&config, "Formation unit".into(), Kind::Thing);
-        UnitTemplate::parse("test", source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
             .create(&mut base, id)
             .unwrap();
         support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);

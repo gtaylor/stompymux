@@ -2,13 +2,14 @@ name = "Man 'O War"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 8
-heat_sinks = 32
+walk_mp = 5
+heat_sinks = 16
 specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 400
 armor = "ferro_fibrous"
 
 [sections.left_arm]

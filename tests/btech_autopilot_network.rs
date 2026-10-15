@@ -35,7 +35,7 @@ fn place(
 ) -> ObjectId {
     let id = world.create(config, name.into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(world, id, template).unwrap();
+    create_battle_unit(world, id, crate::support::templates::legal(template)).unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, x, y).unwrap();
     if let Some(pilot) = pilot {

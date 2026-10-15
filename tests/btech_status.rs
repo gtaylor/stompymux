@@ -90,7 +90,13 @@ async fn advanced_technology_keeps_reference_order_and_counter_colors() {
     let source = support::templates::with_flags(include_str!("../game/units/JR7-D.toml"), &["SuperCharger_Tech"])
         .replace(
             "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]\n\n[sections.right_torso]",
-            "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n    { at = 3, item = \"TAG\" },\n    { at = 4, item = \"Masc\" },\n]\n\n[sections.right_torso]",
+            "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n    { at = 3, item = \"TAG\" },\n    { at = \"4-5\", item = \"Masc\" },\n    { at = 6, item = \"JumpJet\" },\n]\n\n[sections.right_torso]",
+        )
+        // A 35-ton Mech's MASC fills two slots (TechManual p. 52), and the supercharger takes
+        // the center torso jump jet's slot beside the engine.
+        .replace(
+            "    { at = 12, item = \"JumpJet\" },",
+            "    { at = 12, item = \"SuperCharger\" },",
         );
     let (_dir, config, mut world, id, _) = fixture(&source).await;
     for (counter, color) in [
@@ -251,9 +257,9 @@ async fn vehicle_damage_banners_follow_owned_motive_state() {
         ("wheel", "AXLE DESTROYED"),
         ("hover", "LIFT FAN DESTROYED"),
     ] {
-        let source = include_str!("../game/units/Demolisher.toml").replace(
-            "movement = \"track\"",
-            &format!("movement = \"{movement}\""),
+        let source = crate::support::templates::with_movement(
+            include_str!("../game/units/Demolisher.toml"),
+            movement,
         );
         let (_dir, _config, mut world, id, _) = fixture(&source).await;
         assert!(!text::plain(&battle_unit_status(&world, id, "").unwrap()).contains(banner));
@@ -331,18 +337,18 @@ async fn named_fixture(
     )
     .unwrap();
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
-    UnitTemplate::parse(reference, source)
-        .unwrap()
+    crate::support::templates::fitted_unit(UnitTemplate::parse(reference, source).unwrap())
         .create(&mut world, id)
         .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
-    UnitTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
-        .unwrap()
-        .create(&mut world, observer)
-        .unwrap();
+    crate::support::templates::fitted_unit(
+        UnitTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
+    )
+    .create(&mut world, observer)
+    .unwrap();
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
     assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
@@ -478,11 +484,13 @@ async fn vehicle_status_tracks_live_load_damage_ammunition_and_flight() {
     let (_dir, config, mut world, id, _) =
         fixture(include_str!("../game/units/Kestrel.toml")).await;
     let target = world.create(&config, "Load".into(), Kind::Thing);
-    UnitTemplate::parse(
-        "Savannah_Master",
-        include_str!("../game/units/Savannah_Master.toml"),
+    crate::support::templates::fitted_unit(
+        UnitTemplate::parse(
+            "Savannah_Master",
+            include_str!("../game/units/Savannah_Master.toml"),
+        )
+        .unwrap(),
     )
-    .unwrap()
     .create(&mut world, target)
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);

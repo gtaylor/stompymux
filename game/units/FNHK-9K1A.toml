@@ -2,12 +2,14 @@ name = "Falcon Hawk"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 8
-heat_sinks = 26
+walk_mp = 5
+heat_sinks = 13
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 175
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

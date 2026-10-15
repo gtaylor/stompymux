@@ -114,10 +114,11 @@ async fn ground_fixture(positions: &[(u16, u16)], pilot_first: bool) -> GroundFi
     for (index, &(x, y)) in positions.iter().enumerate() {
         let id = world.create(&config, format!("Autopilot unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-            .unwrap()
-            .create(&mut world, id)
-            .unwrap();
+        crate::support::templates::legal_unit(
+            UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+        )
+        .create(&mut world, id)
+        .unwrap();
         place_battle_unit(&mut world, id, map, i64::from(x), i64::from(y)).unwrap();
         units.push(id);
     }

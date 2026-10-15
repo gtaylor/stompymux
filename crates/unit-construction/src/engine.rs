@@ -1,7 +1,8 @@
 //! Fusion-engine identity derived from supported BattleMech installations, independent of live damage.
 use super::{MechLoadout, MechSection, System};
-use anyhow::{Result, bail, ensure};
+use anyhow::{Context, Result, bail};
 use serde::Serialize;
+use std::collections::BTreeMap;
 
 /// Supported BattleMech fusion-engine construction families.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -15,57 +16,27 @@ pub enum Engine {
 }
 
 impl Engine {
-    /// Recognize complete installations, including side slots relocated into the center torso.
-    /// Return the effective mass/combat family; flags do not grant equipment.
+    /// Recognize a complete installation from its center, left and right torso engine slots.
+    /// Only the TechManual layouts exist (TM p. 50, Engine Critical Space table; Tactical
+    /// Operations: Advanced Units & Equipment for XXL): a standard engine fills six center
+    /// torso slots and a compact engine three; an Inner Sphere XL engine adds three slots to
+    /// each side torso, a Clan XL or Inner Sphere light engine two, an Inner Sphere XXL six
+    /// and a Clan XXL four. A large engine, rated above 400, fills eight center torso slots
+    /// rather than six (Tactical Operations: Advanced Units & Equipment, Advanced Engine
+    /// Master Table). `clan` is the engine's technology base.
     pub fn resolve(loadout: &MechLoadout, clan: bool) -> Result<Self> {
         let [center, left, right] = engine_slots(loadout)?;
-        if (center, left, right) == (3, 0, 0) {
-            return Ok(Self::Compact);
-        }
-        if (center, left, right) == (6, 0, 0) {
-            return Ok(Self::Standard);
-        }
-        if !(6..=8).contains(&center) {
-            bail!(
-                "Incomplete or unsupported fusion engine installation (center {center}, left {left}, right {right})"
-            );
-        }
-        let sides = [left, right];
-        if clan {
-            return match center + left + right {
-                10 if sides.iter().all(|count| matches!(count, 0..=2)) => Ok(Self::Xl),
-                14 if sides.iter().all(|count| *count == 4) => Ok(Self::Xxl),
-                _ => bail!(
-                    "Incomplete or unsupported Clan fusion engine installation (center {center}, left {left}, right {right})"
-                ),
-            };
-        }
-        // Asymmetric twelve-slot layouts combine reference flags. XL wins mass
-        // precedence over XXL; XXL wins over Light. Their implemented BV factors
-        // agree with those effective families for Inner Sphere installations.
-        if center == 6 {
-            match (left, right) {
-                (5, 1) | (1, 5) => return Ok(Self::Xl),
-                (4, 2) | (2, 4) => return Ok(Self::Xxl),
-                _ => {}
-            }
-        }
-        match center + left + right {
-            // A relocated ten-slot installation can expose a single side critical.
-            // That side confers XL behavior even when the opposite side confers Light.
-            10 if sides.iter().all(|count| matches!(count, 0..=2)) => Ok(if sides.contains(&1) {
-                Self::Xl
-            } else {
-                Self::Light
-            }),
-            12 if sides.iter().all(|count| matches!(count, 0..=3))
-                && sides.iter().any(|count| matches!(count, 1 | 3)) =>
-            {
-                Ok(Self::Xl)
-            }
-            18 if sides.iter().all(|count| matches!(count, 0 | 4..=6)) => Ok(Self::Xxl),
+        // A large engine, rated above 400, fills two more center torso slots.
+        let center_full = matches!(center, 6 | 8);
+        match (clan, center_full, center, left, right) {
+            (_, true, _, 0, 0) => Ok(Self::Standard),
+            (false, _, 3, 0, 0) => Ok(Self::Compact),
+            (false, true, _, 3, 3) | (true, true, _, 2, 2) => Ok(Self::Xl),
+            (false, true, _, 2, 2) => Ok(Self::Light),
+            (false, true, _, 6, 6) | (true, true, _, 4, 4) => Ok(Self::Xxl),
             _ => bail!(
-                "Incomplete or unsupported fusion engine installation (center {center}, left {left}, right {right})"
+                "Incomplete or unsupported {} fusion engine installation (center {center}, left {left}, right {right})",
+                if clan { "Clan" } else { "Inner Sphere" }
             ),
         }
     }
@@ -110,6 +81,11 @@ impl Engine {
     }
 }
 
+/// Center torso engine slots of an installation.
+pub fn center_engine_slots(loadout: &MechLoadout) -> Result<u8> {
+    Ok(engine_slots(loadout)?[0])
+}
+
 /// Count the installed engine once, rejecting components outside supported torso sections.
 fn engine_slots(loadout: &MechLoadout) -> Result<[u8; 3]> {
     let mut center = 0;
@@ -134,17 +110,42 @@ fn engine_slots(loadout: &MechLoadout) -> Result<[u8; 3]> {
     Ok([center, left, right])
 }
 
-/// Nominal engine output from the saved maximum speed, with reference single-precision rounding.
-pub fn rated_output(tons: u16, max_speed: f64) -> Result<u32> {
-    ensure!(
-        tons > 0 && max_speed.is_finite() && max_speed >= 0.0,
-        "Invalid engine inputs"
-    );
-    let walking = ((2.0 * max_speed as f32 / 10.75) / 3.0).round();
-    let rating = f64::from(walking) * f64::from(tons);
-    ensure!(
-        rating.is_finite() && rating <= f64::from(i32::MAX),
-        "Engine rating is out of bounds"
-    );
-    Ok(rating as u32)
+/// Running MP of a whole walking figure: x 1.5, rounded up (TM p. 48). Combat vehicles
+/// take their flanking MP from cruising MP the same way (TM p. 100). Templates store the
+/// walking figure; every rule that needs the running figure derives it here.
+pub fn running_mp_of_walking(walking_mp: u32) -> u32 {
+    (walking_mp * 3).div_ceil(2)
+}
+
+/// Engine rating: tonnage x walking MP for a Mech (TM p. 48), or the Base Engine Rating,
+/// tonnage x cruising MP, for a combat vehicle (TM p. 100).
+pub fn rated_output(tons: u16, walking_mp: u32) -> u32 {
+    u32::from(tons).saturating_mul(walking_mp)
+}
+
+/// The engine rating a template's `[construction]` table declares, if it declares one.
+pub fn declared_engine_rating(attributes: &BTreeMap<String, String>) -> Result<Option<u32>> {
+    attributes
+        .get(super::document::ENGINE_RATING)
+        .map(|rating| {
+            rating
+                .trim()
+                .parse()
+                .with_context(|| format!("Invalid declared engine rating {rating}"))
+        })
+        .transpose()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Running MP is walking x 1.5 rounded up, and the rating is tonnage x walking MP.
+    #[test]
+    fn running_mp_and_rating_follow_the_walking_figure() {
+        let running: Vec<_> = (0..=8).map(running_mp_of_walking).collect();
+        assert_eq!(running, [0, 2, 3, 5, 6, 8, 9, 11, 12]);
+        assert_eq!(rated_output(50, 5), 250);
+        assert_eq!(rated_output(35, 7), 245);
+    }
 }

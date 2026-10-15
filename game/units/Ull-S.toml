@@ -2,13 +2,16 @@ name = "Uller"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 9
-heat_sinks = 20
+walk_mp = 6
+jump_mp = 6
+heat_sinks = 10
 radio = 5
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 180
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -17,45 +20,46 @@ armor = 7
 slots = [
     { at = 5, item = "CL.MediumPulseLaser" },
     { at = 6, item = "CL.StreakSRM-4" },
-    { at = 7, item = "FerroFibrous" },
+    { at = 7, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
     { at = 8, item = "EndoSteel" },
-    { at = 9, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
+    { at = 9, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 7
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.LargePulseLaser" },
-    { at = 6, item = "FerroFibrous" },
-    { at = 7, item = "CL.SmallPulseLaser" },
-    { at = 12, item = "EndoSteel" },
+    { at = "3-4", item = "CL.LargePulseLaser" },
+    { at = 5, item = "CL.SmallPulseLaser" },
+    { at = 6, item = "EndoSteel" },
+    { at = 7, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 8
 rear = 4
 slots = [
-    { at = "3-4", item = "FerroFibrous" },
-    { at = "5-6", item = "EndoSteel" },
-    { at = 7, item = "CL.MachineGun" },
-    { at = "11-12", item = "JumpJet" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "JumpJet" },
+    { at = 8, item = "CL.MachineGun" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 8
 rear = 4
 slots = [
-    { at = "3-4", item = "FerroFibrous" },
-    { at = "5-7", item = "EndoSteel" },
-    { at = 8, item = "CL.MachineGun" },
-    { at = 9, item = "Ammo_CL.MachineGun", rounds = 200 },
-    { at = "11-12", item = "JumpJet" },
+    { at = 3, item = "JumpJet" },
+    { at = 4, item = "CL.MachineGun" },
+    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 9
-rear = 5
+rear = 4
 slots = [
     { at = "11-12", item = "HeatSink" },
 ]
@@ -63,13 +67,13 @@ slots = [
 [sections.left_leg]
 armor = 8
 slots = [
-    { at = "5-6", item = "HeatSink" },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 8
 slots = [
-    { at = "5-6", item = "HeatSink" },
+    { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.head]

@@ -2,13 +2,15 @@ name = "Wasp"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 120
 armor = "ferro_fibrous"
 
 [sections.left_arm]
@@ -19,10 +21,9 @@ slots = [
 
 [sections.right_arm]
 armor = 3
-omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.SmallPulseLaser" },
-    { at = "6-8", item = "FerroFibrous" },
+    { at = "5-6", item = "IS.SmallPulseLaser" },
+    { at = "7-9", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -46,7 +47,7 @@ slots = [
 
 [sections.center_torso]
 armor = 5
-rear = 2
+rear = 1
 slots = [
     { at = "11-12", item = "JumpJet" },
 ]

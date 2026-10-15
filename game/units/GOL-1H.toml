@@ -2,8 +2,12 @@ name = "Goliath"
 class = "mech"
 movement = "quad"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 17
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 320
 
 [sections.front_left_leg]
 armor = 24

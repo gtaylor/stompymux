@@ -2,11 +2,14 @@ name = "Vedette"
 class = "vehicle"
 movement = "track"
 tons = 50
-walk_mp = 8
+walk_mp = 5
+heat_sinks = 6
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 250
 
 [sections.left_side]
 armor = 18

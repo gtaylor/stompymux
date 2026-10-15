@@ -23,8 +23,7 @@ async fn fixture(
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(&mut world, shooter)
         .unwrap();
     support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);
@@ -79,10 +78,10 @@ fn scripts(config: &Config, world: &World) -> Scripts {
 async fn coordinates_share_all_chassis_single_tic_and_restart() {
     let tracked = include_str!("../game/units/Demolisher.toml");
     let wheeled = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
-    let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
+    let hover = crate::support::templates::hovercraft(tracked);
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("walk_mp = 5", "walk_mp = 0");
+        .replace("walk_mp = 3", "walk_mp = 0");
     for source in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/GOL-1H.toml"),
@@ -325,10 +324,10 @@ fn assert_mechanical_rejection(config: &Config, world: &World, shooter: ObjectId
 async fn weapon_mechanics_precede_targets_across_chassis_and_restart() {
     let tracked = include_str!("../game/units/Demolisher.toml");
     let wheeled = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
-    let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
+    let hover = crate::support::templates::hovercraft(tracked);
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("walk_mp = 5", "walk_mp = 0");
+        .replace("walk_mp = 3", "walk_mp = 0");
     for source in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/GOL-1H.toml"),

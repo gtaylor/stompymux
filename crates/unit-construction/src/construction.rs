@@ -11,6 +11,15 @@ use std::fmt::Write as _;
 /// Kilometres per hour for each movement point.
 pub const SPEED_PER_MP: f64 = 10.75;
 
+/// Whether a Mech's engine is a large engine, rated above 400: tonnage times walking MP
+/// (TM p. 48; Tactical Operations: Advanced Units & Equipment large engines).
+pub fn large_engine(tons: i64, walking_mp: Option<&str>) -> bool {
+    let Some(walking) = walking_mp.and_then(|walking| walking.trim().parse::<i64>().ok()) else {
+        return false;
+    };
+    walking * tons > 400
+}
+
 /// Critical names of every item that construction places in a mech.
 pub const FIXED_ITEMS: [&str; 9] = [
     SHOULDER_OR_HIP,
@@ -36,6 +45,14 @@ const SENSORS: &str = "Sensors";
 
 /// Chassis flag recording Clan technology.
 const CLAN: &str = "Clan";
+
+/// Chassis flag recording a mixed-technology design, whose weapons and equipment may come from
+/// either technology base (Tactical Operations: Advanced Units & Equipment p. 189). Without it a
+/// Mech mounts only weapons of its own technology base (TM p. 46).
+pub const MIXED_TECH: &str = "MixedTech";
+
+/// Chassis flag recording single heat sinks on a Clan Mech, whose default is double sinks.
+pub const SINGLE_HEAT_SINKS: &str = "SingleHS";
 
 /// Chassis flag recording flippable arms; it always follows the arm actuator layout.
 pub const FLIP_ARMS: &str = "FlipArms";
@@ -125,6 +142,7 @@ choice!(
     Cockpit {
         Standard = "standard" => [],
         Small = "small" => ["SmallCockpit_Tech", "SMCPIT"],
+        TorsoMounted = "torso_mounted" => ["TorsoCockpit_Tech", "TCPIT"],
     }
 );
 
@@ -152,9 +170,10 @@ choice!(
 );
 
 choice!(
-    /// Heat sink family beyond the tech base default.
+    /// Heat sink family beyond the tech base default. Clan Mechs default to double sinks
+    /// but may use single sinks (TM p. 52), which the `SingleHS` flag records.
     HeatSinks {
-        Single = "single" => [],
+        Single = "single" => ["SingleHS"],
         Double = "double" => ["DoubleHS"],
         Laser = "laser" => ["LaserHS_Tech", "LHS"],
     }
@@ -177,7 +196,8 @@ pub enum Component {
 }
 
 impl Component {
-    const ALL: [Self; 3] = [Self::Engine, Self::Structure, Self::Armor];
+    /// Every component, in document order.
+    pub(crate) const ALL: [Self; 3] = [Self::Engine, Self::Structure, Self::Armor];
 
     /// The `[construction]` key naming this component's technology base.
     fn key(self) -> &'static str {
@@ -215,9 +235,17 @@ fn tech_base(key: &str, value: &str) -> Result<bool> {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Construction {
     pub clan: bool,
+    /// The design mixes Inner Sphere and Clan weapons and equipment.
+    pub mixed_tech: bool,
     /// Components built from the other technology base, in [`Component::ALL`] order.
     pub mixed: Vec<Component>,
     pub engine: Engine,
+    /// The engine rating the template declares (`.mtf` `Engine:300 XL Engine`): tonnage x
+    /// walking MP for a Mech (TM p. 48), the Final Engine Rating for a vehicle (TM p. 100).
+    /// Construction derives the rating from movement points when it is absent and requires
+    /// the two to agree when it is present. It is not a chassis flag, so [`Self::from_flags`]
+    /// leaves it unset.
+    pub engine_rating: Option<u32>,
     pub gyro: Gyro,
     pub cockpit: Cockpit,
     pub structure: Structure,
@@ -231,7 +259,10 @@ pub struct Construction {
 #[serde(deny_unknown_fields)]
 struct ConstructionDocument {
     tech_base: Option<String>,
+    #[serde(default)]
+    mixed_tech: bool,
     engine: Option<String>,
+    engine_rating: Option<u32>,
     gyro: Option<String>,
     cockpit: Option<String>,
     structure: Option<String>,
@@ -268,14 +299,12 @@ impl Construction {
             None => HeatSinks::Single,
             Some(value) => HeatSinks::parse("heat_sinks", value)?,
         };
-        ensure!(
-            !clan || heat_sinks != HeatSinks::Single,
-            "Clan units always have double heat sinks"
-        );
         Ok(Self {
             clan,
+            mixed_tech: document.mixed_tech,
             mixed,
             engine: choice(document.engine, Engine::parse, "engine")?,
+            engine_rating: document.engine_rating,
             gyro: choice(document.gyro, Gyro::parse, "gyro")?,
             cockpit: choice(document.cockpit, Cockpit::parse, "cockpit")?,
             structure: choice(document.structure, Structure::parse, "structure")?,
@@ -288,11 +317,11 @@ impl Construction {
     /// Recover construction choices from chassis flags, returning the flags no choice owns.
     pub fn from_flags(flags: &[&str]) -> Result<(Self, Vec<String>)> {
         let clan = flags.iter().any(|flag| flag.eq_ignore_ascii_case(CLAN));
+        let has = |name: &str| flags.iter().any(|flag| flag.eq_ignore_ascii_case(name));
         let heat_sinks = match HeatSinks::from_flags("heat_sinks", flags)? {
-            HeatSinks::Single if clan => HeatSinks::Double,
+            HeatSinks::Single if clan && !has(SINGLE_HEAT_SINKS) => HeatSinks::Double,
             heat_sinks => heat_sinks,
         };
-        let has = |name: &str| flags.iter().any(|flag| flag.eq_ignore_ascii_case(name));
         let mut mixed = Vec::new();
         for component in Component::ALL {
             ensure!(
@@ -306,8 +335,10 @@ impl Construction {
         }
         let construction = Self {
             clan,
+            mixed_tech: has(MIXED_TECH),
             mixed,
             engine: engine_from_flags(flags)?,
+            engine_rating: None,
             gyro: Gyro::from_flags("gyro", flags)?,
             cockpit: Cockpit::from_flags("cockpit", flags)?,
             structure: Structure::from_flags("structure", flags)?,
@@ -329,12 +360,20 @@ impl Construction {
         if self.clan {
             flags.push(CLAN);
         }
+        if self.mixed_tech {
+            flags.push(MIXED_TECH);
+        }
         flags.extend(self.engine.flags().first());
         flags.extend(self.gyro.flags().first());
         flags.extend(self.cockpit.flags().first());
         flags.extend(self.structure.flags().first());
         flags.extend(self.armor.flags().first());
-        if !(self.clan && self.heat_sinks == HeatSinks::Double) {
+        // Each technology base's default sink records no flag: single for the Inner Sphere,
+        // double for the Clans.
+        if !matches!(
+            (self.clan, self.heat_sinks),
+            (false, HeatSinks::Single) | (true, HeatSinks::Double)
+        ) {
             flags.extend(self.heat_sinks.flags().first());
         }
         flags.extend(self.myomer.flags().first());
@@ -351,14 +390,15 @@ impl Construction {
         self.clan != self.mixed.contains(&component)
     }
 
-    /// Render the non-default choices as a `[construction]` table, or nothing.
-    pub fn render(&self) -> String {
+    /// Render the non-default choices as a `[construction]` table, or nothing. A constructed
+    /// unit, a BattleMech or combat vehicle, always states its technology base; other classes
+    /// state it only when it is Clan.
+    pub fn render(&self, constructed: bool) -> String {
         let mut lines = String::new();
-        let mut line = |key: &str, value: &str| {
-            let _ = writeln!(lines, "{key} = \"{value}\"");
-        };
         if self.clan {
-            line("tech_base", "clan");
+            let _ = writeln!(lines, "tech_base = \"clan\"");
+        } else if constructed {
+            let _ = writeln!(lines, "tech_base = \"inner_sphere\"");
         }
         for (key, value, default) in [
             (
@@ -390,8 +430,16 @@ impl Construction {
             ),
         ] {
             if value != default {
-                line(key, value);
+                let _ = writeln!(lines, "{key} = \"{value}\"");
             }
+            if key == "engine"
+                && let Some(rating) = self.engine_rating
+            {
+                let _ = writeln!(lines, "engine_rating = {rating}");
+            }
+        }
+        if self.mixed_tech {
+            let _ = writeln!(lines, "mixed_tech = true");
         }
         for component in &self.mixed {
             let _ = writeln!(
@@ -444,6 +492,7 @@ pub fn mixed_technology_flag(flag: &str) -> bool {
 /// Whether a flag is set by a construction choice or derived, so `specials` may not list it.
 pub fn owned_flag(flag: &str) -> bool {
     flag.eq_ignore_ascii_case(CLAN)
+        || flag.eq_ignore_ascii_case(MIXED_TECH)
         || mixed_technology_flag(flag)
         || Engine::ALL
             .iter()
@@ -495,33 +544,23 @@ fn technology_names(codes: std::ops::RangeInclusive<i32>) -> impl Iterator<Item 
     codes.filter_map(|code| super::administrative_technology(code).map(|(name, _)| name))
 }
 
-/// Actuators a section may leave out of its standard installation.
+/// Actuators a biped arm may leave out of its standard installation: only the lower arm and
+/// hand actuators, and an arm without its lower arm actuator has no hand actuator either.
+/// Shoulders, upper arm actuators and every leg actuator are mandatory (TechManual p. 45).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Omission {
-    Shoulder,
-    Upper,
     Lower,
     Hand,
-    Foot,
 }
 
 impl Omission {
-    const ALL: [Self; 5] = [
-        Self::Shoulder,
-        Self::Upper,
-        Self::Lower,
-        Self::Hand,
-        Self::Foot,
-    ];
+    const ALL: [Self; 2] = [Self::Lower, Self::Hand];
 
     /// Document spelling.
     pub fn spelling(self) -> &'static str {
         match self {
-            Self::Shoulder => "shoulder",
-            Self::Upper => "upper_actuator",
             Self::Lower => "lower_actuator",
             Self::Hand => "hand_actuator",
-            Self::Foot => "foot_actuator",
         }
     }
 
@@ -530,7 +569,11 @@ impl Omission {
         Self::ALL
             .into_iter()
             .find(|omission| omission.spelling() == value)
-            .with_context(|| format!("unknown omitted actuator {value}"))
+            .with_context(|| {
+                format!(
+                    "cannot omit {value}: a Mech may omit only its lower arm and hand actuators (TechManual p. 45)"
+                )
+            })
     }
 }
 
@@ -540,8 +583,9 @@ pub struct SectionPlan<'a> {
     pub omit: &'a [Omission],
     /// Zero-based first engine slot in a side torso.
     pub engine_at: Option<u8>,
-    /// Engine slots the section holds when they differ from the engine type's count.
-    pub engine_slots: Option<u8>,
+    /// The engine is rated above 400 and fills two more center torso slots (Tactical
+    /// Operations: Advanced Units & Equipment, Advanced Engine Master Table).
+    pub large_engine: bool,
 }
 
 /// Fixed equipment construction places in one mech section, by zero-based slot.
@@ -553,44 +597,27 @@ pub fn fixed_equipment(
 ) -> Result<BTreeMap<u8, &'static str>> {
     use MechSection::*;
     let mut items = BTreeMap::new();
-    let limb = |items: &mut BTreeMap<u8, &'static str>, last: &'static str, omit_last: Omission| {
-        if !plan.omit.contains(&Omission::Shoulder) {
-            items.insert(0, SHOULDER_OR_HIP);
-        }
-        if !plan.omit.contains(&Omission::Upper) {
-            items.insert(1, UPPER_ACTUATOR);
-        }
+    let limb = |items: &mut BTreeMap<u8, &'static str>| {
+        items.insert(0, SHOULDER_OR_HIP);
+        items.insert(1, UPPER_ACTUATOR);
         if !plan.omit.contains(&Omission::Lower) {
             items.insert(2, LOWER_ACTUATOR);
         }
-        if !plan.omit.contains(&omit_last) {
-            items.insert(3, last);
+        if !plan.omit.contains(&Omission::Hand) {
+            items.insert(3, HAND_OR_FOOT);
         }
     };
     let arm = chassis == MechChassis::Biped && matches!(section, LeftArm | RightArm);
-    let allowed: &[Omission] = match section {
-        LeftArm | RightArm if arm => &[
-            Omission::Shoulder,
-            Omission::Upper,
-            Omission::Lower,
-            Omission::Hand,
-        ],
-        LeftArm | RightArm | LeftLeg | RightLeg => &[
-            Omission::Shoulder,
-            Omission::Upper,
-            Omission::Lower,
-            Omission::Foot,
-        ],
-        _ => &[],
-    };
-    for omission in plan.omit {
-        ensure!(
-            allowed.contains(omission),
-            "{} has no {}",
-            section.name(),
-            omission.spelling()
-        );
-    }
+    ensure!(
+        plan.omit.is_empty() || arm,
+        "{} keeps all its actuators: only a biped arm may omit its lower arm and hand actuators (TechManual p. 45)",
+        chassis.section_name(section)
+    );
+    ensure!(
+        !plan.omit.contains(&Omission::Lower) || plan.omit.contains(&Omission::Hand),
+        "{} omits its lower arm actuator, so it must omit its hand actuator too (TechManual p. 45)",
+        section.name()
+    );
     let side_engine = match (
         construction.engine,
         construction.clan_component(Component::Engine),
@@ -602,17 +629,11 @@ pub fn fixed_equipment(
         _ => 0,
     };
     ensure!(
-        plan.engine_slots.is_none() || matches!(section, LeftTorso | RightTorso | CenterTorso),
-        "engine_slots applies only to torsos"
-    );
-    let side_engine = plan.engine_slots.map_or(side_engine, usize::from);
-    ensure!(
         plan.engine_at.is_none() || (matches!(section, LeftTorso | RightTorso) && side_engine > 0),
         "engine_at applies only to side torsos holding engine slots"
     );
     match section {
-        LeftArm | RightArm if arm => limb(&mut items, HAND_OR_FOOT, Omission::Hand),
-        LeftArm | RightArm | LeftLeg | RightLeg => limb(&mut items, HAND_OR_FOOT, Omission::Foot),
+        LeftArm | RightArm | LeftLeg | RightLeg => limb(&mut items),
         Head => {
             let layout: &[(u8, &str)] = match construction.cockpit {
                 Cockpit::Standard => &[
@@ -623,6 +644,9 @@ pub fn fixed_equipment(
                     (5, LIFE_SUPPORT),
                 ],
                 Cockpit::Small => &[(0, LIFE_SUPPORT), (1, SENSORS), (2, COCKPIT), (3, SENSORS)],
+                // A torso-mounted cockpit leaves the head only its two sensors (Tactical
+                // Operations: Advanced Units & Equipment p. 112).
+                Cockpit::TorsoMounted => &[(0, SENSORS), (1, SENSORS)],
             };
             items.extend(layout.iter().copied());
         }
@@ -632,12 +656,13 @@ pub fn fixed_equipment(
                 Gyro::Xl => 6,
                 Gyro::Compact => 2,
             };
-            let standard = if construction.engine == Engine::Compact {
+            let engine = if construction.engine == Engine::Compact {
                 3
+            } else if plan.large_engine {
+                8
             } else {
                 6
             };
-            let engine = plan.engine_slots.unwrap_or(standard);
             ensure!(
                 engine <= 12 - gyro,
                 "engine and gyro slots run past the section"
@@ -646,9 +671,28 @@ pub fn fixed_equipment(
             items.extend((0..front).map(|slot| (slot, ENGINE)));
             items.extend((3..3 + gyro).map(|slot| (slot, GYRO)));
             items.extend((3 + gyro..engine + gyro).map(|slot| (slot, ENGINE)));
+            // A torso-mounted cockpit and its added sensor package follow the engine and gyro.
+            if construction.cockpit == Cockpit::TorsoMounted {
+                ensure!(
+                    engine + gyro + 2 <= 12,
+                    "a torso-mounted cockpit does not fit beside this engine and gyro"
+                );
+                items.insert(engine + gyro, COCKPIT);
+                items.insert(engine + gyro + 1, SENSORS);
+            }
         }
         LeftTorso | RightTorso => {
-            let first = plan.engine_at.unwrap_or(0);
+            // A torso-mounted cockpit moves one life support slot to each side torso, ahead of
+            // any engine slots there (Tactical Operations: Advanced Units & Equipment p. 112).
+            let torso_cockpit = construction.cockpit == Cockpit::TorsoMounted;
+            if torso_cockpit {
+                items.insert(0, LIFE_SUPPORT);
+            }
+            let first = plan.engine_at.unwrap_or(u8::from(torso_cockpit));
+            ensure!(
+                !torso_cockpit || first > 0,
+                "a torso-mounted cockpit's life support fills the first side torso slot"
+            );
             ensure!(
                 usize::from(first) + side_engine <= 12,
                 "engine slots run past the section"
@@ -712,9 +756,10 @@ pub fn mech_internal(tons: u16, section: MechSection, quad: bool) -> Option<u16>
     })
 }
 
-/// Internal structure of every structured vehicle location, from tonnage (vehicle_int_check).
+/// Internal structure points of every structured vehicle location: 10 percent of the tonnage,
+/// rounded up to the next whole point (TechManual p. 98).
 pub fn vehicle_internal(tons: i64) -> u16 {
-    u16::try_from((tons + 5).max(10) / 10).unwrap_or(u16::MAX)
+    u16::try_from((tons.max(1) + 9) / 10).unwrap_or(u16::MAX)
 }
 
 /// Whether a class takes its internal structure from tonnage rather than its document.
@@ -739,8 +784,10 @@ mod tests {
     fn choices_round_trip_through_flags() {
         let construction = Construction {
             clan: true,
+            mixed_tech: true,
             mixed: vec![Component::Engine, Component::Armor],
             engine: Engine::Xl,
+            engine_rating: None,
             gyro: Gyro::HeavyDuty,
             cockpit: Cockpit::Small,
             structure: Structure::EndoSteel,
@@ -780,9 +827,28 @@ mod tests {
         let clan = table("tech_base = \"clan\"").unwrap();
         assert_eq!(clan.heat_sinks, HeatSinks::Double);
         assert_eq!(clan.flags(), ["Clan"]);
-        assert_eq!(clan.render(), "\n[construction]\ntech_base = \"clan\"\n");
-        assert_eq!(table("").unwrap().render(), "");
-        assert!(table("tech_base = \"clan\"\nheat_sinks = \"single\"").is_err());
+        assert_eq!(
+            clan.render(false),
+            "\n[construction]\ntech_base = \"clan\"\n"
+        );
+        assert_eq!(table("").unwrap().render(false), "");
+        assert_eq!(
+            table("").unwrap().render(true),
+            "\n[construction]\ntech_base = \"inner_sphere\"\n"
+        );
+        // Clan Mechs may use single heat sinks (TM p. 52).
+        let single = table("tech_base = \"clan\"\nheat_sinks = \"single\"").unwrap();
+        assert_eq!(single.flags(), ["Clan", "SingleHS"]);
+        assert_eq!(
+            Construction::from_flags(&["Clan", "SingleHS"]).unwrap().0,
+            single
+        );
+        assert!(
+            !table("heat_sinks = \"single\"")
+                .unwrap()
+                .flags()
+                .contains(&"SingleHS")
+        );
         // A component from the other technology base round-trips; one from the chassis base is
         // the default and is not recorded.
         let mixed = table("engine_tech = \"clan\"\narmor_tech = \"inner_sphere\"").unwrap();
@@ -790,7 +856,10 @@ mod tests {
         assert!(mixed.clan_component(Component::Engine));
         assert!(!mixed.clan_component(Component::Armor));
         assert_eq!(mixed.flags(), ["ClanEngine_Tech"]);
-        assert_eq!(mixed.render(), "\n[construction]\nengine_tech = \"clan\"\n");
+        assert_eq!(
+            mixed.render(false),
+            "\n[construction]\nengine_tech = \"clan\"\n"
+        );
         let clan_mixed = table("tech_base = \"clan\"\nstructure_tech = \"inner_sphere\"").unwrap();
         assert_eq!(clan_mixed.flags(), ["Clan", "ISStructure_Tech"]);
         assert_eq!(
@@ -902,8 +971,8 @@ mod tests {
                 "{ at = 5, item = \"HeatSink\" }",
             )
             .replacen(
-                "\n[sections.",
-                "\n[construction]\ncockpit = \"small\"\n\n[sections.",
+                "[construction]\n",
+                "[construction]\ncockpit = \"small\"\n",
                 1,
             );
         let template = crate::MechTemplate::parse("JR7-D", &small).unwrap();
@@ -917,6 +986,61 @@ mod tests {
         );
     }
 
+    /// A torso-mounted cockpit sits after the engine and gyro with its sensor package, moves
+    /// a life support slot to the top of each side torso and leaves the head two sensors
+    /// (Tactical Operations: Advanced Units & Equipment p. 112).
+    #[test]
+    fn torso_mounted_cockpits_move_into_the_torsos() {
+        use MechSection::*;
+        let jenner = include_str!("../tests/fixtures/JR7-D.toml");
+        let source = jenner
+            .replacen("[construction]\n", "[construction]\ncockpit = \"torso_mounted\"\n", 1)
+            .replace(
+                "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]",
+                "slots = [\n    { at = \"2-4\", item = \"JumpJet\" },\n]",
+            )
+            .replace(
+                "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"JumpJet\" },",
+                "    { at = 4, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"JumpJet\" },",
+            )
+            .replace(
+                "    { at = 11, item = \"IS.SRM-4\" },\n    { at = 12, item = \"JumpJet\" },\n",
+                "",
+            )
+            .replace(
+                "    { at = 4, item = \"HeatSink\" },",
+                "    { at = 3, item = \"IS.SRM-4\" },\n    { at = 4, item = \"HeatSink\" },",
+            );
+        let template = crate::MechTemplate::parse("JR7-D", &source).unwrap();
+        let slot = |section, slot: u8| {
+            template.sections[&section].criticals[&slot]
+                .equipment
+                .clone()
+        };
+        assert_eq!(
+            (slot(Head, 0), slot(Head, 1)),
+            (SENSORS.into(), SENSORS.into())
+        );
+        assert_eq!(slot(CenterTorso, 10), COCKPIT);
+        assert_eq!(slot(CenterTorso, 11), SENSORS);
+        assert_eq!(slot(LeftTorso, 0), LIFE_SUPPORT);
+        assert_eq!(slot(RightTorso, 0), LIFE_SUPPORT);
+        // Everything else passes; the cockpit's extra ton leaves the Jenner overweight.
+        let rejection = crate::check_template(&template)
+            .rejection
+            .unwrap_or_default();
+        assert!(rejection.contains("over the 35-ton chassis"), "{rejection}");
+        let rendered = template.to_document().unwrap();
+        assert!(rendered.contains("cockpit = \"torso_mounted\""));
+        assert!(!rendered.contains("engine_at"));
+        assert_eq!(
+            crate::MechTemplate::parse("JR7-D", &rendered)
+                .unwrap()
+                .sections,
+            template.sections
+        );
+    }
+
     #[test]
     fn derived_numbers_follow_tonnage_and_movement_points() {
         assert_eq!(mech_internal(80, MechSection::CenterTorso, false), Some(25));
@@ -924,6 +1048,10 @@ mod tests {
         assert_eq!(mech_internal(82, MechSection::Head, false), None);
         assert_eq!(vehicle_internal(80), 8);
         assert_eq!(vehicle_internal(5), 1);
+        // A 45-ton vehicle receives 5 points and a 21-ton one 3 (TechManual p. 98).
+        assert_eq!(vehicle_internal(45), 5);
+        assert_eq!(vehicle_internal(21), 3);
+        assert_eq!(vehicle_internal(30), 3);
         assert_eq!(movement_points(64.5), Some(6));
         assert_eq!(movement_points(32.5), None);
     }

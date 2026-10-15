@@ -25,15 +25,15 @@ async fn fixture(
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let observer = world.create(&config, "Observer".into(), Kind::Thing);
     let target = world.create(&config, "Target".into(), Kind::Thing);
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(&mut world, observer)
         .unwrap();
     support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
-    UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-        .unwrap()
-        .create(&mut world, target)
-        .unwrap();
+    crate::support::templates::legal_unit(
+        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+    )
+    .create(&mut world, target)
+    .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, observer, map, 0, 0).unwrap();
     place_battle_unit(&mut world, target, map, 0, 60).unwrap();
@@ -46,7 +46,7 @@ fn edit(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Va
 }
 
 /// Every chassis stops seeing at daylight's sixty hexes, measured spatially, in both directions
-/// and without the query changing anything; equipment on either endpoint never stretches it.
+/// and without the query changing anything.
 #[tokio::test]
 async fn all_chassis_share_symmetric_sight_cutoffs_without_mutation() {
     let ground = include_str!("../game/units/Demolisher.toml");
@@ -55,57 +55,33 @@ async fn all_chassis_share_symmetric_sight_cutoffs_without_mutation() {
         include_str!("../game/units/GOL-1H.toml").to_owned(),
         ground.to_owned(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
-        ground.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(ground),
         include_str!("../game/units/RadioTower.toml").to_owned(),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
-        let (_dir, config, base, map, observer, target) = fixture(&source).await;
-        for anti_aircraft in [None, Some(observer), Some(target)] {
-            let mut world = base.clone();
-            // RadioTower is normally anti-aircraft equipped; make each installation case
-            // explicit so no endpoint's equipment can stretch the cutoff.
-            for id in [observer, target] {
-                edit(&mut world, id, |unit| {
-                    let flags = unit["definition"]["attributes"]["specials"]
-                        .as_str()
-                        .unwrap_or("")
-                        .split_whitespace()
-                        .filter(|flag| *flag != "-" && !flag.eq_ignore_ascii_case("AntiAircraft"))
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    unit["definition"]["attributes"]["specials"] = if Some(id) == anti_aircraft {
-                        format!("{flags} AntiAircraft")
-                    } else if flags.is_empty() {
-                        "-".into()
-                    } else {
-                        flags
-                    }
-                    .into();
-                });
+        let (_dir, config, mut world, map, observer, target) = fixture(&source).await;
+        for distance in [59.999_f64, 60.0, 60.001, 180.0] {
+            place_battle_unit(&mut world, target, map, 0, distance.round() as i64).unwrap();
+            edit(&mut world, target, |unit| {
+                unit["motion"]["point"]["y"] = (0.5 + distance).into()
+            });
+            let before = world.btech.clone();
+            let expected = distance > f64::from(MAX_SIGHT);
+            for (a, b) in [(observer, target), (target, observer)] {
+                assert_eq!(
+                    battle_unit_terrain_los(&world, a, b).unwrap().blocked,
+                    expected,
+                    "distance {distance}"
+                );
             }
-            for distance in [59.999_f64, 60.0, 60.001, 180.0] {
-                place_battle_unit(&mut world, target, map, 0, distance.round() as i64).unwrap();
-                edit(&mut world, target, |unit| {
-                    unit["motion"]["point"]["y"] = (0.5 + distance).into()
-                });
-                let before = world.btech.clone();
-                let expected = distance > f64::from(MAX_SIGHT);
-                for (a, b) in [(observer, target), (target, observer)] {
-                    assert_eq!(
-                        battle_unit_terrain_los(&world, a, b).unwrap().blocked,
-                        expected,
-                        "distance {distance}, anti-aircraft {anti_aircraft:?}"
-                    );
-                }
-                assert_eq!(world.btech, before);
-            }
-            persistence::save(&config.database(), &world).await.unwrap();
-            let restored = persistence::load(&config.database()).await.unwrap();
-            assert_eq!(
-                battle_unit_terrain_los(&world, observer, target).unwrap(),
-                battle_unit_terrain_los(&restored, observer, target).unwrap()
-            );
+            assert_eq!(world.btech, before);
         }
+        persistence::save(&config.database(), &world).await.unwrap();
+        let restored = persistence::load(&config.database()).await.unwrap();
+        assert_eq!(
+            battle_unit_terrain_los(&world, observer, target).unwrap(),
+            battle_unit_terrain_los(&restored, observer, target).unwrap()
+        );
     }
 }
 

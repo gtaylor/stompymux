@@ -2,13 +2,15 @@ name = "Karnov UR"
 class = "vtol"
 movement = "vtol"
 tons = 30
-walk_mp = 17
+walk_mp = 11
 cargo_space = 600
 max_suits = 0
 max_ton = 1
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 190
 
 [sections.left_side]
 armor = 5

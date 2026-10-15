@@ -109,8 +109,14 @@ pub struct VehicleTemplate {
     pub reference: String,
     pub movement: VehicleMovement,
     pub tons: u16,
+    /// Cruising MP the template states; the Base Engine Rating is tonnage x cruising MP
+    /// (TechManual p. 100).
+    pub walk_mp: u32,
+    /// Flanking speed in km/h, cruising MP x 1.5 rounded up: the realtime top speed.
     pub max_speed: f64,
-    /// Absence is preserved; the eventual engine rules determine the installed cooling.
+    /// Installed heat sinks as the record sheet counts them. Vehicles mount single sinks only
+    /// (TechManual p. 104), so this is also the heat they dissipate. Absence is preserved; the
+    /// engine rules determine the installed cooling.
     pub heat_sinks: Option<u16>,
     pub sections: BTreeMap<VehicleSection, SectionDefinition>,
     /// Preserve unit-level fields, including cargo, specials and equipment awaiting implementation.
@@ -118,7 +124,8 @@ pub struct VehicleTemplate {
 }
 
 impl VehicleTemplate {
-    /// Installed cooling capacity; fusion vehicles retain ten sinks when omitted or zero.
+    /// Installed heat sinks, which dissipate one heat each; fusion vehicles retain ten sinks
+    /// when omitted or zero.
     pub fn heat_sink_capacity(&self) -> u16 {
         match self.heat_sinks.unwrap_or(0) {
             0 if !self.has_special("ICEEngine_Tech") => 10,
@@ -143,12 +150,13 @@ impl VehicleTemplate {
     }
 
     /// Every template-level check construction makes before resolving the loadout: anatomy,
-    /// radio ratings, construction mass and, for VTOLs, the fuel capacity. A template that
-    /// passes this and resolves a [`super::VehicleLoadout`] is one the game would construct.
+    /// radio ratings, the TechManual construction rules (see
+    /// [`VehicleTemplate::construction_rules`]) and, for VTOLs, the fuel capacity. A template
+    /// that passes this and resolves a [`super::VehicleLoadout`] is one the game would construct.
     pub fn validate_construction(&self) -> Result<()> {
         self.validate_anatomy()?;
         super::validate_radio_attributes(&self.attributes)?;
-        self.mass()?;
+        self.construction_rules()?;
         if self.is_vtol() {
             self.vtol_fuel_capacity()?;
         }
@@ -159,7 +167,6 @@ impl VehicleTemplate {
     pub fn validate_anatomy(&self) -> Result<()> {
         ensure!(self.tons > 0, "Vehicle tonnage must be positive");
         super::validate_unit_metadata(&self.attributes)?;
-        super::read_engine_sink_override(&self.attributes)?;
         super::read_template_speed(&self.attributes, self.max_speed)?;
         let kind = self
             .attributes
@@ -189,14 +196,15 @@ impl VehicleTemplate {
             },
             "Rotor anatomy must match the vehicle class"
         );
-        // Hardened armor is too heavy for craft that ride on air: hovercraft and VTOLs.
+        // Hardened armor may not be carried by VTOL, WiGE or hover combat vehicles (Tactical
+        // Operations: Advanced Units & Equipment p. 92, Advanced Armor Table).
         ensure!(
             !self.has_technology(super::Technology::HardenedArmor)
                 || !matches!(
                     self.movement,
                     VehicleMovement::Hover | VehicleMovement::Vtol
                 ),
-            "Hovercraft and VTOLs cannot mount hardened armor"
+            "Hovercraft and VTOLs cannot mount hardened armor (Tactical Operations: Advanced Units & Equipment p. 92)"
         );
         Ok(())
     }
@@ -221,17 +229,7 @@ impl VehicleTemplate {
             .parse::<u16>()
             .context("invalid vehicle tonnage")?;
         ensure!(tons > 0, "vehicle tonnage must be positive");
-        let max_speed = parsed
-            .fields
-            .get("max_speed")
-            .map(String::as_str)
-            .unwrap_or("0")
-            .parse::<f64>()
-            .context("invalid vehicle speed")?;
-        ensure!(
-            max_speed.is_finite() && max_speed >= 0.0,
-            "invalid vehicle speed"
-        );
+        let (walk_mp, max_speed) = super::template_walking_mp(&parsed.fields)?;
         let heat_sinks = parsed
             .fields
             .get("heat_sinks")
@@ -256,13 +254,10 @@ impl VehicleTemplate {
                 section.name()
             );
         }
-        // The reference load forces vehicle internal structure to
-        // (tons + 5, at least 10) / 10 for every section that has any
-        // (vehicle_int_check), overriding authored Internals lines. Keeping the
-        // rewrite here, where C's parse and finalize are one operation, leaves
-        // saved definitions and later construction edits restored verbatim.
-        let expected_internal =
-            u16::try_from((i32::from(tons) + 5).max(10) / 10).expect("vehicle tonnage is bounded");
+        // Every structured location receives 10 percent of the tonnage in structure points,
+        // rounded up (TechManual p. 98), overriding authored internals. Keeping the rewrite
+        // here leaves saved definitions and later construction edits restored verbatim.
+        let expected_internal = super::construction::vehicle_internal(i64::from(tons));
         for layout in sections.values_mut() {
             if layout.internal != 0 {
                 layout.internal = expected_internal;
@@ -273,6 +268,7 @@ impl VehicleTemplate {
             reference,
             movement,
             tons,
+            walk_mp,
             max_speed,
             heat_sinks,
             sections,

@@ -2,13 +2,15 @@ name = "Goshawk"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
-heat_sinks = 20
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 330
+structure = "endo_steel"
 armor = "ferro_fibrous"
 
 [sections.left_arm]
@@ -16,6 +18,7 @@ armor = 18
 slots = [
     { at = "5-7", item = "CL.MachineGun" },
     { at = 8, item = "Ammo_CL.MachineGun", rounds = 200 },
+    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = "10-11", item = "FerroFibrous" },
     { at = 12, item = "EndoSteel" },
 ]
@@ -30,7 +33,7 @@ slots = [
 ]
 
 [sections.left_torso]
-armor = 20
+armor = 21
 rear = 5
 slots = [
     { at = 3, item = "JumpJet" },
@@ -41,17 +44,18 @@ slots = [
 ]
 
 [sections.right_torso]
-armor = 20
+armor = 21
 rear = 5
 slots = [
     { at = 3, item = "JumpJet" },
     { at = "6-8", item = "TargetingComputer" },
-    { at = "10-11", item = "FerroFibrous" },
+    { at = 10, item = "FerroFibrous" },
+    { at = 11, item = "EndoSteel" },
     { at = 12, item = "EndoSteel" },
 ]
 
 [sections.center_torso]
-armor = 30
+armor = 31
 rear = 5
 slots = [
     { at = 11, item = "FerroFibrous" },

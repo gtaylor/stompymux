@@ -2,12 +2,13 @@ name = "Crossbow"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 8
-heat_sinks = 20
+walk_mp = 5
+heat_sinks = 10
 specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 325
 
 [sections.left_arm]
 armor = 18

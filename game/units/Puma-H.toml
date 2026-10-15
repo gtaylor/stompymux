@@ -2,12 +2,13 @@ name = "Puma"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 9
-heat_sinks = 32
+walk_mp = 6
+heat_sinks = 16
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 210
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

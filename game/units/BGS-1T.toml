@@ -2,10 +2,13 @@ name = "Barghest"
 class = "mech"
 movement = "quad"
 tons = 70
-walk_mp = 8
-heat_sinks = 20
+walk_mp = 5
+heat_sinks = 10
 
 [construction]
+tech_base = "inner_sphere"
+engine = "xl"
+engine_rating = 350
 heat_sinks = "double"
 
 [sections.front_left_leg]
@@ -17,18 +20,13 @@ armor = 27
 [sections.left_torso]
 armor = 21
 rear = 6
-engine_slots = 5
 slots = [
-    { at = "6-9", item = "IS.ERLargeLaser" },
+    { at = "4-7", item = "IS.ERLargeLaser" },
 ]
 
 [sections.right_torso]
 armor = 21
 rear = 6
-engine_slots = 1
-slots = [
-    { at = "2-12", item = "IS.LB20-XAC" },
-]
 
 [sections.center_torso]
 armor = 30
@@ -50,3 +48,10 @@ slots = [
 
 [sections.head]
 armor = 9
+
+[[split_mounts]]
+item = "IS.LB20-XAC"
+placements = [
+    { section = "right_torso", at = "4-12" },
+    { section = "center_torso", at = "11-12" },
+]

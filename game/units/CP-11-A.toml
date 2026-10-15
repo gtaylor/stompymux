@@ -2,12 +2,14 @@ name = "Cyclops"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 12
 radio = 4
 radio_type = 127
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 360
 
 [sections.left_arm]
 armor = 10

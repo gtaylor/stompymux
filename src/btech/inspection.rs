@@ -3,10 +3,10 @@
 use super::{
     CriticalLocation, InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon, Mech,
     MechLoadout, MechSection, MechTemplate, Part, PartKind, SectionDefinition,
-    inspect_raw_template_armor, inspect_raw_template_weapons, inspection_ammunition_modes,
-    inspection_canonical_mech_internal, inspection_compatible_template,
-    inspection_compatible_vehicle_template, inspection_configured_technology,
-    inspection_configured_technology_attributes, inspection_fire_modes, inspection_raw_part,
+    inspection_ammunition_modes, inspection_canonical_mech_internal,
+    inspection_compatible_template, inspection_compatible_vehicle_template,
+    inspection_configured_technology, inspection_configured_technology_attributes,
+    inspection_fire_modes, inspection_raw_part,
 };
 use anyhow::{Context, Result};
 use std::collections::BTreeMap;
@@ -20,193 +20,32 @@ pub fn inspection_effective_maximum_speed(
     super::effective_speed::configured(world, id, super::SpeedPolicy::configured(config))
 }
 
-/// Battle value using the same live host load policy as C-facing speed.
+/// Battle Value of a live unit with the world's runtime weapon values.
 pub fn inspection_battle_value(
     world: &crate::World,
     id: crate::ObjectId,
-    config: &crate::Config,
 ) -> Result<super::BattleValue> {
-    super::battle_value::configured(world, id, super::SpeedPolicy::configured(config))
+    super::battle_value::unit_battle_value(world, id)
 }
 
-/// Pristine BattleMech value after normalizing C weapon names.
+/// Battle Value of the pristine 'Mech a template describes. Weapon names are normalized as
+/// for the other template views, while the authored jump speed is kept as the design value.
 pub fn inspection_template_battle_value(template: &MechTemplate) -> Result<super::BattleValue> {
-    let compatible = inspection_compatible_template(template);
-    let loadout = MechLoadout::resolve(&compatible)?;
-    let flag = |name: &str| {
-        ["specials", "specials2"]
-            .iter()
-            .filter_map(|key| template.attributes.get(*key))
-            .any(|value| {
-                value
-                    .split_ascii_whitespace()
-                    .any(|item| item.eq_ignore_ascii_case(name))
-            })
-    };
-    let clan = flag("Clan");
-    let engine_factor = if flag("LightEngine_Tech") || (clan && flag("XLEngine_Tech")) {
-        0.75_f32
-    } else if flag("XLEngine_Tech") || flag("XXL_Tech") {
-        0.5_f32
-    } else {
-        1.0_f32
-    };
-    let armor: u32 = template
-        .sections
-        .values()
-        .map(|section| u32::from(section.armor) + u32::from(section.rear))
-        .sum();
-    let structure: u32 = MechSection::ALL
-        .into_iter()
-        .map(|section| {
-            inspection_canonical_mech_internal(template, section).unwrap_or_else(|| {
-                template
-                    .sections
-                    .get(&section)
-                    .map_or(0, |definition| definition.internal)
-            })
-        })
-        .map(u32::from)
-        .sum();
-    let tons = super::administrative_template_tonnage(&template.attributes, template.tons);
-    let mut defense = armor as f32 * 2.5 + structure as f32 * 1.5 * engine_factor;
-    defense += tons as f32
-        * if flag("HDGyro_Tech") || flag("HDGYRO") {
-            1.0
-        } else {
-            0.5
-        };
-    let settings = super::WeaponSettings::default();
-    let has_case_ii = |section| {
-        loadout
-            .systems
-            .iter()
-            .any(|part| part.system == super::System::CaseIi && part.location.section == section)
-    };
-    let ecm = loadout
-        .systems
-        .iter()
-        .filter(|part| part.system == super::System::Ecm)
-        .count()
-        >= if clan { 1 } else { 2 };
-    let probe = loadout
-        .systems
-        .iter()
-        .filter(|part| part.system == super::System::BeagleProbe)
-        .count()
-        >= if clan { 1 } else { 2 };
-    defense += if ecm { 61.0 } else { 0.0 } + if probe { 10.0 } else { 0.0 };
-    for mount in &loadout.weapons {
-        if mount.weapon.is_ams()
-            || matches!(mount.weapon, super::Weapon::APod | super::Weapon::ClanAPod)
-        {
-            defense += settings.battle_value(mount.weapon) as f32;
-        }
-    }
-    for bin in &loadout.ammunition {
-        defense += match bin.weapon {
-            super::Weapon::AntiMissileSystem => 11.0,
-            super::Weapon::ClanAntiMissileSystem => 21.0,
-            _ => 0.0,
-        };
-        let vulnerable = matches!(
-            bin.location.section,
-            MechSection::CenterTorso
-                | MechSection::Head
-                | MechSection::LeftLeg
-                | MechSection::RightLeg
-        );
-        let has_case = loadout.systems.iter().any(|part| {
-            part.system == super::System::Case && part.location.section == bin.location.section
-        });
-        if !has_case_ii(bin.location.section)
-            && (vulnerable || flag("XLEngine_Tech") || flag("XXL_Tech") || !has_case)
-        {
-            defense -= 15.0;
-        }
-    }
-    let vulnerable_core = |section| {
-        matches!(
-            section,
-            MechSection::CenterTorso
-                | MechSection::Head
-                | MechSection::LeftLeg
-                | MechSection::RightLeg
-        )
-    };
-    let xl = flag("XLEngine_Tech") || flag("XXL_Tech");
-    let has_case = |section| {
-        template.sections.get(&section).is_some_and(|definition| {
-            definition
-                .configuration
-                .as_deref()
-                .is_some_and(|value| value.eq_ignore_ascii_case("Case"))
-        })
-    };
-    for (&section, definition) in &template.sections {
-        let exposed = if has_case_ii(section) {
-            false
-        } else if (clan && vulnerable_core(section)) || xl {
-            true
-        } else if vulnerable_core(section) {
-            !has_case(section)
-        } else {
-            match section {
-                MechSection::LeftArm => !has_case(MechSection::LeftTorso),
-                MechSection::RightArm => !has_case(MechSection::RightTorso),
-                _ => false,
-            }
-        };
-        if exposed {
-            defense -= definition
-                .criticals
-                .values()
-                .filter(|critical| {
-                    super::Weapon::parse(&critical.equipment)
-                        .is_ok_and(|weapon| weapon.weapon_explosion_damage() > 0)
-                })
-                .count() as f32;
-        }
-    }
-    let jump = (template.jump_speed as f32 / 10.75) as i32;
-    let running = (template.max_speed as f32 / 10.75) as i32;
-    let movement = match running {
-        ..=2 => 0,
-        3..=4 => 1,
-        5..=6 => 2,
-        7..=9 => 3,
-        10..=17 => 4,
-        18..=24 => 5,
-        _ => 6,
-    } + i32::from(jump > running);
-    defense += defense * movement as f32 * 0.1;
-    defense = ((defense * 100.0).round() / 100.0).max(0.0);
-    let heat_efficiency = 6 + i32::from(template.heat_sinks) - jump.max(2);
-    let mut weapons: Vec<_> = loadout.weapons.iter().map(|mount| mount.weapon).collect();
-    weapons.sort_by_key(|weapon| settings.battle_value(*weapon));
-    let mut heat = 0_i32;
-    let mut offense = tons as f32;
-    for weapon in weapons.into_iter().rev().filter(|weapon| !weapon.is_ams()) {
-        heat += i32::from(weapon.profile().heat);
-        let value = settings.battle_value(weapon);
-        offense += (if heat > heat_efficiency {
-            value / 2
-        } else {
-            value
-        }) as f32;
-    }
-    Ok(super::BattleValue {
-        offensive: f64::from(offense),
-        defensive: f64::from(defense),
-        total: f64::from(offense) + f64::from(defense),
-    })
+    let mut compatible = inspection_compatible_template(template);
+    compatible.jump_speed = template.jump_speed;
+    let unit = Mech::from_template(compatible.clone())
+        .or_else(|_| Mech::from_contract_template(compatible))?;
+    unit.battle_value()
 }
 
-/// Pristine vehicle value after normalizing C weapon names.
+/// Battle Value of the pristine vehicle or VTOL a template describes.
 pub fn inspection_vehicle_template_battle_value(
     template: &super::VehicleTemplate,
 ) -> Result<super::BattleValue> {
-    super::Vehicle::new(inspection_compatible_vehicle_template(template))?.battle_value()
+    let compatible = inspection_compatible_vehicle_template(template);
+    let unit = super::Vehicle::new(compatible.clone())
+        .or_else(|_| super::Vehicle::new_contract(compatible))?;
+    unit.battle_value()
 }
 
 /// Stable C-facing section identity for a supported BattleMech.
@@ -719,146 +558,30 @@ pub fn inspect_section_condition(unit: &Mech, section: MechSection) -> &'static 
     }
 }
 
-fn raw_technology_codes(template: &super::RawTemplate) -> Result<std::collections::BTreeSet<i32>> {
-    Ok(inspect_raw_template_technologies(template)?
-        .into_iter()
-        .map(|technology| technology.code)
-        .collect())
-}
-
-fn raw_normalized_jump_speed(
-    template: &super::RawTemplate,
-    technology: &std::collections::BTreeSet<i32>,
-) -> f32 {
-    if template.class != super::RawUnitClass::Mech {
-        return template.jump_speed as f32;
-    }
-    let mut jets = template
-        .sections
-        .values()
-        .flat_map(|section| section.criticals.values())
-        .filter(|critical| critical.equipment.eq_ignore_ascii_case("JumpJet"))
-        .count() as i32;
-    if technology.contains(&38) {
-        jets /= 2;
-        let maximum = (template.max_speed as f32 * 0.093_023_3_f32) as i32;
-        jets = jets.min(maximum);
-    } else {
-        // Native integer `(2 / 3)` makes the admitted standard-jet maximum zero.
-        jets = 0;
-    }
-    10.75_f32 * jets.max(0) as f32
-}
-
-fn raw_weapon_heat_and_value(part_id: i32) -> Option<(i32, i32)> {
-    if let Some(weapon) = super::Weapon::from_part_id(part_id) {
-        return Some((
-            i32::from(weapon.profile().heat),
-            i32::from(weapon.battle_value()),
-        ));
-    }
-    match part_id {
-        171 => Some((0, 5)),
-        172 => Some((0, 7)),
-        173 => Some((0, 9)),
-        174 => Some((0, 8)),
-        175 => Some((1, 9)),
-        176 => Some((1, 5)),
-        177 => Some((1, 12)),
-        178 => Some((1, 22)),
-        _ => None,
-    }
-}
-
-/// Calculate pristine native Battle Value from class-neutral template material.
+/// Battle Value of the pristine unit a class-neutral template describes. 'Mech, vehicle and
+/// VTOL templates are read back through their typed template rules; other unit classes have no
+/// supported valuation.
 pub fn inspect_raw_template_battle_value(
     template: &super::RawTemplate,
 ) -> Result<super::BattleValue> {
-    let technology = raw_technology_codes(template)?;
-    let armor = inspect_raw_template_armor(template, None)?;
-    let mut defense = (armor.armor.1 + armor.rear_armor.1) as f32 * 2.5_f32;
-    let engine_factor = if template.class != super::RawUnitClass::Mech {
-        1.0_f32
-    } else if technology.contains(&24) || (technology.contains(&5) && technology.contains(&21)) {
-        0.75_f32
-    } else if technology.contains(&21) || technology.contains(&25) {
-        0.5_f32
-    } else {
-        1.0_f32
+    let parsed = super::ParsedTemplate {
+        fields: template.attributes.clone(),
+        sections: template
+            .sections
+            .iter()
+            .filter(|(_, definition)| **definition != SectionDefinition::default())
+            .map(|(section, definition)| (section.name().replace(' ', "_"), definition.clone()))
+            .collect(),
     };
-    defense += armor.internal.1 as f32 * 1.5_f32 * engine_factor;
-    if template.class == super::RawUnitClass::Mech {
-        defense += template.tons as f32 * if technology.contains(&53) { 1.0 } else { 0.5 };
-    }
-
-    let discount = match template.movement {
-        super::RawMovement::Tracked => 0.1_f32,
-        super::RawMovement::Wheeled => 0.2_f32,
-        super::RawMovement::Hover | super::RawMovement::Vtol => 0.3_f32,
-        super::RawMovement::Hull | super::RawMovement::Foil | super::RawMovement::Submarine => {
-            0.4_f32
+    match template.class {
+        super::RawUnitClass::Mech => {
+            inspection_template_battle_value(&MechTemplate::from_parsed(parsed)?)
         }
-        _ => 0.0_f32,
-    };
-    defense -= defense * discount;
-
-    let jump = (raw_normalized_jump_speed(template, &technology) / 10.75_f32) as i32;
-    let mut running = (template.max_speed as f32 / 10.75_f32) as i32;
-    if technology.contains(&0) {
-        running = (((template.max_speed as f32 / 1.5_f32 / 10.75_f32).round_ties_even() + 1.0_f32)
-            * 1.5_f32) as i32;
+        super::RawUnitClass::Vehicle | super::RawUnitClass::Vtol => {
+            inspection_vehicle_template_battle_value(&super::VehicleTemplate::from_parsed(parsed)?)
+        }
+        class => anyhow::bail!("Battle Value is unsupported for {} units", class.name()),
     }
-    if technology.contains(&4) && technology.contains(&37) {
-        running = ((running * 2 / 3) as f32 * 2.5_f32) as i32;
-    }
-    if technology.contains(&4) || technology.contains(&37) {
-        running = (running * 2 / 3) * 2;
-    }
-    let mut movement = match running {
-        ..=2 => 0,
-        3..=4 => 1,
-        5..=6 => 2,
-        7..=9 => 3,
-        10..=17 => 4,
-        18..=24 => 5,
-        _ => 6,
-    };
-    if matches!(
-        template.class,
-        super::RawUnitClass::BattleSuit
-            | super::RawUnitClass::Vtol
-            | super::RawUnitClass::AeroFighter
-    ) {
-        movement += 1;
-    }
-    movement += i32::from(jump > running);
-    if technology.contains(&31) {
-        movement += 2;
-    }
-    defense += defense * movement as f32 * 0.1_f32;
-    defense = ((defense * 100.0_f32).round() / 100.0_f32).max(0.0);
-
-    let heat_efficiency = 6 + template.heat_sinks - jump.max(2);
-    let mut weapons: Vec<_> = inspect_raw_template_weapons(template)?
-        .into_iter()
-        .filter_map(|weapon| raw_weapon_heat_and_value(weapon.part.id))
-        .collect();
-    weapons.sort_by_key(|(_, battle_value)| *battle_value);
-    let mut heat = 0;
-    let mut offense = template.tons as f32;
-    for (weapon_heat, battle_value) in weapons.into_iter().rev() {
-        heat += weapon_heat;
-        offense += if heat > heat_efficiency {
-            (battle_value / 2) as f32
-        } else {
-            battle_value as f32
-        };
-    }
-    Ok(super::BattleValue {
-        offensive: f64::from(offense),
-        defensive: f64::from(defense),
-        total: f64::from(offense) + f64::from(defense),
-    })
 }
 
 fn compose_raw_template(
@@ -1409,8 +1132,10 @@ pub struct InspectionTechnology {
 pub fn inspect_technologies(template: &MechTemplate) -> Result<Vec<InspectionTechnology>> {
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) =
-            super::administrative_technology(code).expect("complete unit technology catalogue");
+        // Codes of removed house flags no longer name a technology.
+        let Some((flag, group)) = super::administrative_technology(code) else {
+            continue;
+        };
         let configured = inspection_configured_technology(template, flag, group);
         let loaded = template.infers_technology(code);
         if configured || loaded {
@@ -1430,6 +1155,7 @@ pub fn inspect_technologies(template: &MechTemplate) -> Result<Vec<InspectionTec
         (super::System::C3Master, 7, "C3MasterTech"),
         (super::System::C3Slave, 8, "C3SlaveTech"),
         (super::System::ArtemisIv, 9, "ArtemisIV"),
+        (super::System::ArtemisV, 48, "ArtemisV_Tech"),
         (super::System::Ecm, 10, "ECM"),
         (super::System::BeagleProbe, 11, "BeagleProbe"),
         (super::System::LightProbe, 15, "LightBAP"),
@@ -1437,6 +1163,7 @@ pub fn inspect_technologies(template: &MechTemplate) -> Result<Vec<InspectionTec
         (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
         (super::System::AngelEcm, 43, "AngelECM_Tech"),
         (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::LightTag, 46, "TAG_Tech"),
         (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if loadout.systems.iter().any(|part| part.system == system)
@@ -1460,8 +1187,10 @@ pub fn inspect_raw_template_technologies(
 ) -> Result<Vec<InspectionTechnology>> {
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) =
-            super::administrative_technology(code).expect("complete unit technology catalogue");
+        // Codes of removed house flags no longer name a technology.
+        let Some((flag, group)) = super::administrative_technology(code) else {
+            continue;
+        };
         if inspection_configured_technology_attributes(&template.attributes, flag, group) {
             rows.push(InspectionTechnology {
                 code,
@@ -1503,6 +1232,7 @@ pub fn inspect_raw_template_technologies(
         (super::System::C3Master, 7, "C3MasterTech"),
         (super::System::C3Slave, 8, "C3SlaveTech"),
         (super::System::ArtemisIv, 9, "ArtemisIV"),
+        (super::System::ArtemisV, 48, "ArtemisV_Tech"),
         (super::System::Ecm, 10, "ECM"),
         (super::System::BeagleProbe, 11, "BeagleProbe"),
         (super::System::LightProbe, 15, "LightBAP"),
@@ -1510,6 +1240,7 @@ pub fn inspect_raw_template_technologies(
         (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
         (super::System::AngelEcm, 43, "AngelECM_Tech"),
         (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::LightTag, 46, "TAG_Tech"),
         (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if systems.contains(&system) && !rows.iter().any(|row| row.code == code) {
@@ -1536,8 +1267,10 @@ pub fn inspect_vehicle_technologies(
         .unwrap_or("");
     let mut rows = Vec::new();
     for code in 0..=66 {
-        let (flag, group) =
-            super::administrative_technology(code).expect("complete unit technology catalogue");
+        // Codes of removed house flags no longer name a technology.
+        let Some((flag, group)) = super::administrative_technology(code) else {
+            continue;
+        };
         if specials
             .split_ascii_whitespace()
             .any(|item| item.eq_ignore_ascii_case(flag))
@@ -1559,6 +1292,7 @@ pub fn inspect_vehicle_technologies(
         (super::System::BloodhoundProbe, 42, "BloodhoundProbe_Tech"),
         (super::System::AngelEcm, 43, "AngelECM_Tech"),
         (super::System::Tag, 46, "TAG_Tech"),
+        (super::System::LightTag, 46, "TAG_Tech"),
         (super::System::TargetingComputer, 55, "TargComp_Tech"),
     ] {
         if loadout.systems.iter().any(|part| part.system == system)

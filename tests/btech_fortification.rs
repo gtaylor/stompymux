@@ -20,8 +20,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     )
     .unwrap();
     let id = world.create(&config, "Unit".into(), Kind::Thing);
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(&mut world, id)
         .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -199,10 +198,11 @@ async fn tow_pairs_reject_either_fortified_endpoint_and_cannot_be_fortified_afte
             let (_dir, config, mut world, id) = fixture(source).await;
             let map = world.objects[&id].location.unwrap();
             let target = world.create(&config, "Target".into(), Kind::Thing);
-            UnitTemplate::parse("test", target_source)
-                .unwrap()
-                .create(&mut world, target)
-                .unwrap();
+            crate::support::templates::legal_unit(
+                UnitTemplate::parse("test", target_source).unwrap(),
+            )
+            .create(&mut world, target)
+            .unwrap();
             place_battle_unit(&mut world, target, map, 0, 0).unwrap();
             for endpoint in [id, target] {
                 set_battle_fortified(&mut world, endpoint, true).unwrap();

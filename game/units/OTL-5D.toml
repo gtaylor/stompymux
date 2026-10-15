@@ -2,11 +2,13 @@ name = "Ostsol"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 16
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 armor = "ferro_fibrous"
 
 [sections.left_arm]

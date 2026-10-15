@@ -2,10 +2,12 @@ name = "Striker"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-walk_mp = 8
+walk_mp = 5
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 155
 
 [sections.left_side]
 armor = 20

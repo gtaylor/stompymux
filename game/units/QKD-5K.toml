@@ -2,14 +2,16 @@ name = "Quickdraw"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 34
+heat_sinks = 17
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

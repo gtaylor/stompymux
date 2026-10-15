@@ -28,7 +28,7 @@ impl Mech {
         let definition = self.definition();
         let loadout = self.loadout()?;
         let survives = |section| self.sections()[&section].internal > 0;
-        let rating = rated_output(definition.tons, definition.max_speed)?;
+        let rating = rated_output(definition.tons, definition.walk_mp);
         // C derives the engine mass family from technology flags alone; reference
         // builds without engine criticals still carry a nominal engine mass.
         let engine_family = || {
@@ -59,14 +59,14 @@ impl Mech {
             -1024
         };
         let gyro = self.gyro().mass(gyro);
-        let cockpit = if survives(MechSection::Head) {
-            if definition.has_technology(Technology::SmallCockpit) {
-                2 * 1024
-            } else {
-                3 * 1024
-            }
-        } else {
+        let cockpit = if !survives(self.cockpit_section()) {
             0
+        } else if definition.has_technology(Technology::SmallCockpit) {
+            2 * 1024
+        } else if definition.has_technology(Technology::TorsoMountedCockpit) {
+            4 * 1024
+        } else {
+            3 * 1024
         };
         let original: u32 = definition
             .sections
@@ -120,7 +120,13 @@ impl Mech {
             .systems
             .iter()
             .filter(|part| survives(part.location.section))
-            .map(|part| system_slot_mass(definition, part.system))
+            .map(|part| {
+                system_slot_mass(
+                    definition,
+                    part.system,
+                    part.is_clan(definition.has_special("Clan")),
+                )
+            })
             .sum::<u32>();
         for mount in &loadout.weapons {
             let slot_mass = mount.weapon.mass() / u32::from(mount.weapon.profile().critical_slots);
@@ -194,15 +200,12 @@ impl Mech {
         let definition = self.definition();
         let loadout = self.loadout()?;
         let survives = |section| self.sections()[&section].internal > 0;
+        // Surviving dissipation, in heat points, converted back to sinks below.
         let sinks = definition
-            .heat_sinks
+            .heat_dissipation()
             .saturating_sub(u16::from(self.system_hits(System::HeatSink)));
         let sink_slots = definition.heat_sink_slots() as u32;
-        let sink_efficiency = if definition.has_double_heat_sinks() {
-            2
-        } else {
-            1
-        };
+        let sink_efficiency = u32::from(definition.heat_per_sink());
         // Keep per-critical integer rounding, including 341 units per IS double-sink slot.
         let slot_mass = 1024 / sink_slots;
         // Fusion engines carry ten heat sinks for free; combustion engines carry none.

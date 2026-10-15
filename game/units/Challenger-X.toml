@@ -2,7 +2,7 @@ name = "Challenger X"
 class = "vehicle"
 movement = "track"
 tons = 90
-walk_mp = 5
+walk_mp = 3
 radio = 5
 radio_type = 126
 radio_range = 210
@@ -14,20 +14,21 @@ max_suits = 0
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 270
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 50
 slots = [
     { at = 1, item = "IS.StreakSRM-2" },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 50
 slots = [
     { at = 1, item = "IS.StreakSRM-2" },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
@@ -48,7 +49,7 @@ slots = [
 ]
 
 [sections.turret]
-armor = 57
+armor = 56
 slots = [
     { at = 1, item = "IS.GaussRifle" },
     { at = 2, item = "IS.LRM-10", modes = ["Artemis/Mine"] },

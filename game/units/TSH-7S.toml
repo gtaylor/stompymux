@@ -2,11 +2,13 @@ name = "Tai-sho"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
-heat_sinks = 26
+walk_mp = 3
+heat_sinks = 13
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 255
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

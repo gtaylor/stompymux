@@ -2,13 +2,15 @@ name = "Ninja-To"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 9
-heat_sinks = 24
+walk_mp = 6
+heat_sinks = 12
 radio = 4
 specials = ["C3SlaveTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 390
 structure = "endo_steel"
 heat_sinks = "double"
 

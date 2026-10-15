@@ -22,6 +22,15 @@ pub struct TemplateCheck {
     pub chassis: Option<MechChassis>,
     pub constructible: bool,
     pub rejection: Option<String>,
+    /// Walking MP the template states (TM p. 48).
+    pub walking_mp: u32,
+    /// Running MP: walking MP x 1.5, rounded up (TM p. 48).
+    pub running_mp: u32,
+    /// Engine rating: tonnage x walking MP (TM p. 48).
+    pub engine_rating: u32,
+    /// The engine rating the template's `[construction]` table declares, which construction
+    /// requires to equal `engine_rating`; absent when the template derives it.
+    pub declared_engine_rating: Option<u32>,
     pub weapons: usize,
     pub ammunition_bins: usize,
     pub ammunition_adjustments: Vec<AmmunitionAdjustment>,
@@ -35,6 +44,10 @@ pub fn check_template(template: &MechTemplate) -> TemplateCheck {
         chassis: template.chassis().ok(),
         constructible: false,
         rejection: None,
+        walking_mp: template.walking_mp(),
+        running_mp: template.running_mp(),
+        engine_rating: template.engine_rating(),
+        declared_engine_rating: template.declared_engine_rating().ok().flatten(),
         weapons: 0,
         ammunition_bins: 0,
         ammunition_adjustments: Vec::new(),

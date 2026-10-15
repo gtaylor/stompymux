@@ -2,14 +2,15 @@ name = "Koshi"
 class = "mech"
 movement = "biped"
 tons = 25
-walk_mp = 11
+walk_mp = 7
 jump_mp = 6
-heat_sinks = 20
-specials = ["BeagleProbe"]
+heat_sinks = 10
+specials = ["OmniMech_Tech", "BeagleProbe"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 175
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -18,19 +19,19 @@ armor = 4
 slots = [
     { at = 5, item = "CL.LRM-10" },
     { at = 6, item = "Ammo_CL.LRM-10", rounds = 12 },
-    { at = 7, item = "FerroFibrous" },
-    { at = 8, item = "EndoSteel" },
+    { at = 7, item = "EndoSteel" },
+    { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 4
 slots = [
     { at = 5, item = "CL.StreakSRM-4" },
-    { at = 6, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
-    { at = 7, item = "CL.MachineGun" },
-    { at = 8, item = "Ammo_CL.MachineGun", rounds = 200 },
-    { at = 9, item = "FerroFibrous" },
+    { at = "6-7", item = "CL.MachineGun" },
+    { at = 8, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
+    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 10, item = "EndoSteel" },
+    { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -39,8 +40,8 @@ rear = 5
 slots = [
     { at = "3-6", item = "HeatSink" },
     { at = "7-9", item = "JumpJet" },
-    { at = "10-11", item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = 10, item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -48,17 +49,17 @@ armor = 7
 rear = 5
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-6", item = "FerroFibrous" },
-    { at = "7-9", item = "JumpJet" },
-    { at = 10, item = "EndoSteel" },
+    { at = "5-7", item = "JumpJet" },
+    { at = 8, item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 10
-rear = 5
+rear = 6
 slots = [
-    { at = 11, item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.left_leg]

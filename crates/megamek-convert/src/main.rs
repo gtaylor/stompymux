@@ -21,7 +21,7 @@ use clap::Parser;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
-use stompymux_unit_construction::{UnitTemplate, VehicleLoadout, check_template};
+use stompymux_unit_construction::{UnitTemplate, check_template, check_vehicle_template};
 
 /// Command-line options.
 #[derive(Parser)]
@@ -154,10 +154,10 @@ fn finish(reference: &str, draft: &draft::Draft) -> Result<String> {
             mech.to_document()?
         }
         UnitTemplate::Vehicle(vehicle) => {
-            vehicle
-                .validate_construction()
-                .and_then(|()| VehicleLoadout::resolve(&vehicle))
-                .context("stompymux cannot construct this vehicle")?;
+            let check = check_vehicle_template(&vehicle);
+            if let Some(rejection) = check.rejection {
+                bail!("stompymux cannot construct this vehicle: {rejection}");
+            }
             vehicle.to_document()?
         }
     };

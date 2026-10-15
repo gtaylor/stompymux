@@ -58,7 +58,6 @@ const FIELDS: &[&str] = &[
     "disabled_hs",
     "overheat",
     "dissheat",
-    "hsengoverride",
     "heatsinks",
     "last_startup",
     "C3iNetworkSize",
@@ -113,7 +112,7 @@ fn admission(world: &World, actor: ObjectId, id: ObjectId) -> Result<()> {
 }
 
 /// Read a field from existing authoritative services; projections never consume random state.
-fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Option<String>> {
+fn value(world: &World, id: ObjectId, field: &str) -> Result<Option<String>> {
     let scanner = super::scanner::scanner_unit(world, id).context("Unit is unavailable")?;
     let mech = world.btech.constructed_units().get(&id);
     let vehicle = world.btech.vehicles().get(&id);
@@ -175,10 +174,9 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             Some(super::unit_metadata(attributes, field).into())
         }
         "displayname" => Some(super::display_name::display_name(world, id)?.into()),
-        "bv" => float(
-            super::battle_value::configured(world, id, super::SpeedPolicy::configured(config))?
-                .total,
-        ),
+        "bv" => integer(i64::from(
+            super::battle_value::unit_battle_value(world, id)?.total,
+        )),
         "UnitPrefs" => Some(super::field_bits::format(i64::from(
             super::preference_fields::read(world, id)?,
         ))),
@@ -201,12 +199,6 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
         "StaggerDamage" => integer(mech.map_or(0, |unit| i64::from(unit.stagger().action_damage))),
         // Weapon admission derives physical arcs.
         "unusablearcs" => integer(0),
-        "hsengoverride" => integer(i64::from(super::read_engine_sink_override(
-            mech.map_or_else(
-                || &vehicle.unwrap().definition().attributes,
-                |unit| &unit.definition().attributes,
-            ),
-        )?)),
         "unitname" => Some(definition.into()),
         "unitref" => Some(reference.into()),
         "maxspeed" => float(mech.map_or_else(
@@ -391,7 +383,7 @@ pub fn view_unit_fields_action(
             .map(|name| {
                 Ok(UnitField {
                     name,
-                    value: value(&world, config, id, name)?,
+                    value: value(&world, id, name)?,
                 })
             })
             .collect::<Result<Vec<_>>>()?;
@@ -632,13 +624,6 @@ pub fn set_unit_field_action(
                     field.eq_ignore_ascii_case("basewalkspeed"),
                     value,
                 )?;
-            }
-            "hsengoverride" => {
-                let value = super::parse_engine_sink_override(value)?;
-                let mut world = scripts.world_mut();
-                crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
-                    unit.set_engine_sink_override(value);
-                })
             }
             "pilotnum" | "target" => {
                 let reference = value

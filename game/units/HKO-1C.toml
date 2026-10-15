@@ -2,8 +2,8 @@ name = "Ha Otoko"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 6
-heat_sinks = 20
+walk_mp = 4
+heat_sinks = 10
 radio_type = 24
 radio_range = 120
 tac_range = 30
@@ -12,7 +12,9 @@ scan_range = 30
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 260
 heat_sinks = "double"
 
 [sections.left_arm]

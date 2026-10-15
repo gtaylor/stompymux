@@ -2,13 +2,15 @@ name = "PhoenixHawk"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
-heat_sinks = 24
+heat_sinks = 12
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 270
 structure = "endo_steel"
 heat_sinks = "double"
 

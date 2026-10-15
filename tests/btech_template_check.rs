@@ -317,3 +317,58 @@ fn chassis_command_locations_round_trip_labels_and_short_names() {
     assert!(MechChassis::Quad.parse_location("LL").is_err());
     assert!(MechChassis::Quad.parse_section("FLL").is_err());
 }
+
+/// Vehicle templates go through the TechManual combat vehicle check, which reports what the
+/// design spends against its limits or the rule it breaks.
+#[tokio::test(flavor = "current_thread")]
+async fn template_check_reports_vehicle_construction() {
+    let (dir, config, world) = support::isolated_world().await;
+    std::fs::create_dir_all(dir.path().join("units")).unwrap();
+    let tank = include_str!("../game/units/Demolisher.toml");
+    std::fs::write(dir.path().join("units/tank.toml"), tank).unwrap();
+    std::fs::write(
+        dir.path().join("units/heavy.toml"),
+        tank.replace(
+            "[sections.aft_side]\narmor = 20",
+            "[sections.aft_side]\narmor = 28",
+        ),
+    )
+    .unwrap();
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let text = support::run_text(
+        &scripts,
+        &config,
+        ObjectId(1),
+        1,
+        "@btech template-check tank",
+    );
+    assert!(
+        text.contains(
+            "Demolisher (tank): constructible combat vehicle; 2 weapons, 4 ammunition bins."
+        ),
+        "{text}"
+    );
+    assert!(
+        text.contains(
+            "Mass 80 tons; item slots 3 of 21; armor 160 of 320 points; energy weapon heat 0."
+        ),
+        "{text}"
+    );
+    let text = support::run_text(
+        &scripts,
+        &config,
+        ObjectId(1),
+        1,
+        "@btech template-check heavy",
+    );
+    assert!(
+        text.contains("not constructible: Components weigh 80.5 tons, more than the vehicle's 80 tons (TechManual p. 97)"),
+        "{text}"
+    );
+    let report = check_battle_vehicle_template(&VehicleTemplate::parse("tank", tank).unwrap());
+    assert!(report.constructible);
+    assert_eq!(
+        report.construction.unwrap().maximum_armor,
+        vehicle_maximum_armor(80)
+    );
+}

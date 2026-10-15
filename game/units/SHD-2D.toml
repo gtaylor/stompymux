@@ -2,10 +2,14 @@ name = "Shadow Hawk"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 8
+walk_mp = 5
 jump_mp = 3
 heat_sinks = 14
 specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 275
 
 [sections.left_arm]
 armor = 5

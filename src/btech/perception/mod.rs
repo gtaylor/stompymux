@@ -342,26 +342,18 @@ fn sensor_profile(
     probe: Option<ProbeProfile>,
     jammed: bool,
 ) -> Result<SensorProfile> {
-    let (clan, hits, no_sensors) = match world.btech.constructed_units().get(&observer) {
-        Some(mech) => (
-            mech.definition().has_special("Clan"),
-            mech.system_hits(System::Sensors),
-            mech.definition().has_special("NoSensors"),
+    let (clan, failed) = match world.btech.constructed_units().get(&observer) {
+        Some(mech) => (mech.definition().has_special("Clan"), mech.sensors_failed()),
+        None => (
+            world.btech.vehicles()[&observer]
+                .definition()
+                .has_special("Clan"),
+            false,
         ),
-        None => {
-            let vehicle = &world.btech.vehicles()[&observer];
-            (
-                vehicle.definition().has_special("Clan"),
-                0,
-                vehicle.definition().has_special("NoSensors"),
-            )
-        }
     };
-    let status = if no_sensors {
-        PerceptionStatus::Absent
-    } else if map.perception_disabled(MapPerceptionFlag::Sensors) {
+    let status = if map.perception_disabled(MapPerceptionFlag::Sensors) {
         PerceptionStatus::Disabled
-    } else if hits >= 2 {
+    } else if failed {
         PerceptionStatus::Damaged
     } else {
         PerceptionStatus::Ready
@@ -427,7 +419,8 @@ fn probe_profile(
                 .context("Observer is not constructed")?;
             let loadout = unit.loadout()?;
             (
-                unit.definition().has_special("Clan"),
+                // The Beagle and Clan active probes reach by the probe's own technology base.
+                unit.definition().installation_is_clan(System::BeagleProbe),
                 ActiveProbe::BY_REACH.map(|kind| (kind, unit.probe_fitting(&loadout, kind))),
             )
         }

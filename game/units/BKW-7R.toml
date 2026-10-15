@@ -2,12 +2,14 @@ name = "Black Watch"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
+walk_mp = 3
 jump_mp = 3
-heat_sinks = 20
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 255
 structure = "endo_steel"
 heat_sinks = "double"
 

@@ -3,18 +3,10 @@ use super::{Mech, System};
 use anyhow::Result;
 
 impl Mech {
-    /// MASC requires at least one slot, then one per twenty tons (twenty-five for Clan designs).
-    /// The reference uses integer division, so surplus installed slots can tolerate a loss.
+    /// MASC fills 5% of an Inner Sphere Mech's tonnage or 4% of a Clan Mech's, rounded to
+    /// the nearest whole slot (TM p. 52); it works while that many slots do.
     pub fn masc_required_slots(&self) -> usize {
-        usize::from(
-            (self.definition().tons
-                / if self.definition().has_special("Clan") {
-                    25
-                } else {
-                    20
-                })
-            .max(1),
-        )
+        self.definition().masc_slots()
     }
 
     /// Installed MASC can remain physically present after it stops meeting its working threshold.

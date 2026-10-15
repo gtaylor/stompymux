@@ -2,11 +2,13 @@ name = "Wolf Trap"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 9
+walk_mp = 6
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 270
 structure = "endo_steel"
 
 [sections.left_arm]

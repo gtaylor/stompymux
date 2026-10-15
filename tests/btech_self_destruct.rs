@@ -46,12 +46,15 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
             let text = match chassis {
                 "vtol" => include_str!("../game/units/Kestrel.toml").to_owned(),
                 "wheel" => include_str!("../game/units/Demolisher.toml")
-                    .replace("movement = \"track\"", "movement = \"wheel\""),
-                "hover" => include_str!("../game/units/Demolisher.toml")
-                    .replace("movement = \"track\"", "movement = \"hover\""),
+                    .replace("movement = \"track\"", "movement = \"wheel\"")
+                    .replace("engine_rating = 240", "engine_rating = 220"),
+                "hover" => crate::support::templates::hovercraft(include_str!(
+                    "../game/units/Demolisher.toml"
+                )),
                 "stationary" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
-                    .replace("walk_mp = 5", "walk_mp = 0"),
+                    .replace("engine_rating = 240\n", "")
+                    .replace("walk_mp = 3", "walk_mp = 0"),
                 _ => include_str!("../game/units/Demolisher.toml").to_owned(),
             };
             create_battle_vehicle(
@@ -446,10 +449,11 @@ async fn self_destruct_order_and_failed_tick_replay() {
             "    { at = 4, item = \"HeatSink\" },",
             "    { at = 4, item = \"Ammo_IS.SRM-4\", rounds = 25 },",
         );
+    // The displaced heat sink moves into a free slot elsewhere.
     create_battle_unit(
         &mut world,
         second,
-        MechTemplate::parse("JR7-D", &template).unwrap(),
+        crate::support::templates::legal(MechTemplate::parse("JR7-D", &template).unwrap()),
     )
     .unwrap();
     support::seed_object_dice(&mut world, second, support::FIXTURE_DICE_SEED);

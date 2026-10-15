@@ -2,10 +2,15 @@ name = "Magi"
 class = "vehicle"
 movement = "track"
 tons = 70
-walk_mp = 8
+walk_mp = 5
 cargo_space = 0
 max_suits = 0
 max_ton = 1
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 350
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 43
@@ -30,6 +35,5 @@ slots = [
 armor = 40
 slots = [
     { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "2-3", item = "FerroFibrous" },
     { at = 4, item = "Case" },
 ]

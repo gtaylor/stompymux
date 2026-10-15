@@ -2,25 +2,20 @@ name = "Zorya"
 class = "vehicle"
 movement = "track"
 tons = 35
-walk_mp = 6
+walk_mp = 4
 specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
 engine = "ice"
+engine_rating = 140
 armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 9
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 9
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 15

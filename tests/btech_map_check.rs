@@ -171,8 +171,7 @@ async fn membership_span_survives_holes_reuse_and_restart() {
             });
         }
         let last = world.create(&config, "Last member".into(), Kind::Thing);
-        UnitTemplate::parse("test", &template)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", &template).unwrap())
             .create(&mut world, last)
             .unwrap();
         support::seed_object_dice(&mut world, last, support::FIXTURE_DICE_SEED);

@@ -10,19 +10,20 @@ fn templates() -> Vec<String> {
     vec![
         ground.into(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
-        ground.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(ground),
         ground
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         vtol.into(),
         vtol.replace("movement = \"vtol\"", "movement = \"none\"")
-            .replace("walk_mp = 18", "walk_mp = 0"),
+            .replace("walk_mp = 12", "walk_mp = 0"),
     ]
 }
 
 /// Install one turret launcher and a controller without changing chassis identity.
 fn definition(source: &str, section: VehicleSection, link: &str) -> VehicleTemplate {
-    let mut template = VehicleTemplate::parse("test", source).unwrap();
+    let mut template =
+        crate::support::templates::fitted(VehicleTemplate::parse("test", source).unwrap());
     for section in template.sections.values_mut() {
         section.criticals.clear();
     }
@@ -76,7 +77,10 @@ fn vehicle_artemis_links_loss_and_roundtrip() {
             VehicleSection::Rear,
             VehicleSection::Front,
         ] {
-            let unit = Vehicle::new(definition(&source, section, "1")).unwrap();
+            let unit = Vehicle::new(crate::support::templates::fitted(definition(
+                &source, section, "1",
+            )))
+            .unwrap();
             let linked = section == VehicleSection::Turret
                 || (section == VehicleSection::Rear && !unit.definition().is_vtol());
             assert_eq!(
@@ -110,7 +114,12 @@ fn vehicle_artemis_links_loss_and_roundtrip() {
             );
         }
         for link in ["-", "0", "2", "255"] {
-            let unit = Vehicle::new(definition(&source, VehicleSection::Turret, link)).unwrap();
+            let unit = Vehicle::new(crate::support::templates::fitted(definition(
+                &source,
+                VehicleSection::Turret,
+                link,
+            )))
+            .unwrap();
             assert!(!unit.artemis_operational(0).unwrap());
             assert!(unit.artemis_controllers().unwrap()[0].operational);
         }
@@ -128,7 +137,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId) {
     create_battle_vehicle(
         &mut world,
         id,
-        definition(source, VehicleSection::Turret, "1"),
+        crate::support::templates::fitted(definition(source, VehicleSection::Turret, "1")),
     )
     .unwrap();
     let map = world.create(&config, "Field".into(), Kind::Room);

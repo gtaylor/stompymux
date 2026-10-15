@@ -2,27 +2,28 @@ name = "Maxim"
 class = "vehicle"
 movement = "hover"
 tons = 50
-walk_mp = 12
+walk_mp = 8
 cargo_space = 350
 max_suits = 0
 max_ton = 10
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 165
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 23
 slots = [
     { at = 1, item = "IS.StreakSRM-2" },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 23
 slots = [
     { at = 1, item = "IS.StreakSRM-2" },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]

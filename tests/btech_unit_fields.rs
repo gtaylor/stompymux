@@ -1269,9 +1269,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
     let config = &f.config;
     for source in firing::templates() {
         let (mut world, id, _, _) = f.supply(&source, Some(Weapon::MediumLaser), &source, None);
-        let baseline = battle_unit_value(&world, id, config.battletech.tsm_tow_bonus != 0)
-            .unwrap()
-            .total;
+        let baseline = battle_unit_value(&world, id).unwrap().total;
         firing::edit(&mut world, id, |unit| {
             let section = if unit["sections"].get("CenterTorso").is_some() {
                 "CenterTorso"
@@ -1280,14 +1278,10 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
             };
             unit["sections"][section]["armor"] = 0.into();
         });
-        let damaged = battle_unit_value(&world, id, config.battletech.tsm_tow_bonus != 0)
-            .unwrap()
-            .total;
+        let damaged = battle_unit_value(&world, id).unwrap().total;
         assert!(damaged < baseline);
         set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.MediumLaser", 1000).unwrap();
-        let increased = battle_unit_value(&world, id, config.battletech.tsm_tow_bonus != 0)
-            .unwrap()
-            .total;
+        let increased = battle_unit_value(&world, id).unwrap().total;
         assert!(increased > damaged);
         let expected = format!("{increased:.2}");
         let before = world.btech.clone();
@@ -1340,7 +1334,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
     }
 }
 
-/// Administrative movement and engine allocation fields round-trip without changing live physics.
+/// Administrative movement fields round-trip without changing live physics.
 async fn construction_fields_share_storage_authority_and_restart_without_changing_physics_scenario(
     f: &UnitFields,
 ) {
@@ -1351,13 +1345,12 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
         let lua = &f.lua;
         f.install(&world);
         let original = view_battle_unit_fields_action(native, config, ObjectId(1), id, "").unwrap();
-        for name in ["basewalkspeed", "baserunspeed", "hsengoverride"] {
+        for name in ["basewalkspeed", "baserunspeed"] {
             assert_eq!(field(&original, name), Some("0"));
         }
         for (name, value) in [
             ("basewalkspeed", "-2147483648"),
             ("baserunspeed", "2147483647"),
-            ("hsengoverride", "12"),
         ] {
             commands::run(
                 native,
@@ -1409,32 +1402,6 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
             persistence::load(&config.database()).await.unwrap().btech,
             snapshot.btech
         );
-    }
-}
-
-/// Authored overrides survive construction, while invalid template values fail before unit insertion.
-async fn engine_sink_override_validates_authored_values_across_chassis_scenario(f: &UnitFields) {
-    let config = &f.config;
-    for source in firing::templates() {
-        let authored = format!("hs_engine_override = 14\n{source}");
-        let (mut world, id, _, _) = f.pair(&authored, &source);
-        let candidate = world.create(config, "Invalid construction".into(), Kind::Thing);
-        let before = world.btech.clone();
-        // Typed TOML values reject non-integers and values outside a signed 32-bit range.
-        for value in ["\"no\"", "2147483648", "-2147483649", "1.5"] {
-            let template =
-                UnitTemplate::parse("test", &format!("hs_engine_override = {value}\n{source}"));
-            let result = template.and_then(|template| template.create(&mut world, candidate));
-            let error = format!("{:#}", result.unwrap_err());
-            assert!(error.contains("hs_engine_override"), "{error}");
-            assert_eq!(world.btech, before);
-        }
-        let scripts = &f.native;
-        support::install(scripts, world.clone());
-        let report =
-            view_battle_unit_fields_action(scripts, config, ObjectId(1), id, "hsengoverride")
-                .unwrap();
-        assert_eq!(field(&report, "hsengoverride"), Some("14"));
     }
 }
 
@@ -1522,8 +1489,7 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario
         support::seed_object_dice(&mut world, replacement, support::FIXTURE_DICE_SEED);
         let unplaced = world.create(config, "Unplaced unit".into(), Kind::Thing);
         world.objects.get_mut(&unplaced).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("test", &source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", &source).unwrap())
             .create(&mut world, unplaced)
             .unwrap();
         support::seed_object_dice(&mut world, unplaced, support::FIXTURE_DICE_SEED);
@@ -1820,6 +1786,26 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
         let native = &f.native;
         let lua = &f.lua;
         f.install(&world);
+        // A Mech's cargo installation counts toward its tonnage, so a wizard cannot add one
+        // to a design already at its weight (TechManual p. 46).
+        if world.btech.constructed_units().contains_key(&id) {
+            let before = lua.world().btech.clone();
+            for value in [123, 100_000] {
+                assert!(
+                    set_battle_unit_field_action(
+                        lua,
+                        config,
+                        ObjectId(1),
+                        id,
+                        "cargospace",
+                        &value.to_string()
+                    )
+                    .is_err()
+                );
+                assert_eq!(lua.world().btech, before);
+            }
+            continue;
+        }
         for value in [123, 100_000, 0] {
             let before = lua.world().btech.clone();
             lua.drain_outbox();
@@ -1860,18 +1846,17 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
                 original_load.material_mass - original_cargo
                     + (value as f32 / divisor * 1024.0).trunc() as u32
             );
-            if value == 100_000 {
-                assert_eq!(load.maximum_speed(100.0).unwrap(), 0.0);
-                let world = lua.world();
-                let motion = world
-                    .btech
-                    .constructed_units()
-                    .get(&id)
-                    .and_then(Mech::motion)
-                    .or_else(|| world.btech.vehicles().get(&id).and_then(Vehicle::motion))
-                    .unwrap();
-                assert_eq!(motion.speed, 0.0);
-                assert_eq!(motion.desired_speed, 0.0);
+            // An installation that takes the unit over its tonnage is not a speed penalty;
+            // construction answers for overweight designs (TechManual p. 97).
+            let nominal = UnitLoad {
+                material_mass: u32::from(load.nominal_tons) * 1024,
+                ..load
+            };
+            if load.material_mass >= nominal.material_mass {
+                assert_eq!(
+                    load.maximum_speed(100.0).unwrap(),
+                    nominal.maximum_speed(100.0).unwrap()
+                );
             }
             let saved = lua.world().clone();
             persistence::save(&config.database(), &saved).await.unwrap();
@@ -2869,8 +2854,12 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
             assert_eq!(load.material_mass, mass as u32);
             assert_eq!(load.nominal_tons, original.nominal_tons);
             assert_eq!(load.carried_mass, original.carried_mass);
+            // Material above the nominal tonnage is not a speed penalty (TechManual p. 97).
             if mass == i32::MAX {
-                assert_eq!(load.maximum_speed(100.0).unwrap(), 0.0);
+                assert_eq!(
+                    load.maximum_speed(100.0).unwrap(),
+                    original.maximum_speed(100.0).unwrap()
+                );
             }
             if let Some(unit) = saved.btech.constructed_units().get(&id) {
                 assert_eq!(unit.mass().unwrap().total, original.material_mass);
@@ -2996,6 +2985,22 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(
             expected["units"][id.0.to_string()]["tons"] = tons.into();
             expected[collection][id.0.to_string()]["definition"]["attributes"]["tons"] =
                 value.into();
+            // A declared engine rating follows the tonnage (TechManual pp. 48, 100).
+            let rating = if mech {
+                let walking = before.constructed_units()[&id].definition().walk_mp;
+                (u32::from(tons) * walking).to_string()
+            } else {
+                let vehicle = before.vehicles()[&id].definition();
+                vehicle
+                    .movement
+                    .final_engine_rating(tons, vehicle.walk_mp)
+                    .to_string()
+            };
+            let attributes =
+                &mut expected[collection][id.0.to_string()]["definition"]["attributes"];
+            if attributes.get("engine_rating").is_some() {
+                attributes["engine_rating"] = rating.into();
+            }
             assert_eq!(serde_json::to_value(&saved.btech).unwrap(), expected);
             let load = battle_unit_load(&saved, id, false).unwrap();
             assert_eq!(load.nominal_tons, tons);
@@ -3064,6 +3069,25 @@ async fn movement_fields_preserve_material_and_validate_anatomy_scenario(f: &Uni
         let native = &f.native;
         let lua = &f.lua;
         f.install(&world);
+        if mech
+            && world.btech.constructed_units()[&id]
+                .definition()
+                .chassis()
+                .unwrap()
+                == MechChassis::Biped
+        {
+            // Arms without lower arm and hand actuators cannot become a quad's front legs,
+            // which keep all their actuators (TechManual p. 45).
+            let error =
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "unitmovetype", "Quad")
+                    .unwrap_err();
+            assert!(
+                format!("{error:#}").contains("TechManual p. 45"),
+                "{error:#}"
+            );
+            firing::edit(&mut world, id, crate::support::templates::quad_ready_record);
+            f.install(&world);
+        }
         let values: &[&str] = if mech {
             &["Biped", "Quad", "Biped"]
         } else if vtol {
@@ -3284,7 +3308,6 @@ async fn unit_fields_preferences_values_and_construction_harness() {
     battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(&f).await;
     construction_fields_share_storage_authority_and_restart_without_changing_physics_scenario(&f)
         .await;
-    engine_sink_override_validates_authored_values_across_chassis_scenario(&f).await;
     inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scenario(&f).await;
     crew_and_target_fields_share_native_lua_validation_and_restart_scenario(&f).await;
 }

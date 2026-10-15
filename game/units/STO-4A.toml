@@ -2,13 +2,15 @@ name = "Stilletto"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 12
-heat_sinks = 20
+walk_mp = 8
+heat_sinks = 10
 radio = 4
 specials = ["ECM"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "light"
+engine_rating = 280
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"
@@ -41,8 +43,8 @@ slots = [
 armor = 11
 rear = 4
 slots = [
-    { at = 3, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 4, item = "Ammo_IS.LRM-5", rounds = 24 },
     { at = 5, item = "Case" },
     { at = "6-12", item = "EndoSteel" },
 ]
@@ -68,4 +70,4 @@ slots = [
 ]
 
 [sections.head]
-armor = 9
+armor = 8

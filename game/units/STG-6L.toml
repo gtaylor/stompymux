@@ -2,12 +2,14 @@ name = "Stinger"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 12
-heat_sinks = 20
+walk_mp = 8
+heat_sinks = 10
 radio = 4
 specials = ["ECM"]
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 160
 structure = "endo_steel"
 armor = "stealth"
 heat_sinks = "double"

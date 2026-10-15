@@ -2,12 +2,14 @@ name = "Fire Falcon"
 class = "mech"
 movement = "biped"
 tons = 25
-walk_mp = 12
-heat_sinks = 20
+walk_mp = 8
+heat_sinks = 10
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 200
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -16,8 +18,8 @@ armor = 6
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = 3, item = "CL.MediumPulseLaser" },
-    { at = 4, item = "CL.SmallPulseLaser" },
-    { at = 5, item = "CL.ERSmallLaser" },
+    { at = 4, item = "CL.ERSmallLaser" },
+    { at = 5, item = "CL.SmallPulseLaser" },
     { at = "6-8", item = "EndoSteel" },
 ]
 
@@ -26,7 +28,7 @@ armor = 6
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-6", item = "CL.MachineGun" },
-    { at = 7, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 7, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = "8-10", item = "FerroFibrous" },
 ]
 
@@ -47,7 +49,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 11
+armor = 10
 rear = 3
 
 [sections.left_leg]

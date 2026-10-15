@@ -2,9 +2,13 @@ name = "Warhammer"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 20
 specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 280
 
 [sections.left_arm]
 armor = 22

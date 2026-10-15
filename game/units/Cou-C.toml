@@ -2,13 +2,15 @@ name = "Cougar"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 8
-heat_sinks = 20
+walk_mp = 5
+heat_sinks = 10
 radio = 5
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 175
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -16,17 +18,16 @@ armor = "ferro_fibrous"
 armor = 11
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "CL.GaussRifle" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-10", item = "CL.GaussRifle" },
 ]
 
 [sections.right_arm]
 armor = 11
-omit = ["lower_actuator", "hand_actuator"]
+omit = ["hand_actuator"]
 slots = [
-    { at = "3-6", item = "CL.ERMediumLaser" },
-    { at = "7-8", item = "HeatSink" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "4-5", item = "HeatSink" },
+    { at = "6-9", item = "CL.ERMediumLaser" },
 ]
 
 [sections.left_torso]
@@ -34,31 +35,35 @@ armor = 12
 rear = 4
 slots = [
     { at = "3-4", item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = "5-6", item = "HeatSink" },
-    { at = "10-12", item = "FerroFibrous" },
+    { at = "5-9", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = "5-6", item = "HeatSink" },
-    { at = "10-12", item = "FerroFibrous" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-7", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 14
-rear = 6
+rear = 5
 slots = [
-    { at = 11, item = "EndoSteel" },
-    { at = 12, item = "FerroFibrous" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 12
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
 
 [sections.right_leg]
 armor = 12
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
 
 [sections.head]
 armor = 8

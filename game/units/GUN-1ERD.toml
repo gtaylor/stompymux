@@ -2,13 +2,15 @@ name = "Gunslinger"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
+walk_mp = 3
 jump_mp = 2
-heat_sinks = 20
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 255
 heat_sinks = "double"
 
 [sections.left_arm]

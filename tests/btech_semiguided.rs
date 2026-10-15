@@ -31,7 +31,7 @@ fn semiguided_templates_and_capacity() {
         bin.equipment = format!("Ammo_{}", weapon.name());
         bin.data = weapon.profile().ammunition_per_ton.to_string();
         bin.modes = vec!["Sguided".into()];
-        let unit = Mech::from_template(definition).unwrap();
+        let unit = Mech::from_template(crate::support::templates::legal(definition)).unwrap();
         let loadout = unit.loadout().unwrap();
         let index = loadout
             .weapons

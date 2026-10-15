@@ -2,12 +2,13 @@ name = "Pack Hunter"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 11
+walk_mp = 7
 jump_mp = 7
-heat_sinks = 20
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
+engine_rating = 210
 structure = "endo_steel"
 
 [sections.left_arm]

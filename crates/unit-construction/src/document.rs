@@ -36,10 +36,11 @@
 use super::construction::{
     Construction, FLIP_ARMS, Omission, SPEED_PER_MP, SectionPlan, arms_flip,
     canonical_infantry_special, canonical_special, derives_internals, fixed_equipment,
-    is_fixed_item, mech_internal, movement_points, vehicle_internal,
+    is_fixed_item, large_engine, mech_internal, movement_points, vehicle_internal,
 };
 use super::{
     CriticalDefinition, MechChassis, MechSection, RawMovement, RawUnitClass, SectionDefinition,
+    TRANSPORT_BAYS, TransportBays,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
@@ -70,11 +71,11 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("class", "type", Kind::Text),
     ("movement", "move_type", Kind::Text),
     ("tons", "tons", Kind::Integer),
+    ("walk_mp", "walk_mp", Kind::Integer),
     ("max_speed", "max_speed", Kind::Float),
     ("jump_speed", "jump_speed", Kind::Float),
     ("template_speed", "template_speed", Kind::Float),
     ("heat_sinks", "heat_sinks", Kind::Integer),
-    ("hs_engine_override", "hsengoverride", Kind::Integer),
     ("radio", "radio", Kind::Integer),
     ("radio_type", "radiotype", Kind::Integer),
     ("radio_range", "radio_range", Kind::Integer),
@@ -97,8 +98,16 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("infantry_specials", "infantryspecials", Kind::Flags),
 ];
 
-/// Movement point keys and the speed attribute each one sets.
-const MOVEMENT_POINTS: [(&str, &str); 2] = [("walk_mp", "max_speed"), ("jump_mp", "jump_speed")];
+/// Movement point keys stored directly as the speed attribute each one sets. `walk_mp` is
+/// not one of them: it is kept as the walking (cruising) figure, and the parser derives the
+/// running (flanking) speed from it.
+const MOVEMENT_POINTS: [(&str, &str); 1] = [("jump_mp", "jump_speed")];
+
+/// Largest movement point figure a document may state.
+const MOVEMENT_POINT_LIMIT: i64 = 100;
+
+/// Attribute holding the engine rating a `[construction]` table declares.
+pub const ENGINE_RATING: &str = "engine_rating";
 
 /// Internal attributes that a rendered document carries elsewhere or not at all.
 const UNRENDERED: &[&str] = &[
@@ -125,7 +134,6 @@ struct SectionDocument {
     #[serde(default)]
     omit: Vec<String>,
     engine_at: Option<i64>,
-    engine_slots: Option<i64>,
     #[serde(default)]
     slots: Vec<SlotDocument>,
 }
@@ -204,6 +212,8 @@ struct Unit {
     chassis: Option<MechChassis>,
     tons: i64,
     construction: Construction,
+    /// The engine is rated above 400 and fills eight center torso slots.
+    large_engine: bool,
 }
 
 impl Unit {
@@ -224,6 +234,11 @@ impl ParsedTemplate {
         let sections = document.remove("sections");
         let split_mounts = document.remove("split_mounts");
         let construction = document.remove("construction");
+        let transport_bays = document
+            .remove(TRANSPORT_BAYS)
+            .map(TransportBays::decode)
+            .transpose()
+            .with_context(|| format!("invalid {TRANSPORT_BAYS}"))?;
         let construction = construction
             .map(Construction::decode)
             .transpose()
@@ -233,12 +248,29 @@ impl ParsedTemplate {
         if !reference.is_empty() {
             fields.insert("reference".to_owned(), reference.to_owned());
         }
+        if let Some(rating) = construction.engine_rating {
+            fields.insert(ENGINE_RATING.to_owned(), rating.to_string());
+        }
         for (key, value) in document {
+            if key == "walk_mp" {
+                let toml::Value::Integer(points) = value else {
+                    bail!("{key} must be an integer");
+                };
+                ensure!(
+                    (0..=MOVEMENT_POINT_LIMIT).contains(&points),
+                    "{key} is out of range"
+                );
+                fields.insert(key, points.to_string());
+                continue;
+            }
             if let Some((_, speed)) = MOVEMENT_POINTS.iter().find(|(name, _)| *name == key) {
                 let toml::Value::Integer(points) = value else {
                     bail!("{key} must be an integer");
                 };
-                ensure!((0..=100).contains(&points), "{key} is out of range");
+                ensure!(
+                    (0..=MOVEMENT_POINT_LIMIT).contains(&points),
+                    "{key} is out of range"
+                );
                 ensure!(
                     fields
                         .insert(
@@ -275,20 +307,45 @@ impl ParsedTemplate {
             .get("type")
             .map(|class| RawUnitClass::parse(class))
             .transpose()?;
+        if let Some(walking) = fields.get("walk_mp") {
+            ensure!(
+                !fields.contains_key("max_speed"),
+                "give either walk_mp or max_speed, not both"
+            );
+            let walking: u32 = walking.parse().context("invalid walk_mp")?;
+            let top = class.unwrap_or(RawUnitClass::Mech).top_speed_mp(walking);
+            fields.insert(
+                "max_speed".to_owned(),
+                (f64::from(top) * SPEED_PER_MP).to_string(),
+            );
+        }
+        if let Some(bays) = transport_bays {
+            // Transport bays are combat vehicle construction (TechManual p. 239); Mechs carry
+            // cargo only through `cargo_space`.
+            ensure!(
+                matches!(class, Some(RawUnitClass::Vehicle | RawUnitClass::Vtol)),
+                "{TRANSPORT_BAYS} are only for vehicles and VTOLs"
+            );
+            if let Some(stored) = bays.to_attribute() {
+                fields.insert(TRANSPORT_BAYS.to_owned(), stored);
+            }
+        }
         let chassis = match class {
             Some(RawUnitClass::Mech) => fields
                 .get("move_type")
                 .and_then(|movement| MechChassis::parse(movement).ok()),
             _ => None,
         };
+        let tons = fields
+            .get("tons")
+            .and_then(|tons| tons.parse().ok())
+            .unwrap_or_default();
         let unit = Unit {
             class,
             chassis,
-            tons: fields
-                .get("tons")
-                .and_then(|tons| tons.parse().ok())
-                .unwrap_or_default(),
+            tons,
             construction,
+            large_engine: large_engine(tons, fields.get("walk_mp").map(String::as_str)),
         };
         let mut parsed = Self {
             fields,
@@ -344,11 +401,8 @@ impl ParsedTemplate {
             "only mech sections can be explicit"
         );
         ensure!(
-            constructed
-                || (section.omit.is_empty()
-                    && section.engine_at.is_none()
-                    && section.engine_slots.is_none()),
-            "omit, engine_at and engine_slots need constructed mech equipment"
+            constructed || (section.omit.is_empty() && section.engine_at.is_none()),
+            "omit and engine_at need constructed mech equipment"
         );
         let internal = match section.internals {
             Some(internal) => internal,
@@ -382,20 +436,10 @@ impl ParsedTemplate {
                     Ok(slot as u8 - 1)
                 })
                 .transpose()?;
-            let engine_slots = section
-                .engine_slots
-                .map(|count| {
-                    ensure!(
-                        (0..=12).contains(&count),
-                        "engine_slots must be from 0 to 12"
-                    );
-                    Ok(count as u8)
-                })
-                .transpose()?;
             let plan = SectionPlan {
                 omit: &omit,
                 engine_at,
-                engine_slots,
+                large_engine: unit.large_engine,
             };
             for (slot, item) in fixed_equipment(&unit.construction, chassis, mech, plan)? {
                 let critical = CriticalDefinition {
@@ -619,15 +663,16 @@ fn mech_section(heading: &str) -> Result<MechSection> {
         .or_else(|_| super::MechChassis::Quad.parse_section(heading))
 }
 
-/// Whether a split mount may continue from one section into the other.
+/// Whether a split mount may continue from one section into the other: two adjacent
+/// locations, not including the legs (TM p. 47).
 pub fn split_adjacent(primary: MechSection, extension: MechSection) -> bool {
     use MechSection::*;
     matches!(
         (primary, extension),
-        (LeftArm | LeftLeg | CenterTorso, LeftTorso)
-            | (LeftTorso, LeftArm | LeftLeg | CenterTorso)
-            | (RightArm | RightLeg | CenterTorso, RightTorso)
-            | (RightTorso, RightArm | RightLeg | CenterTorso)
+        (LeftArm | CenterTorso, LeftTorso)
+            | (LeftTorso, LeftArm | CenterTorso)
+            | (RightArm | CenterTorso, RightTorso)
+            | (RightTorso, RightArm | CenterTorso)
     )
 }
 
@@ -678,6 +723,8 @@ pub fn render(
     for key in attributes.keys() {
         ensure!(
             UNRENDERED.contains(&key.as_str())
+                || key == ENGINE_RATING
+                || key == TRANSPORT_BAYS
                 || FIELDS.iter().any(|(_, attribute, _)| attribute == key),
             "unsupported template attribute {key}"
         );
@@ -691,7 +738,12 @@ pub fn render(
                 .collect()
         })
         .unwrap_or_default();
-    let (construction, specials) = Construction::from_flags(&flags)?;
+    let (mut construction, specials) = Construction::from_flags(&flags)?;
+    construction.engine_rating = attributes
+        .get(ENGINE_RATING)
+        .map(|rating| rating.trim().parse())
+        .transpose()
+        .with_context(|| format!("invalid {ENGINE_RATING}"))?;
     let class = attributes
         .get("type")
         .map(|class| RawUnitClass::parse(class))
@@ -702,20 +754,26 @@ pub fn render(
             .and_then(|movement| MechChassis::parse(movement).ok()),
         _ => None,
     };
+    let tons = attributes
+        .get("tons")
+        .and_then(|tons| tons.trim().parse().ok())
+        .unwrap_or_default();
     let unit = Unit {
         class,
         chassis,
-        tons: attributes
-            .get("tons")
-            .and_then(|tons| tons.trim().parse().ok())
-            .unwrap_or_default(),
+        tons,
         construction,
+        large_engine: large_engine(tons, attributes.get("walk_mp").map(String::as_str)),
     };
     let mut output = String::new();
     for (name, attribute, kind) in FIELDS {
         let Some(value) = attributes.get(*attribute) else {
             continue;
         };
+        // The running speed follows from the walking MP the document states.
+        if *attribute == "max_speed" && attributes.contains_key("walk_mp") {
+            continue;
+        }
         let rendered = match kind {
             Kind::Integer => value
                 .trim()
@@ -762,7 +820,13 @@ pub fn render(
         };
         writeln!(output, "{name} = {rendered}")?;
     }
-    output.push_str(&unit.construction.render());
+    let constructed = unit.places_equipment()
+        || matches!(unit.class, Some(RawUnitClass::Vehicle | RawUnitClass::Vtol));
+    output.push_str(&unit.construction.render(constructed));
+    output.push_str(
+        &TransportBays::from_attribute(attributes.get(TRANSPORT_BAYS).map(String::as_str))?
+            .render(),
+    );
     let mounts = split_mounts(sections)?;
     for section in sections {
         render_section(&mut output, section, &mounts, &unit)?;
@@ -777,7 +841,6 @@ pub fn render(
 struct SectionFit {
     omit: Vec<Omission>,
     engine_at: Option<u8>,
-    engine_slots: Option<u8>,
     placed: BTreeMap<u8, &'static str>,
 }
 
@@ -792,62 +855,39 @@ fn fit_section(
     use Omission::*;
     let chassis = unit.chassis?;
     let omissions: Vec<Vec<Omission>> = match section {
-        LeftArm | RightArm | LeftLeg | RightLeg => {
-            let last = if chassis == MechChassis::Biped && matches!(section, LeftArm | RightArm) {
-                Hand
-            } else {
-                Foot
-            };
-            let actuators = [Shoulder, Upper, Lower, last];
-            (0..16u8)
-                .map(|mask| {
-                    actuators
-                        .iter()
-                        .enumerate()
-                        .filter(|(bit, _)| mask & (1 << bit) != 0)
-                        .map(|(_, omission)| *omission)
-                        .collect()
-                })
-                .collect()
+        LeftArm | RightArm if chassis == MechChassis::Biped => {
+            vec![Vec::new(), vec![Hand], vec![Lower, Hand]]
         }
         _ => vec![Vec::new()],
     };
-    let engines = layout
-        .criticals
-        .values()
-        .filter(|critical| critical.equipment == "Engine")
-        .count();
+    // Side torso engine slots start at the top, or after the life support slot a
+    // torso-mounted cockpit moves there; only a departure from that is stated.
+    let default_engine_at =
+        u8::from(unit.construction.cockpit == super::construction::Cockpit::TorsoMounted);
     let engine_at = layout
         .criticals
         .iter()
         .find(|(_, critical)| critical.equipment == "Engine")
         .map(|(slot, _)| *slot)
-        .filter(|slot| *slot != 0 && matches!(section, LeftTorso | RightTorso));
-    let engine_counts: &[Option<u8>] = match section {
-        LeftTorso | RightTorso | CenterTorso => &[None, Some(engines as u8)],
-        _ => &[None],
-    };
+        .filter(|slot| *slot != default_engine_at && matches!(section, LeftTorso | RightTorso));
     omissions.iter().find_map(|omit| {
-        engine_counts.iter().find_map(|&engine_slots| {
-            let plan = SectionPlan {
-                omit,
-                engine_at,
-                engine_slots,
-            };
-            let placed = fixed_equipment(&unit.construction, chassis, section, plan).ok()?;
-            let reproduced = placed.iter().all(|(slot, item)| {
-                layout.criticals.get(slot).is_some_and(|critical| {
-                    critical.equipment == *item && critical.data == "-" && critical.modes.is_empty()
-                })
-            }) && layout.criticals.iter().all(|(slot, critical)| {
-                !is_fixed_item(&critical.equipment) || placed.contains_key(slot)
-            });
-            reproduced.then(|| SectionFit {
-                omit: omit.clone(),
-                engine_at,
-                engine_slots,
-                placed,
+        let plan = SectionPlan {
+            omit,
+            engine_at,
+            large_engine: unit.large_engine,
+        };
+        let placed = fixed_equipment(&unit.construction, chassis, section, plan).ok()?;
+        let reproduced = placed.iter().all(|(slot, item)| {
+            layout.criticals.get(slot).is_some_and(|critical| {
+                critical.equipment == *item && critical.data == "-" && critical.modes.is_empty()
             })
+        }) && layout.criticals.iter().all(|(slot, critical)| {
+            !is_fixed_item(&critical.equipment) || placed.contains_key(slot)
+        });
+        reproduced.then(|| SectionFit {
+            omit: omit.clone(),
+            engine_at,
+            placed,
         })
     })
 }
@@ -980,9 +1020,6 @@ fn render_section(
         }
         if let Some(slot) = fit.engine_at {
             writeln!(output, "engine_at = {}", slot + 1)?;
-        }
-        if let Some(count) = fit.engine_slots {
-            writeln!(output, "engine_slots = {count}")?;
         }
     }
     let in_mount = |slot: u8| {
@@ -1119,11 +1156,12 @@ name = "Zeus"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 specials = ["searchlight"]
 
 [construction]
 engine = "xl"
+engine_rating = 320
 heat_sinks = "double"
 
 [sections.left_arm]
@@ -1210,6 +1248,7 @@ armor = 9
     fn malformed_documents_are_rejected() {
         for source in [
             "unknown = 1",
+            "hs_engine_override = 14",
             "tons = \"80\"",
             "tons = 2147483648",
             "class = \"Mech\"",
@@ -1259,7 +1298,7 @@ armor = 9
     fn vehicles_and_other_classes_keep_their_own_structure_rules() {
         let parsed = ParsedTemplate::parse(
             "Truck",
-            "class = \"vehicle\"\nmovement = \"wheel\"\ntons = 40\nwalk_mp = 5\n[construction]\nengine = \"ice\"\n[sections.front_side]\narmor = 10\n[sections.turret]\ninternals = 0\n",
+            "class = \"vehicle\"\nmovement = \"wheel\"\ntons = 40\nwalk_mp = 3\n[construction]\nengine = \"ice\"\n[sections.front_side]\narmor = 10\n[sections.turret]\ninternals = 0\n",
         )
         .unwrap();
         assert_eq!(parsed.fields["specials"], "ICEEngine_Tech");
@@ -1273,6 +1312,13 @@ armor = 9
         )
         .unwrap();
         assert_eq!(aero.sections["nose"].internal, 0);
+        // Battle armor has no faster gait than its ground MP.
+        let suit = ParsedTemplate::parse(
+            "Suit",
+            "class = \"battlesuit\"\nmovement = \"biped\"\ntons = 1\nwalk_mp = 2\n",
+        )
+        .unwrap();
+        assert_eq!(suit.fields["max_speed"], "21.5");
     }
 
     #[test]
@@ -1349,9 +1395,12 @@ placements = [
     fn rendering_states_choices_and_leaves_out_what_they_imply() {
         let parsed = ParsedTemplate::parse("ZEU-9S", ZEUS).unwrap();
         let rendered = render_mech(&parsed);
-        assert!(rendered.contains("walk_mp = 6\n"));
+        assert!(rendered.contains("walk_mp = 4\n"));
+        assert!(!rendered.contains("max_speed"));
         assert!(rendered.contains("specials = [\"SearchLight\"]\n"));
-        assert!(rendered.contains("[construction]\nengine = \"xl\"\nheat_sinks = \"double\"\n"));
+        assert!(rendered.contains(
+            "[construction]\ntech_base = \"inner_sphere\"\nengine = \"xl\"\nengine_rating = 320\nheat_sinks = \"double\"\n"
+        ));
         assert!(rendered.contains("omit = [\"hand_actuator\"]"));
         assert!(rendered.contains("engine_at = 4"));
         assert!(!rendered.contains("internals"));
@@ -1373,51 +1422,53 @@ placements = [
 
     #[test]
     fn irregular_sections_state_their_differences_instead_of_listing_fixed_equipment() {
-        let source = ZEUS
-            .replace(
-                "omit = [\"lower_actuator\", \"hand_actuator\"]",
-                "omit = [\"shoulder\", \"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]",
-            )
-            .replace(
-                "[sections.left_leg]\narmor = 24\n",
-                "[sections.left_leg]\narmor = 24\nomit = [\"lower_actuator\"]\n",
-            )
-            .replace(
-                "[sections.right_torso]\narmor = 25\nrear = 6\n",
-                "[sections.right_torso]\narmor = 25\nrear = 6\nengine_slots = 1\n",
-            )
-            .replace(
-                "[sections.center_torso]\narmor = 26\nrear = 8\n",
-                "[sections.center_torso]\narmor = 26\nrear = 8\nengine_slots = 8\n",
-            );
+        let source = ZEUS.replace(
+            "omit = [\"hand_actuator\"]",
+            "omit = [\"lower_actuator\", \"hand_actuator\"]",
+        );
         let parsed = ParsedTemplate::parse("ZEU-9S", &source).unwrap();
-        assert!(parsed.sections["right_arm"].criticals.is_empty());
-        let leg = &parsed.sections["left_leg"];
-        assert!(!leg.criticals.contains_key(&2));
-        assert_eq!(leg.criticals[&3].equipment, "HandOrFootActuator");
-        let torso = &parsed.sections["right_torso"];
-        assert_eq!(torso.criticals.len(), 1);
-        let center = &parsed.sections["center_torso"];
-        let engines = center
-            .criticals
-            .values()
-            .filter(|critical| critical.equipment == "Engine")
-            .count();
-        assert_eq!(engines, 8);
-        assert_eq!(center.criticals[&11].equipment, "Engine");
+        let arm = &parsed.sections["right_arm"];
+        assert_eq!(arm.criticals.len(), 2);
+        assert_eq!(arm.criticals[&1].equipment, "UpperActuator");
+        // Only lower arm and hand actuators may be omitted (TechManual p. 45).
+        for omit in ["shoulder", "upper_actuator", "foot_actuator"] {
+            let refused = ZEUS.replace(
+                "omit = [\"hand_actuator\"]",
+                &format!("omit = [\"{omit}\", \"hand_actuator\"]"),
+            );
+            assert!(ParsedTemplate::parse("ZEU-9S", &refused).is_err(), "{omit}");
+        }
+        // Engines fill only the TechManual layouts; a section cannot relocate engine slots.
+        let relocated = source.replace(
+            "[sections.right_torso]\narmor = 25\nrear = 6\n",
+            "[sections.right_torso]\narmor = 25\nrear = 6\nengine_slots = 1\n",
+        );
+        assert_ne!(relocated, source);
+        assert!(ParsedTemplate::parse("ZEU-9S", &relocated).is_err());
 
         let rendered = render_mech(&parsed);
-        for line in [
-            "omit = [\"shoulder\", \"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]\n",
-            "omit = [\"lower_actuator\"]\n",
-            "engine_slots = 1\n",
-            "engine_slots = 8\n",
-        ] {
-            assert!(rendered.contains(line), "{line}");
-        }
+        assert_eq!(
+            rendered
+                .matches("omit = [\"lower_actuator\", \"hand_actuator\"]\n")
+                .count(),
+            2
+        );
         assert!(!rendered.contains("explicit"));
         let reparsed = ParsedTemplate::parse("ZEU-9S", &rendered).unwrap();
         assert_eq!(reparsed.sections, parsed.sections);
+
+        // A section no omission reproduces lists its slots explicitly.
+        let mut legless = parsed;
+        legless
+            .sections
+            .get_mut("left_leg")
+            .unwrap()
+            .criticals
+            .remove(&2);
+        let rendered = render_mech(&legless);
+        assert!(rendered.contains("[sections.left_leg]\narmor = 24\nexplicit = true\n"));
+        let reparsed = ParsedTemplate::parse("ZEU-9S", &rendered).unwrap();
+        assert_eq!(reparsed.sections, legless.sections);
     }
 
     #[test]

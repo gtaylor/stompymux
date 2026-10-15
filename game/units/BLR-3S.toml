@@ -2,13 +2,15 @@ name = "Battlemaster"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 22
 radio = 4
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 340
 
 [sections.left_arm]
 armor = 23

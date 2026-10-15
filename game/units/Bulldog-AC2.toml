@@ -2,7 +2,11 @@ name = "Bulldog"
 class = "vehicle"
 movement = "track"
 tons = 60
-walk_mp = 6
+walk_mp = 4
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 240
 
 [sections.left_side]
 armor = 20
@@ -14,7 +18,7 @@ armor = 20
 armor = 24
 slots = [
     { at = 1, item = "IS.MachineGun" },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
 ]
 
 [sections.aft_side]

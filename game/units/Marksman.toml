@@ -2,9 +2,11 @@ name = "Marksman"
 class = "vehicle"
 movement = "track"
 tons = 65
-walk_mp = 6
+walk_mp = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 260
 armor = "ferro_fibrous"
 
 [sections.left_side]
@@ -14,7 +16,7 @@ armor = 20
 armor = 20
 
 [sections.front_side]
-armor = 54
+armor = 45
 slots = [
     { at = 1, item = "IS.Sniper" },
     { at = "2-3", item = "Ammo_IS.Sniper", rounds = 10 },

@@ -2,31 +2,34 @@ name = "Blood Asp"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 6
-heat_sinks = 32
-specials = ["ArtemisIV"]
+walk_mp = 4
+heat_sinks = 16
+specials = ["OmniMech_Tech", "ArtemisIV"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 360
 structure = "endo_steel"
 
 [sections.left_arm]
 armor = 28
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.LRM-20" },
+    { at = "3-6", item = "CL.LRM-20" },
+    { at = 7, item = "ArtemisIV", link = 3 },
     { at = "8-9", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 28
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.LRM-20" },
-    { at = "8-9", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
-    { at = "10-11", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-8", item = "CL.LRM-20" },
+    { at = 9, item = "ArtemisIV", link = 5 },
+    { at = "10-11", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -42,8 +45,8 @@ slots = [
 armor = 24
 rear = 11
 slots = [
-    { at = "3-8", item = "CL.GaussRifle" },
-    { at = "9-10", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-10", item = "CL.GaussRifle" },
     { at = 11, item = "EndoSteel" },
 ]
 
@@ -51,8 +54,8 @@ slots = [
 armor = 40
 rear = 13
 slots = [
-    { at = 11, item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = 12, item = "Ecm" },
+    { at = 11, item = "Ecm" },
+    { at = 12, item = "Ammo_CL.GaussRifle", rounds = 8 },
 ]
 
 [sections.left_leg]

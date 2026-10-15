@@ -2,13 +2,14 @@ name = "Dasher"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 15
-heat_sinks = 20
-specials = ["CL_AMS", "Masc"]
+walk_mp = 10
+heat_sinks = 10
+specials = ["Masc"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 200
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

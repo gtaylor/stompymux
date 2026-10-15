@@ -2,22 +2,21 @@ name = "Rifleman"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 6
+walk_mp = 4
 jump_mp = 3
-heat_sinks = 24
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
+engine_rating = 260
 structure = "endo_steel"
-armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-6", item = "CL.UltraAC/2" },
-    { at = 11, item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = "7-8", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
@@ -25,52 +24,39 @@ armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-6", item = "CL.UltraAC/2" },
-    { at = "9-11", item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = 7, item = "EndoSteel" },
 ]
 
 [sections.left_torso]
-armor = 20
-rear = 10
+armor = 22
+rear = 8
 slots = [
     { at = 1, item = "JumpJet" },
-    { at = 2, item = "Ammo_CL.UltraAC/2", rounds = 45 },
-    { at = 10, item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "2-4", item = "Ammo_CL.UltraAC/2", rounds = 45 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
-armor = 20
-rear = 10
+armor = 22
+rear = 8
 slots = [
     { at = 1, item = "JumpJet" },
-    { at = "2-3", item = "Ammo_CL.UltraAC/2", rounds = 45 },
-    { at = 10, item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "2-4", item = "Ammo_CL.UltraAC/2", rounds = 45 },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
-armor = 30
-rear = 12
+armor = 29
+rear = 10
 slots = [
     { at = 11, item = "JumpJet" },
-    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 30
-slots = [
-    { at = "5-6", item = "HeatSink" },
-]
 
 [sections.right_leg]
 armor = 30
-slots = [
-    { at = "5-6", item = "HeatSink" },
-]
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "FerroFibrous" },
-]

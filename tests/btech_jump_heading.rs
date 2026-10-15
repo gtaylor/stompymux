@@ -32,8 +32,12 @@ async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {
                     },
                 )
                 .unwrap();
-                definition.jump_speed = 53.75;
-                create_battle_unit(&mut world, id, definition).unwrap();
+                if quad {
+                    // The Scorpion carries no jets of its own; five give it five jumping MP.
+                    support::templates::install_jump_jets(&mut definition, 5);
+                }
+                create_battle_unit(&mut world, id, crate::support::templates::legal(definition))
+                    .unwrap();
                 support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
                 place_battle_unit(&mut world, id, map, 5, 5).unwrap();
                 world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);

@@ -15,6 +15,9 @@ pub struct DfaProfile {
     pub skill: i32,
     /// Darkness on the target's map, less what searchlights offset.
     pub light: i32,
+    /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind
+    /// (Tactical Operations: Advanced Units & Equipment p. 113).
+    pub sensors: i32,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -158,12 +161,18 @@ fn dfa_profile_inner(
             target,
             rules.fall.extended_piloting,
         )?);
-    let target_number = base + skill + attacker_movement + target_movement + light;
+    let sensors = i32::from(source.blind_cockpit_modifier());
+    let target_number = base + skill + attacker_movement + target_movement + light + sensors;
     ensure!(
         target_number <= 12,
         "DFA: BTH {target_number}\tYou choose not to attack and land from your jump."
     );
-    let (inflicted_damage, received_damage) = damage(source.definition().tons, specialist);
+    let (mut inflicted_damage, received_damage) = damage(source.definition().tons, specialist);
+    // Working talons raise the landing's damage by half (Tactical Operations: Advanced Units &
+    // Equipment p. 103).
+    if source.any_talons_working()? {
+        inflicted_damage = super::talons::raise(inflicted_damage);
+    }
     let reverse = unit_range(world, target, attacker)?;
     Ok(DfaProfile {
         target_number,
@@ -172,6 +181,7 @@ fn dfa_profile_inner(
         target_movement,
         skill,
         light,
+        sensors,
         inflicted_damage,
         received_damage,
         target_arc: HitArc::from_bearing(
@@ -232,6 +242,8 @@ struct DfaPackets {
     impacts: Vec<TacticalImpact>,
     experience: Vec<ExperienceAward>,
     experience_messages: Vec<super::DiagnosticMessage>,
+    /// Whether a spike cluster blunted any packet.
+    spiked: bool,
 }
 
 /// Apply five-point groups, resampling posture and preserving location/damage dice order.
@@ -248,6 +260,7 @@ fn packets(
     let mut reports = Vec::new();
     let mut experience = Vec::new();
     let mut experience_messages = Vec::new();
+    let mut spiked = false;
     while damage > 0 {
         let unit = &world.btech.constructed_units()[&id];
         // A prone target takes the landing on the Rear column of the Hit Location Table
@@ -265,13 +278,16 @@ fn packets(
             super::resolve_hit(unit, arc, roll, &mut dice)?
         } else {
             Hit {
-                section: table.location(unit.chassis(), arc, dice.d6())?,
+                section: super::hit::d6_location(unit, table, arc, &mut dice)?,
                 rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
             }
         };
         world.btech.constructed.get_mut(&id).unwrap().dice = dice;
-        let amount = damage.min(5);
+        let group = damage.min(5);
+        // A spike cluster where the group lands takes four points off it.
+        let (amount, blunted) = super::spikes::absorb(world, id, hit.section, group)?;
+        spiked |= blunted;
         if character
             && let Some(pilot) = world.btech.constructed_units()[&attacker].pilot()
             && let Some(award) = super::physical_experience::award(
@@ -301,12 +317,13 @@ fn packets(
             },
         )?;
         reports.push(report);
-        damage -= amount;
+        damage -= group;
     }
     Ok(DfaPackets {
         impacts: reports,
         experience,
         experience_messages,
+        spiked,
     })
 }
 
@@ -397,7 +414,21 @@ fn resolve_dfa_inner(
             report.target_impacts = target_packets.impacts;
             report.experience = target_packets.experience;
             report.experience_messages = target_packets.experience_messages;
-            report.attacker_impacts = packets(
+            // The target's spikes wound both of the attacker's legs, a point each.
+            let backlash = if target_packets.spiked {
+                let legs = [MechSection::LeftLeg, MechSection::RightLeg];
+                super::spikes::backlash(
+                    world,
+                    attacker,
+                    &legs,
+                    attacker_rules,
+                    character,
+                    &mut report.notices,
+                )?
+            } else {
+                Vec::new()
+            };
+            let landing = packets(
                 world,
                 attacker,
                 report.profile.received_damage,
@@ -405,8 +436,8 @@ fn resolve_dfa_inner(
                 DamagePhase::Legs,
                 attacker_rules,
                 (attacker, character),
-            )?
-            .impacts;
+            )?;
+            report.attacker_impacts = backlash.into_iter().chain(landing.impacts).collect();
         } else {
             report.notices.push(Notice {
                 unit: attacker,

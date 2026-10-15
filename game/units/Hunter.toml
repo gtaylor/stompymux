@@ -2,8 +2,12 @@ name = "Hunter"
 class = "vehicle"
 movement = "track"
 tons = 35
-walk_mp = 8
+walk_mp = 5
 specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 175
 
 [sections.left_side]
 armor = 22

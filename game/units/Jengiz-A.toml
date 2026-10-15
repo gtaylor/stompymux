@@ -2,8 +2,8 @@ name = "Jengiz"
 class = "aerofighter"
 movement = "fly"
 tons = 80
-walk_mp = 8
-heat_sinks = 54
+walk_mp = 5
+heat_sinks = 27
 fuel = 600
 specials = ["CargoTech"]
 

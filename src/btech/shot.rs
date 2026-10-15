@@ -387,6 +387,13 @@ fn resolve_shot_inner(
     let target_number = aim.subtotal();
     candidate.btech.constructed.get_mut(&shooter).unwrap().dice = aim_dice;
     let weapon = mount.weapon;
+    // A surviving Apollo system takes one from the launcher's Cluster Hits roll (Tactical
+    // Operations: Advanced Units & Equipment p. 143).
+    let apollo = weapon.is_mrm()
+        && world.btech.constructed_units()[&shooter].apollo_operational(weapon_index)?;
+    // Firing a gun its machine gun array links fires every ready linked gun as one attack
+    // (Total Warfare p. 137).
+    let volley = world.btech.constructed_units()[&shooter].array_volley(weapon_index)?;
     let streak_confused = weapon.is_streak()
         && (super::electronic_field(world, shooter)?.angel_disturbed
             || super::electronic_field(world, target)?.angel_protected);
@@ -407,7 +414,7 @@ fn resolve_shot_inner(
         hit,
         glancing,
         ammunition_warning,
-        launch_notices,
+        mut launch_notices,
     } = super::weapon_launch::resolve_prepared_launch(
         &mut candidate,
         super::weapon_launch::WeaponLaunchRequest {
@@ -422,6 +429,17 @@ fn resolve_shot_inner(
         },
         Some(prepared),
     )?;
+    // The array's other guns spend their ammunition and recycle with the one fired.
+    if let Some(guns) = &volley {
+        for &gun in guns.iter().filter(|gun| **gun != weapon_index) {
+            super::readiness::use_weapon(&mut candidate, shooter, pilot, gun, launched, None)?;
+        }
+        launch_notices.push(super::Notice {
+            unit: shooter,
+            text: format!("Your machine gun array fires {} guns together.", guns.len()),
+        });
+    }
+    let array = volley.as_ref().map(|guns| guns.len() as u8);
     let beacon = weapon.beacon_kind(expenditure.ammunition_mode);
     let pod = beacon.is_some();
     let aimed = super::aimed_hit::prepare(
@@ -536,6 +554,8 @@ fn resolve_shot_inner(
                 angel_blocked: false,
                 ams_engaged,
                 indirect: indirect_fire,
+                apollo,
+                array,
             },
             rules.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
@@ -564,6 +584,8 @@ fn resolve_shot_inner(
                     character,
                     ams_engaged,
                     indirect: indirect_fire,
+                    apollo,
+                    array,
                     experience,
                 },
             )?,

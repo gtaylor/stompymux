@@ -2,12 +2,14 @@ name = "Cicada"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 12
-heat_sinks = 20
+walk_mp = 8
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 320
 heat_sinks = "double"
 
 [sections.left_arm]

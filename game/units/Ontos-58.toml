@@ -2,21 +2,20 @@ name = "Ontos"
 class = "vehicle"
 movement = "track"
 tons = 95
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 24
 specials = ["SearchLight"]
 
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 285
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 32
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 32
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 40

@@ -2,8 +2,8 @@ name = "Hauptmann"
 class = "mech"
 movement = "biped"
 tons = 95
-walk_mp = 5
-heat_sinks = 26
+walk_mp = 3
+heat_sinks = 13
 tac_range = 25
 lrs_range = 50
 scan_range = 25
@@ -11,6 +11,8 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 285
 heat_sinks = "double"
 
 [sections.left_arm]

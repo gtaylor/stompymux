@@ -2,13 +2,17 @@ name = "Packrat"
 class = "vehicle"
 movement = "wheel"
 tons = 20
-walk_mp = 11
+walk_mp = 7
 radio = 5
 radio_type = 126
 cargo_space = 100
 max_suits = 0
 max_ton = 1
 specials = ["CargoTech"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 120
 
 [sections.left_side]
 armor = 16

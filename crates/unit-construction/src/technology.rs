@@ -14,12 +14,14 @@ pub enum Technology {
     CompositeStructure,
     /// Two-ton cockpit that adds one to piloting rolls.
     SmallCockpit,
+    /// Four-ton cockpit in the center torso, with life support in the side torsos and a third
+    /// sensor package; it adds one to piloting rolls and outlives the head (Tactical
+    /// Operations: Advanced Units & Equipment pp. 112-113).
+    TorsoMountedCockpit,
     /// Clan heat sinks that glow in darkness; dissipation follows the chassis sink rules.
     LaserHeatSinks,
     /// Clan ECM suite that also works as an active probe.
     Watchdog,
-    /// Clan missile guidance that improves on Artemis IV.
-    ArtemisV,
     /// Armor that reflects part of each energy hit but spalls under area-effect blasts.
     /// Energy weapons remove half their damage in armor, rounding down; area-effect
     /// weapons such as artillery remove double.
@@ -56,9 +58,9 @@ impl Technology {
         Self::ReinforcedStructure,
         Self::CompositeStructure,
         Self::SmallCockpit,
+        Self::TorsoMountedCockpit,
         Self::LaserHeatSinks,
         Self::Watchdog,
-        Self::ArtemisV,
         Self::LaserReflectiveArmor,
     ];
 
@@ -69,9 +71,9 @@ impl Technology {
             Self::ReinforcedStructure => ("ReinforcedInternal_Tech", "RINT"),
             Self::CompositeStructure => ("CompositeInternal_Tech", "CINT"),
             Self::SmallCockpit => ("SmallCockpit_Tech", "SMCPIT"),
+            Self::TorsoMountedCockpit => ("TorsoCockpit_Tech", "TCPIT"),
             Self::LaserHeatSinks => ("LaserHS_Tech", "LHS"),
             Self::Watchdog => ("WatchDog_Tech", "WDOG"),
-            Self::ArtemisV => ("ArtemisV_Tech", "AV"),
             Self::LaserReflectiveArmor => ("LaserRefArmor_Tech", "LRARM"),
         }
     }

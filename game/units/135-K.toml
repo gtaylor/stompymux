@@ -2,10 +2,13 @@ name = "Coolant Truck"
 class = "vehicle"
 movement = "wheel"
 tons = 30
-walk_mp = 6
+walk_mp = 4
+heat_sinks = 6
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 100
 
 [sections.left_side]
 armor = 28

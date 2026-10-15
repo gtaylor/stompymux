@@ -2,13 +2,14 @@ name = "Phoenix Hawk"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 20
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 400
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -16,58 +17,58 @@ armor = "ferro_fibrous"
 armor = 20
 slots = [
     { at = "5-8", item = "Ammo_CL.LRM-20", rounds = 6 },
-    { at = "9-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 20
 slots = [
     { at = "5-8", item = "Ammo_CL.LRM-20", rounds = 6 },
-    { at = "9-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = "3-10", item = "CL.LRM-20" },
-    { at = "11-12", item = "JumpJet" },
+    { at = "3-4", item = "JumpJet" },
+    { at = "5-12", item = "CL.LRM-20" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = "3-10", item = "CL.LRM-20" },
-    { at = "11-12", item = "JumpJet" },
+    { at = "3-4", item = "JumpJet" },
+    { at = "5-12", item = "CL.LRM-20" },
 ]
 
 [sections.center_torso]
-armor = 27
-rear = 15
+armor = 21
+rear = 10
 slots = [
     { at = 11, item = "JumpJet" },
-    { at = 12, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.left_leg]
-armor = 30
+armor = 21
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
-armor = 30
+armor = 21
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "FerroFibrous" },
+    { at = 4, item = "EndoSteel" },
 ]

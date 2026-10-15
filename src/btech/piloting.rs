@@ -287,12 +287,15 @@ fn roll_check(
 }
 
 impl super::Mech {
-    /// Construction-only control penalty; it does not count as mobility damage.
+    /// Cockpit control penalty, which does not count as mobility damage: +1 for a small or
+    /// torso-mounted cockpit (Tactical Operations: Advanced Units & Equipment p. 113), and +4
+    /// more while a torso-mounted cockpit's sensor damage leaves its MechWarrior blind.
     pub fn cockpit_piloting_modifier(&self) -> u8 {
         u8::from(
             self.definition()
-                .has_technology(super::Technology::SmallCockpit),
-        )
+                .has_technology(super::Technology::SmallCockpit)
+                || self.torso_mounted_cockpit(),
+        ) + self.blind_cockpit_modifier()
     }
 }
 

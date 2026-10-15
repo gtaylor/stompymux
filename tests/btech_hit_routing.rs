@@ -29,15 +29,17 @@ async fn fixture(
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    UnitTemplate::parse(
-        "test",
-        if vehicle {
-            include_str!("../game/units/Demolisher.toml")
-        } else {
-            include_str!("fixtures/btech/units/JR7-D.toml")
-        },
+    crate::support::templates::legal_unit(
+        UnitTemplate::parse(
+            "test",
+            if vehicle {
+                include_str!("../game/units/Demolisher.toml")
+            } else {
+                include_str!("fixtures/btech/units/JR7-D.toml")
+            },
+        )
+        .unwrap(),
     )
-    .unwrap()
     .create(&mut world, shooter)
     .unwrap();
     support::seed_object_dice(&mut world, shooter, support::FIXTURE_DICE_SEED);

@@ -34,13 +34,40 @@ fn definition(section: MechSection, link: &str) -> MechTemplate {
                 },
             );
     }
-    template
+    crate::support::templates::legal(template)
 }
 
-/// Local and head-to-torso links resolve; loss disables assistance but preserves installed mass.
+/// Local links resolve; loss disables assistance but preserves installed mass. Artemis IV
+/// sits in its launcher's location (TechManual p. 206), so a head controller cannot serve the
+/// center torso launcher.
 #[test]
 fn artemis_links_damage_and_restoration() {
-    for section in [MechSection::CenterTorso, MechSection::Head] {
+    let head = MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
+        .map(|mut template| {
+            template
+                .sections
+                .get_mut(&MechSection::Head)
+                .unwrap()
+                .criticals
+                .insert(
+                    3,
+                    CriticalDefinition {
+                        equipment: "ArtemisIV".into(),
+                        data: "11".into(),
+                        modes: vec![],
+                    },
+                );
+            template
+        })
+        .unwrap();
+    assert!(
+        Mech::from_template(crate::support::templates::legal(head))
+            .unwrap_err()
+            .to_string()
+            .contains("Artemis IV must serve every LRM, SRM and MML launcher")
+    );
+    {
+        let section = MechSection::CenterTorso;
         let unit = Mech::from_template(definition(section, "11")).unwrap();
         let controllers = unit.artemis_controllers().unwrap();
         assert_eq!(controllers.len(), 1);
@@ -104,64 +131,38 @@ fn artemis_unassigned_links_and_mass() {
     }
 }
 
-/// An Artemis V controller weighs a ton and a half, half a ton more than Artemis IV.
+/// An Artemis V controller weighs a ton and a half across two slots, half a ton more than
+/// Artemis IV (Tactical Operations: Advanced Units & Equipment p. 217).
 #[test]
 fn artemis_v_controller_mass() {
     let standard = Mech::from_template(definition(MechSection::CenterTorso, "11")).unwrap();
-    for flag in ["ArtemisV_Tech", "AV"] {
-        let mut template = definition(MechSection::CenterTorso, "11");
-        let value = template.attributes.entry("specials".into()).or_default();
-        value.push(' ');
-        value.push_str(flag);
-        let unit = Mech::from_template(template).unwrap();
-        assert_eq!(
-            unit.mass().unwrap().equipment,
-            standard.mass().unwrap().equipment + 512,
-            "{flag}"
-        );
-    }
-}
-
-/// Head lookup does not hide a same-numbered center-torso launcher.
-#[test]
-fn head_controller_reports_both_matching_mounts() {
-    let mut template = definition(MechSection::Head, "1");
-    let launcher = CriticalDefinition {
-        equipment: "IS.SRM-2".into(),
-        data: "-".into(),
-        modes: vec![],
-    };
-    let life_support = template
-        .sections
-        .get_mut(&MechSection::Head)
-        .unwrap()
-        .criticals
-        .insert(0, launcher.clone())
-        .unwrap();
-    template
-        .sections
-        .get_mut(&MechSection::LeftTorso)
-        .unwrap()
-        .criticals
-        .insert(8, life_support);
+    // Artemis V fills two slots beside its launcher, so the SRM-4 moves to the right torso
+    // with its controller.
+    let mut template = definition(MechSection::CenterTorso, "11");
     let center = template
         .sections
         .get_mut(&MechSection::CenterTorso)
         .unwrap();
-    let engine = center.criticals.insert(0, launcher).unwrap();
-    let jet = center.criticals.insert(11, engine).unwrap();
-    template
-        .sections
-        .get_mut(&MechSection::RightTorso)
-        .unwrap()
-        .criticals
-        .insert(6, jet);
-    let unit = Mech::from_template(template).unwrap();
-    let controller = unit.artemis_controllers().unwrap().remove(0);
-    assert_eq!(controller.weapon_indices.len(), 2);
-    for index in controller.weapon_indices {
-        assert!(unit.artemis_operational(index).unwrap());
+    let launcher = center.criticals.remove(&10).unwrap();
+    center.criticals.remove(&11);
+    let torso = template.sections.get_mut(&MechSection::RightTorso).unwrap();
+    torso.criticals.insert(7, launcher);
+    for slot in [8, 9] {
+        torso.criticals.insert(
+            slot,
+            CriticalDefinition {
+                equipment: "ArtemisV".into(),
+                data: "-".into(),
+                modes: vec![],
+            },
+        );
     }
+    let template = crate::support::templates::legal(template);
+    let unit = Mech::from_template(template).unwrap();
+    assert_eq!(
+        unit.mass().unwrap().equipment,
+        standard.mass().unwrap().equipment + 512
+    );
 }
 
 /// The ammunition bonus shifts the missile table by two, capped at twelve, with ordinary packet

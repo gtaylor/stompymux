@@ -2,14 +2,15 @@ name = "Orion"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
-heat_sinks = 20
+walk_mp = 4
+heat_sinks = 10
 radio = 4
 cargo_space = 0
 max_suits = 0
-specials = ["AntiAircraft"]
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"

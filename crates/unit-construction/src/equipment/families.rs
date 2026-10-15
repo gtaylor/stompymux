@@ -166,11 +166,23 @@ impl Weapon {
         rounds: u16,
         ammunition: AmmunitionMode,
     ) -> u32 {
-        if self.weapon_explosion_damage() > 0 || self == Self::PlasmaRifle {
+        if self.weapon_explosion_damage() > 0 || self.is_plasma() {
             return 0;
         }
         let profile = self.profile_for_ammunition(ammunition);
         u32::from(rounds) * u32::from(profile.damage) * u32::from(profile.missiles.max(1))
+    }
+
+    /// The Inner Sphere plasma rifle and the Clan plasma cannon. Their ammunition never explodes
+    /// and they cannot fire underwater (Total Warfare p. 139).
+    pub fn is_plasma(self) -> bool {
+        matches!(self, Self::PlasmaRifle | Self::ClanPlasmaCannon)
+    }
+
+    /// Clan hyper-assault Gauss rifles, which roll on the Cluster Hits Table and deal their
+    /// damage in five-point groups (Total Warfare p. 136).
+    pub fn is_hag(self) -> bool {
+        matches!(self, Self::ClanHag20 | Self::ClanHag30 | Self::ClanHag40)
     }
 
     /// Conventional IS and Clan Narc launchers, with normal beacons or explosive rounds.
@@ -210,6 +222,10 @@ impl Weapon {
                 | Self::ClanSrm2
                 | Self::ClanStreakSrm2
                 | Self::ClanGaussRifle
+                | Self::ClanApGaussRifle
+                | Self::ClanHag20
+                | Self::ClanHag30
+                | Self::ClanHag40
                 | Self::ClanMachineGun
                 | Self::ClanLightMachineGun
                 | Self::ClanHeavyMachineGun
@@ -218,6 +234,7 @@ impl Weapon {
                 | Self::ClanSmallPulseLaser
                 | Self::ClanErSmallPulseLaser
                 | Self::MachineGun
+                | Self::LightMachineGun
                 | Self::HeavyMachineGun
                 | Self::SmallLaser
                 | Self::ErSmallLaser
@@ -242,6 +259,7 @@ impl Weapon {
                 | Self::ClanUltraAc5
                 | Self::ClanSrm2
                 | Self::ClanStreakSrm2
+                | Self::ClanApGaussRifle
                 | Self::ClanMachineGun
                 | Self::ClanLightMachineGun
                 | Self::ClanHeavyMachineGun
@@ -252,6 +270,7 @@ impl Weapon {
                 | Self::HyperAc2
                 | Self::HyperAc5
                 | Self::MachineGun
+                | Self::LightMachineGun
                 | Self::HeavyMachineGun
                 | Self::LightAc2
                 | Self::LightAc5

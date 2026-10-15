@@ -2,12 +2,12 @@ name = "Galahad"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 6
-heat_sinks = 32
-specials = ["AntiAircraft"]
+walk_mp = 4
+heat_sinks = 16
 
 [construction]
 tech_base = "clan"
+engine_rating = 240
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

@@ -2,8 +2,8 @@ name = "Kirghiz"
 class = "aerofighter"
 movement = "fly"
 tons = 100
-walk_mp = 8
-heat_sinks = 48
+walk_mp = 5
+heat_sinks = 24
 fuel = 750
 
 [construction]

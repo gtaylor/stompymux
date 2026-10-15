@@ -2,7 +2,8 @@
 use crate::support;
 use stompymux_rs::*;
 
-/// Install booster slots only in genuinely vacant torso/arm positions.
+/// Install `count` contiguous MASC slots in the first vacant run of an Atlas torso or arm,
+/// with armor making room for their mass.
 fn with_masc(count: usize, clan: bool) -> (MechTemplate, Vec<CriticalLocation>) {
     let mut template =
         MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap();
@@ -16,8 +17,8 @@ fn with_masc(count: usize, clan: bool) -> (MechTemplate, Vec<CriticalLocation>) 
                 .criticals
                 .retain(|_, part| part.equipment != "HeatSink");
         }
-        template.heat_sinks = 20;
-        template.attributes.insert("heat_sinks".into(), "20".into());
+        template.heat_sinks = 10;
+        template.attributes.insert("heat_sinks".into(), "10".into());
     }
     let mut locations = Vec::new();
     for section in [
@@ -26,29 +27,37 @@ fn with_masc(count: usize, clan: bool) -> (MechTemplate, Vec<CriticalLocation>) 
         MechSection::LeftArm,
         MechSection::RightArm,
     ] {
-        for slot in 0..12 {
-            if locations.len() == count {
-                return (template, locations);
-            }
-            let criticals = &mut template.sections.get_mut(&section).unwrap().criticals;
-            if criticals.contains_key(&slot) {
-                continue;
-            }
-            criticals.insert(
-                slot,
-                CriticalDefinition {
-                    equipment: "Masc".into(),
-                    data: "-".into(),
-                    modes: vec![],
-                },
-            );
+        let criticals = &template.sections[&section].criticals;
+        let Some(first) = (0..12u8).find(|&first| {
+            (first..first + count as u8).all(|slot| slot < 12 && !criticals.contains_key(&slot))
+        }) else {
+            continue;
+        };
+        for slot in first..first + count as u8 {
+            template
+                .sections
+                .get_mut(&section)
+                .unwrap()
+                .criticals
+                .insert(
+                    slot,
+                    CriticalDefinition {
+                        equipment: "Masc".into(),
+                        data: "-".into(),
+                        modes: vec![],
+                    },
+                );
             locations.push(CriticalLocation { section, slot });
         }
+        break;
     }
     assert_eq!(locations.len(), count);
-    (template, locations)
+    (crate::support::templates::legal(template), locations)
 }
 
+/// MASC fills 5% of an Inner Sphere Mech's tonnage or 4% of a Clan Mech's, rounded to the
+/// nearest slot (TechManual p. 52): construction refuses any other count, it weighs a ton per
+/// slot, and losing a slot stops it working while the hardware stays installed.
 #[test]
 fn masc_thresholds_mass_and_critical_loss_follow_live_installed_slots() {
     for (clan, required) in [(false, 5), (true, 4)] {
@@ -56,44 +65,48 @@ fn masc_thresholds_mass_and_critical_loss_follow_live_installed_slots() {
         let base = Mech::from_template(base).unwrap();
         assert!(!base.masc_installed().unwrap());
         assert!(!base.masc_operational().unwrap());
-        for count in [required - 1, required, required + 1] {
-            let (template, locations) = with_masc(count, clan);
-            let mut unit = Mech::from_template(template).unwrap();
-            assert_eq!(unit.masc_required_slots(), required);
-            assert_eq!(unit.masc_installed().unwrap(), count >= required);
-            assert_eq!(unit.masc_operational().unwrap(), count >= required);
-            assert_eq!(
-                unit.mass().unwrap().equipment - base.mass().unwrap().equipment,
-                count as u32 * 1024
-            );
-            let mass = unit.mass().unwrap();
-            assert!(matches!(
-                unit.destroy_critical(locations[0]).unwrap(),
-                Some(CriticalLoss::System {
-                    system: System::Masc
-                })
-            ));
-            assert_eq!(unit.masc_operational().unwrap(), count > required);
-            assert_eq!(unit.masc_installed().unwrap(), count >= required);
-            assert_eq!(unit.mass().unwrap(), mass);
-            assert!(unit.destroy_critical(locations[0]).unwrap().is_none());
+        for count in [required - 1, required + 1] {
+            let error = Mech::from_template(with_masc(count, clan).0).unwrap_err();
+            assert!(error.to_string().contains("MASC needs"), "{error}");
         }
+        let (template, locations) = with_masc(required, clan);
+        let mut unit = Mech::from_template(template).unwrap();
+        assert_eq!(unit.masc_required_slots(), required);
+        assert!(unit.masc_installed().unwrap());
+        assert!(unit.masc_operational().unwrap());
+        assert_eq!(
+            unit.mass().unwrap().equipment - base.mass().unwrap().equipment,
+            required as u32 * 1024
+        );
+        let mass = unit.mass().unwrap();
+        assert!(matches!(
+            unit.destroy_critical(locations[0]).unwrap(),
+            Some(CriticalLoss::System {
+                system: System::Masc
+            })
+        ));
+        assert!(!unit.masc_operational().unwrap());
+        assert!(unit.masc_installed().unwrap());
+        assert_eq!(unit.mass().unwrap(), mass);
+        assert!(unit.destroy_critical(locations[0]).unwrap().is_none());
     }
-    // Integer thresholds, including the minimum slot on light chassis.
+    // Normal rounding, with at least one slot on the lightest chassis.
     for (tons, clan, required) in [
         (20, false, 1),
-        (35, false, 1),
+        (25, false, 1),
+        (30, false, 2),
+        (35, false, 2),
         (40, false, 2),
-        (45, true, 1),
+        (45, true, 2),
+        (50, false, 3),
         (50, true, 2),
-        (95, false, 4),
-        (95, true, 3),
+        (95, false, 5),
+        (95, true, 4),
+        (100, true, 4),
     ] {
-        let (mut template, _) = with_masc(5, clan);
+        let (mut template, _) = with_masc(0, clan);
         template.tons = tons;
-        template.attributes.insert("tons".into(), tons.to_string());
-        let unit = Mech::from_template(template).unwrap();
-        assert_eq!(unit.masc_required_slots(), required);
+        assert_eq!(template.masc_slots(), required, "{tons} {clan}");
     }
 }
 
@@ -389,7 +402,10 @@ fn with_supercharger() -> (MechTemplate, CriticalLocation) {
             modes: vec![],
         },
     );
-    (template, CriticalLocation { section, slot })
+    (
+        crate::support::templates::legal(template),
+        CriticalLocation { section, slot },
+    )
 }
 
 #[tokio::test]
@@ -549,9 +565,12 @@ async fn simultaneous_boosters_roll_separately_without_a_penalty() {
     }
 }
 
+/// A supercharger is one critical slot beside the engine and the SuperCharger_Tech flag
+/// together (Tactical Operations: Advanced Units & Equipment p. 223); construction refuses
+/// either alone.
 #[test]
 fn supercharger_technology_flag_and_critical_mass_match_construction_behavior() {
-    let (mut template, compressor) = with_supercharger();
+    let (template, compressor) = with_supercharger();
     let mut base_template = template.clone();
     base_template
         .sections
@@ -559,14 +578,16 @@ fn supercharger_technology_flag_and_critical_mass_match_construction_behavior() 
         .unwrap()
         .criticals
         .remove(&compressor.slot);
-    let base = Mech::from_template(base_template).unwrap();
+    base_template
+        .attributes
+        .insert("specials".into(), "Masc".into());
+    let base = Mech::from_template(crate::support::templates::legal(base_template)).unwrap();
     let mut unit = Mech::from_template(template.clone()).unwrap();
     assert!(unit.supercharger_installed());
     assert!(unit.supercharger_operational());
     // A supercharger weighs a tenth of the 19-ton engine, rounded up to the half ton.
     let (with, without) = (unit.mass().unwrap(), base.mass().unwrap());
     assert_eq!(with.equipment, without.equipment + 2048);
-    assert_eq!(with.total, without.total + 2048);
     assert!(matches!(
         unit.destroy_critical(compressor).unwrap(),
         Some(CriticalLoss::System {
@@ -574,38 +595,55 @@ fn supercharger_technology_flag_and_critical_mass_match_construction_behavior() 
         })
     ));
     assert!(unit.supercharger_operational());
-    template.attributes.insert("specials".into(), "Masc".into());
-    assert!(
-        !Mech::from_template(template.clone())
-            .unwrap()
-            .supercharger_installed()
-    );
-    template
+    let mut unflagged = template.clone();
+    unflagged
         .attributes
-        .insert("specials".into(), "Masc SuperCharger_Tech".into());
-    template
+        .insert("specials".into(), "Masc".into());
+    assert!(Mech::from_template(unflagged).is_err());
+    let mut slotless = template;
+    slotless
         .sections
         .get_mut(&compressor.section)
         .unwrap()
         .criticals
         .remove(&compressor.slot);
-    assert!(
-        Mech::from_template(template)
-            .unwrap()
-            .supercharger_operational()
-    );
+    assert!(Mech::from_template(slotless).is_err());
 }
 
 /// A fast biped with both boosters and passive myomer; vacant slots carry the test equipment.
 fn myomer_booster_design() -> MechTemplate {
     let mut template =
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
+    // MASC and triple strength myomer may not be combined (TechManual p. 52), so the
+    // supercharger is the booster beside the passive myomer.
     template.attributes.insert(
         "specials".into(),
-        "Masc SuperCharger_Tech TripleMyomerTech".into(),
+        "SuperCharger_Tech TripleMyomerTech".into(),
     );
-    let mut equipment = vec!["Masc", "SuperCharger"];
-    equipment.extend(["TripleStrengthMyomer"; 6]);
+    // The supercharger shares the center torso with the engine; its jump jet moves out.
+    let center = &mut template
+        .sections
+        .get_mut(&MechSection::CenterTorso)
+        .unwrap()
+        .criticals;
+    let jet = center
+        .insert(
+            11,
+            CriticalDefinition {
+                equipment: "SuperCharger".into(),
+                data: "-".into(),
+                modes: vec![],
+            },
+        )
+        .unwrap();
+    let torso = &mut template
+        .sections
+        .get_mut(&MechSection::LeftTorso)
+        .unwrap()
+        .criticals;
+    let vacant = (0..12).find(|slot| !torso.contains_key(slot)).unwrap();
+    torso.insert(vacant, jet);
+    let mut equipment = vec!["TripleStrengthMyomer"; 6];
     for section in [
         MechSection::CenterTorso,
         MechSection::LeftTorso,
@@ -619,7 +657,7 @@ fn myomer_booster_design() -> MechTemplate {
                 continue;
             }
             let Some(name) = equipment.pop() else {
-                return template;
+                return crate::support::templates::legal(template);
             };
             slots.insert(
                 slot,
@@ -632,7 +670,7 @@ fn myomer_booster_design() -> MechTemplate {
         }
     }
     assert!(equipment.is_empty());
-    template
+    crate::support::templates::legal(template)
 }
 
 /// Set the last committed thermal sample without advancing movement or booster timers.
@@ -648,20 +686,14 @@ fn sample_booster_heat(world: &mut World, id: ObjectId, heat: f64) {
 #[tokio::test]
 async fn hot_myomer_replaces_the_extra_movement_boost_and_preserves_turning() {
     let (_dir, config, world, id) = powered_template(myomer_booster_design()).await;
-    // A 7/11 at heat 9 walks 7 + 2 - 1 = 8 and runs 12; one booster doubles the walk to a
-    // run of 16, both multiply it by 2.5 for 20 (Total Warfare pp. 137 and 139). The unit
-    // accelerates by a twentieth of the ceiling it would have while cool, 9/14 and up.
-    for (masc, compressor, control, acceleration) in [
-        (false, false, 129.0, 150.5 / 20.0),
-        (true, false, 172.0, 193.5 / 20.0),
-        (false, true, 172.0, 193.5 / 20.0),
-        (true, true, 215.0, 247.25 / 20.0),
-    ] {
+    // A 7/11 at heat 9 walks 7 + 2 - 1 = 8 and runs 12; the supercharger doubles the walk to
+    // a run of 16 (Total Warfare p. 137). The unit accelerates by a twentieth of the ceiling it
+    // would have while cool, 9/14 and up.
+    for (compressor, control, acceleration) in
+        [(false, 129.0, 150.5 / 20.0), (true, 172.0, 193.5 / 20.0)]
+    {
         let mut trial = world.clone();
         sample_booster_heat(&mut trial, id, 9.0);
-        if masc {
-            toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
-        }
         if compressor {
             toggle_battle_supercharger(&mut trial, id, ObjectId(1)).unwrap();
         }
@@ -694,30 +726,19 @@ async fn hot_myomer_replaces_the_extra_movement_boost_and_preserves_turning() {
 #[tokio::test]
 async fn hot_throttle_toggle_rounding_survives_save_and_cooling() {
     let (_dir, config, world, id) = powered_template(myomer_booster_design()).await;
-    for (intermediate, direction) in [
-        (false, 1.0),
-        (true, 1.0),
-        (false, -2.0 / 3.0),
-        (true, -2.0 / 3.0),
-    ] {
+    for direction in [1.0, -2.0 / 3.0] {
         let mut trial = world.clone();
         sample_booster_heat(&mut trial, id, 9.0);
         // Backward travel is limited to the walking ceiling, 86 km/h at heat 9.
         let request = |ceiling: f64| if direction > 0.0 { ceiling } else { -86.0 };
-        if intermediate {
-            toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
-            set_battle_speed(&mut trial, id, ObjectId(1), request(172.0)).unwrap();
-        } else {
-            set_battle_speed(&mut trial, id, ObjectId(1), request(129.0)).unwrap();
-            toggle_battle_masc(&mut trial, id, ObjectId(1)).unwrap();
-        }
+        set_battle_speed(&mut trial, id, ObjectId(1), request(129.0)).unwrap();
         toggle_battle_supercharger(&mut trial, id, ObjectId(1)).unwrap();
         let desired = trial.btech.constructed_units()[&id]
             .motion()
             .unwrap()
             .desired_speed;
-        // A forward throttle follows the ceiling to 215; a reverse one is left alone.
-        assert!((desired - request(215.0)).abs() < 1e-9);
+        // A forward throttle follows the ceiling to 172; a reverse one is left alone.
+        assert!((desired - request(172.0)).abs() < 1e-9);
         trial.validate(&config).unwrap();
         persistence::save(&config.database(), &trial).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();

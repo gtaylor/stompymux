@@ -2,7 +2,11 @@ name = "Clint"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 9
+walk_mp = 6
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 240
 
 [sections.left_arm]
 armor = 6

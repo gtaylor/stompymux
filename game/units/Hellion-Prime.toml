@@ -2,49 +2,51 @@ name = "Hellion"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 11
-heat_sinks = 20
-specials = ["Masc"]
+walk_mp = 7
+heat_sinks = 10
+specials = ["OmniMech_Tech", "Masc"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 210
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 10
 slots = [
-    { at = "5-6", item = "EndoSteel" },
-    { at = "7-8", item = "FerroFibrous" },
-    { at = 9, item = "Cl.ERMediumLaser" },
+    { at = 5, item = "CL.ERMediumLaser" },
+    { at = "6-10", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 10
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "5-9", item = "FerroFibrous" },
-    { at = "10-11", item = "Cl.ERMediumLaser" },
+    { at = "3-4", item = "CL.ERMediumLaser" },
+    { at = "5-6", item = "FerroFibrous" },
+    { at = "7-8", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = "3-5", item = "EndoSteel" },
-    { at = "6-7", item = "Cl.StreakSRM-2" },
-    { at = 8, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = "3-4", item = "CL.StreakSRM-2" },
+    { at = 5, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = "6-8", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = "3-4", item = "EndoSteel" },
-    { at = 5, item = "Masc" },
-    { at = 6, item = "Cl.LRM-10" },
-    { at = 7, item = "Cl.StreakSRM-2" },
-    { at = 8, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = 3, item = "Masc" },
+    { at = 4, item = "CL.LRM-10" },
+    { at = 5, item = "CL.StreakSRM-2" },
+    { at = 6, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "7-8", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -65,3 +67,6 @@ slots = [
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "CL.ERMediumLaser" },
+]

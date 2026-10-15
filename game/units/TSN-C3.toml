@@ -2,13 +2,15 @@ name = "Tessen"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 9
-heat_sinks = 22
+walk_mp = 6
+heat_sinks = 11
 radio = 4
 specials = ["C3SlaveTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"

@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
 article_tags = ["show_in_index"]
 +++
 
@@ -327,10 +327,19 @@ plasma and fire together cannot exceed fifteen points a turn (Total Warfare
 p. 159). A vehicle tracks no heat, so a heat-mode hit on one does its normal
 damage instead (Total Warfare p. 113). It still costs you three heat and ten seconds of
 recycle. `weapons` marks heat mode with `[HEAT]`. Modes survive shutdown and restart.
+
 Select numbers and ranges separated by commas without spaces, such as `0,2-4`.
 Reversed ranges work; repeated numbers toggle again. An invalid selection clause
 stops processing after earlier changes. Weapons that cannot toggle are skipped
 with an error. The command accepts no switches.
+
+A Clan plasma cannon never damages a Mech's armor: a hit adds 2D6 outside heat
+instead, under the same fifteen-point cap. Against a vehicle it deals 3D6 damage
+in five-point groups (Total Warfare p. 139). A Clan hyper-assault Gauss rifle
+rolls on the Cluster Hits Table for its size, two higher at short range and two
+lower at long range, and lands its damage in five-point groups (Total Warfare
+p. 136). A critical hit on a hyper-assault Gauss rifle explodes for 10, 15 or 20
+points by size, and on a Clan anti-personnel Gauss rifle for 3 (p. 135).
 
 
 Direct fire currently covers Inner Sphere small, medium and large lasers, ER
@@ -404,8 +413,9 @@ jump jet also causes a fall, but leaves no thrust for the collision damage rule.
 
 
 Inner Sphere double heat sinks are supported. Each installed sink occupies three
-critical slots and loses two cooling capacity if hit. The unit's listed heat-sink
-capacity already includes their doubled cooling. Sink damage persists across
+critical slots and loses two cooling capacity if hit. Templates and the template
+report count heat sinks as the record sheet does, one per sink; each double sink
+dissipates two heat. Sink damage persists across
 restart; double sinks can coexist with arm-flipping equipment.
 
 
@@ -498,6 +508,12 @@ Spotter-directed indirect fire gets no Artemis or Narc bonus (Total Warfare
 pp. 130, 139). Controllers link within their own section. Mechs can also use a head controller
 for a center-torso launcher; ground vehicles can use a rear controller for a
 turret launcher. VTOL controllers must be in the launcher’s section.
+
+An MRM "Apollo" fire control system linked to an MRM launcher cancels the
+MRM's +1 to hit and takes one from its Cluster Hits roll (never below 2); it
+needs no special ammunition and ECM does not affect it. Once destroyed, the
+launcher fires as a plain MRM (Tactical Operations: Advanced Units & Equipment
+p. 143).
 
 `unjam <selection>` begins a 60-second attempt to clear a jammed ammunition feed.
 You must be walking or slower, on the ground, with no weapons recycling. Only
@@ -694,6 +710,50 @@ argument.
 Laser AMS uses the same switch but needs no ammunition. Its recycle time is 25
 seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
 
+### Machine gun arrays
+
+A machine gun array links the two to four machine guns of one size class in the
+slots directly above it in its location (or, with none above, directly below).
+Firing any linked gun fires every linked gun that is ready and not set to
+rapid fire, as one attack: one to-hit roll, then a roll on the Cluster Hits
+Table column for the number of guns, every hit striking one location. Each gun
+spends its own round and recycles. A gun in rapid fire, or one left alone after
+the others are destroyed or recycling, fires by itself, and so does every gun
+once the array is destroyed (Total Warfare p. 137).
+
+### Torso-mounted cockpits
+
+A torso-mounted cockpit sits in the center torso. Head hits do not injure you,
+and losing the head neither destroys the Mech nor kills you: later hits there
+are rolled again. You add one to every piloting roll. The extra sensor package
+means a second sensor hit only raises the weapon penalty from +2 to +4; a third
+stops weapon attacks. Once both head sensors or three sensors are gone you are
+blind, adding 4 to piloting rolls and physical attacks. With life support
+damaged you take a point of damage each turn at 1-14 heat and two at 15 or more
+(Tactical Operations: Advanced Units & Equipment p. 113).
+
+### Talons and spikes
+
+Clan talons fill two slots in every leg. A kick from a leg whose talons and foot
+actuator both survive deals half again its damage, rounded up, after triple
+strength myomer; death from above deals half again while any leg's talons work
+(Tactical Operations: Advanced Units & Equipment p. 103).
+
+An Inner Sphere spike cluster takes four points off every physical blow that
+lands on its location, never below one. A bare arm or leg that strikes it takes
+two points itself: the punching arm, the kicking leg, a point to each leg after
+death from above, or the center torso after a charge. Clubs and physical weapons
+strike without touching the spikes. Each working cluster in a torso location
+adds two points to your own charges; after a charge, each damaged location of
+yours that holds a cluster loses it on 9 or more on 2d6.
+
+### Anti-infantry pods
+
+A-Pods and B-Pods are one-shot defenses against infantry, which this game does
+not field, so neither has a target and firing one does nothing. A B-Pod weighs
+a ton in one slot anywhere on the Mech (TechManual p. 204); a critical hit on
+it releases 2 points of damage in its location (Total Warfare p. 130).
+
 ### Narc beacons
 
 IS and Clan Narc launchers fire homing pods. A pod attaches to a surviving section
@@ -835,9 +895,11 @@ ECM and stealth systems add to the sweep roll. It has no special treatment of
 airborne targets.
 
 Use `tag ID` or `tag #unit` to make a TAG attack on an enemy within fifteen
-hexes with working TAG hardware and an unobstructed line of sight. Designating is
-a weapon attack (Total Warfare p. 142): it rolls 2d6 against your ordinary to-hit
-number with TAG's own range brackets of 5/9/15 hexes and no minimum range. Your
+hexes (nine with only a Clan light TAG) with working TAG hardware and an
+unobstructed line of sight. Designating is a weapon attack (Total Warfare
+p. 142): it rolls 2d6 against your ordinary to-hit number with TAG's own range
+brackets of 5/9/15 hexes, or light TAG's 3/6/9 (TechManual p. 343), and no
+minimum range. Your
 movement, heat and sensor damage, the target's movement and cover, the light and
 the secondary-target penalty all count, as does a Haywire pod on your unit; TAG
 has no ammunition or targeting-computer terms. A miss designates nothing and the

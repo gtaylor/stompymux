@@ -2,23 +2,20 @@ name = "Vedette"
 class = "vehicle"
 movement = "track"
 tons = 50
-walk_mp = 8
+walk_mp = 5
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 250
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 21
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 21
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 25

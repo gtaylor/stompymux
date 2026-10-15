@@ -2,14 +2,16 @@ name = "Nexus"
 class = "mech"
 movement = "biped"
 tons = 25
-walk_mp = 11
+walk_mp = 7
 jump_mp = 4
-heat_sinks = 20
+heat_sinks = 10
 radio = 2
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 175
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"
@@ -58,7 +60,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 6
+armor = 5
 rear = 2
 slots = [
     { at = 11, item = "EndoSteel" },

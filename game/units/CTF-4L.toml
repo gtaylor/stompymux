@@ -2,14 +2,17 @@ name = "Cataphract"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 6
-heat_sinks = 26
+walk_mp = 4
+heat_sinks = 13
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 280
 structure = "endo_steel"
+armor = "stealth"
 heat_sinks = "double"
 
 [sections.left_arm]
@@ -17,6 +20,7 @@ armor = 22
 omit = ["hand_actuator"]
 slots = [
     { at = "4-5", item = "IS.ERMediumLaser" },
+    { at = "6-7", item = "StealthArmor" },
     { at = "8-12", item = "EndoSteel" },
 ]
 
@@ -25,6 +29,7 @@ armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "IS.ERPPC" },
+    { at = "6-7", item = "StealthArmor" },
     { at = "8-12", item = "EndoSteel" },
 ]
 
@@ -35,6 +40,7 @@ slots = [
     { at = "1-6", item = "HeatSink" },
     { at = "7-8", item = "Ammo_IS.GaussRifle", rounds = 8 },
     { at = "9-10", item = "Ecm" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.right_torso]
@@ -42,7 +48,8 @@ armor = 22
 rear = 8
 slots = [
     { at = "1-7", item = "IS.GaussRifle" },
-    { at = 8, item = "Case" },
+    { at = "8-9", item = "StealthArmor" },
+    { at = 10, item = "Case" },
     { at = "11-12", item = "EndoSteel" },
 ]
 
@@ -55,12 +62,15 @@ slots = [
 
 [sections.left_leg]
 armor = 30
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
 
 [sections.right_leg]
 armor = 30
+slots = [
+    { at = "5-6", item = "StealthArmor" },
+]
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "EndoSteel" },
-]

@@ -2,11 +2,13 @@ name = "Awesome"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 5
-heat_sinks = 38
+walk_mp = 3
+heat_sinks = 19
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 240
 heat_sinks = "double"
 
 [sections.left_arm]

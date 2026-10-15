@@ -2,11 +2,13 @@ name = "Daimyo"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 8
-heat_sinks = 22
+walk_mp = 5
+heat_sinks = 11
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 200
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

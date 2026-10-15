@@ -2,26 +2,27 @@ name = "Night Gyr"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 40
+heat_sinks = 20
 radio = 5
 cargo_space = 0
 max_suits = 0
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 armor = "ferro_fibrous"
-heat_sinks = "laser"
 
 [sections.left_arm]
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "CL.ERPPC" },
-    { at = "7-10", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-10", item = "CL.ERPPC" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 
@@ -29,9 +30,9 @@ slots = [
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "CL.UltraAC/10" },
-    { at = "7-8", item = "Ammo_CL.UltraAC/10", rounds = 10 },
-    { at = "9-10", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-8", item = "CL.UltraAC/10" },
+    { at = "9-10", item = "Ammo_CL.UltraAC/10", rounds = 10 },
     { at = "11-12", item = "EndoSteel" },
 ]
 
@@ -39,22 +40,22 @@ slots = [
 armor = 22
 rear = 10
 slots = [
-    { at = 3, item = "CL.MediumPulseLaser" },
-    { at = "4-7", item = "HeatSink" },
-    { at = "8-12", item = "FerroFibrous" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "CL.MediumPulseLaser" },
+    { at = "8-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 10
 slots = [
-    { at = 3, item = "CL.MediumPulseLaser" },
-    { at = "4-7", item = "HeatSink" },
-    { at = "8-12", item = "EndoSteel" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "CL.MediumPulseLaser" },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 34
+armor = 33
 rear = 10
 slots = [
     { at = "11-12", item = "HeatSink" },

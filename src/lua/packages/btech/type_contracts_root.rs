@@ -37,9 +37,10 @@
 //|---@field name string
 //|---@field reference string
 //|---@field tons integer
-//|---@field max_speed number
+//|---@field walk_mp integer Walking MP the template states; the engine rating is tons x walk_mp.
+//|---@field max_speed number Running speed in km/h: walk_mp x 1.5 rounded up, 10.75 km/h per MP.
 //|---@field jump_speed number
-//|---@field heat_sinks integer Cooling capacity; double sinks are already counted twice.
+//|---@field heat_sinks integer Installed heat sinks as the record sheet counts them; double and laser sinks each dissipate two heat.
 //|---@field sections table<MechSectionName, SectionDefinition>
 //|---@field attributes table<string, string> Unit-level source fields; not validated simulation capabilities.
 // lua-types-end
@@ -103,7 +104,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00011
-//|---@alias Weapon "arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_rifle"|"flamer"|"heavy_flamer"|"vehicle_flamer"|"plasma_rifle"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"nlrm5"|"nlrm10"|"nlrm15"|"nlrm20"|"lrt5"|"lrt10"|"lrt15"|"lrt20"|"srt2"|"srt4"|"srt6"|"clan_lrt5"|"clan_lrt10"|"clan_lrt15"|"clan_lrt20"|"clan_srt2"|"clan_srt4"|"clan_srt6"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"
+//|---@alias Weapon "arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_cannon"|"sniper_cannon"|"thumper_cannon"|"a_pod"|"clan_a_pod"|"b_pod"|"clan_b_pod"|"i_narc_beacon"|"narc_beacon"|"clan_narc_beacon"|"anti_missile_system"|"clan_anti_missile_system"|"laser_ams"|"clan_laser_ams"|"clan_lbx2"|"clan_lbx5"|"clan_lbx10"|"clan_lbx20"|"clan_ultra_ac2"|"clan_ultra_ac5"|"clan_ultra_ac10"|"clan_ultra_ac20"|"mml3"|"mml5"|"mml7"|"mml9"|"clan_atm3"|"clan_atm6"|"clan_atm9"|"clan_atm12"|"clan_lrm5"|"clan_lrm10"|"clan_lrm15"|"clan_lrm20"|"clan_srm2"|"clan_srm4"|"clan_srm6"|"clan_streak_srm2"|"clan_streak_srm4"|"clan_streak_srm6"|"clan_streak_lrm5"|"clan_streak_lrm10"|"clan_streak_lrm15"|"clan_streak_lrm20"|"clan_gauss_rifle"|"clan_ap_gauss_rifle"|"clan_hag20"|"clan_hag30"|"clan_hag40"|"clan_machine_gun"|"clan_light_machine_gun"|"clan_heavy_machine_gun"|"clan_er_large_laser"|"clan_er_medium_laser"|"clan_er_small_laser"|"clan_er_micro_laser"|"clan_er_ppc"|"clan_flamer"|"clan_heavy_large_laser"|"clan_heavy_medium_laser"|"clan_heavy_small_laser"|"clan_large_pulse_laser"|"clan_medium_pulse_laser"|"clan_small_pulse_laser"|"clan_micro_pulse_laser"|"clan_er_large_pulse_laser"|"clan_er_medium_pulse_laser"|"clan_er_small_pulse_laser"|"clan_plasma_cannon"|"flamer"|"heavy_flamer"|"vehicle_flamer"|"plasma_rifle"|"thunderbolt5"|"thunderbolt10"|"thunderbolt15"|"thunderbolt20"|"hyper_ac2"|"hyper_ac5"|"hyper_ac10"|"machine_gun"|"light_machine_gun"|"heavy_machine_gun"|"light_ac2"|"light_ac5"|"small_laser"|"medium_laser"|"large_laser"|"ppc"|"er_small_laser"|"er_medium_laser"|"er_large_laser"|"er_ppc"|"small_pulse_laser"|"medium_pulse_laser"|"large_pulse_laser"|"x_small_pulse_laser"|"x_medium_pulse_laser"|"x_large_pulse_laser"|"light_ppc"|"heavy_ppc"|"snub_nosed_ppc"|"srm2"|"rocket10"|"rocket15"|"rocket20"|"mrm10"|"mrm20"|"mrm30"|"mrm40"|"streak_srm2"|"streak_srm4"|"streak_srm6"|"elrm5"|"elrm10"|"elrm15"|"elrm20"|"nlrm5"|"nlrm10"|"nlrm15"|"nlrm20"|"lrt5"|"lrt10"|"lrt15"|"lrt20"|"srt2"|"srt4"|"srt6"|"clan_lrt5"|"clan_lrt10"|"clan_lrt15"|"clan_lrt20"|"clan_srt2"|"clan_srt4"|"clan_srt6"|"lrm5"|"lrm10"|"lrm15"|"srm4"|"srm6"|"lrm20"|"heavy_gauss_rifle"|"gauss_rifle"|"light_gauss_rifle"|"magshot_gauss_rifle"|"lbx2"|"lbx5"|"lbx10"|"lbx20"|"ac2"|"ac5"|"ac10"|"ac20"|"ultra_ac2"|"ultra_ac5"|"ultra_ac10"|"ultra_ac20"|"rotary_ac2"|"rotary_ac5"|"clan_rotary_ac2"|"clan_rotary_ac5"
 // lua-types-end
 
 // lua-types-begin btech 00012
@@ -392,6 +393,7 @@
 //|---@field weapon_failures table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam"> Temporary conditions by mount index; existing recycle clocks govern recovery.
 //|---@field gyro "standard"|"hardened"|"xl"|"compact" Construction family.
 //|---@field artemis ArtemisController[] Installed controllers and resolved links.
+//|---@field machine_gun_arrays MachineGunArray[] Installed machine gun arrays and the guns each links.
 //|---@field masc BoosterState Saved activation and overload/recovery state.
 //|---@field supercharger BoosterState Independent compressor timer and failure state.
 //|---@field supercharger_installed boolean Template technology flag.
@@ -1280,6 +1282,10 @@
 //|---@field reference string
 //|---@field constructible boolean Passes currently implemented biped construction checks.
 //|---@field rejection string|nil First construction failure; nil for a constructible template.
+//|---@field walking_mp integer Walking MP the template states.
+//|---@field running_mp integer Walking MP x 1.5, rounded up.
+//|---@field engine_rating integer Tonnage x walking MP.
+//|---@field declared_engine_rating integer|nil Rating the [construction] table declares; nil when derived.
 //|---@field weapons integer Resolved weapon count on success; zero on rejection.
 //|---@field ammunition_bins integer Resolved bin count on success; zero on rejection.
 //|---@field ammunition_adjustments AmmunitionAdjustment[] Changes on successful construction.
@@ -1291,6 +1297,9 @@
 //|---@field link integer One-based template launcher slot; zero is unassigned.
 //|---@field weapon_indices integer[] Zero-based missile mounts matching the link.
 //|---@field operational boolean Controller is available under the unit’s equipment damage rules.
+//|---@class MachineGunArray
+//|---@field location {section: MechSectionName, slot: integer} Zero-based array module position.
+//|---@field weapon_indices integer[] Zero-based machine gun mounts the array links, two to four of one size class.
 // lua-types-end
 
 // lua-types-begin btech 00256
@@ -1808,9 +1817,9 @@
 
 // lua-types-begin btech 00437
 //|---@class BattleValue
-//|---@field total number
-//|---@field offensive number
-//|---@field defensive number
+//|---@field total integer Final Battle Value for a Gunnery 4 / Piloting 5 crew, rounded to the nearest whole number.
+//|---@field offensive number Offensive Battle Rating, with fractions.
+//|---@field defensive number Defensive Battle Rating, with fractions.
 // lua-types-end
 
 // lua-types-begin btech 00438

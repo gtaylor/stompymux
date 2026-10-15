@@ -2,27 +2,26 @@ name = "J_Edgar"
 class = "vehicle"
 movement = "hover"
 tons = 25
-walk_mp = 17
+walk_mp = 11
 tac_range = 30
 lrs_range = 60
 scan_range = 30
 cargo_space = 0
 max_suits = 0
 
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 145
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 20
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 20
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 32
+armor = 31
 
 [sections.aft_side]
 armor = 12

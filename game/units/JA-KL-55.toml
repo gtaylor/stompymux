@@ -2,14 +2,16 @@ name = "Jackal"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 11
-heat_sinks = 20
+walk_mp = 7
+heat_sinks = 10
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 210
 structure = "endo_steel"
 heat_sinks = "double"
 

@@ -2,8 +2,12 @@ name = "Banshee"
 class = "mech"
 movement = "biped"
 tons = 95
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 12
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 380
 
 [sections.left_arm]
 armor = 21

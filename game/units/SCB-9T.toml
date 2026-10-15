@@ -2,13 +2,16 @@ name = "Scarabus"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 15
+walk_mp = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 armor = "ferro_fibrous"
+myomer = "triple_strength"
 
 [sections.left_arm]
 armor = 9
@@ -16,8 +19,8 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "IS.MediumLaser" },
     { at = "5-6", item = "IS.SmallLaser" },
-    { at = "7-10", item = "FerroFibrous" },
-    { at = 11, item = "EndoSteel" },
+    { at = 7, item = "EndoSteel" },
+    { at = "8-11", item = "FerroFibrous" },
     { at = 12, item = "TripleStrengthMyomer" },
 ]
 
@@ -25,8 +28,8 @@ slots = [
 armor = 9
 slots = [
     { at = "5-6", item = "Axe" },
-    { at = "7-10", item = "FerroFibrous" },
-    { at = 11, item = "EndoSteel" },
+    { at = 7, item = "EndoSteel" },
+    { at = "8-11", item = "FerroFibrous" },
     { at = 12, item = "TripleStrengthMyomer" },
 ]
 
@@ -34,8 +37,8 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "FerroFibrous" },
-    { at = "7-10", item = "EndoSteel" },
+    { at = "4-7", item = "EndoSteel" },
+    { at = "8-10", item = "FerroFibrous" },
     { at = "11-12", item = "TripleStrengthMyomer" },
 ]
 
@@ -43,14 +46,14 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "FerroFibrous" },
-    { at = "7-10", item = "EndoSteel" },
+    { at = "4-7", item = "EndoSteel" },
+    { at = "8-10", item = "FerroFibrous" },
     { at = "11-12", item = "TripleStrengthMyomer" },
 ]
 
 [sections.center_torso]
 armor = 12
-rear = 6
+rear = 5
 slots = [
     { at = "11-12", item = "Ecm" },
 ]

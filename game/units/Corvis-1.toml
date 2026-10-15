@@ -2,13 +2,15 @@ name = "Corvis"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 20
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
+engine_rating = 160
 structure = "endo_steel"
+armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 12
@@ -21,7 +23,7 @@ armor = 12
 omit = ["hand_actuator"]
 slots = [
     { at = "4-7", item = "CL.UltraAC/10" },
-    { at = "8-9", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+    { at = "8-11", item = "Ammo_CL.UltraAC/10", rounds = 10 },
 ]
 
 [sections.left_torso]
@@ -39,15 +41,15 @@ rear = 4
 slots = [
     { at = "1-2", item = "HeatSink" },
     { at = "3-4", item = "JumpJet" },
-    { at = "5-6", item = "FerroFibrous" },
+    { at = "5-10", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = 11, item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.left_leg]
@@ -64,6 +66,3 @@ slots = [
 
 [sections.head]
 armor = 8
-slots = [
-    { at = 4, item = "FerroFibrous" },
-]

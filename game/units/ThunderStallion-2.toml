@@ -2,11 +2,12 @@ name = "Thunder Stallion"
 class = "mech"
 movement = "quad"
 tons = 85
-walk_mp = 5
-heat_sinks = 32
+walk_mp = 3
+heat_sinks = 16
 
 [construction]
 tech_base = "clan"
+engine_rating = 255
 
 [sections.front_left_leg]
 armor = 36

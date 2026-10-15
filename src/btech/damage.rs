@@ -24,9 +24,12 @@ pub struct DamageResult<L = MechSection> {
 
 impl Mech {
     /// Core structure, cockpit loss or three engine hits destroy the unit, not its MUX object.
+    /// A torso-mounted cockpit's Mech survives the loss of its head (Tactical Operations:
+    /// Advanced Units & Equipment p. 113).
     pub fn is_destroyed(&self) -> bool {
+        let head_lethal = !self.torso_mounted_cockpit();
         self.transport_destroyed
-            || self.section_disabled(MechSection::Head)
+            || self.section_disabled(self.cockpit_section())
             || self.character_pilot.is_some_and(|status| status.killed)
             || self.pilot_killed
             || (!self.systems_intact()
@@ -34,6 +37,7 @@ impl Mech {
                     || self.system_hits(super::System::Cockpit) > 0))
             || [MechSection::Head, MechSection::CenterTorso]
                 .iter()
+                .filter(|section| head_lethal || **section != MechSection::Head)
                 .any(|section| {
                     self.sections
                         .get(section)

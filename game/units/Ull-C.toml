@@ -2,13 +2,14 @@ name = "Uller"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 9
-heat_sinks = 20
-specials = ["CL_AMS", "ECM", "BeagleProbe"]
+walk_mp = 6
+heat_sinks = 10
+specials = ["ECM", "BeagleProbe"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 180
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

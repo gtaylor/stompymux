@@ -2,11 +2,15 @@ name = "Minion"
 class = "vehicle"
 movement = "hover"
 tons = 20
-walk_mp = 14
+walk_mp = 9
 radio = 4
 cargo_space = 0
 max_suits = 0
 specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 95
 
 [sections.left_side]
 armor = 22

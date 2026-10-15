@@ -75,15 +75,19 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
 
 #[test]
 fn vehicle_mass_applies_chassis_material_cooling_and_cargo_rules() {
+    // Combat vehicles use standard structure only (TechManual p. 98): the other structure
+    // technologies are refused rather than weighed.
+    for flag in [
+        "EndoSteel_Tech",
+        "CompositeInternal_Tech",
+        "ReinforcedInternal_Tech",
+    ] {
+        let template = vehicle(flag);
+        assert_eq!(template.mass().unwrap().structure, 8 * 1024);
+        assert!(template.validate_construction().is_err(), "{flag}");
+    }
     for (flag, structure, armor) in [
         ("-", 8 * 1024, 10 * 1024),
-        ("EndoSteel_Tech", 4 * 1024, 10 * 1024),
-        ("CompositeInternal_Tech", 4 * 1024, 10 * 1024),
-        (
-            "ReinforcedInternal_Tech EndoSteel_Tech",
-            16 * 1024,
-            10 * 1024,
-        ),
         ("FerroFibrous_Tech", 8 * 1024, 9 * 1024),
         ("Clan FerroFibrous_Tech", 8 * 1024, 17 * 512),
         ("HvyFerroFibrous_Tech", 8 * 1024, 17 * 512),
@@ -93,12 +97,14 @@ fn vehicle_mass_applies_chassis_material_cooling_and_cargo_rules() {
         let mass = vehicle(flag).mass().unwrap();
         assert_eq!((mass.structure, mass.armor), (structure, armor), "{flag}");
     }
+    // Combat vehicles mount single heat sinks only, whatever their technology base
+    // (TechManual p. 104).
     for (flags, cooling, cargo) in [
         ("-", 15 * 1024, 2048),
-        ("DoubleHS", 2 * 1024, 2048),
-        ("Clan", 2 * 1024, 2048),
+        ("DoubleHS", 15 * 1024, 2048),
+        ("Clan", 15 * 1024, 2048),
         ("ICEEngine_Tech", 25 * 1024, 2048),
-        ("ICEEngine_Tech DoubleHS CargoTech", 12 * 1024, 10 * 1024),
+        ("ICEEngine_Tech DoubleHS CargoTech", 25 * 1024, 10 * 1024),
         ("Carrier_Tech CargoTech", 15 * 1024, 1024),
     ] {
         let mut template = vehicle(flags);
@@ -117,10 +123,12 @@ fn vehicle_mass_applies_chassis_material_cooling_and_cargo_rules() {
         assert!(template.mass().is_err(), "{value}");
     }
     template.attributes.remove("cargo_space");
+    // An 11-ton tank at 1 cruising MP rates 11, rounded up to 15 (TechManual p. 100): a
+    // half-ton standard engine, a ton with shielding.
     template.tons = 11;
-    template.max_speed = 16.125;
-    assert!(template.engine().unwrap().standard_mass.is_none());
-    assert_eq!(template.mass().unwrap().engine, 0);
+    template.set_cruising_mp(1);
+    assert_eq!(template.engine().unwrap().weight_rating, 15);
+    assert_eq!(template.mass().unwrap().engine, 1024);
 }
 
 #[test]
@@ -182,7 +190,7 @@ fn vehicle_systems_use_whole_installation_mass_without_duplicate_sink_weight() {
 fn stationary_construction_has_no_propulsion_mass() {
     let mut template = vehicle("-");
     template.movement = VehicleMovement::Stationary;
-    template.max_speed = 0.0;
+    template.set_cruising_mp(0);
     let before = template.clone();
     let engine = template.engine().unwrap();
     assert_eq!(engine.nominal_rating, 0);
@@ -192,9 +200,11 @@ fn stationary_construction_has_no_propulsion_mass() {
     assert_eq!(mass.engine, 0);
     assert!(mass.equipment > 0 && mass.armor > 0 && mass.structure > 0);
     assert_eq!(template, before);
+    // A moving vehicle carries at least a 10-rated engine (TechManual p. 100).
     for movement in [VehicleMovement::Tracked, VehicleMovement::Wheeled] {
         template.movement = movement;
-        assert_eq!(template.mass().unwrap().engine, 0);
+        assert_eq!(template.engine().unwrap().weight_rating, 10);
+        assert_eq!(template.mass().unwrap().engine, 1024);
     }
     template.movement = VehicleMovement::Hover;
     assert_eq!(
@@ -203,20 +213,23 @@ fn stationary_construction_has_no_propulsion_mass() {
     );
     template.movement = VehicleMovement::Stationary;
     template.tons = 11;
-    template.max_speed = 16.125;
+    template.set_cruising_mp(1);
     assert_eq!(template.mass().unwrap().engine, 0);
 }
 
-/// Non-catalogue hover ratings retain diagnostics but use the reference propulsion minimum.
+/// Hover ratings round up to the next multiple of 5 and the engine weighs at least a fifth of
+/// the vehicle (TechManual p. 100).
 #[test]
-fn hovercraft_missing_catalogue_rating_uses_mass_floor() {
+fn hovercraft_rating_rounds_up_and_keeps_the_mass_floor() {
     let template =
         VehicleTemplate::parse("Shamash", include_str!("../game/units/Shamash.toml")).unwrap();
     let engine = template.engine().unwrap();
-    assert_eq!(engine.weight_rating, 58);
-    assert_eq!(engine.standard_mass, None);
-    assert_eq!(engine.engine_mass, 0);
-    assert_eq!(engine.installed_mass, 11 * 1024 / 5);
+    // 58 rounds up to 60: a 1.5-ton standard engine, 2.5 tons with shielding.
+    assert_eq!(engine.weight_rating, 60);
+    assert_eq!(engine.standard_mass, Some(3 * 512));
+    assert_eq!(engine.engine_mass, 5 * 512);
+    assert_eq!(engine.hover_minimum, 11 * 1024 / 5);
+    assert_eq!(engine.installed_mass, 5 * 512);
     let vehicle = Vehicle::new(template.clone()).unwrap();
     assert_eq!(
         vehicle.definition().mass().unwrap().engine,
@@ -233,7 +246,12 @@ fn hovercraft_missing_catalogue_rating_uses_mass_floor() {
     ] {
         let mut modified = template.clone();
         modified.attributes.insert("specials".into(), flags.into());
-        assert_eq!(modified.mass().unwrap().engine, engine.installed_mass);
+        let engine = modified.engine().unwrap();
+        assert_eq!(
+            engine.installed_mass,
+            engine.engine_mass.max(engine.hover_minimum)
+        );
+        assert!(modified.mass().unwrap().engine >= 11 * 1024 / 5);
     }
 }
 

@@ -2,21 +2,19 @@ name = "Partisan"
 class = "vehicle"
 movement = "track"
 tons = 80
-walk_mp = 5
+walk_mp = 3
 cargo_space = 0
-specials = ["AntiAircraft"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 240
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 26
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 26
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 35

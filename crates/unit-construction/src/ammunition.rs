@@ -91,16 +91,8 @@ impl AmmunitionMode {
                 weapon.supports_thunder()
             }
             Self::Artemis => weapon.accepts_artemis(),
-            // On a Narc launcher this flag selects explosive pods (Total Warfare p. 141), and
-            // the ballistic AMS reuses it for its own supply.
-            Self::Narc => {
-                weapon.accepts_narc_rounds()
-                    || weapon.is_narc()
-                    || matches!(
-                        weapon,
-                        Weapon::AntiMissileSystem | Weapon::ClanAntiMissileSystem
-                    )
-            }
+            // On a Narc launcher this flag selects explosive pods (Total Warfare p. 141).
+            Self::Narc => weapon.accepts_narc_rounds() || weapon.is_narc(),
             Self::Precision | Self::Flechette | Self::ArmorPiercing | Self::Caseless => {
                 weapon.supports_rapid_fire()
             }
@@ -379,7 +371,7 @@ mod tests {
         assert!(M::ExtendedRange.supports(W::ClanAtm3));
         assert!(M::HighExplosive.supports(W::ClanAtm3));
         assert!(!M::ExtendedRange.supports(W::Lrm5));
-        assert!(M::Narc.supports(W::AntiMissileSystem));
+        assert!(!M::Narc.supports(W::AntiMissileSystem));
     }
 
     /// An MML loads each special round only in the family that round belongs to; Thunder rounds

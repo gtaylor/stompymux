@@ -123,7 +123,7 @@ async fn field_with_equipment(
         }
         let id = world.create(&config, format!("Network unit {i}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, template).unwrap();
+        create_battle_unit(&mut world, id, crate::support::templates::legal(template)).unwrap();
         place_battle_unit(
             &mut world,
             id,

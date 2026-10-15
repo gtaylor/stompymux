@@ -83,7 +83,11 @@ development. Ground autopilots are available through in-game Lua; repairs and
 loading units into other units are deferred. A successfully parsed
 template has not yet had its equipment and rule support validated. Use
 `template-check <name>` to preview the unit-construction checks, the first
-rejection reason and any ammunition normalization. A successful check means the
+rejection reason, the movement points and engine rating (and whether the
+template declares the rating or derives it from movement) and any ammunition
+normalization; for a vehicle or VTOL it also
+reports mass, item slots, armor and energy weapon heat against the TechManual
+limits, and any unspent tonnage. A successful check means the
 template can be constructed under the currently implemented construction rules; it
 does not establish complete gameplay parity. Maps without a saved terrain dictionary require explicit `map-reload` before
 tile queries are available. Reload replaces terrain from the asset; it cannot
@@ -1055,9 +1059,11 @@ stops at blocking terrain or the map edge; it does not anticipate new orders,
 future damage, vertical movement, or map transfers. Each weapon still needs its
 usual ammunition and readiness. Queued artillery survives a server restart.
 
-`@viewunit bv` reports current Battle Value to two decimal places. It uses live
-armor, equipment, load and configured weapon values. The field is read-only;
-`setwbv` changes the weapon values used by the calculation.
+`@viewunit bv` reports the unit's Battle Value (TechManual BV 2.0) as a whole
+number for a Gunnery 4 / Piloting 5 crew. It uses current armor and internal
+structure, the installed equipment and the design's maximum movement; towing and
+carried load do not change it. The field is read-only; `setwbv` changes the
+weapon values used by the calculation.
 
 `@viewunit unitdamage` reads a compact damage report: `A:section/loss` for armor,
 `A(R):section/loss` for rear armor, `I:section/loss` for internal structure,
@@ -1071,11 +1077,6 @@ It is read-only and does not represent every combat condition.
 reserved administrative values. Both start at zero, accept signed 32-bit integers,
 and survive restart. They do not change a unit's movement limits or throttle.
 Inspect them with `@viewunit base`; Lua uses the same unit field accessors.
-
-`@viewunit hsengoverride` reads the template's engine heat-sink allocation override.
-`@setunit hsengoverride <integer>` stores a signed 32-bit override, shared with Lua
-unit field access. It defaults to zero and survives restart. Updating it does not
-recalculate current cooling or repair damaged heat sinks.
 
 `StaggerDamage` is read-only and reports the Mech's saved action-time stagger
 value, which normally remains zero. It is separate from recent damage history.

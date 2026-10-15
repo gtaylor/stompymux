@@ -2,10 +2,12 @@ name = "Demolisher"
 class = "vehicle"
 movement = "track"
 tons = 80
-walk_mp = 5
+walk_mp = 3
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 240
 
 [sections.left_side]
 armor = 30

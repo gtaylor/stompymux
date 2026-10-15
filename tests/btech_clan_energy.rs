@@ -4,10 +4,9 @@ use stompymux_rs::*;
 /// Construct each supported Clan energy identity without requiring unrelated Clan chassis flags.
 #[test]
 fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
-    for &weapon in Weapon::ALL
-        .iter()
-        .filter(|w| w.name().starts_with("CL.") && w.gunnery_skill(true) == "Gunnery-Laser")
-    {
+    for &weapon in Weapon::ALL.iter().filter(|w| {
+        w.name().starts_with("CL.") && w.gunnery_skill(true) == "Gunnery-Laser" && !w.is_plasma()
+    }) {
         assert_eq!(weapon.gunnery_skill(true), "Gunnery-Laser");
         assert_eq!(weapon.profile().ammunition_per_ton, 0);
         assert_eq!(weapon.profile().missiles, 0);
@@ -23,7 +22,7 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         for slot in 2..2 + weapon.profile().critical_slots {
             arm.criticals.insert(slot, part.clone());
         }
-        let unit = Mech::from_template(template.clone()).unwrap();
+        let unit = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
         let loadout = unit.loadout().unwrap();
         let (index, mount) = loadout
             .weapons
@@ -37,7 +36,10 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         );
         assert_eq!(
             weapon.supports_targeting_computer(),
-            weapon != Weapon::ClanFlamer
+            !matches!(
+                weapon,
+                Weapon::ClanFlamer | Weapon::ClanLaserAms | Weapon::ClanAPod | Weapon::ClanBPod
+            )
         );
         assert_eq!(weapon.supports_heat_mode(), weapon == Weapon::ClanFlamer);
         for location in &mount.criticals {
@@ -46,7 +48,7 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
                 damaged.destroy_critical(*location).unwrap(),
                 Some(CriticalLoss::Weapon {
                     index,
-                    explosion_damage: 0
+                    explosion_damage: weapon.pod_explosion_damage()
                 })
             );
             assert!(!damaged.weapon_readiness(index).unwrap().intact);
@@ -76,6 +78,6 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         assert_eq!(weapon.accuracy_modifier(), accuracy);
     }
     assert_eq!(Weapon::ClanFlamer.mass(), Weapon::Flamer.mass() / 2);
-    assert!(!Weapon::ClanPlasmaRifle.is_flamer());
-    assert_eq!(Weapon::ClanPlasmaRifle.weapon_explosion_damage(), 0);
+    assert!(!Weapon::ClanPlasmaCannon.is_flamer());
+    assert_eq!(Weapon::ClanPlasmaCannon.weapon_explosion_damage(), 0);
 }

@@ -2,12 +2,14 @@ name = "Marshal"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
 heat_sinks = 18
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 220
 armor = "ferro_fibrous"
 
 [sections.left_arm]

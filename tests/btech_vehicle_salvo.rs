@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("test", template).unwrap(),
+        crate::support::templates::fitted(VehicleTemplate::parse("test", template).unwrap()),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -67,6 +67,8 @@ fn request(weapon: Weapon) -> VehicleSalvoRequest {
         angel_blocked: false,
         ams_engaged: false,
         indirect: false,
+        apollo: false,
+        array: None,
     }
 }
 

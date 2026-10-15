@@ -12,10 +12,10 @@ fn templates() -> Vec<String> {
         include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
@@ -51,9 +51,9 @@ async fn fixture(
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         (if index == 0 {
-            launcher(source, "Swarm")
+            crate::support::templates::fitted_unit(launcher(source, "Swarm"))
         } else {
-            UnitTemplate::parse("test", source).unwrap()
+            crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap())
         })
         .create(&mut world, id)
         .unwrap();
@@ -93,7 +93,8 @@ fn shot_rules() -> ShotRules {
 
 /// Install the same Clan LRM-20 and full Swarm bin in either construction anatomy.
 fn launcher(source: &str, mode: &str) -> UnitTemplate {
-    let mut definition = UnitTemplate::parse("test", source).unwrap();
+    let mut definition =
+        crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap());
     let part = MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
         .unwrap()
         .sections[&MechSection::LeftArm]
@@ -140,7 +141,7 @@ fn launcher(source: &str, mode: &str) -> UnitTemplate {
             );
         }
     }
-    definition
+    crate::support::templates::legal_unit(definition)
 }
 
 /// Seed an attack independently from cluster and target damage streams.
@@ -256,8 +257,7 @@ fn candidate(
     };
     let id = world.create(config, "Retarget candidate".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap())
         .create(world, id)
         .unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
@@ -719,7 +719,7 @@ fn swarm_template_modes_cover_compatible_catalogue() {
             bin.equipment = format!("Ammo_{}", weapon.name());
             bin.data = weapon.profile().ammunition_per_ton.to_string();
             bin.modes = vec![flag.into()];
-            let unit = Mech::from_template(template).unwrap();
+            let unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
             let loadout = unit.loadout().unwrap();
             let index = loadout
                 .weapons

@@ -42,7 +42,7 @@ const QUAD: [Location; 8] = [
     ("head", "head", "hd", None),
 ];
 
-/// Heat dissipation stompymux assumes for a mech template that states none.
+/// Heat sinks stompymux assumes for a mech template that states none: the engine's free ten.
 const DEFAULT_HEAT_SINKS: u32 = 10;
 
 /// Every location heading an `.mtf` file may use, including ones stompymux refuses.
@@ -183,17 +183,22 @@ pub fn convert(source: &str) -> Result<Converted> {
         "quad" => "quad",
         _ => bail!("unsupported unit type: {config} BattleMech"),
     };
-    let tech = tech_base(file.required("techbase")?)?;
+    let tech_header = file.required("techbase")?;
+    let tech = tech_base(tech_header)?;
     let tons: u16 = file
         .number("mass")?
         .try_into()
         .context("mass is out of range")?;
-    let mut construction = Vec::new();
-    if tech == TechBase::Clan {
-        construction.push(("tech_base", "clan"));
+    // The chassis technology base is always stated: `Mixed (IS Chassis)` is an Inner Sphere
+    // chassis and `Mixed (Clan Chassis)` a Clan one, each declaring mixed technology.
+    let mut construction = vec![("tech_base", tech.document_spelling())];
+    // A mixed-technology design may mount weapons and equipment of either base.
+    if tech_header.trim().to_ascii_lowercase().starts_with("mixed") {
+        construction.push(("mixed_tech", "true"));
     }
     let engine_header = file.required("engine")?;
     let engine_family = engine(engine_header)?;
+    let engine_rating = engine_rating(engine_header)?;
     construction.extend(engine_family.map(|engine| ("engine", engine)));
     construction.extend(gyro(file.field("gyro"))?.map(|gyro| ("gyro", gyro)));
     construction.extend(cockpit(file.field("cockpit"))?.map(|cockpit| ("cockpit", cockpit)));
@@ -242,6 +247,10 @@ pub fn convert(source: &str) -> Result<Converted> {
     match sinks {
         HeatSinkKind::Double(TechBase::InnerSphere) => construction.push(("heat_sinks", "double")),
         HeatSinkKind::Laser => construction.push(("heat_sinks", "laser")),
+        // Clan Mechs default to double sinks; single sinks are named (TM p. 52).
+        HeatSinkKind::Single if tech == TechBase::Clan => {
+            construction.push(("heat_sinks", "single"))
+        }
         _ => {}
     }
     construction.extend(myomer(file.field("myomer"))?.map(|myomer| ("myomer", myomer)));
@@ -259,30 +268,31 @@ pub fn convert(source: &str) -> Result<Converted> {
         specials.push("SearchLight");
     }
     let mut criticals = Vec::new();
+    // Slots holding a system of the other technology base, which their item names state.
+    let mut other_base = Vec::new();
     for (mtf, heading, _, _) in locations {
         let lines = file
             .locations
             .get(*mtf)
             .with_context(|| format!("missing {mtf} critical slots"))?;
         let mut resolved = Vec::new();
+        let mut bases = Vec::new();
         for (slot, line) in lines.iter().enumerate() {
-            let critical =
-                equipment::parse(line).with_context(|| format!("{heading} slot {}", slot + 1))?;
+            let item_tech = equipment::system_tech(line).filter(|item_tech| *item_tech != tech);
+            bases.push(item_tech.filter(|_| {
+                !matches!(
+                    equipment::parse_for(line, tech),
+                    Ok(Critical::Weapon { .. } | Critical::Ammo { .. })
+                )
+            }));
+            let critical = equipment::parse_for(line, tech)
+                .with_context(|| format!("{heading} slot {}", slot + 1))?;
             match critical {
                 Critical::HeatSink(kind) if !same_family(kind, sinks) => {
                     bail!(
                         "{heading} slot {} holds {line}, but the mech declares {sink_count} {:?} heat sinks",
                         slot + 1,
                         sinks
-                    )
-                }
-                Critical::System(item)
-                    if equipment::system_tech(line).is_some_and(|item_tech| item_tech != tech) =>
-                {
-                    bail!(
-                        "{heading} slot {}: {line} is mixed technology on this {} chassis, which stompymux cannot represent ({item})",
-                        slot + 1,
-                        tech.label()
                     )
                 }
                 Critical::Searchlight => {
@@ -295,11 +305,14 @@ pub fn convert(source: &str) -> Result<Converted> {
             }
         }
         criticals.push(resolved);
+        other_base.push(bases);
     }
     feed_other_tech_launchers(&mut criticals);
     let split_mounts = split_mounts(&mut criticals, locations)?;
     let mut sections = Vec::new();
-    for ((_, heading, armor_key, rear_key), criticals) in locations.iter().zip(&criticals) {
+    for (((_, heading, armor_key, rear_key), criticals), bases) in
+        locations.iter().zip(&criticals).zip(&other_base)
+    {
         let armor = armor_value(&file, armor_key)?;
         let rear = match rear_key {
             Some(key) => armor_value(&file, key)?,
@@ -308,6 +321,12 @@ pub fn convert(source: &str) -> Result<Converted> {
         let mut section = Section::new(heading, armor, rear, true);
         section.slots =
             layout::slots(criticals, WeaponSpan::Catalogue).with_context(|| heading.to_string())?;
+        // A system of the other base states it, as `CL.Ecm` on an Inner Sphere chassis.
+        for (slot, base) in section.slots.iter_mut().zip(bases) {
+            if let (Some(slot), Some(base)) = (slot, base) {
+                slot.item = format!("{}.{}", base.namespace(), slot.item);
+            }
+        }
         sections.push(section);
     }
     let full_reference = if model.is_empty() {
@@ -326,15 +345,14 @@ pub fn convert(source: &str) -> Result<Converted> {
             class: "mech",
             movement,
             tons,
-            max_mp: (walk * 3).div_ceil(2),
+            walk_mp: walk,
             jump_mp: jump,
-            heat_sinks: Some(match sinks {
-                HeatSinkKind::Single => sink_count,
-                HeatSinkKind::Double(_) | HeatSinkKind::Laser => sink_count * 2,
-            })
-            .filter(|dissipation| *dissipation != DEFAULT_HEAT_SINKS),
+            engine_rating,
+            heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
             construction,
             specials,
+            cargo_space: None,
+            transport_bays: Vec::new(),
             sections,
             split_mounts,
         },
@@ -537,6 +555,18 @@ fn armor_tech(value: &str) -> Option<TechBase> {
     engine_tech(value)
 }
 
+/// The rating that leads an engine line such as `300 XL Engine(IS)`.
+fn engine_rating(value: &str) -> Result<u32> {
+    let digits: String = value
+        .trim()
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect();
+    digits
+        .parse()
+        .with_context(|| format!("engine {value} does not start with its rating"))
+}
+
 /// The engine family, or `None` for a standard fusion engine.
 fn engine(value: &str) -> Result<Option<&'static str>> {
     let kind = value
@@ -597,6 +627,7 @@ fn cockpit(value: Option<&str>) -> Result<Option<&'static str>> {
     Ok(match value.to_ascii_lowercase().as_str() {
         "standard cockpit" | "standard" => None,
         "small cockpit" => Some("small"),
+        "torso-mounted cockpit" => Some("torso_mounted"),
         _ => bail!("unsupported cockpit {value}"),
     })
 }
@@ -679,9 +710,6 @@ fn heat_sinks(value: &str, tech: TechBase) -> Result<(u32, HeatSinkKind)> {
         bail!("unsupported heat sinks {value}")
     };
     match (tech, kind) {
-        (TechBase::Clan, HeatSinkKind::Single) => {
-            bail!("Clan chassis with single heat sinks are unsupported")
-        }
         (TechBase::Clan, HeatSinkKind::Double(TechBase::InnerSphere)) => {
             bail!("Clan chassis with Inner Sphere double heat sinks are unsupported")
         }
@@ -724,7 +752,7 @@ mod tests {
         for line in [
             "name = \"Atlas\"\n",
             "class = \"mech\"\n",
-            "walk_mp = 5\n",
+            "walk_mp = 3\n",
             "heat_sinks = 20\n",
             "rear = 14\n",
             "{ at = \"1-10\", item = \"IS.AC/20\" },",
@@ -734,7 +762,12 @@ mod tests {
             assert!(template.contains(line), "{line} missing from\n{template}");
         }
         assert!(!template.contains("Engine"));
-        assert!(!template.contains("[construction]"));
+        // The TechBase line, and the engine line's rating: 100 tons x walking MP 3 (TM p. 48).
+        assert!(
+            template
+                .contains("[construction]\ntech_base = \"inner_sphere\"\nengine_rating = 300\n"),
+            "{template}"
+        );
     }
 
     #[test]
@@ -784,6 +817,29 @@ mod tests {
         assert_eq!(draft.specials, ["OmniMech_Tech", "SearchLight"]);
     }
 
+    /// The TechBase line becomes `tech_base`; a mixed design keeps its chassis base and
+    /// declares mixed technology.
+    #[test]
+    fn the_tech_base_line_names_the_chassis_and_mixed_technology() {
+        // The Atlas's equipment lines name Inner Sphere weapons only on an Inner Sphere chassis.
+        for (line, base, mixed) in [
+            ("Inner Sphere", "inner_sphere", false),
+            ("Mixed (IS Chassis)", "inner_sphere", true),
+        ] {
+            let source = ATLAS.replace("techbase:Inner Sphere", &format!("techbase:{line}"));
+            let construction = convert(&source).unwrap().draft.construction;
+            assert_eq!(construction[0], ("tech_base", base), "{line}");
+            assert_eq!(
+                construction.contains(&("mixed_tech", "true")),
+                mixed,
+                "{line}"
+            );
+        }
+        for line in ["Clan", "Mixed (Clan Chassis)"] {
+            assert_eq!(tech_base(line).unwrap().document_spelling(), "clan");
+        }
+    }
+
     #[test]
     fn mixed_technology_components_are_recorded_or_refused() {
         let clan_engine = ATLAS.replace("300 Fusion Engine(IS)", "300 XL (Clan) Engine");
@@ -799,9 +855,34 @@ mod tests {
                 .iter()
                 .any(|(key, _)| *key == "engine_tech")
         );
+        // A system of the other base states its base in its item name, and construction then
+        // needs mixed technology.
         let clan_case = replace_line(ATLAS, "Left Torso:", 12, "CLCASEII");
-        assert!(template_error(&clan_case).contains("mixed technology"));
+        let error = template_error(&clan_case);
+        assert!(
+            error.contains("CL.CaseIi is Clan technology on an Inner Sphere Mech"),
+            "{error}"
+        );
+        let mixed = clan_case.replace("techbase:Inner Sphere", "techbase:Mixed (IS Chassis)");
+        let converted = convert(&mixed).unwrap();
+        let torso = converted
+            .draft
+            .sections
+            .iter()
+            .find(|section| section.heading == "left_torso")
+            .unwrap();
+        assert_eq!(torso.slots[11].as_ref().unwrap().item, "CL.CASE-II");
+        // Mixed technology admits it; the half ton of Clan CASE II then overloads the Atlas.
+        let error = format!("{:#}", template(&mixed).unwrap_err());
+        assert!(error.contains("100.50 tons"), "{error}");
         assert_eq!(equipment::system_tech("CLCASEII"), Some(TechBase::Clan));
+        assert_eq!(equipment::system_tech("CLMASC"), Some(TechBase::Clan));
+        assert_eq!(
+            equipment::system_tech("ISTargeting Computer"),
+            Some(TechBase::InnerSphere)
+        );
+        assert_eq!(equipment::system_tech("CLArtemisIV"), Some(TechBase::Clan));
+        assert_eq!(equipment::system_tech("MASC"), None);
         assert_eq!(
             equipment::system_tech("BeagleActiveProbe (OMNIPOD)"),
             Some(TechBase::InnerSphere)
@@ -885,7 +966,8 @@ mod tests {
             (
                 "techbase:Inner Sphere",
                 "techbase:Clan",
-                "Clan chassis with single heat sinks",
+                // Unprefixed weapons follow the chassis base, and the Clan LRM-20 is smaller.
+                "left over after whole weapons",
             ),
             (
                 "Autocannon/20\nIS Ammo",
@@ -936,7 +1018,11 @@ mod tests {
         assert_eq!(armor("Standard(Inner Sphere)").unwrap(), None);
         assert!(armor("Reactive(Inner Sphere)").is_err());
         assert!(armor("Ferro-Lamellor(Clan)").is_err());
-        assert!(cockpit(Some("Torso-Mounted Cockpit")).is_err());
+        assert_eq!(
+            cockpit(Some("Torso-Mounted Cockpit")).unwrap(),
+            Some("torso_mounted")
+        );
+        assert!(cockpit(Some("Command Console")).is_err());
         assert_eq!(gyro(Some("Heavy Duty Gyro")).unwrap(), Some("heavy_duty"));
         assert_eq!(
             heat_sinks("10 Double", TechBase::Clan).unwrap(),
@@ -946,7 +1032,13 @@ mod tests {
             heat_sinks("14 IS Double", TechBase::InnerSphere).unwrap(),
             (14, HeatSinkKind::Double(TechBase::InnerSphere))
         );
-        assert!(heat_sinks("10 Single", TechBase::Clan).is_err());
+        assert_eq!(
+            heat_sinks("10 Single", TechBase::Clan).unwrap(),
+            (10, HeatSinkKind::Single)
+        );
+        assert_eq!(engine_rating("300 XL Engine(IS)").unwrap(), 300);
+        assert_eq!(engine_rating("85 Fusion Engine").unwrap(), 85);
+        assert!(engine_rating("XL Engine").is_err());
         assert!(heat_sinks("10 Laser", TechBase::InnerSphere).is_err());
         assert!(heat_sinks("10 Compact", TechBase::InnerSphere).is_err());
     }

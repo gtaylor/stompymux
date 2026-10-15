@@ -32,14 +32,16 @@ mod construction;
 mod cost;
 mod document;
 mod engine;
-mod engine_sink_override;
 mod equipment;
 mod fire_mode;
 mod gyro;
 mod inspection;
 mod loadout;
+mod machine_gun_array;
 mod mass;
 mod mech;
+mod mech_mass;
+mod mech_rules;
 mod mech_validation;
 mod metadata;
 mod part_forms;
@@ -50,13 +52,16 @@ mod raw;
 mod registry;
 mod render;
 mod speed;
+mod tech_base;
 mod technology;
 mod template_check;
+mod transport_bay;
 mod unit;
 mod vehicle;
 mod vehicle_engine;
 mod vehicle_loadout;
 mod vehicle_mass;
+mod vehicle_rules;
 
 pub use administrative::{
     administrative_technology, administrative_template_movement, administrative_template_tonnage,
@@ -69,13 +74,10 @@ pub use cost::{
     PartPrices, part_price, raw_template_base_cost, template_base_cost, vehicle_template_base_cost,
 };
 pub use document::ParsedTemplate;
-pub use engine::{Engine, rated_output};
-pub use engine_sink_override::{
-    parse_engine_sink_override, read_engine_sink_override, write_engine_sink_override,
-};
+pub use engine::{Engine, rated_output, running_mp_of_walking};
 pub use equipment::{
-    ARTILLERY_MAPSHEET_HEXES, RangeBracket, System, WaterRanges, Weapon, WeaponProfile,
-    WeaponRange, strip_name_prefix,
+    ARTILLERY_MAPSHEET_HEXES, PhysicalBattleValue, RangeBracket, System, SystemContext,
+    WaterRanges, Weapon, WeaponProfile, WeaponRange, strip_name_prefix,
 };
 pub use fire_mode::FireMode;
 pub use gyro::Gyro;
@@ -86,17 +88,20 @@ pub use inspection::{
     inspection_compatible_template, inspection_compatible_vehicle_template,
     inspection_configured_technology, inspection_configured_technology_attributes,
     inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
-    inspection_raw_part, inspection_template_part, inspection_vehicle_engine_rating,
-    inspection_vehicle_engine_values,
+    inspection_raw_part, inspection_raw_walking_mp, inspection_template_part,
+    inspection_vehicle_engine_rating, inspection_vehicle_engine_values,
 };
 pub use loadout::{
     AmmunitionBin, CriticalLocation, MechLoadout, ResolvedLoadout, SystemCritical, WeaponMount,
 };
+pub use machine_gun_array::{ARRAY_GUNS, MachineGunArray, MachineGunClass};
 pub use mass::{
     armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
-    structure_mass, system_slot_mass,
+    structure_mass, system_mass, system_slot_mass,
 };
 pub use mech::{CriticalDefinition, MechSection, MechTemplate, SectionDefinition};
+pub use mech_mass::{MassItem, MechMass, armor_denominator, structure_divisor};
+pub use mech_rules::{MAXIMUM_ENGINE_RATING, MAXIMUM_HEAD_ARMOR};
 pub use metadata::{unit_metadata, validate_unit_metadata};
 pub use part_forms::{
     PartForm, PartNames, part_abbreviation, part_catalogue, part_names, part_short_name,
@@ -109,11 +114,24 @@ pub use registry::{
     read_resolved_template, read_template_document, resolve_template_path,
     resolve_template_path_bytes_cached, resolve_template_path_cached, write_template,
 };
-pub use speed::{parse_template_speed, read_template_speed, write_template_speed};
+pub use speed::{
+    parse_template_speed, read_template_speed, template_walking_mp, write_template_speed,
+};
+pub use tech_base::{SystemInstallation, TechBase, TechnologyInventory, check_technology_base};
 pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
 pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
+pub use transport_bay::{BaySize, TRANSPORT_BAYS, TransportBay, TransportBays};
 pub use unit::UnitTemplate;
 pub use vehicle::{VehicleMovement, VehicleSection, VehicleTemplate};
-pub use vehicle_engine::{VehicleEngine, VehiclePowerplant};
+pub use vehicle_engine::{
+    VEHICLE_MAXIMUM_ENGINE_RATING, VEHICLE_MINIMUM_ENGINE_RATING, VehicleEngine, VehiclePowerplant,
+};
 pub use vehicle_loadout::{VehicleCriticalLocation, VehicleLoadout};
-pub use vehicle_mass::{VehicleMass, VehicleMaterial};
+pub use vehicle_mass::{
+    VehicleMass, VehicleMaterial, needs_power_amplifier,
+    power_amplifier_mass as vehicle_power_amplifier_mass, turret_mass,
+};
+pub use vehicle_rules::{
+    ROTOR_MAXIMUM_ARMOR, VehicleConstruction, VehicleTemplateCheck, check_vehicle_template,
+    format_tons, occupies_vehicle_slot, vehicle_maximum_armor,
+};

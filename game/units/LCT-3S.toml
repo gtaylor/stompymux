@@ -2,10 +2,12 @@ name = "Locust"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 12
+walk_mp = 8
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 160
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -30,8 +32,8 @@ armor = 5
 rear = 1
 slots = [
     { at = 1, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = "2-8", item = "EndoSteel" },
-    { at = 9, item = "Case" },
+    { at = 2, item = "Case" },
+    { at = "3-9", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -42,7 +44,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 6
+armor = 5
 rear = 2
 slots = [
     { at = 11, item = "IS.MediumLaser" },

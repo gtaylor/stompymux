@@ -31,12 +31,12 @@ pub use btech::{
     Facing, FallRules, FireMode, FreeFall, FreeFallStep, Gyro, Heat, HeatCheck, HeatRates, Hex,
     HexCoordinate, Hit, HitArc, HitTable, ImpactEffect, ImpactReport, IndirectAim, JumpCapacity,
     JumpFlight, JumpOutcome, JumpPath, JumpSample, JumpStep, LIT_TARGET_SIGHT, Light, MAX_SIGHT,
-    MapAsset, MapPointOfInterest, MapRegion, Mass, Mech, MechFallReport, MechLoadout,
-    MechSalvoReport, MechSection, MechShotReport, MechTemplate, MessageTarget, Mobility, Motion,
-    MovementRules, NarcReport, Notice, OverheatClock, OverheatReport, OverheatRules, PerceptionAim,
-    PersonalEquipment, PersonalLoadout, PilotNotice, PilotingCheck, PlayerConfiguration,
-    PodRemoval, PodRow, Point, Position, Posture, Power, Range, RangeBracket, RawMovement,
-    RawSectionCode, RawTemplate, RawUnitClass, RecoilReport, Recovery, RecoveryMode,
+    MapAsset, MapPointOfInterest, MapRegion, Mass, MassItem, Mech, MechFallReport, MechLoadout,
+    MechMass, MechSalvoReport, MechSection, MechShotReport, MechTemplate, MessageTarget, Mobility,
+    Motion, MovementRules, NarcReport, Notice, OverheatClock, OverheatReport, OverheatRules,
+    PerceptionAim, PersonalEquipment, PersonalLoadout, PilotNotice, PilotingCheck,
+    PlayerConfiguration, PodRemoval, PodRow, Point, Position, Posture, Power, Range, RangeBracket,
+    RawMovement, RawSectionCode, RawTemplate, RawUnitClass, RecoilReport, Recovery, RecoveryMode,
     ResolvedLoadout, SEARCHLIGHT_SIGHT, SalvoGroup, SalvoReport, SectionDefinition,
     SectionExposure, SectionExposureReport, SectionState, ShotReport, ShotRules, SkillCategory,
     SpeedEnvelope, StackingEntry, StackingInput, Stagger, StaggerReport, StaggerRules,
@@ -355,11 +355,13 @@ pub use btech::{
     award_classic_gunnery_experience as award_battle_classic_gunnery_experience,
 };
 
-pub use btech::BattleValue;
+pub use btech::{
+    BattleValue, skill_multiplier as battle_skill_multiplier, speed_factor as battle_speed_factor,
+};
 
 pub use btech::{
     BattleValueExperienceAward, BattleValueExperienceCalculation, BattleValueExperienceInput,
-    award_battle_value_gunnery_experience, pilot_battle_value_modifier,
+    award_battle_value_gunnery_experience,
 };
 
 pub use btech::{ShotExperienceAward, award_gunnery_experience as award_battle_gunnery_experience};
@@ -662,8 +664,17 @@ pub use btech::{VehicleEngine, VehiclePowerplant};
 /// Intact ground-vehicle component and ammunition mass diagnostics.
 pub use btech::VehicleMass;
 
+/// TechManual combat vehicle construction rules and the read-only vehicle template check.
+pub use btech::{
+    VehicleConstruction, VehicleTemplateCheck,
+    check_vehicle_template as check_battle_vehicle_template, vehicle_maximum_armor,
+};
+
 /// Owned ground-vehicle protection and ammunition state.
 pub use btech::Vehicle;
+
+/// The Inner Sphere and Clan technology bases construction cross-checks equipment against.
+pub use btech::TechBase;
 
 /// Register owned ground-vehicle state on an unused object.
 pub use btech::create_vehicle as create_battle_vehicle;
@@ -865,7 +876,7 @@ pub use btech::throttle_maximum as battle_throttle_maximum;
 /// World-aware transfer speed derived from live mass and external tow load.
 pub use btech::unit_effective_maximum_speed as battle_effective_maximum_speed;
 
-/// Battle value using live external load and configured myomer towing assistance.
+/// Battle Value of a live unit with the world's runtime weapon values.
 pub use btech::unit_battle_value as battle_unit_value;
 
 /// Shared pickup eligibility and persisted scenario towing permission.

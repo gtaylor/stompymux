@@ -2,13 +2,15 @@ name = "UrbanMech"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 3
+walk_mp = 2
 jump_mp = 2
 heat_sinks = 11
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 60
 armor = "ferro_fibrous"
 
 [sections.left_arm]

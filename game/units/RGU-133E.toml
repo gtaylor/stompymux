@@ -2,7 +2,7 @@ name = "Rouge"
 class = "aerofighter"
 movement = "fly"
 tons = 40
-walk_mp = 11
+walk_mp = 7
 fuel = 750
 
 [sections.nose]

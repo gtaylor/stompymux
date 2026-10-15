@@ -2,11 +2,13 @@ name = "Spider"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 12
+walk_mp = 8
 jump_mp = 8
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 240
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -41,7 +43,7 @@ slots = [
 
 [sections.center_torso]
 armor = 8
-rear = 4
+rear = 3
 slots = [
     { at = 11, item = "IS.MediumPulseLaser" },
     { at = 12, item = "IS.MediumLaser" },

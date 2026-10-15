@@ -2,13 +2,14 @@ name = "Pouncer"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 9
+walk_mp = 6
 jump_mp = 5
-heat_sinks = 24
+heat_sinks = 12
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 240
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

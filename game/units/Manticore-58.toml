@@ -2,19 +2,18 @@ name = "Manticore"
 class = "vehicle"
 movement = "track"
 tons = 60
-walk_mp = 6
+walk_mp = 4
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 240
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 34
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 34
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 43

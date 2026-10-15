@@ -52,7 +52,7 @@ fn clan_missile_tables_groups_and_mounts() {
             .unwrap();
         bin.equipment = format!("Ammo_{}", weapon.name());
         bin.data = p.ammunition_per_ton.to_string();
-        let unit = Mech::from_template(template).unwrap();
+        let unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
         let loadout = unit.loadout().unwrap();
         let (index, mount) = loadout
             .weapons

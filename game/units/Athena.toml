@@ -2,23 +2,18 @@ name = "Athena"
 class = "vehicle"
 movement = "track"
 tons = 75
-walk_mp = 5
+walk_mp = 3
 
 [construction]
 tech_base = "clan"
+engine_rating = 225
 armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 26
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 26
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 38
@@ -40,5 +35,5 @@ armor = 30
 slots = [
     { at = "1-2", item = "CL.ERMediumLaser", modes = ["OnTC"] },
     { at = "3-4", item = "CL.MachineGun" },
-    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
 ]

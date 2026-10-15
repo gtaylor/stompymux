@@ -81,6 +81,7 @@ pub fn registered_unit_default_template(world: &World, id: ObjectId) -> Option<M
         name: String::new(),
         reference: String::new(),
         tons: 0,
+        walk_mp: 0,
         max_speed: 0.0,
         jump_speed: 0.0,
         heat_sinks: 0,

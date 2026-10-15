@@ -700,7 +700,7 @@ mod tests {
             );
         }
         let mut definition = world.btech.constructed_units()[&mech].definition().clone();
-        definition.max_speed = 64.5;
+        definition.name = "Renamed Jenner".into();
         let mut typed = world.btech.clone();
         let mut json = world.btech.clone();
         typed.set_unit_definition(mech, definition.clone()).unwrap();

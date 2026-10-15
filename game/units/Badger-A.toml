@@ -2,11 +2,15 @@ name = "Badger"
 class = "vehicle"
 movement = "track"
 tons = 30
-walk_mp = 9
+walk_mp = 6
 cargo_space = 400
 max_suits = 0
 max_ton = 4
 specials = ["CargoTech"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 180
 
 [sections.left_side]
 armor = 18

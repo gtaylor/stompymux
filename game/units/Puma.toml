@@ -2,10 +2,14 @@ name = "Puma"
 class = "vehicle"
 movement = "track"
 tons = 95
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 20
 cargo_space = 0
 max_suits = 0
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 285
 
 [sections.left_side]
 armor = 40

@@ -2,12 +2,14 @@ name = "Black Knight"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 20
 radio = 4
 specials = ["BeagleProbe", "SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 structure = "endo_steel"
 
 [sections.left_arm]

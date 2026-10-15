@@ -2,13 +2,14 @@ name = "Jenner"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 14
-jump_mp = 8
-heat_sinks = 20
+walk_mp = 9
+jump_mp = 7
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 315
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

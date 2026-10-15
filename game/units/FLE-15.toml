@@ -2,11 +2,15 @@ name = "Flea"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 9
+walk_mp = 6
 radio = 5
 tac_range = 32
 lrs_range = 64
 scan_range = 32
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 120
 
 [sections.left_arm]
 armor = 4

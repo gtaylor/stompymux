@@ -2,47 +2,57 @@ name = "Rifleman"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 6
+walk_mp = 4
+heat_sinks = 12
+specials = ["SearchLight"]
 
 [construction]
-tech_base = "clan"
+tech_base = "inner_sphere"
+engine_rating = 240
+mixed_tech = true
 
 [sections.left_arm]
 armor = 15
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "CL.LB5-XAC" },
-    { at = "7-8", item = "CL.LargePulseLaser" },
+    { at = "3-4", item = "CL.LargePulseLaser" },
+    { at = "5-8", item = "CL.LB5-XAC" },
 ]
 
 [sections.right_arm]
 armor = 15
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "CL.LB5-XAC" },
-    { at = "7-8", item = "CL.LargePulseLaser" },
+    { at = "3-4", item = "CL.LargePulseLaser" },
+    { at = "5-8", item = "CL.LB5-XAC" },
 ]
 
 [sections.left_torso]
 armor = 15
 rear = 2
 slots = [
-    { at = "1-2", item = "HeatSink" },
+    { at = 1, item = "HeatSink" },
 ]
 
 [sections.right_torso]
 armor = 15
 rear = 2
 slots = [
-    { at = 1, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = 1, item = "HeatSink" },
 ]
 
 [sections.center_torso]
-armor = 20
+armor = 22
 rear = 4
+slots = [
+    { at = 11, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+]
 
 [sections.left_leg]
 armor = 12
+slots = [
+    { at = 5, item = "HeatSink" },
+]
 
 [sections.right_leg]
 armor = 12

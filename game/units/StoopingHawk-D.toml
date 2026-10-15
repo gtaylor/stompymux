@@ -2,11 +2,12 @@ name = "Stooping Hawk"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 8
-heat_sinks = 42
+walk_mp = 5
+heat_sinks = 21
 
 [construction]
 tech_base = "clan"
+engine_rating = 275
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

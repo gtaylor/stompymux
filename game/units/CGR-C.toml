@@ -2,15 +2,17 @@ name = "Charger"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 24
+heat_sinks = 12
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 400
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

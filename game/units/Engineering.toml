@@ -2,11 +2,13 @@ name = "Engineering"
 class = "vehicle"
 movement = "track"
 tons = 40
-walk_mp = 9
+walk_mp = 6
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 240
 
 [sections.left_side]
 armor = 8

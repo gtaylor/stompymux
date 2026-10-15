@@ -2,13 +2,14 @@ name = "BlackHawk"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 36
+heat_sinks = 18
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 250
 
 [sections.left_arm]
 armor = 16

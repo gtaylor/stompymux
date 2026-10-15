@@ -2,27 +2,26 @@ name = "Goblin"
 class = "vehicle"
 movement = "track"
 tons = 45
-walk_mp = 6
+walk_mp = 4
 cargo_space = 300
 specials = ["CargoTech"]
 
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 180
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 32
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 32
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 40
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
-    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
     { at = 4, item = "IS.Anti-MissileSystem" },
     { at = 5, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
 ]

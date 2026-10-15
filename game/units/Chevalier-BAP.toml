@@ -2,10 +2,14 @@ name = "Chevalier"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-walk_mp = 9
+walk_mp = 6
 heat_sinks = 12
 cargo_space = 0
 max_suits = 0
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 190
 
 [sections.left_side]
 armor = 12
@@ -19,7 +23,7 @@ slots = [
     { at = "1-2", item = "IS.StreakSRM-2" },
     { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
     { at = 4, item = "IS.MachineGun" },
-    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100 },
+    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 6, item = "BeagleProbe" },
 ]
 

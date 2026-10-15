@@ -85,7 +85,7 @@ pub trait TerrainIgnition {
 
 impl TerrainIgnition for Weapon {
     fn terrain_ignition_target(self, ammunition: AmmunitionMode) -> Option<u8> {
-        if ammunition == AmmunitionMode::Inferno || self == Self::PlasmaRifle {
+        if ammunition == AmmunitionMode::Inferno || self.is_plasma() {
             return Some(0);
         }
         if matches!(self, Self::Flamer | Self::ClanFlamer | Self::HeavyFlamer) {
@@ -199,6 +199,7 @@ mod tests {
             (Weapon::Lrm20, Some(9)),
             (Weapon::VehicleFlamer, Some(7)),
             (Weapon::PlasmaRifle, Some(0)),
+            (Weapon::ClanPlasmaCannon, Some(0)),
             (Weapon::GaussRifle, None),
             (Weapon::SmallLaser, None),
             (Weapon::Srm2, None),

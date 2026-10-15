@@ -262,7 +262,10 @@ fn inspect<L: Copy + PartialEq>(
                 || definition.equipment.replace(['_', '.'], " "),
                 |system| names.system_name(system, &definition.equipment),
             );
-            if system == Some(System::ArtemisIv) && row.condition == EquipmentCondition::Operational
+            if matches!(
+                system,
+                Some(System::ArtemisIv | System::ArtemisV | System::ApolloFcs)
+            ) && row.condition == EquipmentCondition::Operational
             {
                 row.controls_slot = definition.data.parse().ok().filter(|slot| *slot > 0);
             }

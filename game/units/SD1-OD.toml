@@ -2,21 +2,20 @@ name = "Sunder"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 6
+walk_mp = 4
 jump_mp = 3
-heat_sinks = 30
+heat_sinks = 15
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 360
 heat_sinks = "double"
 
 [sections.left_arm]
 armor = 30
-omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
-slots = [
-    { at = "2-12", item = "IS.LB20-XAC" },
-]
+omit = ["lower_actuator", "hand_actuator"]
 
 [sections.right_arm]
 armor = 30
@@ -57,3 +56,10 @@ armor = 33
 
 [sections.head]
 armor = 9
+
+[[split_mounts]]
+item = "IS.LB20-XAC"
+placements = [
+    { section = "left_arm", at = "3-12" },
+    { section = "left_torso", at = 5 },
+]

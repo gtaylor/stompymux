@@ -2,11 +2,12 @@ name = "Commando"
 class = "mech"
 movement = "biped"
 tons = 25
-walk_mp = 9
-heat_sinks = 20
+walk_mp = 6
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
+engine_rating = 150
 structure = "endo_steel"
 
 [sections.left_arm]

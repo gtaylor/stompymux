@@ -2,14 +2,16 @@ name = "Toyama"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
-heat_sinks = 28
+walk_mp = 4
+heat_sinks = 14
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 heat_sinks = "double"
 

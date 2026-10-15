@@ -44,7 +44,6 @@ battletech.xp.ammomod = 100
 battletech.xp.defaultweapdam = 5
 battletech.xp.modifier = 100
 battletech.xp.defaultweapbv = 120
-battletech.xp.use_pilot_bv_mod = 1
 battletech.xp.oldxpsystem = 1
 battletech.xp.vrtmod = 0
 battletech.xp.perunit_xpmod = 1

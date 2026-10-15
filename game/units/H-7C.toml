@@ -2,11 +2,12 @@ name = "Warrior"
 class = "vtol"
 movement = "vtol"
 tons = 21
-walk_mp = 15
+walk_mp = 10
 specials = ["SearchLight"]
 
 [construction]
-engine = "ice"
+tech_base = "inner_sphere"
+engine_rating = 70
 
 [sections.left_side]
 armor = 5

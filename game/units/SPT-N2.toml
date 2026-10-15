@@ -2,14 +2,16 @@ name = "Spartan"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 8
-heat_sinks = 26
+walk_mp = 5
+heat_sinks = 13
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 400
 heat_sinks = "double"
 
 [sections.left_arm]

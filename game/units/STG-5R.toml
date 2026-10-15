@@ -2,12 +2,13 @@ name = "Stinger"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 120
 armor = "ferro_fibrous"
 
 [sections.left_arm]
@@ -63,4 +64,4 @@ slots = [
 ]
 
 [sections.head]
-armor = 8
+armor = 7

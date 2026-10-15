@@ -2,12 +2,13 @@ name = "Masakari"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 6
-heat_sinks = 50
+walk_mp = 4
+heat_sinks = 25
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 340
 armor = "ferro_fibrous"
 
 [sections.left_arm]

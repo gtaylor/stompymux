@@ -23,8 +23,7 @@ async fn fixture(sources: &[&str]) -> (tempfile::TempDir, Config, World, ObjectI
     let mut units = Vec::new();
     for source in sources {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
-        UnitTemplate::parse("test", source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
             .create(&mut world, id)
             .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -396,7 +395,12 @@ async fn hot_myomer_tow_discount_requires_hardware_heat_and_configuration() {
     }
     assert_eq!(remaining, 0);
     let carrier = world.create(&config, "Myomer carrier".into(), Kind::Thing);
-    create_battle_unit(&mut world, carrier, template).unwrap();
+    create_battle_unit(
+        &mut world,
+        carrier,
+        crate::support::templates::legal(template),
+    )
+    .unwrap();
     support::seed_object_dice(&mut world, carrier, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, carrier, map, 0, 0).unwrap();
     set_battle_tow(&mut world, carrier, Some(ids[0])).unwrap();
@@ -701,7 +705,7 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
         include_str!("../game/units/GOL-1H.toml").to_owned(),
         ground.to_owned(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
-        ground.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(ground),
         CHASSIS[2].to_owned(),
     ] {
         let (_dir, config, mut world, _, ids) =

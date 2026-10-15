@@ -2,10 +2,12 @@ name = "Hermes"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 14
+walk_mp = 9
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 270
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -36,7 +38,7 @@ slots = [
 armor = 6
 rear = 2
 slots = [
-    { at = "1-2", item = "BeagleProbe" },
+    { at = "1-2", item = "Ecm" },
     { at = "3-9", item = "EndoSteel" },
 ]
 
@@ -51,4 +53,4 @@ armor = 4
 armor = 4
 
 [sections.head]
-armor = 5
+armor = 4

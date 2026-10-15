@@ -31,12 +31,15 @@ fn unit(world: &mut World, config: &Config, map: ObjectId, chassis: &str) -> Obj
         let source = match chassis {
             "vtol" => include_str!("../game/units/Kestrel.toml").to_owned(),
             "wheeled" => include_str!("../game/units/Demolisher.toml")
-                .replace("movement = \"track\"", "movement = \"wheel\""),
-            "hover" => include_str!("../game/units/Demolisher.toml")
-                .replace("movement = \"track\"", "movement = \"hover\""),
+                .replace("movement = \"track\"", "movement = \"wheel\"")
+                .replace("engine_rating = 240", "engine_rating = 220"),
+            "hover" => {
+                crate::support::templates::hovercraft(include_str!("../game/units/Demolisher.toml"))
+            }
             "stationary" => include_str!("../game/units/Demolisher.toml")
                 .replace("movement = \"track\"", "movement = \"none\"")
-                .replace("walk_mp = 5", "walk_mp = 0"),
+                .replace("engine_rating = 240\n", "")
+                .replace("walk_mp = 3", "walk_mp = 0"),
             _ => include_str!("../game/units/Demolisher.toml").to_owned(),
         };
         create_battle_vehicle(world, id, VehicleTemplate::parse("test", &source).unwrap()).unwrap();

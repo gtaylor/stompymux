@@ -2,9 +2,13 @@ name = "Exterminator"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
 heat_sinks = 11
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 325
 
 [sections.left_arm]
 armor = 18

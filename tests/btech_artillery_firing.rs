@@ -60,7 +60,12 @@ async fn fixture_source(
     for pilot in [ObjectId(1), ObjectId(2)] {
         let id = world.create(&config, format!("Artillery {}", pilot.0), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        create_battle_unit(&mut world, id, template.clone()).unwrap();
+        create_battle_unit(
+            &mut world,
+            id,
+            crate::support::templates::legal(template.clone()),
+        )
+        .unwrap();
         place_battle_unit(&mut world, id, map, 1, 1).unwrap();
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, pilot).unwrap();

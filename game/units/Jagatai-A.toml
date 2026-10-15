@@ -2,8 +2,8 @@ name = "Jagatai"
 class = "aerofighter"
 movement = "fly"
 tons = 70
-walk_mp = 9
-heat_sinks = 30
+walk_mp = 6
+heat_sinks = 15
 fuel = 600
 
 [construction]

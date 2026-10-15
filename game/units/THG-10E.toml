@@ -2,8 +2,12 @@ name = "Thug"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 19
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 320
 
 [sections.left_arm]
 armor = 25

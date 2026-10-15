@@ -79,8 +79,14 @@ pub struct MechTemplate {
     pub name: String,
     pub reference: String,
     pub tons: u16,
+    /// Walking MP the template states (TM p. 48); the engine rating is tonnage x walking MP.
+    pub walk_mp: u32,
+    /// Running speed in km/h, walking MP x 1.5 rounded up: the realtime top speed.
     pub max_speed: f64,
     pub jump_speed: f64,
+    /// Installed heat sinks, counted as the record sheet counts them (TM p. 52), not the heat
+    /// they dissipate; [`Self::heat_dissipation`] gives the cooling. Ten, the engine's free
+    /// sinks (TM p. 53), when the template has no `heat_sinks` line.
     pub heat_sinks: u16,
     pub sections: BTreeMap<MechSection, SectionDefinition>,
     /// All unit-level fields, including features awaiting domain implementation.
@@ -88,13 +94,36 @@ pub struct MechTemplate {
 }
 
 impl MechTemplate {
-    /// Clan chassis always use double-efficiency heat sinks.
+    /// Double-efficiency heat sinks: Inner Sphere double sinks, or a Clan chassis's sinks
+    /// unless it declares single sinks (TM p. 52).
     pub fn has_double_heat_sinks(&self) -> bool {
-        self.has_special("Clan") || self.has_special("DoubleHS")
+        (self.has_special("Clan") && !self.has_special(super::construction::SINGLE_HEAT_SINKS))
+            || self.has_special("DoubleHS")
     }
 
-    /// Number of contiguous critical slots occupied by one installed heat sink.
+    /// Heat one installed sink dissipates a turn: two for double and laser heat sinks, one for
+    /// single sinks (TM p. 52; Tactical Operations: Advanced Units & Equipment laser heat
+    /// sinks).
+    pub fn heat_per_sink(&self) -> u16 {
+        if self.has_double_heat_sinks() || self.has_technology(super::Technology::LaserHeatSinks) {
+            2
+        } else {
+            1
+        }
+    }
+
+    /// Heat the intact Mech's sinks dissipate a turn: the sink count times the heat each one
+    /// dissipates. The live heat model works in these points.
+    pub fn heat_dissipation(&self) -> u16 {
+        self.heat_sinks.saturating_mul(self.heat_per_sink())
+    }
+
+    /// Number of contiguous critical slots occupied by one installed heat sink: one for a
+    /// single sink, three for an Inner Sphere double and two for a Clan double (TM p. 53).
     pub fn heat_sink_slots(&self) -> usize {
+        if self.has_special(super::construction::SINGLE_HEAT_SINKS) {
+            return 1;
+        }
         if self.has_special("Clan") {
             return 2;
         }
@@ -183,20 +212,22 @@ impl MechTemplate {
         );
         let tons = required("tons")?.parse().context("invalid tonnage")?;
         ensure!(tons > 0, "tonnage must be positive");
+        let (walk_mp, max_speed) = super::template_walking_mp(&fields)?;
         let mut template = Self {
             name: required("name")?,
             reference: required("reference")?,
             tons,
-            max_speed: speed("max_speed")?,
+            walk_mp,
+            max_speed,
             jump_speed: speed("jump_speed")?,
-            heat_sinks: fields
-                .get("heat_sinks")
-                .map(String::as_str)
-                .unwrap_or("10")
-                .parse()
-                .context("invalid heat sinks")?,
+            heat_sinks: 10,
             sections,
             attributes: fields,
+        };
+        // Without a heat_sinks line a Mech carries the engine's ten free sinks (TM p. 53).
+        template.heat_sinks = match template.attributes.get("heat_sinks") {
+            Some(value) => value.parse().context("invalid heat sinks")?,
+            None => 10,
         };
         // The reference load always forces the tonnage-chart internal structure
         // (mech_int_check) while reading the template file, overriding authored

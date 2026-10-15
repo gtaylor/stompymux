@@ -2,14 +2,17 @@ name = "Vindicator"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 26
+heat_sinks = 13
 radio = 4
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 225
+armor = "stealth"
 heat_sinks = "double"
 
 [sections.left_arm]
@@ -23,9 +26,9 @@ slots = [
 armor = 14
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC" },
-    { at = "7-9", item = "HeatSink" },
-    { at = "11-12", item = "StealthArmor" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
+    { at = "10-11", item = "StealthArmor" },
 ]
 
 [sections.left_torso]
@@ -45,8 +48,8 @@ slots = [
     { at = "4-5", item = "JumpJet" },
     { at = 6, item = "Ammo_IS.LRM-5", rounds = 24 },
     { at = "7-9", item = "HeatSink" },
-    { at = "10-11", item = "StealthArmor" },
-    { at = 12, item = "Case" },
+    { at = 10, item = "Case" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.center_torso]

@@ -2,12 +2,14 @@ name = "Vindicator"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 30
+heat_sinks = 15
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 180
 heat_sinks = "double"
 
 [sections.left_arm]

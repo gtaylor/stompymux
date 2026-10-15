@@ -2,7 +2,7 @@ name = "MechBuster"
 class = "aerofighter"
 movement = "fly"
 tons = 50
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 0
 fuel = 6000
 

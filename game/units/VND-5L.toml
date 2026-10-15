@@ -2,15 +2,18 @@ name = "Vindicator"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 20
+heat_sinks = 10
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 180
 heat_sinks = "double"
+myomer = "triple_strength"
 
 [sections.left_arm]
 armor = 14
@@ -22,8 +25,8 @@ slots = [
 armor = 14
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
 ]
 
 [sections.left_torso]

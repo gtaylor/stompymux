@@ -2,13 +2,15 @@ name = "Enfield"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 22
+heat_sinks = 11
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 250
 structure = "endo_steel"
 heat_sinks = "double"
 

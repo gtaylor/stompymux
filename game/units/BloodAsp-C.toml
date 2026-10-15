@@ -2,12 +2,13 @@ name = "Blood Asp"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 6
-heat_sinks = 28
+walk_mp = 4
+heat_sinks = 14
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 360
 structure = "endo_steel"
 
 [sections.left_arm]

@@ -2,10 +2,12 @@ name = "Burke"
 class = "vehicle"
 movement = "track"
 tons = 75
-walk_mp = 3
+walk_mp = 2
 heat_sinks = 30
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 150
 armor = "ferro_fibrous"
 
 [sections.left_side]
@@ -15,7 +17,7 @@ armor = 20
 armor = 20
 
 [sections.front_side]
-armor = 30
+armor = 21
 slots = [
     { at = 1, item = "IS.LRM-10" },
     { at = 2, item = "Ammo_IS.LRM-10", rounds = 12 },
@@ -25,7 +27,7 @@ slots = [
 armor = 16
 
 [sections.turret]
-armor = 22
+armor = 21
 slots = [
     { at = "1-3", item = "IS.PPC" },
 ]

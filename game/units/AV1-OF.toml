@@ -2,15 +2,17 @@ name = "Avatar"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 30
+heat_sinks = 15
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 280
 heat_sinks = "double"
 
 [sections.left_arm]
@@ -23,10 +25,7 @@ slots = [
 
 [sections.right_arm]
 armor = 16
-omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
-slots = [
-    { at = "2-12", item = "IS.LB20-XAC" },
-]
+omit = ["lower_actuator", "hand_actuator"]
 
 [sections.left_torso]
 armor = 22
@@ -43,9 +42,9 @@ armor = 22
 rear = 8
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = 7, item = "Ammo_IS.LB20-XAC", rounds = 5 },
-    { at = 8, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
-    { at = 12, item = "Case" },
+    { at = 9, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 10, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 11, item = "Case" },
 ]
 
 [sections.center_torso]
@@ -69,3 +68,10 @@ slots = [
 
 [sections.head]
 armor = 9
+
+[[split_mounts]]
+item = "IS.LB20-XAC"
+placements = [
+    { section = "right_arm", at = "3-11" },
+    { section = "right_torso", at = "7-8" },
+]

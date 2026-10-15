@@ -2,9 +2,13 @@ name = "Marauder"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 18
 specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 
 [sections.left_arm]
 armor = 22

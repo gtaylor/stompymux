@@ -2,24 +2,19 @@ name = "Ishtar"
 class = "vehicle"
 movement = "wheel"
 tons = 65
-walk_mp = 5
-specials = ["ArtemisIV", "CL_AMS"]
+walk_mp = 3
+specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 175
 armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 30
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 30
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 32

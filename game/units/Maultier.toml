@@ -2,14 +2,16 @@ name = "Maultier"
 class = "vehicle"
 movement = "hover"
 tons = 15
-walk_mp = 14
-cargo_space = 300
+walk_mp = 9
+cargo_space = 250
 max_suits = 0
 max_ton = 3
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 50
 
 [sections.left_side]
 armor = 10

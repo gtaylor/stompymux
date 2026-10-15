@@ -2,11 +2,13 @@ name = "Condor"
 class = "vehicle"
 movement = "hover"
 tons = 50
-walk_mp = 12
+walk_mp = 8
 heat_sinks = 12
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 165
 
 [sections.left_side]
 armor = 23

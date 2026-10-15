@@ -2,12 +2,14 @@ name = "Penetrator"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 24
+heat_sinks = 12
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 heat_sinks = "double"
 
 [sections.left_arm]

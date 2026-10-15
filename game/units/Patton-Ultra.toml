@@ -2,9 +2,14 @@ name = "Patton"
 class = "vehicle"
 movement = "track"
 tons = 65
-walk_mp = 6
+walk_mp = 4
 cargo_space = 0
 max_suits = 0
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 260
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 46
@@ -13,7 +18,7 @@ armor = 46
 armor = 46
 
 [sections.front_side]
-armor = 52
+armor = 51
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
@@ -21,9 +26,6 @@ slots = [
 
 [sections.aft_side]
 armor = 38
-slots = [
-    { at = 1, item = "FerroFibrous" },
-]
 
 [sections.turret]
 armor = 51

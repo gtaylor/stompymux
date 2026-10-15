@@ -2,12 +2,14 @@ name = "Starslayer"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 24
+heat_sinks = 12
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 250
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"

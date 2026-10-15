@@ -2,23 +2,22 @@ name = "Hunter"
 class = "vehicle"
 movement = "track"
 tons = 35
-walk_mp = 6
+walk_mp = 4
 specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 140
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 15
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 15
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 28
+armor = 27
 slots = [
     { at = "1-2", item = "IS.LRM-15" },
     { at = "3-4", item = "ArtemisIV" },

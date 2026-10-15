@@ -2,69 +2,71 @@ name = "Phantom"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 14
-heat_sinks = 22
+walk_mp = 9
+heat_sinks = 12
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 360
+structure = "endo_steel"
 armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 12
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
-    { at = "7-10", item = "CL.ERSmallLaser", modes = ["OnTC"] },
+    { at = "5-8", item = "CL.ERSmallLaser" },
+    { at = 9, item = "EndoSteel" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 12
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
-    { at = "7-10", item = "CL.ERSmallLaser", modes = ["OnTC"] },
+    { at = "5-8", item = "CL.ERSmallLaser" },
+    { at = 9, item = "EndoSteel" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 11
 rear = 7
-engine_at = 3
 slots = [
-    { at = 1, item = "FerroFibrous" },
-    { at = 2, item = "EndoSteel" },
-    { at = 5, item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = 3, item = "CL.ERMediumLaser" },
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 11
 rear = 7
-engine_at = 2
 slots = [
-    { at = 1, item = "FerroFibrous" },
-    { at = 4, item = "CL.ERSmallLaser", modes = ["RearMount"] },
+    { at = 3, item = "CL.Flamer", modes = ["RearMount"] },
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 12
 rear = 8
 slots = [
-    { at = 11, item = "EndoSteel" },
-    { at = 12, item = "TargetingComputer" },
+    { at = 11, item = "TargetingComputer" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 13
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 13
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]

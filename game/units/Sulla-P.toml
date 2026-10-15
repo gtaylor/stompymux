@@ -2,8 +2,8 @@ name = "Sulla"
 class = "aerofighter"
 movement = "fly"
 tons = 45
-walk_mp = 14
-heat_sinks = 26
+walk_mp = 9
+heat_sinks = 13
 fuel = 750
 
 [construction]

@@ -150,8 +150,9 @@ impl WeaponSalvo for Weapon {
             | Self::Elrm20
             | Self::ClanLbx20
             | Self::Lbx20 => 20,
-            Self::Mrm30 => 30,
-            Self::Mrm40 => 40,
+            Self::Mrm30 | Self::ClanHag30 => 30,
+            Self::Mrm40 | Self::ClanHag40 => 40,
+            Self::ClanHag20 => 20,
             _ => bail!("Weapon is not a missile launcher"),
         };
         cluster_hits(size, roll)
@@ -240,7 +241,7 @@ impl WeaponSalvo for Weapon {
                 "Invalid weapon damage range"
             );
         }
-        if self.profile().missiles == 0 && !cluster {
+        if self.profile().missiles == 0 && !cluster && !self.is_hag() {
             ensure!(
                 cluster_roll.is_none(),
                 "Non-missile weapon does not use a cluster roll"
@@ -287,10 +288,21 @@ impl WeaponSalvo for Weapon {
         } else {
             0
         };
+        // A hyper-assault Gauss rifle adds two to its cluster roll at short range and subtracts
+        // two at long range (Total Warfare p. 136).
+        // Brackets round the distance as weapon ranges do.
+        let hag_bonus = match distance
+            .filter(|_| self.is_hag())
+            .map(|distance| (distance + 0.95).floor())
+        {
+            Some(range) if range > f64::from(self.profile().medium_range) => -2,
+            Some(range) if range <= f64::from(self.profile().short_range) => 2,
+            _ => 0,
+        };
         // Neither the glancing modifier (Tactical Operations p. 79) nor the AMS modifier (Total
         // Warfare p. 129) takes the cluster roll below 2.
         let ams_penalty = if ams_engaged { 4 } else { 0 };
-        let adjusted = (i16::from(roll) + artemis_bonus + atm_bonus
+        let adjusted = (i16::from(roll) + artemis_bonus + atm_bonus + hag_bonus
             - if glancing { 4 } else { 0 }
             - ams_penalty)
             .clamp(2, 12) as u8;
@@ -352,12 +364,15 @@ impl WeaponSalvo for Weapon {
                     | Self::ClanStreakLrm10
                     | Self::ClanStreakLrm15
                     | Self::ClanStreakLrm20
+                    | Self::ClanHag20
+                    | Self::ClanHag30
+                    | Self::ClanHag40
             ) {
             5
         } else {
             1
         };
-        let damage = if cluster {
+        let damage = if cluster || self.is_hag() {
             1
         } else if self.is_thunderbolt() && inside_minimum {
             // The warhead has not armed yet: half damage, rounded down (TacOps: AUE p. 159).
@@ -511,6 +526,10 @@ pub(super) struct ShotDamage<'a> {
     pub ams_engaged: bool,
     /// Spotter-directed indirect fire gets no Artemis or Narc cluster bonus.
     pub indirect: bool,
+    /// An MRM "Apollo" fire-control system guided the launcher.
+    pub apollo: bool,
+    /// Machine guns fired together as a machine gun array.
+    pub array: Option<u8>,
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
 }
 
@@ -553,6 +572,8 @@ pub(super) fn resolve_salvo_in_candidate(
             gatling_damage: weapon.gatling_damage,
             ams_engaged: damage.ams_engaged,
             indirect: damage.indirect,
+            apollo: damage.apollo,
+            array: damage.array,
             incoming: damage.incoming,
         },
         effects,
@@ -602,6 +623,8 @@ enum HitGeometry {
         gatling_damage: Option<u8>,
         ams_engaged: bool,
         indirect: bool,
+        apollo: bool,
+        array: Option<u8>,
         incoming: Option<u8>,
     },
 }
@@ -725,6 +748,21 @@ fn resolve_salvo_with_effects(
             )
         }
     };
+    // A plasma cannon deals a Mech no damage, only heat, which the direct shot's effects apply
+    // (Total Warfare p. 139).
+    if weapon == Weapon::ClanPlasmaCannon {
+        return Ok(MechSalvoReport {
+            building: None,
+            collapse: None,
+            missiles_before_defense: None,
+            missiles_intercepted: None,
+            cluster_roll: None,
+            inferno: None,
+            groups: Vec::new(),
+            experience: Vec::new(),
+            experience_messages: Vec::new(),
+        });
+    }
     let unit = world.btech.constructed.get_mut(&target).unwrap();
     let fire_mode = match geometry {
         HitGeometry::Direct { fire_mode, .. } => fire_mode,
@@ -755,6 +793,11 @@ fn resolve_salvo_with_effects(
                 }
             ),
             indirect: matches!(geometry, HitGeometry::Direct { indirect: true, .. }),
+            apollo: matches!(geometry, HitGeometry::Direct { apollo: true, .. }),
+            array: match geometry {
+                HitGeometry::Direct { array, .. } => array,
+                HitGeometry::Fixed(_) => None,
+            },
         },
         &mut unit.dice,
     )?;
@@ -795,6 +838,8 @@ fn resolve_salvo_with_effects(
         &mut packets.damage,
     )?;
     let damage_groups = packets.damage;
+    // A machine gun array's hits all strike the location its first hit found.
+    let mut shared_hit: Option<Hit> = None;
     let weapon_effect = if weapon == Weapon::PlasmaRifle {
         Some(super::impact::WeaponEffect::Plasma)
     } else if mode == super::AmmunitionMode::ArmorPiercing {
@@ -818,7 +863,9 @@ fn resolve_salvo_with_effects(
         };
         let unit = &world.btech.constructed_units()[&target];
         let mut dice = unit.dice.clone();
-        let hit = if let Some(super::UnitSection::Mech(section)) = preferred {
+        let hit = if let Some(hit) = shared_hit.filter(|_| packets.single_location) {
+            hit
+        } else if let Some(super::UnitSection::Mech(section)) = preferred {
             Hit {
                 section,
                 rear_armor: arc == HitArc::Rear
@@ -834,6 +881,9 @@ fn resolve_salvo_with_effects(
             let roll = dice.generic_roll();
             super::resolve_hit(unit, arc, roll, &mut dice)?
         };
+        if packets.single_location && shared_hit.is_none() {
+            shared_hit = Some(hit);
+        }
         let covered_legs = partial_cover && unit.chassis().is_leg(hit.section);
         world.btech.constructed.get_mut(&target).unwrap().dice = dice;
         if covered_legs {
@@ -1355,6 +1405,24 @@ mod flechette_tests {
                 );
             }
         }
+    }
+
+    /// A hyper-assault Gauss rifle rolls on its own Cluster Hits column, plus two at short range
+    /// and minus two at long range within 2..=12, and lands its damage in five-point groups
+    /// (Total Warfare p. 136).
+    #[test]
+    fn hag_cluster_hits_shift_with_range_in_five_point_groups() {
+        let groups = |weapon: Weapon, roll: u8, distance: f64| {
+            weapon.damage_groups_at_range(Some(roll), distance).unwrap()
+        };
+        // HAG/20 rolls of 7: short range reads 9 (16), medium 7 (12), long 5 (12).
+        assert_eq!(groups(Weapon::ClanHag20, 7, 8.0), vec![5, 5, 5, 1]);
+        assert_eq!(groups(Weapon::ClanHag20, 7, 9.0), vec![5, 5, 2]);
+        assert_eq!(groups(Weapon::ClanHag20, 7, 20.0), vec![5, 5, 2]);
+        // The shifted roll stays on the table: 11 + 2 reads 12, 3 - 2 reads 2.
+        assert_eq!(groups(Weapon::ClanHag40, 11, 2.0).iter().sum::<u16>(), 40);
+        assert_eq!(groups(Weapon::ClanHag30, 3, 20.0).iter().sum::<u16>(), 10);
+        assert!(Weapon::ClanHag30.damage_groups(None).is_err());
     }
 
     /// Enhanced LRMs fire the same salvos as the LRMs they extend.

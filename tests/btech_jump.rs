@@ -2943,6 +2943,8 @@ async fn hardened_gyro_airborne_protection_and_restart() {
         .btech
         .rewrite_unit_record(id, |record| {
             record["definition"]["attributes"]["specials"] = "HDGYRO".into();
+            // The gyro's three extra tons come out of the weapons, keeping the armor.
+            crate::support::templates::book_legal_record_keeping(record, Some(MechSection::Head));
             // Keep the test retrofit at nominal mass so launch tests gyro protection, not overload.
             record["live_mass"] = serde_json::json!(35 * 1024);
         })
@@ -3230,17 +3232,31 @@ fn improved_jet_template() -> MechTemplate {
     template
         .attributes
         .insert("specials".into(), "FlipArms ImprovedJJ_Tech".into());
-    template
+    without_spares(template)
+}
+
+/// The Jenner without its right arm lasers and center torso launcher, whose four tons make
+/// room for the improved jets' extra mass without touching the armor.
+fn without_spares(mut template: MechTemplate) -> MechTemplate {
+    for section in [MechSection::RightArm, MechSection::CenterTorso] {
+        template
+            .sections
+            .get_mut(&section)
+            .unwrap()
+            .criticals
+            .retain(|_, part| !part.equipment.starts_with("IS."));
+    }
+    crate::support::templates::legal(template)
 }
 
 /// Improved installations reject incomplete pairs and unsupported declared thrust.
 #[test]
 fn improved_jet_construction_pairs_and_mass() {
     let template = improved_jet_template();
-    let improved = Mech::from_template(template.clone()).unwrap();
-    let ordinary = Mech::from_template(
+    let improved = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
+    let ordinary = Mech::from_template(without_spares(
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
-    )
+    ))
     .unwrap();
     assert_eq!(improved.jump_capacity(100).unwrap().movement_points, 5);
     assert_eq!(
@@ -3285,7 +3301,9 @@ async fn improved_jet_group_loss_flight_and_adapter_replay() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id) = runtime_fixture().await;
     base.btech
-        .set_unit_definition(id, improved_jet_template())
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, improved_jet_template())
+        })
         .unwrap();
     base.validate(&config).unwrap();
     let (observer, _witness) = jump_observer(&mut base, &config, id);
@@ -4989,7 +5007,10 @@ async fn jump_course_fields_redirect_without_moving_the_committed_cursor() {
     use std::{cell::RefCell, rc::Rc};
     use stompymux_rs::*;
     for chassis in ["Biped", "Quad"] {
-        let (_dir, config, world, id) = runtime_fixture().await;
+        let (_dir, config, mut world, id) = runtime_fixture().await;
+        if chassis == "Quad" {
+            support::btech_firing::edit(&mut world, id, support::templates::quad_ready_record);
+        }
         let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "unitmovetype", chassis)
             .unwrap();
@@ -5260,7 +5281,10 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
     use std::{cell::RefCell, rc::Rc};
     use stompymux_rs::*;
     for chassis in ["Biped", "Quad"] {
-        let (_dir, config, world, id) = runtime_fixture().await;
+        let (_dir, config, mut world, id) = runtime_fixture().await;
+        if chassis == "Quad" {
+            support::btech_firing::edit(&mut world, id, support::templates::quad_ready_record);
+        }
         let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "unitmovetype", chassis)
             .unwrap();
@@ -5503,7 +5527,12 @@ async fn depth_one_takeoff_uses_only_torso_jets() {
     assert_ne!(leg_jets, source);
     world
         .btech
-        .set_unit_definition(id, MechTemplate::parse("JR7-D", &leg_jets).unwrap())
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(
+                record,
+                MechTemplate::parse("JR7-D", &leg_jets).unwrap(),
+            )
+        })
         .unwrap();
     world.validate(&config).unwrap();
     let unit = &world.btech.constructed_units()[&id];
@@ -5539,7 +5568,12 @@ async fn depth_one_takeoff_uses_only_torso_jets() {
     let (_dir, config, mut world, id) = water_jump_fixture(1, true).await;
     world
         .btech
-        .set_unit_definition(id, MechTemplate::parse("JR7-D", &only_legs).unwrap())
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(
+                record,
+                MechTemplate::parse("JR7-D", &only_legs).unwrap(),
+            )
+        })
         .unwrap();
     world.validate(&config).unwrap();
     assert_eq!(
@@ -5628,8 +5662,9 @@ async fn quad_jump_fixture() -> (
     let id = world.create(&config, "Quad".into(), Kind::Thing);
     let mut definition =
         MechTemplate::parse("test", include_str!("../game/units/SCP-1N.toml")).unwrap();
-    definition.jump_speed = 53.75;
-    create_battle_unit(&mut world, id, definition).unwrap();
+    // The Scorpion carries no jets of its own; five give it five jumping MP.
+    support::templates::install_jump_jets(&mut definition, 5);
+    create_battle_unit(&mut world, id, crate::support::templates::legal(definition)).unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);

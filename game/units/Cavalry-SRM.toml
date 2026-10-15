@@ -2,10 +2,12 @@ name = "Cavalry"
 class = "vtol"
 movement = "vtol"
 tons = 25
-walk_mp = 15
+walk_mp = 10
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 110
 
 [sections.left_side]
 armor = 10

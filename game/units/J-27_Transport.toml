@@ -2,13 +2,17 @@ name = "Long Tom"
 class = "vehicle"
 movement = "track"
 tons = 10
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 0
 radio = 2
 radio_range = 100
 lrs_range = 20
 cargo_space = 0
 max_suits = 0
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 50
 
 [sections.left_side]
 armor = 1

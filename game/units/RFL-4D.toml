@@ -2,10 +2,14 @@ name = "Rifleman"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 15
 radio = 4
-specials = ["AntiAircraft", "SearchLight"]
+specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 240
 
 [sections.left_arm]
 armor = 15

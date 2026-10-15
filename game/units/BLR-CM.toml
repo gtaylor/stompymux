@@ -2,13 +2,15 @@ name = "Battlemaster"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
+walk_mp = 3
 jump_mp = 3
-heat_sinks = 32
+heat_sinks = 16
 radio = 4
 specials = ["C3MasterTech", "SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 255
 heat_sinks = "double"
 
 [sections.left_arm]

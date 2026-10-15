@@ -1070,11 +1070,6 @@ impl Mech {
         super::write_template_speed(&mut self.definition.attributes, speed);
     }
 
-    /// Change only the authored engine allocation override; recalculation is a separate operation.
-    pub(super) fn set_engine_sink_override(&mut self, value: i32) {
-        super::write_engine_sink_override(&mut self.definition.attributes, value);
-    }
-
     /// Change limb roles while retaining their installed equipment and damage.
     pub(super) fn set_chassis(&mut self, chassis: super::MechChassis) {
         let name = match chassis {
@@ -1086,12 +1081,14 @@ impl Mech {
             .insert("move_type".into(), name.into());
     }
 
-    /// Change nominal tonnage without rebuilding equipment, protection or crew state.
+    /// Change nominal tonnage without rebuilding equipment, protection or crew state. A
+    /// declared engine rating follows the new tonnage.
     pub(super) fn set_nominal_tonnage(&mut self, tons: u16) {
         self.definition.tons = tons;
         self.definition
             .attributes
             .insert("tons".into(), tons.to_string());
+        self.definition.restate_engine_rating();
     }
 
     /// Update the owned cargo installation; the shared load service reconciles motion.
@@ -1198,14 +1195,14 @@ impl Mech {
         if let Some(capacity) = self.reconstructed_cooling {
             ensure!(
                 capacity
-                    <= self.definition.heat_sinks
+                    <= self.definition.heat_dissipation()
                         + super::engine_sink_capacity::external_capacity(self)?,
                 "Invalid reconstructed cooling capacity"
             );
         }
         self.heat_cutoff.validate(
             self.reconstructed_cooling
-                .unwrap_or(self.definition.heat_sinks)
+                .unwrap_or(self.definition.heat_dissipation())
                 / self.heat_sink_points_each(),
         )?;
         ensure!(

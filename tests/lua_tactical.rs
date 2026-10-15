@@ -18,10 +18,11 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts, Vec<ObjectId>, Object
     for index in 0..3 {
         let id = world.create(&config, format!("Tactical {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml"))
-            .unwrap()
-            .create(&mut world, id)
-            .unwrap();
+        crate::support::templates::legal_unit(
+            UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
+        )
+        .create(&mut world, id)
+        .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(
             &mut world,

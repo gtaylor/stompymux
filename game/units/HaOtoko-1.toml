@@ -2,9 +2,14 @@ name = "Ha Otoko"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 13
 radio = 5
+
+[construction]
+tech_base = "clan"
+engine_rating = 260
+heat_sinks = "single"
 
 [sections.left_arm]
 armor = 20

@@ -38,13 +38,14 @@ impl Weapon {
             });
         }
         // Total Warfare p. 109 rows, then the Tactical Operations advanced-weapons rows
-        // (X-pulse and Clan ER pulse lasers). The Clan plasma entry borrows the ER PPC row.
+        // (X-pulse and Clan ER pulse lasers). Plasma weapons cannot fire underwater (Total
+        // Warfare p. 139).
         let (minimum_range, short_range, medium_range, long_range) = match self {
             Self::ClanErLargeLaser => (0, 5, 10, Some(16)),
             Self::ClanErMediumLaser => (0, 3, 7, Some(10)),
             Self::ClanErSmallLaser | Self::ClanSmallPulseLaser => (0, 1, 2, Some(4)),
             Self::ClanErMicroLaser | Self::ClanMicroPulseLaser => (0, 1, 2, None),
-            Self::ClanErPpc | Self::ErPpc | Self::ClanPlasmaRifle => (0, 4, 10, Some(16)),
+            Self::ClanErPpc | Self::ErPpc => (0, 4, 10, Some(16)),
             Self::ClanHeavyLargeLaser | Self::LargeLaser | Self::XLargePulseLaser => {
                 (0, 3, 6, Some(9))
             }
@@ -116,17 +117,18 @@ mod tests {
     /// Water eligibility is narrower than energy weapons, and differs between plasma designs.
     /// The fourteen torpedo launchers are the only missiles that fire underwater.
     #[test]
-    fn catalogue_admits_only_the_47_water_profiles() {
+    fn catalogue_admits_only_the_46_water_profiles() {
         assert_eq!(
             Weapon::ALL
                 .iter()
                 .filter(|w| w.water_ranges().is_some())
                 .count(),
-            47
+            46
         );
         for weapon in [
             Weapon::Flamer,
             Weapon::PlasmaRifle,
+            Weapon::ClanPlasmaCannon,
             Weapon::Ac20,
             Weapon::Srm6,
         ] {
@@ -136,13 +138,6 @@ mod tests {
                 "This weapon may not be fired underwater."
             );
         }
-        assert_eq!(
-            Weapon::ClanPlasmaRifle
-                .water_ranges()
-                .unwrap()
-                .effective_range(),
-            16
-        );
     }
 
     /// Every row matches the Underwater Range Table (Total Warfare p. 109) and the advanced

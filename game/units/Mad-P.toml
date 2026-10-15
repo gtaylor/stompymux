@@ -2,12 +2,14 @@ name = "MadCat"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 8
-heat_sinks = 34
+walk_mp = 5
+heat_sinks = 17
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 375
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -15,8 +17,8 @@ armor = "ferro_fibrous"
 armor = 24
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "CL.ERLargeLaser" },
-    { at = "5-6", item = "HeatSink" },
+    { at = "4-5", item = "HeatSink" },
+    { at = 6, item = "CL.ERLargeLaser" },
     { at = 7, item = "CL.ERMediumLaser" },
     { at = 8, item = "FerroFibrous" },
 ]
@@ -25,8 +27,8 @@ slots = [
 armor = 24
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "CL.ERLargeLaser" },
-    { at = "5-6", item = "HeatSink" },
+    { at = "4-5", item = "HeatSink" },
+    { at = 6, item = "CL.ERLargeLaser" },
     { at = 7, item = "CL.ERMediumLaser" },
     { at = 8, item = "FerroFibrous" },
 ]
@@ -34,27 +36,24 @@ slots = [
 [sections.left_torso]
 armor = 25
 rear = 7
-engine_at = 8
 slots = [
-    { at = 1, item = "CL.MediumPulseLaser" },
-    { at = "2-5", item = "CL.LRM-20" },
-    { at = 6, item = "Ammo_CL.LRM-20", rounds = 6 },
-    { at = 7, item = "CL.ERSmallLaser" },
+    { at = "3-6", item = "CL.LRM-20" },
+    { at = 7, item = "CL.MediumPulseLaser" },
+    { at = 8, item = "Ammo_CL.LRM-20", rounds = 6 },
+    { at = 9, item = "EndoSteel" },
     { at = "10-11", item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 25
 rear = 7
-engine_at = 8
 slots = [
-    { at = 1, item = "CL.MachineGun" },
-    { at = 2, item = "Ammo_CL.MachineGun", rounds = 200 },
     { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "Ammo_CL.LRM-20", rounds = 6 },
-    { at = "10-11", item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = 7, item = "CL.MachineGun" },
+    { at = 8, item = "Ammo_CL.LRM-20", rounds = 6 },
+    { at = 9, item = "Ammo_CL.MachineGun", rounds = 200 },
+    { at = 10, item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

@@ -2,8 +2,12 @@ name = "Mantis"
 class = "vtol"
 movement = "vtol"
 tons = 15
-walk_mp = 17
+walk_mp = 11
 cargo_space = 0
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 70
 
 [sections.left_side]
 armor = 8

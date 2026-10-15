@@ -2,14 +2,16 @@ name = "Wolfhound"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 9
-heat_sinks = 24
+walk_mp = 6
+heat_sinks = 12
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "light"
+engine_rating = 210
 structure = "endo_steel"
 heat_sinks = "double"
 

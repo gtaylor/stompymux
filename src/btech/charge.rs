@@ -252,7 +252,10 @@ fn charge_profile_for(
         tons.div_ceil(10)
     } else {
         charge_damage(tons, (rules.distance as u32).max(1))?
-    } + u16::from(specialist);
+    } + u16::from(specialist)
+        // Each working torso spike cluster adds two points (Tactical Operations: Advanced
+        // Units & Equipment p. 103).
+        + super::spikes::charge_bonus(source)?;
     ensure!(
         inflicted > 0,
         "You have not covered enough ground to charge."
@@ -286,7 +289,10 @@ fn charge_profile_for(
         })
         + i32::from(super::aim::ground_physical_target_modifier(world, victim))
         + i32::from(terrain)
-        + i32::from(super::light_aim::modifier(world, target, true)?);
+        + i32::from(super::light_aim::modifier(world, target, true)?)
+        // A blinded torso-mounted cockpit (Tactical Operations: Advanced Units & Equipment
+        // p. 113).
+        + i32::from(source.blind_cockpit_modifier());
     ensure!(
         target_number <= 12,
         "Charge: BTH {target_number}\tYou choose not to charge."
@@ -314,6 +320,8 @@ struct ChargePackets {
     impacts: Vec<TacticalImpact>,
     experience: Vec<ExperienceAward>,
     experience_messages: Vec<super::DiagnosticMessage>,
+    /// Locations whose spike cluster blunted a packet, in order.
+    spiked: Vec<MechSection>,
 }
 
 /// Apply independently located packets in order, including normal damage/crew/fall cascades.
@@ -332,6 +340,7 @@ fn packets(
     let mut reports = Vec::new();
     let mut experience = Vec::new();
     let mut experience_messages = Vec::new();
+    let mut spiked = Vec::new();
     while damage > 0 {
         let unit = &world.btech.constructed_units()[&id];
         let mut dice = unit.dice.clone();
@@ -340,13 +349,18 @@ fn packets(
             super::resolve_hit(unit, arc, roll, &mut dice)?
         } else {
             Hit {
-                section: table.location(unit.chassis(), arc, dice.d6())?,
+                section: super::hit::d6_location(unit, table, arc, &mut dice)?,
                 rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
             }
         };
         world.btech.constructed.get_mut(&id).unwrap().dice = dice;
-        let amount = damage.min(5);
+        let group = damage.min(5);
+        // A spike cluster where the group lands takes four points off it.
+        let (amount, blunted) = super::spikes::absorb(world, id, hit.section, group)?;
+        if blunted {
+            spiked.push(hit.section);
+        }
         if character
             && let Some(pilot) = world.btech.constructed_units()[&attacker].pilot()
             && let Some(award) = super::physical_experience::award(
@@ -376,12 +390,13 @@ fn packets(
             },
         )?;
         reports.push(report);
-        damage -= amount;
+        damage -= group;
     }
     Ok(ChargePackets {
         impacts: reports,
         experience,
         experience_messages,
+        spiked,
     })
 }
 
@@ -620,6 +635,9 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
                 super::physical::participant_fall_rules(world, target, rules.physical.fall);
             let attacker_rules =
                 super::physical::participant_fall_rules(world, attacker, rules.physical.fall);
+            // A charger with torso spikes drives them home, and risks losing them.
+            let charged_with_spikes =
+                world.btech.constructed_units()[&attacker].torso_spike_clusters()? > 0;
             let target_packets = packets(
                 world,
                 target,
@@ -630,6 +648,19 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
                 (attacker, character),
             )?;
             report.target_impacts = target_packets.impacts;
+            // The target's spikes wound the charger's center torso.
+            let backlash = if target_packets.spiked.is_empty() {
+                Vec::new()
+            } else {
+                super::spikes::backlash(
+                    world,
+                    attacker,
+                    &[MechSection::CenterTorso],
+                    attacker_rules,
+                    character,
+                    &mut report.notices,
+                )?
+            };
             report.experience = target_packets.experience;
             report.experience_messages = target_packets.experience_messages;
             report.received_damage = recoil_damage(recoil_tons);
@@ -644,7 +675,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
                 .heading;
             let recoil_arc = HitArc::from_bearing(range.bearing.unwrap_or(180.0), heading)?;
             report.recoil_arc = Some(recoil_arc);
-            report.attacker_impacts = packets(
+            let recoil = packets(
                 world,
                 attacker,
                 report.received_damage,
@@ -652,8 +683,11 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
                 HitTable::Weapon,
                 attacker_rules,
                 (attacker, character),
-            )?
-            .impacts;
+            )?;
+            if charged_with_spikes {
+                super::spikes::tear_away(world, attacker, &recoil.spiked, &mut report.notices)?;
+            }
+            report.attacker_impacts = backlash.into_iter().chain(recoil.impacts).collect();
             for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
                 super::piloting::append_feedback(
                     &mut report.pilot_notices,

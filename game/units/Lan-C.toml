@@ -2,13 +2,15 @@ name = "Black Lanner"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 11
-heat_sinks = 26
+walk_mp = 7
+heat_sinks = 13
 radio = 5
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 385
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -17,7 +19,7 @@ armor = 13
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-8", item = "CL.ERMediumLaser" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -25,38 +27,42 @@ armor = 13
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "CL.StreakSRM-6" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = 5, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "6-7", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 16
 rear = 5
 slots = [
-    { at = "10-12", item = "FerroFibrous" },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-11", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 16
 rear = 5
 slots = [
-    { at = 3, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "3-5", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 26
+armor = 25
 rear = 7
+slots = [
+    { at = "11-12", item = "Masc" },
+]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = "5-6", item = "FerroFibrous" },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = "5-6", item = "EndoSteel" },
+    { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.head]

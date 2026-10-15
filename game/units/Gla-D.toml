@@ -2,14 +2,15 @@ name = "Gladiator"
 class = "mech"
 movement = "biped"
 tons = 95
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 38
-specials = ["Masc"]
+heat_sinks = 19
+specials = ["OmniMech_Tech", "Masc"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 380
 armor = "ferro_fibrous"
 
 [sections.left_arm]
@@ -17,17 +18,17 @@ armor = 32
 slots = [
     { at = "5-6", item = "CL.SRM-6" },
     { at = "7-9", item = "Ammo_CL.SRM-6", rounds = 15 },
-    { at = 12, item = "FerroFibrous" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 32
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.LargePulseLaser" },
-    { at = "6-8", item = "CL.MediumPulseLaser" },
-    { at = "9-11", item = "CL.SmallPulseLaser" },
-    { at = 12, item = "FerroFibrous" },
+    { at = "3-4", item = "CL.LargePulseLaser" },
+    { at = "5-7", item = "CL.MediumPulseLaser" },
+    { at = "8-10", item = "CL.SmallPulseLaser" },
+    { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -35,19 +36,16 @@ armor = 20
 rear = 10
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = 5, item = "Masc" },
-    { at = 6, item = "CL.Flamer" },
-    { at = "7-8", item = "HeatSink" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = 5, item = "CL.ERSmallLaser" },
+    { at = "6-9", item = "Masc" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = 3, item = "Masc" },
-    { at = "4-5", item = "CL.SmallPulseLaser" },
-    { at = "6-9", item = "HeatSink" },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-10", item = "CL.SmallPulseLaser" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 
@@ -55,7 +53,7 @@ slots = [
 armor = 37
 rear = 9
 slots = [
-    { at = "11-12", item = "Masc" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.left_leg]

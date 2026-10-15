@@ -2,8 +2,8 @@ name = "Daishi"
 class = "mech"
 movement = "biped"
 tons = 100
-walk_mp = 5
-heat_sinks = 40
+walk_mp = 3
+heat_sinks = 20
 radio = 5
 cargo_space = 0
 max_suits = 0
@@ -11,6 +11,7 @@ max_suits = 0
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 300
 
 [sections.left_arm]
 armor = 34

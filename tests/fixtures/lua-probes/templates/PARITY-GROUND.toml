@@ -2,11 +2,13 @@ name = "Parity Ground Vehicle"
 class = "vehicle"
 movement = "track"
 tons = 60
-walk_mp = 4
+walk_mp = 2
 heat_sinks = 10
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 120
 
 [sections.left_side]
 armor = 24

@@ -2,13 +2,15 @@ name = "Mauler"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 5
-heat_sinks = 22
+walk_mp = 3
+heat_sinks = 11
 radio = 4
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 270
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

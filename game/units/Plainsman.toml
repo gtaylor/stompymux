@@ -2,10 +2,12 @@ name = "Plainsman"
 class = "vehicle"
 movement = "hover"
 tons = 35
-walk_mp = 14
+walk_mp = 9
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 140
 
 [sections.left_side]
 armor = 16

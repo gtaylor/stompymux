@@ -2,12 +2,13 @@ name = "Blood Kite"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
+walk_mp = 3
 jump_mp = 3
-heat_sinks = 42
+heat_sinks = 21
 
 [construction]
 tech_base = "clan"
+engine_rating = 255
 structure = "endo_steel"
 
 [sections.left_arm]

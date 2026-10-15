@@ -2,60 +2,55 @@ name = "Stalker"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
-heat_sinks = 32
+walk_mp = 3
+heat_sinks = 16
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine = "light"
+engine_rating = 255
 heat_sinks = "double"
 
 [sections.left_arm]
 armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink" },
-    { at = "6-8", item = "IS.ERPPC" },
-    { at = 9, item = "IS.MediumPulseLaser" },
-    { at = "10-12", item = "HeatSink" },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-11", item = "IS.ERPPC" },
+    { at = 12, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink" },
-    { at = "6-8", item = "IS.ERPPC" },
-    { at = 9, item = "IS.MediumPulseLaser" },
-    { at = "10-12", item = "HeatSink" },
+    { at = "3-8", item = "HeatSink" },
+    { at = "9-11", item = "IS.ERPPC" },
+    { at = 12, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 25
 rear = 7
-engine_slots = 2
 slots = [
     { at = "3-8", item = "HeatSink" },
-    { at = "9-10", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
-    { at = "11-12", item = "IS.ERMediumLaser" },
+    { at = 9, item = "IS.ERMediumLaser" },
+    { at = "10-12", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
 ]
 
 [sections.right_torso]
 armor = 25
 rear = 7
-engine_slots = 1
 slots = [
-    { at = "2-12", item = "IS.HeavyGaussRifle" },
+    { at = 12, item = "IS.ERMediumLaser" },
 ]
 
 [sections.center_torso]
 armor = 36
 rear = 11
-engine_slots = 7
-slots = [
-    { at = 12, item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
-]
 
 [sections.left_leg]
 armor = 25
@@ -65,3 +60,10 @@ armor = 25
 
 [sections.head]
 armor = 9
+
+[[split_mounts]]
+item = "IS.HeavyGaussRifle"
+placements = [
+    { section = "right_torso", at = "3-11" },
+    { section = "center_torso", at = "11-12" },
+]

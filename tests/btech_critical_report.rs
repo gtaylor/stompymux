@@ -11,10 +11,10 @@ fn templates() -> Vec<String> {
         include_str!("../game/units/GOL-1H.toml").into(),
         vehicle.into(),
         vehicle.replace("movement = \"track\"", "movement = \"wheel\""),
-        vehicle.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(vehicle),
         vehicle
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
@@ -24,7 +24,9 @@ async fn fixture(template: UnitTemplate) -> (tempfile::TempDir, Config, World, O
     let (dir, config, mut world) = support::isolated_world().await;
     let id = world.create(&config, "Critical inspection".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    template.create(&mut world, id).unwrap();
+    support::templates::legal_unit(template)
+        .create(&mut world, id)
+        .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     (dir, config, world, id)
@@ -298,19 +300,28 @@ async fn critical_equipment_labels() {
         .get_mut(&10)
         .unwrap();
     missile.modes = vec!["OneShot".into(), "OneShot_Used".into(), "RearMount".into()];
-    template
+    // Artemis IV sits beside its launcher (TechManual p. 206); the displaced jump jet moves
+    // to the left torso.
+    let jet = template
         .sections
-        .get_mut(&MechSection::Head)
+        .get_mut(&MechSection::CenterTorso)
         .unwrap()
         .criticals
         .insert(
-            5,
+            11,
             CriticalDefinition {
                 equipment: "ArtemisIV".into(),
                 data: "11".into(),
                 modes: vec![],
             },
-        );
+        )
+        .unwrap();
+    template
+        .sections
+        .get_mut(&MechSection::LeftTorso)
+        .unwrap()
+        .criticals
+        .insert(2, jet);
     template
         .sections
         .get_mut(&MechSection::RightTorso)
@@ -333,7 +344,7 @@ async fn critical_equipment_labels() {
             .contains("Small Cockpit")
     );
     assert!(
-        battle_critical_status(&world, id, "h")
+        battle_critical_status(&world, id, "ct")
             .unwrap()
             .contains("[Controls Slot 11]")
     );
@@ -351,12 +362,12 @@ async fn critical_equipment_labels() {
         &mut world,
         id,
         CriticalLocation {
-            section: MechSection::Head,
-            slot: 5,
+            section: MechSection::CenterTorso,
+            slot: 11,
         },
     )
     .unwrap();
-    let text = battle_critical_status(&world, id, "h").unwrap();
+    let text = battle_critical_status(&world, id, "ct").unwrap();
     assert!(text.contains("ArtemisIV (Destroyed)"));
     assert!(!text.contains("Controls Slot"));
 

@@ -2,8 +2,12 @@ name = "Assassin"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 11
+walk_mp = 7
 jump_mp = 7
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 280
 
 [sections.left_arm]
 armor = 6

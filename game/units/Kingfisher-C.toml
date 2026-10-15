@@ -2,12 +2,12 @@ name = "Kingfisher"
 class = "mech"
 movement = "biped"
 tons = 90
-walk_mp = 6
-heat_sinks = 50
-specials = ["CL_AMS"]
+walk_mp = 4
+heat_sinks = 25
 
 [construction]
 tech_base = "clan"
+engine_rating = 360
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

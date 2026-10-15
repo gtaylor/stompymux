@@ -2,11 +2,15 @@ name = "MASH Truck"
 class = "vehicle"
 movement = "wheel"
 tons = 35
-walk_mp = 8
+walk_mp = 5
 cargo_space = 10000
 max_suits = 0
 max_ton = 100
 specials = ["Carrier_Tech"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 155
 
 [sections.left_side]
 armor = 16

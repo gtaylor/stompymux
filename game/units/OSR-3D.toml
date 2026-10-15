@@ -2,13 +2,15 @@ name = "Osiris"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 12
+walk_mp = 8
 jump_mp = 4
-heat_sinks = 20
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 240
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"
@@ -36,8 +38,9 @@ rear = 3
 slots = [
     { at = "4-5", item = "JumpJet" },
     { at = 6, item = "IS.MachineGun" },
-    { at = 7, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = "8-12", item = "EndoSteel" },
+    { at = 7, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 8, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "9-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -46,7 +49,7 @@ rear = 3
 slots = [
     { at = "4-5", item = "JumpJet" },
     { at = 6, item = "IS.ERMediumLaser" },
-    { at = 7, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 7, item = "EndoSteel" },
     { at = "8-12", item = "FerroFibrous" },
 ]
 
@@ -70,7 +73,7 @@ slots = [
 ]
 
 [sections.head]
-armor = 8
+armor = 7
 slots = [
     { at = 4, item = "EndoSteel" },
 ]

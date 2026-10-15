@@ -818,6 +818,9 @@ fn publish_physical_consequences(
     if let Some(impact) = &report.impact {
         publish_impact_consequences(scripts, config, impact)?;
     }
+    for impact in &report.spike_backlash {
+        publish_impact_consequences(scripts, config, impact)?;
+    }
     if let Some(fall) = &report.fall {
         publish_fall_consequences(scripts, config, fall)?;
     }

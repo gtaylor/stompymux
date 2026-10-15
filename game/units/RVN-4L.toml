@@ -2,13 +2,15 @@ name = "Raven"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 9
-heat_sinks = 20
+walk_mp = 6
+heat_sinks = 10
 radio = 4
 specials = ["BeagleProbe", "ECM"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 210
 armor = "stealth"
 heat_sinks = "double"
 

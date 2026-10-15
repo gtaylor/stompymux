@@ -1,11 +1,28 @@
-//! Relocated fusion-engine slot layouts, derived mass and damage availability.
+//! Fusion-engine slot layouts, derived mass and damage availability. Engines fill only the
+//! TechManual layouts (TechManual p. 50; Tactical Operations: Advanced Units & Equipment for
+//! XXL engines).
 use stompymux_rs::*;
 
-/// Preserve a complete biped while redistributing engine slots among its three torso sections.
-fn definition(center: u8, left: u8, right: u8) -> MechTemplate {
+/// The engine construction flag each family declares.
+fn flag(engine: Engine) -> &'static str {
+    match engine {
+        Engine::Standard => "",
+        Engine::Xl => "XLEngine_Tech",
+        Engine::Light => "LightEngine_Tech",
+        Engine::Xxl => "XXL_Tech",
+        Engine::Compact => "CompactEngine_Tech",
+    }
+}
+
+/// A complete biped with its engine slots laid out among its three torso sections and the
+/// engine family `engine` declared.
+fn definition(center: u8, left: u8, right: u8, engine: Engine) -> MechTemplate {
     let mut template =
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
-    template.max_speed = 96.75;
+    template.set_walking_mp(6);
+    template
+        .attributes
+        .insert("specials".into(), format!("FlipArms {}", flag(engine)));
     let engine = template.sections[&MechSection::CenterTorso].criticals[&0].clone();
     for (section, count) in [
         (MechSection::CenterTorso, center),
@@ -29,33 +46,20 @@ fn definition(center: u8, left: u8, right: u8) -> MechTemplate {
             layout.criticals.insert(slot, engine.clone());
         }
     }
-    template
+    crate::support::templates::legal(template)
 }
 
-/// Full engine totals and consistent side-torso evidence are required after redistribution.
+/// Each Inner Sphere family fills its own layout and weighs its share of the standard engine.
 #[test]
-fn relocated_engine_families_mass_and_invalid_layouts() {
+fn engine_families_mass_and_invalid_layouts() {
     for (center, left, right, engine, mass) in [
-        (6, 5, 1, Engine::Xl, 4608),
-        (6, 1, 5, Engine::Xl, 4608),
-        (6, 4, 2, Engine::Xxl, 3072),
-        (6, 2, 4, Engine::Xxl, 3072),
-        (8, 2, 0, Engine::Light, 7168),
-        (8, 0, 2, Engine::Light, 7168),
-        (7, 2, 1, Engine::Xl, 4608),
-        (7, 1, 2, Engine::Xl, 4608),
-        (8, 1, 1, Engine::Xl, 4608),
-        (7, 2, 3, Engine::Xl, 4608),
-        (7, 3, 2, Engine::Xl, 4608),
-        (8, 3, 1, Engine::Xl, 4608),
-        (8, 1, 3, Engine::Xl, 4608),
-        (7, 5, 6, Engine::Xxl, 3072),
-        (7, 6, 5, Engine::Xxl, 3072),
-        (8, 4, 6, Engine::Xxl, 3072),
-        (8, 6, 4, Engine::Xxl, 3072),
-        (8, 5, 5, Engine::Xxl, 3072),
+        (6, 0, 0, Engine::Standard, 9216),
+        (3, 0, 0, Engine::Compact, 13824),
+        (6, 3, 3, Engine::Xl, 4608),
+        (6, 2, 2, Engine::Light, 7168),
+        (6, 6, 6, Engine::Xxl, 3072),
     ] {
-        let unit = Mech::from_template(definition(center, left, right)).unwrap();
+        let unit = Mech::from_template(definition(center, left, right, engine)).unwrap();
         assert_eq!(unit.engine().unwrap(), engine);
         assert_eq!(unit.mass().unwrap().engine, mass);
         let loadout = unit.loadout().unwrap();
@@ -74,24 +78,27 @@ fn relocated_engine_families_mass_and_invalid_layouts() {
             assert_eq!(damaged.is_destroyed(), index == 2);
         }
     }
-    for (center, left, right) in [
-        (7, 2, 0),
-        (8, 1, 0),
-        (8, 2, 2),
-        (8, 3, 0),
-        (6, 6, 5),
-        (8, 4, 5),
+    // Relocated slots, partial installations and a family the slots do not match are refused.
+    for (center, left, right, engine) in [
+        (6, 5, 1, Engine::Xl),
+        (6, 4, 2, Engine::Xxl),
+        (8, 2, 0, Engine::Light),
+        (7, 2, 1, Engine::Xl),
+        (8, 5, 5, Engine::Xxl),
+        (7, 2, 0, Engine::Light),
+        (6, 2, 2, Engine::Xl),
+        (6, 3, 3, Engine::Standard),
     ] {
         assert!(
-            Mech::from_template(definition(center, left, right)).is_err(),
-            "{center}/{left}/{right}"
+            Mech::from_template(definition(center, left, right, engine)).is_err(),
+            "{center}/{left}/{right} {engine:?}"
         );
     }
 }
 
-/// Existing Heavy Gauss assets preserve their installed engine identity and weapon loadout.
+/// The Cestus CES-4S record sheet fields a light engine beside its heavy Gauss rifle.
 #[test]
-fn relocated_cestus_constructs_without_asset_changes() {
+fn cestus_constructs_with_its_published_engine() {
     let template =
         MechTemplate::parse("CES-4S", include_str!("../game/units/CES-4S.toml")).unwrap();
     let unit = Mech::from_template(template).unwrap();
@@ -118,23 +125,20 @@ fn relocated_cestus_constructs_without_asset_changes() {
 fn clan_engine_layouts_mass_and_side_loss() {
     for (center, left, right, engine, mass) in [
         (6, 0, 0, Engine::Standard, 9216),
-        (3, 0, 0, Engine::Compact, 13824),
         (6, 2, 2, Engine::Xl, 4608),
-        (8, 2, 0, Engine::Xl, 4608),
-        (7, 1, 2, Engine::Xl, 4608),
         (6, 4, 4, Engine::Xxl, 3072),
     ] {
-        let mut template = definition(center, left, right);
+        let mut template = definition(center, left, right, engine);
         template
             .attributes
-            .insert("specials".into(), "Clan FlipArms".into());
-        template.heat_sinks = 20;
+            .insert("specials".into(), format!("Clan FlipArms {}", flag(engine)));
+        template.heat_sinks = 10;
         for section in template.sections.values_mut() {
             section
                 .criticals
                 .retain(|_, part| part.equipment != "HeatSink");
         }
-        let mut unit = Mech::from_template(template).unwrap();
+        let mut unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
         assert_eq!(unit.engine().unwrap(), engine);
         assert_eq!(unit.mass().unwrap().engine, mass);
         if left > 0 {
@@ -144,54 +148,66 @@ fn clan_engine_layouts_mass_and_side_loss() {
             assert_eq!(unit.engine().unwrap(), engine);
         }
     }
-    for (center, left, right) in [(8, 2, 4), (7, 3, 4), (8, 3, 3)] {
-        let mut template = definition(center, left, right);
-        template.attributes.insert("specials".into(), "Clan".into());
-        template.heat_sinks = 20;
+    // Clan engines have no compact or light family and no relocated layouts.
+    for (center, left, right, engine) in [
+        (3, 0, 0, Engine::Compact),
+        (8, 2, 0, Engine::Xl),
+        (7, 1, 2, Engine::Xl),
+        (6, 3, 3, Engine::Xl),
+    ] {
+        let mut template = definition(center, left, right, engine);
+        template
+            .attributes
+            .insert("specials".into(), format!("Clan FlipArms {}", flag(engine)));
+        template.heat_sinks = 10;
         for section in template.sections.values_mut() {
             section
                 .criticals
                 .retain(|_, part| part.equipment != "HeatSink");
         }
-        assert!(Mech::from_template(template).is_err());
+        assert!(
+            Mech::from_template(crate::support::templates::legal(template)).is_err(),
+            "{center}/{left}/{right}"
+        );
     }
 }
 
 /// Engine shielding changes internal defensive value independently of installed weapon offense.
 #[test]
 fn battle_value_engine_factors() {
-    for (center, left, right, defensive) in [
-        (6, 0, 0, 324.35),
-        (8, 2, 0, 296.08),
-        (8, 3, 1, 267.8),
-        (7, 2, 1, 267.8),
-        (7, 3, 2, 267.8),
-        (7, 5, 6, 267.8),
+    for (center, left, right, engine, defensive) in [
+        (6, 0, 0, Engine::Standard, 324.35),
+        (6, 2, 2, Engine::Light, 296.075),
+        (6, 3, 3, Engine::Xl, 267.8),
+        // An Inner Sphere XXL engine keeps a quarter of the structure value (TO:AUE p. 193).
+        (6, 6, 6, Engine::Xxl, 239.525),
     ] {
-        let unit = Mech::from_template(definition(center, left, right)).unwrap();
-        let value = unit.battle_value(None).unwrap();
-        assert_eq!(value.offensive, 196.0);
+        let unit = Mech::from_template(definition(center, left, right, engine)).unwrap();
+        let value = unit.battle_value().unwrap();
+        // Four medium lasers and 35 tons at 9 running and 4 jumping MP: the center torso jump
+        // jet made room for the engine.
+        assert!((value.offensive - 385.44).abs() < 0.0001, "{value:?}");
         assert!((value.defensive - defensive).abs() < 0.0001, "{value:?}");
     }
 }
 
-/// Asymmetric complete Barghest engines use characterized mass/BV precedence and retain slot damage.
+/// The Barghest quads construct with their published XL engines and lose them to three hits.
 #[test]
-fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
-    for (source, expected) in [
-        (include_str!("../game/units/BGS-1T.toml"), Engine::Xl),
-        (include_str!("../game/units/BGS-2T.toml"), Engine::Xxl),
+fn quad_engines_use_their_family_and_live_damage() {
+    for source in [
+        include_str!("../game/units/BGS-1T.toml"),
+        include_str!("../game/units/BGS-2T.toml"),
     ] {
         let template = MechTemplate::parse("test", source).unwrap();
         assert!(check_battle_template(&template).constructible);
         let mut unit = Mech::from_template(template).unwrap();
-        assert_eq!(unit.engine().unwrap(), expected);
+        assert_eq!(unit.engine().unwrap(), Engine::Xl);
         let original_mass = unit.mass().unwrap();
         assert!(original_mass.engine > 0);
-        let original_bv = unit.battle_value(None).unwrap();
+        let original_bv = unit.battle_value().unwrap();
         let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(restored.mass().unwrap(), original_mass);
-        assert_eq!(restored.battle_value(None).unwrap(), original_bv);
+        assert_eq!(restored.battle_value().unwrap(), original_bv);
         let slots: Vec<_> = unit
             .loadout()
             .unwrap()
@@ -204,10 +220,12 @@ fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
         for (i, slot) in slots.into_iter().take(3).enumerate() {
             unit.destroy_critical(slot).unwrap();
             assert_eq!(unit.system_hits(System::Engine), i as u8 + 1);
-            assert_eq!(unit.engine().unwrap(), expected);
+            assert_eq!(unit.engine().unwrap(), Engine::Xl);
         }
         assert!(unit.is_destroyed());
     }
+    // The Golem GOL-3S splits its LB 20-X between torsos, never into a leg (TechManual
+    // p. 47), and an engine slot outside the torsos is refused.
     let mut template =
         MechTemplate::parse("GOL-3S", include_str!("../game/units/GOL-3S.toml")).unwrap();
     let unit = Mech::from_template(template.clone()).unwrap();
@@ -219,10 +237,10 @@ fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
         .find(|mount| mount.weapon == Weapon::Lbx20)
         .unwrap();
     assert_eq!(cannon.criticals.len(), 11);
-    assert_eq!(
-        cannon.criticals.last().unwrap().section,
-        MechSection::LeftLeg
-    );
+    assert!(cannon.criticals.iter().all(|location| !matches!(
+        location.section,
+        MechSection::LeftLeg | MechSection::RightLeg
+    )));
     let engine = template.sections[&MechSection::CenterTorso].criticals[&0].clone();
     template
         .sections
@@ -238,21 +256,21 @@ fn asymmetric_quad_engines_use_effective_family_and_live_damage() {
     );
 }
 
-/// Mixed side evidence retains authored equipment and uses XL mass and combat behavior.
+/// Record-sheet light and XL engines keep their authored equipment and saved damage.
 #[test]
-fn mixed_relocated_asset_engines_construct_and_preserve_saved_damage() {
-    for source in [
-        include_str!("../game/units/AXM-3S.toml"),
-        include_str!("../game/units/HBK-5S.toml"),
-        include_str!("../game/units/MAD-4S.toml"),
-        include_str!("../game/units/STK-8S.toml"),
-        include_str!("../game/units/BTZ-3F.toml"),
+fn published_engines_construct_and_preserve_saved_damage() {
+    for (source, engine) in [
+        (include_str!("../game/units/AXM-3S.toml"), Engine::Light),
+        (include_str!("../game/units/HBK-5S.toml"), Engine::Light),
+        (include_str!("../game/units/MAD-4S.toml"), Engine::Light),
+        (include_str!("../game/units/STK-8S.toml"), Engine::Light),
+        (include_str!("../game/units/BTZ-3F.toml"), Engine::Xl),
     ] {
         let definition = MechTemplate::parse("test", source).unwrap();
         assert!(check_battle_template(&definition).constructible);
         let mut unit = Mech::from_template(definition.clone()).unwrap();
         assert_eq!(unit.definition(), &definition);
-        assert_eq!(unit.engine().unwrap(), Engine::Xl);
+        assert_eq!(unit.engine().unwrap(), engine);
         let mass = unit.mass().unwrap();
         let slots: Vec<_> = unit
             .loadout()
@@ -265,7 +283,7 @@ fn mixed_relocated_asset_engines_construct_and_preserve_saved_damage() {
         for (index, slot) in slots.into_iter().take(3).enumerate() {
             unit.destroy_critical(slot).unwrap();
             assert_eq!(unit.system_hits(System::Engine), index as u8 + 1);
-            assert_eq!(unit.engine().unwrap(), Engine::Xl);
+            assert_eq!(unit.engine().unwrap(), engine);
             assert_eq!(unit.mass().unwrap().engine, mass.engine);
         }
         assert!(unit.is_destroyed());
@@ -276,20 +294,19 @@ fn mixed_relocated_asset_engines_construct_and_preserve_saved_damage() {
 
 use crate::support;
 
-/// Cockpit naming preserves display precedence without changing the effective mass/combat family.
+/// The cockpit names each engine family.
 #[tokio::test]
-async fn critical_report_mixed_engine_names() {
-    for (center, left, right, name) in [
-        (7, 2, 1, "Engine (Light)"),
-        (6, 4, 2, "Engine (Light)"),
-        (6, 5, 1, "Engine (XXL)"),
-        (3, 0, 0, "Engine (Compact)"),
-        (6, 3, 3, "Engine (XL)"),
-        (6, 0, 0, "Engine"),
+async fn critical_report_engine_names() {
+    for (center, left, right, engine, name) in [
+        (6, 2, 2, Engine::Light, "Engine (Light)"),
+        (6, 6, 6, Engine::Xxl, "Engine (XXL)"),
+        (3, 0, 0, Engine::Compact, "Engine (Compact)"),
+        (6, 3, 3, Engine::Xl, "Engine (XL)"),
+        (6, 0, 0, Engine::Standard, "Engine"),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;
         let id = world.create(&config, "Engine report".into(), Kind::Thing);
-        create_battle_unit(&mut world, id, definition(center, left, right)).unwrap();
+        create_battle_unit(&mut world, id, definition(center, left, right, engine)).unwrap();
         let report = battle_critical_report(&world, id, "ct").unwrap();
         assert_eq!(
             report

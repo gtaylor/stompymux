@@ -1742,7 +1742,8 @@
 // lua-types-end
 
 // lua-types-begin btech 00482
-//|---Read offensive, defensive and total Battle Value.
+//|---Read offensive, defensive and total Battle Value (TechManual BV 2.0). Current armor and
+//|---internal structure count; installed equipment and movement keep their design value.
 //|---@param unit DbRef|Object
 //|---@return BattleValue value
 //|function btech_unit.battle_value(unit) end

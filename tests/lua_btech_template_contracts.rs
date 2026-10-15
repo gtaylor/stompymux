@@ -134,8 +134,9 @@ async fn loadable_template_projects_exact_reference_rows() {
       assert(engine.rating==300 and engine.suspension_factor==0,'engine')
       assert(btech.template.base_cost('parity')==8356250,'cost')
       local bv=btech.template.battle_value('parity')
-      assert(math.abs(bv.total-849.20001220703125)<0.000001,'total')
-      assert(bv.offensive==251 and math.abs(bv.defensive-598.20001220703125)<0.000001,'bv')
+      -- 116 armor, 114 structure and a 37.5 gyro at +2 (1.2); one PPC and 75 tons at 1.12.
+      assert(bv.total==879,'total '..bv.total..' '..bv.offensive..' '..bv.defensive)
+      assert(math.abs(bv.offensive-281.12)<0.000001 and math.abs(bv.defensive-598.2)<0.000001,'bv')
       local armor=btech.template.armor('parity')
       assert(armor.armor.current==104 and armor.internal.current==114 and armor.rear_armor.current==12,'armor all')
       assert(armor.section==nil,'no section field when aggregated')

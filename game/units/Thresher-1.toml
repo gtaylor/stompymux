@@ -2,13 +2,14 @@ name = "Thresher"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 26
+heat_sinks = 13
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 300
 structure = "endo_steel"
 
 [sections.left_arm]

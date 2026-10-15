@@ -2,11 +2,13 @@ name = "Falcon_Hovertruck"
 class = "vehicle"
 movement = "hover"
 tons = 15
-walk_mp = 14
+walk_mp = 9
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 50
 
 [sections.left_side]
 armor = 12

@@ -21,6 +21,12 @@ pub(super) struct WeaponGroupRequest {
     /// Spotter-directed indirect fire, which Artemis and Narc guidance do not improve (Total
     /// Warfare pp. 130, 139).
     pub indirect: bool,
+    /// An MRM "Apollo" fire-control system guided the launcher: -1 on the Cluster Hits roll,
+    /// never below 2 (Tactical Operations: Advanced Units & Equipment p. 143).
+    pub apollo: bool,
+    /// Machine guns firing together as a machine gun array: the attack rolls on that column
+    /// of the Cluster Hits Table and every hit lands in one location (Total Warfare p. 137).
+    pub array: Option<u8>,
 }
 
 /// Shared cluster draw and ordered damage packet sizes, before cover and terrain absorption.
@@ -33,6 +39,8 @@ pub(super) struct WeaponGroups {
     pub missiles_before_defense: Option<u8>,
     /// Hits an anti-missile engagement removed from the Cluster Hits result.
     pub missiles_intercepted: Option<u8>,
+    /// Every packet lands in the first packet's location, as a machine gun array's hits do.
+    pub single_location: bool,
 }
 
 /// Consume candidate dice and size packets without assigning hit locations or applying damage.
@@ -53,26 +61,66 @@ pub(super) fn roll_weapon_groups(
         artemis_v,
         ams_engaged,
         indirect,
+        apollo,
+        array,
     } = request;
+    let array = array.filter(|guns| *guns >= 2);
     let burst = fire_mode.rounds_per_cycle() > 1;
-    let cluster_roll = (burst || weapon.profile().missiles > 0 || mode == AmmunitionMode::Cluster)
-        .then(|| {
-            if fire_mode == FireMode::Hotload {
-                let first = dice.d6();
-                let second = dice.d6();
-                let third = dice.d6();
-                first + second + third - first.max(second).max(third)
-            } else {
-                dice.generic_roll()
-            }
-        });
-    let missile_damage = if mode == AmmunitionMode::Cluster {
+    let cluster_roll = (burst
+        || weapon.profile().missiles > 0
+        || weapon.is_hag()
+        || mode == AmmunitionMode::Cluster
+        || array.is_some())
+    .then(|| {
+        if fire_mode == FireMode::Hotload {
+            let first = dice.d6();
+            let second = dice.d6();
+            let third = dice.d6();
+            first + second + third - first.max(second).max(third)
+        } else {
+            dice.generic_roll()
+        }
+    });
+    // An Apollo system takes one from the roll the table reads, never below 2; the reported
+    // roll stays the one the dice made.
+    let table_roll = cluster_roll.map(|roll| {
+        if apollo {
+            roll.saturating_sub(1).max(2)
+        } else {
+            roll
+        }
+    });
+    let missile_damage = if mode == AmmunitionMode::Cluster || weapon.is_hag() {
         1
     } else {
         weapon.profile_for_ammunition(mode).damage
     };
+    // A plasma cannon deals 3D6 to a target that does not track heat, in five-point groups
+    // (Total Warfare p. 139); heat-tracking targets take its heat instead of these packets.
+    let plasma = (weapon == Weapon::ClanPlasmaCannon).then(|| dice.d6() + dice.d6() + dice.d6());
     let resolve = |ams_engaged: bool| -> Result<Vec<u16>> {
-        let mut damage = if let Some(damage) = gatling_damage {
+        let mut damage = if let Some(guns) = array {
+            // A glancing blow shifts a cluster roll down four, never below 2 (Tactical
+            // Operations p. 79).
+            let roll = table_roll.expect("array cluster roll");
+            let roll = if glancing {
+                roll.saturating_sub(4).max(2)
+            } else {
+                roll
+            };
+            let hits = super::salvo::cluster_hits(guns, roll)?;
+            vec![u16::from(weapon.profile().damage); usize::from(hits)]
+        } else if let Some(total) = plasma {
+            let total = if glancing { total / 2 } else { total };
+            let mut remaining = u16::from(total);
+            let mut groups = Vec::new();
+            while remaining > 0 {
+                let group = remaining.min(5);
+                groups.push(group);
+                remaining -= group;
+            }
+            groups
+        } else if let Some(damage) = gatling_damage {
             vec![if glancing {
                 u16::from(damage) / 2
             } else {
@@ -91,7 +139,7 @@ pub(super) fn roll_weapon_groups(
             };
             conventional.damage_groups_for_guided_hit(super::GuidedHit {
                 mode: AmmunitionMode::Normal,
-                cluster_roll,
+                cluster_roll: table_roll,
                 glancing,
                 distance,
                 artemis_v: false,
@@ -99,10 +147,10 @@ pub(super) fn roll_weapon_groups(
                 ams_engaged,
             })?
         } else if weapon.is_rotary() && burst {
-            weapon.rotary_damage_groups(fire_mode, cluster_roll.unwrap(), glancing)?
+            weapon.rotary_damage_groups(fire_mode, table_roll.unwrap(), glancing)?
         } else if burst {
             weapon
-                .double_shot_damage_groups(cluster_roll.unwrap(), glancing)?
+                .double_shot_damage_groups(table_roll.unwrap(), glancing)?
                 .into_iter()
                 .map(|damage| mode.armored_damage(damage))
                 .collect()
@@ -127,7 +175,7 @@ pub(super) fn roll_weapon_groups(
                 artemis_v && guided_mode == mode && mode.munition() == AmmunitionMode::Artemis;
             weapon.damage_groups_for_guided_hit(super::GuidedHit {
                 mode: guided_mode,
-                cluster_roll,
+                cluster_roll: table_roll,
                 glancing,
                 distance,
                 artemis_v,
@@ -161,6 +209,7 @@ pub(super) fn roll_weapon_groups(
         damage,
         missiles_before_defense,
         missiles_intercepted,
+        single_location: array.is_some(),
     })
 }
 
@@ -220,6 +269,8 @@ mod tests {
             artemis_v: false,
             ams_engaged: false,
             indirect: false,
+            apollo: false,
+            array: None,
         }
     }
 
@@ -308,6 +359,37 @@ mod tests {
                     FireMode::Normal
                 ))
             );
+        }
+    }
+
+    /// An MRM "Apollo" system subtracts one from the Cluster Hits roll, never below 2
+    /// (Tactical Operations: Advanced Units & Equipment p. 143); the dice stream and the
+    /// reported roll are unchanged.
+    #[test]
+    fn apollo_takes_one_from_the_cluster_roll() {
+        for seed in 0..=255 {
+            let mut dice = Dice::seeded([seed; 32]);
+            let plain = roll_weapon_groups(
+                request(Weapon::Mrm20, AmmunitionMode::Normal, FireMode::Normal),
+                &mut dice,
+            )
+            .unwrap();
+            let mut guided_dice = Dice::seeded([seed; 32]);
+            let guided = roll_weapon_groups(
+                WeaponGroupRequest {
+                    apollo: true,
+                    ..request(Weapon::Mrm20, AmmunitionMode::Normal, FireMode::Normal)
+                },
+                &mut guided_dice,
+            )
+            .unwrap();
+            assert_eq!(dice, guided_dice);
+            let roll = plain.cluster_roll.unwrap();
+            assert_eq!(guided.cluster_roll, Some(roll));
+            let expected = Weapon::Mrm20
+                .damage_groups(Some(roll.saturating_sub(1).max(2)))
+                .unwrap();
+            assert_eq!(guided.damage, expected, "roll {roll}");
         }
     }
 
@@ -482,6 +564,8 @@ mod streak_lrm_tests {
                                 artemis_v: false,
                                 ams_engaged: false,
                                 indirect: false,
+                                apollo: false,
+                                array: None,
                             },
                             &mut dice,
                         )

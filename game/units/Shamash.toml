@@ -2,23 +2,18 @@ name = "Shamash"
 class = "vehicle"
 movement = "hover"
 tons = 11
-walk_mp = 20
+walk_mp = 13
 
 [construction]
 tech_base = "clan"
+engine_rating = 60
 armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 7
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 7
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 9

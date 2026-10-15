@@ -2,12 +2,14 @@ name = "Victor"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
 heat_sinks = 15
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 320
 structure = "endo_steel"
 
 [sections.left_arm]

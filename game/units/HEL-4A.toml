@@ -2,12 +2,14 @@ name = "Helios"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 6
+walk_mp = 4
 jump_mp = 4
-heat_sinks = 30
+heat_sinks = 15
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 240
 structure = "endo_steel"
 heat_sinks = "double"
 

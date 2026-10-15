@@ -2,13 +2,14 @@ name = "Canis"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 5
+walk_mp = 3
 jump_mp = 3
-heat_sinks = 32
+heat_sinks = 16
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 240
 structure = "endo_steel"
 
 [sections.left_arm]

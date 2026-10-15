@@ -38,8 +38,7 @@ async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassi
         support::seed_object_dice(&mut world, occupant, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, occupant, interior, 0, 0).unwrap();
         let id = world.create(&config, "Traveler".into(), Kind::Thing);
-        UnitTemplate::parse("test", source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
             .create(&mut world, id)
             .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);

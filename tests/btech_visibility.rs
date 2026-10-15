@@ -11,10 +11,10 @@ fn templates() -> Vec<String> {
         include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
@@ -48,8 +48,7 @@ async fn fixture(
     for (index, source) in [observer, target].into_iter().enumerate() {
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("test", source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
             .create(&mut world, id)
             .unwrap();
         place_battle_unit(&mut world, id, map, 0, if index == 0 { 2 } else { 0 }).unwrap();

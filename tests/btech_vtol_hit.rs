@@ -27,7 +27,7 @@ fn vtol_locations_follow_total_warfare_and_tactical_operations() {
         for turret in [false, true] {
             let unit = kestrel(proof, turret);
             // Rows 2–12: face, rotors, turret (or rotors), 5/9 side mappings, rotors (TW p. 196,
-            // TO:AR p. 193).
+            // TO:AR p. 193). A chin turret takes row 4 alone (TO:AUE p. 160).
             for (arc, row) in [
                 (HitArc::Front, "FOTRFFFLOOO"),
                 (HitArc::Rear, "BOTLBBBROOO"),
@@ -80,6 +80,21 @@ fn invalid_rolls_and_ground_vehicles_are_rejected() {
     .unwrap();
     assert!(ground.vtol_hit(HitArc::Front, 7).is_err());
     assert!(ground.vtol_hit_location(HitArc::Front, 7).is_err());
+}
+
+/// Destroying all of a chin turret's internal structure destroys the VTOL as normal, and the
+/// turret's criticals use the vehicle turret column (Tactical Operations: Advanced Units &
+/// Equipment p. 160).
+#[test]
+fn a_destroyed_chin_turret_destroys_the_vtol() {
+    let mut unit = kestrel(false, true);
+    let internal = unit.sections()[&VehicleSection::Turret].internal;
+    unit.damage_phase(VehicleSection::Turret, internal - 1, DamagePhase::Internal)
+        .unwrap();
+    assert!(!unit.is_destroyed());
+    unit.damage_phase(VehicleSection::Turret, 1, DamagePhase::Internal)
+        .unwrap();
+    assert!(unit.is_destroyed());
 }
 
 #[test]

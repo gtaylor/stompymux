@@ -2,14 +2,16 @@ name = "Marauder II"
 class = "mech"
 movement = "biped"
 tons = 100
-walk_mp = 5
+walk_mp = 3
 jump_mp = 3
 heat_sinks = 29
 radio = 4
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 300
 
 [sections.left_arm]
 armor = 34

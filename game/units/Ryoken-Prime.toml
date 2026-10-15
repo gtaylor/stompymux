@@ -2,12 +2,13 @@ name = "Ryoken"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 9
-heat_sinks = 44
+walk_mp = 6
+heat_sinks = 22
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 330
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

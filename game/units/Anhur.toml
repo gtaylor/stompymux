@@ -2,7 +2,7 @@ name = "Anhur"
 class = "vtol"
 movement = "vtol"
 tons = 30
-walk_mp = 12
+walk_mp = 8
 heat_sinks = 13
 radio = 5
 cargo_space = 700
@@ -10,18 +10,14 @@ specials = ["CargoTech"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 100
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 14
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 14
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 16

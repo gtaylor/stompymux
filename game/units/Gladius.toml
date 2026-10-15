@@ -2,10 +2,12 @@ name = "Gladius"
 class = "vehicle"
 movement = "hover"
 tons = 40
-walk_mp = 12
+walk_mp = 8
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 145
 
 [sections.left_side]
 armor = 24

@@ -1,19 +1,22 @@
 //! The to-hit number of a TAG designation, which Total Warfare p. 142 resolves as a standard
-//! weapon attack: gunnery, TAG's own 5/9/15 range brackets, attacker and target movement,
+//! weapon attack: gunnery, the designator's range brackets (TAG 5/9/15, light TAG 3/6/9), attacker and target movement,
 //! heat, sensor and control damage, the multiple-targets rule, cover and light. TAG has no
 //! ammunition, mounting-section or targeting-computer terms.
-use super::{AimModifiers, AimRules, RangeBracket, StealthRange, System, WeaponRange};
+use super::{AimModifiers, AimRules, RangeBracket, StealthRange, WeaponRange};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
 /// TAG's short, medium and long range in hexes (TW p. 142); it has no minimum range.
 pub const TAG_RANGES: [u8; 3] = [5, 9, 15];
 
-/// TAG's range bracket at `distance`, or `None` beyond fifteen hexes. Reach is the raw
-/// distance and the brackets use the same rounding as weapon ranges.
-pub(super) fn tag_range(distance: f64) -> Result<Option<WeaponRange>> {
+/// Light TAG's short, medium and long range in hexes (TechManual p. 343).
+pub const LIGHT_TAG_RANGES: [u8; 3] = [3, 6, 9];
+
+/// A designator's range bracket at `distance`, or `None` beyond its long range. Reach is the
+/// raw distance and the brackets use the same rounding as weapon ranges.
+pub(super) fn tag_range(distance: f64, ranges: [u8; 3]) -> Result<Option<WeaponRange>> {
     ensure!(distance.is_finite() && distance >= 0.0, "Invalid TAG range");
-    let [short, medium, long] = TAG_RANGES;
+    let [short, medium, long] = ranges;
     if distance > f64::from(long) {
         return Ok(None);
     }
@@ -67,11 +70,7 @@ pub fn tag_aim_modifiers(
             (
                 mech.attacker_movement_modifier(),
                 mech.heat().to_hit_modifier(),
-                match mech.system_hits(System::Sensors) {
-                    0 => 0,
-                    1 => 2,
-                    _ => 75,
-                },
+                mech.sensor_aim_modifier(),
                 0,
                 mech.has_beacon(super::BeaconKind::Haywire),
             )
@@ -81,7 +80,8 @@ pub fn tag_aim_modifiers(
         gunnery,
         distance,
         network_range: None,
-        range: tag_range(distance)?.map(|range| range.against_stealth(defender.concealed)),
+        range: tag_range(distance, super::tag::unit_ranges(world, shooter)?)?
+            .map(|range| range.against_stealth(defender.concealed)),
         attacker_movement,
         spotting: u8::from(super::spotter::spotting_for_others(world, shooter)),
         target_movement: movement.total(),
@@ -122,14 +122,24 @@ mod tests {
             (15.0, Some((RangeBracket::Long, 4))),
             (15.01, None),
         ] {
-            let range = tag_range(distance).unwrap();
+            let range = tag_range(distance, TAG_RANGES).unwrap();
             assert_eq!(
                 range.map(|range| (range.bracket, range.modifier)),
                 expected,
                 "{distance}"
             );
         }
-        assert!(tag_range(-1.0).is_err());
-        assert!(tag_range(f64::NAN).is_err());
+        assert!(tag_range(-1.0, TAG_RANGES).is_err());
+        assert!(tag_range(f64::NAN, TAG_RANGES).is_err());
+        // Light TAG reaches 3/6/9 (TechManual p. 343).
+        for (distance, expected) in [
+            (3.0, Some(RangeBracket::Short)),
+            (6.0, Some(RangeBracket::Medium)),
+            (9.0, Some(RangeBracket::Long)),
+            (9.01, None),
+        ] {
+            let range = tag_range(distance, LIGHT_TAG_RANGES).unwrap();
+            assert_eq!(range.map(|range| range.bracket), expected, "{distance}");
+        }
     }
 }

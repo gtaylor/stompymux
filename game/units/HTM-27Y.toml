@@ -2,13 +2,15 @@ name = "Hatamoto-Mizo"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 22
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 320
 structure = "endo_steel"
 
 [sections.left_arm]

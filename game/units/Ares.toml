@@ -2,25 +2,20 @@ name = "Ares"
 class = "vehicle"
 movement = "track"
 tons = 40
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 12
 specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 200
 armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 17
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 17
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 19

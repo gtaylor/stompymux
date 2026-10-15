@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                VehicleTemplate::parse("test", vehicle).unwrap(),
+                crate::support::templates::fitted(VehicleTemplate::parse("test", vehicle).unwrap()),
             )
             .unwrap();
         }
@@ -109,11 +109,12 @@ fn install_test_ams_at(
     part.equipment = format!("Ammo_{}", weapon.name());
     part.data = weapon.profile().ammunition_per_ton.to_string();
     arm.criticals.insert(5, part);
-    let constructed = Mech::from_template(definition.clone()).unwrap();
+    let constructed =
+        Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
     world
         .btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"] = serde_json::to_value(constructed.ammunition()).unwrap();
             // Face the shooter one hex south so the arm-mounted defense covers the attack
             // direction (Total Warfare p. 129).
@@ -382,7 +383,7 @@ async fn vehicle_shots_observe_existing_angel_fields_without_copying_field_rules
         }
         base.btech
             .rewrite_unit_record(emitter, |record| {
-                record["definition"] = serde_json::to_value(definition).unwrap();
+                crate::support::templates::set_record_definition(record, definition);
                 record["signature"]["team"] = serde_json::json!(1);
             })
             .unwrap();
@@ -683,7 +684,10 @@ fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: Weapon) {
             )
             .replace("IS.AC/20", weapon.name())
     };
-    let unit = Vehicle::new(VehicleTemplate::parse("test", &source).unwrap()).unwrap();
+    let unit = Vehicle::new(crate::support::templates::fitted(
+        VehicleTemplate::parse("test", &source).unwrap(),
+    ))
+    .unwrap();
     world
         .btech
         .rewrite_unit_record(target, |record| {
@@ -1141,11 +1145,13 @@ async fn vehicle_beacon_launchers_reuse_attachment_interception_and_replay() {
     }
 }
 
+/// A Clan plasma cannon deals a Mech no damage but 2D6 outside heat, and any other target 3D6
+/// damage in five-point groups (Total Warfare p. 139).
 #[tokio::test]
-async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
-    // Clan plasma is conventional damage in the shared catalogue, without IS plasma heating.
-    let template =
-        include_str!("../game/units/Demolisher.toml").replace("\"IS.AC/20\"", "\"CL.PlasmaRifle\"");
+async fn clan_plasma_cannon_heats_mechs_and_damages_vehicles() {
+    let template = include_str!("../game/units/Demolisher.toml")
+        .replace("\"IS.AC/20\"", "\"CL.PlasmaCannon\"")
+        .replace("\"Ammo_IS.AC/20\"", "\"Ammo_CL.PlasmaCannon\"");
     let (_dir, config, mut world, _, [mech, _, shooter, vehicle]) = engagement(&template).await;
     let value = (0..=255)
         .find(|value| Dice::seeded([*value; 32]).two_d6() == 12)
@@ -1163,18 +1169,19 @@ async fn clan_plasma_vehicle_shots_use_ordinary_damage_packets() {
         )
         .unwrap();
         assert!(report.hit);
-        assert_eq!(report.heat_transfer, None);
         assert!(report.narc.is_none());
-        match report.salvo.unwrap() {
-            TargetSalvo::Swarm(_) => panic!("Direct explosive ammunition cannot retarget"),
-            TargetSalvo::Mech(salvo) => assert_eq!(
-                salvo.groups.iter().map(|group| group.damage).sum::<u16>(),
-                10
-            ),
-            TargetSalvo::Vehicle(salvo) => assert_eq!(
-                salvo.groups.iter().map(|group| group.damage).sum::<u16>(),
-                10
-            ),
+        if target == mech {
+            let heat = report.heat_transfer.expect("plasma heat");
+            assert!((2..=12).contains(&heat), "{heat}");
+            assert!(report.salvo.is_none());
+        } else {
+            assert_eq!(report.heat_transfer, None);
+            let Some(TargetSalvo::Vehicle(salvo)) = report.salvo else {
+                panic!("a vehicle target takes plasma cannon damage");
+            };
+            let damage: Vec<_> = salvo.groups.iter().map(|group| group.damage).collect();
+            assert!(damage.iter().all(|&group| (1..=5).contains(&group)));
+            assert!((3..=18).contains(&damage.iter().sum::<u16>()), "{damage:?}");
         }
         candidate.validate(&config).unwrap();
     }
@@ -1376,6 +1383,8 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
         angel_blocked: false,
         ams_engaged: false,
         indirect: false,
+        apollo: false,
+        array: None,
     };
     let enhanced = resolve_battle_vehicle_salvo(
         &mut world,
@@ -1877,11 +1886,12 @@ fn install_mech_launcher(
             },
         },
     );
-    let rebuilt = Mech::from_template(definition.clone()).unwrap();
+    let rebuilt =
+        Mech::from_template(crate::support::templates::legal(definition.clone())).unwrap();
     world
         .btech
         .rewrite_unit_record(shooter, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"] = serde_json::to_value(rebuilt.ammunition()).unwrap();
         })
         .unwrap();
@@ -2768,10 +2778,10 @@ async fn weapons_hold_vehicle_shooters_warn_on_mech_damage_without_blocking_it()
     for source in [
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         let (_dir, config, mut base, _, [target, _, shooter, _]) = engagement(&source).await;
@@ -2814,10 +2824,10 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
     for source in [
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         let (_dir, config, initial, map, ids) = engagement(&source).await;
@@ -2981,8 +2991,9 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
         support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
         let target = base.create(&config, "Emergency target".into(), Kind::Thing);
         base.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
-        let mut template =
-            VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap();
+        let mut template = crate::support::templates::fitted(
+            VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
+        );
         for section in template.sections.values_mut() {
             section.internal = 30;
         }

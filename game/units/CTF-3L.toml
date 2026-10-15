@@ -2,12 +2,14 @@ name = "Cataphract"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 6
-heat_sinks = 32
+walk_mp = 4
+heat_sinks = 16
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 280
 heat_sinks = "double"
 
 [sections.left_arm]

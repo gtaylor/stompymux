@@ -2,10 +2,12 @@ name = "Hollander"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 8
+walk_mp = 5
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 175
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

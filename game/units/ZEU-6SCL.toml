@@ -2,12 +2,13 @@ name = "Zeus"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 6
-heat_sinks = 20
+walk_mp = 4
+heat_sinks = 10
 specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 320
 armor = "ferro_fibrous"
 
 [sections.left_arm]

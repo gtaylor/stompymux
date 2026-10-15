@@ -2,13 +2,15 @@ name = "Jenner"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 11
+walk_mp = 7
 jump_mp = 5
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 245
 armor = "ferro_fibrous"
 
 [sections.left_arm]
@@ -44,7 +46,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 9
+armor = 8
 rear = 3
 slots = [
     { at = 11, item = "JumpJet" },

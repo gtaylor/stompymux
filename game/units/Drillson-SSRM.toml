@@ -2,10 +2,14 @@ name = "Drillson"
 class = "vehicle"
 movement = "hover"
 tons = 50
-walk_mp = 14
+walk_mp = 9
 tac_range = 30
 lrs_range = 60
 scan_range = 30
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 215
 
 [sections.left_side]
 armor = 21

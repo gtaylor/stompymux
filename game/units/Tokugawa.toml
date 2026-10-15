@@ -2,9 +2,13 @@ name = "Tokugawa"
 class = "vehicle"
 movement = "wheel"
 tons = 60
-walk_mp = 6
+walk_mp = 4
 cargo_space = 0
 max_suits = 0
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 220
 
 [sections.left_side]
 armor = 26

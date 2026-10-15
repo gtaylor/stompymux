@@ -114,6 +114,15 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
         }
         return Ok(report);
     }
+    if request.weapon == Weapon::ClanPlasmaCannon {
+        // A plasma cannon deals a Mech no damage, only 2D6 outside heat (Total Warfare p. 139,
+        // capped at fifteen a turn per p. 159); other targets take 3D6 damage instead.
+        if let Some(target) = world.btech.constructed.get_mut(&request.target) {
+            let heat = target.dice.d6() + target.dice.d6();
+            report.heat_transfer = Some(target.absorb_outside_heat(heat));
+        }
+        return Ok(report);
+    }
     if request.fire_mode != FireMode::Heat {
         return Ok(report);
     }
@@ -149,6 +158,8 @@ fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u1
             artemis_v: super::artemis::artemis_v(world, request.shooter),
             ams_engaged: false,
             indirect: false,
+            apollo: false,
+            array: None,
         },
         super::dice::unit_dice_mut(world, request.shooter)?,
     )?;

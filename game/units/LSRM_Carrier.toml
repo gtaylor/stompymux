@@ -2,7 +2,11 @@ name = "SRM Carrier"
 class = "vehicle"
 movement = "wheel"
 tons = 40
-walk_mp = 6
+walk_mp = 4
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 140
 
 [sections.left_side]
 armor = 14

@@ -2,7 +2,7 @@ name = "Scimitar"
 class = "vehicle"
 movement = "hover"
 tons = 35
-walk_mp = 12
+walk_mp = 8
 tac_range = 30
 lrs_range = 60
 scan_range = 30
@@ -10,19 +10,16 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 105
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 25
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 25
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 30

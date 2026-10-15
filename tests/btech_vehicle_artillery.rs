@@ -27,9 +27,10 @@ async fn fixture(
             )
             .unwrap();
         } else {
-            let mut template =
+            let mut template = crate::support::templates::fitted(
                 VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-                    .unwrap();
+                    .unwrap(),
+            );
             template.movement = movement;
             create_battle_vehicle(&mut world, id, template).unwrap();
         }
@@ -206,10 +207,7 @@ async fn artillery_water_depth_excludes_submerged_hulls_but_not_hovercraft() {
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let hover = world.create(&config, "Hover target".into(), Kind::Thing);
         world.objects.get_mut(&hover).unwrap().home = Some(ObjectId(config.home()));
-        let mut template =
-            VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-                .unwrap();
-        template.movement = VehicleMovement::Hover;
+        let template = crate::support::templates::demolisher(VehicleMovement::Hover);
         create_battle_vehicle(&mut world, hover, template).unwrap();
         support::seed_object_dice(&mut world, hover, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, ids[0], map, 1, 1).unwrap();

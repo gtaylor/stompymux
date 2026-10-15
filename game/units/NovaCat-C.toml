@@ -2,12 +2,13 @@ name = "Nova Cat"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 6
-heat_sinks = 24
+walk_mp = 4
+heat_sinks = 12
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 280
 structure = "endo_steel"
 
 [sections.left_arm]

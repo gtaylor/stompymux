@@ -4,8 +4,9 @@
 //!
 //! MegaMek spells one piece of equipment many ways (`Medium Laser`, `ISMediumLaser`,
 //! `IS Medium Laser`), so names are compared as lowercase alphanumeric keys with an optional
-//! technology prefix. MegaMek writes Clan equipment with a `CL` or `Clan` prefix; unprefixed
-//! weapons are its Inner Sphere (or shared) versions.
+//! technology prefix. MegaMek writes Clan equipment with a `CL` or `Clan` prefix; an
+//! unprefixed weapon resolves to the chassis's own technology base when that base has it (a
+//! Clan unit's `Light Machine Gun` is the Clan gun), and otherwise to the other base.
 use anyhow::{Context, Result, bail, ensure};
 use stompymux_unit_construction::{AmmunitionMode, Weapon};
 
@@ -17,11 +18,20 @@ pub enum TechBase {
 }
 
 impl TechBase {
-    /// The namespace stompymux weapon and ammunition names carry.
-    fn namespace(self) -> &'static str {
+    /// The namespace stompymux weapon and ammunition names carry, and that a system both
+    /// bases build carries when its base differs from the chassis's.
+    pub fn namespace(self) -> &'static str {
         match self {
             Self::InnerSphere => "IS",
             Self::Clan => "CL",
+        }
+    }
+
+    /// The `[construction]` `tech_base` spelling.
+    pub fn document_spelling(self) -> &'static str {
+        match self {
+            Self::InnerSphere => "inner_sphere",
+            Self::Clan => "clan",
         }
     }
 
@@ -65,6 +75,12 @@ pub enum Critical {
     System(&'static str),
     /// An Artemis IV fire-control system, linked to a launcher once its section is known.
     Artemis,
+    /// One slot of a Clan Artemis V fire-control system, linked like Artemis IV; a BattleMech
+    /// installation fills two slots (Tactical Operations: Advanced Units & Equipment p. 217).
+    ArtemisV,
+    /// An MRM "Apollo" fire-control system, linked to an MRM launcher in its section like
+    /// Artemis IV (Tactical Operations: Advanced Units & Equipment p. 142).
+    Apollo,
     /// A searchlight, which stompymux records as a chassis special rather than a slot.
     Searchlight,
 }
@@ -79,6 +95,8 @@ impl Critical {
             Self::Weapon { weapon, .. } => weapon.name().to_owned(),
             Self::Ammo { weapon, .. } => format!("Ammo_{}", weapon.name()),
             Self::Artemis => "ArtemisIV".to_owned(),
+            Self::ArtemisV => "ArtemisV".to_owned(),
+            Self::Apollo => "ApolloFCS".to_owned(),
         })
     }
 
@@ -141,6 +159,7 @@ const SYSTEMS: &[(&str, &str)] = &[
     ("lightactiveprobe", "Light_BAP"),
     ("bloodhoundactiveprobe", "BloodhoundProbe"),
     ("tag", "TAG"),
+    ("lighttag", "LightTAG"),
     ("c3slave", "C3Slave"),
     ("c3slaveunit", "C3Slave"),
     ("c3computerslave", "C3Slave"),
@@ -152,6 +171,14 @@ const SYSTEMS: &[(&str, &str)] = &[
     ("c3iunit", "C3i"),
     ("improvedc3computer", "C3i"),
     ("masc", "Masc"),
+    ("talons", "Talons"),
+    ("mga", "MGA"),
+    ("lmga", "MGA"),
+    ("hmga", "MGA"),
+    ("machinegunarray", "MGA"),
+    ("lightmachinegunarray", "MGA"),
+    ("heavymachinegunarray", "MGA"),
+    ("spikes", "Spikes"),
     ("tsm", "TripleStrengthMyomer"),
     ("triplestrengthmyomer", "TripleStrengthMyomer"),
     ("hatchet", "Axe"),
@@ -218,6 +245,7 @@ const WEAPON_ALIASES: &[(&str, &str)] = &[
     ("sniperartillery", "sniper"),
     ("thumperartillery", "thumper"),
     ("antipersonnelpod", "apod"),
+    ("antibattlearmorpod", "bpod"),
     ("smallxpulselaser", "xsmallpulselaser"),
     ("mediumxpulselaser", "xmediumpulselaser"),
     ("largexpulselaser", "xlargepulselaser"),
@@ -243,12 +271,18 @@ const WEAPON_ALIASES: &[(&str, &str)] = &[
     ("heavygauss", "heavygaussrifle"),
     ("magshot", "magshotgaussrifle"),
     ("magshotgr", "magshotgaussrifle"),
+    ("apgauss", "apgaussrifle"),
+    ("antipersonnelgaussrifle", "apgaussrifle"),
+    ("hyperassaultgauss20", "hag20"),
+    ("hyperassaultgauss30", "hag30"),
+    ("hyperassaultgauss40", "hag40"),
     ("snppc", "snubnosedppc"),
 ];
 
 /// Munition phrases MegaMek writes into ammunition names, and the stompymux bin mode each sets.
 /// Longer phrases come first so `swarm-i` is not read as `swarm`.
 const MUNITIONS: &[(&str, &str, AmmunitionMode)] = &[
+    ("artemis v-capable", "Artemis/Mine", AmmunitionMode::Artemis),
     ("artemis-capable", "Artemis/Mine", AmmunitionMode::Artemis),
     ("narc-capable", "Narc/Smoke", AmmunitionMode::Narc),
     ("swarm-i", "Swarm1", AmmunitionMode::Swarm1),
@@ -265,7 +299,6 @@ const MUNITIONS: &[(&str, &str, AmmunitionMode)] = &[
 /// MegaMek munitions stompymux has no equivalent for, checked before [`MUNITIONS`] so that
 /// `Thunder-Inferno` is refused rather than read as `Inferno`.
 const UNSUPPORTED_MUNITIONS: &[&str] = &[
-    "artemis v-capable",
     "fascam",
     "tandem-charge",
     "tracer",
@@ -299,8 +332,16 @@ const UNSUPPORTED_MUNITIONS: &[&str] = &[
     "nemesis",
 ];
 
-/// Resolve one MegaMek critical slot or equipment line.
+/// Resolve one MegaMek critical slot or equipment line on an Inner Sphere chassis; tests'
+/// shorthand for [`parse_for`].
+#[cfg(test)]
 pub fn parse(raw: &str) -> Result<Critical> {
+    parse_for(raw, TechBase::InnerSphere)
+}
+
+/// Resolve one MegaMek critical slot or equipment line on a chassis of technology base
+/// `chassis`, which unprefixed weapon and ammunition names prefer.
+pub fn parse_for(raw: &str, chassis: TechBase) -> Result<Critical> {
     let mut name = raw.trim();
     if name.is_empty() || name.eq_ignore_ascii_case("-Empty-") {
         return Ok(Critical::Empty);
@@ -331,15 +372,21 @@ pub fn parse(raw: &str) -> Result<Critical> {
     }
     let lower = name.to_ascii_lowercase();
     let critical = if lower.contains("ammo") || lower.ends_with("pods") {
-        parse_ammo(name)?
+        parse_ammo(name, chassis)?
     } else {
-        parse_equipment(name)?
+        parse_equipment(name, chassis)?
     };
     match critical {
-        Critical::Weapon { weapon, .. } => Ok(Critical::Weapon {
+        // A one-shot launcher is marked either by an `(OS)` suffix or in its key, as in
+        // `ISStreakSRM2OS`; it weighs half a ton more (TechManual p. 342).
+        Critical::Weapon {
+            weapon,
+            one_shot: spelled,
+            ..
+        } => Ok(Critical::Weapon {
             weapon,
             rear,
-            one_shot: one_shot || weapon.is_rocket(),
+            one_shot: one_shot || spelled || weapon.is_rocket(),
         }),
         _ if rear => bail!("only weapons can be rear-mounted: {raw}"),
         _ if one_shot => bail!("only launchers can be one-shot: {raw}"),
@@ -347,15 +394,32 @@ pub fn parse(raw: &str) -> Result<Critical> {
     }
 }
 
-/// The technology base a slot's system implies, for the systems whose Inner Sphere and Clan
-/// versions differ in mass or reach while stompymux reads their technology from the chassis:
-/// CASE II, ECM suites and active probes. `None` when the slot names no such system or does
-/// not say which base built it.
+/// The technology base a slot's system states, for the systems both bases build to their own
+/// specifications under one stompymux name: CASE II, ECM suites, active probes, MASC,
+/// targeting computers, Artemis IV and jump jets (see `System::built_by_either_base`). `None`
+/// when the slot names no such system or does not say which base built it.
 pub fn system_tech(raw: &str) -> Option<TechBase> {
     let name = raw.split(['(', ':']).next().unwrap_or_default();
     for (tech, base) in readings(&key(name)) {
         match base {
-            "caseii" | "ecmsuite" | "activeprobe" if tech.is_some() => return tech,
+            "caseii"
+            | "ecmsuite"
+            | "activeprobe"
+            | "masc"
+            | "targetingcomputer"
+            | "artemisiv"
+            | "artemisivfcs"
+            | "jumpjet"
+            | "mga"
+            | "lmga"
+            | "hmga"
+            | "machinegunarray"
+            | "lightmachinegunarray"
+            | "heavymachinegunarray"
+                if tech.is_some() =>
+            {
+                return tech;
+            }
             "guardianecm" | "guardianecmsuite" | "beagleactiveprobe" => {
                 return Some(TechBase::InnerSphere);
             }
@@ -366,7 +430,7 @@ pub fn system_tech(raw: &str) -> Option<TechBase> {
 }
 
 /// Resolve a non-ammunition item.
-fn parse_equipment(name: &str) -> Result<Critical> {
+fn parse_equipment(name: &str, chassis: TechBase) -> Result<Critical> {
     let full = key(name);
     if let Some((_, item)) = FIXED.iter().find(|(known, _)| *known == full) {
         return Ok(Critical::Fixed(item));
@@ -394,6 +458,8 @@ fn parse_equipment(name: &str) -> Result<Critical> {
     for (_, base) in &readings {
         match *base {
             "artemisiv" | "artemisivfcs" => return Ok(Critical::Artemis),
+            "artemisv" | "artemisvfcs" => return Ok(Critical::ArtemisV),
+            "apollo" | "mrmapollofcs" | "apollofcs" => return Ok(Critical::Apollo),
             "searchlight" | "mountedsearchlight" => return Ok(Critical::Searchlight),
             _ => {}
         }
@@ -401,7 +467,7 @@ fn parse_equipment(name: &str) -> Result<Critical> {
             return Ok(Critical::System(item));
         }
     }
-    let (weapon, one_shot) = resolve_weapon(&readings)
+    let (weapon, one_shot) = resolve_weapon(&readings, chassis)
         .with_context(|| format!("unsupported equipment {name}"))?
         .with_context(|| format!("unsupported equipment {name}"))?;
     Ok(Critical::Weapon {
@@ -412,7 +478,7 @@ fn parse_equipment(name: &str) -> Result<Critical> {
 }
 
 /// Resolve a ton (or half ton) of ammunition and the bin's munition.
-fn parse_ammo(name: &str) -> Result<Critical> {
+fn parse_ammo(name: &str, chassis: TechBase) -> Result<Critical> {
     let mut lower = name
         .to_ascii_lowercase()
         .replace("(clan)", " ")
@@ -473,9 +539,12 @@ fn parse_ammo(name: &str) -> Result<Critical> {
             (tech, base)
         })
         .collect();
-    let weapon = first_weapon(readings.iter().map(|(tech, base)| (*tech, base.as_str())))
-        .with_context(|| format!("unsupported ammunition {name}"))?
-        .with_context(|| format!("unsupported ammunition {name}"))?;
+    let weapon = first_weapon(
+        readings.iter().map(|(tech, base)| (*tech, base.as_str())),
+        chassis,
+    )
+    .with_context(|| format!("unsupported ammunition {name}"))?
+    .with_context(|| format!("unsupported ammunition {name}"))?;
     ensure!(
         weapon.profile().ammunition_per_ton > 0,
         "{} takes no ammunition: {name}",
@@ -534,8 +603,11 @@ fn parse_ammo(name: &str) -> Result<Critical> {
 
 /// Resolve a weapon from its key readings, returning whether its spelling marked a one-shot
 /// launcher (`ISLRM20OS`).
-fn resolve_weapon(readings: &[(Option<TechBase>, &str)]) -> Result<Option<(Weapon, bool)>> {
-    if let Some(weapon) = first_weapon(readings.iter().copied())? {
+fn resolve_weapon(
+    readings: &[(Option<TechBase>, &str)],
+    chassis: TechBase,
+) -> Result<Option<(Weapon, bool)>> {
+    if let Some(weapon) = first_weapon(readings.iter().copied(), chassis)? {
         return Ok(Some((weapon, false)));
     }
     ensure!(
@@ -545,7 +617,7 @@ fn resolve_weapon(readings: &[(Option<TechBase>, &str)]) -> Result<Option<(Weapo
     let launchers = readings
         .iter()
         .filter_map(|(tech, base)| Some((*tech, base.strip_suffix("os")?)));
-    Ok(first_weapon(launchers)?.map(|weapon| (weapon, true)))
+    Ok(first_weapon(launchers, chassis)?.map(|weapon| (weapon, true)))
 }
 
 /// The weapon named by the first reading that names one.
@@ -554,10 +626,11 @@ fn resolve_weapon(readings: &[(Option<TechBase>, &str)]) -> Result<Option<(Weapo
 /// reported when no other reading resolves.
 fn first_weapon<'a>(
     readings: impl Iterator<Item = (Option<TechBase>, &'a str)>,
+    chassis: TechBase,
 ) -> Result<Option<Weapon>> {
     let mut mismatch = None;
     for (tech, base) in readings {
-        match pick_weapon(tech, base) {
+        match pick_weapon(tech, base, chassis) {
             Ok(Some(weapon)) => return Ok(Some(weapon)),
             Ok(None) => {}
             Err(error) => mismatch = mismatch.or(Some(error)),
@@ -568,9 +641,9 @@ fn first_weapon<'a>(
 
 /// Choose the stompymux weapon for a technology-free key, preferring the named technology base.
 ///
-/// Unprefixed MegaMek weapons are its Inner Sphere versions; a Clan-only weapon written without
-/// a prefix still resolves to the Clan one.
-fn pick_weapon(tech: Option<TechBase>, base: &str) -> Result<Option<Weapon>> {
+/// An unprefixed weapon resolves to the chassis's technology base when it has the weapon, and
+/// otherwise to the other base.
+fn pick_weapon(tech: Option<TechBase>, base: &str, chassis: TechBase) -> Result<Option<Weapon>> {
     let base = WEAPON_ALIASES
         .iter()
         .find(|(alias, _)| *alias == base)
@@ -582,7 +655,11 @@ fn pick_weapon(tech: Option<TechBase>, base: &str) -> Result<Option<Weapon>> {
         })
     };
     let Some(tech) = tech else {
-        return Ok(lookup(TechBase::InnerSphere).or_else(|| lookup(TechBase::Clan)));
+        let other = match chassis {
+            TechBase::InnerSphere => TechBase::Clan,
+            TechBase::Clan => TechBase::InnerSphere,
+        };
+        return Ok(lookup(chassis).or_else(|| lookup(other)));
     };
     if let Some(weapon) = lookup(tech) {
         return Ok(Some(weapon));
@@ -688,7 +765,43 @@ mod tests {
                 .starts_with("CL.")
         );
         assert!(weapon("LRM 20 (OS)").2);
+        // The key spelling marks a one-shot launcher too.
+        assert!(weapon("ISStreakSRM2OS").2);
         assert!(weapon("Rocket Launcher 10").2);
+        for (name, expected) in [
+            ("CLAPGaussRifle", "CL.APGaussRifle"),
+            ("CLHAG20", "CL.HAG/20"),
+            ("Clan HAG 40", "CL.HAG/40"),
+            ("CLPlasmaCannon", "CL.PlasmaCannon"),
+            ("CLLightMG", "CL.LightMachineGun"),
+            ("ISLightMG", "IS.LightMachineGun"),
+            ("ISBPod", "IS.B-Pod"),
+            ("CLBPod", "CL.B-Pod"),
+            ("Anti-BattleArmor Pod", "IS.B-Pod"),
+        ] {
+            assert_eq!(weapon(name).0.name(), expected, "{name}");
+        }
+    }
+
+    /// An unprefixed name resolves to the chassis's technology base when it has the weapon
+    /// (TechManual p. 341 and p. 343 list both light machine guns).
+    #[test]
+    fn unprefixed_weapons_follow_the_chassis_technology_base() {
+        for (chassis, expected) in [
+            (TechBase::InnerSphere, "IS.LightMachineGun"),
+            (TechBase::Clan, "CL.LightMachineGun"),
+        ] {
+            let Critical::Weapon { weapon, .. } = parse_for("Light Machine Gun", chassis).unwrap()
+            else {
+                panic!("a light machine gun is a weapon");
+            };
+            assert_eq!(weapon.name(), expected);
+        }
+        let Critical::Weapon { weapon, .. } = parse_for("Medium Laser", TechBase::Clan).unwrap()
+        else {
+            panic!("a medium laser is a weapon");
+        };
+        assert_eq!(weapon.name(), "IS.MediumLaser");
     }
 
     #[test]
@@ -716,6 +829,10 @@ mod tests {
         assert_eq!(ammo("IS Ammo MML-5 LRM").1, vec!["MML_LRM"]);
         assert!(ammo("IS Ammo MML-5 SRM").1.is_empty());
         assert_eq!(ammo("ISNarc Pods").0, "Ammo_IS.NarcBeacon");
+        assert_eq!(
+            ammo("Clan Ammo LRM-15 (Clan) Artemis V-capable"),
+            ("Ammo_CL.LRM-15".into(), vec!["Artemis/Mine"], 8)
+        );
     }
 
     #[test]
@@ -742,6 +859,16 @@ mod tests {
             ("Clan Endo Steel", Critical::System("EndoSteel")),
             ("ISGuardianECMSuite", Critical::System("Ecm")),
             ("ISArtemisIV", Critical::Artemis),
+            ("ISApollo (OMNIPOD)", Critical::Apollo),
+            ("Talons (OMNIPOD)", Critical::System("Talons")),
+            ("Spikes", Critical::System("Spikes")),
+            ("ISLMGA", Critical::System("MGA")),
+            (
+                "Clan Heavy Machine Gun Array (OMNIPOD)",
+                Critical::System("MGA"),
+            ),
+            ("CLArtemisV", Critical::ArtemisV),
+            ("CLLightTAG", Critical::System("LightTAG")),
         ] {
             assert_eq!(parse(name).unwrap(), expected, "{name}");
         }
@@ -752,7 +879,6 @@ mod tests {
         for name in [
             "ISImprovedHeavyGaussRifle",
             "CLHeavyFlamer",
-            "Clan Ammo LRM-15 (Clan) Artemis V-capable",
             "IS Ammo LRM-20 Thunder",
             "CLImpGaussAmmo",
             "Chameleon Light Polarization Shield",

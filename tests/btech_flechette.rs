@@ -42,7 +42,7 @@ fn flechette_bins_have_ordinary_capacity_and_refuse_half_ton_lots() {
                 assert!(Mech::from_template(definition).is_err(), "{weapon:?}");
                 continue;
             }
-            let unit = Mech::from_template(definition).unwrap();
+            let unit = Mech::from_template(crate::support::templates::legal(definition)).unwrap();
             let loadout = unit.loadout().unwrap();
             let index = loadout
                 .weapons

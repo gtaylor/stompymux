@@ -5,6 +5,8 @@ mod special_commands;
 pub(crate) mod special_dispatch;
 mod special_help;
 mod special_registration;
+#[cfg(test)]
+mod test_designs;
 pub(crate) use special_registration::unregister_special;
 pub(crate) mod unit_lifecycle;
 pub use special_commands::{CommandClass, SpecialCommand, SpecialType};
@@ -270,32 +272,37 @@ pub use stompymux_map::{HexCoordinate, Point};
 pub use stompymux_unit_construction::{
     AMMUNITION_PART_OFFSET, ARTILLERY_MAPSHEET_HEXES, AmmunitionAdjustment, AmmunitionBin,
     AmmunitionMode, CriticalDefinition, CriticalLocation, DamageClass, Engine, FireMode, Gyro,
-    InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon, MechChassis,
-    MechLoadout, MechSection, MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part, PartForm,
-    PartKind, PartNames, PartPrices, RangeBracket, RawMovement, RawSectionCode, RawTemplate,
-    RawUnitClass, ResolvedLoadout, SectionDefinition, System, SystemCritical, Technology,
-    TemplateCheck, TemplateRegistryCache, UnitTemplate, VehicleCriticalLocation, VehicleEngine,
-    VehicleLoadout, VehicleMass, VehicleMaterial, VehicleMovement, VehiclePowerplant,
-    VehicleSection, VehicleTemplate, WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount,
-    WeaponProfile, WeaponRange, administrative_technology, administrative_template_movement,
-    administrative_template_tonnage, armor_mass, cargo_space_mass, check_template, edit_special,
-    engine_mass, finalize_raw_load_specials, flag_spells_technology, half_ton,
-    inspect_raw_template_armor, inspect_raw_template_criticals, inspect_raw_template_engine,
-    inspect_raw_template_weapons, inspection_ammunition_modes, inspection_canonical_mech_internal,
+    InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon, MassItem, MechChassis,
+    MechLoadout, MechMass, MechSection, MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part,
+    PartForm, PartKind, PartNames, PartPrices, PhysicalBattleValue, RangeBracket, RawMovement,
+    RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout, SectionDefinition, System,
+    SystemContext, SystemCritical, TechBase, Technology, TemplateCheck, TemplateRegistryCache,
+    UnitTemplate, VehicleCriticalLocation, VehicleEngine, VehicleLoadout, VehicleMass,
+    VehicleMaterial, VehicleMovement, VehiclePowerplant, VehicleSection, VehicleTemplate,
+    WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount, WeaponProfile, WeaponRange,
+    administrative_technology, administrative_template_movement, administrative_template_tonnage,
+    armor_mass, cargo_space_mass, check_template, edit_special, engine_mass,
+    finalize_raw_load_specials, flag_spells_technology, half_ton, inspect_raw_template_armor,
+    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_weapons,
+    inspection_ammunition_modes, inspection_canonical_mech_internal,
     inspection_compatible_template, inspection_compatible_vehicle_template,
     inspection_configured_technology, inspection_configured_technology_attributes,
     inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
     inspection_raw_part, inspection_template_part, inspection_vehicle_engine_rating,
-    inspection_vehicle_engine_values, mixed_technology_flag, one_shot_mass,
-    parse_engine_sink_override, parse_template_speed, part_abbreviation, part_catalogue,
-    part_names, part_price, part_short_name, power_amplifier_mass, rated_output,
-    raw_default_mech_criticals, raw_template_base_cost, read_engine_sink_override,
+    inspection_vehicle_engine_values, mixed_technology_flag, one_shot_mass, parse_template_speed,
+    part_abbreviation, part_catalogue, part_names, part_price, part_short_name,
+    power_amplifier_mass, rated_output, raw_default_mech_criticals, raw_template_base_cost,
     read_resolved_raw_template, read_resolved_template, read_template_document,
     read_template_speed, reflective_armor_slots, resolve_template_path,
     resolve_template_path_bytes_cached, resolve_template_path_cached, strip_name_prefix,
     structure_mass, system_slot_mass, template_base_cost, unit_metadata, validate_radio_attributes,
-    validate_unit_metadata, vehicle_template_base_cost, write_engine_sink_override, write_template,
-    write_template_speed,
+    validate_unit_metadata, vehicle_template_base_cost, write_template, write_template_speed,
+};
+pub use stompymux_unit_construction::{
+    ROTOR_MAXIMUM_ARMOR, VEHICLE_MAXIMUM_ENGINE_RATING, VEHICLE_MINIMUM_ENGINE_RATING,
+    VehicleConstruction, VehicleTemplateCheck, check_vehicle_template, format_tons,
+    needs_power_amplifier, occupies_vehicle_slot, turret_mass, vehicle_maximum_armor,
+    vehicle_power_amplifier_mass,
 };
 
 pub(crate) use motion::set_speed_autopilot;
@@ -485,7 +492,11 @@ pub use dfa::{DfaBalance, DfaProfile, DfaReport, dfa_profile, resolve_dfa};
 pub use jumping::launch_dfa;
 
 mod experience;
+mod machine_gun_array;
 mod physical_experience;
+mod spikes;
+mod talons;
+mod torso_cockpit;
 pub use experience::{ExperienceAward, ExperienceRules, award_character_experience};
 
 pub(crate) mod skill_catalog;
@@ -568,13 +579,12 @@ mod effective_speed;
 pub use effective_speed::unit_effective_maximum_speed;
 
 mod battle_value;
-pub use battle_value::BattleValue;
-pub use battle_value::unit_battle_value;
+pub use battle_value::{BattleValue, skill_multiplier, speed_factor, unit_battle_value};
 
 mod battle_value_experience;
 pub use battle_value_experience::{
     BattleValueExperienceAward, BattleValueExperienceCalculation, BattleValueExperienceInput,
-    award_battle_value_gunnery_experience, pilot_battle_value_modifier,
+    award_battle_value_gunnery_experience,
 };
 
 pub use gunnery_experience::{ShotExperienceAward, award_gunnery_experience};

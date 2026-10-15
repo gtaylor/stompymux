@@ -2,7 +2,11 @@ name = "Charger"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 8
+walk_mp = 5
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 400
 
 [sections.left_arm]
 armor = 15

@@ -2,11 +2,13 @@ name = "Hussar"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 14
-heat_sinks = 20
+walk_mp = 9
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 270
 armor = "ferro_fibrous"
 heat_sinks = "double"
 
@@ -20,18 +22,18 @@ armor = 2
 armor = 3
 rear = 2
 slots = [
-    { at = "1-5", item = "FerroFibrous" },
+    { at = "1-6", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 3
 rear = 2
 slots = [
-    { at = "1-5", item = "FerroFibrous" },
+    { at = "1-7", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 4
+armor = 3
 rear = 2
 slots = [
     { at = "11-12", item = "IS.ERLargeLaser" },
@@ -39,15 +41,12 @@ slots = [
 
 [sections.left_leg]
 armor = 2
-slots = [
-    { at = "5-6", item = "FerroFibrous" },
-]
 
 [sections.right_leg]
 armor = 2
-slots = [
-    { at = "5-6", item = "FerroFibrous" },
-]
 
 [sections.head]
 armor = 3
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

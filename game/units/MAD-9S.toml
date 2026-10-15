@@ -2,13 +2,15 @@ name = "Marauder"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
-heat_sinks = 28
+walk_mp = 4
+heat_sinks = 14
 radio = 4
 specials = ["ECM", "BeagleProbe", "SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "light"
+engine_rating = 300
 structure = "endo_steel"
 heat_sinks = "double"
 

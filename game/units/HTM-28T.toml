@@ -2,14 +2,16 @@ name = "Hatamoto-Chi"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 5
+walk_mp = 3
 jump_mp = 3
-heat_sinks = 34
+heat_sinks = 17
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 240
 heat_sinks = "double"
 
 [sections.left_arm]

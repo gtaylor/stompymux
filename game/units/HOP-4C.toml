@@ -2,8 +2,12 @@ name = "Hoplite"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 16
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 220
 
 [sections.left_arm]
 armor = 18

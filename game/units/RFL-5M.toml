@@ -2,13 +2,15 @@ name = "Rifleman"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 6
-heat_sinks = 24
+walk_mp = 4
+heat_sinks = 12
 radio = 4
-specials = ["SearchLight", "AntiAircraft"]
+specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 240
 heat_sinks = "double"
 
 [sections.left_arm]

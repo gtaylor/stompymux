@@ -2,8 +2,8 @@ name = "Vandal"
 class = "aerofighter"
 movement = "fly"
 tons = 30
-walk_mp = 21
-heat_sinks = 20
+walk_mp = 14
+heat_sinks = 10
 fuel = 600
 
 [construction]

@@ -2,14 +2,16 @@ name = "Cronus"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
-heat_sinks = 28
+heat_sinks = 14
 radio = 4
 specials = ["C3SlaveTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 330
 structure = "endo_steel"
 heat_sinks = "double"
 

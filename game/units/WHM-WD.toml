@@ -2,12 +2,13 @@ name = "Warhammer"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 8
-heat_sinks = 36
+walk_mp = 5
+heat_sinks = 18
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 350
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

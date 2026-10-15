@@ -2,12 +2,14 @@ name = "MantaRay"
 class = "mech"
 movement = "biped"
 tons = 95
-walk_mp = 6
-heat_sinks = 30
+walk_mp = 4
+heat_sinks = 15
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 380
 armor = "ferro_fibrous"
 heat_sinks = "double"
 
@@ -47,9 +49,9 @@ slots = [
 
 [sections.center_torso]
 armor = 40
-rear = 16
+rear = 15
 slots = [
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 12, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
 ]
 

@@ -2,14 +2,17 @@ name = "No-Dachi"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 8
-heat_sinks = 20
+walk_mp = 5
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 350
 structure = "endo_steel"
 heat_sinks = "double"
+myomer = "triple_strength"
 
 [sections.left_arm]
 armor = 20

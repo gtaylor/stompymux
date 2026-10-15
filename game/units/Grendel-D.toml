@@ -2,14 +2,15 @@ name = "Grendel"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 11
+walk_mp = 7
 jump_mp = 7
-heat_sinks = 20
+heat_sinks = 10
 radio = 5
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 315
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

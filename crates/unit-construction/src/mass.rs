@@ -4,13 +4,15 @@ use super::{MechSection, System, WeaponMount};
 use anyhow::{Context, Result, ensure};
 
 /// Installed system mass per surviving Mech critical, independent of current critical damage.
-pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32 {
+/// `clan` is the installation's technology base, which sizes active probes, ECM suites and
+/// CASE II (TechManual pp. 341-343; Tactical Operations: Advanced Units & Equipment p. 217).
+pub fn system_slot_mass(definition: &super::MechTemplate, system: System, clan: bool) -> u32 {
     match system {
-        System::Case | System::LightProbe => 512,
+        System::Case | System::LightProbe | System::LightTag => 512,
         System::C3i => 1280,
         // The Clan active probe fills one slot for a ton; the Beagle two for a ton and a half.
         System::BeagleProbe => {
-            if definition.has_special("Clan") {
+            if clan {
                 1024
             } else {
                 768
@@ -27,19 +29,15 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
         | System::Mace
         | System::DualSaw
         | System::Claw => 1024,
-        // An Artemis V controller weighs a ton and a half.
-        System::ArtemisIv => {
-            if definition.has_technology(super::Technology::ArtemisV) {
-                1536
-            } else {
-                1024
-            }
-        }
+        System::ArtemisIv | System::ApolloFcs => 1024,
+        // An Artemis V controller weighs a ton and a half across two slots (Tactical
+        // Operations: Advanced Units & Equipment p. 217).
+        System::ArtemisV => 768,
         // A Watchdog CEWS weighs a ton and a half across two ECM slots.
         System::Ecm => {
             if definition.has_technology(super::Technology::Watchdog) {
                 768
-            } else if definition.has_special("Clan") {
+            } else if clan {
                 1024
             } else {
                 768
@@ -47,7 +45,7 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
         }
         // Inner Sphere CASE II weighs a ton per slot; the Clan version weighs half as much.
         System::CaseIi => {
-            if definition.has_special("Clan") {
+            if clan {
                 512
             } else {
                 1024
@@ -69,6 +67,23 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
         System::SmallVibroblade => 3 * 1024,
         System::MediumVibroblade => 5 * 1024 / 2,
         System::LargeVibroblade => 7 * 1024 / 4,
+        // Talons weigh a ton per fifteen tons of Mech, rounded up, spread over the two slots
+        // in each leg (Tactical Operations: Advanced Units & Equipment p. 100).
+        System::Talons => {
+            let legs = match definition.chassis() {
+                Ok(super::MechChassis::Quad) => 4,
+                _ => 2,
+            };
+            u32::from(definition.tons.div_ceil(15)) * 1024 / (2 * legs)
+        }
+        System::Spikes => 512,
+        System::MachineGunArray => {
+            if clan {
+                256
+            } else {
+                512
+            }
+        }
         System::JumpJet => match definition.tons {
             0..=55 => 512,
             56..=85 => 1024,
@@ -76,6 +91,36 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
         },
         _ => 0,
     }
+}
+
+/// Mass of `slots` installed critical slots of `system`, rounded per whole item rather than
+/// per slot, so a complete installation weighs exactly its book mass: three Bloodhound slots
+/// weigh two tons and five wrecking-ball slots four (TM pp. 341-344; Tactical Operations:
+/// Advanced Units & Equipment pp. 217-221). `clan` is the installation's technology base.
+pub fn system_mass(
+    definition: &super::MechTemplate,
+    system: System,
+    clan: bool,
+    slots: usize,
+) -> u32 {
+    let (item_mass, item_slots) = match system {
+        System::BloodhoundProbe => (2048, 3),
+        System::WreckingBall => (4096, 5),
+        System::Sword => (
+            u32::from(definition.tons.div_ceil(10)) * 512,
+            u32::from(definition.tons.div_ceil(15)),
+        ),
+        System::RetractableBlade => (
+            512 + half_ton((u32::from(definition.tons) * 1024).div_ceil(20)),
+            u32::from(definition.tons.div_ceil(20)) + 1,
+        ),
+        _ => (system_slot_mass(definition, system, clan), 1),
+    };
+    let slots = slots as u64;
+    u32::try_from(
+        (slots * u64::from(item_mass) + u64::from(item_slots) / 2) / u64::from(item_slots),
+    )
+    .unwrap_or(u32::MAX)
 }
 
 /// A one-shot launcher weighs half a ton more than the launcher it adapts; rocket launchers are
@@ -98,11 +143,10 @@ pub fn power_amplifier_mass(
         .iter()
         .filter(|mount| {
             (mount.weapon.is_energy() && mount.weapon.profile().ammunition_per_ton == 0)
+                || mount.weapon.is_plasma()
                 || matches!(
                     mount.weapon,
-                    super::Weapon::PlasmaRifle
-                        | super::Weapon::LaserAms
-                        | super::Weapon::ClanLaserAms
+                    super::Weapon::LaserAms | super::Weapon::ClanLaserAms
                 )
         })
         .filter(|mount| survives(mount.criticals[0].section))
@@ -221,18 +265,28 @@ mod tests {
         assert_eq!(armor_mass(80, 25), 10 * 1024);
     }
 
-    /// CASE II weighs a ton per Inner Sphere slot and half a ton per Clan slot.
+    /// CASE II weighs a ton per Inner Sphere slot and half a ton per Clan slot, and the
+    /// Beagle probe and Guardian ECM three quarters of a ton per slot against a ton for their
+    /// one-slot Clan counterparts, by the installation's technology base.
     #[test]
-    fn case_ii_slot_mass_depends_on_technology_base() {
-        let mut definition =
+    fn system_slot_mass_depends_on_the_installation_base() {
+        let definition =
             crate::MechTemplate::parse("JR7-D", include_str!("../tests/fixtures/JR7-D.toml"))
                 .unwrap();
-        assert_eq!(system_slot_mass(&definition, System::CaseIi), 1024);
-        assert_eq!(system_slot_mass(&definition, System::Case), 512);
-        let specials = definition.attributes.entry("specials".into()).or_default();
-        specials.push_str(" Clan");
-        assert_eq!(system_slot_mass(&definition, System::CaseIi), 512);
+        assert_eq!(system_slot_mass(&definition, System::CaseIi, false), 1024);
+        assert_eq!(system_slot_mass(&definition, System::Case, false), 512);
+        assert_eq!(system_slot_mass(&definition, System::CaseIi, true), 512);
+        assert_eq!(
+            system_slot_mass(&definition, System::BeagleProbe, false),
+            768
+        );
+        assert_eq!(
+            system_slot_mass(&definition, System::BeagleProbe, true),
+            1024
+        );
+        assert_eq!(system_slot_mass(&definition, System::Ecm, true), 1024);
         assert_eq!(System::parse("CASE-II").unwrap(), System::CaseIi);
+        assert_eq!(System::parse("CL.CASE-II").unwrap(), System::CaseIi);
         assert!(System::CaseIi.is_noncritical());
     }
 }

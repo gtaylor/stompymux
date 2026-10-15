@@ -2,11 +2,12 @@ name = "Locust"
 class = "mech"
 movement = "biped"
 tons = 25
-walk_mp = 12
-heat_sinks = 20
+walk_mp = 8
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
+engine_rating = 200
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -44,7 +45,7 @@ slots = [
 
 [sections.center_torso]
 armor = 10
-rear = 3
+rear = 2
 slots = [
     { at = 11, item = "CL.MediumPulseLaser" },
     { at = 12, item = "EndoSteel" },

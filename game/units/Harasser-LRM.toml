@@ -2,11 +2,13 @@ name = "Harasser"
 class = "vehicle"
 movement = "hover"
 tons = 25
-walk_mp = 15
+walk_mp = 10
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 120
 
 [sections.left_side]
 armor = 6

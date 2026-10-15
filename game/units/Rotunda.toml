@@ -2,9 +2,11 @@ name = "Rotunda"
 class = "vehicle"
 movement = "wheel"
 tons = 20
-walk_mp = 14
+walk_mp = 9
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 160
 armor = "ferro_fibrous"
 
 [sections.left_side]
@@ -14,7 +16,7 @@ armor = 4
 armor = 4
 
 [sections.front_side]
-armor = 6
+armor = 5
 slots = [
     { at = 1, item = "IS.LargeLaser" },
     { at = 2, item = "IS.SRM-2" },

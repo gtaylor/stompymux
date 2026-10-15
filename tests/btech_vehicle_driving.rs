@@ -34,8 +34,9 @@ async fn fixture_movement(
     )
     .unwrap();
     template.movement = movement;
+    template.restate_engine_rating();
     if movement == VehicleMovement::Hover {
-        template.max_speed = 64.5;
+        template.set_cruising_mp(4);
     }
     create_battle_vehicle(&mut world, id, template).unwrap();
     place_battle_unit(&mut world, id, map, 2, 1).unwrap();

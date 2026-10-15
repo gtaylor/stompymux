@@ -2,12 +2,14 @@ name = "Men Shen"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 9
-heat_sinks = 20
+walk_mp = 6
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 330
 structure = "endo_steel"
 heat_sinks = "double"
 

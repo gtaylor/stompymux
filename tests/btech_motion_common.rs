@@ -69,7 +69,7 @@ pub(crate) async fn fixture_assets(
     .unwrap();
     let id = world.create(&config, "Jenner".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_unit(&mut world, id, template).unwrap();
+    create_battle_unit(&mut world, id, crate::support::templates::legal(template)).unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

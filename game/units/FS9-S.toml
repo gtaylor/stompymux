@@ -2,13 +2,15 @@ name = "Firestarter"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 210
 structure = "endo_steel"
 
 [sections.left_arm]

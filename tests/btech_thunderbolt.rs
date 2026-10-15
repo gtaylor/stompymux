@@ -23,7 +23,7 @@ fn definition(weapon: Weapon, hotload: bool) -> MechTemplate {
         .unwrap();
     bin.equipment = format!("Ammo_{}", weapon.name());
     bin.data = weapon.profile().ammunition_per_ton.to_string();
-    template
+    crate::support::templates::legal(template)
 }
 
 /// Every cluster result retains one whole missile, including Artemis-adjusted results.

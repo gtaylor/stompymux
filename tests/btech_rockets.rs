@@ -60,7 +60,7 @@ fn rocket_catalog_clusters_and_one_shot_templates() {
                 vec!["OneShot"]
             };
             let template = definition(weapon, &modes);
-            let unit = Mech::from_template(template).unwrap();
+            let unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
             let loadout = unit.loadout().unwrap();
             let (index, mount) = loadout
                 .weapons

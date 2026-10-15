@@ -2,7 +2,7 @@ name = "Cheetah"
 class = "aerofighter"
 movement = "fly"
 tons = 25
-walk_mp = 18
+walk_mp = 12
 fuel = 450
 
 [sections.nose]

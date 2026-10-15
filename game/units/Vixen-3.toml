@@ -2,12 +2,13 @@ name = "Vixen"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 14
-heat_sinks = 20
+walk_mp = 9
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 270
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -25,7 +26,7 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = 3, item = "CL.ERMediumLaser" },
+    { at = 3, item = "CL.MediumPulseLaser" },
     { at = "4-5", item = "CL.MachineGun" },
     { at = "6-7", item = "EndoSteel" },
     { at = "8-10", item = "FerroFibrous" },
@@ -35,7 +36,7 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = 3, item = "CL.ERMediumLaser" },
+    { at = 3, item = "CL.MediumPulseLaser" },
     { at = "4-5", item = "CL.MachineGun" },
     { at = "6-7", item = "EndoSteel" },
     { at = "8-9", item = "FerroFibrous" },
@@ -45,7 +46,7 @@ slots = [
 armor = 15
 rear = 5
 slots = [
-    { at = 11, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 11, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -65,6 +66,3 @@ slots = [
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "CL.MachineGun" },
-]

@@ -2,12 +2,13 @@ name = "Shadow Hawk"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
-heat_sinks = 20
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
+engine_rating = 270
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

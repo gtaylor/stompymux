@@ -2,12 +2,13 @@ name = "JagerMech"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 6
+walk_mp = 4
 radio = 4
-specials = ["AntiAircraft"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 260
 armor = "ferro_fibrous"
 
 [sections.left_arm]

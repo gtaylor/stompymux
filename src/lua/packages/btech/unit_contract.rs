@@ -415,7 +415,7 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
                 let (rating, suspension) = crate::btech::inspection_vehicle_engine_values(
                     tons,
                     movement,
-                    unit.definition().max_speed,
+                    unit.definition().walk_mp,
                 )
                 .map_err(mlua::Error::external)?;
                 result.raw_set("rating", rating)?;
@@ -460,11 +460,10 @@ pub(super) fn register(lua: &Lua, native: &Table, shared: &SharedWorld) -> mlua:
             crate::lua::transactions::require(lua)?;
             let id = require_unit_runtime(lua, &world, value(&args, 0))?;
             let borrowed = world.borrow();
-            let config = crate::lua::configuration(lua);
             let bv = if borrowed.btech.constructed_units().contains_key(&id)
                 || borrowed.btech.vehicles().contains_key(&id)
             {
-                crate::btech::inspection_battle_value(&borrowed, id, &config)
+                crate::btech::inspection_battle_value(&borrowed, id)
             } else {
                 crate::btech::inspection_template_battle_value(
                     &crate::btech::registered_unit_default_template(&borrowed, id).unwrap(),

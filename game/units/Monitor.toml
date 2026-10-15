@@ -2,7 +2,7 @@ name = "Monitor"
 class = "naval"
 movement = "hull"
 tons = 75
-walk_mp = 5
+walk_mp = 3
 
 [sections.left_side]
 armor = 22

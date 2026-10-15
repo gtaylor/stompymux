@@ -2,10 +2,14 @@ name = "Swayback"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 23
 cargo_space = 0
 max_suits = 0
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 200
 
 [sections.left_arm]
 armor = 16

@@ -2,13 +2,14 @@ name = "Dasher"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 15
-heat_sinks = 20
-specials = ["CL_AMS", "Masc", "BeagleProbe"]
+walk_mp = 10
+heat_sinks = 10
+specials = ["OmniMech_Tech", "Masc", "BeagleProbe"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 200
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -17,16 +18,17 @@ armor = 3
 slots = [
     { at = 5, item = "CL.Anti-MissileSystem" },
     { at = 6, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
-    { at = 7, item = "FerroFibrous" },
-    { at = 8, item = "EndoSteel" },
+    { at = 7, item = "EndoSteel" },
+    { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 3
 slots = [
-    { at = 5, item = "BeagleProbe" },
-    { at = 7, item = "FerroFibrous" },
-    { at = 8, item = "EndoSteel" },
+    { at = 5, item = "TAG" },
+    { at = 6, item = "BeagleProbe" },
+    { at = 7, item = "EndoSteel" },
+    { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -34,20 +36,19 @@ armor = 4
 rear = 2
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-6", item = "FerroFibrous" },
-    { at = 7, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = "6-7", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 4
 rear = 2
-engine_at = 3
 slots = [
-    { at = 1, item = "CL.StreakSRM-4" },
-    { at = 2, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
-    { at = "5-6", item = "HeatSink" },
-    { at = "7-8", item = "FerroFibrous" },
-    { at = 9, item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "CL.StreakSRM-4" },
+    { at = 6, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
+    { at = 7, item = "EndoSteel" },
+    { at = "8-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

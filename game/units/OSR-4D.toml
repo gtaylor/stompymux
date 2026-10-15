@@ -2,13 +2,15 @@ name = "Osiris"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 12
+walk_mp = 8
 jump_mp = 8
-heat_sinks = 20
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 240
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"
@@ -17,16 +19,16 @@ heat_sinks = "double"
 armor = 9
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "FerroFibrous" },
-    { at = "4-12", item = "EndoSteel" },
+    { at = "3-11", item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 9
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.ERMediumLaser" },
-    { at = "5-7", item = "HeatSink" },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-7", item = "IS.ERMediumLaser" },
     { at = "8-12", item = "FerroFibrous" },
 ]
 
@@ -43,8 +45,8 @@ armor = 10
 rear = 3
 slots = [
     { at = "4-7", item = "JumpJet" },
-    { at = 8, item = "IS.ERMediumLaser" },
-    { at = 9, item = "IS.MediumPulseLaser" },
+    { at = 8, item = "IS.MediumPulseLaser" },
+    { at = 9, item = "IS.ERMediumLaser" },
     { at = "10-12", item = "FerroFibrous" },
 ]
 
@@ -68,7 +70,7 @@ slots = [
 ]
 
 [sections.head]
-armor = 9
+armor = 8
 slots = [
     { at = 4, item = "FerroFibrous" },
 ]

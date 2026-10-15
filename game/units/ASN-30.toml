@@ -2,9 +2,9 @@ name = "Assassin"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 11
+walk_mp = 7
 jump_mp = 7
-heat_sinks = 20
+heat_sinks = 10
 tac_range = 30
 lrs_range = 60
 scan_range = 30
@@ -12,7 +12,9 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "light"
+engine_rating = 280
 structure = "endo_steel"
 heat_sinks = "double"
 

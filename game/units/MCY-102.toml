@@ -2,12 +2,14 @@ name = "Mercury"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 12
+walk_mp = 8
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 160
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -40,10 +42,10 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 7
+armor = 6
 rear = 4
 slots = [
-    { at = 12, item = "Masc" },
+    { at = 11, item = "Masc" },
 ]
 
 [sections.left_leg]

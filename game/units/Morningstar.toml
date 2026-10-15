@@ -2,14 +2,16 @@ name = "Morningstar"
 class = "vehicle"
 movement = "wheel"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 radio = 4
 cargo_space = 2500
 max_suits = 0
 max_ton = 5
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 280
 
 [sections.left_side]
 armor = 29

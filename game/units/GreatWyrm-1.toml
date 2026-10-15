@@ -2,11 +2,12 @@ name = "Great Wyrm"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 8
-heat_sinks = 20
+walk_mp = 5
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
+engine_rating = 225
 
 [sections.left_arm]
 armor = 10

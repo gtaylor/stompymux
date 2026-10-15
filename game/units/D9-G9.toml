@@ -2,13 +2,15 @@ name = "Duan Gung"
 class = "mech"
 movement = "biped"
 tons = 25
-walk_mp = 11
+walk_mp = 7
 jump_mp = 6
-heat_sinks = 20
+heat_sinks = 10
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 175
 structure = "endo_steel"
 heat_sinks = "double"
 

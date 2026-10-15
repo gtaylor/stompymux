@@ -2,12 +2,16 @@ name = "Bandit"
 class = "vehicle"
 movement = "hover"
 tons = 50
-walk_mp = 14
+walk_mp = 9
 heat_sinks = 11
 cargo_space = 400
 max_suits = 0
 max_ton = 4
 specials = ["CargoTech"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 215
 
 [sections.left_side]
 armor = 40

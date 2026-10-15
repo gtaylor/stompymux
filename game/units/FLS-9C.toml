@@ -2,14 +2,16 @@ name = "Flashman"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 8
-heat_sinks = 32
+walk_mp = 5
+heat_sinks = 16
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 375
 structure = "endo_steel"
 armor = "ferro_fibrous"
 heat_sinks = "double"
@@ -30,7 +32,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "IS.ERLargeLaser" },
     { at = 5, item = "IS.MediumPulseLaser" },
-    { at = "6-12", item = "EndoSteel" },
+    { at = "6-11", item = "EndoSteel" },
 ]
 
 [sections.left_torso]

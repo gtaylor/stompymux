@@ -31,8 +31,10 @@ fn install_test_myomer(world: &mut stompymux_rs::World, id: ObjectId) {
                 },
             );
     }
-    state["constructed"][id.0.to_string()]["definition"] =
-        serde_json::to_value(definition).unwrap();
+    crate::support::templates::set_record_definition(
+        &mut state["constructed"][id.0.to_string()],
+        definition,
+    );
     world.btech = serde_json::from_value(state).unwrap();
 }
 
@@ -266,6 +268,50 @@ fn handweapon_template_name(kind: stompymux_rs::ArmAttack) -> &'static str {
     }
 }
 
+/// Critical slots a 35-ton Mech's hand weapon fills (TechManual pp. 220, 237; Tactical
+/// Operations: Advanced Units & Equipment melee weapons).
+fn handweapon_slots(kind: stompymux_rs::ArmAttack) -> u8 {
+    use stompymux_rs::ArmAttack as W;
+    match kind {
+        W::Axe | W::Sword | W::Claw | W::RetractableBlade => 3,
+        W::Mace | W::Flail | W::LargeVibroblade => 4,
+        W::Lance | W::ChainWhip | W::MediumVibroblade => 2,
+        W::WreckingBall => 5,
+        W::SmallVibroblade => 1,
+        W::Saw => 7,
+        W::Punch => panic!("fixture needs installed equipment"),
+    }
+}
+
+/// Lay out an arm holding `count` slots of `kind` behind its lower arm actuator: claws and
+/// flails replace the hand actuator, every other weapon keeps it.
+fn arm_with_weapon(
+    arm: &mut stompymux_rs::SectionDefinition,
+    kind: stompymux_rs::ArmAttack,
+    count: u8,
+) {
+    use stompymux_rs::{ArmAttack, CriticalDefinition};
+    arm.criticals.retain(|slot, _| *slot < 2);
+    let replaces_hand = matches!(kind, ArmAttack::Claw | ArmAttack::Flail);
+    let first = if replaces_hand { 3 } else { 4 };
+    let mut parts = vec![(2, "LowerActuator")];
+    if !replaces_hand {
+        parts.push((3, "HandOrFootActuator"));
+    }
+    let equipment = handweapon_template_name(kind);
+    parts.extend((first..first + count).map(|slot| (slot, equipment)));
+    for (slot, name) in parts {
+        arm.criticals.insert(
+            slot,
+            CriticalDefinition {
+                equipment: name.into(),
+                data: "-".into(),
+                modes: vec![],
+            },
+        );
+    }
+}
+
 /// Equip both hands while preserving the fixture's identity and ammunition layout.
 fn install_test_handweapons(
     world: &mut stompymux_rs::World,
@@ -274,39 +320,14 @@ fn install_test_handweapons(
 ) {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
-    let equipment = handweapon_template_name(kind);
-    // A 35-ton mace fills four slots; the other hand weapons fill three.
-    let last = if kind == ArmAttack::Mace { 7 } else { 6 };
-    for section in [MechSection::LeftArm, MechSection::RightArm] {
-        for (slot, name) in [(2, "LowerActuator"), (3, "HandOrFootActuator")]
-            .into_iter()
-            .chain((4..=last).map(|slot| (slot, equipment)))
-        {
-            definition
-                .sections
-                .get_mut(&section)
-                .unwrap()
-                .criticals
-                .insert(
-                    slot,
-                    CriticalDefinition {
-                        equipment: name.into(),
-                        data: "-".into(),
-                        modes: vec![],
-                    },
-                );
-        }
-    }
-    definition
-        .sections
-        .get_mut(&MechSection::CenterTorso)
-        .unwrap()
-        .criticals
-        .remove(&10);
     if kind == ArmAttack::Saw {
+        // The dual saw fills the left arm behind a full set of actuators.
         for section in [MechSection::LeftArm, MechSection::RightArm] {
-            let arm = definition.sections.get_mut(&section).unwrap();
-            arm.criticals.retain(|slot, _| *slot < 4);
+            arm_with_weapon(
+                definition.sections.get_mut(&section).unwrap(),
+                ArmAttack::Axe,
+                0,
+            );
         }
         let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();
         for slot in 4..=10 {
@@ -319,8 +340,27 @@ fn install_test_handweapons(
                 },
             );
         }
+    } else {
+        for section in [MechSection::LeftArm, MechSection::RightArm] {
+            arm_with_weapon(
+                definition.sections.get_mut(&section).unwrap(),
+                kind,
+                handweapon_slots(kind),
+            );
+        }
     }
-    world.btech.set_unit_definition(id, definition).unwrap();
+    definition
+        .sections
+        .get_mut(&MechSection::CenterTorso)
+        .unwrap()
+        .criticals
+        .remove(&10);
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            crate::support::templates::set_record_definition(record, definition)
+        })
+        .unwrap();
 }
 
 /// Axes/swords retain damage with failed arm actuators, require hands and enough surviving parts, and have distinct mass.
@@ -649,15 +689,21 @@ async fn handweapon_native_lua_recovery_and_restart() {
 async fn melee_swings_each_arms_installed_weapon() {
     use stompymux_rs::*;
     let (_dir, config, original, id, target) = kick_fixture().await;
-    let mixed = |left: ArmAttack, right: &str| {
+    let mixed = |left: ArmAttack, right: ArmAttack| {
         let mut world = original.clone();
         install_test_handweapons(&mut world, id, left);
         let mut definition = world.btech.constructed_units()[&id].definition().clone();
-        let arm = definition.sections.get_mut(&MechSection::RightArm).unwrap();
-        for slot in 4..=6 {
-            arm.criticals.get_mut(&slot).unwrap().equipment = right.into();
-        }
-        world.btech.set_unit_definition(id, definition).unwrap();
+        arm_with_weapon(
+            definition.sections.get_mut(&MechSection::RightArm).unwrap(),
+            right,
+            handweapon_slots(right),
+        );
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                crate::support::templates::set_record_definition(record, definition)
+            })
+            .unwrap();
         world
     };
     let attack = |world: &World, arms| {
@@ -686,7 +732,7 @@ async fn melee_swings_each_arms_installed_weapon() {
             .map(|attack| attack.profile.attack)
             .collect::<Vec<_>>()
     };
-    let claw_axe = mixed(ArmAttack::Claw, "Axe");
+    let claw_axe = mixed(ArmAttack::Claw, ArmAttack::Axe);
     assert_eq!(
         swung(&attack(&claw_axe, ArmSelection::Right).unwrap()),
         [PhysicalAttack::Weapon {
@@ -716,7 +762,7 @@ async fn melee_swings_each_arms_installed_weapon() {
             .reason
             .contains("Your limbs are still recovering")
     );
-    let axe_claw = mixed(ArmAttack::Axe, "Claw");
+    let axe_claw = mixed(ArmAttack::Axe, ArmAttack::Claw);
     assert_eq!(
         swung(&attack(&axe_claw, ArmSelection::Both).unwrap()),
         [PhysicalAttack::Weapon {
@@ -724,7 +770,7 @@ async fn melee_swings_each_arms_installed_weapon() {
             weapon: ArmAttack::Axe
         }]
     );
-    let claws = mixed(ArmAttack::Claw, "Claw");
+    let claws = mixed(ArmAttack::Claw, ArmAttack::Claw);
     assert_eq!(
         swung(&attack(&claws, ArmSelection::Both).unwrap()),
         [
@@ -767,32 +813,23 @@ async fn melee_swings_each_arms_installed_weapon() {
     assert_eq!(scripts.world().btech, original.btech);
 }
 
-/// Give a unit's right arm working lower and hand actuators, then `count` parts of one hand weapon.
+/// Put `count` slots of `kind` in the right arm, refusing a layout construction refuses.
 fn install_right_arm_weapon(
     world: &mut stompymux_rs::World,
     id: ObjectId,
     kind: stompymux_rs::ArmAttack,
     count: u8,
-) {
+) -> anyhow::Result<()> {
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
-    let arm = definition.sections.get_mut(&MechSection::RightArm).unwrap();
-    arm.criticals.retain(|slot, _| *slot < 2);
-    let equipment = handweapon_template_name(kind);
-    let parts = [(2, "LowerActuator"), (3, "HandOrFootActuator")]
-        .into_iter()
-        .chain((4..4 + count).map(|slot| (slot, equipment)));
-    for (slot, name) in parts {
-        arm.criticals.insert(
-            slot,
-            CriticalDefinition {
-                equipment: name.into(),
-                data: "-".into(),
-                modes: vec![],
-            },
-        );
-    }
-    world.btech.set_unit_definition(id, definition).unwrap();
+    arm_with_weapon(
+        definition.sections.get_mut(&MechSection::RightArm).unwrap(),
+        kind,
+        count,
+    );
+    world.btech.rewrite_unit_record(id, |record| {
+        crate::support::templates::set_record_definition(record, definition)
+    })
 }
 
 /// Each added 35-ton hand weapon has its own slots, aim, damage, myomer, hand and heat rules.
@@ -823,13 +860,18 @@ async fn added_handweapon_profiles_slots_hands_and_heat() {
                 kick_rules(),
             )
         };
-        let mut short = original.clone();
-        install_right_arm_weapon(&mut short, id, kind, slots - 1);
-        let error = format!("{:#}", profile(&short).unwrap_err());
-        assert!(error.contains("No usable"), "{kind:?}: {error}");
+        // Construction refuses a weapon short of its slot count.
+        if slots > 1 {
+            let mut short = original.clone();
+            assert!(
+                install_right_arm_weapon(&mut short, id, kind, slots - 1).is_err()
+                    || short.validate(&config).is_err(),
+                "{kind:?}"
+            );
+        }
 
         let mut base = original.clone();
-        install_right_arm_weapon(&mut base, id, kind, slots);
+        install_right_arm_weapon(&mut base, id, kind, slots).unwrap();
         base.validate(&config).unwrap();
         let armed = profile(&base).unwrap();
         assert_eq!(
@@ -854,17 +896,20 @@ async fn added_handweapon_profiles_slots_hands_and_heat() {
             "{kind:?}"
         );
 
-        let mut handless = base.clone();
-        destroy_battle_critical(
-            &mut handless,
-            id,
-            CriticalLocation {
-                section: MechSection::RightArm,
-                slot: 3,
-            },
-        )
-        .unwrap();
-        assert_eq!(profile(&handless).is_ok(), !kind.needs_hand(), "{kind:?}");
+        // A flail replaces the hand actuator, so there is no hand to lose.
+        if kind != ArmAttack::Flail {
+            let mut handless = base.clone();
+            destroy_battle_critical(
+                &mut handless,
+                id,
+                CriticalLocation {
+                    section: MechSection::RightArm,
+                    slot: 3,
+                },
+            )
+            .unwrap();
+            assert_eq!(profile(&handless).is_ok(), !kind.needs_hand(), "{kind:?}");
+        }
 
         let scripts = Scripts::new(
             &config,
@@ -908,7 +953,7 @@ async fn flail_and_wrecking_ball_fumbles_without_knockdown() {
     };
     for (kind, slots) in [(ArmAttack::Flail, 4), (ArmAttack::WreckingBall, 5)] {
         let mut world = original.clone();
-        install_right_arm_weapon(&mut world, id, kind, slots);
+        install_right_arm_weapon(&mut world, id, kind, slots).unwrap();
         shot_seed(&mut world, id, seeded(2));
         let report = resolve_battle_arm_attack(
             &mut world,
@@ -938,7 +983,7 @@ async fn flail_and_wrecking_ball_fumbles_without_knockdown() {
     }
 
     let mut world = original.clone();
-    install_right_arm_weapon(&mut world, id, ArmAttack::WreckingBall, 5);
+    install_right_arm_weapon(&mut world, id, ArmAttack::WreckingBall, 5).unwrap();
     shot_seed(&mut world, id, seeded(12));
     let report = resolve_battle_arm_attack(
         &mut world,
@@ -957,7 +1002,7 @@ async fn flail_and_wrecking_ball_fumbles_without_knockdown() {
     assert!(attack.balance.is_none());
 
     let mut world = original.clone();
-    install_right_arm_weapon(&mut world, id, ArmAttack::Flail, 4);
+    install_right_arm_weapon(&mut world, id, ArmAttack::Flail, 4).unwrap();
     shot_seed(&mut world, id, seeded(12));
     let report = resolve_battle_arm_attack(
         &mut world,
@@ -983,13 +1028,15 @@ async fn lance_penetrates_remaining_armor_with_reduced_criticals() {
         .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
         .unwrap();
     let mut armed = original.clone();
-    install_right_arm_weapon(&mut armed, id, ArmAttack::Lance, 2);
+    install_right_arm_weapon(&mut armed, id, ArmAttack::Lance, 2).unwrap();
     shot_seed(&mut armed, id, hit_seed);
     // Armor the target heavily enough that the lance's seven damage never breaches it.
     armed
         .btech
         .rewrite_unit_record(target, |record| {
             let unit = record;
+            // Every location takes its maximum front armor (TechManual p. 54), the weapons
+            // making room for it.
             for name in unit["sections"]
                 .as_object()
                 .unwrap()
@@ -997,9 +1044,22 @@ async fn lance_penetrates_remaining_armor_with_reduced_criticals() {
                 .cloned()
                 .collect::<Vec<_>>()
             {
-                unit["sections"][&name]["armor"] = 30.into();
-                unit["definition"]["sections"][&name]["armor"] = 30.into();
+                let cap = if name == "Head" {
+                    9
+                } else {
+                    unit["sections"][&name]["internal"].as_u64().unwrap() * 2
+                };
+                for field in ["sections", "definition"] {
+                    let state = if field == "sections" {
+                        &mut unit["sections"][&name]
+                    } else {
+                        &mut unit["definition"]["sections"][&name]
+                    };
+                    state["armor"] = cap.into();
+                    state["rear"] = 0.into();
+                }
             }
+            crate::support::templates::book_legal_record_keeping(unit, Some(MechSection::Head));
         })
         .unwrap();
     let attack = |world: &mut World| {
@@ -1091,7 +1151,7 @@ async fn lance_penetrates_remaining_armor_with_reduced_criticals() {
     }
     let mut world = armed.clone();
     let mut fist = world.clone();
-    install_right_arm_weapon(&mut fist, id, ArmAttack::Axe, 3);
+    install_right_arm_weapon(&mut fist, id, ArmAttack::Axe, 3).unwrap();
     shot_seed(&mut world, target, 0);
     shot_seed(&mut fist, target, 0);
     assert!(attack(&mut world).penetration.is_some());
@@ -1508,13 +1568,12 @@ async fn claw_parts_actuators_damage_and_dice() {
     bare.btech
         .rewrite_unit_record(id, |record| {
             for section in ["LeftArm", "RightArm"] {
-                for slot in 4..=6 {
-                    record["definition"]["sections"][section]["criticals"]
-                        .as_object_mut()
-                        .unwrap()
-                        .remove(&slot.to_string());
-                }
+                record["definition"]["sections"][section]["criticals"]
+                    .as_object_mut()
+                    .unwrap()
+                    .retain(|_, part| part["equipment"] != "Claw");
             }
+            crate::support::templates::book_legal_record(record);
         })
         .unwrap();
     assert_eq!(
@@ -1533,7 +1592,9 @@ async fn claw_parts_actuators_damage_and_dice() {
             install_test_myomer(&mut world, id);
             myomer_test_heat(&mut world, id, 20.0, 9.0);
         }
-        for slot in 0..=3 {
+        // Claws replace the hand actuator (Tactical Operations: Advanced Units & Equipment),
+        // so the arm's actuators are the shoulder, upper and lower arm.
+        for slot in 0..=2 {
             destroy_battle_critical(
                 &mut world,
                 id,
@@ -1662,6 +1723,7 @@ fn prepare_test_club(world: &mut stompymux_rs::World, id: ObjectId) {
                 .remove(&slot.to_string());
         }
     }
+    crate::support::templates::book_legal_record(&mut state["constructed"][id.0.to_string()]);
     let position = world.btech.constructed_units()[&id].position().unwrap();
     let index = usize::from(position.y) * world.btech.maps()[&position.map].width as usize
         + usize::from(position.x);
@@ -6306,7 +6368,7 @@ async fn character_heavy_gauss_recoil_uses_shooter_health_and_toughness() {
     bin.data = "4".into();
     base.btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"][0] = 4.into();
         })
         .unwrap();
@@ -6468,7 +6530,7 @@ async fn character_misload_rolls_back_weapon_and_shooter_casualty() {
     bin.data = "45".into();
     base.btech
         .rewrite_unit_record(id, |record| {
-            record["definition"] = serde_json::to_value(definition).unwrap();
+            crate::support::templates::set_record_definition(record, definition);
             record["ammunition"][0] = 45.into();
         })
         .unwrap();
@@ -6986,15 +7048,9 @@ async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
                 .unwrap(),
             expected
         );
-        let value = unit.battle_value(world.btech.maps().get(&map_id)).unwrap();
-        let defensive = if expected == 258.0 {
-            399.2
-        } else if gravity == 200 {
-            324.35
-        } else {
-            349.3
-        };
-        assert!((value.defensive - defensive).abs() < 0.0001, "{value:?}");
+        // Battle Value reads the design: heat, active myomer and gravity leave it unchanged.
+        let value = unit.battle_value().unwrap();
+        assert!((value.defensive - 349.3).abs() < 0.0001, "{value:?}");
         assert_eq!(world.btech, before);
     }
     // Underweight damage and ammunition loss do not raise the template speed ceiling.
@@ -7172,7 +7228,7 @@ async fn battle_value_gunnery_awards_are_atomic_without_dice() {
     let ShotExperienceAward::BattleValue(report) = report else {
         panic!("Wrong formula")
     };
-    assert_eq!(report.amount, 6);
+    assert_eq!(report.amount, 7);
     assert!(report.calculation.difficulty.unwrap() > 100.0);
     assert!(report.award.accepted);
     assert_eq!(report.award.after.last_used, 100);
@@ -8771,7 +8827,7 @@ async fn heavy_gauss_recoil_experience_policy() {
             bin.data = "4".into();
             base.btech
                 .rewrite_unit_record(id, |record| {
-                    record["definition"] = serde_json::to_value(definition).unwrap();
+                    crate::support::templates::set_record_definition(record, definition);
                     record["ammunition"][0] = 4.into();
                 })
                 .unwrap();
@@ -9029,7 +9085,12 @@ async fn unjam_control_experience_and_roll_traces() {
                     .unwrap();
                 bin.equipment = format!("Ammo_{}", weapon.name());
                 bin.data = weapon.profile().ammunition_per_ton.to_string();
-                world.btech.set_unit_definition(id, definition).unwrap();
+                world
+                    .btech
+                    .rewrite_unit_record(id, |record| {
+                        crate::support::templates::set_record_definition(record, definition)
+                    })
+                    .unwrap();
             }
             let mut unit = world.btech.constructed_units()[&id].clone();
             let weapon = if case == "rotary" {

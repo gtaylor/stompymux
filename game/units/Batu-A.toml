@@ -2,8 +2,8 @@ name = "Batu"
 class = "aerofighter"
 movement = "fly"
 tons = 40
-walk_mp = 14
-heat_sinks = 22
+walk_mp = 9
+heat_sinks = 11
 fuel = 450
 
 [construction]

@@ -2,13 +2,15 @@ name = "Nightsky"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 9
+walk_mp = 6
 jump_mp = 6
-heat_sinks = 22
+heat_sinks = 11
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 300
 heat_sinks = "double"
 
 [sections.left_arm]

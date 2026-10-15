@@ -2,8 +2,13 @@ name = "Yellow Jacket"
 class = "vtol"
 movement = "vtol"
 tons = 30
-walk_mp = 9
+walk_mp = 6
 specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine = "ice"
+engine_rating = 40
 
 [sections.left_side]
 armor = 13

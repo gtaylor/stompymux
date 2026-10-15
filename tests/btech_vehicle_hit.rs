@@ -6,10 +6,10 @@ use stompymux_rs::{
 
 /// A Demolisher with the supplied armor on every face.
 fn vehicle(armor: u16) -> Vehicle {
-    let vehicle = Vehicle::new(
+    let vehicle = Vehicle::new(crate::support::templates::fitted(
         VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
             .unwrap(),
-    )
+    ))
     .unwrap();
     let mut state = serde_json::to_value(vehicle).unwrap();
     for section in ["left", "right", "front", "rear", "turret"] {
@@ -56,13 +56,13 @@ fn locations_follow_total_warfare_with_turret_hits_falling_back_to_the_face() {
     let mut lost = intact.clone();
     lost.damage_phase(S::Turret, 100, stompymux_rs::DamagePhase::Internal)
         .unwrap();
-    let turretless = Vehicle::new(
+    let turretless = Vehicle::new(crate::support::templates::fitted(
         VehicleTemplate::parse(
             "Flatbed_Truck",
             include_str!("../game/units/Flatbed_Truck.toml"),
         )
         .unwrap(),
-    )
+    ))
     .unwrap();
     for (arc, row) in expected_rows() {
         let face = arc.vehicle_section();
@@ -115,13 +115,15 @@ fn locations_follow_total_warfare_with_turret_hits_falling_back_to_the_face() {
 fn motive_rolls_apply_direction_and_vehicle_type_modifiers() {
     // Tracked +0, wheeled +2, hover +3; rear +1, sides +2 (TW p. 193).
     for (movement, type_modifier) in [("track", 0u8), ("wheel", 2), ("hover", 3)] {
-        let text = include_str!("../game/units/Demolisher.toml")
-            .replace(
-                "movement = \"track\"",
-                &format!("movement = \"{movement}\""),
-            )
-            .replace("walk_mp = 5", "walk_mp = 8");
-        let vehicle = Vehicle::new(VehicleTemplate::parse("test", &text).unwrap()).unwrap();
+        let text = crate::support::templates::with_movement(
+            include_str!("../game/units/Demolisher.toml"),
+            movement,
+        )
+        .replace("walk_mp = 3", "walk_mp = 5");
+        let vehicle = Vehicle::new(crate::support::templates::fitted(
+            VehicleTemplate::parse("test", &text).unwrap(),
+        ))
+        .unwrap();
         for (arc, direction) in [
             (Arc::Front, 0u8),
             (Arc::Rear, 1),

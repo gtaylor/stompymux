@@ -2,6 +2,9 @@
 
 use stompymux_test_support as support;
 
+#[path = "../btech_apollo.rs"]
+mod btech_apollo;
+
 #[path = "../btech_artemis.rs"]
 mod btech_artemis;
 

@@ -54,15 +54,18 @@ impl VehicleLoadout {
                             critical.data == "-" || critical.data.parse::<i32>().is_ok()
                         } else {
                             critical.data == "-"
-                                || (critical.equipment.eq_ignore_ascii_case("ArtemisIV")
-                                    && critical.data.parse::<u8>().is_ok())
+                                || (matches!(
+                                    super::System::named(&critical.equipment),
+                                    Some(super::System::ArtemisIv | super::System::ArtemisV)
+                                ) && critical.data.parse::<u8>().is_ok())
                         },
                         "Unsupported critical data {}",
                         critical.data
                     );
                     let equipment = critical.equipment.clone();
-                    if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
-                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
+                    if (super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
+                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some())
+                        && System::named(&equipment).is_none()
                     {
                         let weapon = match Weapon::parse(&equipment) {
                             Ok(weapon) => weapon,
@@ -84,8 +87,8 @@ impl VehicleLoadout {
                         });
                         return Ok(());
                     }
-                    let system = match System::named(&critical.equipment) {
-                        Some(system) => system,
+                    let (system, tech_base) = match System::installation(&critical.equipment) {
+                        Some(installation) => installation,
                         None if contract
                             && Part::parse(&critical.equipment).is_ok_and(|part| {
                                 matches!(part.kind, PartKind::Component | PartKind::Bomb)
@@ -96,7 +99,11 @@ impl VehicleLoadout {
                         None => bail!("Unsupported equipment {}", critical.equipment),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    loadout.systems.push(SystemCritical { location, system });
+                    loadout.systems.push(SystemCritical {
+                        location,
+                        system,
+                        tech_base,
+                    });
                     Ok(())
                 })()
                 .with_context(|| {

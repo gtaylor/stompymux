@@ -2,8 +2,12 @@ name = "Stalker"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 26
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 255
 
 [sections.left_arm]
 armor = 22

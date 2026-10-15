@@ -2,7 +2,11 @@ name = "Trebuchet"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 8
+walk_mp = 5
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 250
 
 [sections.left_arm]
 armor = 10

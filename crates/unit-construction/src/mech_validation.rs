@@ -14,7 +14,6 @@ impl MechTemplate {
     /// layout. [`MechTemplate::validate_loadout`] checks the installed equipment afterwards.
     pub fn validate_definition(&self) -> Result<()> {
         super::validate_unit_metadata(&self.attributes)?;
-        super::read_engine_sink_override(&self.attributes)?;
         super::read_template_speed(&self.attributes, self.max_speed)?;
         ensure!(
             (20..=100).contains(&self.tons) && self.tons.is_multiple_of(5),
@@ -30,10 +29,7 @@ impl MechTemplate {
                 && self.jump_speed <= self.max_speed,
             "Invalid jump speed"
         );
-        ensure!(
-            (10..=100).contains(&self.heat_sinks),
-            "Invalid heat sink count"
-        );
+        ensure!(self.heat_sinks <= 200, "Invalid heat sink count");
         ensure!(
             !self.name.is_empty()
                 && self.name.len() <= 128
@@ -46,8 +42,8 @@ impl MechTemplate {
         validate_unsupported_technology(self)?;
         for (field, value) in &self.attributes {
             match field.as_str() {
-                "name" | "reference" | "tons" | "max_speed" | "jump_speed" | "heat_sinks"
-                | "comment" | "hsengoverride" | "template_speed" => {}
+                "name" | "reference" | "tons" | "walk_mp" | "max_speed" | "jump_speed"
+                | "heat_sinks" | "comment" | "template_speed" | "engine_rating" => {}
                 "type" => ensure!(value.eq_ignore_ascii_case("Mech"), "Unsupported unit type"),
                 "move_type" => ensure!(
                     value.eq_ignore_ascii_case("Biped") || value.eq_ignore_ascii_case("Quad"),
@@ -77,7 +73,6 @@ impl MechTemplate {
                             && value.split_ascii_whitespace().all(|flag| flag
                                 .eq_ignore_ascii_case("FlipArms")
                                 || flag.eq_ignore_ascii_case("Searchlight")
-                                || flag.eq_ignore_ascii_case("Camo_Tech")
                                 || flag.eq_ignore_ascii_case("CritProof_Tech")
                                 || flag.eq_ignore_ascii_case("CargoTech")
                                 || flag.eq_ignore_ascii_case("SalvageTech")
@@ -89,9 +84,10 @@ impl MechTemplate {
                                 || flag.eq_ignore_ascii_case("C3I_Tech")
                                 || flag.eq_ignore_ascii_case("SuperCharger_Tech")
                                 || flag.eq_ignore_ascii_case("Clan")
-                                || flag.eq_ignore_ascii_case("IS_AMS")
-                                || flag.eq_ignore_ascii_case("CL_AMS")
+                                || flag.eq_ignore_ascii_case(super::construction::MIXED_TECH)
                                 || flag.eq_ignore_ascii_case("DoubleHS")
+                                || flag
+                                    .eq_ignore_ascii_case(super::construction::SINGLE_HEAT_SINKS)
                                 || flag.eq_ignore_ascii_case("LaserHS_Tech")
                                 || flag.eq_ignore_ascii_case("ImprovedJJ_Tech")
                                 || flag.eq_ignore_ascii_case("HDGYRO")
@@ -103,7 +99,6 @@ impl MechTemplate {
                                 || flag.eq_ignore_ascii_case("AngelECM_Tech")
                                 || flag.eq_ignore_ascii_case("StealthArmor_Tech")
                                 || flag.eq_ignore_ascii_case("NullSigSys_Tech")
-                                || flag.eq_ignore_ascii_case("AntiAircraft")
                                 || flag.eq_ignore_ascii_case("TAG_Tech")
                                 || flag.eq_ignore_ascii_case("BeagleProbe")
                                 || flag.eq_ignore_ascii_case("LightBAP")
@@ -142,11 +137,13 @@ impl MechTemplate {
                 layout.criticals.keys().all(|&slot| slot < slots),
                 "Critical outside section capacity"
             );
+            // CASE is equipment in a critical slot, and Clan CASE is built into every location
+            // (TM p. 210); a section-wide CASE configuration has no book counterpart.
             ensure!(
                 layout
                     .configuration
                     .as_deref()
-                    .is_none_or(|value| value == "-" || value.eq_ignore_ascii_case("Case")),
+                    .is_none_or(|value| value == "-"),
                 "Unsupported section configuration"
             );
             ensure!(
@@ -162,7 +159,8 @@ impl MechTemplate {
 
     /// Check the installed equipment of a template that passed
     /// [`MechTemplate::validate_definition`]: a complete engine, one gyro technology, the
-    /// conventional cockpit systems, jump jet groups, heat sink criticals and cargo space.
+    /// conventional cockpit systems and cargo space, then the TechManual construction rules
+    /// of [`MechTemplate::validate_construction`].
     pub fn validate_loadout(&self, loadout: &MechLoadout) -> Result<()> {
         super::Engine::resolve(loadout, self.clan_engine())?;
         ensure!(
@@ -173,13 +171,15 @@ impl MechTemplate {
                 <= 1,
             "Conflicting gyro technologies"
         );
+        let torso_cockpit = self.has_technology(super::Technology::TorsoMountedCockpit);
         for (system, count) in [
             (
                 System::Gyro,
                 super::Gyro::from_definition(self).critical_slots(),
             ),
             (System::Cockpit, 1),
-            (System::Sensors, 2),
+            // A torso-mounted cockpit adds a sensor package beside it to the head's two.
+            (System::Sensors, if torso_cockpit { 3 } else { 2 }),
             // A small cockpit fits one life support slot beside its two sensors.
             (
                 System::LifeSupport,
@@ -201,32 +201,7 @@ impl MechTemplate {
                 system
             );
         }
-        if self.has_special("ImprovedJJ_Tech") {
-            let jets = loadout.jump_jet_groups(true)?.len();
-            ensure!(
-                (self.jump_speed - jets as f64 * 10.75).abs() < 0.001,
-                "Improved jump jet capacity does not match installed groups"
-            );
-        }
-        if self.has_double_heat_sinks() {
-            ensure!(
-                self.heat_sinks.is_multiple_of(2),
-                "Invalid double heat sink capacity"
-            );
-        }
-        let sinks = loadout
-            .systems
-            .iter()
-            .filter(|critical| critical.system == System::HeatSink)
-            .count();
-        ensure!(
-            if self.has_double_heat_sinks() {
-                sinks / self.heat_sink_slots() * 2
-            } else {
-                sinks
-            } <= usize::from(self.heat_sinks),
-            "More heat sink criticals than declared heat sinks"
-        );
+        self.validate_cockpit_placement(loadout)?;
         // A declared cargo installation must weigh out; live mass is measured from the same rule.
         if self
             .attributes
@@ -239,6 +214,38 @@ impl MechTemplate {
                 self.has_special("CargoTech"),
             )?;
         }
+        self.validate_construction(loadout)
+    }
+}
+
+impl MechTemplate {
+    /// The cockpit sits in the head with its life support and sensors, or, torso-mounted, in
+    /// the center torso beside one sensor package with a life support slot in each side torso
+    /// and two sensors left in the head (Tactical Operations: Advanced Units & Equipment
+    /// p. 112).
+    fn validate_cockpit_placement(&self, loadout: &MechLoadout) -> Result<()> {
+        let count = |system, section| {
+            loadout
+                .systems
+                .iter()
+                .filter(|part| part.system == system && part.location.section == section)
+                .count()
+        };
+        if !self.has_technology(super::Technology::TorsoMountedCockpit) {
+            ensure!(
+                count(System::Cockpit, MechSection::Head) == 1,
+                "The cockpit belongs in the head"
+            );
+            return Ok(());
+        }
+        ensure!(
+            count(System::Cockpit, MechSection::CenterTorso) == 1
+                && count(System::Sensors, MechSection::CenterTorso) == 1
+                && count(System::Sensors, MechSection::Head) == 2
+                && count(System::LifeSupport, MechSection::LeftTorso) == 1
+                && count(System::LifeSupport, MechSection::RightTorso) == 1,
+            "A torso-mounted cockpit sits in the center torso with one sensor package, a life support slot in each side torso and two sensors in the head"
+        );
         Ok(())
     }
 }

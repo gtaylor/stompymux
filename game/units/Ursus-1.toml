@@ -2,11 +2,12 @@ name = "Ursus"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 6
-heat_sinks = 32
+walk_mp = 4
+heat_sinks = 16
 
 [construction]
 tech_base = "clan"
+engine_rating = 200
 armor = "ferro_fibrous"
 
 [sections.left_arm]

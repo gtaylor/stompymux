@@ -5,6 +5,7 @@ use stompymux_rs::*;
 fn unit(source: &str) -> Mech {
     Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap()
 }
+
 const JENNER: &str = include_str!("fixtures/btech/units/JR7-D.toml");
 const ATLAS: &str = include_str!("fixtures/btech/units/AS7-D.toml");
 
@@ -78,8 +79,14 @@ fn sink_losses_and_destroyed_core_preserve_component_accounting() {
     assert!(mass.total > 0);
 }
 
-/// Add distributed construction slots without replacing weapons or conventional systems.
+/// Construct [`material_template`].
 fn with_material(name: &str, count: usize) -> Mech {
+    Mech::from_template(material_template(name, count)).unwrap()
+}
+
+/// Add distributed construction slots without replacing weapons or conventional systems, and
+/// declare the material.
+fn material_template(name: &str, count: usize) -> MechTemplate {
     let mut template = MechTemplate::parse("JR7-D", JENNER).unwrap();
     let mut part = template.sections[&MechSection::Head].criticals[&3].clone();
     part.equipment = name.into();
@@ -101,11 +108,21 @@ fn with_material(name: &str, count: usize) -> Mech {
         }
     }
     assert_eq!(remaining, 0);
-    Mech::from_template(template).unwrap()
+    // Each material is a declared construction choice (TechManual pp. 47, 56).
+    let flag = match name {
+        "FerroFibrous" => "FerroFibrous_Tech",
+        "LtFerroFibrous" => "LtFerroFibrous_Tech",
+        "HvyFerroFibrous" => "HvyFerroFibrous_Tech",
+        _ => "EndoSteel_Tech",
+    };
+    template
+        .attributes
+        .insert("specials".into(), format!("FlipArms {flag}"));
+    crate::support::templates::legal(template)
 }
 
 #[test]
-fn structural_material_thresholds_mass_rounding_and_critical_exclusion() {
+fn structural_material_slots_mass_rounding_and_critical_exclusion() {
     let standard = unit(JENNER);
     for (name, slots, intact_armor, damaged_armor, structure) in [
         ("FerroFibrous", 14, 4096, 3584, 3584),
@@ -120,10 +137,8 @@ fn structural_material_thresholds_mass_rounding_and_critical_exclusion() {
             enhanced.mass().unwrap().equipment,
             standard.mass().unwrap().equipment
         );
-        assert_eq!(
-            with_material(name, slots - 1).mass().unwrap(),
-            standard.mass().unwrap()
-        );
+        // The material fills exactly its slot count.
+        assert!(Mech::from_template(material_template(name, slots - 1)).is_err());
         for &section in standard.sections().keys() {
             assert_eq!(
                 enhanced.critical_candidates(section),
@@ -160,13 +175,12 @@ fn material_flags_alone_do_not_replace_required_slots() {
         "specials".into(),
         "FlipArms FerroFibrous_Tech EndoSteel_Tech HvyFerroFibrous_Tech LtFerroFibrous_Tech".into(),
     );
-    let declared = Mech::from_template(template).unwrap();
-    assert_eq!(declared.mass().unwrap(), standard.mass().unwrap());
+    assert!(Mech::from_template(template).is_err());
 }
 
 /// The Jenner with empty side torsos for engine slots, no jump jets, and a `[construction]`
-/// table.
-fn jenner_with(construction: &str, slots: &str) -> Mech {
+/// table, weighed by book rounding without constructing it (TechManual pp. 46-57).
+fn jenner_with(construction: &str, slots: &str) -> (MechTemplate, MechMass) {
     let source = JENNER
         .replace("jump_mp = 5\n", "")
         .replace("slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]\n", "")
@@ -175,7 +189,19 @@ fn jenner_with(construction: &str, slots: &str) -> Mech {
             "    { at = 12, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n",
         )
         .replace("    { at = 11, item = \"IS.SRM-4\" },\n    { at = 12, item = \"JumpJet\" },\n", slots);
-    unit(&format!("{source}\n[construction]\n{construction}\n"))
+    let template = MechTemplate::parse(
+        "test",
+        &source.replacen(
+            "[construction]\n",
+            &format!("[construction]\n{construction}\n"),
+            1,
+        ),
+    )
+    .unwrap();
+    let mass = template
+        .construction_mass(&MechLoadout::resolve(&template).unwrap())
+        .unwrap();
+    (template, mass)
 }
 
 /// The Jenner's own center torso launcher.
@@ -186,7 +212,7 @@ const SRM: &str = "    { at = 11, item = \"IS.SRM-4\" },\n";
 /// side slots weighs three quarters.
 #[test]
 fn mixed_technology_engines_use_their_own_base() {
-    let standard = jenner_with("", SRM).mass().unwrap().engine;
+    let standard = jenner_with("", SRM).1.engine;
     assert_eq!(standard, 12 * 1024);
     for (construction, engine, mass) in [
         ("engine = \"xl\"", Engine::Xl, 6 * 1024),
@@ -197,12 +223,17 @@ fn mixed_technology_engines_use_their_own_base() {
         ),
         ("engine = \"light\"", Engine::Light, 9 * 1024),
     ] {
-        let unit = jenner_with(construction, SRM);
-        assert_eq!(unit.engine().unwrap(), engine, "{construction}");
-        assert_eq!(unit.mass().unwrap().engine, mass, "{construction}");
+        let (template, weight) = jenner_with(construction, SRM);
+        let installed = Engine::resolve(
+            &MechLoadout::resolve(&template).unwrap(),
+            template.clan_engine(),
+        )
+        .unwrap();
+        assert_eq!(installed, engine, "{construction}");
+        assert_eq!(weight.engine, mass, "{construction}");
     }
-    let clan = jenner_with("engine = \"xl\"\nengine_tech = \"clan\"", SRM);
-    let side = clan.definition().sections[&MechSection::LeftTorso]
+    let (clan, _) = jenner_with("engine = \"xl\"\nengine_tech = \"clan\"", SRM);
+    let side = clan.sections[&MechSection::LeftTorso]
         .criticals
         .values()
         .filter(|critical| critical.equipment == "Engine")
@@ -211,25 +242,29 @@ fn mixed_technology_engines_use_their_own_base() {
 }
 
 /// A combustion engine weighs twice a fusion engine, carries no free heat sinks and needs power
-/// amplifiers for its energy weapons.
+/// amplifiers for its energy weapons (TechManual p. 49; Tactical Operations: Advanced Units &
+/// Equipment non-fusion engines).
 #[test]
 fn combustion_engines_weigh_double_without_free_sinks() {
-    let fusion = jenner_with("", SRM).mass().unwrap();
-    let ice = jenner_with("engine = \"ice\"", SRM).mass().unwrap();
+    let (_, fusion) = jenner_with("", SRM);
+    let (_, ice) = jenner_with("engine = \"ice\"", SRM);
     assert_eq!(ice.engine, 2 * fusion.engine);
     // Ten heat sinks at a ton each, and half a ton of amplifiers for four medium lasers.
-    assert_eq!(ice.equipment, fusion.equipment + 10 * 1024 + 512);
+    assert_eq!(ice.heat_sinks, fusion.heat_sinks + 10 * 1024);
+    assert!(
+        ice.items
+            .iter()
+            .any(|item| item.name == "PowerAmplifiers" && item.mass == 512)
+    );
 }
 
 /// A one-shot launcher weighs half a ton more than the launcher and carries no bin.
 #[test]
 fn one_shot_launchers_add_half_a_ton() {
-    let fed = jenner_with("", SRM).mass().unwrap();
-    let one_shot = jenner_with(
+    let (_, fed) = jenner_with("", SRM);
+    let (_, one_shot) = jenner_with(
         "",
         "    { at = 11, item = \"IS.SRM-4\", modes = [\"OneShot\"] },\n",
-    )
-    .mass()
-    .unwrap();
-    assert_eq!(one_shot.equipment, fed.equipment + 512);
+    );
+    assert_eq!(one_shot.total, fed.total + 512);
 }

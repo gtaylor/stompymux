@@ -2,10 +2,12 @@ name = "Dart"
 class = "mech"
 movement = "biped"
 tons = 25
-walk_mp = 14
+walk_mp = 9
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 225
 armor = "ferro_fibrous"
 
 [sections.left_arm]

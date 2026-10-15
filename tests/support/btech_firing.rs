@@ -8,18 +8,27 @@ pub fn templates() -> Vec<String> {
         include_str!("../../game/units/JR7-D.toml").into(),
         include_str!("../../game/units/GOL-1H.toml").into(),
         tracked.into(),
-        tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        tracked
+            .replace("movement = \"track\"", "movement = \"wheel\"")
+            .replace("engine_rating = 240", "engine_rating = 220"),
+        crate::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("engine_rating = 240\n", "")
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../../game/units/Kestrel.toml").into(),
     ]
 }
 
 /// Edit only explicitly selected saved test state, retaining the normal validation path.
 pub fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    world.btech.rewrite_unit_record(id, change).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            change(record);
+            crate::templates::book_legal_record(record);
+        })
+        .unwrap();
 }
 
 /// A configurable recipient supports both ground and airborne target admission cases.
@@ -133,16 +142,24 @@ pub fn supply_fixture_on(
             );
         }
     }
+    match &mut template {
+        UnitTemplate::Vehicle(definition) => crate::templates::fit_vehicle(definition),
+        UnitTemplate::Mech(definition) => {
+            crate::templates::book_legal_keeping(definition, Some(MechSection::LeftTorso))
+        }
+    }
     let shooter = world.create(config, "Sighter".into(), Kind::Thing);
     let target = world.create(config, "Target".into(), Kind::Thing);
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
     template.create(&mut world, shooter).unwrap();
-    UnitTemplate::parse("target", target_source)
-        .unwrap()
-        .create(&mut world, target)
-        .unwrap();
+    let mut target_template = UnitTemplate::parse("target", target_source).unwrap();
+    match &mut target_template {
+        UnitTemplate::Vehicle(definition) => crate::templates::fit_vehicle(definition),
+        UnitTemplate::Mech(definition) => crate::templates::book_legal(definition),
+    }
+    target_template.create(&mut world, target).unwrap();
     for id in [shooter, target] {
         crate::seed_object_dice(&mut world, id, crate::FIXTURE_DICE_SEED);
     }

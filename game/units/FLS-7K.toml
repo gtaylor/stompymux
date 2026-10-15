@@ -2,8 +2,12 @@ name = "Flashman"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
+walk_mp = 4
 heat_sinks = 23
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 
 [sections.left_arm]
 armor = 24

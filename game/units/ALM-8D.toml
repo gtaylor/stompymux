@@ -2,11 +2,13 @@ name = "Fireball"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 17
+walk_mp = 11
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 220
 structure = "endo_steel"
 
 [sections.left_arm]

@@ -32,8 +32,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Hiding unit".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::legal_unit(UnitTemplate::parse("test", source).unwrap())
         .create(&mut world, id)
         .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -57,10 +56,10 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
 async fn hiding_native_lua_all_chassis_timing_and_restart() {
     let tracked = include_str!("../game/units/Demolisher.toml");
     let wheel = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
-    let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
+    let hover = crate::support::templates::hovercraft(tracked);
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
-        .replace("walk_mp = 5", "walk_mp = 0");
+        .replace("walk_mp = 3", "walk_mp = 0");
     for source in [
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/GOL-1H.toml"),
@@ -165,10 +164,11 @@ async fn hiding_authority_and_cached_observer_rules() {
             begin_battle_hiding(&mut world, id, ObjectId(2)).unwrap();
             let observer = world.create(&config, "Observer".into(), Kind::Thing);
             world.objects.get_mut(&observer).unwrap().home = Some(ObjectId(config.home()));
-            UnitTemplate::parse("Hunter", include_str!("../game/units/Hunter.toml"))
-                .unwrap()
-                .create(&mut world, observer)
-                .unwrap();
+            crate::support::templates::legal_unit(
+                UnitTemplate::parse("Hunter", include_str!("../game/units/Hunter.toml")).unwrap(),
+            )
+            .create(&mut world, observer)
+            .unwrap();
             support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
             place_battle_unit(&mut world, observer, map, 1, 0).unwrap();
             world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(observer);
@@ -665,10 +665,10 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
         include_str!("../game/units/GOL-1H.toml").to_owned(),
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ];
     for source in chassis {

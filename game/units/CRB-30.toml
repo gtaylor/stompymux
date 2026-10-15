@@ -2,14 +2,16 @@ name = "Crab"
 class = "mech"
 movement = "biped"
 tons = 50
-walk_mp = 8
-heat_sinks = 28
+walk_mp = 5
+heat_sinks = 14
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 250
 armor = "ferro_fibrous"
 heat_sinks = "double"
 

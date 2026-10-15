@@ -91,8 +91,7 @@ async fn normal_placement_avoids_authored_ids_without_reordering_membership() {
     for source in firing::templates() {
         let unit = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
-        UnitTemplate::parse("test", &source)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", &source).unwrap())
             .create(&mut world, unit)
             .unwrap();
         place_battle_unit(&mut world, unit, map, 0, 0).unwrap();

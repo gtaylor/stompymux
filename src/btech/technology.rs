@@ -88,6 +88,8 @@ mod tests {
         .unwrap();
         let specials = template.attributes.entry("specials".into()).or_default();
         specials.push_str(" HARM");
+        // Hardened armor's doubled weight comes out of the weapons.
+        crate::btech::test_designs::balance(&mut template, &[]);
         let unit = Mech::from_template(template).unwrap();
         let left_arm = MechSection::LeftArm;
         // Six damage removes three of four points: three count.
@@ -139,11 +141,13 @@ mod tests {
                 "{ at = 5, item = \"HeatSink\" }",
             )
             .replacen(
-                "\n[sections.",
-                "\n[construction]\ncockpit = \"small\"\n\n[sections.",
+                "[construction]\n",
+                "[construction]\ncockpit = \"small\"\n",
                 1,
             );
-        let template = MechTemplate::parse("JR7-D", &small).unwrap();
+        let mut template = MechTemplate::parse("JR7-D", &small).unwrap();
+        // The ton the small cockpit saves becomes cargo space.
+        crate::btech::test_designs::balance(&mut template, &[]);
         assert!(Mech::from_template(template).is_ok());
 
         let mut flagged = MechTemplate::parse("JR7-D", jenner).unwrap();

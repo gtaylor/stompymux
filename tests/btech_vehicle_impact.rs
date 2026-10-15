@@ -201,8 +201,7 @@ async fn motive_impacts_commit_steering_speed_and_penetration_together() {
 
 #[tokio::test]
 async fn driving_penalties_apply_once_per_tier_and_an_immobilized_hovercraft_sinks() {
-    let text = include_str!("../game/units/Demolisher.toml")
-        .replace("movement = \"track\"", "movement = \"hover\"");
+    let text = crate::support::templates::hovercraft(include_str!("../game/units/Demolisher.toml"));
     let (_dir, config, mut world, id) = fixture(&text).await;
     // Hover +3 from the front: a motive roll of 3 is a 6 (+1 driving) each time.
     for expected in [1, 1] {

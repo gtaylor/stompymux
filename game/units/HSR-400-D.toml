@@ -2,30 +2,27 @@ name = "Hussar"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 12
+walk_mp = 8
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 240
 armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 2
-slots = [
-    { at = "5-7", item = "FerroFibrous" },
-]
 
 [sections.right_arm]
 armor = 2
-slots = [
-    { at = "5-7", item = "FerroFibrous" },
-]
 
 [sections.left_torso]
 armor = 8
 rear = 1
 slots = [
     { at = "4-9", item = "IS.LB10-XAC" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -36,7 +33,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 11
+armor = 10
 rear = 2
 slots = [
     { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
@@ -54,3 +51,6 @@ armor = 5
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

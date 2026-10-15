@@ -2,9 +2,13 @@ name = "Jenner"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 11
+walk_mp = 7
 jump_mp = 5
 radio = 2
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 245
 
 [sections.left_arm]
 armor = 4

@@ -2,56 +2,47 @@ name = "Naga"
 class = "mech"
 movement = "biped"
 tons = 80
-walk_mp = 8
-heat_sinks = 24
+walk_mp = 5
+heat_sinks = 12
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 400
 structure = "endo_steel"
 
 [sections.left_arm]
 armor = 14
-omit = ["shoulder", "upper_actuator", "lower_actuator", "hand_actuator"]
-slots = [
-    { at = "1-12", item = "CL.ArrowIVSystem" },
-]
+omit = ["lower_actuator", "hand_actuator"]
 
 [sections.right_arm]
 armor = 14
-omit = ["shoulder", "upper_actuator", "lower_actuator", "hand_actuator"]
-slots = [
-    { at = "1-12", item = "CL.ArrowIVSystem" },
-]
+omit = ["lower_actuator", "hand_actuator"]
 
 [sections.left_torso]
 armor = 15
 rear = 9
-engine_at = 4
 slots = [
-    { at = 3, item = "EndoSteel" },
-    { at = "6-7", item = "HeatSink" },
-    { at = "8-10", item = "Ammo_CL.ArrowIVSystem", rounds = 5 },
-    { at = 12, item = "CL.ERSmallLaser" },
+    { at = 5, item = "CL.ERSmallLaser" },
+    { at = "6-8", item = "Ammo_CL.ArrowIVSystem", rounds = 5 },
+    { at = 9, item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 15
 rear = 9
-engine_at = 4
 slots = [
-    { at = 3, item = "EndoSteel" },
-    { at = "6-7", item = "HeatSink" },
-    { at = "9-10", item = "Ammo_CL.ArrowIVSystem", rounds = 5 },
-    { at = 12, item = "CL.ERMediumLaser" },
+    { at = 5, item = "CL.ERMediumLaser" },
+    { at = "6-7", item = "Ammo_CL.ArrowIVSystem", rounds = 5 },
+    { at = 8, item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 17
 rear = 10
 slots = [
-    { at = 11, item = "EndoSteel" },
-    { at = 12, item = "CL.ERMediumLaser" },
+    { at = 11, item = "CL.ERMediumLaser" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
@@ -68,3 +59,17 @@ slots = [
 
 [sections.head]
 armor = 9
+
+[[split_mounts]]
+item = "CL.ArrowIVSystem"
+placements = [
+    { section = "left_arm", at = "3-12" },
+    { section = "left_torso", at = "3-4" },
+]
+
+[[split_mounts]]
+item = "CL.ArrowIVSystem"
+placements = [
+    { section = "right_arm", at = "3-12" },
+    { section = "right_torso", at = "3-4" },
+]

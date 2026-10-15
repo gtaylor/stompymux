@@ -69,11 +69,12 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
             .await
             .unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
+        // A Clan plasma cannon deals a Mech no damage; its heat arrives with the direct shot.
         let mut clan = before.clone();
         let clan_report =
-            resolve_battle_salvo(&mut clan, id, Weapon::ClanPlasmaRifle, HitArc::Front).unwrap();
-        assert_eq!(clan_report, ordinary_report);
-        assert_eq!(clan.btech, ordinary.btech);
+            resolve_battle_salvo(&mut clan, id, Weapon::ClanPlasmaCannon, HitArc::Front).unwrap();
+        assert!(clan_report.groups.is_empty());
+        assert_eq!(clan.btech, before.btech);
         let mut plasma = before.clone();
         let report =
             resolve_battle_salvo(&mut plasma, id, Weapon::PlasmaRifle, HitArc::Front).unwrap();
@@ -125,7 +126,7 @@ fn plasma_ammunition_is_inert_and_mount_facts_are_distinct() {
         .unwrap();
     bin.equipment = "Ammo_IS.PlasmaRifle".into();
     bin.data = "10".into();
-    let mut unit = Mech::from_template(template).unwrap();
+    let mut unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
     let loadout = unit.loadout().unwrap();
     let location = loadout.ammunition[0].location;
     let index = loadout

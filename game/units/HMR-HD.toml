@@ -2,7 +2,7 @@ name = "Hammaerhead"
 class = "aerofighter"
 movement = "fly"
 tons = 75
-walk_mp = 11
+walk_mp = 7
 fuel = 750
 
 [sections.nose]

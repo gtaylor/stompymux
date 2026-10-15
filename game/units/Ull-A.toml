@@ -2,12 +2,14 @@ name = "Uller"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 9
-heat_sinks = 20
+walk_mp = 6
+heat_sinks = 10
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 180
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -15,15 +17,16 @@ armor = "ferro_fibrous"
 armor = 7
 slots = [
     { at = "5-6", item = "CL.ERMediumLaser" },
-    { at = 11, item = "EndoSteel" },
-    { at = 12, item = "FerroFibrous" },
+    { at = 7, item = "EndoSteel" },
+    { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 7
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-9", item = "CL.GaussRifle" },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "9-10", item = "Ammo_CL.GaussRifle", rounds = 8 },
     { at = 11, item = "EndoSteel" },
     { at = 12, item = "FerroFibrous" },
 ]
@@ -32,37 +35,31 @@ slots = [
 armor = 8
 rear = 4
 slots = [
-    { at = "9-10", item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-8", item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 8
 rear = 4
 slots = [
-    { at = "3-4", item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = "8-10", item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-5", item = "EndoSteel" },
+    { at = "6-7", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 9
-rear = 5
+rear = 4
 slots = [
     { at = "11-12", item = "HeatSink" },
 ]
 
 [sections.left_leg]
 armor = 8
-slots = [
-    { at = "5-6", item = "HeatSink" },
-]
 
 [sections.right_leg]
 armor = 8
-slots = [
-    { at = "5-6", item = "HeatSink" },
-]
 
 [sections.head]
 armor = 9

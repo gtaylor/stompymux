@@ -278,6 +278,9 @@ impl Mech {
                             * weapon.profile().missiles.max(1)
                     } else if weapon.jammed_explosion_damage() > 0 && self.weapon_jammed(index)? {
                         weapon.jammed_explosion_damage()
+                    } else if weapon.is_b_pod() {
+                        // Nothing triggers a B-Pod without infantry, so it is never expended.
+                        weapon.pod_explosion_damage()
                     } else {
                         weapon.weapon_explosion_damage()
                     }
@@ -361,7 +364,7 @@ impl Mech {
         if matches!(
             loss,
             CriticalLoss::System {
-                system: System::ArtemisIv
+                system: System::ArtemisIv | System::ArtemisV
             }
         ) {
             // The reference critical handler uses the raw value as a same-section zero-based slot.
@@ -539,7 +542,9 @@ mod tests {
                 "{ at = \"11-12\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
                 &format!("{{ at = 11, item = \"Ammo_{item}\", rounds = {rounds} }}"),
             );
-        Mech::from_template(super::super::MechTemplate::parse("AS7-D", &source).unwrap()).unwrap()
+        let mut template = super::super::MechTemplate::parse("AS7-D", &source).unwrap();
+        super::super::test_designs::balance(&mut template, &[item]);
+        Mech::from_template(template).unwrap()
     }
 
     /// The explosion a critical hit on the right torso's first slot would release.

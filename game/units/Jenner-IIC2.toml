@@ -2,13 +2,14 @@ name = "Jenner"
 class = "mech"
 movement = "biped"
 tons = 35
-walk_mp = 14
+walk_mp = 9
 jump_mp = 9
-heat_sinks = 20
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 315
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -38,13 +39,13 @@ slots = [
 ]
 
 [sections.right_torso]
-armor = 8
-rear = 4
+armor = 6
+rear = 3
 slots = [
     { at = "3-4", item = "JumpJet" },
     { at = 5, item = "Ammo_CL.LRM-5", rounds = 24 },
-    { at = "6-9", item = "EndoSteel" },
-    { at = "10-11", item = "FerroFibrous" },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

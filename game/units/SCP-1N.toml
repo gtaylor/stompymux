@@ -2,8 +2,12 @@ name = "Scorpion"
 class = "mech"
 movement = "quad"
 tons = 55
-walk_mp = 9
+walk_mp = 6
 radio = 4
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 330
 
 [sections.front_left_leg]
 armor = 10

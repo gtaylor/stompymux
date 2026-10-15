@@ -2,13 +2,15 @@ name = "Goliath"
 class = "mech"
 movement = "quad"
 tons = 80
-walk_mp = 6
-heat_sinks = 20
+walk_mp = 4
+heat_sinks = 10
 radio = 4
 specials = ["ArtemisIV"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "light"
+engine_rating = 320
 heat_sinks = "double"
 
 [sections.front_left_leg]
@@ -31,26 +33,30 @@ rear = 7
 armor = 21
 rear = 7
 slots = [
-    { at = "3-4", item = "IS.LRM-10" },
-    { at = "5-6", item = "Ammo_IS.LB20-XAC", rounds = 5 },
-    { at = "7-8", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
-    { at = "9-10", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
-    { at = 11, item = "ArtemisIV" },
+    { at = "3-4", item = "IS.ERLargeLaser" },
+    { at = "5-6", item = "IS.LRM-10" },
+    { at = 7, item = "ArtemisIV", link = 5 },
+    { at = "8-9", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = 10, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 11, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
     { at = 12, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 29
 rear = 10
-slots = [
-    { at = "11-12", item = "IS.ERLargeLaser" },
-]
 
 [sections.rear_left_leg]
 armor = 28
+slots = [
+    { at = 5, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+]
 
 [sections.rear_right_leg]
 armor = 28
+slots = [
+    { at = 5, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+]
 
 [sections.head]
 armor = 9
@@ -62,5 +68,5 @@ slots = [
 item = "IS.LB20-XAC"
 placements = [
     { section = "left_torso", at = "3-12" },
-    { section = "rear_left_leg", at = 5 },
+    { section = "center_torso", at = 11 },
 ]

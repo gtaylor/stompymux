@@ -134,7 +134,7 @@ fn artillery_mount_payload_resolution_and_conflicts() {
                 .retain(|_, part| part.equipment != "JumpJet");
         }
         template.jump_speed = 0.0;
-        assert!(Mech::from_template(template.clone()).is_ok());
+        assert!(Mech::from_template(crate::support::templates::legal(template.clone())).is_ok());
         for part in template
             .sections
             .get_mut(&MechSection::LeftTorso)
@@ -144,7 +144,8 @@ fn artillery_mount_payload_resolution_and_conflicts() {
         {
             part.modes.push("Hotload".into());
         }
-        let hotloaded = Mech::from_template(template.clone()).unwrap();
+        let hotloaded =
+            Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
         let index = hotloaded
             .loadout()
             .unwrap()

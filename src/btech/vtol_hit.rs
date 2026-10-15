@@ -1,5 +1,11 @@
 //! The VTOL Combat Vehicle Hit Location Table (Total Warfare p. 196, with the turret row of
 //! Tactical Operations: Advanced Rules p. 193) and the rotor outcomes shared with its critical table.
+//!
+//! A VTOL's turret is a chin turret (Tactical Operations: Advanced Units & Equipment p. 160):
+//! it replaces the Rotors entry on location 4 of the table, and only that entry, with Turret.
+//! Otherwise it follows the standard vehicle turret rules, so its criticals use the turret
+//! column, and losing all of its internal structure destroys the VTOL as losing any location
+//! does (Total Warfare p. 128).
 use super::{HitArc, VehicleHit, VehicleSection};
 use anyhow::{Result, ensure};
 use serde::Serialize;
@@ -59,7 +65,9 @@ impl super::Vehicle {
         use VehicleSection as S;
         let face = arc.vehicle_section();
         let side = matches!(arc, HitArc::Left | HitArc::Right);
-        // Tactical Operations: a turret strike on a turretless VTOL hits the rotors.
+        // A chin turret takes location 4 (Tactical Operations: Advanced Units & Equipment
+        // p. 160); a turret strike on a turretless VTOL hits the rotors (Tactical Operations:
+        // Advanced Rules p. 193).
         let turret = if self.turret_heading().is_some() {
             S::Turret
         } else {

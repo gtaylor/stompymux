@@ -2,7 +2,7 @@ name = "Schiltron"
 class = "vehicle"
 movement = "wheel"
 tons = 80
-walk_mp = 5
+walk_mp = 3
 tac_range = 30
 lrs_range = 60
 scan_range = 30
@@ -10,19 +10,16 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 220
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 34
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 34
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 46

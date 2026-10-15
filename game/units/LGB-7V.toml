@@ -2,13 +2,14 @@ name = "Longbow"
 class = "mech"
 movement = "biped"
 tons = 85
-walk_mp = 5
-heat_sinks = 28
+walk_mp = 3
+heat_sinks = 14
 radio = 4
-specials = ["AntiAircraft"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 255
 heat_sinks = "double"
 
 [sections.left_arm]

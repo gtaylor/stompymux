@@ -46,7 +46,9 @@ fn template() -> MechTemplate {
 /// Capability comes from the installed layout; passive slots add no mass and cannot receive random criticals.
 #[test]
 fn stealth_equipment_layout_and_accounting() {
-    let complete = template();
+    // Stealth armor is the declared armor choice filling its twelve slots (TechManual p. 206).
+    let complete = crate::support::templates::legal(template());
+    assert!(complete.has_special("StealthArmor_Tech"));
     let unit = Mech::from_template(complete.clone()).unwrap();
     assert!(unit.has_stealth_armor().unwrap());
     assert_eq!(unit.stealth(), SignatureState::default());
@@ -56,12 +58,16 @@ fn stealth_equipment_layout_and_accounting() {
             .criticals
             .retain(|_, part| part.equipment != "StealthArmor");
     }
+    let specials = stripped.attributes["specials"].replace("StealthArmor_Tech", "");
+    stripped.attributes.insert("specials".into(), specials);
     let base = Mech::from_template(stripped).unwrap();
     assert_eq!(unit.mass().unwrap(), base.mass().unwrap());
-    assert_eq!(
-        unit.battle_value(None).unwrap(),
-        base.battle_value(None).unwrap()
-    );
+    // Stealth armor adds its +2 long-range modifier to the Defensive Factor (1.4 to 1.6) and
+    // ten points of movement heat, which halves more weapons (TechManual p. 302).
+    let stealthy = unit.battle_value().unwrap();
+    let plain = base.battle_value().unwrap();
+    assert!((stealthy.defensive - plain.defensive / 1.4 * 1.6).abs() < 1e-9);
+    assert!(stealthy.offensive < plain.offensive);
     for section in MechSection::ALL {
         assert!(unit.critical_candidates(section).iter().all(|location| {
             unit.definition().sections[&section].criticals[&location.slot].equipment
@@ -77,12 +83,7 @@ fn stealth_equipment_layout_and_accounting() {
             .unwrap()
             .criticals
             .remove(&5);
-        assert!(
-            !Mech::from_template(incomplete)
-                .unwrap()
-                .has_stealth_armor()
-                .unwrap()
-        );
+        assert!(Mech::from_template(incomplete).is_err());
     }
     let mut angel_only = complete;
     for part in angel_only
@@ -98,7 +99,7 @@ fn stealth_equipment_layout_and_accounting() {
     }
     // Any ECM suite powers stealth armor, the Angel as well as the Guardian.
     assert!(
-        Mech::from_template(angel_only)
+        Mech::from_template(crate::support::templates::legal(angel_only))
             .unwrap()
             .has_stealth_armor()
             .unwrap()

@@ -2,8 +2,11 @@ name = "Orion"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 6
-specials = ["AntiAircraft"]
+walk_mp = 4
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 300
 
 [sections.left_arm]
 armor = 24

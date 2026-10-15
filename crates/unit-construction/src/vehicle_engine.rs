@@ -1,4 +1,5 @@
-//! Vehicle and rotorcraft engine diagnostics share catalogue mass and suspension arithmetic.
+//! Combat vehicle and VTOL engines: the Engine Rating, suspension factors and engine weight of
+//! TechManual pp. 100-101.
 use super::{Engine, VehicleMovement, VehicleTemplate};
 use anyhow::Result;
 use serde::Serialize;
@@ -11,19 +12,27 @@ pub enum VehiclePowerplant {
     Fusion(Engine),
 }
 
-/// Intact engine mass in 1/1024-ton units; this is not a complete vehicle construction check.
+/// Smallest Final Engine Rating a combat vehicle may carry (TechManual p. 100).
+pub const VEHICLE_MINIMUM_ENGINE_RATING: i32 = 10;
+
+/// Largest Final Engine Rating a combat vehicle may carry (TechManual p. 100).
+pub const VEHICLE_MAXIMUM_ENGINE_RATING: i32 = 400;
+
+/// Intact engine mass in 1/1024-ton units; whether the rating is legal is a construction check.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct VehicleEngine {
     pub powerplant: VehiclePowerplant,
-    /// Rounded walking movement points multiplied by nominal tonnage.
+    /// Base Engine Rating: tonnage times Cruising MP (TechManual p. 100).
     pub nominal_rating: u32,
     pub suspension: u16,
-    /// Catalogue lookup rating after suspension; retained even when negative or absent from the table.
+    /// Final Engine Rating: the Base Engine Rating less the suspension factor, raised to the
+    /// minimum of 10 and rounded up to a multiple of 5 (TechManual p. 100). Stationary
+    /// installations carry no engine and have a rating of 0.
     pub weight_rating: i32,
-    /// Unmodified standard engine mass, absent when the lookup rating has no catalogue entry.
-    /// Stationary zero-rating construction needs no propulsion and therefore also has no entry.
+    /// Standard fusion engine mass for the Final Engine Rating from the Master Engine Table
+    /// (TechManual p. 49), absent for stationary installations and ratings beyond the table.
     pub standard_mass: Option<u32>,
-    /// Engine technology and shielding applied, before the hovercraft minimum.
+    /// Engine type weight with fusion shielding applied, before the hovercraft minimum.
     pub engine_mass: u32,
     pub hover_minimum: u32,
     pub installed_mass: u32,
@@ -51,7 +60,48 @@ impl VehicleMovement {
     }
 }
 
+impl VehicleMovement {
+    /// Final Engine Rating: tonnage x cruising MP less the suspension factor, never below 10
+    /// and rounded up to a multiple of 5 (TechManual p. 100). Stationary installations carry
+    /// no engine and rate 0.
+    pub fn final_engine_rating(self, tons: u16, cruising_mp: u32) -> i32 {
+        if self == Self::Stationary {
+            return 0;
+        }
+        let nominal = super::engine::rated_output(tons, cruising_mp);
+        let rating = i64::from(nominal) - i64::from(self.suspension(tons));
+        let rating = i32::try_from(rating).unwrap_or(i32::MAX);
+        let rating = rating.max(VEHICLE_MINIMUM_ENGINE_RATING);
+        rating.saturating_add(4) / 5 * 5
+    }
+}
+
 impl VehicleTemplate {
+    /// State a new cruising MP, with the flanking speed that follows from it (TechManual
+    /// p. 100). A declared engine rating follows the new cruising MP.
+    pub fn set_cruising_mp(&mut self, cruising_mp: u32) {
+        self.walk_mp = cruising_mp;
+        self.max_speed = f64::from(super::running_mp_of_walking(cruising_mp))
+            * super::construction::SPEED_PER_MP;
+        self.restate_engine_rating();
+    }
+
+    /// The Final Engine Rating the template's `[construction]` table declares, if any.
+    pub fn declared_engine_rating(&self) -> Result<Option<u32>> {
+        super::engine::declared_engine_rating(&self.attributes)
+    }
+
+    /// Bring a declared engine rating back in line with the tonnage and cruising MP after an
+    /// edit to either; a template that declares none keeps deriving it.
+    pub fn restate_engine_rating(&mut self) {
+        let Ok(engine) = self.engine() else {
+            return;
+        };
+        if let Some(declared) = self.attributes.get_mut(super::document::ENGINE_RATING) {
+            *declared = engine.weight_rating.max(0).to_string();
+        }
+    }
+
     /// Test a chassis technology by its full name or the reference's abbreviation.
     pub fn has_technology(&self, technology: super::Technology) -> bool {
         let (name, abbreviation) = technology.names();
@@ -67,11 +117,15 @@ impl VehicleTemplate {
         })
     }
 
-    /// Calculate engine mass, including the hover minimum when no catalogue entry exists.
+    /// Calculate engine mass per TechManual pp. 100-101: the Final Engine Rating is the Base
+    /// Engine Rating less the suspension factor, never below 10 and rounded up to a multiple of
+    /// 5; an ICE weighs twice the standard fusion engine; a fusion engine of any type weighs its
+    /// type's listed weight times 1.5, rounded up to the half ton; a hovercraft's engine weighs
+    /// at least a fifth of the vehicle. Stationary installations carry no engine.
     pub fn engine(&self) -> Result<VehicleEngine> {
-        let nominal_rating = super::engine::rated_output(self.tons, self.max_speed)?;
+        let nominal_rating = super::engine::rated_output(self.tons, self.walk_mp);
         let suspension = self.movement.suspension(self.tons);
-        let weight_rating = nominal_rating as i32 - i32::from(suspension);
+        let weight_rating = self.movement.final_engine_rating(self.tons, self.walk_mp);
         let standard_mass = u32::try_from(weight_rating)
             .ok()
             .map(super::mass::engine_mass)
@@ -96,8 +150,8 @@ impl VehicleTemplate {
         let engine_mass = match powerplant {
             VehiclePowerplant::Combustion => base * 2,
             VehiclePowerplant::Fusion(family) => {
-                let shielded = super::mass::half_ton(base + base / 2);
-                super::mass::half_ton(family.unrounded_mass(shielded))
+                let listed = super::mass::half_ton(family.unrounded_mass(base));
+                super::mass::half_ton((listed * 3).div_ceil(2))
             }
         };
         let hover_minimum = if self.movement == VehicleMovement::Hover {

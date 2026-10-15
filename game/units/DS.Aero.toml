@@ -2,7 +2,7 @@ name = "Aerodyne Tester"
 class = "aerodyne_dropship"
 movement = "fly"
 tons = 10000
-walk_mp = 8
+walk_mp = 5
 fuel = 7500
 
 [sections.right_wing]

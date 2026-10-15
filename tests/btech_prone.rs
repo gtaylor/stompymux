@@ -400,20 +400,20 @@ async fn prone_rejects_vehicle_chassis() {
         let text = if movement == "vtol" {
             include_str!("../game/units/Kestrel.toml").to_owned()
         } else {
-            include_str!("../game/units/Demolisher.toml").replace(
-                "movement = \"track\"",
-                &format!("movement = \"{movement}\""),
+            crate::support::templates::with_movement(
+                include_str!("../game/units/Demolisher.toml"),
+                movement,
             )
         };
         let text = if movement == "none" {
-            text.replace("walk_mp = 5", "walk_mp = 0")
+            text.replace("walk_mp = 3", "walk_mp = 0")
         } else {
             text
         };
         create_battle_vehicle(
             &mut world,
             id,
-            VehicleTemplate::parse("test", &text).unwrap(),
+            crate::support::templates::fitted(VehicleTemplate::parse("test", &text).unwrap()),
         )
         .unwrap();
         let before = world.btech.clone();

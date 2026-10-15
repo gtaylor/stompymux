@@ -2,12 +2,14 @@ name = "Parity VTOL"
 class = "vtol"
 movement = "vtol"
 tons = 25
-walk_mp = 10
+walk_mp = 6
 heat_sinks = 10
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 10
 
 [sections.left_side]
 armor = 12

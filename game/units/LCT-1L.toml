@@ -2,10 +2,12 @@ name = "Locust"
 class = "mech"
 movement = "biped"
 tons = 20
-walk_mp = 12
+walk_mp = 8
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 160
 
 [sections.left_arm]
 armor = 4
@@ -24,16 +26,10 @@ slots = [
 [sections.left_torso]
 armor = 8
 rear = 2
-slots = [
-    { at = "10-12", item = "TripleStrengthMyomer" },
-]
 
 [sections.right_torso]
 armor = 8
 rear = 2
-slots = [
-    { at = "10-12", item = "TripleStrengthMyomer" },
-]
 
 [sections.center_torso]
 armor = 10

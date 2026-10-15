@@ -2,20 +2,21 @@ name = "Maxim"
 class = "vehicle"
 movement = "hover"
 tons = 50
-walk_mp = 12
+walk_mp = 8
 cargo_space = 800
 max_suits = 0
 max_ton = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 165
 
 [sections.left_side]
 armor = 23
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
@@ -23,7 +24,6 @@ armor = 23
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]

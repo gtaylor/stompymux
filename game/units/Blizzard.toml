@@ -2,12 +2,14 @@ name = "Blizzard"
 class = "vehicle"
 movement = "hover"
 tons = 25
-walk_mp = 14
-cargo_space = 6144
+walk_mp = 9
+cargo_space = 600
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 95
 
 [sections.left_side]
 armor = 10

@@ -2,11 +2,13 @@ name = "Flatbed Truck"
 class = "vehicle"
 movement = "wheel"
 tons = 10
-walk_mp = 8
+walk_mp = 5
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 30
 
 [sections.left_side]
 armor = 10

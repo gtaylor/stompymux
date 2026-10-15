@@ -2,18 +2,19 @@ name = "Viper"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 26
+heat_sinks = 13
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 375
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
 [sections.left_arm]
-armor = 22
+armor = 21
 slots = [
     { at = "5-9", item = "FerroFibrous" },
     { at = "10-11", item = "CL.MachineGun" },
@@ -21,14 +22,14 @@ slots = [
 ]
 
 [sections.right_arm]
-armor = 22
+armor = 21
 slots = [
     { at = "5-8", item = "TargetingComputer" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
-armor = 22
+armor = 21
 rear = 10
 slots = [
     { at = "3-4", item = "EndoSteel" },
@@ -51,7 +52,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 30
+armor = 22
 rear = 12
 slots = [
     { at = 11, item = "EndoSteel" },
@@ -59,13 +60,13 @@ slots = [
 ]
 
 [sections.left_leg]
-armor = 26
+armor = 22
 slots = [
     { at = "5-6", item = "JumpJet" },
 ]
 
 [sections.right_leg]
-armor = 26
+armor = 22
 slots = [
     { at = "5-6", item = "JumpJet" },
 ]

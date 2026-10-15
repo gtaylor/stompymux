@@ -270,36 +270,52 @@ mod tests {
     /// Physical labels remain visible after part damage and use each weapon's actuator needs.
     #[test]
     fn physical_equipment_uses_reference_order_and_readiness() {
-        for (equipment, label, needs_hand, needs_shoulder) in [
-            ("Axe", "Axe", true, true),
-            ("Sword", "Sword", true, true),
-            ("Claw", "Claw", false, false),
-            ("Mace", "Mace", true, true),
-            ("Dual_Saw", "Saw", false, true),
-            ("Retractable_Blade", "RBlade", false, true),
-            ("Lance", "Lance", false, true),
-            ("Flail", "Flail", false, true),
-            ("Wrecking_Ball", "WBall", false, true),
-            ("Chain_Whip", "Whip", true, true),
-            ("Small_Vibroblade", "SVibro", true, true),
-            ("Medium_Vibroblade", "MVibro", true, true),
-            ("Large_Vibroblade", "LVibro", true, true),
+        // Each weapon fills its 65-ton slot count (TechManual pp. 220, 237; Tactical
+        // Operations: Advanced Units & Equipment); claws and flails replace the hand.
+        for (equipment, label, needs_hand, needs_shoulder, slots) in [
+            ("Axe", "Axe", true, true, 5),
+            ("Sword", "Sword", true, true, 5),
+            ("Claw", "Claw", false, false, 5),
+            ("Mace", "Mace", true, true, 7),
+            ("Dual_Saw", "Saw", false, true, 7),
+            ("Retractable_Blade", "RBlade", false, true, 5),
+            ("Lance", "Lance", false, true, 4),
+            ("Flail", "Flail", false, true, 4),
+            ("Wrecking_Ball", "WBall", false, true, 5),
+            ("Chain_Whip", "Whip", true, true, 2),
+            ("Small_Vibroblade", "SVibro", true, true, 1),
+            ("Medium_Vibroblade", "MVibro", true, true, 2),
+            ("Large_Vibroblade", "LVibro", true, true, 4),
         ] {
+            let replaces_hand = matches!(equipment, "Claw" | "Flail");
+            let first = if replaces_hand { 4 } else { 5 };
             let original = include_str!("../../../game/units/AXM-2N.toml");
-            let source = original
-                .replace("    { at = \"5-7\", item = \"IS.MediumLaser\" },\n", "")
-                .replace(
-                    "{ at = \"8-12\", item = \"Axe\"",
-                    &format!("{{ at = \"5-12\", item = \"{equipment}\""),
-                );
-            assert!(!source.contains("IS.MediumLaser") && source.contains("\"5-12\""));
-            let unit =
-                Mech::from_template(MechTemplate::parse("AXM-2N", &source).unwrap()).unwrap();
+            let source = original.replace(
+                "slots = [\n    { at = \"5-9\", item = \"Axe\" },\n    { at = \"10-12\", item = \"IS.MediumLaser\" },\n]",
+                &format!(
+                    "{}slots = [\n    {{ at = \"{first}-{}\", item = \"{equipment}\" }},\n]",
+                    if replaces_hand {
+                        "omit = [\"hand_actuator\"]\n"
+                    } else {
+                        ""
+                    },
+                    first + slots - 1
+                ),
+            );
+            assert!(!source.contains("IS.MediumLaser"));
+            let mut template = MechTemplate::parse("AXM-2N", &source).unwrap();
+            crate::btech::test_designs::balance(&mut template, &[]);
+            let unit = Mech::from_template(template).unwrap();
             assert_eq!(
                 text::plain(&physical_readiness(&unit).unwrap().join("")),
                 format!("{label}[RA]: Rdy")
             );
-            for (slot, broken) in [(0, needs_shoulder), (3, needs_hand), (4, false)] {
+            // A weapon that replaces the hand has no hand actuator to lose.
+            let mut losses = vec![(0, needs_shoulder), (first - 1, false)];
+            if !replaces_hand {
+                losses.push((3, needs_hand));
+            }
+            for (slot, broken) in losses {
                 let mut damaged = unit.clone();
                 damaged
                     .destroy_critical(CriticalLocation {

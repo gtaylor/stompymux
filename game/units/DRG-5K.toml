@@ -2,14 +2,16 @@ name = "Grand Dragon"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 9
-heat_sinks = 26
+walk_mp = 6
+heat_sinks = 13
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 360
 heat_sinks = "double"
 
 [sections.left_arm]

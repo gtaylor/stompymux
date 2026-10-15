@@ -2,13 +2,15 @@ name = "Anubis"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 12
-heat_sinks = 24
+walk_mp = 8
+heat_sinks = 12
 radio = 4
 specials = ["ECM"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 240
 structure = "endo_steel"
 armor = "stealth"
 heat_sinks = "double"

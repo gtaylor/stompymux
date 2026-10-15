@@ -2,13 +2,15 @@ name = "Griffin"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 28
+heat_sinks = 14
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 275
 heat_sinks = "double"
 
 [sections.left_arm]

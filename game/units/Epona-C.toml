@@ -2,24 +2,19 @@ name = "Epona"
 class = "vehicle"
 movement = "hover"
 tons = 50
-walk_mp = 14
+walk_mp = 9
 heat_sinks = 15
 
 [construction]
 tech_base = "clan"
+engine_rating = 215
 armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 20
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 20
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 21

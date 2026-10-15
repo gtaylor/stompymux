@@ -2,13 +2,14 @@ name = "Viper"
 class = "mech"
 movement = "biped"
 tons = 75
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 26
+heat_sinks = 13
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 375
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

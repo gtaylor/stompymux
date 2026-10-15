@@ -16,7 +16,8 @@ async fn preferred_sections_controls_feed_and_restart() {
         let id = world.create(&config, "Ammo preference".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let (weapon, preference, preferred_bin, other_bin) = if vehicle {
-            let mut definition = VehicleTemplate::parse("test", source).unwrap();
+            let mut definition =
+                crate::support::templates::fitted(VehicleTemplate::parse("test", source).unwrap());
             let bin = definition
                 .sections
                 .values()
@@ -30,7 +31,12 @@ async fn preferred_sections_controls_feed_and_restart() {
                 .unwrap()
                 .criticals
                 .insert(0, bin.clone());
-            create_battle_vehicle(&mut world, id, definition).unwrap();
+            create_battle_vehicle(
+                &mut world,
+                id,
+                crate::support::templates::fitted(definition),
+            )
+            .unwrap();
             support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             let loadout = world.btech.vehicles()[&id].loadout().unwrap();
             let weapon_type = loadout
@@ -74,7 +80,8 @@ async fn preferred_sections_controls_feed_and_restart() {
                 .unwrap()
                 .criticals
                 .insert(3, bin);
-            create_battle_unit(&mut world, id, definition).unwrap();
+            create_battle_unit(&mut world, id, crate::support::templates::legal(definition))
+                .unwrap();
             support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
             let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
             let weapon_type = loadout
@@ -271,7 +278,7 @@ async fn laser_defense_rejects_preferred_ammunition() {
         create_battle_vehicle(
             &mut world,
             id,
-            VehicleTemplate::parse("test", &source).unwrap(),
+            crate::support::templates::fitted(VehicleTemplate::parse("test", &source).unwrap()),
         )
         .unwrap();
         let map = world.create(&config, "Field".into(), Kind::Room);

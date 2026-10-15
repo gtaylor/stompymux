@@ -2,12 +2,13 @@ name = "Arctic Wolf"
 class = "mech"
 movement = "biped"
 tons = 40
-walk_mp = 11
-heat_sinks = 20
+walk_mp = 7
+heat_sinks = 10
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 280
 structure = "endo_steel"
 
 [sections.left_arm]

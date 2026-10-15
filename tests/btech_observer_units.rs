@@ -22,15 +22,16 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
         support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
         let id = world.create(&config, "Observer".into(), Kind::Thing);
         let target = world.create(&config, "Subject".into(), Kind::Thing);
-        UnitTemplate::parse("test", template)
-            .unwrap()
+        crate::support::templates::legal_unit(UnitTemplate::parse("test", template).unwrap())
             .create(&mut world, id)
             .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
-        UnitTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-            .unwrap()
-            .create(&mut world, target)
-            .unwrap();
+        crate::support::templates::legal_unit(
+            UnitTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
+                .unwrap(),
+        )
+        .create(&mut world, target)
+        .unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 0, 0).unwrap();
         place_battle_unit(&mut world, target, map, 0, 3).unwrap();

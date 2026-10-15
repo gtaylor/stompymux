@@ -61,8 +61,10 @@ async fn fixture_with_mml(
             create_battle_unit(
                 &mut world,
                 id,
-                MechTemplate::parse("test", &source(include_str!("../game/units/AS7-D.toml")))
-                    .unwrap(),
+                crate::support::templates::legal(
+                    MechTemplate::parse("test", &source(include_str!("../game/units/AS7-D.toml")))
+                        .unwrap(),
+                ),
             )
             .unwrap();
         }

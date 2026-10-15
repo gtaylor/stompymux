@@ -8,7 +8,7 @@ fn definition() -> MechTemplate {
     template
         .attributes
         .insert("specials".into(), "HDGYRO".into());
-    template
+    crate::support::templates::legal(template)
 }
 
 /// All slot orders preserve the protected first hit and require three hits to lose mobility.
@@ -98,7 +98,7 @@ fn xl_and_compact_gyro_construction_damage_and_restore() {
             torso.criticals.insert(4, launcher);
             torso.criticals.insert(5, jet);
         }
-        let unit = Mech::from_template(template.clone()).unwrap();
+        let unit = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
         assert_eq!(unit.gyro(), family);
         assert_eq!(unit.mass().unwrap().gyro, mass);
         let slots: Vec<_> = unit
@@ -172,7 +172,7 @@ fn gyro_piloting_modifiers_add_to_leg_damage_in_any_order() {
                 let specials = template.attributes.entry("specials".into()).or_default();
                 specials.push_str(" HDGYRO");
             }
-            let base = Mech::from_template(template).unwrap();
+            let base = Mech::from_template(crate::support::templates::legal(template)).unwrap();
             let gyro: Vec<_> = base
                 .loadout()
                 .unwrap()
@@ -244,7 +244,7 @@ fn gyro_modifier_survives_section_loss_recalculation() {
             .entry("specials".into())
             .or_default()
             .push_str(" HDGYRO");
-        let base = Mech::from_template(template).unwrap();
+        let base = Mech::from_template(crate::support::templates::legal(template)).unwrap();
         let gyro = base
             .loadout()
             .unwrap()

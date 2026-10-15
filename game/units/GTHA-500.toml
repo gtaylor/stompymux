@@ -2,7 +2,7 @@ name = "Gotha"
 class = "aerofighter"
 movement = "fly"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 14
 fuel = 900
 

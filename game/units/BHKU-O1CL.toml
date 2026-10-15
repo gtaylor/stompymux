@@ -2,14 +2,18 @@ name = "Blackhawk-Ku"
 class = "mech"
 movement = "biped"
 tons = 60
-walk_mp = 8
+walk_mp = 5
 jump_mp = 5
-heat_sinks = 28
+heat_sinks = 14
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 300
 heat_sinks = "double"
+mixed_tech = true
 
 [sections.left_arm]
 armor = 20

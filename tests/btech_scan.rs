@@ -44,6 +44,9 @@ async fn fixture_with_ranges(
         for &(field, value) in ranges {
             template.attributes.insert(field.into(), value.into());
         }
+        if ranges.contains(&("move_type", "Quad")) {
+            support::templates::quad_ready_arms(&mut template);
+        }
         create_battle_unit(&mut world, id, template).unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 1, y).unwrap();
@@ -140,14 +143,14 @@ fn sensor_defaults_follow_technology_base_and_critical_halving() {
             template
                 .attributes
                 .insert("specials".into(), "Clan FlipArms".into());
-            template.heat_sinks = 20;
+            template.heat_sinks = 10;
             for section in template.sections.values_mut() {
                 section
                     .criticals
                     .retain(|_, part| part.equipment != "HeatSink");
             }
         }
-        let mut unit = Mech::from_template(template).unwrap();
+        let mut unit = Mech::from_template(crate::support::templates::legal(template)).unwrap();
         assert_eq!(
             unit.sensor_ranges(),
             SensorRanges {
@@ -4088,6 +4091,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
             record["definition"]["sections"]["LeftTorso"]["criticals"]["8"] =
                 serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
             record["sensor_sweep"] = serde_json::json!(7);
+            crate::support::templates::book_legal_record(record);
         })
         .unwrap();
     assert!(

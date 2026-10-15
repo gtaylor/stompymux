@@ -2,12 +2,13 @@ name = "Fenris"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 12
-heat_sinks = 24
+walk_mp = 8
+heat_sinks = 12
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 360
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

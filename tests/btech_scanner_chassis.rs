@@ -10,18 +10,19 @@ fn templates() -> Vec<String> {
         include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
-            .replace("walk_mp = 5", "walk_mp = 0"),
+            .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
 
 /// Add probes to unoccupied slots without changing the unit's weapons or required equipment.
 fn equipment(source: &str) -> UnitTemplate {
-    let mut template = UnitTemplate::parse("test", source).unwrap();
-    let (attributes, section, parts) = match &mut template {
+    let mut template =
+        crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap());
+    let (section, parts) = match &mut template {
         UnitTemplate::Mech(definition) => {
             let section = definition
                 .sections
@@ -38,7 +39,6 @@ fn equipment(source: &str) -> UnitTemplate {
                 .unwrap()
                 .1;
             (
-                &mut definition.attributes,
                 section,
                 vec![
                     "BeagleProbe",
@@ -51,15 +51,10 @@ fn equipment(source: &str) -> UnitTemplate {
             )
         }
         UnitTemplate::Vehicle(definition) => (
-            &mut definition.attributes,
             definition.sections.get_mut(&VehicleSection::Front).unwrap(),
             vec!["BeagleProbe", "Light_BAP", "BloodhoundProbe"],
         ),
     };
-    attributes
-        .entry("specials".into())
-        .or_default()
-        .push_str(" AntiAircraft");
     for name in parts {
         let slot = (0..12)
             .find(|slot| !section.criticals.contains_key(slot))
@@ -73,12 +68,18 @@ fn equipment(source: &str) -> UnitTemplate {
             },
         );
     }
-    template
+    crate::support::templates::legal_unit(template)
 }
 
 /// Change only explicitly selected scenario state, using the same representation as restart.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {
-    world.btech.rewrite_unit_record(id, change).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            change(record);
+            crate::support::templates::book_legal_record(record);
+        })
+        .unwrap();
 }
 
 /// A running, equipped observer faces an ordinary target down a lane, optionally behind a hill.
@@ -104,14 +105,16 @@ async fn fixture(
     let mut ids = Vec::new();
     for (index, template) in [
         equipment(source),
-        UnitTemplate::parse("test", target).unwrap(),
+        crate::support::templates::fitted_unit(UnitTemplate::parse("test", target).unwrap()),
     ]
     .into_iter()
     .enumerate()
     {
         let id = world.create(&config, format!("Sensor unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        template.create(&mut world, id).unwrap();
+        crate::support::templates::fitted_unit(template)
+            .create(&mut world, id)
+            .unwrap();
         place_battle_unit(
             &mut world,
             id,
@@ -304,6 +307,7 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
     );
     let (definition, ammunition, index) = match template {
         UnitTemplate::Mech(definition) => {
+            let definition = crate::support::templates::legal(definition);
             let unit = Mech::from_template(definition.clone()).unwrap();
             let index = unit
                 .loadout()
@@ -334,7 +338,9 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
             )
         }
         UnitTemplate::Vehicle(definition) => {
-            let unit = Vehicle::new(definition.clone()).unwrap();
+            // The saved record keeps the edited definition; a constructible copy of it, with
+            // the same slots, locates the weapon and bins.
+            let unit = Vehicle::new(crate::support::templates::fitted(definition.clone())).unwrap();
             let index = unit
                 .loadout()
                 .unwrap()
@@ -358,7 +364,7 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
                 }
             }
             (
-                serde_json::to_value(unit.definition()).unwrap(),
+                serde_json::to_value(&definition).unwrap(),
                 serde_json::to_value(ammunition).unwrap(),
                 index,
             )

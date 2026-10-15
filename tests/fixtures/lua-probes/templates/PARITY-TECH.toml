@@ -2,13 +2,14 @@ name = "Parity Technology"
 class = "mech"
 movement = "biped"
 tons = 55
-walk_mp = 5
+walk_mp = 3
 jump_mp = 2
-heat_sinks = 12
+heat_sinks = 6
 specials = ["ImprovedJJ_Tech"]
 
 [construction]
 tech_base = "clan"
+engine_rating = 165
 gyro = "heavy_duty"
 armor = "hardened"
 

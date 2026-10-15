@@ -2,13 +2,15 @@ name = "Bloodhound"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 11
-heat_sinks = 24
+walk_mp = 7
+heat_sinks = 12
 radio = 4
 specials = ["ECM", "BeagleProbe"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
+engine_rating = 315
 structure = "endo_steel"
 heat_sinks = "double"
 

@@ -2,7 +2,7 @@ name = "Parity Aero"
 class = "aerofighter"
 movement = "fly"
 tons = 90
-walk_mp = 9
+walk_mp = 6
 
 [sections.nose]
 armor = 31

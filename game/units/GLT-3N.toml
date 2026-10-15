@@ -2,13 +2,15 @@ name = "Guillotine"
 class = "mech"
 movement = "biped"
 tons = 70
-walk_mp = 6
-jump_speed = 43.2
+walk_mp = 4
+jump_mp = 4
 heat_sinks = 25
 radio = 4
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 280
 structure = "endo_steel"
 
 [sections.left_arm]
@@ -24,16 +26,16 @@ armor = 20
 omit = ["hand_actuator"]
 slots = [
     { at = "4-5", item = "IS.MediumLaser" },
-    { at = "6-9", item = "EndoSteel" },
+    { at = "6-8", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 22
 rear = 8
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "JumpJet" },
-    { at = "3-9", item = "HeatSink" },
+    { at = "1-7", item = "HeatSink" },
+    { at = 8, item = "JumpJet" },
+    { at = 9, item = "IS.MediumLaser" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -41,11 +43,11 @@ slots = [
 armor = 22
 rear = 8
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 3, item = "Case" },
-    { at = 4, item = "JumpJet" },
-    { at = "5-9", item = "HeatSink" },
+    { at = "1-5", item = "HeatSink" },
+    { at = 6, item = "JumpJet" },
+    { at = 7, item = "IS.MediumLaser" },
+    { at = 8, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 9, item = "Case" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -59,16 +61,19 @@ slots = [
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "JumpJet" },
 ]
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

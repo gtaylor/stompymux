@@ -40,7 +40,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
                 definition
                     .attributes
                     .insert("specials".into(), "Clan FlipArms".into());
-                definition.heat_sinks = 24;
+                definition.heat_sinks = 12;
                 for section in definition.sections.values_mut() {
                     section
                         .criticals
@@ -64,7 +64,7 @@ fn radio_hardware_quality_and_chassis_defaults() {
                         );
                 }
             }
-            let unit = Mech::from_template(definition).unwrap();
+            let unit = Mech::from_template(crate::support::templates::legal(definition)).unwrap();
             assert_eq!(
                 unit.radio_capabilities(),
                 RadioCapabilities {
@@ -261,7 +261,7 @@ async fn relay_fixture() -> (tempfile::TempDir, Config, World, ObjectId, Vec<Obj
                     },
                 );
         }
-        create_battle_unit(&mut world, id, definition).unwrap();
+        create_battle_unit(&mut world, id, crate::support::templates::legal(definition)).unwrap();
         place_battle_unit(&mut world, id, map, 1, y).unwrap();
         world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

@@ -2,13 +2,15 @@ name = "Hammer"
 class = "mech"
 movement = "biped"
 tons = 30
-walk_mp = 8
+walk_mp = 5
 heat_sinks = 11
 radio = 4
 cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
+engine_rating = 150
 structure = "endo_steel"
 
 [sections.left_arm]

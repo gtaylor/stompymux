@@ -2,13 +2,15 @@ name = "Grendel"
 class = "mech"
 movement = "biped"
 tons = 45
-walk_mp = 11
+walk_mp = 7
 jump_mp = 7
-heat_sinks = 24
+heat_sinks = 12
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 315
 structure = "endo_steel"
 armor = "ferro_fibrous"
 
@@ -23,28 +25,30 @@ slots = [
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 5, item = "CL.ERLargeLaser" },
-    { at = 6, item = "CL.ERSmallLaser" },
-    { at = 7, item = "EndoSteel" },
-    { at = "8-10", item = "FerroFibrous" },
+    { at = 3, item = "CL.ERLargeLaser" },
+    { at = 4, item = "CL.ERSmallLaser" },
+    { at = 5, item = "EndoSteel" },
+    { at = "6-8", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 16
 rear = 6
 slots = [
-    { at = 9, item = "JumpJet" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "JumpJet" },
+    { at = "6-8", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 16
 rear = 6
 slots = [
-    { at = "5-6", item = "CL.StreakSRM-6" },
-    { at = 7, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = 9, item = "JumpJet" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "JumpJet" },
+    { at = "6-7", item = "CL.StreakSRM-6" },
+    { at = 8, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "9-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -52,7 +56,6 @@ armor = 18
 rear = 9
 slots = [
     { at = 11, item = "JumpJet" },
-    { at = 12, item = "CL.ERSmallLaser" },
 ]
 
 [sections.left_leg]

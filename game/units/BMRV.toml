@@ -2,11 +2,13 @@ name = "Mech Recovery Vehicle"
 class = "vehicle"
 movement = "wheel"
 tons = 50
-walk_mp = 9
+walk_mp = 6
 specials = ["SalvageTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
+engine_rating = 280
 
 [sections.left_side]
 armor = 2

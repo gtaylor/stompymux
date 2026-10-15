@@ -2,13 +2,14 @@ name = "Loki"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 8
-heat_sinks = 26
+walk_mp = 5
+heat_sinks = 13
 specials = ["SearchLight"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 325
 
 [sections.left_arm]
 armor = 11

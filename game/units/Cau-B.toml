@@ -2,13 +2,14 @@ name = "Cauldron Born"
 class = "mech"
 movement = "biped"
 tons = 65
-walk_mp = 8
-heat_sinks = 28
+walk_mp = 5
+heat_sinks = 14
 specials = ["BeagleProbe"]
 
 [construction]
 tech_base = "clan"
 engine = "xl"
+engine_rating = 325
 structure = "endo_steel"
 armor = "ferro_fibrous"
 

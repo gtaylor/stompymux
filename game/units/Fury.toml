@@ -2,9 +2,13 @@ name = "Fury"
 class = "vehicle"
 movement = "track"
 tons = 80
-walk_mp = 6
-cargo_space = 768
+walk_mp = 4
+cargo_space = 250
 specials = ["SearchLight"]
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 320
 
 [sections.left_side]
 armor = 40

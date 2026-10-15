@@ -2,8 +2,12 @@ name = "Von Luckner"
 class = "vehicle"
 movement = "track"
 tons = 75
-walk_mp = 5
+walk_mp = 3
 heat_sinks = 10
+
+[construction]
+tech_base = "inner_sphere"
+engine_rating = 225
 
 [sections.left_side]
 armor = 30
@@ -34,5 +38,5 @@ slots = [
     { at = "6-8", item = "Ammo_IS.AC/20", rounds = 5 },
     { at = 9, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 10, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100 },
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
