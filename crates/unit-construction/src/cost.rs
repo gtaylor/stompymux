@@ -212,7 +212,8 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
     let engine_size = u64::try_from(i64::from(rating) - i64::from(suspension))?;
     total += (engine_base * engine_size * tons) as f64 / 75.0;
     let clan = raw_flag(template, "Clan");
-    let double = clan || raw_flag(template, "DoubleHS");
+    // A Clan Mech's sinks are double unless it declares single sinks (TechManual p. 52).
+    let double = (clan && !raw_flag(template, "SingleHS")) || raw_flag(template, "DoubleHS");
     let sinks = u64::try_from(template.heat_sinks.max(0))? / if double { 2 } else { 1 };
     total += (if double || ice {
         sinks
@@ -417,7 +418,8 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
         .count() as u64;
     let jump = if improved_jump { jets / 2 } else { jets };
     total += (tons * jump * jump * if improved_jump { 500 } else { 200 }) as f64;
-    let double = clan || flag(template, "DoubleHS");
+    // A Clan Mech's sinks are double unless it declares single sinks (TechManual p. 52).
+    let double = template.has_double_heat_sinks();
     let sinks = if double {
         u64::from(template.heat_sinks) / 2
     } else {
@@ -652,6 +654,24 @@ mod tests {
             template_base_cost(&PartPrices::new(), &jenner()).unwrap(),
             3_161_925
         );
+    }
+
+    /// A Clan Mech that declares single heat sinks (TechManual p. 52) prices them as singles.
+    #[test]
+    fn clan_single_heat_sinks_cost_as_singles() {
+        let clan = |sinks: &str| {
+            let mut template = jenner();
+            let specials = template.attributes.entry("specials".into()).or_default();
+            specials.push_str(sinks);
+            template.heat_sinks = if sinks.contains("SingleHS") { 12 } else { 24 };
+            for section in template.sections.values_mut() {
+                section
+                    .criticals
+                    .retain(|_, part| part.equipment != "HeatSink");
+            }
+            template_base_cost(&PartPrices::new(), &template).unwrap()
+        };
+        assert!(clan(" Clan SingleHS") < clan(" Clan"));
     }
 
     /// One-shot launchers cost half their launcher (TechManual p. 291), and equipment prices

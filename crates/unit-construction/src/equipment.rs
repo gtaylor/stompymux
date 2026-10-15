@@ -220,18 +220,11 @@ impl Weapon {
             )
     }
 
-    /// Beam/ballistic computer eligibility excludes ordinary flamers, machine guns, missiles and artillery.
+    /// Weapons a targeting computer assists: the direct-fire and pulse weapons that size it
+    /// (TM p. 238), so flamers, machine guns, missiles, artillery, anti-missile systems and
+    /// A-Pods gain nothing.
     pub fn supports_targeting_computer(self) -> bool {
-        self.profile().missiles == 0
-            && !self.is_artillery()
-            && !self.supports_gatling()
-            && !matches!(
-                self,
-                Self::Flamer
-                    | Self::ClanFlamer
-                    | Self::AntiMissileSystem
-                    | Self::ClanAntiMissileSystem
-            )
+        self.is_direct_fire()
     }
 
     /// Thunderbolt launchers fire one large missile per salvo.

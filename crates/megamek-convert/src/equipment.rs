@@ -355,10 +355,16 @@ pub fn parse_for(raw: &str, chassis: TechBase) -> Result<Critical> {
         parse_equipment(name, chassis)?
     };
     match critical {
-        Critical::Weapon { weapon, .. } => Ok(Critical::Weapon {
+        // A one-shot launcher is marked either by an `(OS)` suffix or in its key, as in
+        // `ISStreakSRM2OS`; it weighs half a ton more (TechManual p. 342).
+        Critical::Weapon {
+            weapon,
+            one_shot: spelled,
+            ..
+        } => Ok(Critical::Weapon {
             weapon,
             rear,
-            one_shot: one_shot || weapon.is_rocket(),
+            one_shot: one_shot || spelled || weapon.is_rocket(),
         }),
         _ if rear => bail!("only weapons can be rear-mounted: {raw}"),
         _ if one_shot => bail!("only launchers can be one-shot: {raw}"),
@@ -719,6 +725,8 @@ mod tests {
                 .starts_with("CL.")
         );
         assert!(weapon("LRM 20 (OS)").2);
+        // The key spelling marks a one-shot launcher too.
+        assert!(weapon("ISStreakSRM2OS").2);
         assert!(weapon("Rocket Launcher 10").2);
         for (name, expected) in [
             ("CLAPGaussRifle", "CL.APGaussRifle"),

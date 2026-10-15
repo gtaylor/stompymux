@@ -1275,19 +1275,31 @@ async fn artemis_v_guidance_improves_aim() {
     for (controller, accuracy) in [("ArtemisIV", 0), ("ArtemisV", -1)] {
         let (_dir, _config, mut world, id, target) = shot_fixture().await;
         let mut template = world.btech.constructed_units()[&id].definition().clone();
-        template
-            .sections
-            .get_mut(&MechSection::Head)
-            .unwrap()
-            .criticals
-            .insert(
-                3,
-                CriticalDefinition {
-                    equipment: controller.into(),
-                    data: "11".into(),
-                    modes: vec![],
-                },
-            );
+        if controller == "ArtemisIV" {
+            install_center_artemis(&mut template);
+        } else {
+            // Artemis V fills two slots beside its launcher (Tactical Operations: Advanced
+            // Units & Equipment p. 217), so the SRM-4 moves to the right torso with it.
+            let launcher = template
+                .sections
+                .get_mut(&MechSection::CenterTorso)
+                .unwrap()
+                .criticals
+                .remove(&10)
+                .unwrap();
+            let torso = template.sections.get_mut(&MechSection::RightTorso).unwrap();
+            torso.criticals.insert(7, launcher);
+            for slot in [8, 9] {
+                torso.criticals.insert(
+                    slot,
+                    CriticalDefinition {
+                        equipment: controller.into(),
+                        data: "8".into(),
+                        modes: vec![],
+                    },
+                );
+            }
+        }
         template
             .sections
             .get_mut(&MechSection::RightTorso)
@@ -1296,7 +1308,12 @@ async fn artemis_v_guidance_improves_aim() {
             .get_mut(&0)
             .unwrap()
             .modes = vec!["Artemis/Mine".into()];
-        world.btech.set_unit_definition(id, template).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                crate::support::templates::set_record_definition(record, template)
+            })
+            .unwrap();
         let srm = world.btech.constructed_units()[&id]
             .loadout()
             .unwrap()
@@ -6704,7 +6721,8 @@ async fn fueled_flamer_modes_native_lua_and_saved_replay() {
         bin.data = profile.ammunition_per_ton.to_string();
         assert_eq!(weapon.gunnery_skill(true), "Gunnery-Ballistic");
         assert_eq!(weapon.mass(), mass);
-        assert!(weapon.supports_targeting_computer());
+        // Flamers are not direct-fire weapons (TechManual p. 238).
+        assert!(!weapon.supports_targeting_computer());
         assert_eq!(
             weapon.ammunition_explosion_damage(10),
             u32::from(profile.damage) * 10

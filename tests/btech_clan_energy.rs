@@ -36,7 +36,10 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
         );
         assert_eq!(
             weapon.supports_targeting_computer(),
-            weapon != Weapon::ClanFlamer
+            !matches!(
+                weapon,
+                Weapon::ClanFlamer | Weapon::ClanLaserAms | Weapon::ClanAPod
+            )
         );
         assert_eq!(weapon.supports_heat_mode(), weapon == Weapon::ClanFlamer);
         for location in &mount.criticals {

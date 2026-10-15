@@ -192,13 +192,13 @@ pub fn fitted(mut template: stompymux_rs::VehicleTemplate) -> stompymux_rs::Vehi
 }
 
 /// [`fit_vehicle`] applied to a vehicle among the templates a test is about to construct;
-/// Mechs pass unchanged.
+/// Mechs pass through [`legal_unit`].
 pub fn fitted_unit(template: stompymux_rs::UnitTemplate) -> stompymux_rs::UnitTemplate {
     match template {
         stompymux_rs::UnitTemplate::Vehicle(vehicle) => {
             stompymux_rs::UnitTemplate::Vehicle(fitted(vehicle))
         }
-        mech => mech,
+        mech => legal_unit(mech),
     }
 }
 

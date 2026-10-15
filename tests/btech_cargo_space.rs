@@ -190,11 +190,14 @@ async fn overweight_cargo_installations_are_refused_rather_than_slowed() {
         let vehicle = matches!(template, UnitTemplate::Vehicle(_));
         match template.create(&mut world, unit) {
             Err(error) => {
-                assert!(vehicle && !stationary, "{error:#}");
-                assert!(
-                    format!("{error:#}").contains("TechManual p. 97"),
-                    "{error:#}"
-                );
+                // A Mech's installation counts toward its tonnage (TechManual p. 46).
+                let expected = if vehicle {
+                    "TechManual p. 97"
+                } else {
+                    "-ton chassis"
+                };
+                assert!(!stationary, "{error:#}");
+                assert!(format!("{error:#}").contains(expected), "{error:#}");
             }
             Ok(()) => {
                 assert!(!vehicle || stationary);

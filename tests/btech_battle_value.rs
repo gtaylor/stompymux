@@ -19,6 +19,19 @@ fn unit(source: &str) -> Mech {
     Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap()
 }
 
+/// The same design without the named equipment, built at its tonnage: the mass the items
+/// freed becomes cargo space, so armor and movement stay as they were and a rating difference
+/// is the items' own.
+fn without(definition: &MechTemplate, items: &[&str]) -> Mech {
+    let mut bare = definition.clone();
+    for section in bare.sections.values_mut() {
+        section
+            .criticals
+            .retain(|_, part| !items.contains(&part.equipment.as_str()));
+    }
+    Mech::from_template(crate::support::templates::legal(bare)).unwrap()
+}
+
 /// Construct a supported vehicle fixture.
 fn vehicle(source: &str) -> Vehicle {
     Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap()
@@ -85,6 +98,16 @@ fn clan_gauss_weapon_exposure() {
         .find(|(_, part)| part.equipment == "CL.MachineGun")
         .unwrap();
     center.criticals.get_mut(&slot).unwrap().equipment = "CL.APGaussRifle".into();
+    // The heavier rifle's quarter ton comes from a half-ton machine gun bin, whose side-torso
+    // ammunition carries no penalty.
+    let bin = definition
+        .sections
+        .values_mut()
+        .flat_map(|section| section.criticals.values_mut())
+        .find(|part| part.equipment == "Ammo_CL.MachineGun")
+        .unwrap();
+    bin.data = "100".into();
+    bin.modes = vec!["Halfton".into()];
     let value = Mech::from_template(definition)
         .unwrap()
         .battle_value()
@@ -141,11 +164,18 @@ fn case_changes_ammunition_exposure() {
             .unwrap()
             .criticals
             .insert(3, case);
-        score(
-            &Mech::from_template(definition).unwrap(),
-            525.96,
-            370.3,
-            896,
+        // The containment's mass comes out of the armor (TechManual p. 46); against the same
+        // design without it, the bin's penalty is gone.
+        let definition = crate::support::templates::legal(definition);
+        let contained = Mech::from_template(definition.clone())
+            .unwrap()
+            .battle_value()
+            .unwrap();
+        let bare = without(&definition, &[equipment]).battle_value().unwrap();
+        assert!((contained.offensive - bare.offensive).abs() < 0.005);
+        assert!(
+            (contained.defensive - bare.defensive - 15.0 * 1.4).abs() < 0.005,
+            "{contained:?} {bare:?}"
         );
     }
 }
@@ -174,10 +204,18 @@ fn gauss_exposure_is_per_slot_and_uses_parent_torso_case() {
                 .criticals
                 .insert(3, part);
         }
-        let original = Mech::from_template(definition).unwrap();
-        let defensive = if contained { 349.3 } else { 346.5 };
+        // Against the same design without the rifle, each exposed slot costs a point.
+        let definition = crate::support::templates::legal(definition);
+        let original = Mech::from_template(definition.clone()).unwrap();
+        let bare = without(&definition, &["IS.MagshotGaussRifle"])
+            .battle_value()
+            .unwrap();
+        let penalty = if contained { 0.0 } else { 2.0 * 1.4 };
         let value = original.battle_value().unwrap();
-        assert!((value.defensive - defensive).abs() < 0.005, "{value:?}");
+        assert!(
+            (bare.defensive - value.defensive - penalty).abs() < 0.005,
+            "{value:?} {bare:?}"
+        );
         let mut damaged = original;
         damaged
             .destroy_critical(CriticalLocation {
@@ -196,11 +234,24 @@ fn heavy_duty_gyro_value() {
     definition
         .attributes
         .insert("specials".into(), "HDGYRO".into());
-    let unit = Mech::from_template(definition).unwrap();
-    let value = unit.battle_value().unwrap();
+    // The gyro's extra three tons come out of the armor; against the same design with a
+    // standard gyro, the full tonnage counts.
+    let definition = crate::support::templates::legal(definition);
+    let value = Mech::from_template(definition.clone())
+        .unwrap()
+        .battle_value()
+        .unwrap();
+    let mut standard = definition;
+    standard
+        .attributes
+        .insert("specials".into(), "FlipArms".into());
+    let standard = Mech::from_template(crate::support::templates::legal(standard))
+        .unwrap()
+        .battle_value()
+        .unwrap();
     assert!(
-        (value.defensive - (349.3 + 17.5 * 1.4)).abs() < 0.005,
-        "{value:?}"
+        (value.defensive - standard.defensive - 17.5 * 1.4).abs() < 0.005,
+        "{value:?} {standard:?}"
     );
 }
 
@@ -220,8 +271,14 @@ fn anti_missile_system_value_and_mass() {
         part.equipment = format!("Ammo_{}", weapon.name());
         part.data = capacity.to_string();
         arm.criticals.insert(5, part);
-        let mut equipped =
-            Mech::from_template(crate::support::templates::legal(definition)).unwrap();
+        let definition = crate::support::templates::legal(definition);
+        let mut equipped = Mech::from_template(definition.clone()).unwrap();
+        let bare = without(
+            &definition,
+            &[weapon.name(), &format!("Ammo_{}", weapon.name())],
+        )
+        .battle_value()
+        .unwrap();
         assert_eq!(weapon.mass(), 512);
         assert!(!weapon.supports_targeting_computer());
         assert_eq!(
@@ -230,11 +287,17 @@ fn anti_missile_system_value_and_mass() {
         );
         assert!(equipped.ams_enabled());
         let system = f64::from(weapon.battle_value());
-        // The arm bin adds its own fifteen-point penalty to the Jenner's 249.5.
-        let defensive = (249.5 + system + ammunition.min(system) - 15.0) * 1.4;
+        // The arm bin adds its own fifteen-point penalty.
+        let defensive = (system + ammunition.min(system) - 15.0) * 1.4;
         let value = equipped.battle_value().unwrap();
-        assert!((value.defensive - defensive).abs() < 0.005, "{value:?}");
-        assert!((value.offensive - 525.96).abs() < 0.005, "{value:?}");
+        assert!(
+            (value.defensive - bare.defensive - defensive).abs() < 0.005,
+            "{value:?}"
+        );
+        assert!(
+            (value.offensive - bare.offensive).abs() < 0.005,
+            "{value:?}"
+        );
         equipped
             .destroy_critical(CriticalLocation {
                 section: MechSection::LeftArm,
@@ -256,11 +319,15 @@ fn laser_anti_missile_system_value_and_mass() {
         for slot in 4..4 + weapon.profile().critical_slots {
             arm.criticals.insert(slot, part.clone());
         }
-        let mut equipped =
-            Mech::from_template(crate::support::templates::legal(definition)).unwrap();
+        let definition = crate::support::templates::legal(definition);
+        let mut equipped = Mech::from_template(definition.clone()).unwrap();
+        let bare = without(&definition, &[weapon.name()])
+            .battle_value()
+            .unwrap();
         assert_eq!(weapon.mass(), mass);
         assert_eq!(weapon.profile().ammunition_per_ton, 0);
-        assert!(weapon.supports_targeting_computer());
+        // A defensive weapon gains nothing from a targeting computer (TechManual p. 238).
+        assert!(!weapon.supports_targeting_computer());
         assert!(
             !equipped
                 .loadout()
@@ -270,9 +337,12 @@ fn laser_anti_missile_system_value_and_mass() {
                 .any(|bin| bin.weapon == weapon)
         );
         assert!(equipped.ams_enabled());
-        let defensive = 349.3 + f64::from(weapon.battle_value()) * 1.4;
+        let defensive = f64::from(weapon.battle_value()) * 1.4;
         let value = equipped.battle_value().unwrap();
-        assert!((value.defensive - defensive).abs() < 0.005, "{value:?}");
+        assert!(
+            (value.defensive - bare.defensive - defensive).abs() < 0.005,
+            "{value:?}"
+        );
         equipped
             .destroy_critical(CriticalLocation {
                 section: MechSection::LeftArm,

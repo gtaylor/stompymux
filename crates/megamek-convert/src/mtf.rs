@@ -891,7 +891,8 @@ mod tests {
             (
                 "techbase:Inner Sphere",
                 "techbase:Clan",
-                "Inner Sphere technology on a Clan Mech",
+                // Unprefixed weapons follow the chassis base, and the Clan LRM-20 is smaller.
+                "left over after whole weapons",
             ),
             (
                 "Autocannon/20\nIS Ammo",

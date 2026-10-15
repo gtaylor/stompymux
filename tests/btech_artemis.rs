@@ -136,25 +136,28 @@ fn artemis_unassigned_links_and_mass() {
 #[test]
 fn artemis_v_controller_mass() {
     let standard = Mech::from_template(definition(MechSection::CenterTorso, "11")).unwrap();
+    // Artemis V fills two slots beside its launcher, so the SRM-4 moves to the right torso
+    // with its controller.
     let mut template = definition(MechSection::CenterTorso, "11");
-    let torso = template
+    let center = template
         .sections
         .get_mut(&MechSection::CenterTorso)
         .unwrap();
-    torso.criticals.get_mut(&11).unwrap().equipment = "ArtemisV".into();
-    template
-        .sections
-        .get_mut(&MechSection::RightTorso)
-        .unwrap()
-        .criticals
-        .insert(
-            7,
+    let launcher = center.criticals.remove(&10).unwrap();
+    center.criticals.remove(&11);
+    let torso = template.sections.get_mut(&MechSection::RightTorso).unwrap();
+    torso.criticals.insert(7, launcher);
+    for slot in [8, 9] {
+        torso.criticals.insert(
+            slot,
             CriticalDefinition {
                 equipment: "ArtemisV".into(),
                 data: "-".into(),
                 modes: vec![],
             },
         );
+    }
+    let template = crate::support::templates::legal(template);
     let unit = Mech::from_template(template).unwrap();
     assert_eq!(
         unit.mass().unwrap().equipment,

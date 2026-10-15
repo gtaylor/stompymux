@@ -69,12 +69,16 @@ fn targeting_computer_slots_mass_damage_and_flooding() {
         Weapon::Ac20,
         Weapon::Lbx10,
         Weapon::HeavyGaussRifle,
-        Weapon::HeavyFlamer,
-        Weapon::VehicleFlamer,
     ] {
         assert!(weapon.supports_targeting_computer());
     }
+    // Flamers, machine guns, missiles, artillery and defensive weapons are not direct-fire
+    // weapons (TechManual p. 238).
     for weapon in [
+        Weapon::HeavyFlamer,
+        Weapon::VehicleFlamer,
+        Weapon::LaserAms,
+        Weapon::APod,
         Weapon::Flamer,
         Weapon::MachineGun,
         Weapon::HeavyMachineGun,

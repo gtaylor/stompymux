@@ -499,7 +499,7 @@ impl MechTemplate {
         Ok(())
     }
 
-    /// Artemis IV serves every applicable launcher or none, from the launcher's location
+    /// Artemis IV or V serves every applicable launcher or none, from the launcher's location
     /// (TM p. 206); Inner Sphere CASE goes in torsos (TM p. 210); rear-firing weapons sit in
     /// torsos, legs or the head (TM p. 46); a heavy Gauss rifle sits in the torsos, splitting
     /// only between a side and the center torso (TM p. 218); and only ranged weapons of eight
@@ -511,20 +511,29 @@ impl MechTemplate {
                 MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
             )
         };
-        let artemis = loadout
-            .systems
-            .iter()
-            .filter(|part| part.system == System::ArtemisIv)
-            .count();
-        if artemis > 0 {
-            for section in MechSection::ALL {
-                let controllers = loadout
+        // Artemis IV fills one slot per launcher, Artemis V two (Tactical Operations: Advanced
+        // Units & Equipment p. 217).
+        let controller_slots = |section: Option<MechSection>| -> (usize, usize) {
+            let count = |system| {
+                loadout
                     .systems
                     .iter()
                     .filter(|part| {
-                        part.system == System::ArtemisIv && part.location.section == section
+                        part.system == system && section.is_none_or(|s| part.location.section == s)
                     })
-                    .count();
+                    .count()
+            };
+            (count(System::ArtemisIv), count(System::ArtemisV))
+        };
+        if controller_slots(None) != (0, 0) {
+            for section in MechSection::ALL {
+                let (four, five) = controller_slots(Some(section));
+                let name = chassis.section_name(section);
+                ensure!(
+                    five.is_multiple_of(2),
+                    "Artemis V fills two slots per launcher; {name} has {five}"
+                );
+                let controllers = four + five / 2;
                 let launchers = loadout
                     .weapons
                     .iter()
@@ -534,8 +543,7 @@ impl MechTemplate {
                     .count();
                 ensure!(
                     controllers == launchers,
-                    "Artemis IV must serve every LRM, SRM and MML launcher from its location: {} has {launchers} launchers and {controllers} Artemis IV systems",
-                    chassis.section_name(section)
+                    "Artemis IV must serve every LRM, SRM and MML launcher from its location: {name} has {launchers} launchers and {controllers} Artemis systems"
                 );
             }
         }
