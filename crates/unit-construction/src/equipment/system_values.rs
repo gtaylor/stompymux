@@ -23,6 +23,17 @@ pub enum PhysicalBattleValue {
     DamageTimes(f64),
 }
 
+impl SystemContext {
+    /// The context of one installation whose slot states `base`: a stated base replaces the
+    /// chassis's for the facts it sizes.
+    pub fn for_installation(self, base: Option<super::super::TechBase>) -> Self {
+        Self {
+            clan: base.map_or(self.clan, |base| base == super::super::TechBase::Clan),
+            ..self
+        }
+    }
+}
+
 impl System {
     /// Defensive Battle Value of one installation of this system (the † entries of
     /// TechManual pp. 317-318 and Tactical Operations: Advanced Units & Equipment pp. 195-197):

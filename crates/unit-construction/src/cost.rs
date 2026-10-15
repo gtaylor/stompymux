@@ -475,7 +475,10 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
         engine_rating: u16::try_from(rating).unwrap_or(u16::MAX),
     };
     for part in &loadout.systems {
-        if let Some(price) = part.system.slot_price(context) {
+        if let Some(price) = part
+            .system
+            .slot_price(context.for_installation(part.tech_base))
+        {
             total += price;
             continue;
         }

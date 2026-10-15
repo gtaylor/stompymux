@@ -108,8 +108,17 @@ only the other base builds. The Bloodhound probe, C3, the null signature system,
 Angel ECM, triple strength myomer, stealth armor and light and heavy
 ferro-fibrous armor are Inner Sphere equipment; the light active probe, light
 TAG, Artemis V, laser heat sinks and the Watchdog suite are Clan equipment.
-Heat sinks, jump jets, CASE, ECM, the active probe, MASC, targeting computers
-and Artemis IV share one name on both bases and take the chassis's base.
+CASE is an Inner Sphere item that goes in a torso; Clan CASE is built into
+every location of a Clan-structure unit rather than installed (TechManual p.
+210).
+
+CASE II, ECM suites, active probes, MASC, targeting computers, Artemis IV and
+jump jets are built by both bases to their own specifications under one name.
+An unprefixed slot is built from the chassis's base; a slot may instead state
+its base with an `IS.` or `CL.` prefix, as `CL.Ecm` (the one-slot, one-ton Clan
+ECM suite rather than the Guardian), `CL.Masc` (4% of the tonnage rather than
+5%) or `IS.TargetingComputer` (a ton per four tons of weapons rather than
+five). A stated base other than the chassis's needs `mixed_tech`.
 
 ### Construction rules
 
@@ -298,9 +307,9 @@ OmniMechs get the `OmniMech_Tech` special and a searchlight design quirk the
 `SearchLight` special; other quirks have no stompymux counterpart and are not
 converted. Mixed-technology units set `mixed_tech = true` and keep a Clan or
 Inner Sphere engine, structure or armor through the `[construction]` technology
-keys. CASE II, ECM
-suites and active probes take their technology from the chassis in stompymux,
-so one built from the other technology base is refused.
+keys. A CASE II, ECM suite, active probe, MASC, targeting computer, Artemis IV
+or jump jet of the other technology base keeps its base as an `IS.` or `CL.`
+prefix on its item.
 
 Every converted unit must load and construct exactly as the game would, so the
 tool refuses anything stompymux cannot field instead of dropping it: other unit

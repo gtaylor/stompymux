@@ -4,13 +4,15 @@ use super::{MechSection, System, WeaponMount};
 use anyhow::{Context, Result, ensure};
 
 /// Installed system mass per surviving Mech critical, independent of current critical damage.
-pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32 {
+/// `clan` is the installation's technology base, which sizes active probes, ECM suites and
+/// CASE II (TechManual pp. 341-343; Tactical Operations: Advanced Units & Equipment p. 217).
+pub fn system_slot_mass(definition: &super::MechTemplate, system: System, clan: bool) -> u32 {
     match system {
         System::Case | System::LightProbe | System::LightTag => 512,
         System::C3i => 1280,
         // The Clan active probe fills one slot for a ton; the Beagle two for a ton and a half.
         System::BeagleProbe => {
-            if definition.has_special("Clan") {
+            if clan {
                 1024
             } else {
                 768
@@ -35,7 +37,7 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
         System::Ecm => {
             if definition.has_technology(super::Technology::Watchdog) {
                 768
-            } else if definition.has_special("Clan") {
+            } else if clan {
                 1024
             } else {
                 768
@@ -43,7 +45,7 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
         }
         // Inner Sphere CASE II weighs a ton per slot; the Clan version weighs half as much.
         System::CaseIi => {
-            if definition.has_special("Clan") {
+            if clan {
                 512
             } else {
                 1024
@@ -77,8 +79,13 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
 /// Mass of `slots` installed critical slots of `system`, rounded per whole item rather than
 /// per slot, so a complete installation weighs exactly its book mass: three Bloodhound slots
 /// weigh two tons and five wrecking-ball slots four (TM pp. 341-344; Tactical Operations:
-/// Advanced Units & Equipment pp. 217-221).
-pub fn system_mass(definition: &super::MechTemplate, system: System, slots: usize) -> u32 {
+/// Advanced Units & Equipment pp. 217-221). `clan` is the installation's technology base.
+pub fn system_mass(
+    definition: &super::MechTemplate,
+    system: System,
+    clan: bool,
+    slots: usize,
+) -> u32 {
     let (item_mass, item_slots) = match system {
         System::BloodhoundProbe => (2048, 3),
         System::WreckingBall => (4096, 5),
@@ -90,7 +97,7 @@ pub fn system_mass(definition: &super::MechTemplate, system: System, slots: usiz
             512 + half_ton((u32::from(definition.tons) * 1024).div_ceil(20)),
             u32::from(definition.tons.div_ceil(20)) + 1,
         ),
-        _ => (system_slot_mass(definition, system), 1),
+        _ => (system_slot_mass(definition, system, clan), 1),
     };
     let slots = slots as u64;
     u32::try_from(
@@ -241,18 +248,28 @@ mod tests {
         assert_eq!(armor_mass(80, 25), 10 * 1024);
     }
 
-    /// CASE II weighs a ton per Inner Sphere slot and half a ton per Clan slot.
+    /// CASE II weighs a ton per Inner Sphere slot and half a ton per Clan slot, and the
+    /// Beagle probe and Guardian ECM three quarters of a ton per slot against a ton for their
+    /// one-slot Clan counterparts, by the installation's technology base.
     #[test]
-    fn case_ii_slot_mass_depends_on_technology_base() {
-        let mut definition =
+    fn system_slot_mass_depends_on_the_installation_base() {
+        let definition =
             crate::MechTemplate::parse("JR7-D", include_str!("../tests/fixtures/JR7-D.toml"))
                 .unwrap();
-        assert_eq!(system_slot_mass(&definition, System::CaseIi), 1024);
-        assert_eq!(system_slot_mass(&definition, System::Case), 512);
-        let specials = definition.attributes.entry("specials".into()).or_default();
-        specials.push_str(" Clan");
-        assert_eq!(system_slot_mass(&definition, System::CaseIi), 512);
+        assert_eq!(system_slot_mass(&definition, System::CaseIi, false), 1024);
+        assert_eq!(system_slot_mass(&definition, System::Case, false), 512);
+        assert_eq!(system_slot_mass(&definition, System::CaseIi, true), 512);
+        assert_eq!(
+            system_slot_mass(&definition, System::BeagleProbe, false),
+            768
+        );
+        assert_eq!(
+            system_slot_mass(&definition, System::BeagleProbe, true),
+            1024
+        );
+        assert_eq!(system_slot_mass(&definition, System::Ecm, true), 1024);
         assert_eq!(System::parse("CASE-II").unwrap(), System::CaseIi);
+        assert_eq!(System::parse("CL.CASE-II").unwrap(), System::CaseIi);
         assert!(System::CaseIi.is_noncritical());
     }
 }

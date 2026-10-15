@@ -87,7 +87,9 @@ impl Part {
     }
 
     /// Resolve an exact, ASCII case-insensitive stock name.
+    /// A system slot's `IS.` or `CL.` technology prefix names no separate stock item.
     pub fn parse(name: &str) -> Result<Self> {
+        let name = super::System::stock_name(name);
         let mut matches = Self::all().filter(|part| part.name.eq_ignore_ascii_case(name));
         let part = matches
             .next()

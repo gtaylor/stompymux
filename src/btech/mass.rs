@@ -120,7 +120,13 @@ impl Mech {
             .systems
             .iter()
             .filter(|part| survives(part.location.section))
-            .map(|part| system_slot_mass(definition, part.system))
+            .map(|part| {
+                system_slot_mass(
+                    definition,
+                    part.system,
+                    part.is_clan(definition.has_special("Clan")),
+                )
+            })
             .sum::<u32>();
         for mount in &loadout.weapons {
             let slot_mass = mount.weapon.mass() / u32::from(mount.weapon.profile().critical_slots);

@@ -422,7 +422,8 @@ fn probe_profile(
                 .context("Observer is not constructed")?;
             let loadout = unit.loadout()?;
             (
-                unit.definition().has_special("Clan"),
+                // The Beagle and Clan active probes reach by the probe's own technology base.
+                unit.definition().installation_is_clan(System::BeagleProbe),
                 ActiveProbe::BY_REACH.map(|kind| (kind, unit.probe_fitting(&loadout, kind))),
             )
         }

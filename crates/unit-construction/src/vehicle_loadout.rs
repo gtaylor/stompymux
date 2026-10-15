@@ -63,8 +63,9 @@ impl VehicleLoadout {
                         critical.data
                     );
                     let equipment = critical.equipment.clone();
-                    if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
-                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
+                    if (super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
+                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some())
+                        && System::named(&equipment).is_none()
                     {
                         let weapon = match Weapon::parse(&equipment) {
                             Ok(weapon) => weapon,
@@ -86,8 +87,8 @@ impl VehicleLoadout {
                         });
                         return Ok(());
                     }
-                    let system = match System::named(&critical.equipment) {
-                        Some(system) => system,
+                    let (system, tech_base) = match System::installation(&critical.equipment) {
+                        Some(installation) => installation,
                         None if contract
                             && Part::parse(&critical.equipment).is_ok_and(|part| {
                                 matches!(part.kind, PartKind::Component | PartKind::Bomb)
@@ -98,7 +99,11 @@ impl VehicleLoadout {
                         None => bail!("Unsupported equipment {}", critical.equipment),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    loadout.systems.push(SystemCritical { location, system });
+                    loadout.systems.push(SystemCritical {
+                        location,
+                        system,
+                        tech_base,
+                    });
                     Ok(())
                 })()
                 .with_context(|| {

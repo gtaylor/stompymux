@@ -114,7 +114,7 @@ pub use registry::{
 pub use speed::{
     parse_template_speed, read_template_speed, template_walking_mp, write_template_speed,
 };
-pub use tech_base::{TechBase, TechnologyInventory, check_technology_base};
+pub use tech_base::{SystemInstallation, TechBase, TechnologyInventory, check_technology_base};
 pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
 pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
 pub use unit::UnitTemplate;

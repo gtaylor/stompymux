@@ -18,8 +18,9 @@ pub enum TechBase {
 }
 
 impl TechBase {
-    /// The namespace stompymux weapon and ammunition names carry.
-    fn namespace(self) -> &'static str {
+    /// The namespace stompymux weapon and ammunition names carry, and that a system both
+    /// bases build carries when its base differs from the chassis's.
+    pub fn namespace(self) -> &'static str {
         match self {
             Self::InnerSphere => "IS",
             Self::Clan => "CL",
@@ -380,15 +381,20 @@ pub fn parse_for(raw: &str, chassis: TechBase) -> Result<Critical> {
     }
 }
 
-/// The technology base a slot's system implies, for the systems whose Inner Sphere and Clan
-/// versions differ in mass or reach while stompymux reads their technology from the chassis:
-/// CASE II, ECM suites and active probes. `None` when the slot names no such system or does
-/// not say which base built it.
+/// The technology base a slot's system states, for the systems both bases build to their own
+/// specifications under one stompymux name: CASE II, ECM suites, active probes, MASC,
+/// targeting computers, Artemis IV and jump jets (see `System::built_by_either_base`). `None`
+/// when the slot names no such system or does not say which base built it.
 pub fn system_tech(raw: &str) -> Option<TechBase> {
     let name = raw.split(['(', ':']).next().unwrap_or_default();
     for (tech, base) in readings(&key(name)) {
         match base {
-            "caseii" | "ecmsuite" | "activeprobe" if tech.is_some() => return tech,
+            "caseii" | "ecmsuite" | "activeprobe" | "masc" | "targetingcomputer" | "artemisiv"
+            | "artemisivfcs" | "jumpjet"
+                if tech.is_some() =>
+            {
+                return tech;
+            }
             "guardianecm" | "guardianecmsuite" | "beagleactiveprobe" => {
                 return Some(TechBase::InnerSphere);
             }

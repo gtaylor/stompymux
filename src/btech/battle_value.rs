@@ -374,19 +374,22 @@ fn physical_weapon_value(attack: ArmAttack, tons: u16, triple_myomer: bool) -> f
 fn defensive_system_value<L>(
     loadout: &ResolvedLoadout<L>,
     context: SystemContext,
-    slots: impl Fn(System) -> u16,
+    slots: impl Fn(System, SystemContext) -> u16,
 ) -> f64 {
-    let mut counts: BTreeMap<System, usize> = BTreeMap::new();
+    // Each installation is valued and sized by its own technology base.
+    let mut counts: BTreeMap<(System, Option<super::TechBase>), usize> = BTreeMap::new();
     for part in &loadout.systems {
+        let context = context.for_installation(part.tech_base);
         if part.system.defensive_battle_value(context).is_some() {
-            *counts.entry(part.system).or_default() += 1;
+            *counts.entry((part.system, part.tech_base)).or_default() += 1;
         }
     }
     counts
         .into_iter()
-        .map(|(system, count)| {
+        .map(|((system, base), count)| {
+            let context = context.for_installation(base);
             let value = system.defensive_battle_value(context).unwrap_or(0);
-            let size = usize::from(slots(system).max(1));
+            let size = usize::from(slots(system, context).max(1));
             (count / size) as f64 * f64::from(value)
         })
         .sum()
@@ -489,7 +492,7 @@ impl Mech {
             tons,
             engine_rating: 0,
         };
-        let defensive_equipment = defensive_system_value(&loadout, context, |system| {
+        let defensive_equipment = defensive_system_value(&loadout, context, |system, context| {
             system.installation_slots(context).unwrap_or(1)
         }) + defensive_weapon_value(
             settings,
@@ -721,7 +724,7 @@ impl super::Vehicle {
             tons: definition.tons,
             engine_rating: 0,
         };
-        let defensive_equipment = defensive_system_value(&loadout, context, |_| 1)
+        let defensive_equipment = defensive_system_value(&loadout, context, |_, _| 1)
             + defensive_weapon_value(
                 settings,
                 loadout.weapons.iter().map(|mount| mount.weapon),

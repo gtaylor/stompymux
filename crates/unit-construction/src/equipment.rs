@@ -472,12 +472,19 @@ impl System {
         Ok(system)
     }
 
-    /// Look up a system slot name, or `None` for weapons, ammunition and unknown parts.
+    /// Look up a system slot name, or `None` for weapons, ammunition and unknown parts. A
+    /// system both technology bases build may carry an `IS.` or `CL.` prefix stating its base
+    /// (see [`System::installation`]).
     ///
     /// Validation and critical-slot scans ask this of every slot on a unit, most of which
     /// are not systems, so the miss returns no error: building one per slot would format a
     /// message and, when backtraces are enabled, capture a stack trace each time.
     pub fn named(name: &str) -> Option<Self> {
+        Self::installation(name).map(|(system, _)| system)
+    }
+
+    /// Look up a system slot name without a technology prefix.
+    pub(crate) fn unprefixed(name: &str) -> Option<Self> {
         match name {
             name if name.eq_ignore_ascii_case("ShoulderOrHip") => Some(Self::ShoulderOrHip),
             name if name.eq_ignore_ascii_case("UpperActuator") => Some(Self::UpperActuator),

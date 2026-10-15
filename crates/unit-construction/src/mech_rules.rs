@@ -170,10 +170,27 @@ impl MechTemplate {
         whole_movement_points(self.jump_speed, "Jumping speed")
     }
 
-    /// Critical slots, and tons, of MASC: 5% of an Inner Sphere Mech's tonnage or 4% of a
-    /// Clan Mech's, rounded to the nearest whole number (TM p. 52).
+    /// Whether the installed `system` is Clan technology: the base its slots' `IS.` or `CL.`
+    /// prefix states, or the chassis's base when they state none.
+    pub fn installation_is_clan(&self, system: System) -> bool {
+        let declared = self
+            .sections
+            .values()
+            .flat_map(|section| section.criticals.values())
+            .filter_map(|critical| System::installation(&critical.equipment))
+            .find(|(installed, _)| *installed == system)
+            .and_then(|(_, base)| base);
+        declared.map_or(self.has_special("Clan"), |base| base == TechBase::Clan)
+    }
+
+    /// Critical slots, and tons, of MASC: 5% of the tonnage for Inner Sphere MASC or 4% for
+    /// Clan MASC, rounded to the nearest whole number (TM p. 52).
     pub fn masc_slots(&self) -> usize {
-        let percent = if self.has_special("Clan") { 4 } else { 5 };
+        let percent = if self.installation_is_clan(System::Masc) {
+            4
+        } else {
+            5
+        };
         usize::from((self.tons * percent + 50) / 100).max(1)
     }
 
@@ -467,41 +484,37 @@ impl MechTemplate {
     }
 
     /// A targeting computer weighs, and fills as many contiguous slots in one location as,
-    /// the tonnage of the direct-fire weapons divided by 4 (Inner Sphere) or 5 (Clan),
-    /// rounded up (TM p. 238).
+    /// the tonnage of the direct-fire weapons divided by 4 for an Inner Sphere computer or 5
+    /// for a Clan one, rounded up (TM p. 238).
     fn validate_targeting_computer(&self, loadout: &MechLoadout) -> Result<()> {
         let computer: Vec<_> = loadout
             .systems
             .iter()
             .filter(|part| part.system == System::TargetingComputer)
-            .map(|part| part.location)
             .collect();
         if computer.is_empty() {
             return Ok(());
         }
+        let clan = computer[0].is_clan(self.has_special("Clan"));
+        ensure!(
+            computer
+                .iter()
+                .all(|part| part.is_clan(self.has_special("Clan")) == clan),
+            "A targeting computer is built from one technology base"
+        );
         let weapons: u32 = loadout
             .weapons
             .iter()
             .filter(|mount| mount.weapon.is_direct_fire())
             .map(|mount| mount.weapon.mass())
             .sum();
-        let size = |divisor: u32| weapons.div_ceil(1024 * divisor) as usize;
-        let expected = if self.has_special("Clan") {
-            size(5)
-        } else {
-            size(4)
-        };
-        // A mixed-technology Mech may carry either base's computer.
-        let other = if self.has_special("Clan") {
-            size(4)
-        } else {
-            size(5)
-        };
+        let divisor = if clan { 5 } else { 4 };
+        let expected = weapons.div_ceil(1024 * divisor) as usize;
+        let locations: Vec<_> = computer.iter().map(|part| part.location).collect();
         ensure!(
-            (computer.len() == expected
-                || (self.has_special(MIXED_TECH) && computer.len() == other))
-                && contiguous(&computer),
-            "A targeting computer for {:.1} tons of direct-fire weapons needs {expected} contiguous critical slots in one location; found {}",
+            computer.len() == expected && contiguous(&locations),
+            "A{} targeting computer for {:.1} tons of direct-fire weapons needs {expected} contiguous critical slots in one location; found {}",
+            if clan { " Clan" } else { "n Inner Sphere" },
             f64::from(weapons) / 1024.0,
             computer.len()
         );
@@ -566,7 +579,7 @@ impl MechTemplate {
     }
 
     /// Artemis IV or V serves every applicable launcher or none, from the launcher's location
-    /// (TM p. 206); Inner Sphere CASE goes in torsos (TM p. 210); rear-firing weapons sit in
+    /// (TM p. 206); CASE goes in torsos (TM p. 210); rear-firing weapons sit in
     /// torsos, legs or the head (TM p. 46); a heavy Gauss rifle sits in the torsos, splitting
     /// only between a side and the center torso (TM p. 218); and only ranged weapons of eight
     /// or more slots split, across two adjacent locations other than the legs (TM p. 47).
@@ -613,15 +626,15 @@ impl MechTemplate {
                 );
             }
         }
-        if !self.has_special("Clan") {
-            ensure!(
-                loadout
-                    .systems
-                    .iter()
-                    .all(|part| part.system != System::Case || torso(part.location.section)),
-                "Inner Sphere CASE may only be mounted in torso locations"
-            );
-        }
+        // CASE as an item is Inner Sphere CASE wherever it is mounted; Clan CASE is built into
+        // Clan structure (TM p. 210).
+        ensure!(
+            loadout
+                .systems
+                .iter()
+                .all(|part| part.system != System::Case || torso(part.location.section)),
+            "Inner Sphere CASE may only be mounted in torso locations"
+        );
         for mount in &loadout.weapons {
             let primary = mount.criticals[0].section;
             let name = mount.weapon.name();
@@ -681,7 +694,10 @@ impl MechTemplate {
                 .filter(|component| self.has_special(component.flag(!clan)))
                 .collect(),
             weapons: loadout.weapons.iter().map(|mount| mount.weapon),
-            systems: loadout.systems.iter().map(|part| part.system),
+            systems: loadout
+                .systems
+                .iter()
+                .map(|part| (part.system, part.tech_base)),
         })
     }
 
@@ -920,6 +936,37 @@ mod tests {
         refused(
             &JENNER.replacen("item = \"IS.MediumLaser\"", "item = \"LightTAG\"", 1),
             "LightTag is Clan technology on an Inner Sphere Mech",
+        );
+    }
+
+    /// A slot may state the base of equipment both bases build, which then sizes it and must
+    /// match the chassis unless the design is mixed technology.
+    #[test]
+    fn stated_technology_bases_size_shared_equipment() {
+        let with = |item: &str, at: &str| {
+            JENNER.replace(
+                "    { at = \"1-2\", item = \"JumpJet\" },\n]",
+                &format!(
+                    "    {{ at = \"1-2\", item = \"JumpJet\" }},\n    {{ at = \"{at}\", item = \"{item}\" }},\n]"
+                ),
+            )
+        };
+        refused(
+            &with("CL.Ecm", "3"),
+            "CL.Ecm is Clan technology on an Inner Sphere Mech",
+        );
+        let mixed = |source: String| {
+            source.replacen("[construction]\n", "[construction]\nmixed_tech = true\n", 1)
+        };
+        // Clan MASC fills 4% of the 35 tons, rounded: one slot (TM p. 52).
+        let clan_masc = MechTemplate::parse("JR7-D", &mixed(with("CL.Masc", "3"))).unwrap();
+        assert_eq!(clan_masc.masc_slots(), 1);
+        assert!(clan_masc.installation_is_clan(crate::System::Masc));
+        let inner_masc = MechTemplate::parse("JR7-D", &with("Masc", "3-4")).unwrap();
+        assert_eq!(inner_masc.masc_slots(), 2);
+        refused(
+            &mixed(with("CL.TargetingComputer", "3-4")),
+            "A Clan targeting computer for 4.0 tons of direct-fire weapons needs 1",
         );
     }
 

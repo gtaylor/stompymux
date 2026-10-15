@@ -268,13 +268,23 @@ pub fn convert(source: &str) -> Result<Converted> {
         specials.push("SearchLight");
     }
     let mut criticals = Vec::new();
+    // Slots holding a system of the other technology base, which their item names state.
+    let mut other_base = Vec::new();
     for (mtf, heading, _, _) in locations {
         let lines = file
             .locations
             .get(*mtf)
             .with_context(|| format!("missing {mtf} critical slots"))?;
         let mut resolved = Vec::new();
+        let mut bases = Vec::new();
         for (slot, line) in lines.iter().enumerate() {
+            let item_tech = equipment::system_tech(line).filter(|item_tech| *item_tech != tech);
+            bases.push(item_tech.filter(|_| {
+                !matches!(
+                    equipment::parse_for(line, tech),
+                    Ok(Critical::Weapon { .. } | Critical::Ammo { .. })
+                )
+            }));
             let critical = equipment::parse_for(line, tech)
                 .with_context(|| format!("{heading} slot {}", slot + 1))?;
             match critical {
@@ -283,15 +293,6 @@ pub fn convert(source: &str) -> Result<Converted> {
                         "{heading} slot {} holds {line}, but the mech declares {sink_count} {:?} heat sinks",
                         slot + 1,
                         sinks
-                    )
-                }
-                Critical::System(item)
-                    if equipment::system_tech(line).is_some_and(|item_tech| item_tech != tech) =>
-                {
-                    bail!(
-                        "{heading} slot {}: {line} is mixed technology on this {} chassis, which stompymux cannot represent ({item})",
-                        slot + 1,
-                        tech.label()
                     )
                 }
                 Critical::Searchlight => {
@@ -304,11 +305,14 @@ pub fn convert(source: &str) -> Result<Converted> {
             }
         }
         criticals.push(resolved);
+        other_base.push(bases);
     }
     feed_other_tech_launchers(&mut criticals);
     let split_mounts = split_mounts(&mut criticals, locations)?;
     let mut sections = Vec::new();
-    for ((_, heading, armor_key, rear_key), criticals) in locations.iter().zip(&criticals) {
+    for (((_, heading, armor_key, rear_key), criticals), bases) in
+        locations.iter().zip(&criticals).zip(&other_base)
+    {
         let armor = armor_value(&file, armor_key)?;
         let rear = match rear_key {
             Some(key) => armor_value(&file, key)?,
@@ -317,6 +321,12 @@ pub fn convert(source: &str) -> Result<Converted> {
         let mut section = Section::new(heading, armor, rear, true);
         section.slots =
             layout::slots(criticals, WeaponSpan::Catalogue).with_context(|| heading.to_string())?;
+        // A system of the other base states it, as `CL.Ecm` on an Inner Sphere chassis.
+        for (slot, base) in section.slots.iter_mut().zip(bases) {
+            if let (Some(slot), Some(base)) = (slot, base) {
+                slot.item = format!("{}.{}", base.namespace(), slot.item);
+            }
+        }
         sections.push(section);
     }
     let full_reference = if model.is_empty() {
@@ -842,9 +852,34 @@ mod tests {
                 .iter()
                 .any(|(key, _)| *key == "engine_tech")
         );
+        // A system of the other base states its base in its item name, and construction then
+        // needs mixed technology.
         let clan_case = replace_line(ATLAS, "Left Torso:", 12, "CLCASEII");
-        assert!(template_error(&clan_case).contains("mixed technology"));
+        let error = template_error(&clan_case);
+        assert!(
+            error.contains("CL.CaseIi is Clan technology on an Inner Sphere Mech"),
+            "{error}"
+        );
+        let mixed = clan_case.replace("techbase:Inner Sphere", "techbase:Mixed (IS Chassis)");
+        let converted = convert(&mixed).unwrap();
+        let torso = converted
+            .draft
+            .sections
+            .iter()
+            .find(|section| section.heading == "left_torso")
+            .unwrap();
+        assert_eq!(torso.slots[11].as_ref().unwrap().item, "CL.CASE-II");
+        // Mixed technology admits it; the half ton of Clan CASE II then overloads the Atlas.
+        let error = format!("{:#}", template(&mixed).unwrap_err());
+        assert!(error.contains("100.50 tons"), "{error}");
         assert_eq!(equipment::system_tech("CLCASEII"), Some(TechBase::Clan));
+        assert_eq!(equipment::system_tech("CLMASC"), Some(TechBase::Clan));
+        assert_eq!(
+            equipment::system_tech("ISTargeting Computer"),
+            Some(TechBase::InnerSphere)
+        );
+        assert_eq!(equipment::system_tech("CLArtemisIV"), Some(TechBase::Clan));
+        assert_eq!(equipment::system_tech("MASC"), None);
         assert_eq!(
             equipment::system_tech("BeagleActiveProbe (OMNIPOD)"),
             Some(TechBase::InnerSphere)

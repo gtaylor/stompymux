@@ -137,7 +137,12 @@ impl MechTemplate {
             *systems.entry((part.system, name.clone())).or_default() += 1;
         }
         for ((system, name), slots) in systems {
-            add(&name, slots as u32, system_mass(self, system, slots));
+            let clan = System::installation(&name)
+                .and_then(|(_, base)| base)
+                .map_or(self.has_special("Clan"), |base| {
+                    base == super::TechBase::Clan
+                });
+            add(&name, slots as u32, system_mass(self, system, clan, slots));
         }
         for bin in &loadout.ammunition {
             add(
