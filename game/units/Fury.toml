@@ -7,6 +7,7 @@ cargo_space = 250
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 320
 
 [sections.left_side]

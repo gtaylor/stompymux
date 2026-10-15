@@ -10,6 +10,7 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 270
 armor = "ferro_fibrous"
 heat_sinks = "double"

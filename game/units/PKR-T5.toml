@@ -11,6 +11,7 @@ max_ton = 1
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 120
 
 [sections.left_side]

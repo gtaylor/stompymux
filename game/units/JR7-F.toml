@@ -7,6 +7,7 @@ jump_mp = 5
 radio = 2
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 245
 
 [sections.left_arm]

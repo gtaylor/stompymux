@@ -260,12 +260,19 @@ fn vtol_anatomy_requires_matching_type_movement_and_rotor() {
 }
 
 /// Every shipped vehicle and VTOL passes the TechManual combat vehicle construction check and
-/// declares its engine rating.
+/// declares its engine rating and technology base; the failures are listed together, so a rule change and the
+/// templates it rejects land together.
 #[test]
 fn shipped_vehicle_templates_pass_the_construction_check() {
     let mut count = 0;
-    for entry in std::fs::read_dir(crate::support::repository_root().join("game/units")).unwrap() {
-        let path = entry.unwrap().path();
+    let mut rejected = Vec::new();
+    let mut entries: Vec<_> =
+        std::fs::read_dir(crate::support::repository_root().join("game/units"))
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .collect();
+    entries.sort();
+    for path in entries {
         let source = std::fs::read_to_string(&path).unwrap();
         if !source
             .lines()
@@ -277,20 +284,25 @@ fn shipped_vehicle_templates_pass_the_construction_check() {
         let template = VehicleTemplate::parse(reference, &source)
             .unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
         let report = check_battle_vehicle_template(&template);
-        assert!(
-            report.constructible,
-            "{}: {:?}",
-            path.display(),
-            report.rejection
-        );
-        // Every shipped vehicle with an engine states its Final Engine Rating.
-        assert!(
-            template.movement == VehicleMovement::Stationary
-                || report.declared_engine_rating.is_some(),
-            "{}: no declared engine_rating",
-            path.display()
-        );
         count += 1;
+        if let Some(rejection) = report.rejection {
+            rejected.push(format!("{reference}: {rejection}"));
+        }
+        // Every shipped vehicle with an engine states its Final Engine Rating.
+        if template.movement != VehicleMovement::Stationary
+            && report.declared_engine_rating.is_none()
+        {
+            rejected.push(format!("{reference}: no declared engine_rating"));
+        }
+        if !source.lines().any(|line| line.starts_with("tech_base = ")) {
+            rejected.push(format!("{reference}: no declared tech_base"));
+        }
     }
     assert_eq!(count, 255);
+    assert!(
+        rejected.is_empty(),
+        "{} of {count} shipped vehicle templates are rejected:\n{}",
+        rejected.len(),
+        rejected.join("\n")
+    );
 }

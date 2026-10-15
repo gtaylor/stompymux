@@ -8,6 +8,7 @@ radio = 4
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 280
 armor = "ferro_fibrous"

@@ -9,6 +9,7 @@ radio = 4
 specials = ["C3SlaveTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 240
 structure = "endo_steel"

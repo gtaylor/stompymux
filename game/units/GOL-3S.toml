@@ -8,6 +8,7 @@ radio = 4
 specials = ["ArtemisIV"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "light"
 engine_rating = 320
 heat_sinks = "double"

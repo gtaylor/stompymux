@@ -5,6 +5,7 @@ tons = 100
 walk_mp = 2
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 200
 

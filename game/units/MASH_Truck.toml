@@ -9,6 +9,7 @@ max_ton = 100
 specials = ["Carrier_Tech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 155
 
 [sections.left_side]

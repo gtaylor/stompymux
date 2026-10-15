@@ -6,6 +6,7 @@ walk_mp = 9
 radio = 5
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 270
 
 [sections.left_arm]

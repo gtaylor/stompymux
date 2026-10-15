@@ -8,6 +8,7 @@ radio = 4
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 340
 
 [sections.left_arm]

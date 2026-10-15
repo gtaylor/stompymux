@@ -6,6 +6,7 @@ walk_mp = 4
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 220
 structure = "endo_steel"
 

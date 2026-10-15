@@ -9,6 +9,7 @@ max_suits = 0
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 105
 

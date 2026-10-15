@@ -9,6 +9,7 @@ radio = 4
 specials = ["ArtemisIV", "ECM"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 270
 structure = "endo_steel"

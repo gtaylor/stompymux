@@ -6,6 +6,7 @@ walk_mp = 3
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 190
 armor = "ferro_fibrous"
 

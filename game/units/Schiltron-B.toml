@@ -6,6 +6,7 @@ walk_mp = 3
 specials = ["ArtemisIV"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 220
 armor = "ferro_fibrous"

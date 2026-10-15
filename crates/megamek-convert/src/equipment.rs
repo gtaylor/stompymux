@@ -26,6 +26,14 @@ impl TechBase {
         }
     }
 
+    /// The `[construction]` `tech_base` spelling.
+    pub fn document_spelling(self) -> &'static str {
+        match self {
+            Self::InnerSphere => "inner_sphere",
+            Self::Clan => "clan",
+        }
+    }
+
     /// Human-readable name for diagnostics.
     pub fn label(self) -> &'static str {
         match self {

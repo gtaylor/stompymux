@@ -673,6 +673,9 @@ pub use btech::{
 /// Owned ground-vehicle protection and ammunition state.
 pub use btech::Vehicle;
 
+/// The Inner Sphere and Clan technology bases construction cross-checks equipment against.
+pub use btech::TechBase;
+
 /// Register owned ground-vehicle state on an unused object.
 pub use btech::create_vehicle as create_battle_vehicle;
 

@@ -11,6 +11,7 @@ max_suits = 0
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 275
 
 [sections.left_arm]

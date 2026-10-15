@@ -12,6 +12,7 @@ scan_range = 30
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 260
 heat_sinks = "double"

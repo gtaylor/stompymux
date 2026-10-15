@@ -9,6 +9,7 @@ cargo_space = 0
 max_suits = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 120
 structure = "endo_steel"

@@ -195,7 +195,8 @@ pub enum Component {
 }
 
 impl Component {
-    const ALL: [Self; 3] = [Self::Engine, Self::Structure, Self::Armor];
+    /// Every component, in document order.
+    pub(crate) const ALL: [Self; 3] = [Self::Engine, Self::Structure, Self::Armor];
 
     /// The `[construction]` key naming this component's technology base.
     fn key(self) -> &'static str {
@@ -388,11 +389,15 @@ impl Construction {
         self.clan != self.mixed.contains(&component)
     }
 
-    /// Render the non-default choices as a `[construction]` table, or nothing.
-    pub fn render(&self) -> String {
+    /// Render the non-default choices as a `[construction]` table, or nothing. A constructed
+    /// unit, a BattleMech or combat vehicle, always states its technology base; other classes
+    /// state it only when it is Clan.
+    pub fn render(&self, constructed: bool) -> String {
         let mut lines = String::new();
         if self.clan {
             let _ = writeln!(lines, "tech_base = \"clan\"");
+        } else if constructed {
+            let _ = writeln!(lines, "tech_base = \"inner_sphere\"");
         }
         for (key, value, default) in [
             (
@@ -823,8 +828,15 @@ mod tests {
         let clan = table("tech_base = \"clan\"").unwrap();
         assert_eq!(clan.heat_sinks, HeatSinks::Double);
         assert_eq!(clan.flags(), ["Clan"]);
-        assert_eq!(clan.render(), "\n[construction]\ntech_base = \"clan\"\n");
-        assert_eq!(table("").unwrap().render(), "");
+        assert_eq!(
+            clan.render(false),
+            "\n[construction]\ntech_base = \"clan\"\n"
+        );
+        assert_eq!(table("").unwrap().render(false), "");
+        assert_eq!(
+            table("").unwrap().render(true),
+            "\n[construction]\ntech_base = \"inner_sphere\"\n"
+        );
         // Clan Mechs may use single heat sinks (TM p. 52).
         let single = table("tech_base = \"clan\"\nheat_sinks = \"single\"").unwrap();
         assert_eq!(single.flags(), ["Clan", "SingleHS"]);
@@ -845,7 +857,10 @@ mod tests {
         assert!(mixed.clan_component(Component::Engine));
         assert!(!mixed.clan_component(Component::Armor));
         assert_eq!(mixed.flags(), ["ClanEngine_Tech"]);
-        assert_eq!(mixed.render(), "\n[construction]\nengine_tech = \"clan\"\n");
+        assert_eq!(
+            mixed.render(false),
+            "\n[construction]\nengine_tech = \"clan\"\n"
+        );
         let clan_mixed = table("tech_base = \"clan\"\nstructure_tech = \"inner_sphere\"").unwrap();
         assert_eq!(clan_mixed.flags(), ["Clan", "ISStructure_Tech"]);
         assert_eq!(

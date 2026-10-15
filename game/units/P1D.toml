@@ -9,6 +9,7 @@ cargo_space = 0
 specials = ["OmniMech_Tech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 300
 structure = "endo_steel"

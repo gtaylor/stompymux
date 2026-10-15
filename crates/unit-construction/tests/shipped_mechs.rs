@@ -4,8 +4,8 @@ use std::path::Path;
 use stompymux_unit_construction::{MechTemplate, check_template};
 
 /// Run the whole-set template check over `game/units` and list every Mech construction
-/// refuses or that leaves its engine rating undeclared, so a rule change and the templates
-/// it rejects land together.
+/// refuses or that leaves its engine rating or technology base undeclared, so a rule change
+/// and the templates it rejects land together.
 #[test]
 fn shipped_mech_templates_pass_construction() {
     let units = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../game/units");
@@ -44,9 +44,13 @@ fn shipped_mech_templates_pass_construction() {
         if let Some(rejection) = report.rejection {
             rejected.push(format!("{reference}: {rejection}"));
         }
-        // Every shipped Mech states its engine rating rather than leaving it to the MP.
+        // Every shipped Mech states its engine rating rather than leaving it to the MP, and
+        // its technology base rather than leaving it to the Inner Sphere default.
         if report.declared_engine_rating.is_none() {
             rejected.push(format!("{reference}: no declared engine_rating"));
+        }
+        if !source.lines().any(|line| line.starts_with("tech_base = ")) {
+            rejected.push(format!("{reference}: no declared tech_base"));
         }
     }
     assert!(checked > 1000, "only {checked} Mech templates found");

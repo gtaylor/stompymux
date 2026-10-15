@@ -8,6 +8,7 @@ radio = 4
 specials = ["C3MasterTech", "SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 340
 heat_sinks = "double"

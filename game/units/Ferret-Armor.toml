@@ -8,6 +8,7 @@ max_suits = 0
 max_ton = 10
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 25
 

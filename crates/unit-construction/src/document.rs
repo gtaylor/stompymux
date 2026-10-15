@@ -803,7 +803,9 @@ pub fn render(
         };
         writeln!(output, "{name} = {rendered}")?;
     }
-    output.push_str(&unit.construction.render());
+    let constructed = unit.places_equipment()
+        || matches!(unit.class, Some(RawUnitClass::Vehicle | RawUnitClass::Vtol));
+    output.push_str(&unit.construction.render(constructed));
     let mounts = split_mounts(sections)?;
     for section in sections {
         render_section(&mut output, section, &mounts, &unit)?;
@@ -1386,7 +1388,7 @@ placements = [
         assert!(!rendered.contains("max_speed"));
         assert!(rendered.contains("specials = [\"SearchLight\"]\n"));
         assert!(rendered.contains(
-            "[construction]\nengine = \"xl\"\nengine_rating = 320\nheat_sinks = \"double\"\n"
+            "[construction]\ntech_base = \"inner_sphere\"\nengine = \"xl\"\nengine_rating = 320\nheat_sinks = \"double\"\n"
         ));
         assert!(rendered.contains("omit = [\"hand_actuator\"]"));
         assert!(rendered.contains("engine_at = 4"));

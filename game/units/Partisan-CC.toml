@@ -5,6 +5,7 @@ tons = 80
 walk_mp = 3
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 240
 armor = "ferro_fibrous"
 

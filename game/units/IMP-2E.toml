@@ -7,6 +7,7 @@ heat_sinks = 30
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 300
 
 [sections.left_arm]

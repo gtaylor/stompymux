@@ -9,6 +9,7 @@ radio = 4
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 180
 heat_sinks = "double"
 

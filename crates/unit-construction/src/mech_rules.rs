@@ -4,9 +4,10 @@
 //! technology base and total mass. Template checks, the template loader and the live
 //! revalidation of a constructed Mech all run these rules, so a Mech that passes is one a
 //! record sheet could describe.
-use super::construction::{MIXED_TECH, SPEED_PER_MP};
+use super::construction::{Component, MIXED_TECH, SPEED_PER_MP};
 use super::document::ENGINE_RATING;
 use super::engine::declared_engine_rating;
+use super::tech_base::{TechBase, TechnologyInventory, check_technology_base};
 use super::{
     Engine, MechChassis, MechLoadout, MechSection, MechTemplate, System, rated_output,
     running_mp_of_walking,
@@ -398,8 +399,8 @@ impl MechTemplate {
             myomer.len()
         );
         ensure!(
-            !declared || !self.has_special("Clan"),
-            "Clan Mechs may not mount triple strength myomer"
+            !declared || !self.has_special("Clan") || self.has_special(MIXED_TECH),
+            "Clan Mechs may not mount triple strength myomer unless they are mixed technology"
         );
         ensure!(
             !declared || masc.is_empty(),
@@ -619,32 +620,28 @@ impl MechTemplate {
         Ok(())
     }
 
-    /// A Mech mounts weapons of its own technology base unless the template declares mixed
-    /// technology (TM p. 46; Tactical Operations: Advanced Units & Equipment p. 189).
+    /// A Mech builds its engine, structure and armor and mounts its weapons and equipment from
+    /// its own technology base unless the template declares mixed technology (TM p. 46;
+    /// Tactical Operations: Advanced Units & Equipment p. 189). The Watchdog suite is Clan
+    /// equipment.
     fn validate_technology_base(&self, loadout: &MechLoadout) -> Result<()> {
-        if self.has_special(MIXED_TECH) {
-            return Ok(());
-        }
         let clan = self.has_special("Clan");
-        for mount in &loadout.weapons {
-            // The anti-personnel pod is the same item on both technology bases (TM pp. 341,
-            // 343), and record sheets name either.
-            if matches!(mount.weapon, super::Weapon::APod | super::Weapon::ClanAPod) {
-                continue;
-            }
-            ensure!(
-                mount.weapon.is_clan() == clan,
-                "{} is {} technology on a{} Mech; declare mixed_tech in [construction]",
-                mount.weapon.name(),
-                if mount.weapon.is_clan() {
-                    "Clan"
-                } else {
-                    "Inner Sphere"
-                },
-                if clan { " Clan" } else { "n Inner Sphere" }
-            );
-        }
-        Ok(())
+        let mixed_tech = self.has_special(MIXED_TECH);
+        ensure!(
+            clan || mixed_tech || !self.has_technology(super::Technology::Watchdog),
+            "The Watchdog suite is Clan technology on an Inner Sphere Mech; declare mixed_tech in [construction]"
+        );
+        check_technology_base(TechnologyInventory {
+            unit: "Mech",
+            base: TechBase::of(clan),
+            mixed_tech,
+            other_base_components: Component::ALL
+                .into_iter()
+                .filter(|component| self.has_special(component.flag(!clan)))
+                .collect(),
+            weapons: loadout.weapons.iter().map(|mount| mount.weapon),
+            systems: loadout.systems.iter().map(|part| part.system),
+        })
     }
 
     /// Every component together weighs the Mech's tonnage: none over, and no more than the
@@ -774,11 +771,7 @@ mod tests {
         );
         let clan = MechTemplate::parse(
             "JR7-D",
-            &JENNER.replacen(
-                "[construction]\n",
-                "[construction]\ntech_base = \"clan\"\n",
-                1,
-            ),
+            &JENNER.replace("tech_base = \"inner_sphere\"", "tech_base = \"clan\""),
         )
         .unwrap();
         assert_eq!((clan.heat_sinks, clan.heat_dissipation()), (10, 20));
@@ -868,6 +861,25 @@ mod tests {
         let mixed = clan.replacen("[construction]\n", "[construction]\nmixed_tech = true\n", 1);
         // Lighter lasers leave the design two tons under its 35.
         refused(&mixed, "under the 35-ton chassis");
+    }
+
+    /// The engine, structure and armor come from the chassis technology base unless the design
+    /// is mixed technology (TM p. 46), and so does equipment only one base builds.
+    #[test]
+    fn components_and_equipment_follow_the_chassis_technology_base() {
+        let clan_engine = JENNER.replacen(
+            "[construction]\n",
+            "[construction]\nengine_tech = \"clan\"\n",
+            1,
+        );
+        refused(&clan_engine, "The engine is not Inner Sphere technology");
+        let mixed =
+            clan_engine.replacen("[construction]\n", "[construction]\nmixed_tech = true\n", 1);
+        assert_eq!(rejection(&mixed), None);
+        refused(
+            &JENNER.replacen("item = \"IS.MediumLaser\"", "item = \"LightTAG\"", 1),
+            "LightTag is Clan technology on an Inner Sphere Mech",
+        );
     }
 
     /// Every component together weighs the tonnage (TM pp. 46, 57).

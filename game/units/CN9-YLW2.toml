@@ -6,6 +6,7 @@ walk_mp = 4
 radio = 5
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 200
 myomer = "triple_strength"

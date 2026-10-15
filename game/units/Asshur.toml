@@ -6,6 +6,7 @@ walk_mp = 9
 heat_sinks = 10
 
 [construction]
+tech_base = "clan"
 engine_rating = 95
 armor = "ferro_fibrous"
 

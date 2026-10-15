@@ -5,6 +5,7 @@ tons = 75
 walk_mp = 5
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 375
 

@@ -2,6 +2,8 @@
 //! limits, structure and engine choices, heat sinks, the Maximum Armor Factor, item slots and
 //! the tonnage budget. Stationary installations are not combat vehicles and only pass anatomy
 //! and mass arithmetic.
+use super::construction::{Component, MIXED_TECH};
+use super::tech_base::{TechBase, TechnologyInventory, check_technology_base};
 use super::{
     AmmunitionMode, Engine, System, Technology, VehicleLoadout, VehicleMass, VehicleMovement,
     VehiclePowerplant, VehicleSection, VehicleTemplate, Weapon,
@@ -276,9 +278,22 @@ impl VehicleTemplate {
         Ok(())
     }
 
-    /// Equipment the motive type or location forbids. A VTOL's turret is a chin turret, which
-    /// follows the standard turret rules (TacOps AUE p. 160).
+    /// Equipment the motive type or location forbids, and equipment of the other technology
+    /// base on a vehicle that does not declare mixed technology (TechManual p. 46). A VTOL's
+    /// turret is a chin turret, which follows the standard turret rules (TacOps AUE p. 160).
     fn check_equipment(&self, loadout: &VehicleLoadout) -> Result<()> {
+        let clan = self.has_special("Clan");
+        check_technology_base(TechnologyInventory {
+            unit: "vehicle",
+            base: TechBase::of(clan),
+            mixed_tech: self.has_special(MIXED_TECH),
+            other_base_components: Component::ALL
+                .into_iter()
+                .filter(|component| self.has_special(component.flag(!clan)))
+                .collect(),
+            weapons: loadout.weapons.iter().map(|mount| mount.weapon),
+            systems: loadout.systems.iter().map(|part| part.system),
+        })?;
         let rotor = loadout
             .weapons
             .iter()
@@ -655,6 +670,30 @@ slots = [
         let fusion = parse(&lasers.replace("engine = \"ice\"", "tech_base = \"clan\""));
         assert_eq!(fusion.mass().unwrap().power_amplifiers, 0);
         assert_eq!(fusion.system_mass(System::Case), 0);
+    }
+
+    /// A vehicle mounts its own technology base's weapons unless it declares mixed
+    /// technology (TechManual p. 46).
+    #[test]
+    fn weapons_follow_the_vehicle_technology_base() {
+        let clan = YELLOW_JACKET.replace("IS.GaussRifle", "CL.GaussRifle");
+        let refused = rejection(&parse(&clan));
+        assert!(
+            refused.contains("CL.GaussRifle is Clan technology on an Inner Sphere vehicle"),
+            "{refused}"
+        );
+        let mixed = parse(&clan.replace("[construction]\n", "[construction]\nmixed_tech = true\n"));
+        let accepted = mixed
+            .construction_rules()
+            .map(|_| ())
+            .map_err(|error| error.to_string());
+        assert!(
+            !accepted
+                .as_ref()
+                .err()
+                .is_some_and(|error| error.contains("technology")),
+            "{accepted:?}"
+        );
     }
 
     #[test]

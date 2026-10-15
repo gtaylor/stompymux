@@ -119,6 +119,7 @@ pub fn hovercraft(tracked: &str) -> String {
 pub fn fit_vehicle(template: &mut stompymux_rs::VehicleTemplate) {
     use stompymux_rs::{VehicleLoadout, VehicleSection, VehicleTemplate};
     template.restate_engine_rating();
+    mark_vehicle_mixed_technology(template);
     let legal = |template: &VehicleTemplate| {
         stompymux_rs::check_battle_vehicle_template(template).constructible
     };
@@ -291,10 +292,16 @@ pub fn book_legal_keeping(
     while template.walking_mp() > 1 && template.walking_mp() * u32::from(template.tons) > 500 {
         slow_down(template);
     }
+    let base = stompymux_rs::TechBase::of(template.has_special("Clan"));
     if loadout
         .weapons
         .iter()
         .any(|mount| mount.weapon.is_clan() != template.has_special("Clan"))
+        || loadout.systems.iter().any(|part| {
+            part.system
+                .technology_base()
+                .is_some_and(|other| other != base)
+        })
     {
         add_special(template, "MixedTech");
     }
@@ -661,8 +668,38 @@ pub fn legal_unit(template: stompymux_rs::UnitTemplate) -> stompymux_rs::UnitTem
         }
         stompymux_rs::UnitTemplate::Vehicle(mut vehicle) => {
             vehicle.restate_engine_rating();
+            mark_vehicle_mixed_technology(&mut vehicle);
             stompymux_rs::UnitTemplate::Vehicle(vehicle)
         }
+    }
+}
+
+/// Declare mixed technology on a vehicle a scenario arms with weapons or equipment of the
+/// other technology base, as the Mech balancing in [`book_legal`] does (TechManual p. 46).
+pub fn mark_vehicle_mixed_technology(template: &mut stompymux_rs::VehicleTemplate) {
+    let Ok(loadout) = stompymux_rs::VehicleLoadout::resolve(template) else {
+        return;
+    };
+    let clan = template.has_special("Clan");
+    let base = stompymux_rs::TechBase::of(clan);
+    let mixed = loadout
+        .weapons
+        .iter()
+        .any(|mount| mount.weapon.is_clan() != clan)
+        || loadout.systems.iter().any(|part| {
+            part.system
+                .technology_base()
+                .is_some_and(|other| other != base)
+        });
+    if mixed && !template.has_special("MixedTech") {
+        let specials = template.attributes.entry("specials".into()).or_default();
+        if specials == "-" {
+            specials.clear();
+        }
+        if !specials.is_empty() {
+            specials.push(' ');
+        }
+        specials.push_str("MixedTech");
     }
 }
 

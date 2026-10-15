@@ -6,6 +6,7 @@ walk_mp = 5
 heat_sinks = 14
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 275
 
 [sections.left_arm]

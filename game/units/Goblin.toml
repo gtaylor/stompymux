@@ -10,6 +10,7 @@ max_ton = 1
 specials = ["CargoTech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 180
 

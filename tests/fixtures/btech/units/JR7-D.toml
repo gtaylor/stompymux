@@ -10,6 +10,7 @@ lrs_range = 40
 scan_range = 20
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 245
 
 [sections.left_arm]

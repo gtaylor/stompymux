@@ -13,6 +13,7 @@ scan_range = 30
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 325
 structure = "endo_steel"

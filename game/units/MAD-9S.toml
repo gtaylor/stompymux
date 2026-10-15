@@ -8,6 +8,7 @@ radio = 4
 specials = ["ECM", "BeagleProbe", "SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "light"
 engine_rating = 300
 structure = "endo_steel"

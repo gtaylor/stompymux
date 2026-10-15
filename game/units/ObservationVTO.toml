@@ -10,6 +10,9 @@ scan_range = 127
 cargo_space = 0
 specials = ["SalvageTech"]
 
+[construction]
+tech_base = "inner_sphere"
+
 [sections.left_side]
 armor = 1
 

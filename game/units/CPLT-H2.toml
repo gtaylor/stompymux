@@ -8,6 +8,7 @@ heat_sinks = 13
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 260
 heat_sinks = "double"
 

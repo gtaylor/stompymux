@@ -8,6 +8,7 @@ radio = 4
 radio_type = 127
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 360
 
 [sections.left_arm]

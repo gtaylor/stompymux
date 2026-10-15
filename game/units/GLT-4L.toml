@@ -8,6 +8,7 @@ heat_sinks = 22
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 280
 
 [sections.left_arm]

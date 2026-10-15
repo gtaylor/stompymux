@@ -9,6 +9,7 @@ max_suits = 0
 max_ton = 5
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 280
 

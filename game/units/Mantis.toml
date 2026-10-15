@@ -6,6 +6,7 @@ walk_mp = 11
 cargo_space = 0
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 70
 
 [sections.left_side]

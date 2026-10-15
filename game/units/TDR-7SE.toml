@@ -9,6 +9,7 @@ radio = 4
 specials = ["ECM"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 260
 structure = "endo_steel"
 armor = "ferro_fibrous"

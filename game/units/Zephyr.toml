@@ -5,6 +5,7 @@ tons = 40
 walk_mp = 9
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 185
 
 [sections.left_side]

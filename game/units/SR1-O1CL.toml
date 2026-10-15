@@ -7,6 +7,7 @@ radio = 4
 specials = ["OmniMech_Tech"]
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 240
 structure = "endo_steel"
 mixed_tech = true

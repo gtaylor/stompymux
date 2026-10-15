@@ -8,6 +8,9 @@ cargo_space = 0
 max_suits = 0
 specials = ["CritProof_Tech"]
 
+[construction]
+tech_base = "inner_sphere"
+
 [sections.left_side]
 armor = 99
 

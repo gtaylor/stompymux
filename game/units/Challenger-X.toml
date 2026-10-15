@@ -14,6 +14,7 @@ max_suits = 0
 specials = ["SearchLight"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 270
 armor = "ferro_fibrous"

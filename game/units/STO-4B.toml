@@ -8,6 +8,7 @@ radio = 4
 specials = ["ECM"]
 
 [construction]
+tech_base = "inner_sphere"
 engine = "light"
 engine_rating = 280
 structure = "endo_steel"

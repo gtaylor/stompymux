@@ -143,9 +143,11 @@ pub fn convert(source: &str) -> Result<Converted> {
     }
     let cruise = file.integer("cruisemp")?.context("missing <cruiseMP>")?;
     let cruise = u32::try_from(cruise).context("cruiseMP is out of range")?;
-    let mut construction = Vec::new();
-    if tech == TechBase::Clan {
-        construction.push(("tech_base", "clan"));
+    let rules = file.required("type")?;
+    let mut construction = vec![("tech_base", tech.document_spelling())];
+    // `Mixed (IS Chassis)` and `Mixed (Clan Chassis)` designs mount either base's equipment.
+    if rules.trim().to_ascii_lowercase().starts_with("mixed") {
+        construction.push(("mixed_tech", "true"));
     }
     let engine = match file
         .integer("engine_type")?
@@ -399,7 +401,7 @@ mod tests {
         assert_eq!(reference, "Bulldog Medium Tank");
         for expected in [
             "class = \"vehicle\"\nmovement = \"track\"\ntons = 60\nwalk_mp = 4\nheat_sinks = 8\n",
-            "[construction]\nengine = \"ice\"\nengine_rating = 240\n",
+            "[construction]\ntech_base = \"inner_sphere\"\nengine = \"ice\"\nengine_rating = 240\n",
             "[sections.front_side]\narmor = 24\nslots = [\n    { at = 1, item = \"IS.MachineGun\" },\n    \
              { at = 2, item = \"Ammo_IS.MachineGun\", rounds = 100, modes = [\"Halfton\"] },\n]",
             "[sections.turret]\narmor = 20\nslots = [\n    { at = \"1-2\", item = \"IS.SRM-4\" },\n    \
@@ -429,9 +431,30 @@ mod tests {
         // 30 tons x cruising MP 4 less the 140-point VTOL suspension factor rates at the
         // minimum of 10 (TechManual p. 100).
         assert!(
-            template.contains("[construction]\nengine_rating = 10\n"),
+            template.contains("[construction]\ntech_base = \"inner_sphere\"\nengine_rating = 10\n"),
             "{template}"
         );
+    }
+
+    /// The rules line names the chassis technology base, and a mixed design declares mixed
+    /// technology.
+    #[test]
+    fn the_rules_line_names_the_chassis_and_mixed_technology() {
+        for (rules, base, mixed) in [
+            ("IS Level 1", "inner_sphere", false),
+            ("Clan Level 2", "clan", false),
+            ("Mixed (IS Chassis) Level 3", "inner_sphere", true),
+            ("Mixed (Clan Chassis) Level 3", "clan", true),
+        ] {
+            let source = BULLDOG.replace("<type>\nIS Level 1", &format!("<type>\n{rules}"));
+            let construction = convert(&source).unwrap().draft.construction;
+            assert_eq!(construction[0], ("tech_base", base), "{rules}");
+            assert_eq!(
+                construction.contains(&("mixed_tech", "true")),
+                mixed,
+                "{rules}"
+            );
+        }
     }
 
     #[test]

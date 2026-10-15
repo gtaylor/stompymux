@@ -8,6 +8,7 @@ heat_sinks = 12
 radio = 4
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 250
 structure = "endo_steel"
 armor = "ferro_fibrous"

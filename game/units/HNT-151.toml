@@ -6,6 +6,7 @@ walk_mp = 5
 jump_mp = 5
 
 [construction]
+tech_base = "inner_sphere"
 engine_rating = 100
 
 [sections.left_arm]

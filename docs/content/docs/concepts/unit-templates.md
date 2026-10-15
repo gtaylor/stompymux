@@ -76,7 +76,7 @@ armor = "ferro_fibrous"
 
 | Key | Choices |
 | --- | --- |
-| `tech_base` | `inner_sphere`, `clan` |
+| `tech_base` | `inner_sphere`, `clan`; the `.mtf` `TechBase:` line (a `Mixed (IS Chassis)` design is `inner_sphere` with `mixed_tech`, `Mixed (Clan Chassis)` is `clan` with `mixed_tech`). Saved mechs and vehicles always state it, and every shipped one declares it. |
 | `engine` | `standard`, `xl`, `light`, `xxl`, `compact`, `ice` |
 | `engine_rating` | Integer: the engine rating the record sheet states. For a mech it must be tonnage x `walk_mp` (TechManual p. 48); for a vehicle or VTOL it must be the Final Engine Rating, tonnage x cruising MP less the suspension factor, rounded up to a multiple of 5 and at least 10 (TechManual p. 100). A template without it derives the rating from its movement points; every shipped mech and vehicle declares it. |
 | `gyro` | `standard`, `xl`, `compact`, `heavy_duty` |
@@ -85,8 +85,8 @@ armor = "ferro_fibrous"
 | `armor` | `standard`, `ferro_fibrous`, `light_ferro_fibrous`, `heavy_ferro_fibrous`, `stealth`, `hardened`, `laser_reflective` |
 | `heat_sinks` | `single`, `double`, `laser`; Clan units default to doubles, and laser heat sinks are Clan only |
 | `myomer` | `standard`, `triple_strength` |
-| `engine_tech`, `structure_tech`, `armor_tech` | `inner_sphere`, `clan`; default to `tech_base` |
-| `mixed_tech` | `true` for a mixed-technology design, whose weapons may come from either technology base |
+| `engine_tech`, `structure_tech`, `armor_tech` | `inner_sphere`, `clan`; default to `tech_base`, and may differ from it only on a `mixed_tech` design (TechManual p. 46) |
+| `mixed_tech` | `true` for a mixed-technology design, whose components, weapons and equipment may come from either technology base |
 
 Endo steel and ferro-fibrous slots are still listed in the sections: where
 they go is a design choice, not a consequence of the type. Inner Sphere endo
@@ -99,8 +99,18 @@ A mixed-technology unit may take its engine, structure or armor from the other
 technology base. An Inner Sphere Mech with a Clan XL engine sets
 `engine_tech = "clan"`, giving the engine two slots in each side torso and the
 Clan XL engine's mass; a Clan Mech with Inner Sphere ferro-fibrous armor sets
-`armor_tech = "inner_sphere"`. Its weapons must still come from its own
-technology base unless it also sets `mixed_tech = true`.
+`armor_tech = "inner_sphere"`; both must also set `mixed_tech = true`, since
+only a mixed-technology design builds components from both bases (TechManual p.
+46).
+
+Without `mixed_tech`, construction refuses anything from the other technology
+base, on mechs and vehicles alike: a weapon of the other base, and equipment
+only the other base builds. The Bloodhound probe, C3, the null signature system,
+Angel ECM, triple strength myomer, stealth armor and light and heavy
+ferro-fibrous armor are Inner Sphere equipment; the light active probe, light
+TAG, Artemis V, laser heat sinks and the Watchdog suite are Clan equipment.
+Heat sinks, jump jets, CASE, ECM, the active probe, MASC, targeting computers
+and Artemis IV share one name on both bases and take the chassis's base.
 
 ### Construction rules
 
@@ -128,7 +138,7 @@ checks:
   structure, nine on the head (TechManual p. 54).
 - MASC fills 5% (Inner Sphere) or 4% (Clan) of the tonnage, rounded to the nearest
   slot, in one run; triple strength myomer fills six slots, is never combined with
-  MASC and is not available to Clan mechs (TechManual p. 52). A supercharger is
+  MASC and is not available to Clan mechs unless they are mixed technology (TechManual p. 52). A supercharger is
   one slot beside engine slots together with `SuperCharger_Tech`.
 - A targeting computer fills one slot per ton of direct-fire weapons / 4 (Clan:
   / 5), rounded up, in one run (TechManual p. 238).

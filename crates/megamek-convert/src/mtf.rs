@@ -189,11 +189,10 @@ pub fn convert(source: &str) -> Result<Converted> {
         .number("mass")?
         .try_into()
         .context("mass is out of range")?;
-    let mut construction = Vec::new();
-    if tech == TechBase::Clan {
-        construction.push(("tech_base", "clan"));
-    }
-    // A mixed-technology design may mount weapons of either base.
+    // The chassis technology base is always stated: `Mixed (IS Chassis)` is an Inner Sphere
+    // chassis and `Mixed (Clan Chassis)` a Clan one, each declaring mixed technology.
+    let mut construction = vec![("tech_base", tech.document_spelling())];
+    // A mixed-technology design may mount weapons and equipment of either base.
     if tech_header.trim().to_ascii_lowercase().starts_with("mixed") {
         construction.push(("mixed_tech", "true"));
     }
@@ -750,9 +749,10 @@ mod tests {
             assert!(template.contains(line), "{line} missing from\n{template}");
         }
         assert!(!template.contains("Engine"));
-        // The engine line's rating, 100 tons x walking MP 3 (TM p. 48).
+        // The TechBase line, and the engine line's rating: 100 tons x walking MP 3 (TM p. 48).
         assert!(
-            template.contains("[construction]\nengine_rating = 300\n"),
+            template
+                .contains("[construction]\ntech_base = \"inner_sphere\"\nengine_rating = 300\n"),
             "{template}"
         );
     }
@@ -802,6 +802,29 @@ mod tests {
             );
         let draft = convert(&source).unwrap().draft;
         assert_eq!(draft.specials, ["OmniMech_Tech", "SearchLight"]);
+    }
+
+    /// The TechBase line becomes `tech_base`; a mixed design keeps its chassis base and
+    /// declares mixed technology.
+    #[test]
+    fn the_tech_base_line_names_the_chassis_and_mixed_technology() {
+        // The Atlas's equipment lines name Inner Sphere weapons only on an Inner Sphere chassis.
+        for (line, base, mixed) in [
+            ("Inner Sphere", "inner_sphere", false),
+            ("Mixed (IS Chassis)", "inner_sphere", true),
+        ] {
+            let source = ATLAS.replace("techbase:Inner Sphere", &format!("techbase:{line}"));
+            let construction = convert(&source).unwrap().draft.construction;
+            assert_eq!(construction[0], ("tech_base", base), "{line}");
+            assert_eq!(
+                construction.contains(&("mixed_tech", "true")),
+                mixed,
+                "{line}"
+            );
+        }
+        for line in ["Clan", "Mixed (Clan Chassis)"] {
+            assert_eq!(tech_base(line).unwrap().document_spelling(), "clan");
+        }
     }
 
     #[test]
