@@ -104,22 +104,35 @@ fn artemis_unassigned_links_and_mass() {
     }
 }
 
-/// An Artemis V controller weighs a ton and a half, half a ton more than Artemis IV.
+/// An Artemis V controller weighs a ton and a half across two slots, half a ton more than
+/// Artemis IV (Tactical Operations: Advanced Units & Equipment p. 217).
 #[test]
 fn artemis_v_controller_mass() {
     let standard = Mech::from_template(definition(MechSection::CenterTorso, "11")).unwrap();
-    for flag in ["ArtemisV_Tech", "AV"] {
-        let mut template = definition(MechSection::CenterTorso, "11");
-        let value = template.attributes.entry("specials".into()).or_default();
-        value.push(' ');
-        value.push_str(flag);
-        let unit = Mech::from_template(template).unwrap();
-        assert_eq!(
-            unit.mass().unwrap().equipment,
-            standard.mass().unwrap().equipment + 512,
-            "{flag}"
+    let mut template = definition(MechSection::CenterTorso, "11");
+    let torso = template
+        .sections
+        .get_mut(&MechSection::CenterTorso)
+        .unwrap();
+    torso.criticals.get_mut(&11).unwrap().equipment = "ArtemisV".into();
+    template
+        .sections
+        .get_mut(&MechSection::RightTorso)
+        .unwrap()
+        .criticals
+        .insert(
+            7,
+            CriticalDefinition {
+                equipment: "ArtemisV".into(),
+                data: "-".into(),
+                modes: vec![],
+            },
         );
-    }
+    let unit = Mech::from_template(template).unwrap();
+    assert_eq!(
+        unit.mass().unwrap().equipment,
+        standard.mass().unwrap().equipment + 512
+    );
 }
 
 /// Head lookup does not hide a same-numbered center-torso launcher.

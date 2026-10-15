@@ -6,7 +6,7 @@ use anyhow::{Context, Result, ensure};
 /// Installed system mass per surviving Mech critical, independent of current critical damage.
 pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32 {
     match system {
-        System::Case | System::LightProbe => 512,
+        System::Case | System::LightProbe | System::LightTag => 512,
         System::C3i => 1280,
         // The Clan active probe fills one slot for a ton; the Beagle two for a ton and a half.
         System::BeagleProbe => {
@@ -27,14 +27,10 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System) -> u32
         | System::Mace
         | System::DualSaw
         | System::Claw => 1024,
-        // An Artemis V controller weighs a ton and a half.
-        System::ArtemisIv => {
-            if definition.has_technology(super::Technology::ArtemisV) {
-                1536
-            } else {
-                1024
-            }
-        }
+        System::ArtemisIv => 1024,
+        // An Artemis V controller weighs a ton and a half across two slots (Tactical
+        // Operations: Advanced Units & Equipment p. 217).
+        System::ArtemisV => 768,
         // A Watchdog CEWS weighs a ton and a half across two ECM slots.
         System::Ecm => {
             if definition.has_technology(super::Technology::Watchdog) {
@@ -98,11 +94,10 @@ pub fn power_amplifier_mass(
         .iter()
         .filter(|mount| {
             (mount.weapon.is_energy() && mount.weapon.profile().ammunition_per_ton == 0)
+                || mount.weapon.is_plasma()
                 || matches!(
                     mount.weapon,
-                    super::Weapon::PlasmaRifle
-                        | super::Weapon::LaserAms
-                        | super::Weapon::ClanLaserAms
+                    super::Weapon::LaserAms | super::Weapon::ClanLaserAms
                 )
         })
         .filter(|mount| survives(mount.criticals[0].section))

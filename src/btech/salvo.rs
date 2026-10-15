@@ -150,8 +150,9 @@ impl WeaponSalvo for Weapon {
             | Self::Elrm20
             | Self::ClanLbx20
             | Self::Lbx20 => 20,
-            Self::Mrm30 => 30,
-            Self::Mrm40 => 40,
+            Self::Mrm30 | Self::ClanHag30 => 30,
+            Self::Mrm40 | Self::ClanHag40 => 40,
+            Self::ClanHag20 => 20,
             _ => bail!("Weapon is not a missile launcher"),
         };
         cluster_hits(size, roll)
@@ -240,7 +241,7 @@ impl WeaponSalvo for Weapon {
                 "Invalid weapon damage range"
             );
         }
-        if self.profile().missiles == 0 && !cluster {
+        if self.profile().missiles == 0 && !cluster && !self.is_hag() {
             ensure!(
                 cluster_roll.is_none(),
                 "Non-missile weapon does not use a cluster roll"
@@ -287,10 +288,21 @@ impl WeaponSalvo for Weapon {
         } else {
             0
         };
+        // A hyper-assault Gauss rifle adds two to its cluster roll at short range and subtracts
+        // two at long range (Total Warfare p. 136).
+        // Brackets round the distance as weapon ranges do.
+        let hag_bonus = match distance
+            .filter(|_| self.is_hag())
+            .map(|distance| (distance + 0.95).floor())
+        {
+            Some(range) if range > f64::from(self.profile().medium_range) => -2,
+            Some(range) if range <= f64::from(self.profile().short_range) => 2,
+            _ => 0,
+        };
         // Neither the glancing modifier (Tactical Operations p. 79) nor the AMS modifier (Total
         // Warfare p. 129) takes the cluster roll below 2.
         let ams_penalty = if ams_engaged { 4 } else { 0 };
-        let adjusted = (i16::from(roll) + artemis_bonus + atm_bonus
+        let adjusted = (i16::from(roll) + artemis_bonus + atm_bonus + hag_bonus
             - if glancing { 4 } else { 0 }
             - ams_penalty)
             .clamp(2, 12) as u8;
@@ -352,12 +364,15 @@ impl WeaponSalvo for Weapon {
                     | Self::ClanStreakLrm10
                     | Self::ClanStreakLrm15
                     | Self::ClanStreakLrm20
+                    | Self::ClanHag20
+                    | Self::ClanHag30
+                    | Self::ClanHag40
             ) {
             5
         } else {
             1
         };
-        let damage = if cluster {
+        let damage = if cluster || self.is_hag() {
             1
         } else if self.is_thunderbolt() && inside_minimum {
             // The warhead has not armed yet: half damage, rounded down (TacOps: AUE p. 159).
@@ -725,6 +740,21 @@ fn resolve_salvo_with_effects(
             )
         }
     };
+    // A plasma cannon deals a Mech no damage, only heat, which the direct shot's effects apply
+    // (Total Warfare p. 139).
+    if weapon == Weapon::ClanPlasmaCannon {
+        return Ok(MechSalvoReport {
+            building: None,
+            collapse: None,
+            missiles_before_defense: None,
+            missiles_intercepted: None,
+            cluster_roll: None,
+            inferno: None,
+            groups: Vec::new(),
+            experience: Vec::new(),
+            experience_messages: Vec::new(),
+        });
+    }
     let unit = world.btech.constructed.get_mut(&target).unwrap();
     let fire_mode = match geometry {
         HitGeometry::Direct { fire_mode, .. } => fire_mode,
@@ -1355,6 +1385,24 @@ mod flechette_tests {
                 );
             }
         }
+    }
+
+    /// A hyper-assault Gauss rifle rolls on its own Cluster Hits column, plus two at short range
+    /// and minus two at long range within 2..=12, and lands its damage in five-point groups
+    /// (Total Warfare p. 136).
+    #[test]
+    fn hag_cluster_hits_shift_with_range_in_five_point_groups() {
+        let groups = |weapon: Weapon, roll: u8, distance: f64| {
+            weapon.damage_groups_at_range(Some(roll), distance).unwrap()
+        };
+        // HAG/20 rolls of 7: short range reads 9 (16), medium 7 (12), long 5 (12).
+        assert_eq!(groups(Weapon::ClanHag20, 7, 8.0), vec![5, 5, 5, 1]);
+        assert_eq!(groups(Weapon::ClanHag20, 7, 9.0), vec![5, 5, 2]);
+        assert_eq!(groups(Weapon::ClanHag20, 7, 20.0), vec![5, 5, 2]);
+        // The shifted roll stays on the table: 11 + 2 reads 12, 3 - 2 reads 2.
+        assert_eq!(groups(Weapon::ClanHag40, 11, 2.0).iter().sum::<u16>(), 40);
+        assert_eq!(groups(Weapon::ClanHag30, 3, 20.0).iter().sum::<u16>(), 10);
+        assert!(Weapon::ClanHag30.damage_groups(None).is_err());
     }
 
     /// Enhanced LRMs fire the same salvos as the LRMs they extend.

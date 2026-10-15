@@ -18,8 +18,6 @@ pub enum Technology {
     LaserHeatSinks,
     /// Clan ECM suite that also works as an active probe.
     Watchdog,
-    /// Clan missile guidance that improves on Artemis IV.
-    ArtemisV,
     /// Armor that reflects part of each energy hit but spalls under area-effect blasts.
     /// Energy weapons remove half their damage in armor, rounding down; area-effect
     /// weapons such as artillery remove double.
@@ -51,14 +49,13 @@ impl DamageClass {
 
 impl Technology {
     /// Every technology handled here.
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 7] = [
         Self::HardenedArmor,
         Self::ReinforcedStructure,
         Self::CompositeStructure,
         Self::SmallCockpit,
         Self::LaserHeatSinks,
         Self::Watchdog,
-        Self::ArtemisV,
         Self::LaserReflectiveArmor,
     ];
 
@@ -71,7 +68,6 @@ impl Technology {
             Self::SmallCockpit => ("SmallCockpit_Tech", "SMCPIT"),
             Self::LaserHeatSinks => ("LaserHS_Tech", "LHS"),
             Self::Watchdog => ("WatchDog_Tech", "WDOG"),
-            Self::ArtemisV => ("ArtemisV_Tech", "AV"),
             Self::LaserReflectiveArmor => ("LaserRefArmor_Tech", "LRARM"),
         }
     }

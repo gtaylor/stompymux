@@ -913,6 +913,82 @@
   },
   {
     "accuracy": 0,
+    "mass": 512,
+    "name": "CL.APGaussRifle",
+    "profile": {
+      "ammunition_per_ton": 40,
+      "critical_slots": 1,
+      "damage": 3,
+      "heat": 1,
+      "long_range": 9,
+      "medium_range": 6,
+      "minimum_range": 0,
+      "missiles": 0,
+      "recycle_seconds": 10,
+      "short_range": 3
+    },
+    "skill": "Gunnery-Ballistic",
+    "weapon": "clan_ap_gauss_rifle"
+  },
+  {
+    "accuracy": 0,
+    "mass": 10240,
+    "name": "CL.HAG/20",
+    "profile": {
+      "ammunition_per_ton": 6,
+      "critical_slots": 6,
+      "damage": 20,
+      "heat": 4,
+      "long_range": 24,
+      "medium_range": 16,
+      "minimum_range": 2,
+      "missiles": 0,
+      "recycle_seconds": 25,
+      "short_range": 8
+    },
+    "skill": "Gunnery-Ballistic",
+    "weapon": "clan_hag20"
+  },
+  {
+    "accuracy": 0,
+    "mass": 13312,
+    "name": "CL.HAG/30",
+    "profile": {
+      "ammunition_per_ton": 4,
+      "critical_slots": 8,
+      "damage": 30,
+      "heat": 6,
+      "long_range": 24,
+      "medium_range": 16,
+      "minimum_range": 2,
+      "missiles": 0,
+      "recycle_seconds": 30,
+      "short_range": 8
+    },
+    "skill": "Gunnery-Ballistic",
+    "weapon": "clan_hag30"
+  },
+  {
+    "accuracy": 0,
+    "mass": 16384,
+    "name": "CL.HAG/40",
+    "profile": {
+      "ammunition_per_ton": 3,
+      "critical_slots": 10,
+      "damage": 40,
+      "heat": 8,
+      "long_range": 24,
+      "medium_range": 16,
+      "minimum_range": 2,
+      "missiles": 0,
+      "recycle_seconds": 30,
+      "short_range": 8
+    },
+    "skill": "Gunnery-Ballistic",
+    "weapon": "clan_hag40"
+  },
+  {
+    "accuracy": 0,
     "mass": 256,
     "name": "CL.MachineGun",
     "profile": {
@@ -1274,22 +1350,22 @@
   },
   {
     "accuracy": 0,
-    "mass": 6144,
-    "name": "CL.PlasmaRifle",
+    "mass": 3072,
+    "name": "CL.PlasmaCannon",
     "profile": {
-      "ammunition_per_ton": 0,
-      "critical_slots": 2,
-      "damage": 10,
-      "heat": 15,
-      "long_range": 22,
-      "medium_range": 14,
+      "ammunition_per_ton": 10,
+      "critical_slots": 1,
+      "damage": 0,
+      "heat": 7,
+      "long_range": 18,
+      "medium_range": 12,
       "minimum_range": 0,
       "missiles": 0,
       "recycle_seconds": 25,
-      "short_range": 7
+      "short_range": 6
     },
     "skill": "Gunnery-Laser",
-    "weapon": "clan_plasma_rifle"
+    "weapon": "clan_plasma_cannon"
   },
   {
     "accuracy": 0,
@@ -1518,6 +1594,25 @@
     },
     "skill": "Gunnery-Ballistic",
     "weapon": "machine_gun"
+  },
+  {
+    "accuracy": 0,
+    "mass": 512,
+    "name": "IS.LightMachineGun",
+    "profile": {
+      "ammunition_per_ton": 200,
+      "critical_slots": 1,
+      "damage": 1,
+      "heat": 0,
+      "long_range": 6,
+      "medium_range": 4,
+      "minimum_range": 0,
+      "missiles": 0,
+      "recycle_seconds": 7,
+      "short_range": 2
+    },
+    "skill": "Gunnery-Ballistic",
+    "weapon": "light_machine_gun"
   },
   {
     "accuracy": 0,

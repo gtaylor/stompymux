@@ -20,14 +20,31 @@ pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<[Option<Slot>; 
     }
     let mut launchers = launcher_starts(criticals, span);
     let mut slots: [Option<Slot>; 12] = Default::default();
+    // The launcher the first slot of a two-slot Mech Artemis V installation claimed.
+    let mut artemis_v: Option<usize> = None;
     for (index, critical) in criticals.iter().enumerate() {
         let Some(item) = critical.item() else {
+            artemis_v = None;
             continue;
         };
         let link = match critical {
             Critical::Artemis => Some(claim_launcher(&mut launchers, index)? + 1),
+            Critical::ArtemisV => {
+                if let Some(launcher) = artemis_v.take() {
+                    Some(launcher + 1)
+                } else {
+                    let launcher = claim_launcher(&mut launchers, index)?;
+                    if span == WeaponSpan::Catalogue {
+                        artemis_v = Some(launcher);
+                    }
+                    Some(launcher + 1)
+                }
+            }
             _ => None,
         };
+        if !matches!(critical, Critical::ArtemisV) {
+            artemis_v = None;
+        }
         slots[index] = Some(Slot {
             item,
             rounds: match critical {
@@ -75,7 +92,7 @@ fn claim_launcher(launchers: &mut Vec<usize>, artemis: usize) -> Result<usize> {
         .or_else(|| launchers.iter().position(|&start| start > artemis));
     let Some(position) = position else {
         bail!(
-            "Artemis IV in slot {} has no missile launcher to guide",
+            "Artemis in slot {} has no missile launcher to guide",
             artemis + 1
         );
     };
@@ -105,5 +122,34 @@ mod tests {
         assert_eq!(slots[5].as_ref().unwrap().link, Some(4));
         let lonely = [parse("ISArtemisIV").unwrap()];
         assert!(super::slots(&lonely, WeaponSpan::Single).is_err());
+    }
+
+    /// A Mech's two Artemis V slots guide one launcher; each vehicle entry guides its own.
+    #[test]
+    fn artemis_v_pairs_guide_one_launcher() {
+        let criticals: Vec<_> = [
+            "CLLRM10",
+            "CLArtemisV",
+            "CLArtemisV",
+            "CLSRM6",
+            "CLArtemisV",
+            "CLArtemisV",
+        ]
+        .into_iter()
+        .map(|name| parse(name).unwrap())
+        .collect();
+        let slots = slots(&criticals, WeaponSpan::Catalogue).unwrap();
+        let links: Vec<_> = [1, 2, 4, 5]
+            .into_iter()
+            .map(|index| slots[index].as_ref().unwrap().link)
+            .collect();
+        assert_eq!(links, [Some(1), Some(1), Some(4), Some(4)]);
+        let vehicle: Vec<_> = ["CLLRM10", "CLSRM6", "CLArtemisV", "CLArtemisV"]
+            .into_iter()
+            .map(|name| parse(name).unwrap())
+            .collect();
+        let slots = super::slots(&vehicle, WeaponSpan::Single).unwrap();
+        assert_eq!(slots[2].as_ref().unwrap().link, Some(2));
+        assert_eq!(slots[3].as_ref().unwrap().link, Some(1));
     }
 }

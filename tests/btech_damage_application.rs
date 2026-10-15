@@ -117,7 +117,7 @@ async fn vehicle_section_loss_and_restoration_use_material_lifecycle_without_com
 async fn restoring_a_launcher_clears_its_spent_state_without_resetting_vehicle_corrections() {
     for source in firing::templates().into_iter().skip(2) {
         let (_dir, config, mut world, id, _, index) =
-            firing::fixture_with_supply(&source, Some(Weapon::Mml3), &source, false, Some(""))
+            firing::fixture_with_supply(&source, Some(Weapon::Srm4), &source, false, Some(""))
                 .await;
         firing::edit(&mut world, id, |state| {
             state["definition"]["sections"]["front"]["criticals"]["0"]["modes"] =

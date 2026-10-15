@@ -893,9 +893,11 @@ impl<'a> ImpactContext<'a> {
                     System::MediumVibroblade => Some("Your medium vibroblade has been destroyed!"),
                     System::LargeVibroblade => Some("Your large vibroblade has been destroyed!"),
                     System::ArtemisIv => Some("Your Artemis IV system has been destroyed!"),
+                    System::ArtemisV => Some("Your Artemis V system has been destroyed!"),
                     System::Ecm => Some("Your ECM system has been destroyed!"),
                     System::NullSignature => Some("Your Null Signature System has been destroyed!"),
                     System::Tag => Some("Your TAG system has been destroyed!"),
+                    System::LightTag => Some("Your light TAG system has been destroyed!"),
                     System::BeagleProbe => Some("Your Beagle Active Probe has been destroyed!"),
                     System::LightProbe => Some("Your Light Active Probe has been destroyed!"),
                     System::BloodhoundProbe => {

@@ -144,7 +144,7 @@ fn hardened_gyro_value_includes_mass_speed_tradeoff() {
 fn anti_missile_system_value_and_mass() {
     for (weapon, capacity, defensive, recycle) in [
         (Weapon::AntiMissileSystem, 12, 388.5, 10),
-        (Weapon::ClanAntiMissileSystem, 24, 445.9, 10),
+        (Weapon::ClanAntiMissileSystem, 24, 402.5, 10),
     ] {
         let mut definition = MechTemplate::parse("JR7-D", JENNER).unwrap();
         let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();

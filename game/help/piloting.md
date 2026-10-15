@@ -327,10 +327,19 @@ plasma and fire together cannot exceed fifteen points a turn (Total Warfare
 p. 159). A vehicle tracks no heat, so a heat-mode hit on one does its normal
 damage instead (Total Warfare p. 113). It still costs you three heat and ten seconds of
 recycle. `weapons` marks heat mode with `[HEAT]`. Modes survive shutdown and restart.
+
 Select numbers and ranges separated by commas without spaces, such as `0,2-4`.
 Reversed ranges work; repeated numbers toggle again. An invalid selection clause
 stops processing after earlier changes. Weapons that cannot toggle are skipped
 with an error. The command accepts no switches.
+
+A Clan plasma cannon never damages a Mech's armor: a hit adds 2D6 outside heat
+instead, under the same fifteen-point cap. Against a vehicle it deals 3D6 damage
+in five-point groups (Total Warfare p. 139). A Clan hyper-assault Gauss rifle
+rolls on the Cluster Hits Table for its size, two higher at short range and two
+lower at long range, and lands its damage in five-point groups (Total Warfare
+p. 136). A critical hit on a hyper-assault Gauss rifle explodes for 10, 15 or 20
+points by size, and on a Clan anti-personnel Gauss rifle for 3 (p. 135).
 
 
 Direct fire currently covers Inner Sphere small, medium and large lasers, ER
@@ -835,9 +844,11 @@ ECM and stealth systems add to the sweep roll. It has no special treatment of
 airborne targets.
 
 Use `tag ID` or `tag #unit` to make a TAG attack on an enemy within fifteen
-hexes with working TAG hardware and an unobstructed line of sight. Designating is
-a weapon attack (Total Warfare p. 142): it rolls 2d6 against your ordinary to-hit
-number with TAG's own range brackets of 5/9/15 hexes and no minimum range. Your
+hexes (nine with only a Clan light TAG) with working TAG hardware and an
+unobstructed line of sight. Designating is a weapon attack (Total Warfare
+p. 142): it rolls 2d6 against your ordinary to-hit number with TAG's own range
+brackets of 5/9/15 hexes, or light TAG's 3/6/9 (TechManual p. 343), and no
+minimum range. Your
 movement, heat and sensor damage, the target's movement and cover, the light and
 the secondary-target penalty all count, as does a Haywire pod on your unit; TAG
 has no ammunition or targeting-computer terms. A miss designates nothing and the
