@@ -73,8 +73,7 @@ local function run()
   local catalog = {}
   for _, reference in ipairs({
     'PARITY-PROBE', 'PARITY-TECH', 'PARITY-GROUND', 'PARITY-VTOL',
-    'PARITY-NAVAL', 'PARITY-SPHEROID', 'PARITY-AERO', 'PARITY-AERODYNE',
-    'PARITY-BSUIT', 'PARITY-MW',
+    'PARITY-NAVAL', 'PARITY-BSUIT', 'PARITY-MW',
   }) do
     catalog[#catalog + 1] = {
       reference = reference,

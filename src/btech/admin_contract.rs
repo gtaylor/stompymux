@@ -12,25 +12,11 @@ pub enum AdministrativeRepairKind {
     Internal,
 }
 
-/// C mech_re_attach hull classification (mech_classification_state.c:12-18 and
-/// mech_maintenance.c:501-514): dropship hulls never read as destroyed,
-/// aerospace hulls need only armor loss, and ground hulls need both exhausted.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ReattachHull {
-    Ground,
-    Aerospace,
-    Dropship,
-}
-
-impl ReattachHull {
-    /// Whether the section reads as destroyed under this hull classification.
-    pub(super) fn destroyed(self, armor: u16, internal: u16) -> bool {
-        match self {
-            Self::Ground => armor == 0 && internal == 0,
-            Self::Aerospace => armor == 0,
-            Self::Dropship => false,
-        }
-    }
+/// Whether a section reads as destroyed for reattachment and fixability: C
+/// mech_section_is_destroyed (mech_equipment_state.c:282-291) needs both its armor and
+/// internal structure exhausted.
+pub(super) fn section_destroyed(armor: u16, internal: u16) -> bool {
+    armor == 0 && internal == 0
 }
 
 pub fn apply_administrative_repair(
@@ -46,18 +32,13 @@ pub fn apply_administrative_repair(
     let movement = administrative_unit_movement(world, id)
         .and_then(|value| RawMovement::parse(&value).ok())
         .context("Unit movement is unavailable")?;
-    let hull = match class {
-        RawUnitClass::AeroFighter => ReattachHull::Aerospace,
-        RawUnitClass::AerodyneDropship | RawUnitClass::SpheroidDropship => ReattachHull::Dropship,
-        _ => ReattachHull::Ground,
-    };
     let ordinal = RawSectionCode::for_unit(class, movement)
         .iter()
         .position(|section| *section as i32 == section_code)
         .context("Section is not valid for this unit")?;
     if let Some(unit) = world.btech.constructed.get_mut(&id) {
         let section = administrative_mech_section(unit, section_code)?;
-        unit.apply_immediate_repair(section, kind, value, hull)?;
+        unit.apply_immediate_repair(section, kind, value)?;
     } else {
         let vehicles = &mut world.btech.vehicles;
         let unit = vehicles
@@ -76,14 +57,14 @@ pub fn apply_administrative_repair(
             .copied()
             .filter(|section| unit.definition().sections.contains_key(section))
         {
-            unit.apply_immediate_repair(section, kind, value, hull)?;
+            unit.apply_immediate_repair(section, kind, value)?;
         } else {
             let section = unit
                 .administrative_raw_mut(class, movement)
                 .extra_sections
                 .entry(ordinal)
                 .or_default();
-            apply_raw_section_repair(section, kind, value, hull)?;
+            apply_raw_section_repair(section, kind, value)?;
         }
     }
     Ok(())
@@ -93,19 +74,14 @@ fn apply_raw_section_repair(
     section: &mut AdministrativeRawSection,
     kind: AdministrativeRepairKind,
     value: u16,
-    hull: ReattachHull,
 ) -> Result<()> {
     match kind {
         AdministrativeRepairKind::Armor => section.current.armor = value,
         AdministrativeRepairKind::Internal => section.current.internal = value,
         AdministrativeRepairKind::RearArmor => section.current.rear = value,
         AdministrativeRepairKind::Reattach => {
-            if hull.destroyed(section.current.armor, section.current.internal) {
-                section.current.internal = if hull == ReattachHull::Aerospace {
-                    1
-                } else {
-                    section.definition.internal
-                };
+            if section_destroyed(section.current.armor, section.current.internal) {
+                section.current.internal = section.definition.internal;
             }
         }
         AdministrativeRepairKind::Part => {
@@ -231,9 +207,6 @@ fn administrative_mech_section(unit: &Mech, code: i32) -> Result<MechSection> {
         "Battlesuit" => &[12, 13, 14, 15, 16, 17, 18, 19],
         "Vehicle" | "Naval" => &[20, 21, 22, 23, 24],
         "VTOL" => &[20, 21, 22, 23, 24, 25],
-        "AeroFighter" => &[26, 27, 28, 23],
-        "Aerodyne_DropShip" => &[28, 27, 29, 30, 31, 26],
-        "Spheroid_DropShip" => &[32, 33, 34, 35, 31, 26],
         _ => &[],
     };
     let index = codes
@@ -413,9 +386,6 @@ pub fn administrative_section_valid(world: &World, id: ObjectId, code: i32) -> b
         "VTOL" => matches!(code, 20..=25),
         "Battlesuit" => matches!(code, 12..=19),
         "Mechwarrior" => matches!(code, 2 | 3 | 4 | 7 | 8 | 9 | 10 | 11),
-        "AeroFighter" => matches!(code, 23 | 26 | 27 | 28),
-        "Aerodyne_DropShip" => matches!(code, 26..=31),
-        "Spheroid_DropShip" => matches!(code, 26 | 31..=35),
         _ => false,
     }
 }
@@ -457,14 +427,6 @@ pub fn administrative_section_info(
 /// Native repair fixability projected through the currently configured raw unit class.
 pub fn administrative_is_fixable(world: &World, id: ObjectId) -> Option<bool> {
     let class = administrative_unit_class(world, id)?;
-    // C mech_section_is_destroyed (mech_equipment_state.c:282-291) needs zero
-    // armor and, for ground classes, zero internal; aerospace hulls count armor
-    // loss alone and dropship hulls never read as destroyed.
-    let destroyed = |armor: u16, internal: u16| match class.as_str() {
-        "AeroFighter" => armor == 0,
-        "Aerodyne_DropShip" | "Spheroid_DropShip" => false,
-        _ => armor == 0 && internal == 0,
-    };
     let forbidden = match class.as_str() {
         "Mech" => &[4_usize][..],
         "Vehicle" => &[0, 1, 2, 3, 5, 6, 7][..],
@@ -494,7 +456,7 @@ pub fn administrative_is_fixable(world: &World, id: ObjectId) -> Option<bool> {
                 && unit
                     .sections()
                     .get(&section)
-                    .is_some_and(|current| destroyed(current.armor, current.internal))
+                    .is_some_and(|current| section_destroyed(current.armor, current.internal))
         }));
     }
     if let Some(unit) = world.btech.vehicles().get(&id) {
@@ -516,13 +478,13 @@ pub fn administrative_is_fixable(world: &World, id: ObjectId) -> Option<bool> {
                     && unit
                         .sections()
                         .get(&section)
-                        .is_some_and(|current| destroyed(current.armor, current.internal));
+                        .is_some_and(|current| section_destroyed(current.armor, current.internal));
             }
             unit.administrative_raw()
                 .and_then(|raw| raw.extra_sections.get(&index))
                 .is_some_and(|section| {
                     section.definition.internal > 0
-                        && destroyed(section.current.armor, section.current.internal)
+                        && section_destroyed(section.current.armor, section.current.internal)
                 })
         }));
     }
@@ -618,32 +580,17 @@ pub fn set_administrative_cargo(
 
 pub fn set_administrative_unit_type(world: &mut World, id: ObjectId, code: i32) -> Result<()> {
     super::ensure_registered_unit_runtime(world, id)?;
-    const TYPES: [&str; 9] = [
-        "Mech",
-        "Vehicle",
-        "VTOL",
-        "Naval",
-        "Spheroid_DropShip",
-        "AeroFighter",
-        "Mechwarrior",
-        "Aerodyne_DropShip",
-        "Battlesuit",
-    ];
-    let class = RawUnitClass::parse(TYPES[code as usize])?;
+    let class = RawUnitClass::from_code(code).context("Unknown unit type")?;
     let current_movement = administrative_unit_movement(world, id)
         .and_then(|value| RawMovement::parse(&value).ok())
         .unwrap_or(RawMovement::Biped);
     let mut storage = storage(world, id)?;
     storage.set_administrative_attribute("administrative_unit_type", class.name());
-    let movement = match code {
-        0 | 8 => Some("Biped"),
-        2 => Some("VTOL"),
-        4 | 5 | 7 => Some("Fly"),
-        _ => None,
+    let movement = match class {
+        RawUnitClass::Mech | RawUnitClass::BattleSuit => RawMovement::Biped,
+        RawUnitClass::Vtol => RawMovement::Vtol,
+        _ => current_movement,
     };
-    let movement = movement
-        .and_then(|value| RawMovement::parse(value).ok())
-        .unwrap_or(current_movement);
     storage.set_administrative_attribute("administrative_movement_type", movement.name());
     storage.raw_identity(class, movement);
     Ok(())
@@ -651,13 +598,10 @@ pub fn set_administrative_unit_type(world: &mut World, id: ObjectId, code: i32) 
 
 pub fn set_administrative_movement_type(world: &mut World, id: ObjectId, code: i32) -> Result<()> {
     super::ensure_registered_unit_runtime(world, id)?;
-    const MOVEMENT: [&str; 11] = [
-        "Biped", "Track", "Wheel", "Hover", "VTOL", "Hull", "Foil", "Fly", "Quad", "Sub", "None",
-    ];
     let class = administrative_unit_class(world, id)
         .and_then(|value| RawUnitClass::parse(&value).ok())
         .unwrap_or(RawUnitClass::Mech);
-    let movement = RawMovement::parse(MOVEMENT[code as usize])?;
+    let movement = RawMovement::from_code(code).context("Unknown movement type")?;
     let mut storage = storage(world, id)?;
     storage.set_administrative_attribute("administrative_movement_type", movement.name());
     storage.raw_identity(class, movement);

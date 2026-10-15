@@ -29,27 +29,6 @@
       "category": false
     },
     {
-      "class_mask": 12,
-      "syntax": "CLIMB [angle]",
-      "description": "Shows/Changes the climbing angle to <NUM>.",
-      "restricted": false,
-      "category": false
-    },
-    {
-      "class_mask": 12,
-      "syntax": "DIVE [angle]",
-      "description": "Shows/Changes the diving angle to <NUM>.",
-      "restricted": false,
-      "category": false
-    },
-    {
-      "class_mask": 12,
-      "syntax": "THRUST [num]",
-      "description": "Shows/Changes the thrust to <NUM>.",
-      "restricted": false,
-      "category": false
-    },
-    {
       "class_mask": 1,
       "syntax": "LATERAL [fl|fr|rl|rr|-]",
       "description": "Change your lateral movement mode (intact quads only). fl/fr/rl/rr = Directions, - = Disable lateral movement.",
@@ -603,13 +582,6 @@
       "category": true
     },
     {
-      "class_mask": 12,
-      "syntax": "CHECKLZ",
-      "description": "Checks if the landing-zone is good for a landing",
-      "restricted": false,
-      "category": false
-    },
-    {
       "class_mask": 0,
       "syntax": "@OOD <X> <Y> [Z]",
       "description": "Initiates OOD drop at the orbit altitude to <X> <Y> (optional Z altitude to start from)",
@@ -642,13 +614,6 @@
       "syntax": "@WEIGHT",
       "description": "Checks the weight allocated in the mech",
       "restricted": true,
-      "category": false
-    },
-    {
-      "class_mask": 4,
-      "syntax": "BOMB [list | drop <num> | aim]",
-      "description": "Lists bombs / drops bomb <num> / aims where a bomb would fall.",
-      "restricted": false,
       "category": false
     },
     {
@@ -822,14 +787,14 @@
     {
       "class_mask": -2,
       "syntax": "LAND",
-      "description": "Terminate your jump or land a VTOL/Aero/DS",
+      "description": "Terminate your jump or land a VTOL",
       "restricted": false,
       "category": false
     },
     {
       "class_mask": -35,
       "syntax": "TAKEOFF",
-      "description": "VTOL/Aero take off command",
+      "description": "VTOL take off command",
       "restricted": false,
       "category": false
     },

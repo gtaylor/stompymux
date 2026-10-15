@@ -274,7 +274,6 @@ messages come from the structured lock result or the native defaults.
 | `on_player_disconnect` | A player's final descriptor disconnects. | — |
 | `on_mech_destroyed` | A BattleTech mech is destroyed. | — |
 | `on_mech_mine_trigger` | A BattleTech mine is triggered. | — |
-| `on_aero_land` | A BattleTech aerospace unit lands. | — |
 | `on_ood_land` | A BattleTech out-of-danger landing completes. | — |
 
 Movement also invokes the applicable cross-location message providers, which

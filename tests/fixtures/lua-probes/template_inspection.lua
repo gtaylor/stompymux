@@ -126,12 +126,7 @@ local function run()
       ground = inspect('PARITY-GROUND', btech.unit.sections.TURRET, player),
       vtol = inspect('PARITY-VTOL', btech.unit.sections.ROTOR, player),
       naval = { raw = inspect_raw('PARITY-NAVAL', btech.unit.sections.LEFT_SIDE) },
-      spheroid = { raw = inspect_raw('PARITY-SPHEROID',
-        btech.unit.sections.FRONT_RIGHT_SIDE) },
-      aero = { raw = inspect_raw('PARITY-AERO', btech.unit.sections.NOSE) },
       mechwarrior = { raw = inspect_raw('PARITY-MW', btech.unit.sections.LEFT_ARM) },
-      aerodyne = { raw = inspect_raw('PARITY-AERODYNE',
-        btech.unit.sections.RIGHT_WING) },
       battlesuit = { raw = inspect_raw('PARITY-BSUIT', btech.unit.sections.SUIT_1) },
     },
     errors = {

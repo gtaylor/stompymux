@@ -1336,12 +1336,12 @@ armor = 9
         assert_eq!(parsed.sections["front_side"].internal, 4);
         assert_eq!(parsed.sections["turret"].internal, 0);
         assert!(parsed.sections["front_side"].criticals.is_empty());
-        let aero = ParsedTemplate::parse(
-            "Aero",
-            "class = \"aerofighter\"\nmovement = \"fly\"\ntons = 50\n[sections.nose]\narmor = 3\n",
+        let naval = ParsedTemplate::parse(
+            "Boat",
+            "class = \"naval\"\nmovement = \"hull\"\ntons = 50\n[sections.left_side]\narmor = 3\n",
         )
         .unwrap();
-        assert_eq!(aero.sections["nose"].internal, 0);
+        assert_eq!(naval.sections["left_side"].internal, 0);
         // Battle armor has no faster gait than its ground MP.
         let suit = ParsedTemplate::parse(
             "Suit",
@@ -1349,6 +1349,30 @@ armor = 9
         )
         .unwrap();
         assert_eq!(suit.fields["max_speed"], "21.5");
+    }
+
+    /// Aerospace fighter and DropShip classes and the `fly` movement type are unknown values.
+    #[test]
+    fn aerospace_classes_and_flight_movement_are_rejected() {
+        for class in ["aerofighter", "spheroid_dropship", "aerodyne_dropship"] {
+            let Err(error) =
+                ParsedTemplate::parse("Aero", &format!("class = \"{class}\"\ntons = 50\n"))
+            else {
+                panic!("{class} parsed");
+            };
+            assert!(
+                format!("{error:#}").contains("unsupported unit template type"),
+                "{error:#}"
+            );
+        }
+        let Err(error) = ParsedTemplate::parse("Aero", "class = \"vehicle\"\nmovement = \"fly\"\n")
+        else {
+            panic!("fly movement parsed");
+        };
+        assert!(
+            format!("{error:#}").contains("unsupported movement type"),
+            "{error:#}"
+        );
     }
 
     #[test]

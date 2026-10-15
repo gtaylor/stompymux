@@ -35,13 +35,3 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.unit.sections.AFT_SIDE` | `23` |  |
 | `btech.unit.sections.TURRET` | `24` |  |
 | `btech.unit.sections.ROTOR` | `25` |  |
-| `btech.unit.sections.NOSE` | `26` |  |
-| `btech.unit.sections.LEFT_WING` | `27` |  |
-| `btech.unit.sections.RIGHT_WING` | `28` |  |
-| `btech.unit.sections.LEFT_REAR_WING` | `29` |  |
-| `btech.unit.sections.RIGHT_REAR_WING` | `30` |  |
-| `btech.unit.sections.AFT` | `31` |  |
-| `btech.unit.sections.FRONT_RIGHT_SIDE` | `32` |  |
-| `btech.unit.sections.FRONT_LEFT_SIDE` | `33` |  |
-| `btech.unit.sections.REAR_LEFT_SIDE` | `34` |  |
-| `btech.unit.sections.REAR_RIGHT_SIDE` | `35` |  |

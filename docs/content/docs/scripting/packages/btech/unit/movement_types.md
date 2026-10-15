@@ -16,7 +16,6 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.unit.movement_types.VTOL` | `4` |  |
 | `btech.unit.movement_types.HULL` | `5` |  |
 | `btech.unit.movement_types.FOIL` | `6` |  |
-| `btech.unit.movement_types.FLY` | `7` |  |
 | `btech.unit.movement_types.QUAD` | `8` |  |
 | `btech.unit.movement_types.SUB` | `9` |  |
 | `btech.unit.movement_types.NONE` | `10` |  |

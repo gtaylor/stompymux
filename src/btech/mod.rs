@@ -825,14 +825,15 @@ pub(crate) use unit_operations_contract::{
     set_unit_weapon_modes, unit_piloting_check_action,
 };
 mod admin_contract;
+use admin_contract::section_destroyed;
 pub use admin_contract::{
-    AdministrativeRepairKind, ReattachHull, administrative_assigned_pilot,
-    administrative_is_fixable, administrative_section_info, administrative_section_valid,
-    administrative_unit_class, administrative_unit_movement, administrative_unit_tonnage,
-    apply_administrative_repair, clear_administrative_technologies, set_administrative_armor,
-    set_administrative_assigned_pilot, set_administrative_cargo, set_administrative_heat_sinks,
-    set_administrative_movement_type, set_administrative_radio_quality, set_administrative_scalar,
-    set_administrative_technology, set_administrative_unit_type,
+    AdministrativeRepairKind, administrative_assigned_pilot, administrative_is_fixable,
+    administrative_section_info, administrative_section_valid, administrative_unit_class,
+    administrative_unit_movement, administrative_unit_tonnage, apply_administrative_repair,
+    clear_administrative_technologies, set_administrative_armor, set_administrative_assigned_pilot,
+    set_administrative_cargo, set_administrative_heat_sinks, set_administrative_movement_type,
+    set_administrative_radio_quality, set_administrative_scalar, set_administrative_technology,
+    set_administrative_unit_type,
 };
 mod unit_configuration;
 pub use unit_configuration::{

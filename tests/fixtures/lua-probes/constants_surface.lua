@@ -140,13 +140,12 @@ local SPECS = {
   },
   {
     page = 3, path = 'btech.unit.types', cross = 'btech_movement',
-    names = { 'MECH', 'VEHICLE', 'VTOL', 'NAVAL', 'SPHEROID_DROPSHIP',
-      'AERO_FIGHTER', 'MECHWARRIOR', 'AERODYNE_DROPSHIP', 'BATTLESUIT' },
+    names = { 'MECH', 'VEHICLE', 'VTOL', 'NAVAL', 'MECHWARRIOR', 'BATTLESUIT' },
   },
   {
     page = 3, path = 'btech.unit.movement_types', cross = 'btech_types',
     names = { 'BIPED', 'TRACK', 'WHEEL', 'HOVER', 'VTOL', 'HULL', 'FOIL',
-      'FLY', 'QUAD', 'SUB', 'NONE' },
+      'QUAD', 'SUB', 'NONE' },
   },
   {
     page = 3, path = 'btech.unit.sections', cross = 'btech_types',
@@ -154,10 +153,7 @@ local SPECS = {
       'RIGHT_TORSO', 'CENTER_TORSO', 'REAR_LEFT_LEG', 'REAR_RIGHT_LEG',
       'HEAD', 'LEFT_ARM', 'RIGHT_ARM', 'LEFT_LEG', 'RIGHT_LEG', 'SUIT_1',
       'SUIT_2', 'SUIT_3', 'SUIT_4', 'SUIT_5', 'SUIT_6', 'SUIT_7', 'SUIT_8',
-      'LEFT_SIDE', 'RIGHT_SIDE', 'FRONT_SIDE', 'AFT_SIDE', 'TURRET', 'ROTOR',
-      'NOSE', 'LEFT_WING', 'RIGHT_WING', 'LEFT_REAR_WING', 'RIGHT_REAR_WING',
-      'AFT', 'FRONT_RIGHT_SIDE', 'FRONT_LEFT_SIDE', 'REAR_LEFT_SIDE',
-      'REAR_RIGHT_SIDE' },
+      'LEFT_SIDE', 'RIGHT_SIDE', 'FRONT_SIDE', 'AFT_SIDE', 'TURRET', 'ROTOR' },
   },
   {
     page = 4, path = 'btech.unit.technology', cross = 'btech_types',

@@ -620,7 +620,6 @@ impl Mech {
         section: MechSection,
         kind: super::AdministrativeRepairKind,
         value: u16,
-        hull: super::ReattachHull,
     ) -> Result<()> {
         if kind == super::AdministrativeRepairKind::Part {
             self.repair_critical(super::CriticalLocation {
@@ -636,13 +635,9 @@ impl Mech {
             super::AdministrativeRepairKind::RearArmor => current.rear = value,
             super::AdministrativeRepairKind::Reattach => {
                 // C mech_re_attach (mech_maintenance.c:501-514) restores only
-                // sections reading as destroyed; aerospace hulls reset to one.
-                if hull.destroyed(current.armor, current.internal) {
-                    current.internal = if hull == super::ReattachHull::Aerospace {
-                        1
-                    } else {
-                        self.definition.sections[&section].internal
-                    };
+                // sections reading as destroyed.
+                if super::section_destroyed(current.armor, current.internal) {
+                    current.internal = self.definition.sections[&section].internal;
                     self.flooded_sections.remove(&section);
                 }
             }

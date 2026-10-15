@@ -126,7 +126,7 @@ pub(super) fn resolve(world: &mut World, request: DirectEffectRequest) -> Result
     if request.fire_mode != FireMode::Heat {
         return Ok(report);
     }
-    // A heat-causing weapon's heat applies to Mechs (and aerospace units) only; a vehicle
+    // A heat-causing weapon's heat applies to Mechs only; a vehicle
     // tracks no heat, so the flamer's Damage Value lands as ordinary damage instead (Total
     // Warfare p. 113, Heat-Causing Weapon; p. 303 note). On a Mech the heat is outside heat,
     // counted against the fifteen-point cap a turn (Total Warfare p. 159).

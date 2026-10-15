@@ -434,7 +434,7 @@ async fn engine_suspension_factor_matches_c_susp_factor() {
       local types=btech.unit.movement_types
       -- 35-ton chassis through C mech_consistency.c:170-218.
       local expected={
-        BIPED=0,TRACK=0,WHEEL=20,HOVER=175,VTOL=140,HULL=30,FOIL=195,FLY=0,QUAD=0,SUB=30,
+        BIPED=0,TRACK=0,WHEEL=20,HOVER=175,VTOL=140,HULL=30,FOIL=195,QUAD=0,SUB=30,
       }
       for name,factor in pairs(expected) do
         btech.unit.set_movement_type(unit,types[name])

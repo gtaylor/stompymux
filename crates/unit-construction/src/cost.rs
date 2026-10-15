@@ -298,10 +298,7 @@ pub fn raw_template_base_cost(prices: &PartPrices, template: &RawTemplate) -> Re
             }
             Ok(final_cost(total * 0.75))
         }
-        RawUnitClass::SpheroidDropship
-        | RawUnitClass::AeroFighter
-        | RawUnitClass::MechWarrior
-        | RawUnitClass::AerodyneDropship => Ok(0),
+        RawUnitClass::MechWarrior => Ok(0),
     }
 }
 

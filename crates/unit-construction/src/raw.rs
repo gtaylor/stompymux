@@ -16,14 +16,26 @@ pub enum RawUnitClass {
     Vehicle = 1,
     Vtol = 2,
     Naval = 3,
-    SpheroidDropship = 4,
-    AeroFighter = 5,
     MechWarrior = 6,
-    AerodyneDropship = 7,
     BattleSuit = 8,
 }
 
 impl RawUnitClass {
+    /// Every class, in numeric order.
+    pub const ALL: [Self; 6] = [
+        Self::Mech,
+        Self::Vehicle,
+        Self::Vtol,
+        Self::Naval,
+        Self::MechWarrior,
+        Self::BattleSuit,
+    ];
+
+    /// Decode the numeric code exposed by the native Lua contract.
+    pub fn from_code(code: i32) -> Option<Self> {
+        Self::ALL.into_iter().find(|class| *class as i32 == code)
+    }
+
     /// Decode the case-insensitive spelling accepted by the native loader.
     pub fn parse(value: &str) -> Result<Self> {
         match value.to_ascii_lowercase().as_str() {
@@ -31,10 +43,7 @@ impl RawUnitClass {
             "vehicle" => Ok(Self::Vehicle),
             "vtol" => Ok(Self::Vtol),
             "naval" => Ok(Self::Naval),
-            "spheroid_dropship" => Ok(Self::SpheroidDropship),
-            "aerofighter" => Ok(Self::AeroFighter),
             "mechwarrior" => Ok(Self::MechWarrior),
-            "aerodyne_dropship" => Ok(Self::AerodyneDropship),
             "battlesuit" => Ok(Self::BattleSuit),
             _ => bail!("unsupported unit template type {value}"),
         }
@@ -47,17 +56,14 @@ impl RawUnitClass {
             Self::Vehicle => "Vehicle",
             Self::Vtol => "VTOL",
             Self::Naval => "Naval",
-            Self::SpheroidDropship => "Spheroid_DropShip",
-            Self::AeroFighter => "AeroFighter",
             Self::MechWarrior => "Mechwarrior",
-            Self::AerodyneDropship => "Aerodyne_DropShip",
             Self::BattleSuit => "Battlesuit",
         }
     }
 
     /// Top speed MP of the walking figure a template's `walk_mp` states: running MP for a
-    /// Mech (TM p. 48), flanking MP for a combat or naval vehicle (TM p. 100) and maximum
-    /// thrust for aerospace units, each the walking figure x 1.5 rounded up. Infantry and
+    /// Mech (TM p. 48) and flanking MP for a combat or naval vehicle (TM p. 100), each the
+    /// walking figure x 1.5 rounded up. Infantry and
     /// battle armor have no faster gait, so their top speed is the walking figure.
     pub fn top_speed_mp(self, walking_mp: u32) -> u32 {
         match self {
@@ -78,13 +84,33 @@ pub enum RawMovement {
     Vtol = 4,
     Hull = 5,
     Foil = 6,
-    Fly = 7,
     Quad = 8,
     Submarine = 9,
     Stationary = 10,
 }
 
 impl RawMovement {
+    /// Every movement type, in numeric order.
+    pub const ALL: [Self; 10] = [
+        Self::Biped,
+        Self::Tracked,
+        Self::Wheeled,
+        Self::Hover,
+        Self::Vtol,
+        Self::Hull,
+        Self::Foil,
+        Self::Quad,
+        Self::Submarine,
+        Self::Stationary,
+    ];
+
+    /// Decode the numeric code exposed by the native Lua contract.
+    pub fn from_code(code: i32) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|movement| *movement as i32 == code)
+    }
+
     /// Decode the case-insensitive spelling accepted by the native loader.
     pub fn parse(value: &str) -> Result<Self> {
         match value.to_ascii_lowercase().as_str() {
@@ -95,7 +121,6 @@ impl RawMovement {
             "vtol" => Ok(Self::Vtol),
             "hull" => Ok(Self::Hull),
             "foil" => Ok(Self::Foil),
-            "fly" => Ok(Self::Fly),
             "quad" => Ok(Self::Quad),
             "sub" => Ok(Self::Submarine),
             "none" => Ok(Self::Stationary),
@@ -113,7 +138,6 @@ impl RawMovement {
             Self::Vtol => "VTOL",
             Self::Hull => "Hull",
             Self::Foil => "Foil",
-            Self::Fly => "Fly",
             Self::Quad => "Quad",
             Self::Submarine => "Sub",
             Self::Stationary => "None",
@@ -151,16 +175,6 @@ pub enum RawSectionCode {
     AftSide = 23,
     Turret = 24,
     Rotor = 25,
-    Nose = 26,
-    LeftWing = 27,
-    RightWing = 28,
-    LeftRearWing = 29,
-    RightRearWing = 30,
-    Aft = 31,
-    FrontRightSide = 32,
-    FrontLeftSide = 33,
-    RearLeftSide = 34,
-    RearRightSide = 35,
 }
 
 const QUAD: [RawSectionCode; 8] = [
@@ -208,28 +222,6 @@ const VTOL: [RawSectionCode; 6] = [
     RawSectionCode::Turret,
     RawSectionCode::Rotor,
 ];
-const AERO: [RawSectionCode; 4] = [
-    RawSectionCode::Nose,
-    RawSectionCode::LeftWing,
-    RawSectionCode::RightWing,
-    RawSectionCode::AftSide,
-];
-const AERODYNE: [RawSectionCode; 6] = [
-    RawSectionCode::RightWing,
-    RawSectionCode::LeftWing,
-    RawSectionCode::LeftRearWing,
-    RawSectionCode::RightRearWing,
-    RawSectionCode::Aft,
-    RawSectionCode::Nose,
-];
-const SPHEROID: [RawSectionCode; 6] = [
-    RawSectionCode::FrontRightSide,
-    RawSectionCode::FrontLeftSide,
-    RawSectionCode::RearLeftSide,
-    RawSectionCode::RearRightSide,
-    RawSectionCode::Aft,
-    RawSectionCode::Nose,
-];
 
 impl RawSectionCode {
     /// Ordered sections exposed for one class and movement combination.
@@ -242,9 +234,6 @@ impl RawSectionCode {
             RawUnitClass::Mech | RawUnitClass::MechWarrior => &MECH,
             RawUnitClass::Vehicle | RawUnitClass::Naval => &GROUND,
             RawUnitClass::Vtol => &VTOL,
-            RawUnitClass::AeroFighter => &AERO,
-            RawUnitClass::AerodyneDropship => &AERODYNE,
-            RawUnitClass::SpheroidDropship => &SPHEROID,
         }
     }
 
@@ -293,16 +282,6 @@ impl RawSectionCode {
             Self::AftSide => "Aft Side",
             Self::Turret => "Turret",
             Self::Rotor => "Rotor",
-            Self::Nose => "Nose",
-            Self::LeftWing => "Left Wing",
-            Self::RightWing => "Right Wing",
-            Self::LeftRearWing => "Left Rear Wing",
-            Self::RightRearWing => "Right Rear Wing",
-            Self::Aft => "Aft",
-            Self::FrontRightSide => "Front Right Side",
-            Self::FrontLeftSide => "Front Left Side",
-            Self::RearLeftSide => "Rear Left Side",
-            Self::RearRightSide => "Rear Right Side",
         }
     }
 
@@ -588,10 +567,7 @@ mod tests {
             (RawUnitClass::Vehicle, RawMovement::Tracked, 5),
             (RawUnitClass::Vtol, RawMovement::Vtol, 6),
             (RawUnitClass::Naval, RawMovement::Hull, 5),
-            (RawUnitClass::SpheroidDropship, RawMovement::Fly, 6),
-            (RawUnitClass::AeroFighter, RawMovement::Fly, 4),
             (RawUnitClass::MechWarrior, RawMovement::Biped, 8),
-            (RawUnitClass::AerodyneDropship, RawMovement::Fly, 6),
             (RawUnitClass::BattleSuit, RawMovement::Biped, 8),
         ];
         for (class, movement, count) in cases {
@@ -603,15 +579,29 @@ mod tests {
     #[test]
     fn parses_noncombat_classes_without_a_runtime_constructor() {
         let template = RawTemplate::parse(
-            "AERO",
-            "class = \"aerofighter\"\nmovement = \"fly\"\ntons = 90\n[sections.nose]\narmor = 67\ninternals = 9\n",
+            "SUIT",
+            "class = \"battlesuit\"\nmovement = \"biped\"\ntons = 1\n[sections.suit_1]\narmor = 67\ninternals = 9\n",
         )
         .unwrap();
-        assert_eq!(template.class, RawUnitClass::AeroFighter);
-        assert_eq!(template.reference, "AERO");
-        assert_eq!(template.sections.len(), 4);
-        assert_eq!(template.sections[&RawSectionCode::Nose].armor, 67);
-        assert_eq!(template.sections[&RawSectionCode::AftSide].armor, 0);
+        assert_eq!(template.class, RawUnitClass::BattleSuit);
+        assert_eq!(template.reference, "SUIT");
+        assert_eq!(template.sections.len(), 8);
+        assert_eq!(template.sections[&RawSectionCode::Suit1].armor, 67);
+        assert_eq!(template.sections[&RawSectionCode::Suit8].armor, 0);
+    }
+
+    #[test]
+    fn aerospace_spellings_are_unknown_classes_and_movement_types() {
+        for class in ["aerofighter", "spheroid_dropship", "aerodyne_dropship"] {
+            assert!(RawUnitClass::parse(class).is_err());
+        }
+        assert!(RawMovement::parse("fly").is_err());
+        assert_eq!(RawUnitClass::from_code(4), None);
+        assert_eq!(RawUnitClass::from_code(8), Some(RawUnitClass::BattleSuit));
+        assert_eq!(RawMovement::from_code(7), None);
+        assert_eq!(RawMovement::from_code(8), Some(RawMovement::Quad));
+        assert!(RawTemplate::parse("X", "class = \"aerofighter\"").is_err());
+        assert!(RawTemplate::parse("X", "class = \"mech\"\nmovement = \"fly\"").is_err());
     }
 
     #[test]
@@ -644,14 +634,14 @@ mod tests {
     fn sections_follow_class_anatomy_and_flags_merge_case_insensitively() {
         let template = RawTemplate::parse(
             "X",
-            "class = \"aerofighter\"\nmovement = \"fly\"\nspecials = [\"ECM\", \"ecm\"]\n[construction]\ntech_base = \"clan\"\n[sections.left_wing]\narmor = 2\n",
+            "class = \"naval\"\nmovement = \"hull\"\nspecials = [\"ECM\", \"ecm\"]\n[construction]\ntech_base = \"clan\"\n[sections.left_side]\narmor = 2\n",
         )
         .unwrap();
-        assert_eq!(template.class, RawUnitClass::AeroFighter);
-        assert_eq!(template.sections[&RawSectionCode::LeftWing].armor, 2);
+        assert_eq!(template.class, RawUnitClass::Naval);
+        assert_eq!(template.sections[&RawSectionCode::LeftSide].armor, 2);
         assert_eq!(template.attributes["specials"], "Clan ECM");
         assert!(RawTemplate::parse("X", "[sections.left_arm]\n[sections.LEFT_ARM]").is_err());
-        assert!(RawTemplate::parse("X", "class = \"aerofighter\"\n[sections.left_arm]").is_err());
+        assert!(RawTemplate::parse("X", "class = \"naval\"\n[sections.left_arm]").is_err());
         assert!(RawTemplate::parse("X", "unknown_field = 1").is_err());
     }
 
