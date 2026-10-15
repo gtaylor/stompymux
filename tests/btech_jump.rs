@@ -5007,7 +5007,10 @@ async fn jump_course_fields_redirect_without_moving_the_committed_cursor() {
     use std::{cell::RefCell, rc::Rc};
     use stompymux_rs::*;
     for chassis in ["Biped", "Quad"] {
-        let (_dir, config, world, id) = runtime_fixture().await;
+        let (_dir, config, mut world, id) = runtime_fixture().await;
+        if chassis == "Quad" {
+            support::btech_firing::edit(&mut world, id, support::templates::quad_ready_record);
+        }
         let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "unitmovetype", chassis)
             .unwrap();
@@ -5278,7 +5281,10 @@ async fn damage_replacement_during_jump_defers_lost_thrust_and_replays_restorati
     use std::{cell::RefCell, rc::Rc};
     use stompymux_rs::*;
     for chassis in ["Biped", "Quad"] {
-        let (_dir, config, world, id) = runtime_fixture().await;
+        let (_dir, config, mut world, id) = runtime_fixture().await;
+        if chassis == "Quad" {
+            support::btech_firing::edit(&mut world, id, support::templates::quad_ready_record);
+        }
         let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         set_battle_unit_field_action(&setup, &config, ObjectId(1), id, "unitmovetype", chassis)
             .unwrap();

@@ -543,33 +543,23 @@ fn technology_names(codes: std::ops::RangeInclusive<i32>) -> impl Iterator<Item 
     codes.filter_map(|code| super::administrative_technology(code).map(|(name, _)| name))
 }
 
-/// Actuators a section may leave out of its standard installation.
+/// Actuators a biped arm may leave out of its standard installation: only the lower arm and
+/// hand actuators, and an arm without its lower arm actuator has no hand actuator either.
+/// Shoulders, upper arm actuators and every leg actuator are mandatory (TechManual p. 45).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Omission {
-    Shoulder,
-    Upper,
     Lower,
     Hand,
-    Foot,
 }
 
 impl Omission {
-    const ALL: [Self; 5] = [
-        Self::Shoulder,
-        Self::Upper,
-        Self::Lower,
-        Self::Hand,
-        Self::Foot,
-    ];
+    const ALL: [Self; 2] = [Self::Lower, Self::Hand];
 
     /// Document spelling.
     pub fn spelling(self) -> &'static str {
         match self {
-            Self::Shoulder => "shoulder",
-            Self::Upper => "upper_actuator",
             Self::Lower => "lower_actuator",
             Self::Hand => "hand_actuator",
-            Self::Foot => "foot_actuator",
         }
     }
 
@@ -578,7 +568,11 @@ impl Omission {
         Self::ALL
             .into_iter()
             .find(|omission| omission.spelling() == value)
-            .with_context(|| format!("unknown omitted actuator {value}"))
+            .with_context(|| {
+                format!(
+                    "cannot omit {value}: a Mech may omit only its lower arm and hand actuators (TechManual p. 45)"
+                )
+            })
     }
 }
 
@@ -602,44 +596,27 @@ pub fn fixed_equipment(
 ) -> Result<BTreeMap<u8, &'static str>> {
     use MechSection::*;
     let mut items = BTreeMap::new();
-    let limb = |items: &mut BTreeMap<u8, &'static str>, last: &'static str, omit_last: Omission| {
-        if !plan.omit.contains(&Omission::Shoulder) {
-            items.insert(0, SHOULDER_OR_HIP);
-        }
-        if !plan.omit.contains(&Omission::Upper) {
-            items.insert(1, UPPER_ACTUATOR);
-        }
+    let limb = |items: &mut BTreeMap<u8, &'static str>| {
+        items.insert(0, SHOULDER_OR_HIP);
+        items.insert(1, UPPER_ACTUATOR);
         if !plan.omit.contains(&Omission::Lower) {
             items.insert(2, LOWER_ACTUATOR);
         }
-        if !plan.omit.contains(&omit_last) {
-            items.insert(3, last);
+        if !plan.omit.contains(&Omission::Hand) {
+            items.insert(3, HAND_OR_FOOT);
         }
     };
     let arm = chassis == MechChassis::Biped && matches!(section, LeftArm | RightArm);
-    let allowed: &[Omission] = match section {
-        LeftArm | RightArm if arm => &[
-            Omission::Shoulder,
-            Omission::Upper,
-            Omission::Lower,
-            Omission::Hand,
-        ],
-        LeftArm | RightArm | LeftLeg | RightLeg => &[
-            Omission::Shoulder,
-            Omission::Upper,
-            Omission::Lower,
-            Omission::Foot,
-        ],
-        _ => &[],
-    };
-    for omission in plan.omit {
-        ensure!(
-            allowed.contains(omission),
-            "{} has no {}",
-            section.name(),
-            omission.spelling()
-        );
-    }
+    ensure!(
+        plan.omit.is_empty() || arm,
+        "{} keeps all its actuators: only a biped arm may omit its lower arm and hand actuators (TechManual p. 45)",
+        chassis.section_name(section)
+    );
+    ensure!(
+        !plan.omit.contains(&Omission::Lower) || plan.omit.contains(&Omission::Hand),
+        "{} omits its lower arm actuator, so it must omit its hand actuator too (TechManual p. 45)",
+        section.name()
+    );
     let side_engine = match (
         construction.engine,
         construction.clan_component(Component::Engine),
@@ -655,8 +632,7 @@ pub fn fixed_equipment(
         "engine_at applies only to side torsos holding engine slots"
     );
     match section {
-        LeftArm | RightArm if arm => limb(&mut items, HAND_OR_FOOT, Omission::Hand),
-        LeftArm | RightArm | LeftLeg | RightLeg => limb(&mut items, HAND_OR_FOOT, Omission::Foot),
+        LeftArm | RightArm | LeftLeg | RightLeg => limb(&mut items),
         Head => {
             let layout: &[(u8, &str)] = match construction.cockpit {
                 Cockpit::Standard => &[

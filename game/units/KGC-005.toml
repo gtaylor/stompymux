@@ -16,26 +16,26 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 34
-omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "2-12", item = "IS.LB20-XAC" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 34
-omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "2-12", item = "IS.LB20-XAC" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 30
 rear = 10
 slots = [
-    { at = 1, item = "EndoSteel" },
     { at = "3-4", item = "IS.StreakSRM-4" },
-    { at = "5-6", item = "Ammo_IS.LB20-XAC", rounds = 5 },
-    { at = 7, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 5, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 6, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 7, item = "Ammo_IS.LB20-XAC", rounds = 5 },
     { at = 8, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
     { at = 9, item = "Case" },
     { at = "10-12", item = "EndoSteel" },
@@ -45,10 +45,10 @@ slots = [
 armor = 30
 rear = 10
 slots = [
-    { at = 1, item = "EndoSteel" },
     { at = "3-4", item = "IS.ERLargeLaser" },
-    { at = 5, item = "Ammo_IS.LB20-XAC", rounds = 5 },
-    { at = "6-7", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 5, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 6, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 7, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
     { at = 8, item = "Case" },
     { at = "9-12", item = "EndoSteel" },
 ]
@@ -76,4 +76,18 @@ slots = [
 armor = 9
 slots = [
     { at = 4, item = "EndoSteel" },
+]
+
+[[split_mounts]]
+item = "IS.LB20-XAC"
+placements = [
+    { section = "left_arm", at = "3-11" },
+    { section = "left_torso", at = "1-2" },
+]
+
+[[split_mounts]]
+item = "IS.LB20-XAC"
+placements = [
+    { section = "right_arm", at = "3-11" },
+    { section = "right_torso", at = "1-2" },
 ]

@@ -3069,6 +3069,25 @@ async fn movement_fields_preserve_material_and_validate_anatomy_scenario(f: &Uni
         let native = &f.native;
         let lua = &f.lua;
         f.install(&world);
+        if mech
+            && world.btech.constructed_units()[&id]
+                .definition()
+                .chassis()
+                .unwrap()
+                == MechChassis::Biped
+        {
+            // Arms without lower arm and hand actuators cannot become a quad's front legs,
+            // which keep all their actuators (TechManual p. 45).
+            let error =
+                set_battle_unit_field_action(lua, config, ObjectId(1), id, "unitmovetype", "Quad")
+                    .unwrap_err();
+            assert!(
+                format!("{error:#}").contains("TechManual p. 45"),
+                "{error:#}"
+            );
+            firing::edit(&mut world, id, crate::support::templates::quad_ready_record);
+            f.install(&world);
+        }
         let values: &[&str] = if mech {
             &["Biped", "Quad", "Biped"]
         } else if vtol {

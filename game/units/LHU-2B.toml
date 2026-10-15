@@ -23,10 +23,7 @@ slots = [
 
 [sections.right_arm]
 armor = 23
-omit = ["upper_actuator", "lower_actuator", "hand_actuator"]
-slots = [
-    { at = "2-12", item = "IS.LB20-XAC" },
-]
+omit = ["lower_actuator", "hand_actuator"]
 
 [sections.left_torso]
 armor = 24
@@ -41,8 +38,8 @@ slots = [
 armor = 24
 rear = 7
 slots = [
-    { at = "4-5", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
-    { at = 6, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 5, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = "6-7", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
     { at = "8-12", item = "EndoSteel" },
 ]
 
@@ -66,4 +63,11 @@ slots = [
 armor = 9
 slots = [
     { at = 4, item = "EndoSteel" },
+]
+
+[[split_mounts]]
+item = "IS.LB20-XAC"
+placements = [
+    { section = "right_arm", at = "3-12" },
+    { section = "right_torso", at = 4 },
 ]

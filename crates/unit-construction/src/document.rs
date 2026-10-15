@@ -833,23 +833,8 @@ fn fit_section(
     use Omission::*;
     let chassis = unit.chassis?;
     let omissions: Vec<Vec<Omission>> = match section {
-        LeftArm | RightArm | LeftLeg | RightLeg => {
-            let last = if chassis == MechChassis::Biped && matches!(section, LeftArm | RightArm) {
-                Hand
-            } else {
-                Foot
-            };
-            let actuators = [Shoulder, Upper, Lower, last];
-            (0..16u8)
-                .map(|mask| {
-                    actuators
-                        .iter()
-                        .enumerate()
-                        .filter(|(bit, _)| mask & (1 << bit) != 0)
-                        .map(|(_, omission)| *omission)
-                        .collect()
-                })
-                .collect()
+        LeftArm | RightArm if chassis == MechChassis::Biped => {
+            vec![Vec::new(), vec![Hand], vec![Lower, Hand]]
         }
         _ => vec![Vec::new()],
     };
@@ -1411,20 +1396,22 @@ placements = [
 
     #[test]
     fn irregular_sections_state_their_differences_instead_of_listing_fixed_equipment() {
-        let source = ZEUS
-            .replace(
-                "omit = [\"lower_actuator\", \"hand_actuator\"]",
-                "omit = [\"shoulder\", \"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]",
-            )
-            .replace(
-                "[sections.left_leg]\narmor = 24\n",
-                "[sections.left_leg]\narmor = 24\nomit = [\"lower_actuator\"]\n",
-            );
+        let source = ZEUS.replace(
+            "omit = [\"hand_actuator\"]",
+            "omit = [\"lower_actuator\", \"hand_actuator\"]",
+        );
         let parsed = ParsedTemplate::parse("ZEU-9S", &source).unwrap();
-        assert!(parsed.sections["right_arm"].criticals.is_empty());
-        let leg = &parsed.sections["left_leg"];
-        assert!(!leg.criticals.contains_key(&2));
-        assert_eq!(leg.criticals[&3].equipment, "HandOrFootActuator");
+        let arm = &parsed.sections["right_arm"];
+        assert_eq!(arm.criticals.len(), 2);
+        assert_eq!(arm.criticals[&1].equipment, "UpperActuator");
+        // Only lower arm and hand actuators may be omitted (TechManual p. 45).
+        for omit in ["shoulder", "upper_actuator", "foot_actuator"] {
+            let refused = ZEUS.replace(
+                "omit = [\"hand_actuator\"]",
+                &format!("omit = [\"{omit}\", \"hand_actuator\"]"),
+            );
+            assert!(ParsedTemplate::parse("ZEU-9S", &refused).is_err(), "{omit}");
+        }
         // Engines fill only the TechManual layouts; a section cannot relocate engine slots.
         let relocated = source.replace(
             "[sections.right_torso]\narmor = 25\nrear = 6\n",
@@ -1434,15 +1421,28 @@ placements = [
         assert!(ParsedTemplate::parse("ZEU-9S", &relocated).is_err());
 
         let rendered = render_mech(&parsed);
-        for line in [
-            "omit = [\"shoulder\", \"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]\n",
-            "omit = [\"lower_actuator\"]\n",
-        ] {
-            assert!(rendered.contains(line), "{line}");
-        }
+        assert_eq!(
+            rendered
+                .matches("omit = [\"lower_actuator\", \"hand_actuator\"]\n")
+                .count(),
+            2
+        );
         assert!(!rendered.contains("explicit"));
         let reparsed = ParsedTemplate::parse("ZEU-9S", &rendered).unwrap();
         assert_eq!(reparsed.sections, parsed.sections);
+
+        // A section no omission reproduces lists its slots explicitly.
+        let mut legless = parsed;
+        legless
+            .sections
+            .get_mut("left_leg")
+            .unwrap()
+            .criticals
+            .remove(&2);
+        let rendered = render_mech(&legless);
+        assert!(rendered.contains("[sections.left_leg]\narmor = 24\nexplicit = true\n"));
+        let reparsed = ParsedTemplate::parse("ZEU-9S", &rendered).unwrap();
+        assert_eq!(reparsed.sections, legless.sections);
     }
 
     #[test]

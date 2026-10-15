@@ -87,6 +87,46 @@ fn physical_weapon(system: System, tons: u16) -> Option<PhysicalWeapon> {
     })
 }
 
+/// Every limb carries its shoulder or hip and upper actuator, and every leg its lower and
+/// foot actuators too. Only a biped arm may leave out its lower arm and hand actuators, and
+/// one without its lower arm actuator has no hand actuator either (TechManual p. 45).
+fn validate_actuators(loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
+    for section in [
+        MechSection::LeftArm,
+        MechSection::RightArm,
+        MechSection::LeftLeg,
+        MechSection::RightLeg,
+    ] {
+        let has = |system| {
+            loadout
+                .systems
+                .iter()
+                .any(|part| part.system == system && part.location.section == section)
+        };
+        let name = chassis.section_name(section);
+        let arm = !chassis.is_leg(section);
+        let (lower, hand) = (has(System::LowerActuator), has(System::HandOrFootActuator));
+        ensure!(
+            has(System::ShoulderOrHip) && has(System::UpperActuator),
+            "{name} lacks its {} actuators; only lower arm and hand actuators may be removed (TechManual p. 45)",
+            if arm {
+                "shoulder and upper arm"
+            } else {
+                "hip and upper leg"
+            }
+        );
+        ensure!(
+            arm || (lower && hand),
+            "{name} lacks its lower leg or foot actuator; only lower arm and hand actuators may be removed (TechManual p. 45)"
+        );
+        ensure!(
+            lower || !hand,
+            "{name} keeps its hand actuator without a lower arm actuator (TechManual p. 45)"
+        );
+    }
+    Ok(())
+}
+
 impl MechTemplate {
     /// Running MP: the walking MP x 1.5, rounded up (TM p. 48).
     pub fn running_mp(&self) -> u32 {
@@ -143,6 +183,7 @@ impl MechTemplate {
         let chassis = self.chassis()?;
         self.validate_movement()?;
         self.validate_engine(loadout)?;
+        validate_actuators(loadout, chassis)?;
         self.validate_jump_jets(loadout, chassis)?;
         self.validate_heat_sinks(loadout)?;
         self.validate_technology_slots(loadout, chassis)?;
@@ -879,6 +920,59 @@ mod tests {
         refused(
             &JENNER.replacen("item = \"IS.MediumLaser\"", "item = \"LightTAG\"", 1),
             "LightTag is Clan technology on an Inner Sphere Mech",
+        );
+    }
+
+    /// Only a biped arm's lower arm and hand actuators may be removed, the hand with the lower
+    /// arm (TM p. 45).
+    #[test]
+    fn only_lower_arm_and_hand_actuators_may_be_omitted() {
+        for omit in [
+            "[\"shoulder\", \"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]",
+            "[\"upper_actuator\", \"lower_actuator\", \"hand_actuator\"]",
+        ] {
+            let source = JENNER.replacen(
+                "omit = [\"lower_actuator\", \"hand_actuator\"]",
+                &format!("omit = {omit}"),
+                1,
+            );
+            let error = format!("{:#}", MechTemplate::parse("JR7-D", &source).unwrap_err());
+            assert!(
+                error.contains("may omit only its lower arm and hand"),
+                "{error}"
+            );
+        }
+        let lower_only = JENNER.replacen(
+            "omit = [\"lower_actuator\", \"hand_actuator\"]",
+            "omit = [\"lower_actuator\"]",
+            1,
+        );
+        let error = format!(
+            "{:#}",
+            MechTemplate::parse("JR7-D", &lower_only).unwrap_err()
+        );
+        assert!(error.contains("must omit its hand actuator too"), "{error}");
+        let leg = JENNER.replace(
+            "[sections.left_leg]\narmor = 6\n",
+            "[sections.left_leg]\narmor = 6\nomit = [\"hand_actuator\"]\n",
+        );
+        let error = format!("{:#}", MechTemplate::parse("JR7-D", &leg).unwrap_err());
+        assert!(
+            error.contains("Left_Leg keeps all its actuators"),
+            "{error}"
+        );
+        // A section listing its slots explicitly is held to the same rule.
+        let mut shoulderless = MechTemplate::parse("JR7-D", JENNER).unwrap();
+        shoulderless
+            .sections
+            .get_mut(&crate::MechSection::LeftArm)
+            .unwrap()
+            .criticals
+            .remove(&0);
+        let rejection = check_template(&shoulderless).rejection.unwrap_or_default();
+        assert!(
+            rejection.contains("Left_Arm lacks its shoulder and upper arm actuators"),
+            "{rejection}"
         );
     }
 

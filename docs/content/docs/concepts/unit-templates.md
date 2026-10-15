@@ -230,7 +230,7 @@ A section adjusts that with:
 
 | Key | Meaning |
 | --- | --- |
-| `omit` | Actuators the section lacks, in any combination: `shoulder`, `upper_actuator`, `lower_actuator`, and `hand_actuator` (biped arms) or `foot_actuator` (legs). The others keep their usual slots. |
+| `omit` | Actuators a biped arm lacks: `hand_actuator`, or `lower_actuator` with `hand_actuator`. These are the only actuators a Mech may remove; shoulders, upper arm actuators and every leg actuator are mandatory (TechManual p. 45). The others keep their usual slots. |
 | `engine_at` | The side torso slot where the engine's slots begin. |
 | `explicit` | `true` when the section's layout is irregular: nothing is placed, and `slots` lists the fixed equipment too. |
 

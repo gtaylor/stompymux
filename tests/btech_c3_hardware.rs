@@ -1,7 +1,8 @@
 //! Command computer installation, independent master groups, and durable damage.
 use stompymux_rs::*;
 
-/// Replace arm equipment with explicitly positioned computer slots.
+/// Replace arm equipment with explicitly positioned computer slots, numbered from the first
+/// slot after the shoulder and upper arm actuators every arm keeps (TechManual p. 45).
 fn design(parts: &[(MechSection, u8, &str)]) -> Mech {
     let mut template =
         MechTemplate::parse("AS7-D", include_str!("fixtures/btech/units/AS7-D.toml")).unwrap();
@@ -15,7 +16,7 @@ fn design(parts: &[(MechSection, u8, &str)]) -> Mech {
             .get_mut(&section)
             .unwrap()
             .criticals
-            .clear();
+            .retain(|&slot, _| slot < 2);
     }
     for &(section, slot, equipment) in parts {
         template
@@ -24,7 +25,7 @@ fn design(parts: &[(MechSection, u8, &str)]) -> Mech {
             .unwrap()
             .criticals
             .insert(
-                slot,
+                slot + 2,
                 CriticalDefinition {
                     equipment: equipment.into(),
                     data: "-".into(),
@@ -51,13 +52,13 @@ fn masters_group_within_sections_and_damage_does_not_cross_groups() {
     );
     unit.destroy_critical(CriticalLocation {
         section: left,
-        slot: 2,
+        slot: 4,
     })
     .unwrap();
     assert_eq!(unit.c3_hardware().unwrap().working_masters, 1);
     unit.destroy_critical(CriticalLocation {
         section: left,
-        slot: 7,
+        slot: 9,
     })
     .unwrap();
     assert_eq!(unit.c3_hardware().unwrap().working_masters, 0);
@@ -105,18 +106,18 @@ fn slaves_and_c3i_use_live_slot_thresholds_without_trusting_flags() {
     assert!(unit.c3_hardware().unwrap().c3i_operational);
     unit.destroy_critical(CriticalLocation {
         section: right,
-        slot: 0,
+        slot: 2,
     })
     .unwrap();
     assert!(unit.c3_hardware().unwrap().c3i_operational);
     unit.destroy_critical(CriticalLocation {
         section: left,
-        slot: 1,
+        slot: 3,
     })
     .unwrap();
     unit.destroy_critical(CriticalLocation {
         section: left,
-        slot: 0,
+        slot: 2,
     })
     .unwrap();
     let hardware = unit.c3_hardware().unwrap();
