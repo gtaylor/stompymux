@@ -610,6 +610,8 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
             &template.sections[&part.location.section].criticals[&part.location.slot].equipment;
         total += vehicle_system_price(prices, part.system, context, equipment)?;
     }
+    // Transport bays beyond the free standard cargo bay (TechManual p. 293).
+    total += template.transport_bays()?.cost();
     if flag_vehicle(template, "OmniMech_Tech") {
         total *= OMNI_MULTIPLIER;
     }

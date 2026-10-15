@@ -22,6 +22,8 @@ pub struct VehicleMass {
     /// Power amplifiers an ICE vehicle carries for its energy weapons (TechManual p. 106).
     pub power_amplifiers: u32,
     pub cooling: u32,
+    /// The standard cargo bay `cargo_space` describes plus every other transport bay
+    /// (TechManual p. 239).
     pub cargo: u32,
     /// Physical mass of listed or currently loaded rounds in surviving sections.
     pub ammunition: u32,
@@ -185,7 +187,9 @@ impl VehicleTemplate {
             self.attributes.get("cargo_space").map(String::as_str),
             self.has_special("Carrier_Tech"),
             self.has_special("CargoTech"),
-        )?;
+        )?
+        .checked_add(self.transport_bays()?.mass())
+        .context("vehicle mass overflow")?;
         let ammunition = loadout
             .ammunition
             .iter()
@@ -330,6 +334,16 @@ impl VehicleTemplate {
 }
 
 impl VehicleTemplate {
+    /// The transport bays beyond the standard cargo bay, construction data only (TechManual
+    /// p. 239).
+    pub fn transport_bays(&self) -> Result<super::TransportBays> {
+        super::TransportBays::from_attribute(
+            self.attributes
+                .get(super::TRANSPORT_BAYS)
+                .map(String::as_str),
+        )
+    }
+
     /// Whether the armor is Clan-made: the chassis technology base unless a mixed-technology
     /// flag names the armor's own.
     pub fn clan_armor(&self) -> bool {

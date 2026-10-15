@@ -40,6 +40,7 @@ use super::construction::{
 };
 use super::{
     CriticalDefinition, MechChassis, MechSection, RawMovement, RawUnitClass, SectionDefinition,
+    TRANSPORT_BAYS, TransportBays,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
@@ -234,6 +235,11 @@ impl ParsedTemplate {
         let sections = document.remove("sections");
         let split_mounts = document.remove("split_mounts");
         let construction = document.remove("construction");
+        let transport_bays = document
+            .remove(TRANSPORT_BAYS)
+            .map(TransportBays::decode)
+            .transpose()
+            .with_context(|| format!("invalid {TRANSPORT_BAYS}"))?;
         let construction = construction
             .map(Construction::decode)
             .transpose()
@@ -313,6 +319,17 @@ impl ParsedTemplate {
                 "max_speed".to_owned(),
                 (f64::from(top) * SPEED_PER_MP).to_string(),
             );
+        }
+        if let Some(bays) = transport_bays {
+            // Transport bays are combat vehicle construction (TechManual p. 239); Mechs carry
+            // cargo only through `cargo_space`.
+            ensure!(
+                matches!(class, Some(RawUnitClass::Vehicle | RawUnitClass::Vtol)),
+                "{TRANSPORT_BAYS} are only for vehicles and VTOLs"
+            );
+            if let Some(stored) = bays.to_attribute() {
+                fields.insert(TRANSPORT_BAYS.to_owned(), stored);
+            }
         }
         let chassis = match class {
             Some(RawUnitClass::Mech) => fields
@@ -708,6 +725,7 @@ pub fn render(
         ensure!(
             UNRENDERED.contains(&key.as_str())
                 || key == ENGINE_RATING
+                || key == TRANSPORT_BAYS
                 || FIELDS.iter().any(|(_, attribute, _)| attribute == key),
             "unsupported template attribute {key}"
         );
@@ -806,6 +824,10 @@ pub fn render(
     let constructed = unit.places_equipment()
         || matches!(unit.class, Some(RawUnitClass::Vehicle | RawUnitClass::Vtol));
     output.push_str(&unit.construction.render(constructed));
+    output.push_str(
+        &TransportBays::from_attribute(attributes.get(TRANSPORT_BAYS).map(String::as_str))?
+            .render(),
+    );
     let mounts = split_mounts(sections)?;
     for section in sections {
         render_section(&mut output, section, &mounts, &unit)?;

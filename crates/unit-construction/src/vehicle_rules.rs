@@ -124,8 +124,10 @@ impl VehicleTemplate {
     }
 
     /// Item slots the loadout occupies: one per weapon and per equipment item, one per
-    /// ammunition type however many tons it holds, and one for a cargo bay (TechManual
-    /// pp. 98, 106). Heat sinks and power amplifiers take none (TechManual pp. 104, 106).
+    /// ammunition type however many tons it holds, one for the standard cargo bay that
+    /// `cargo_space` describes (TechManual pp. 98, 106), one per other type of transport bay and
+    /// one per cargo container (TechManual pp. 107, 239). Heat sinks and power amplifiers take
+    /// none (TechManual pp. 104, 106).
     pub fn item_slots(&self, loadout: &VehicleLoadout) -> u16 {
         let weapons = loadout.weapons.len();
         let systems = loadout
@@ -144,7 +146,10 @@ impl VehicleTemplate {
             .get("cargo_space")
             .and_then(|space| space.parse::<u32>().ok())
             .is_some_and(|space| space > 0);
-        let total = weapons + systems + ammunition.len() + usize::from(cargo);
+        let bays = self
+            .transport_bays()
+            .map_or(0, |bays| bays.item_slots() as usize);
+        let total = weapons + systems + ammunition.len() + usize::from(cargo) + bays;
         u16::try_from(total).unwrap_or(u16::MAX)
     }
 
@@ -172,6 +177,7 @@ impl VehicleTemplate {
     /// cargo space or wasted weight (TechManual pp. 97, 106) and is only a warning.
     pub fn construction_rules(&self) -> Result<VehicleConstruction> {
         let mass = self.mass()?;
+        self.transport_bays()?;
         let loadout = VehicleLoadout::resolve(self)?;
         let armor: u32 = self
             .sections
@@ -808,6 +814,67 @@ slots = [
                 .unwrap_err()
                 .to_string()
                 .contains("Inner Sphere technology")
+        );
+    }
+
+    /// Transport bays weigh, take slots and cost as the Transport Bay table says (TechManual
+    /// p. 239), alongside the standard cargo bay `cargo_space` describes, and survive a
+    /// document round trip; Mechs carry none.
+    #[test]
+    fn transport_bays_weigh_claim_slots_and_cost() {
+        // Trade the Zhukov's SRM-6 and its ammunition (4 tons, 2 slots) for a 4-ton infantry
+        // compartment, as the Hephaestus worked example allots infantry-cargo space (TechManual
+        // p. 107).
+        let carrier = ZHUKOV
+            .replace(
+                "slots = [\n    { at = 1, item = \"IS.SRM-6\" },\n    { at = 2, item = \"Ammo_IS.SRM-6\", rounds = 15 },\n]\n",
+                "",
+            )
+            .replace(
+                "[sections.left_side]",
+                "[transport_bays]\ninfantry_compartment = 4\n\n[sections.left_side]",
+            );
+        let template = parse(&carrier);
+        let report = template.construction_rules().unwrap();
+        assert_eq!(report.mass.cargo, 4 * 1024);
+        assert_eq!(report.mass.design_total, 75 * 1024);
+        assert_eq!(report.item_slots, 4);
+        let prices = crate::PartPrices::new();
+        assert_eq!(
+            crate::vehicle_template_base_cost(&prices, &template).unwrap(),
+            crate::vehicle_template_base_cost(&prices, &parse(ZHUKOV)).unwrap()
+                - crate::Weapon::Srm6.cost() * 175 / 100
+        );
+        // A foot infantry bay instead weighs 5 tons and costs 15,000 C-bills a ton; with a
+        // 1-ton standard cargo bay beside it, each takes its own slot.
+        let bay = parse(
+            &carrier
+                .replace("infantry_compartment = 4", "foot_infantry_bay = 1")
+                .replace(
+                    "walk_mp = 3\n",
+                    "walk_mp = 3\ncargo_space = 100\nspecials = [\"CargoTech\"]\n",
+                ),
+        );
+        assert_eq!(bay.mass().unwrap().cargo, 6 * 1024);
+        assert_eq!(bay.item_slots(&VehicleLoadout::resolve(&bay).unwrap()), 5);
+        assert_eq!(
+            crate::vehicle_template_base_cost(&prices, &bay).unwrap(),
+            crate::vehicle_template_base_cost(&prices, &template).unwrap() + 75_000 * 175 / 100
+        );
+        let rendered = bay.to_document().unwrap();
+        assert!(
+            rendered.contains("\n[transport_bays]\nfoot_infantry_bay = 1\n"),
+            "{rendered}"
+        );
+        assert_eq!(VehicleTemplate::parse("test", &rendered).unwrap(), bay);
+        let mech = crate::MechTemplate::parse(
+            "test",
+            "name = \"M\"\nclass = \"mech\"\n[transport_bays]\nliquid_cargo = 1\n",
+        )
+        .unwrap_err();
+        assert!(
+            format!("{mech:#}").contains("only for vehicles"),
+            "{mech:#}"
         );
     }
 

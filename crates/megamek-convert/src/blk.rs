@@ -319,8 +319,9 @@ pub fn convert(source: &str) -> Result<Converted> {
         sections.push(section);
     }
     let mut warnings = Vec::new();
-    if !file.lines("transporters").is_empty() {
-        warnings.push("ignoring transporter (troop and cargo) capacity".to_owned());
+    let transport = transporters(file.lines("transporters"), &mut warnings)?;
+    if transport.cargo_space.is_some() {
+        push_special(&mut specials, "CargoTech");
     }
     let reference = if model.is_empty() {
         name.clone()
@@ -341,10 +342,112 @@ pub fn convert(source: &str) -> Result<Converted> {
             heat_sinks: (heat_sinks != free).then_some(heat_sinks),
             construction,
             specials,
+            cargo_space: transport.cargo_space,
+            transport_bays: transport.bays,
             sections,
             split_mounts: Vec::new(),
         },
         warnings,
+    })
+}
+
+/// The bays a `<transporters>` block converts to.
+struct Transport {
+    /// Standard cargo in hundredths of a ton.
+    cargo_space: Option<u32>,
+    /// `[transport_bays]` keys and values.
+    bays: Vec<(&'static str, String)>,
+}
+
+/// Convert `<transporters>` lines into the standard cargo bay and the transport bays
+/// (TechManual p. 239). `troopspace` is an infantry compartment in tons and `cargobay` standard
+/// cargo in tons; the specialized cargo bays state their capacity, which is their weight times
+/// the table's capacity factor; `infantrybay` states a number of platoon bays. Battle armor
+/// bays, whose MegaMek size has no confirmed meaning, are refused; seats, quarters, vehicle
+/// cubicles and battle armor handles are not bays a combat vehicle builds and are reported and
+/// left out.
+fn transporters(lines: &[String], warnings: &mut Vec<String>) -> Result<Transport> {
+    let mut cargo = 0.0;
+    let mut tons: BTreeMap<&'static str, f64> = BTreeMap::new();
+    let mut counts: BTreeMap<&'static str, u32> = BTreeMap::new();
+    for line in lines {
+        let fields: Vec<&str> = line.split(':').map(str::trim).collect();
+        let kind = fields[0].to_ascii_lowercase();
+        let size = || -> Result<f64> {
+            let size: f64 = fields
+                .get(1)
+                .with_context(|| format!("transporter {line} has no size"))?
+                .parse()
+                .with_context(|| format!("transporter {line} has no numeric size"))?;
+            ensure!(
+                size.is_finite() && size > 0.0,
+                "transporter {line} has no size"
+            );
+            Ok(size)
+        };
+        let capacity = |key: &'static str, factor: f64| -> Result<(&'static str, f64)> {
+            Ok((key, size()? / factor))
+        };
+        let (key, weight) = match kind.as_str() {
+            "troopspace" => capacity("infantry_compartment", 1.0)?,
+            "cargobay" => {
+                cargo += size()?;
+                continue;
+            }
+            "liquidcargobay" => capacity("liquid_cargo", 0.91)?,
+            "insulatedcargobay" => capacity("insulated_cargo", 0.87)?,
+            "refrigeratedcargobay" => capacity("refrigerated_cargo", 0.87)?,
+            "livestockcargobay" => capacity("livestock_cargo", 0.83)?,
+            "infantrybay" => {
+                let key = match fields
+                    .get(4)
+                    .map(|kind| kind.to_ascii_lowercase())
+                    .as_deref()
+                {
+                    Some("foot") => "foot_infantry_bay",
+                    Some("jump") => "jump_infantry_bay",
+                    Some("motorized") => "motorized_infantry_bay",
+                    Some("mechanized") => "mechanized_infantry_bay",
+                    _ => bail!("unsupported infantry bay {line}"),
+                };
+                let count = size()?;
+                ensure!(
+                    count.fract() == 0.0 && count <= f64::from(u32::MAX),
+                    "unsupported infantry bay {line}: not a whole number of bays"
+                );
+                *counts.entry(key).or_default() += count as u32;
+                continue;
+            }
+            "battlearmorbay" => bail!("unsupported transporter: battle armor bay {line}"),
+            _ => {
+                warnings.push(format!("ignoring transporter {line}"));
+                continue;
+            }
+        };
+        *tons.entry(key).or_default() += weight;
+    }
+    let mut bays = Vec::new();
+    for (key, weight) in tons {
+        let halves = (weight * 2.0).round();
+        ensure!(
+            (weight * 2.0 - halves).abs() < 0.01,
+            "unsupported {key}: {weight} tons is not a whole number of half tons"
+        );
+        bays.push((key, format!("{}", halves / 2.0)));
+    }
+    bays.extend(
+        counts
+            .into_iter()
+            .map(|(key, count)| (key, count.to_string())),
+    );
+    let hundredths = (cargo * 100.0).round();
+    ensure!(
+        (cargo * 100.0 - hundredths).abs() < 0.01,
+        "unsupported cargo bay of {cargo} tons"
+    );
+    Ok(Transport {
+        cargo_space: (hundredths > 0.0).then_some(hundredths as u32),
+        bays,
     })
 }
 
@@ -454,6 +557,56 @@ mod tests {
                 mixed,
                 "{rules}"
             );
+        }
+    }
+
+    /// Troop space becomes an infantry compartment, cargo bays the standard cargo bay and the
+    /// specialized bays their own transport bays (TechManual p. 239); non-bay transporters are
+    /// reported and left out, and battle armor bays refused.
+    #[test]
+    fn transporters_become_cargo_space_and_transport_bays() {
+        let with = |lines: &str| {
+            BULLDOG.replacen(
+                "<tonnage>",
+                &format!("<transporters>\n{lines}\n</transporters>\n<tonnage>"),
+                1,
+            )
+        };
+        let converted = convert(&with(
+            "troopspace:4.0\ncargobay:1.0:1:1::-1:0\nLiquidCargoBay:0.455:1:1::-1:0\n\
+             infantrybay:1.0:1:1:Foot:-1:0\nBattleArmorHandles - troopers:-1",
+        ))
+        .unwrap();
+        assert_eq!(converted.draft.cargo_space, Some(100));
+        assert!(converted.draft.specials.contains(&"CargoTech"));
+        assert_eq!(
+            converted.draft.transport_bays,
+            [
+                ("infantry_compartment", "4".to_owned()),
+                ("liquid_cargo", "0.5".to_owned()),
+                ("foot_infantry_bay", "1".to_owned()),
+            ]
+        );
+        assert_eq!(
+            converted.warnings,
+            ["ignoring transporter BattleArmorHandles - troopers:-1"]
+        );
+        let rendered = converted.draft.render();
+        assert!(rendered.contains("cargo_space = 100\n"), "{rendered}");
+        assert!(
+            rendered.contains("[transport_bays]\ninfantry_compartment = 4\nliquid_cargo = 0.5\n"),
+            "{rendered}"
+        );
+        for (lines, expected) in [
+            ("battlearmorbay:4.5:1:1::-1:0", "battle armor bay"),
+            (
+                "infantrybay:1.5:1:1:Foot:-1:0",
+                "not a whole number of bays",
+            ),
+            ("troopspace:1.2", "not a whole number of half tons"),
+        ] {
+            let error = format!("{:#}", convert(&with(lines)).err().unwrap());
+            assert!(error.contains(expected), "{lines}: {error}");
         }
     }
 

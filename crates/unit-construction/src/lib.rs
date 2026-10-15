@@ -55,6 +55,7 @@ mod speed;
 mod tech_base;
 mod technology;
 mod template_check;
+mod transport_bay;
 mod unit;
 mod vehicle;
 mod vehicle_engine;
@@ -121,6 +122,7 @@ pub use speed::{
 pub use tech_base::{TechBase, TechnologyInventory, check_technology_base};
 pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
 pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
+pub use transport_bay::{BaySize, TRANSPORT_BAYS, TransportBay, TransportBays};
 pub use unit::UnitTemplate;
 pub use vehicle::{VehicleMovement, VehicleSection, VehicleTemplate};
 pub use vehicle_engine::{

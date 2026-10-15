@@ -184,7 +184,8 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   for Clan or light, 3 for heavy), 1 for hardened or laser-reflective armor, 2
   for stealth armor, and plus 1 for a compact engine (TacOps AUE p. 92 for the
   advanced armors). Each weapon
-  and item takes a slot, as does each ammunition type and a cargo bay; heat
+  and item takes a slot, as does each ammunition type, the cargo bay and each
+  type of transport bay (see below); heat
   sinks and power amplifiers take none.
 - Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or
   triple-strength myomer. A VTOL's turret is a chin turret (TacOps AUE p. 160).
@@ -198,6 +199,46 @@ MP, engine rating, mass, item slots, armor and energy weapon heat against these
 limits. Stationary
 installations (`movement = "none"`) are not combat vehicles and only have their
 mass calculated.
+
+### Cargo and transport bays
+
+A vehicle carries cargo in two ways (TechManual p. 239, Transport Bays):
+
+- `cargo_space` is the standard cargo bay, the only bay the game loads stock
+  into. With the `CargoTech` special it is counted in hundredths of a ton
+  (`cargo_space = 400` is a 4-ton bay); it weighs what it holds and takes one
+  item slot.
+- A `[transport_bays]` table lists every other bay. The game has no infantry
+  units and does not load anything into these bays, so they are construction
+  data only: they add mass, item slots and C-bill cost, and no Battle Value.
+  Only vehicles and VTOLs may have one.
+
+```toml
+[transport_bays]
+infantry_compartment = 4   # tons
+foot_infantry_bay = 1      # bays
+```
+
+| Key | Size | Weight | Cost per ton |
+| --- | --- | --- | --- |
+| `infantry_compartment` | tons | as stated | 0 |
+| `foot_infantry_bay` | bays | 5 tons each | 15,000 |
+| `jump_infantry_bay` | bays | 6 tons each | 15,000 |
+| `motorized_infantry_bay` | bays | 7 tons each | 15,000 |
+| `mechanized_infantry_bay` | bays | 8 tons each | 15,000 |
+| `battle_armor_bay` | bays | 8 tons each (4 troopers) | 15,000 |
+| `clan_battle_armor_bay` | bays | 10 tons each (5 troopers) | 15,000 |
+| `six_trooper_battle_armor_bay` | bays | 12 tons each (6 troopers) | 15,000 |
+| `liquid_cargo` | tons | as stated | 100 |
+| `insulated_cargo` | tons | as stated | 250 |
+| `refrigerated_cargo` | tons | as stated | 200 |
+| `livestock_cargo` | tons | as stated | 2,500 |
+| `cargo_containers` | containers | 10 tons each | 0 |
+
+Weights are given in half-ton steps. Each type of bay takes one item slot, as
+all infantry bays of one type combine into a single slot, except cargo
+containers, which take a slot each. The standard cargo bay takes its own slot
+beside them.
 
 ## Sections
 
@@ -325,5 +366,10 @@ MegaMek's vehicle body location has no counterpart, so body ammunition is
 placed beside a weapon it feeds and other body equipment in the first location
 with room. Vehicle heat sinks are set to cover energy weapon heat with single heat
 sinks, and vehicles with endo steel, composite or reinforced structure are
-refused. Troop and
-cargo capacity is not converted. Radios are left at their defaults.
+refused. A `cargobay` becomes the standard cargo bay (`cargo_space` in
+hundredths of a ton, with `CargoTech`); `troopspace` becomes an
+`infantry_compartment`, `infantrybay` lines become infantry bays counted in
+platoon bays, and liquid, insulated, refrigerated and livestock bays, which
+MegaMek sizes by capacity, become `[transport_bays]` weights. Battle armor bays
+are refused; seats, quarters, vehicle cubicles and battle armor handles are
+reported and left out. Radios are left at their defaults.
