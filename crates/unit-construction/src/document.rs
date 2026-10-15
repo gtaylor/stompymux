@@ -39,8 +39,8 @@ use super::construction::{
     is_fixed_item, large_engine, mech_internal, movement_points, vehicle_internal,
 };
 use super::{
-    CriticalDefinition, MechChassis, MechSection, RawMovement, RawUnitClass, SectionDefinition,
-    TRANSPORT_BAYS, TransportBays,
+    CriticalDefinition, MechChassis, MechSection, RawMovement, RawUnitClass, SECTION_SLOTS,
+    SectionDefinition, TRANSPORT_BAYS, TransportBays, VEHICLE_SECTION_SLOT_LIMIT,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde::Deserialize;
@@ -177,8 +177,8 @@ enum SlotRange {
 }
 
 impl SlotRange {
-    /// Decode into an inclusive zero-based range within a twelve-slot section.
-    fn bounds(&self) -> Result<(u8, u8)> {
+    /// Decode into an inclusive zero-based range within a section of `limit` slots.
+    fn bounds(&self, limit: u8) -> Result<(u8, u8)> {
         let (first, last) = match self {
             Self::One(slot) => (*slot, *slot),
             Self::Run(run) => {
@@ -189,9 +189,10 @@ impl SlotRange {
                 )
             }
         };
+        let limit = i64::from(limit);
         ensure!(
-            (1..=12).contains(&first) && (first..=12).contains(&last),
-            "slots must be between 1 and 12 in ascending order"
+            (1..=limit).contains(&first) && (first..=limit).contains(&last),
+            "slots must be between 1 and {limit} in ascending order"
         );
         Ok((first as u8 - 1, last as u8 - 1))
     }
@@ -220,6 +221,15 @@ impl Unit {
     /// Whether construction places fixed equipment: constructed biped and quad mechs.
     fn places_equipment(&self) -> bool {
         self.chassis.is_some()
+    }
+
+    /// Slots each section may hold. Vehicles have no per-location limit, only the
+    /// whole-vehicle item-slot budget (TechManual p. 98); every other class has twelve.
+    fn section_slots(&self) -> u8 {
+        match self.class {
+            Some(RawUnitClass::Vehicle | RawUnitClass::Vtol) => VEHICLE_SECTION_SLOT_LIMIT,
+            _ => SECTION_SLOTS,
+        }
     }
 }
 
@@ -430,8 +440,8 @@ impl ParsedTemplate {
                 .engine_at
                 .map(|slot| {
                     ensure!(
-                        (1..=12).contains(&slot),
-                        "engine_at must be a slot from 1 to 12"
+                        (1..=i64::from(SECTION_SLOTS)).contains(&slot),
+                        "engine_at must be a slot from 1 to {SECTION_SLOTS}"
                     );
                     Ok(slot as u8 - 1)
                 })
@@ -453,7 +463,7 @@ impl ParsedTemplate {
         for slot in section.slots {
             let (first, last) = slot
                 .at
-                .bounds()
+                .bounds(unit.section_slots())
                 .with_context(|| format!("item {}", slot.item))?;
             ensure!(
                 !constructed || !is_fixed_item(&slot.item),
@@ -488,7 +498,7 @@ impl ParsedTemplate {
             extension.section
         );
         ensure!(!is_ammunition(&mount.item), "ammunition cannot be split");
-        let (first, last) = primary.at.bounds()?;
+        let (first, last) = primary.at.bounds(SECTION_SLOTS)?;
         let weapon = CriticalDefinition {
             equipment: mount.item,
             data: "-".into(),
@@ -504,7 +514,7 @@ impl ParsedTemplate {
             .get_mut(&primary.section.to_ascii_lowercase())
             .with_context(|| format!("missing section {}", primary.section))?;
         occupy(layout, first, last, &weapon)?;
-        let (first, last) = extension.at.bounds()?;
+        let (first, last) = extension.at.bounds(SECTION_SLOTS)?;
         let layout = self
             .sections
             .get_mut(&extension.section.to_ascii_lowercase())
@@ -1278,8 +1288,28 @@ armor = 9
             "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.center_torso]\nengine_slots = 9",
             "class = \"mech\"\nmovement = \"biped\"\ntons = 22\n[sections.head]",
             "class = \"vehicle\"\nmovement = \"track\"\ntons = 20\n[sections.turret]\nexplicit = true",
+            "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.left_torso]\nslots = [{ at = 13, item = \"IS.SmallLaser\" }]",
+            "class = \"mech\"\nmovement = \"biped\"\ntons = 20\n[sections.left_torso]\nexplicit = true\nslots = [{ at = \"12-13\", item = \"IS.SmallLaser\" }]",
+            "class = \"vehicle\"\nmovement = \"track\"\ntons = 20\n[sections.turret]\nslots = [{ at = 256, item = \"IS.SmallLaser\" }]",
         ] {
             assert!(ParsedTemplate::parse("X", source).is_err(), "{source}");
+        }
+    }
+
+    /// Vehicle sections have no per-location slot limit; Mech sections keep twelve.
+    #[test]
+    fn vehicle_sections_hold_more_than_twelve_entries() {
+        for class in ["vehicle", "vtol"] {
+            let movement = if class == "vtol" { "vtol" } else { "track" };
+            let source = format!(
+                "class = \"{class}\"\nmovement = \"{movement}\"\ntons = 20\n[sections.front_side]\nslots = [{{ at = \"1-13\", item = \"IS.MachineGun\" }}, {{ at = 255, item = \"Case\" }}]"
+            );
+            let parsed = ParsedTemplate::parse("X", &source).unwrap();
+            let front = &parsed.sections["front_side"];
+            assert_eq!(front.criticals.len(), 14);
+            assert_eq!(front.criticals[&12].equipment, "IS.MachineGun");
+            assert_eq!(front.criticals[&254].equipment, "Case");
+            assert_eq!(front.listed_slots(), 255);
         }
     }
 

@@ -13,7 +13,7 @@ pub struct Slot {
     pub modes: Vec<&'static str>,
 }
 
-/// One armored location and its twelve slots.
+/// One armored location and its slots: twelve for a Mech, as many as a vehicle needs.
 #[derive(Debug, Clone)]
 pub struct Section {
     /// Template heading such as `left_arm` or `front_side`.
@@ -22,18 +22,18 @@ pub struct Section {
     pub rear: u16,
     /// Mech sections list their actuators, engine, gyro and cockpit themselves.
     pub explicit: bool,
-    pub slots: [Option<Slot>; 12],
+    pub slots: Vec<Option<Slot>>,
 }
 
 impl Section {
-    /// An empty section.
+    /// An empty section of twelve slots.
     pub fn new(heading: &'static str, armor: u16, rear: u16, explicit: bool) -> Self {
         Self {
             heading,
             armor,
             rear,
             explicit,
-            slots: Default::default(),
+            slots: vec![None; 12],
         }
     }
 }

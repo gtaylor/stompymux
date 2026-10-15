@@ -101,7 +101,7 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Cri
             slots: inspect(
                 &inventory,
                 &names,
-                12,
+                layout.listed_slots(),
                 |slot| VehicleCriticalLocation { section, slot },
                 |location| SlotDamage {
                     destroyed: unit.critical_destroyed(location),
@@ -356,15 +356,17 @@ impl CriticalInspection {
     }
 }
 
-/// Render paired columns in physical slot order, without omitting uninstalled positions.
+/// Render paired columns in physical slot order, without omitting uninstalled positions. A
+/// vehicle section with an odd slot count leaves the last right-hand cell blank.
 pub fn critical_status(world: &World, id: ObjectId, section: &str) -> Result<String> {
     let report = critical_report(world, id, section)?;
     let rows: Vec<_> = report.slots.iter().map(CriticalInspection::text).collect();
-    let half = rows.len() / 2;
+    let half = rows.len().div_ceil(2);
     let width = rows[..half].iter().map(String::len).max().unwrap_or(0);
     let mut lines = vec![format!("{} Criticals", report.name)];
     for slot in 0..half {
-        lines.push(format!("{:<width$} | {}", rows[slot], rows[slot + half]));
+        let right = rows.get(slot + half).map_or("", String::as_str);
+        lines.push(format!("{:<width$} | {right}", rows[slot]));
     }
     Ok(lines.join("\r\n"))
 }

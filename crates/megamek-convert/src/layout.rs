@@ -3,8 +3,10 @@
 use crate::draft::Slot;
 use crate::equipment::Critical;
 use anyhow::{Result, bail};
+use stompymux_unit_construction::{SECTION_SLOTS, VEHICLE_SECTION_SLOT_LIMIT};
 
-/// How many slots each weapon instance spans in this kind of unit.
+/// How many slots each weapon instance spans in this kind of unit, and so how many slots a
+/// section offers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WeaponSpan {
     /// Mech weapons occupy their catalogue critical slot count.
@@ -13,14 +15,27 @@ pub enum WeaponSpan {
     Single,
 }
 
-/// Build a section's slots from its criticals, which must already be in slot order.
-pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<[Option<Slot>; 12]> {
-    if criticals.len() > 12 {
-        bail!("{} items do not fit in 12 slots", criticals.len());
+impl WeaponSpan {
+    /// Slots one section holds: twelve for a Mech, and no per-location limit for a vehicle,
+    /// whose item-slot budget covers the whole vehicle (TechManual p. 98).
+    fn section_slots(self) -> usize {
+        match self {
+            Self::Catalogue => usize::from(SECTION_SLOTS),
+            Self::Single => usize::from(VEHICLE_SECTION_SLOT_LIMIT),
+        }
+    }
+}
+
+/// Build a section's slots from its criticals, which must already be in slot order. The
+/// result lists at least twelve slots, empty or not.
+pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<Vec<Option<Slot>>> {
+    let limit = span.section_slots();
+    if criticals.len() > limit {
+        bail!("{} items do not fit in {limit} slots", criticals.len());
     }
     let mut launchers = launcher_starts(criticals, span, |_| true);
     let mut mrm_launchers = launcher_starts(criticals, span, |weapon| weapon.is_mrm());
-    let mut slots: [Option<Slot>; 12] = Default::default();
+    let mut slots = vec![None; criticals.len().max(usize::from(SECTION_SLOTS))];
     // The launcher the first slot of a two-slot Mech Artemis V installation claimed.
     let mut artemis_v: Option<usize> = None;
     for (index, critical) in criticals.iter().enumerate() {
@@ -109,6 +124,22 @@ fn claim_launcher(launchers: &mut Vec<usize>, artemis: usize) -> Result<usize> {
 mod tests {
     use super::*;
     use crate::equipment::parse;
+
+    /// A vehicle location has no slot limit, while a Mech location holds twelve.
+    #[test]
+    fn vehicle_locations_take_more_than_twelve_items() {
+        let mut criticals: Vec<_> = std::iter::repeat_n("ISMediumLaser", 11)
+            .chain(["SRM 4", "ISArtemisIV"])
+            .map(|name| parse(name).unwrap())
+            .collect();
+        let slots = slots(&criticals, WeaponSpan::Single).unwrap();
+        assert_eq!(slots.len(), 13);
+        assert_eq!(slots[12].as_ref().unwrap().link, Some(12));
+        criticals.truncate(12);
+        criticals.push(parse("ISMediumLaser").unwrap());
+        assert!(super::slots(&criticals, WeaponSpan::Catalogue).is_err());
+        assert_eq!(super::slots(&[], WeaponSpan::Single).unwrap().len(), 12);
+    }
 
     /// An Apollo system links to the MRM launcher in its section, passing over other
     /// launchers.

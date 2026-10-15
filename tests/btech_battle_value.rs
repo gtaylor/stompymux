@@ -13,6 +13,7 @@ const STALKER: &str = include_str!("fixtures/btech/units/STK-3F.toml");
 const PHOENIX_HAWK: &str = include_str!("fixtures/btech/units/PXH-1.toml");
 const THUNDERBOLT: &str = include_str!("fixtures/btech/units/TDR-5S.toml");
 const CENTURION: &str = include_str!("fixtures/btech/units/CN9-A.toml");
+const ONTOS: &str = include_str!("../game/units/Ontos-58.toml");
 
 /// Construct a supported fixture without map or pilot dependencies.
 fn unit(source: &str) -> Mech {
@@ -71,6 +72,20 @@ fn published_battle_values() {
     }
     assert_eq!(vehicle(VEDETTE).battle_value().unwrap().total, 475);
     assert_eq!(vehicle(MANTICORE).battle_value().unwrap().total, 993);
+    // Ontos (Upgrade, TRO 3058): Artemis IV on the LRM-15, SRM-6 and SRM-4.
+    assert_eq!(vehicle(ONTOS).battle_value().unwrap().total, 1242);
+}
+
+/// The TRO 3058 Upgrade Ontos turret holds thirteen entries: three Artemis IV beside the
+/// LRM-15, SRM-6 and SRM-4 they guide, which construction places at exactly 95 tons.
+#[test]
+fn ontos_book_loadout() {
+    let template = VehicleTemplate::parse("Ontos-58", ONTOS).unwrap();
+    let check = check_battle_vehicle_template(&template);
+    assert!(check.constructible, "{check:?}");
+    let construction = check.construction.unwrap();
+    assert!(construction.warnings.is_empty(), "{construction:?}");
+    assert_eq!(construction.mass.design_total, 95 * 1024);
 }
 
 /// Clan side-torso ammunition is covered by assumed CASE, and machine guns generate no heat.

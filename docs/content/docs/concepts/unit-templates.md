@@ -195,7 +195,9 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   advanced armors). Each weapon
   and item takes a slot, as does each ammunition type, the cargo bay and each
   type of transport bay (see below); heat
-  sinks and power amplifiers take none.
+  sinks and power amplifiers take none. The item slots are the whole
+  vehicle's budget: a location has no slot limit of its own, so a turret may
+  list more than twelve entries.
 - Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or
   triple-strength myomer. A VTOL's turret is a chin turret (TacOps AUE p. 160).
 - Everything together may not weigh more than the vehicle. Unspent tonnage is
@@ -305,7 +307,7 @@ Each slot entry places one item in a run of consecutive critical slots:
 
 | Key | Meaning |
 | --- | --- |
-| `at` | A one-based slot such as `12`, or an inclusive run such as `"4-6"`, within slots 1 to 12. |
+| `at` | A one-based slot such as `12`, or an inclusive run such as `"4-6"`. Mech sections hold slots 1 to 12; vehicle and VTOL locations have no per-location limit (slots 1 to 255), since only the vehicle's item slots limit its equipment. |
 | `item` | Equipment name. |
 | `rounds` | Ammunition only: rounds in the bin. |
 | `link` | Non-ammunition only: the slot an Artemis IV or similar system controls. |

@@ -266,8 +266,9 @@ pub fn convert(source: &str) -> Result<Converted> {
             }),
             _ => None,
         };
+        // Vehicle locations have no slot limit, so body equipment joins the bin's weapon or
+        // the first armored location.
         let heading = heading
-            .filter(|heading| located[heading].len() < 12)
             .or_else(|| {
                 [
                     "front_side",
@@ -277,10 +278,7 @@ pub fn convert(source: &str) -> Result<Converted> {
                     "turret",
                 ]
                 .into_iter()
-                .find(|heading| {
-                    armor.contains_key(heading)
-                        && located.get(heading).is_none_or(|items| items.len() < 12)
-                })
+                .find(|heading| armor.contains_key(heading))
             })
             .with_context(|| format!("no location has room for body equipment {line}"))?;
         located.entry(heading).or_default().push(critical);

@@ -1287,7 +1287,7 @@ Alias: `'empty'|'operational'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'
 
 - `section`: `string` — Stable Mech or vehicle section identity.
 - `name`: `string` — Chassis-specific display heading.
-- `slots`: `CriticalInspection[]` — All six or twelve physical slots, including empty ones.
+- `slots`: `CriticalInspection[]` — Every physical slot, including empty ones: six or twelve in a Mech section, and twelve or through the last occupied slot in a vehicle section.
 
 ## ElectronicMode
 

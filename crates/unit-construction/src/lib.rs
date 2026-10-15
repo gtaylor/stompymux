@@ -99,7 +99,10 @@ pub use mass::{
     armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
     structure_mass, system_mass, system_slot_mass,
 };
-pub use mech::{CriticalDefinition, MechSection, MechTemplate, SectionDefinition};
+pub use mech::{
+    CriticalDefinition, MechSection, MechTemplate, SECTION_SLOTS, SectionDefinition,
+    VEHICLE_SECTION_SLOT_LIMIT,
+};
 pub use mech_mass::{MassItem, MechMass, armor_denominator, structure_divisor};
 pub use mech_rules::{MAXIMUM_ENGINE_RATING, MAXIMUM_HEAD_ARMOR};
 pub use metadata::{unit_metadata, validate_unit_metadata};

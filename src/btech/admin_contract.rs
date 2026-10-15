@@ -429,8 +429,16 @@ pub fn administrative_section_info(
     administrative_section_valid(world, id, code).then(|| {
         let rear = class.as_str() == "Mech" && matches!(code, 2..=4);
         // C crits_in_loc (mech_identity.c:135-152): mech heads and legs carry six
-        // rows, quad mech arms six, mechwarrior sections two, others twelve.
+        // rows, quad mech arms six, mechwarrior sections two, others twelve. A live
+        // vehicle section has no slot limit and lists twelve or through its last item.
+        let vehicle_slots = world.btech.vehicles().get(&id).and_then(|unit| {
+            let section = inspection_vehicle_section(code).ok()?;
+            Some(usize::from(
+                unit.definition().sections.get(&section)?.listed_slots(),
+            ))
+        });
         let slots = match class.as_str() {
+            "Vehicle" | "Naval" | "VTOL" => vehicle_slots.unwrap_or(12),
             "Mech" => {
                 let quad = administrative_unit_movement(world, id).as_deref() == Some("Quad");
                 match code {

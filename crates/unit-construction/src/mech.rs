@@ -73,6 +73,26 @@ pub struct SectionDefinition {
     pub configuration: Option<String>,
 }
 
+/// Slots in a Mech section, and the slots every section lists before it overflows.
+pub const SECTION_SLOTS: u8 = 12;
+
+/// The highest one-based slot a vehicle section may hold. TechManual gives combat vehicles
+/// no per-location slot limit, only an item-slot budget for the whole vehicle, so this only
+/// keeps one-based slot numbers within a byte.
+pub const VEHICLE_SECTION_SLOT_LIMIT: u8 = u8::MAX;
+
+impl SectionDefinition {
+    /// Slots the section lists: twelve, or through its last occupied slot when a vehicle
+    /// section holds more.
+    pub fn listed_slots(&self) -> u8 {
+        self.criticals
+            .last_key_value()
+            .map_or(SECTION_SLOTS, |(&slot, _)| {
+                SECTION_SLOTS.max(slot.saturating_add(1))
+            })
+    }
+}
+
 /// A decoded BattleMech asset; successful parsing does not imply simulation support.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MechTemplate {
@@ -269,5 +289,28 @@ impl MechTemplate {
             .take(6)
             .count()
             >= 6
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A section lists twelve slots until an entry sits past them.
+    #[test]
+    fn listed_slots_cover_every_entry() {
+        let mut section = SectionDefinition::default();
+        assert_eq!(section.listed_slots(), 12);
+        let critical = CriticalDefinition {
+            equipment: "IS.MachineGun".into(),
+            data: "-".into(),
+            modes: Vec::new(),
+        };
+        section.criticals.insert(11, critical.clone());
+        assert_eq!(section.listed_slots(), 12);
+        section.criticals.insert(12, critical.clone());
+        assert_eq!(section.listed_slots(), 13);
+        section.criticals.insert(u8::MAX, critical);
+        assert_eq!(section.listed_slots(), u8::MAX);
     }
 }

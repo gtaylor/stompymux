@@ -2254,7 +2254,7 @@ function btech_unit.weapon_specifications(dbref) end
 ---@class CriticalReport
 ---@field section string Stable Mech or vehicle section identity.
 ---@field name string Chassis-specific display heading.
----@field slots CriticalInspection[] All six or twelve physical slots, including empty ones.
+---@field slots CriticalInspection[] Every physical slot, including empty ones: six or twelve in a Mech section, and twelve or through the last occupied slot in a vehicle section.
 
 ---Inspect equipment by cockpit section alias. The trusted query requires a callback transaction.
 ---Rows are detached from saved state; native CRITSTATUS separately requires a conscious assigned pilot.

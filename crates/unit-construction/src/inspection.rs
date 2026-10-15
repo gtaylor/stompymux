@@ -360,7 +360,8 @@ pub fn inspection_ammunition_modes(flags: &[String]) -> Vec<i32> {
         .collect()
 }
 
-/// Inspect all twelve raw slots without requiring a class-specific runtime.
+/// Inspect every raw slot, twelve or through the last occupied one, without requiring a
+/// class-specific runtime.
 pub fn inspect_raw_template_criticals(
     template: &RawTemplate,
     section: RawSectionCode,
@@ -369,8 +370,9 @@ pub fn inspect_raw_template_criticals(
         .sections
         .get(&section)
         .context("raw template section is missing")?;
-    let mut rows = Vec::with_capacity(12);
-    for slot in 0..12_u8 {
+    let slots = definition.listed_slots();
+    let mut rows = Vec::with_capacity(usize::from(slots));
+    for slot in 0..slots {
         let critical = definition.criticals.get(&slot);
         let identity = critical.and_then(inspection_raw_part);
         let part = identity.map(|value| value.0);
@@ -434,8 +436,9 @@ pub fn inspect_raw_template_weapons(template: &RawTemplate) -> Result<Vec<Inspec
             .sections
             .get(section)
             .context("raw template section is missing")?;
+        let slots = definition.listed_slots();
         let mut slot = 0_u8;
-        while slot < 12 {
+        while slot < slots {
             let Some(raw) = definition.criticals.get(&slot) else {
                 slot += 1;
                 continue;
