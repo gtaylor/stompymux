@@ -433,7 +433,7 @@ mod tests {
         // Two SRM-6s weigh 6 tons: a 1-ton turret rather than 0.75.
         assert_eq!(turret_mass(6 * 1024), 1024);
         assert_eq!(turret_mass(0), 0);
-        // The Neptune's large laser needs half a ton of amplifiers (TechManual p. 107).
+        // A large laser needs half a ton of amplifiers (TechManual p. 107).
         assert_eq!(
             power_amplifier_mass([Weapon::parse("IS.LargeLaser").unwrap()]),
             512
