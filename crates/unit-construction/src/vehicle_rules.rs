@@ -404,8 +404,14 @@ impl VehicleTemplate {
             !rotor,
             "No equipment may be mounted in the rotor (TechManual pp. 98, 106)"
         );
-        check_artemis(loadout)?;
-        check_apollo(loadout)?;
+        // Each Artemis or Apollo entry links the first slot of the launcher it guides in its
+        // own location; every vehicle entry guides its own launcher, Artemis V included.
+        super::fire_control::check_fire_control_links(
+            loadout,
+            &self.sections,
+            VehicleSection::name,
+            1,
+        )?;
         check_machine_gun_arrays(loadout)?;
         for part in &loadout.systems {
             match part.system {
@@ -418,72 +424,6 @@ impl VehicleTemplate {
         }
         Ok(())
     }
-}
-
-/// Artemis IV or V serves every LRM, SRM and MML launcher or none, one system per launcher in
-/// the launcher's own location (TechManual p. 206), so a controller cannot guide a launcher in
-/// another location.
-fn check_artemis(loadout: &VehicleLoadout) -> Result<()> {
-    let Some((section, launchers, controllers)) = fire_control_mismatch(
-        loadout,
-        |system| matches!(system, System::ArtemisIv | System::ArtemisV),
-        Weapon::is_artemis_launcher,
-    ) else {
-        return Ok(());
-    };
-    bail!(
-        "Artemis must serve every LRM, SRM and MML launcher from its location: {} has {launchers} launchers and {controllers} Artemis systems (TechManual p. 206)",
-        section.name()
-    )
-}
-
-/// An MRM "Apollo" fire control system serves every MRM launcher or none, one per launcher in
-/// the launcher's location (Tactical Operations: Advanced Units & Equipment p. 142).
-fn check_apollo(loadout: &VehicleLoadout) -> Result<()> {
-    let Some((section, launchers, controllers)) = fire_control_mismatch(
-        loadout,
-        |system| system == System::ApolloFcs,
-        Weapon::is_mrm,
-    ) else {
-        return Ok(());
-    };
-    bail!(
-        "An MRM Apollo fire control system must serve every MRM launcher from its location: {} has {launchers} launchers and {controllers} Apollo systems (Tactical Operations: Advanced Units & Equipment p. 142)",
-        section.name()
-    )
-}
-
-/// The first location whose fire-control systems do not match its served launchers one for
-/// one, as `(section, launchers, controllers)`. A vehicle without any such system has none.
-fn fire_control_mismatch(
-    loadout: &VehicleLoadout,
-    controls: impl Fn(System) -> bool,
-    serves: impl Fn(Weapon) -> bool,
-) -> Option<(VehicleSection, usize, usize)> {
-    let controllers: Vec<VehicleSection> = loadout
-        .systems
-        .iter()
-        .filter(|part| controls(part.system))
-        .map(|part| part.location.section)
-        .collect();
-    if controllers.is_empty() {
-        return None;
-    }
-    let launchers: Vec<VehicleSection> = loadout
-        .weapons
-        .iter()
-        .filter(|mount| serves(mount.weapon))
-        .map(|mount| mount.criticals[0].section)
-        .collect();
-    let mut sections = controllers.clone();
-    sections.extend(&launchers);
-    sections.sort_unstable();
-    sections.dedup();
-    sections.into_iter().find_map(|section| {
-        let count = |list: &[VehicleSection]| list.iter().filter(|s| **s == section).count();
-        let (launchers, controllers) = (count(&launchers), count(&controllers));
-        (launchers != controllers).then_some((section, launchers, controllers))
-    })
 }
 
 /// Each machine gun array links two to four machine guns of one size class in its location,
@@ -1114,7 +1054,13 @@ slots = [
                 apollo.replace("at = 3", "at = 5")
             ),
         ));
-        assert!(rejection(&misplaced).contains("must serve every MRM launcher from its location"));
+        let refused = rejection(&misplaced);
+        assert!(
+            refused.contains(
+                "The Apollo fire control system in Turret slot 5 links slot 1, which is not the first slot of an MRM launcher in Turret"
+            ),
+            "{refused}"
+        );
     }
 
     /// A fire-control system serves only launchers in its own location: a turret launcher
@@ -1168,7 +1114,7 @@ slots = [
         let refused = rejection(&rear(&turret, "ArtemisIV"));
         assert!(
             refused.contains(
-                "Artemis must serve every LRM, SRM and MML launcher from its location: Aft_Side has 0 launchers and 1 Artemis systems"
+                "The Artemis IV in Aft_Side slot 1 links slot 5, which is not the first slot of an LRM, SRM or MML launcher in Aft_Side"
             ),
             "{refused}"
         );
@@ -1176,15 +1122,89 @@ slots = [
         let mixed = turret.replace("engine = \"ice\"", "engine = \"ice\"\nmixed_tech = true");
         let refused = rejection(&rear(&mixed, "ArtemisV"));
         assert!(
-            refused
-                .contains("Artemis must serve every LRM, SRM and MML launcher from its location"),
+            refused.contains("The Artemis V in Aft_Side slot 1 links slot 5"),
             "{refused}"
         );
         let refused = rejection(&rear(&mrm, "ApolloFCS"));
         assert!(
             refused.contains(
-                "An MRM Apollo fire control system must serve every MRM launcher from its location: Aft_Side has 0 launchers and 1 Apollo systems"
+                "The Apollo fire control system in Aft_Side slot 1 links slot 5, which is not the first slot of an MRM launcher in Aft_Side"
             ),
+            "{refused}"
+        );
+    }
+
+    /// Every fire-control entry names the first slot of the launcher it guides in its own
+    /// location, and no two entries share a launcher (TechManual p. 206).
+    #[test]
+    fn fire_control_links_are_explicit_and_unique() {
+        // A ton of front armor pays for each Artemis IV beside the front SRM-6.
+        let guided = |armor: u16, controllers: &[&str]| {
+            let entries: String = controllers
+                .iter()
+                .map(|entry| format!("\n    {entry},"))
+                .collect();
+            parse(
+                &ZHUKOV
+                    .replace(
+                        "armor = 44\nslots = [\n    { at = 1",
+                        &format!("armor = {armor}\nslots = [\n    {{ at = 1"),
+                    )
+                    .replace("rounds = 15 },", &format!("rounds = 15 }},{entries}")),
+            )
+        };
+        let valid = guided(28, &[r#"{ at = 3, item = "ArtemisIV", link = 1 }"#]);
+        valid.construction_rules().unwrap();
+        let refused = rejection(&guided(28, &[r#"{ at = 3, item = "ArtemisIV" }"#]));
+        assert!(
+            refused.contains("The Artemis IV in Front_Side slot 3 has no launcher link"),
+            "{refused}"
+        );
+        let refused = rejection(&guided(
+            28,
+            &[r#"{ at = 3, item = "ArtemisIV", link = 2 }"#],
+        ));
+        assert!(
+            refused.contains(
+                "The Artemis IV in Front_Side slot 3 links slot 2, which is not the first slot of an LRM, SRM or MML launcher in Front_Side"
+            ),
+            "{refused}"
+        );
+        // Turret slot 1 holds the autocannon; the SRM-6 in front slot 1 is in another section.
+        let refused = rejection(&parse(&ZHUKOV.replace(
+            "rounds = 10 },",
+            "rounds = 10 },\n    { at = 5, item = \"ArtemisIV\", link = 1 },",
+        )));
+        assert!(
+            refused.contains("The Artemis IV in Turret slot 5 links slot 1, which is not the first slot of an LRM, SRM or MML launcher in Turret"),
+            "{refused}"
+        );
+        let refused = rejection(&guided(
+            12,
+            &[
+                r#"{ at = 3, item = "ArtemisIV", link = 1 }"#,
+                r#"{ at = 4, item = "ArtemisIV", link = 1 }"#,
+            ],
+        ));
+        assert!(
+            refused.contains("2 fire-control entries link the")
+                && refused.contains("in Front_Side slot 1"),
+            "{refused}"
+        );
+        // A second SRM-6 in the turret without its own controller breaks all-or-none.
+        let refused = rejection(&parse(
+            &ZHUKOV
+                .replace(
+                    "rounds = 15 },",
+                    "rounds = 15 },\n    { at = 3, item = \"ArtemisIV\", link = 1 },",
+                )
+                .replace(
+                    "rounds = 10 },",
+                    "rounds = 10 },\n    { at = 5, item = \"IS.SRM-6\" },",
+                ),
+        ));
+        assert!(
+            refused.contains("no controller links the") && refused.contains("in Turret slot 5"),
             "{refused}"
         );
     }

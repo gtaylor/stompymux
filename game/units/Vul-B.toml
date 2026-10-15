@@ -32,7 +32,7 @@ rear = 7
 engine_at = 7
 slots = [
     { at = "1-4", item = "CL.LRM-20" },
-    { at = 5, item = "ArtemisIV" },
+    { at = 5, item = "ArtemisIV", link = 1 },
     { at = 6, item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = "11-12", item = "FerroFibrous" },
 ]

@@ -52,7 +52,7 @@ armor = 8
 rear = 3
 slots = [
     { at = 11, item = "IS.SRM-4" },
-    { at = 12, item = "ArtemisIV" },
+    { at = 12, item = "ArtemisIV", link = 11 },
 ]
 
 [sections.left_leg]

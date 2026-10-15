@@ -37,7 +37,7 @@ rear = 7
 slots = [
     { at = 4, item = "IS.SRM-6", modes = ["Artemis/Mine"] },
     { at = 5, item = "IS.SRM-6" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
     { at = "7-8", item = "IS.MediumLaser" },
     { at = 9, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
 ]

@@ -22,7 +22,7 @@ armor = 17
 armor = 19
 slots = [
     { at = 1, item = "IS.LRM-15" },
-    { at = 2, item = "ArtemisIV" },
+    { at = 2, item = "ArtemisIV", link = 1 },
 ]
 
 [sections.aft_side]

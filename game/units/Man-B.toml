@@ -16,9 +16,9 @@ armor = "ferro_fibrous"
 armor = 23
 slots = [
     { at = 5, item = "CL.LRM-10" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 5 },
     { at = 7, item = "CL.SRM-4" },
-    { at = 8, item = "ArtemisIV" },
+    { at = 8, item = "ArtemisIV", link = 7 },
     { at = 9, item = "Ammo_CL.LRM-10", rounds = 12 },
     { at = 10, item = "Ammo_CL.SRM-4", rounds = 25 },
 ]

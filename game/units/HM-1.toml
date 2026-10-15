@@ -33,7 +33,7 @@ rear = 4
 slots = [
     { at = "4-5", item = "Ecm" },
     { at = 6, item = "IS.LRM-5", modes = ["Artemis/Mine"] },
-    { at = 7, item = "ArtemisIV" },
+    { at = 7, item = "ArtemisIV", link = 6 },
     { at = 8, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
     { at = "9-12", item = "EndoSteel" },
 ]

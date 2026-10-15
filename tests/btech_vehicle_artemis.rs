@@ -80,7 +80,8 @@ fn definition(
 }
 
 /// A controller serves only a launcher in its own section on every vehicle class (TechManual
-/// p. 206); construction refuses one placed apart from its launcher on a combat vehicle.
+/// p. 206); construction refuses one placed apart from its launcher on a combat vehicle, and
+/// one without a link on any vehicle.
 #[test]
 fn vehicle_artemis_links_loss_and_roundtrip() {
     for source in templates() {
@@ -140,20 +141,49 @@ fn vehicle_artemis_links_loss_and_roundtrip() {
             }
             let error = format!("{:#}", Vehicle::new(apart).unwrap_err());
             assert!(
-                error.contains("Artemis must serve every LRM, SRM and MML launcher"),
+                error.contains(
+                    "links slot 1, which is not the first slot of an LRM, SRM or MML launcher"
+                ),
                 "{section:?}: {error}"
             );
         }
-        for link in ["-", "0", "2", "255"] {
-            let unit = Vehicle::new(crate::support::templates::fitted(definition(
+        // A legal turret installation whose controller is then relinked, so only the link
+        // differs from a vehicle that constructs.
+        let relinked = |link: &str| {
+            let mut template = crate::support::templates::fitted(definition(
                 &source,
                 VehicleSection::Turret,
                 VehicleSection::Turret,
-                link,
-            )))
-            .unwrap();
+                "1",
+            ));
+            template
+                .sections
+                .get_mut(&VehicleSection::Turret)
+                .unwrap()
+                .criticals
+                .get_mut(&1)
+                .unwrap()
+                .data = link.into();
+            template
+        };
+        // A link to an empty slot guides nothing, so construction refuses it on a combat
+        // vehicle; a stationary installation skips that rule and keeps an idle controller.
+        for link in ["2", "255"] {
+            let template = relinked(link);
+            if template.movement != VehicleMovement::Stationary {
+                let error = format!("{:#}", Vehicle::new(template).unwrap_err());
+                assert!(error.contains(&format!("links slot {link}")), "{error}");
+                continue;
+            }
+            let unit = Vehicle::new(template).unwrap();
             assert!(!unit.artemis_operational(0).unwrap());
             assert!(unit.artemis_controllers().unwrap()[0].operational);
+        }
+        // Every vehicle, stationary installations included, refuses a controller without a
+        // link rather than building one that silently guides nothing.
+        for link in ["-", "0"] {
+            let error = format!("{:#}", Vehicle::new(relinked(link)).unwrap_err());
+            assert!(error.contains("has no launcher link"), "{error}");
         }
         for link in ["bad", "-1", "256"] {
             assert!(

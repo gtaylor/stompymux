@@ -18,7 +18,7 @@ armor = 16
 omit = ["hand_actuator"]
 slots = [
     { at = "4-6", item = "IS.LRM-15" },
-    { at = 7, item = "ArtemisIV" },
+    { at = 7, item = "ArtemisIV", link = 4 },
 ]
 
 [sections.right_arm]
@@ -26,7 +26,7 @@ armor = 16
 omit = ["hand_actuator"]
 slots = [
     { at = "4-6", item = "IS.LRM-15" },
-    { at = 7, item = "ArtemisIV" },
+    { at = 7, item = "ArtemisIV", link = 4 },
 ]
 
 [sections.left_torso]
@@ -34,7 +34,7 @@ armor = 22
 rear = 8
 slots = [
     { at = "4-5", item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
     { at = "7-8", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 9, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
     { at = 10, item = "Case" },
@@ -45,7 +45,7 @@ armor = 22
 rear = 8
 slots = [
     { at = "4-5", item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
     { at = "7-8", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 9, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
     { at = 10, item = "Case" },

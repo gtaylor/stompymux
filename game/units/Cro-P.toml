@@ -15,7 +15,7 @@ armor = 18
 omit = ["hand_actuator"]
 slots = [
     { at = "4-7", item = "CL.LRM-20" },
-    { at = 8, item = "ArtemisIV" },
+    { at = 8, item = "ArtemisIV", link = 4 },
     { at = "9-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]
 
@@ -24,7 +24,7 @@ armor = 18
 omit = ["hand_actuator"]
 slots = [
     { at = "4-7", item = "CL.LRM-20" },
-    { at = 8, item = "ArtemisIV" },
+    { at = 8, item = "ArtemisIV", link = 4 },
     { at = "9-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]
 

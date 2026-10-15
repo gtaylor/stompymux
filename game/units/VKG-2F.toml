@@ -17,7 +17,7 @@ armor = 30
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-7", item = "IS.LRM-20" },
-    { at = 8, item = "ArtemisIV" },
+    { at = 8, item = "ArtemisIV", link = 3 },
     { at = "9-12", item = "EndoSteel" },
 ]
 
@@ -26,7 +26,7 @@ armor = 30
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-7", item = "IS.LRM-20" },
-    { at = 8, item = "ArtemisIV" },
+    { at = 8, item = "ArtemisIV", link = 3 },
     { at = "9-12", item = "EndoSteel" },
 ]
 
@@ -36,7 +36,7 @@ rear = 7
 slots = [
     { at = 1, item = "IS.SmallLaser" },
     { at = "2-4", item = "IS.LRM-15" },
-    { at = 5, item = "ArtemisIV" },
+    { at = 5, item = "ArtemisIV", link = 2 },
     { at = "6-7", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = "8-9", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 10, item = "EndoSteel" },
@@ -49,7 +49,7 @@ rear = 7
 slots = [
     { at = 1, item = "IS.SmallLaser" },
     { at = "2-4", item = "IS.LRM-15" },
-    { at = 5, item = "ArtemisIV" },
+    { at = 5, item = "ArtemisIV", link = 2 },
     { at = 6, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 7, item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = "8-9", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },

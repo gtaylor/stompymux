@@ -30,7 +30,7 @@ rear = 6
 slots = [
     { at = 1, item = "HeatSink" },
     { at = "2-3", item = "IS.LRM-10" },
-    { at = 4, item = "ArtemisIV" },
+    { at = 4, item = "ArtemisIV", link = 2 },
     { at = "5-8", item = "EndoSteel" },
 ]
 

@@ -1295,7 +1295,7 @@
 // lua-types-begin btech 00254
 //|---@class ArtemisController
 //|---@field location {section: MechSectionName|VehicleSectionName, slot: integer} Zero-based controller position.
-//|---@field link integer One-based template launcher slot; zero is unassigned.
+//|---@field link integer One-based template slot of the guided launcher's first critical; construction requires one.
 //|---@field weapon_indices integer[] Zero-based missile mounts matching the link.
 //|---@field operational boolean Controller is available under the unit’s equipment damage rules.
 //|---@class MachineGunArray

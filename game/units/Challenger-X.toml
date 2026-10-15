@@ -53,7 +53,7 @@ armor = 56
 slots = [
     { at = 1, item = "IS.GaussRifle" },
     { at = 2, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
-    { at = 3, item = "ArtemisIV" },
+    { at = 3, item = "ArtemisIV", link = 2 },
     { at = 4, item = "IS.LB10-XAC" },
     { at = 5, item = "IS.Anti-MissileSystem" },
 ]

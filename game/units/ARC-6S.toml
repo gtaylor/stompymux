@@ -35,7 +35,7 @@ slots = [
     { at = "3-7", item = "IS.LRM-20" },
     { at = "8-9", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 10, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = 11, item = "ArtemisIV" },
+    { at = 11, item = "ArtemisIV", link = 3 },
     { at = 12, item = "Case" },
 ]
 
@@ -46,7 +46,7 @@ slots = [
     { at = "3-7", item = "IS.LRM-20" },
     { at = "8-9", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 10, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = 11, item = "ArtemisIV" },
+    { at = 11, item = "ArtemisIV", link = 3 },
     { at = 12, item = "Case" },
 ]
 

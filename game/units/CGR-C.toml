@@ -46,7 +46,7 @@ rear = 7
 slots = [
     { at = 4, item = "IS.LRM-20", modes = ["Artemis/Mine"] },
     { at = "5-8", item = "IS.LRM-20" },
-    { at = 9, item = "ArtemisIV" },
+    { at = 9, item = "ArtemisIV", link = 4 },
     { at = 10, item = "C3Slave" },
 ]
 

@@ -850,6 +850,7 @@ impl Vehicle {
         } else {
             VehicleLoadout::resolve(&definition)?
         };
+        super::artemis::require_links(&loadout, &definition.sections)?;
         let vtol_fuel = definition
             .is_vtol()
             .then(|| super::VtolFuel::from_template(&definition))

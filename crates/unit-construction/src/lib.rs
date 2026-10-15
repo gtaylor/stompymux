@@ -33,6 +33,7 @@ mod cost;
 mod document;
 mod engine;
 mod equipment;
+mod fire_control;
 mod fire_mode;
 mod gyro;
 mod inspection;
@@ -79,6 +80,7 @@ pub use equipment::{
     ARTILLERY_MAPSHEET_HEXES, PhysicalBattleValue, RangeBracket, System, SystemContext,
     WaterRanges, Weapon, WeaponProfile, WeaponRange, strip_name_prefix,
 };
+pub use fire_control::{FireControl, fire_control_link, is_fire_control};
 pub use fire_mode::FireMode;
 pub use gyro::Gyro;
 pub use inspection::{

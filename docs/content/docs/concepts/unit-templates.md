@@ -156,7 +156,7 @@ checks:
   counts (TechManual pp. 220, 237; Tactical Operations: Advanced Units &
   Equipment).
 - Artemis IV serves every standard LRM, SRM and MML launcher from its location or
-  none; Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
+  none, each controller linked to its own launcher (see [Slots](#slots)); Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
   or the head; a Heavy Gauss Rifle sits in the torsos (TechManual pp. 46, 206,
   210, 218).
 - `OneShot` applies only to LRM, SRM, MRM and Streak SRM launchers and Narc and
@@ -310,12 +310,31 @@ Each slot entry places one item in a run of consecutive critical slots:
 | `at` | A one-based slot such as `12`, or an inclusive run such as `"4-6"`. Mech sections hold slots 1 to 12; vehicle and VTOL locations have no per-location limit (slots 1 to 255), since only the vehicle's item slots limit its equipment. |
 | `item` | Equipment name. |
 | `rounds` | Ammunition only: rounds in the bin. |
-| `link` | Non-ammunition only: the slot an Artemis IV or similar system controls. |
+| `link` | Non-ammunition only. Required on every Artemis IV, Artemis V and `ApolloFCS` entry: the one-based slot of the first critical of the launcher it guides, in the same section. |
 | `modes` | Ammunition flags or weapon modes, such as `["RearMount"]` or `["Inferno"]`. |
 
 A run fills every slot with the same item, so `{ at = "1-3", item = "HeatSink" }`
 is three single-slot heat sinks and `{ at = "4-6", item = "IS.ERPPC" }` is one
 three-slot PPC. Overlapping entries are errors.
+
+Fire-control systems name the launcher they guide. Each Artemis IV, Artemis V
+or MRM "Apollo" entry carries a `link` to the first slot of an applicable
+launcher in its own section: a standard LRM, SRM or MML launcher (including
+one-shot and torpedo versions) for Artemis (TechManual p. 206), an MRM launcher
+for Apollo (Tactical Operations: Advanced Units & Equipment p. 142). Because a
+run shares one `link`, give each controller its own entry:
+
+```toml
+slots = [
+    { at = "1-3", item = "IS.LRM-15" },
+    { at = 4, item = "ArtemisIV", link = 1 },
+]
+```
+
+Construction refuses a controller without a link, one whose link is not the
+first slot of an applicable launcher in its section, and two controllers that
+share a launcher. A Mech's Artemis V fills two slots, both linking the same
+launcher; each vehicle entry guides its own launcher.
 
 ## Split mounts
 

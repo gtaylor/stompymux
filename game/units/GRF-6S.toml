@@ -42,7 +42,7 @@ slots = [
     { at = "3-5", item = "IS.LRM-15" },
     { at = "6-7", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 11, item = "Case" },
-    { at = 12, item = "ArtemisIV" },
+    { at = 12, item = "ArtemisIV", link = 3 },
 ]
 
 [sections.center_torso]

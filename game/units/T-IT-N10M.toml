@@ -20,7 +20,7 @@ armor = 29
 slots = [
     { at = 5, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
     { at = "6-7", item = "IS.LRM-15" },
-    { at = 8, item = "ArtemisIV" },
+    { at = 8, item = "ArtemisIV", link = 5 },
     { at = 9, item = "IS.MediumPulseLaser" },
     { at = "10-12", item = "EndoSteel" },
 ]
@@ -39,7 +39,7 @@ rear = 11
 slots = [
     { at = 4, item = "IS.SRM-6", modes = ["Artemis/Mine"] },
     { at = 5, item = "IS.SRM-6" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
     { at = 7, item = "IS.SmallPulseLaser", modes = ["RearMount"] },
     { at = "8-9", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 10, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
@@ -52,7 +52,7 @@ rear = 11
 slots = [
     { at = 4, item = "IS.SRM-6", modes = ["Artemis/Mine"] },
     { at = 5, item = "IS.SRM-6" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
     { at = 7, item = "IS.SmallPulseLaser", modes = ["RearMount"] },
     { at = 8, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
     { at = "9-12", item = "EndoSteel" },

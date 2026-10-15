@@ -882,6 +882,7 @@ impl Mech {
             definition.validate_loadout(&loadout)?;
             loadout
         };
+        super::artemis::require_links(&loadout, &definition.sections)?;
         let sections = definition
             .sections
             .iter()

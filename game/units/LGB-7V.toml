@@ -18,7 +18,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "HeatSink" },
     { at = "6-10", item = "IS.LRM-20" },
-    { at = 11, item = "ArtemisIV" },
+    { at = 11, item = "ArtemisIV", link = 6 },
 ]
 
 [sections.right_arm]
@@ -27,7 +27,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "HeatSink" },
     { at = "6-10", item = "IS.LRM-20" },
-    { at = 11, item = "ArtemisIV" },
+    { at = 11, item = "ArtemisIV", link = 6 },
 ]
 
 [sections.left_torso]

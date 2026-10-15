@@ -187,7 +187,8 @@ fn vehicle_apollo_and_array_battle_value() {
     };
     let [tank, _] = shooters(FRONT);
     let guided = vehicle(&tank);
-    let idle = vehicle(&tank.replace(", link = 1", ""));
+    // Against the same tank without the system, which fires a plain MRM.
+    let idle = vehicle(&tank.replace("\n    { at = 3, item = \"ApolloFCS\", link = 1 },", ""));
     let index = 0;
     assert!(guided.apollo_operational(index).unwrap());
     assert!(!idle.apollo_operational(index).unwrap());

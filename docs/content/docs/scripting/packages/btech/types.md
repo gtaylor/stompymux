@@ -1228,7 +1228,7 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 ## ArtemisController
 
 - `location`: `{section: MechSectionName|VehicleSectionName, slot: integer}` — Zero-based controller position.
-- `link`: `integer` — One-based template launcher slot; zero is unassigned.
+- `link`: `integer` — One-based template slot of the guided launcher's first critical; construction requires one.
 - `weapon_indices`: `integer[]` — Zero-based missile mounts matching the link.
 - `operational`: `boolean` — Controller is available under the unit’s equipment damage rules.
 

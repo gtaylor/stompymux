@@ -299,10 +299,10 @@ pub use stompymux_unit_construction::{
     validate_unit_metadata, vehicle_template_base_cost, write_template, write_template_speed,
 };
 pub use stompymux_unit_construction::{
-    ROTOR_MAXIMUM_ARMOR, VEHICLE_MAXIMUM_ENGINE_RATING, VEHICLE_MINIMUM_ENGINE_RATING,
-    VehicleConstruction, VehicleTemplateCheck, check_vehicle_template, format_tons,
-    needs_power_amplifier, occupies_vehicle_slot, turret_mass, vehicle_maximum_armor,
-    vehicle_power_amplifier_mass,
+    FireControl, ROTOR_MAXIMUM_ARMOR, VEHICLE_MAXIMUM_ENGINE_RATING, VEHICLE_MINIMUM_ENGINE_RATING,
+    VehicleConstruction, VehicleTemplateCheck, check_vehicle_template, fire_control_link,
+    format_tons, is_fire_control, needs_power_amplifier, occupies_vehicle_slot, turret_mass,
+    vehicle_maximum_armor, vehicle_power_amplifier_mass,
 };
 
 pub(crate) use motion::set_speed_autopilot;

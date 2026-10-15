@@ -637,9 +637,9 @@ impl MechTemplate {
         Ok(())
     }
 
-    /// Artemis IV or V serves every applicable launcher or none, from the launcher's location
-    /// (TM p. 206), as the MRM Apollo system serves every MRM launcher (Tactical Operations:
-    /// Advanced Units & Equipment p. 142); CASE goes in torsos (TM p. 210); rear-firing weapons sit in
+    /// Artemis IV or V serves every applicable launcher or none, each linked to the launcher it
+    /// guides in its own location (TM p. 206), as the MRM Apollo system serves every MRM
+    /// launcher (Tactical Operations: Advanced Units & Equipment p. 142); CASE goes in torsos (TM p. 210); rear-firing weapons sit in
     /// torsos, legs or the head (TM p. 46); a heavy Gauss rifle sits in the torsos, splitting
     /// only between a side and the center torso (TM p. 218); and only ranged weapons of eight
     /// or more slots split, across two adjacent locations other than the legs (TM p. 47).
@@ -650,70 +650,15 @@ impl MechTemplate {
                 MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
             )
         };
-        // Artemis IV fills one slot per launcher, Artemis V two (Tactical Operations: Advanced
+        // Each Artemis or Apollo system links the first slot of the launcher it guides in its
+        // own location; Artemis V fills two slots per launcher (Tactical Operations: Advanced
         // Units & Equipment p. 217).
-        let controller_slots = |section: Option<MechSection>| -> (usize, usize) {
-            let count = |system| {
-                loadout
-                    .systems
-                    .iter()
-                    .filter(|part| {
-                        part.system == system && section.is_none_or(|s| part.location.section == s)
-                    })
-                    .count()
-            };
-            (count(System::ArtemisIv), count(System::ArtemisV))
-        };
-        if controller_slots(None) != (0, 0) {
-            for section in MechSection::ALL {
-                let (four, five) = controller_slots(Some(section));
-                let name = chassis.section_name(section);
-                ensure!(
-                    five.is_multiple_of(2),
-                    "Artemis V fills two slots per launcher; {name} has {five}"
-                );
-                let controllers = four + five / 2;
-                let launchers = loadout
-                    .weapons
-                    .iter()
-                    .filter(|mount| {
-                        mount.weapon.is_artemis_launcher() && mount.criticals[0].section == section
-                    })
-                    .count();
-                ensure!(
-                    controllers == launchers,
-                    "Artemis IV must serve every LRM, SRM and MML launcher from its location: {name} has {launchers} launchers and {controllers} Artemis systems"
-                );
-            }
-        }
-        // An MRM "Apollo" fire control system serves every MRM launcher or none, one per
-        // launcher in the launcher's location (Tactical Operations: Advanced Units & Equipment
-        // p. 142).
-        let apollo = |section: Option<MechSection>| {
-            loadout
-                .systems
-                .iter()
-                .filter(|part| {
-                    part.system == System::ApolloFcs
-                        && section.is_none_or(|s| part.location.section == s)
-                })
-                .count()
-        };
-        if apollo(None) > 0 {
-            for section in MechSection::ALL {
-                let launchers = loadout
-                    .weapons
-                    .iter()
-                    .filter(|mount| mount.weapon.is_mrm() && mount.criticals[0].section == section)
-                    .count();
-                ensure!(
-                    apollo(Some(section)) == launchers,
-                    "An MRM Apollo fire control system must serve every MRM launcher from its location: {} has {launchers} launchers and {} Apollo systems",
-                    chassis.section_name(section),
-                    apollo(Some(section))
-                );
-            }
-        }
+        super::fire_control::check_fire_control_links(
+            loadout,
+            &self.sections,
+            |section| chassis.section_name(section),
+            2,
+        )?;
         // CASE as an item is Inner Sphere CASE wherever it is mounted; Clan CASE is built into
         // Clan structure (TM p. 210).
         ensure!(
@@ -837,6 +782,72 @@ mod tests {
         assert_ne!(source, JENNER, "the variant must differ from the Jenner");
         let rejection = rejection(source).unwrap_or_default();
         assert!(rejection.contains(expected), "{expected}: {rejection}");
+    }
+
+    /// A Jenner whose SRM-4 moves to right torso slot 4 with `controllers` beside it and
+    /// `left` in the left torso, sixteen armor points lighter to pay for a ton of fire control.
+    fn guided_jenner(controllers: &str, left: &str) -> String {
+        JENNER
+            .replace("    { at = 11, item = \"IS.SRM-4\" },\n", "")
+            .replace(
+                "    { at = \"2-3\", item = \"JumpJet\" },\n]",
+                &format!(
+                    "    {{ at = \"2-3\", item = \"JumpJet\" }},\n    {{ at = 4, item = \"IS.SRM-4\" }},\n{controllers}]"
+                ),
+            )
+            .replace(
+                "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]",
+                &format!("slots = [\n    {{ at = \"1-2\", item = \"JumpJet\" }},\n{left}]"),
+            )
+            .replace("[sections.left_leg]\narmor = 6", "[sections.left_leg]\narmor = 0")
+            .replace("[sections.right_leg]\narmor = 6", "[sections.right_leg]\narmor = 0")
+            .replace("armor = 4\nomit", "armor = 2\nomit")
+    }
+
+    /// Every Artemis entry names the first slot of the launcher it guides in its own
+    /// location, no two installations share a launcher, and Artemis V fills two slots per
+    /// launcher (TechManual p. 206; Tactical Operations: Advanced Units & Equipment p. 217).
+    #[test]
+    fn fire_control_links_are_explicit_and_unique() {
+        let artemis =
+            |at: u8, link: &str| format!("    {{ at = {at}, item = \"ArtemisIV\"{link} }},\n");
+        assert_eq!(
+            rejection(&guided_jenner(&artemis(5, ", link = 4"), "")),
+            None
+        );
+        refused(
+            &guided_jenner(&artemis(5, ""), ""),
+            "The Artemis IV in Right_Torso slot 5 has no launcher link",
+        );
+        refused(
+            &guided_jenner(&artemis(5, ", link = 1"), ""),
+            "The Artemis IV in Right_Torso slot 5 links slot 1, which is not the first slot of an LRM, SRM or MML launcher in Right_Torso",
+        );
+        refused(
+            &guided_jenner("", &artemis(4, ", link = 4")),
+            "The Artemis IV in Left_Torso slot 4 links slot 4, which is not the first slot of an LRM, SRM or MML launcher in Left_Torso",
+        );
+        refused(
+            &guided_jenner(
+                &format!("{}{}", artemis(5, ", link = 4"), artemis(6, ", link = 4")),
+                "",
+            ),
+            "2 fire-control entries link the",
+        );
+        let mixed = |controllers: &str| {
+            guided_jenner(controllers, "").replace(
+                "engine_rating = 245",
+                "engine_rating = 245\nmixed_tech = true",
+            )
+        };
+        let five = |at: u8| format!("    {{ at = {at}, item = \"ArtemisV\", link = 4 }},\n");
+        refused(&mixed(&five(5)), "1 fire-control entries link the");
+        // The pair passes every rule but mass: Artemis V weighs half a ton more than the
+        // armor freed for it.
+        refused(
+            &mixed(&format!("{}{}", five(5), five(6))),
+            "over the 35-ton chassis",
+        );
     }
 
     #[test]
