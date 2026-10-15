@@ -61,11 +61,10 @@ impl TechBase {
 impl System {
     /// The one technology base that builds this system, or `None` when both bases build it
     /// under the same critical name. The Bloodhound probe, C3, the null signature system,
-    /// Angel ECM, triple strength myomer, stealth armor, light and heavy ferro-fibrous armor
-    /// and the MRM "Apollo" fire control system are Inner Sphere only, and so is CASE as an item: Clan CASE is built into every
-    /// location of a Clan-structure unit rather than installed (TechManual p. 210). The light
-    /// active probe, light TAG and Artemis V are Clan only (TechManual pp. 204-245; Tactical
-    /// Operations: Advanced Units & Equipment).
+    /// Angel ECM, triple strength myomer, stealth armor, light and heavy ferro-fibrous armor,
+    /// the MRM "Apollo" fire control system and spikes are Inner Sphere only; the light active
+    /// probe, light TAG, Artemis V and talons are Clan only (TechManual pp. 204-245; Tactical
+    /// Operations: Advanced Units & Equipment pp. 100, 142, 217).
     pub fn technology_base(self) -> Option<TechBase> {
         match self {
             Self::BloodhoundProbe
@@ -79,8 +78,10 @@ impl System {
             | Self::LightFerroFibrous
             | Self::HeavyFerroFibrous
             | Self::ApolloFcs
-            | Self::Case => Some(TechBase::InnerSphere),
-            Self::LightProbe | Self::LightTag | Self::ArtemisV => Some(TechBase::Clan),
+            | Self::Spikes => Some(TechBase::InnerSphere),
+            Self::LightProbe | Self::LightTag | Self::ArtemisV | Self::Talons => {
+                Some(TechBase::Clan)
+            }
             _ => None,
         }
     }
@@ -289,6 +290,7 @@ mod tests {
         assert!(inventory(InnerSphere, false, vec![], vec![], vec![System::LightTag]).is_err());
         assert!(inventory(Clan, false, vec![], vec![], vec![System::LightTag]).is_ok());
         for system in [
+            System::Case,
             System::Ecm,
             System::BeagleProbe,
             System::Masc,
@@ -297,9 +299,8 @@ mod tests {
             assert!(inventory(Clan, false, vec![], vec![], vec![system]).is_ok());
             assert!(inventory(InnerSphere, false, vec![], vec![], vec![system]).is_ok());
         }
-        // CASE is an Inner Sphere item; Clan CASE is built into Clan structure (TM p. 210).
-        assert!(inventory(Clan, false, vec![], vec![], vec![System::Case]).is_err());
-        assert!(inventory(InnerSphere, false, vec![], vec![], vec![System::Case]).is_ok());
+        assert!(inventory(Clan, false, vec![], vec![], vec![System::Spikes]).is_err());
+        assert!(inventory(InnerSphere, false, vec![], vec![], vec![System::Talons]).is_err());
         let error = inventory(InnerSphere, false, vec![Component::Engine], vec![], vec![])
             .unwrap_err()
             .to_string();

@@ -324,7 +324,9 @@ impl VehicleTemplate {
             | System::LightFerroFibrous
             | System::StealthArmor
             | System::LaserReflective
-            | System::NullSignature => 0,
+            | System::NullSignature
+            | System::Talons
+            | System::Spikes => 0,
         }
     }
 }

@@ -493,6 +493,8 @@ pub use jumping::launch_dfa;
 
 mod experience;
 mod physical_experience;
+mod spikes;
+mod talons;
 pub use experience::{ExperienceAward, ExperienceRules, award_character_experience};
 
 pub(crate) mod skill_catalog;

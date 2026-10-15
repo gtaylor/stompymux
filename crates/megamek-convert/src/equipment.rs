@@ -171,6 +171,8 @@ const SYSTEMS: &[(&str, &str)] = &[
     ("c3iunit", "C3i"),
     ("improvedc3computer", "C3i"),
     ("masc", "Masc"),
+    ("talons", "Talons"),
+    ("spikes", "Spikes"),
     ("tsm", "TripleStrengthMyomer"),
     ("triplestrengthmyomer", "TripleStrengthMyomer"),
     ("hatchet", "Axe"),
@@ -840,6 +842,8 @@ mod tests {
             ("ISGuardianECMSuite", Critical::System("Ecm")),
             ("ISArtemisIV", Critical::Artemis),
             ("ISApollo (OMNIPOD)", Critical::Apollo),
+            ("Talons (OMNIPOD)", Critical::System("Talons")),
+            ("Spikes", Critical::System("Spikes")),
             ("CLArtemisV", Critical::ArtemisV),
             ("CLLightTAG", Critical::System("LightTAG")),
         ] {

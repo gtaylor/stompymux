@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
 article_tags = ["show_in_index"]
 +++
 
@@ -709,6 +709,21 @@ argument.
 
 Laser AMS uses the same switch but needs no ammunition. Its recycle time is 25
 seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
+
+### Talons and spikes
+
+Clan talons fill two slots in every leg. A kick from a leg whose talons and foot
+actuator both survive deals half again its damage, rounded up, after triple
+strength myomer; death from above deals half again while any leg's talons work
+(Tactical Operations: Advanced Units & Equipment p. 103).
+
+An Inner Sphere spike cluster takes four points off every physical blow that
+lands on its location, never below one. A bare arm or leg that strikes it takes
+two points itself: the punching arm, the kicking leg, a point to each leg after
+death from above, or the center torso after a charge. Clubs and physical weapons
+strike without touching the spikes. Each working cluster in a torso location
+adds two points to your own charges; after a charge, each damaged location of
+yours that holds a cluster loses it on 9 or more on 2d6.
 
 ### Anti-infantry pods
 

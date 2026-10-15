@@ -894,6 +894,8 @@ impl<'a> ImpactContext<'a> {
                     System::LargeVibroblade => Some("Your large vibroblade has been destroyed!"),
                     System::ArtemisIv => Some("Your Artemis IV system has been destroyed!"),
                     System::ArtemisV => Some("Your Artemis V system has been destroyed!"),
+                    System::Talons => Some("Your talons have been destroyed!"),
+                    System::Spikes => Some("Your spikes have been destroyed!"),
                     System::ApolloFcs => {
                         Some("Your MRM Apollo fire control system has been destroyed!")
                     }

@@ -476,6 +476,14 @@ pub enum System {
     SmallVibroblade,
     MediumVibroblade,
     LargeVibroblade,
+    /// Clan talons: two slots in every leg, a ton per fifteen tons of Mech in all, raising
+    /// kick and death from above damage by half (Tactical Operations: Advanced Units &
+    /// Equipment pp. 100, 103).
+    Talons,
+    /// An Inner Sphere spike cluster: half a ton in one slot, at most one per location,
+    /// blunting physical attacks against its location (Tactical Operations: Advanced Units &
+    /// Equipment pp. 100, 103).
+    Spikes,
 }
 
 impl System {
@@ -558,6 +566,8 @@ impl System {
             name if name.eq_ignore_ascii_case("Small_Vibroblade") => Some(Self::SmallVibroblade),
             name if name.eq_ignore_ascii_case("Medium_Vibroblade") => Some(Self::MediumVibroblade),
             name if name.eq_ignore_ascii_case("Large_Vibroblade") => Some(Self::LargeVibroblade),
+            name if name.eq_ignore_ascii_case("Talons") => Some(Self::Talons),
+            name if name.eq_ignore_ascii_case("Spikes") => Some(Self::Spikes),
             name if name.eq_ignore_ascii_case("FerroFibrous") => Some(Self::FerroFibrous),
             name if name.eq_ignore_ascii_case("EndoSteel") => Some(Self::EndoSteel),
             name if name.eq_ignore_ascii_case("TripleStrengthMyomer") => {

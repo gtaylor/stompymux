@@ -127,6 +127,41 @@ fn validate_actuators(loadout: &MechLoadout, chassis: MechChassis) -> Result<()>
     Ok(())
 }
 
+/// Talons fill two slots in every leg and nowhere else; a location holds at most one spike
+/// cluster (Tactical Operations: Advanced Units & Equipment p. 100).
+fn validate_talons_and_spikes(loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
+    let count = |system, section| {
+        loadout
+            .systems
+            .iter()
+            .filter(|part| part.system == system && part.location.section == section)
+            .count()
+    };
+    if loadout
+        .systems
+        .iter()
+        .any(|part| part.system == System::Talons)
+    {
+        for section in MechSection::ALL {
+            let expected = if chassis.is_leg(section) { 2 } else { 0 };
+            ensure!(
+                count(System::Talons, section) == expected,
+                "Talons fill two slots in every leg and nowhere else; {} has {}",
+                chassis.section_name(section),
+                count(System::Talons, section)
+            );
+        }
+    }
+    for section in MechSection::ALL {
+        ensure!(
+            count(System::Spikes, section) <= 1,
+            "{} mounts more than one spike cluster",
+            chassis.section_name(section)
+        );
+    }
+    Ok(())
+}
+
 impl MechTemplate {
     /// Running MP: the walking MP x 1.5, rounded up (TM p. 48).
     pub fn running_mp(&self) -> u32 {
@@ -208,6 +243,7 @@ impl MechTemplate {
         self.validate_myomer_and_boosters(loadout)?;
         self.validate_targeting_computer(loadout)?;
         self.validate_physical_weapons(loadout, chassis)?;
+        validate_talons_and_spikes(loadout, chassis)?;
         self.validate_weapon_mounting(loadout, chassis)?;
         self.validate_technology_base(loadout)?;
         self.validate_total_mass(loadout)
@@ -714,6 +750,17 @@ impl MechTemplate {
             clan || mixed_tech || !self.has_technology(super::Technology::Watchdog),
             "The Watchdog suite is Clan technology on an Inner Sphere Mech; declare mixed_tech in [construction]"
         );
+        // CASE as a BattleMech item is Inner Sphere CASE: Clan CASE is built into every
+        // location of a Clan-structure Mech rather than installed (TechManual p. 210).
+        ensure!(
+            !clan
+                || mixed_tech
+                || loadout
+                    .systems
+                    .iter()
+                    .all(|part| part.system != System::Case),
+            "Case is Inner Sphere technology on a Clan Mech, whose CASE is built in; declare mixed_tech in [construction]"
+        );
         check_technology_base(TechnologyInventory {
             unit: "Mech",
             base: TechBase::of(clan),
@@ -996,6 +1043,58 @@ mod tests {
         refused(
             &mixed(with("CL.TargetingComputer", "3-4")),
             "A Clan targeting computer for 4.0 tons of direct-fire weapons needs 1",
+        );
+    }
+
+    /// Talons fill two slots in each leg, weighing a ton per fifteen tons of Mech; a location
+    /// holds one spike cluster (Tactical Operations: Advanced Units & Equipment p. 100).
+    #[test]
+    fn talons_fill_every_leg_and_spikes_one_per_location() {
+        let mixed = |source: String| {
+            source.replacen("[construction]\n", "[construction]\nmixed_tech = true\n", 1)
+        };
+        let leg = |section: &str, slots: &str| {
+            format!("[sections.{section}]\narmor = 6\nslots = [\n{slots}]\n")
+        };
+        let talons = "    { at = \"5-6\", item = \"Talons\" },\n";
+        let one_leg =
+            mixed(JENNER.replace("[sections.left_leg]\narmor = 6\n", &leg("left_leg", talons)));
+        refused(
+            &one_leg,
+            "Talons fill two slots in every leg and nowhere else; Right_Leg has 0",
+        );
+        let both = one_leg.replace(
+            "[sections.right_leg]\narmor = 6\n",
+            &leg("right_leg", talons),
+        );
+        let template = MechTemplate::parse("JR7-D", &both).unwrap();
+        let loadout = crate::MechLoadout::resolve(&template).unwrap();
+        // A 35-ton Mech's talons weigh 3 tons in all.
+        assert_eq!(
+            template.construction_mass(&loadout).unwrap().total
+                - MechTemplate::parse("JR7-D", JENNER)
+                    .unwrap()
+                    .construction_mass(
+                        &crate::MechLoadout::resolve(
+                            &MechTemplate::parse("JR7-D", JENNER).unwrap()
+                        )
+                        .unwrap()
+                    )
+                    .unwrap()
+                    .total,
+            3 * 1024
+        );
+        let error = rejection(&both.replace("mixed_tech = true\n", "")).unwrap_or_default();
+        assert!(error.contains("Talons is Clan technology"), "{error}");
+        refused(
+            &JENNER.replace(
+                "[sections.left_leg]\narmor = 6\n",
+                &leg(
+                    "left_leg",
+                    "    { at = 5, item = \"Spikes\" },\n    { at = 6, item = \"Spikes\" },\n",
+                ),
+            ),
+            "Left_Leg mounts more than one spike cluster",
         );
     }
 

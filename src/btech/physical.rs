@@ -496,6 +496,9 @@ pub struct PhysicalReport {
     pub penetration: Option<LancePenetration>,
     /// Damage a flail or wrecking ball dealt its own wielder on a natural 2.
     pub fumble: Option<TacticalImpact>,
+    /// Damage the target's spikes dealt the punching arm or kicking leg (Tactical Operations:
+    /// Advanced Units & Equipment p. 103).
+    pub spike_backlash: Vec<TacticalImpact>,
     /// Piloting XP applied before eligible direct damage; absent for trips and ineligible combat.
     pub experience: Option<ExperienceAward>,
     /// Accepted damage and control-check XP diagnostics captured during resolution.
@@ -993,6 +996,13 @@ fn attack_profile_inner(
     if source.triple_myomer_active() && attack.hand_weapon().is_none_or(ArmAttack::myomer_doubles) {
         damage *= 2;
     }
+    // Working talons in the kicking leg raise the kick by half, after any triple strength
+    // myomer doubling (Tactical Operations: Advanced Units & Equipment p. 103).
+    if matches!(attack, PhysicalAttack::Kick { .. })
+        && source.talons_working(attack.section(source.chassis()))?
+    {
+        damage = super::talons::raise(damage);
+    }
     damage += u16::from(specialist);
     // Each damaged or missing arm or leg actuator halves the blow, rounding down, to a minimum
     // of one point (Total Warfare pp. 145–147).
@@ -1232,6 +1242,7 @@ fn resolve_attack_inner(
         let mut impact = None;
         let mut vehicle_impact = None;
         let mut penetration = None;
+        let mut spike_backlash = Vec::new();
         let mut experience = None;
         let mut experience_messages = Vec::new();
         if glancing {
@@ -1326,6 +1337,9 @@ fn resolve_attack_inner(
                     }
                 };
                 world.btech.constructed.get_mut(&target).unwrap().dice = dice;
+                // A spike cluster where the blow lands takes four points off it.
+                let (damage, spiked) =
+                    super::spikes::absorb(world, target, location.section, damage)?;
                 // A glancing blow is also less likely to find a critical (TO:AR p. 78).
                 let result = super::impact::resolve_attack_in_candidate_with_penalty(
                     world,
@@ -1352,6 +1366,28 @@ fn resolve_attack_inner(
                 );
                 notices.extend(result.notices.iter().cloned());
                 impact = Some(result);
+                // A bare arm or leg that struck the spikes takes two points itself.
+                if spiked && weapon.is_none() && attack != PhysicalAttack::Club {
+                    let section =
+                        attack.section(world.btech.constructed_units()[&attacker].chassis());
+                    let attacker_rules = participant_fall_rules(world, attacker, rules.fall);
+                    spike_backlash = super::spikes::backlash(
+                        world,
+                        attacker,
+                        &[section],
+                        attacker_rules,
+                        character,
+                        &mut notices,
+                    )?;
+                    for result in &spike_backlash {
+                        super::piloting::append_feedback(
+                            &mut pilot_notices,
+                            result.pilot_notices.clone(),
+                            notices.len(),
+                        );
+                        notices.extend(result.notices.iter().cloned());
+                    }
+                }
                 if weapon == Some(ArmAttack::Lance) {
                     penetration = lance_penetration(
                         world,
@@ -1509,6 +1545,7 @@ fn resolve_attack_inner(
             vehicle_impact,
             penetration,
             fumble: fumble_impact,
+            spike_backlash,
             experience,
             experience_messages,
             balance,

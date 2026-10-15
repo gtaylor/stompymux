@@ -491,6 +491,7 @@ impl Mech {
             watchdog: definition.has_technology(Technology::Watchdog),
             tons,
             engine_rating: 0,
+            legs: if quad { 4 } else { 2 },
         };
         let defensive_equipment = defensive_system_value(&loadout, context, |system, context| {
             system.installation_slots(context).unwrap_or(1)
@@ -612,6 +613,16 @@ impl Mech {
                 }
             }
         }
+        // Talons are worth their kick's final damage, after triple strength myomer and the
+        // talons' own half again (Tactical Operations: Advanced Units & Equipment p. 196).
+        if loadout
+            .systems
+            .iter()
+            .any(|part| part.system == System::Talons)
+        {
+            let kick = tons / 5 * if triple_myomer { 2 } else { 1 };
+            physical += f64::from(super::talons::raise(kick));
+        }
         Ok(Valuation {
             chassis: Chassis::Mech {
                 gyro,
@@ -726,6 +737,7 @@ impl super::Vehicle {
             watchdog: definition.has_technology(Technology::Watchdog),
             tons: definition.tons,
             engine_rating: 0,
+            legs: 0,
         };
         let defensive_equipment = defensive_system_value(&loadout, context, |_, _| 1)
             + defensive_weapon_value(

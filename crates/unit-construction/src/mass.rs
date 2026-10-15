@@ -67,6 +67,16 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System, clan: 
         System::SmallVibroblade => 3 * 1024,
         System::MediumVibroblade => 5 * 1024 / 2,
         System::LargeVibroblade => 7 * 1024 / 4,
+        // Talons weigh a ton per fifteen tons of Mech, rounded up, spread over the two slots
+        // in each leg (Tactical Operations: Advanced Units & Equipment p. 100).
+        System::Talons => {
+            let legs = match definition.chassis() {
+                Ok(super::MechChassis::Quad) => 4,
+                _ => 2,
+            };
+            u32::from(definition.tons.div_ceil(15)) * 1024 / (2 * legs)
+        }
+        System::Spikes => 512,
         System::JumpJet => match definition.tons {
             0..=55 => 512,
             56..=85 => 1024,
