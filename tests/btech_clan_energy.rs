@@ -38,7 +38,7 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
             weapon.supports_targeting_computer(),
             !matches!(
                 weapon,
-                Weapon::ClanFlamer | Weapon::ClanLaserAms | Weapon::ClanAPod
+                Weapon::ClanFlamer | Weapon::ClanLaserAms | Weapon::ClanAPod | Weapon::ClanBPod
             )
         );
         assert_eq!(weapon.supports_heat_mode(), weapon == Weapon::ClanFlamer);
@@ -48,7 +48,7 @@ fn clan_energy_mounts_accuracy_and_grouped_critical_losses() {
                 damaged.destroy_critical(*location).unwrap(),
                 Some(CriticalLoss::Weapon {
                     index,
-                    explosion_damage: 0
+                    explosion_damage: weapon.pod_explosion_damage()
                 })
             );
             assert!(!damaged.weapon_readiness(index).unwrap().intact);

@@ -233,6 +233,7 @@ const WEAPON_ALIASES: &[(&str, &str)] = &[
     ("sniperartillery", "sniper"),
     ("thumperartillery", "thumper"),
     ("antipersonnelpod", "apod"),
+    ("antibattlearmorpod", "bpod"),
     ("smallxpulselaser", "xsmallpulselaser"),
     ("mediumxpulselaser", "xmediumpulselaser"),
     ("largexpulselaser", "xlargepulselaser"),
@@ -749,6 +750,9 @@ mod tests {
             ("CLPlasmaCannon", "CL.PlasmaCannon"),
             ("CLLightMG", "CL.LightMachineGun"),
             ("ISLightMG", "IS.LightMachineGun"),
+            ("ISBPod", "IS.B-Pod"),
+            ("CLBPod", "CL.B-Pod"),
+            ("Anti-BattleArmor Pod", "IS.B-Pod"),
         ] {
             assert_eq!(weapon(name).0.name(), expected, "{name}");
         }

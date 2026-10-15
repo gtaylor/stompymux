@@ -33,7 +33,7 @@ async fn catalogue_resolution_and_c_weapon_projection_are_exact() {
         end
 
         local all=btech.parts.list()
-        assert(#all==599,'catalogue '..#all)
+        assert(#all==603,'catalogue '..#all)
         local counted=0
         local registered_weapons={}
         local names={}

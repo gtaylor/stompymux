@@ -83,6 +83,8 @@ impl Weapon {
                     | Self::ClanLaserAms
                     | Self::APod
                     | Self::ClanAPod
+                    | Self::BPod
+                    | Self::ClanBPod
                     | Self::NarcBeacon
                     | Self::ClanNarcBeacon
                     | Self::INarcBeacon
@@ -259,7 +261,12 @@ impl Weapon {
     /// plasma weapons. Anti-personnel pods and laser anti-missile systems never strike armor.
     pub fn is_energy(self) -> bool {
         match self {
-            Self::APod | Self::ClanAPod | Self::LaserAms | Self::ClanLaserAms => false,
+            Self::APod
+            | Self::ClanAPod
+            | Self::BPod
+            | Self::ClanBPod
+            | Self::LaserAms
+            | Self::ClanLaserAms => false,
             Self::HeavyFlamer | Self::VehicleFlamer | Self::PlasmaRifle => true,
             _ => self.gunnery_skill(true) == "Gunnery-Laser",
         }
@@ -295,13 +302,26 @@ impl Weapon {
         self.one_shot_battle_value().is_some()
     }
 
+    /// Anti-battle armor pods (TechManual p. 204; Total Warfare p. 130).
+    pub fn is_b_pod(self) -> bool {
+        matches!(self, Self::BPod | Self::ClanBPod)
+    }
+
+    /// Damage an unexpended B-Pod releases when a critical hit destroys it: 2 points (Total
+    /// Warfare p. 130). Zero for every other weapon; Gauss weapons explode by
+    /// [`Weapon::weapon_explosion_damage`].
+    pub fn pod_explosion_damage(self) -> u8 {
+        if self.is_b_pod() { 2 } else { 0 }
+    }
+
     /// Critical slots this weapon counts as a Gauss weapon when the Defensive Battle Rating
     /// subtracts one point per exposed Gauss slot (TechManual p. 302): every Gauss rifle,
     /// hyper-assault and anti-personnel Gauss rifle by its full slot count, and a
     /// hyper-velocity autocannon as one slot (Tactical Operations: Advanced Units & Equipment
-    /// p. 195, note Q). `None` for every other weapon.
+    /// p. 195, note Q), and a B-Pod by its one slot (TechManual p. 317, note ‡). `None` for
+    /// every other weapon.
     pub fn defensive_gauss_slots(self) -> Option<u8> {
-        if matches!(self, Self::HyperAc2 | Self::HyperAc5 | Self::HyperAc10) {
+        if matches!(self, Self::HyperAc2 | Self::HyperAc5 | Self::HyperAc10) || self.is_b_pod() {
             return Some(1);
         }
         (self.weapon_explosion_damage() > 0).then_some(self.profile().critical_slots)
@@ -309,9 +329,10 @@ impl Weapon {
 
     /// Weapons whose BV counts toward the Defensive Battle Rating rather than the offensive
     /// rating (the † entries of TechManual pp. 317-318 and Tactical Operations: Advanced Units
-    /// & Equipment p. 194): anti-missile systems, laser anti-missile systems and A-Pods.
+    /// & Equipment p. 194): anti-missile systems, laser anti-missile systems, A-Pods and
+    /// B-Pods.
     pub fn is_defensive_equipment(self) -> bool {
-        self.is_ams() || matches!(self, Self::APod | Self::ClanAPod)
+        self.is_ams() || matches!(self, Self::APod | Self::ClanAPod) || self.is_b_pod()
     }
 
     /// Whether this weapon's ammunition is explosive for the Defensive Battle Rating
@@ -668,6 +689,12 @@ mod tests {
         assert!(W::AntiMissileSystem.is_defensive_equipment());
         assert!(W::ClanLaserAms.is_defensive_equipment());
         assert!(W::APod.is_defensive_equipment());
+        assert!(W::ClanBPod.is_defensive_equipment());
+        assert_eq!(W::BPod.defensive_gauss_slots(), Some(1));
+        assert_eq!(W::BPod.pod_explosion_damage(), 2);
+        assert_eq!(W::BPod.weapon_explosion_damage(), 0);
+        assert!(!W::BPod.is_direct_fire() && !W::BPod.is_energy());
+        assert_eq!((W::BPod.mass(), W::BPod.cost()), (1024, 2500));
         assert!(!W::Lrm5.is_defensive_equipment());
     }
 

@@ -201,9 +201,9 @@ where
         );
     }
     for weapon in inventory.weapons {
-        // The anti-personnel pod is the same item on both technology bases (TM pp. 341, 343),
-        // and record sheets name either.
-        if matches!(weapon, Weapon::APod | Weapon::ClanAPod) {
+        // The anti-personnel and anti-battle armor pods are the same items on both technology
+        // bases (TM pp. 204, 341, 343), and record sheets name either.
+        if matches!(weapon, Weapon::APod | Weapon::ClanAPod) || weapon.is_b_pod() {
             continue;
         }
         let other = TechBase::of(weapon.is_clan());

@@ -278,6 +278,9 @@ impl Mech {
                             * weapon.profile().missiles.max(1)
                     } else if weapon.jammed_explosion_damage() > 0 && self.weapon_jammed(index)? {
                         weapon.jammed_explosion_damage()
+                    } else if weapon.is_b_pod() {
+                        // Nothing triggers a B-Pod without infantry, so it is never expended.
+                        weapon.pod_explosion_damage()
                     } else {
                         weapon.weapon_explosion_damage()
                     }

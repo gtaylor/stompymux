@@ -137,6 +137,12 @@ weapon_catalogue! {
         profile: (0, 0, 0, 0, [1, 1, 1], 1, 0, 30) },
     ClanAPod { name: ("CL", "A-Pod"), part_id: 1, mass: 512, bv: (1, 0, 0), cost: 1500, skill: "Gunnery-Laser",
         profile: (0, 0, 0, 0, [1, 1, 1], 1, 0, 30) },
+    // Anti-battle armor pods: one ton, one slot, one shot, 2,500 C-bills and BV 2 on both
+    // technology bases (TechManual pp. 204, 341-343, 317-318).
+    BPod { name: ("IS", "B-Pod"), part_id: 197, mass: 1024, bv: (2, 0, 0), cost: 2500, skill: "Gunnery-Laser",
+        profile: (0, 0, 0, 0, [1, 1, 1], 1, 0, 30) },
+    ClanBPod { name: ("CL", "B-Pod"), part_id: 198, mass: 1024, bv: (2, 0, 0), cost: 2500, skill: "Gunnery-Laser",
+        profile: (0, 0, 0, 0, [1, 1, 1], 1, 0, 30) },
     INarcBeacon { name: ("IS", "iNarcBeacon"), part_id: 142, mass: 5120, bv: (75, 15, 0), cost: 250000, skill: "Gunnery-Missile",
         profile: (0, 6, 1, 0, [4, 9, 15], 3, 4, 30) },
     NarcBeacon { name: ("IS", "NarcBeacon"), part_id: 141, mass: 3072, bv: (30, 6, 0), cost: 100000, skill: "Gunnery-Missile",
@@ -468,6 +474,8 @@ mod tests {
             (W::ThumperCannon, 41, 0, 5),
             (W::APod, 1, 0, 0),
             (W::ClanAPod, 1, 0, 0),
+            (W::BPod, 2, 0, 0),
+            (W::ClanBPod, 2, 0, 0),
             (W::INarcBeacon, 75, 15, 0),
             (W::NarcBeacon, 30, 6, 0),
             (W::ClanNarcBeacon, 30, 6, 0),

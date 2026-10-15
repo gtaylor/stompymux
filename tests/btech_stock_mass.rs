@@ -99,7 +99,7 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
     }
     let mut names = BTreeSet::new();
     let parts: Vec<_> = Part::all().collect();
-    assert_eq!(parts.len(), 599);
+    assert_eq!(parts.len(), 603);
     let mut duplicates = BTreeSet::new();
     for part in parts {
         if !names.insert(part.name.to_ascii_lowercase()) {
@@ -118,7 +118,7 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
                 .contains("Ambiguous")
         );
     }
-    for id in [-1, 0, 197, 384, 511, 670, 1024, 1408, i32::MAX] {
+    for id in [-1, 0, 199, 384, 511, 670, 1024, 1408, i32::MAX] {
         assert!(Part::from_id(id).is_none());
     }
     assert!(Part::parse("Gold*").is_err());
