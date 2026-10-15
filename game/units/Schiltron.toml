@@ -6,18 +6,13 @@ walk_mp = 5
 
 [construction]
 engine = "xl"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 34
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 34
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 46

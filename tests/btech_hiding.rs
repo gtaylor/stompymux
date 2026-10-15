@@ -57,7 +57,7 @@ async fn fixture(source: &str) -> (tempfile::TempDir, Config, World, ObjectId, O
 async fn hiding_native_lua_all_chassis_timing_and_restart() {
     let tracked = include_str!("../game/units/Demolisher.toml");
     let wheel = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
-    let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
+    let hover = crate::support::templates::hovercraft(tracked);
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
         .replace("walk_mp = 5", "walk_mp = 0");
@@ -665,7 +665,7 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
         include_str!("../game/units/GOL-1H.toml").to_owned(),
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),

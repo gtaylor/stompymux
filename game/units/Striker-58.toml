@@ -5,26 +5,23 @@ tons = 35
 walk_mp = 8
 specials = ["SearchLight"]
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 23
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 23
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 26
-
-[sections.aft_side]
 armor = 24
 
+[sections.aft_side]
+armor = 23
+
 [sections.turret]
-armor = 26
+armor = 23
 slots = [
     { at = 1, item = "IS.LRM-15" },
     { at = 2, item = "ArtemisIV" },

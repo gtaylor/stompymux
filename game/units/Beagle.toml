@@ -6,24 +6,26 @@ walk_mp = 18
 cargo_space = 0
 max_suits = 0
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
-armor = 12
+armor = 10
 
 [sections.right_side]
-armor = 12
+armor = 11
 
 [sections.front_side]
-armor = 15
+armor = 11
 slots = [
     { at = 1, item = "IS.SmallLaser" },
-    { at = 2, item = "FerroFibrous" },
 ]
 
 [sections.aft_side]
 armor = 10
 
 [sections.turret]
-armor = 14
+armor = 11
 slots = [
     { at = 1, item = "IS.MediumLaser" },
     { at = 2, item = "BeagleProbe" },

@@ -11,7 +11,7 @@ armor = 26
 armor = 26
 
 [sections.front_side]
-armor = 35
+armor = 28
 slots = [
     { at = 1, item = "C3Slave" },
 ]
@@ -20,7 +20,7 @@ slots = [
 armor = 21
 
 [sections.turret]
-armor = 35
+armor = 27
 slots = [
     { at = "1-2", item = "IS.LB10-XAC" },
     { at = "3-4", item = "IS.AC/2" },

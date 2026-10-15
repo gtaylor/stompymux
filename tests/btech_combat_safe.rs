@@ -11,7 +11,7 @@ fn templates() -> Vec<String> {
         include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),

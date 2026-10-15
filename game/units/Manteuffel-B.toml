@@ -9,6 +9,7 @@ max_suits = 0
 
 [construction]
 engine = "xl"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 40
@@ -27,7 +28,6 @@ slots = [
 armor = 25
 slots = [
     { at = "1-4", item = "Ammo_IS.HeavyGaussRifle", rounds = 4 },
-    { at = 5, item = "FerroFibrous" },
     { at = 12, item = "Case" },
 ]
 

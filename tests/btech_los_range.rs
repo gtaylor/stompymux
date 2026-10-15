@@ -55,7 +55,7 @@ async fn all_chassis_share_symmetric_sight_cutoffs_without_mutation() {
         include_str!("../game/units/GOL-1H.toml").to_owned(),
         ground.to_owned(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
-        ground.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(ground),
         include_str!("../game/units/RadioTower.toml").to_owned(),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {

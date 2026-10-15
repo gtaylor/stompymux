@@ -6,13 +6,13 @@ walk_mp = 6
 heat_sinks = 11
 
 [sections.left_side]
-armor = 39
+armor = 33
 
 [sections.right_side]
-armor = 39
+armor = 33
 
 [sections.front_side]
-armor = 40
+armor = 34
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
@@ -21,7 +21,7 @@ slots = [
 armor = 26
 
 [sections.turret]
-armor = 40
+armor = 34
 slots = [
     { at = 1, item = "IS.AC/20" },
     { at = "2-5", item = "Ammo_IS.AC/20", rounds = 5 },

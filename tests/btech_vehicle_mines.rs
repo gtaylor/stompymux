@@ -19,8 +19,10 @@ async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-            .unwrap(),
+        crate::support::templates::fitted(
+            VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
+                .unwrap(),
+        ),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -136,10 +138,7 @@ async fn mine_queries_share_surface_gates_across_ground_vehicle_types() {
     ] {
         let id = world.create(&config, "Vehicle".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        let mut template =
-            VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-                .unwrap();
-        template.movement = movement;
+        let template = crate::support::templates::demolisher(movement);
         create_battle_vehicle(&mut world, id, template).unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         for x in 0..3 {
@@ -179,9 +178,10 @@ async fn blast_fixture(
             )
             .unwrap();
         } else {
-            let mut template =
+            let mut template = crate::support::templates::fitted(
                 VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-                    .unwrap();
+                    .unwrap(),
+            );
             template.movement = movement;
             create_battle_vehicle(&mut world, id, template).unwrap();
         }

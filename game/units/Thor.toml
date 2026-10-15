@@ -14,7 +14,7 @@ armor = 25
 armor = 25
 
 [sections.front_side]
-armor = 30
+armor = 26
 config = "Case"
 slots = [
     { at = 1, item = "IS.Thumper" },
@@ -26,7 +26,7 @@ slots = [
 armor = 24
 
 [sections.turret]
-armor = 30
+armor = 25
 slots = [
     { at = "1-2", item = "IS.MediumLaser" },
 ]

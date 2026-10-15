@@ -11,7 +11,7 @@ fn tracked(flags: &str) -> VehicleTemplate {
 }
 
 #[test]
-fn vehicle_engine_shielding_precedes_family_rounding() {
+fn vehicle_engine_shielding_applies_to_the_listed_weight() {
     for (flags, powerplant, half_tons) in [
         ("ICEEngine_Tech", VehiclePowerplant::Combustion, 46),
         ("-", VehiclePowerplant::Fusion(Engine::Standard), 35),
@@ -92,15 +92,16 @@ fn vehicle_suspension_and_missing_engine_diagnostics() {
     template.movement = VehicleMovement::Hover;
     template.tons = 5;
     template.max_speed = 16.125;
+    // 5 - 40 is below the minimum, so the engine rates 10 (TechManual p. 100).
     let engine = template.engine().unwrap();
-    assert_eq!(engine.weight_rating, -35);
-    assert_eq!(engine.standard_mass, None);
-    assert_eq!(engine.engine_mass, 0);
+    assert_eq!(engine.weight_rating, 10);
+    assert_eq!(engine.standard_mass, Some(512));
+    assert_eq!(engine.engine_mass, 1024);
     assert_eq!(engine.installed_mass, 1024);
     template.movement = VehicleMovement::Tracked;
     template.tons = 11;
-    assert_eq!(template.engine().unwrap().standard_mass, None);
-    assert_eq!(template.engine().unwrap().installed_mass, 0);
+    assert_eq!(template.engine().unwrap().weight_rating, 15);
+    assert_eq!(template.engine().unwrap().installed_mass, 1024);
     for speed in [f64::NAN, f64::INFINITY, -1.0, f64::MAX] {
         template.max_speed = speed;
         assert!(template.engine().is_err());

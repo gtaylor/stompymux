@@ -5,17 +5,14 @@ tons = 80
 walk_mp = 5
 cargo_space = 0
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 26
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 26
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 35

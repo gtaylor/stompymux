@@ -48,15 +48,17 @@ fn probe_vehicle(
 ) -> ObjectId {
     let id = world.create(config, "Probe carrier".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    let mut definition = VehicleTemplate::parse(
-        "test",
-        if stationary {
-            include_str!("../game/units/RadioTower.toml")
-        } else {
-            include_str!("../game/units/Demolisher.toml")
-        },
-    )
-    .unwrap();
+    let mut definition = crate::support::templates::fitted(
+        VehicleTemplate::parse(
+            "test",
+            if stationary {
+                include_str!("../game/units/RadioTower.toml")
+            } else {
+                include_str!("../game/units/Demolisher.toml")
+            },
+        )
+        .unwrap(),
+    );
     let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
     front.criticals.clear();
     if let Some(equipment) = equipment {
@@ -69,7 +71,7 @@ fn probe_vehicle(
             },
         );
     }
-    create_battle_vehicle(world, id, definition).unwrap();
+    create_battle_vehicle(world, id, crate::support::templates::fitted(definition)).unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(world, id, map, 0, y).unwrap();
     running(world, id);

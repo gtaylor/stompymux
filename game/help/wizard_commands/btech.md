@@ -83,7 +83,9 @@ development. Ground autopilots are available through in-game Lua; repairs and
 loading units into other units are deferred. A successfully parsed
 template has not yet had its equipment and rule support validated. Use
 `template-check <name>` to preview the unit-construction checks, the first
-rejection reason and any ammunition normalization. A successful check means the
+rejection reason and any ammunition normalization; for a vehicle or VTOL it also
+reports mass, item slots, armor and energy weapon heat against the TechManual
+limits, and any unspent tonnage. A successful check means the
 template can be constructed under the currently implemented construction rules; it
 does not establish complete gameplay parity. Maps without a saved terrain dictionary require explicit `map-reload` before
 tile queries are available. Reload replaces terrain from the asset; it cannot

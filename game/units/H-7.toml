@@ -5,9 +5,6 @@ tons = 21
 walk_mp = 15
 specials = ["SearchLight"]
 
-[construction]
-engine = "ice"
-
 [sections.left_side]
 armor = 5
 

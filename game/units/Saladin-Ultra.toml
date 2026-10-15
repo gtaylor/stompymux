@@ -10,21 +10,16 @@ specials = ["SearchLight"]
 
 [construction]
 engine = "ice"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 8
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 8
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 15
+armor = 14
 slots = [
     { at = 1, item = "IS.UltraAC/20" },
     { at = "2-3", item = "Ammo_IS.UltraAC/20", rounds = 5 },

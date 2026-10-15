@@ -9,21 +9,16 @@ max_suits = 0
 
 [construction]
 engine = "xl"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 26
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 26
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 35
+armor = 31
 
 [sections.aft_side]
 armor = 21
@@ -34,7 +29,7 @@ slots = [
 ]
 
 [sections.turret]
-armor = 35
+armor = 30
 slots = [
     { at = "1-2", item = "IS.LB10-XAC" },
     { at = "3-4", item = "IS.UltraAC/5" },

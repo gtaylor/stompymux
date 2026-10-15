@@ -15,8 +15,10 @@ pub struct UnitLoad {
 }
 
 impl UnitLoad {
-    /// Apply load and construction-weight penalties before boosters and environmental rules.
-    /// Underweight material cannot increase speed; more than three adjusted nominal masses stops motion.
+    /// Apply carried load before boosters and environmental rules. Construction refuses
+    /// overweight designs (TechManual p. 97), so material above the nominal tonnage adds no
+    /// penalty; underweight material cannot increase speed; more than three adjusted nominal
+    /// masses stops motion.
     pub fn maximum_speed(self, maximum: f64) -> Result<f64> {
         ensure!(
             self.nominal_tons > 0,
@@ -33,7 +35,7 @@ impl UnitLoad {
         let material = u64::from(self.material_mass);
         let adjusted = match material {
             1 => nominal,
-            mass if mass > nominal => mass + (mass - nominal) / 2,
+            mass if mass >= nominal => nominal,
             mass => mass + (nominal - mass) / 3,
         };
         let total = adjusted

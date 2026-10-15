@@ -10,27 +10,19 @@ armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 2
-slots = [
-    { at = "1-2", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 2
-slots = [
-    { at = "1-2", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 3
-rear = 2
+armor = 5
 slots = [
     { at = 1, item = "IS.LargeLaser" },
     { at = 2, item = "BeagleProbe" },
 ]
 
 [sections.aft_side]
-armor = 1
-rear = 2
+armor = 3
 
 [sections.rotor]
 armor = 1

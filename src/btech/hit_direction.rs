@@ -53,7 +53,7 @@ mod tests {
             include_str!("../../game/units/GOL-1H.toml").to_owned(),
             tracked.to_owned(),
             tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-            tracked.replace("movement = \"track\"", "movement = \"hover\""),
+            crate::btech::vehicle::hovercraft_variant(tracked),
             tracked
                 .replace("movement = \"track\"", "movement = \"none\"")
                 .replace("walk_mp = 5", "walk_mp = 0"),

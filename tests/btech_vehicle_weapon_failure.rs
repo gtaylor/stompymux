@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("test", template).unwrap(),
+        crate::support::templates::fitted(VehicleTemplate::parse("test", template).unwrap()),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();

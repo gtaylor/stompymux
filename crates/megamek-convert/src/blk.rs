@@ -161,14 +161,15 @@ pub fn convert(source: &str) -> Result<Converted> {
         code => bail!("unsupported engine type {code}"),
     };
     construction.extend(engine.map(|engine| ("engine", engine)));
-    let structure = match file.integer("internal_type")?.unwrap_or(0) {
-        -1 | 0 => None,
-        2 => Some("endo_steel"),
-        4 => Some("reinforced"),
-        5 => Some("composite"),
+    // Combat vehicles use standard structure only (TechManual p. 98); TacOps AUE limits
+    // composite and reinforced structure to BattleMechs.
+    match file.integer("internal_type")?.unwrap_or(0) {
+        -1 | 0 => {}
+        2 => bail!("unsupported structure: endo-steel is not available to combat vehicles"),
+        4 => bail!("unsupported structure: reinforced is not available to combat vehicles"),
+        5 => bail!("unsupported structure: composite is not available to combat vehicles"),
         code => bail!("unsupported structure type {code}"),
-    };
-    construction.extend(structure.map(|structure| ("structure", structure)));
+    }
     let armor = match file.integer("armor_type")?.unwrap_or(0) {
         0 => None,
         1 => Some("ferro_fibrous"),
@@ -292,11 +293,11 @@ pub fn convert(source: &str) -> Result<Converted> {
             _ => None,
         })
         .sum();
-    // Energy weapons need heat sinks for their heat; fusion engines carry ten for free.
-    // A template that states no heat sinks gets exactly that free allowance.
-    let efficiency = if tech == TechBase::Clan { 2 } else { 1 };
+    // Energy weapons need a single heat sink per point of heat, and fusion engines carry ten
+    // for free (TechManual p. 104). Combat vehicles mount single heat sinks only, whatever
+    // their technology base.
     let free = if engine == Some("ice") { 0 } else { 10 };
-    let heat_sinks = energy_heat.div_ceil(efficiency).max(free) * efficiency;
+    let heat_sinks = energy_heat.max(free);
 
     let mut sections = Vec::new();
     for heading in ORDER {
@@ -443,6 +444,16 @@ mod tests {
                 "unsupported armor type 22",
             ),
             ("<armor>\n24", "<armor>\n10\n24", "dual turrets"),
+            (
+                "<armor>\n24",
+                "<internal_type>\n2\n</internal_type>\n<armor>\n24",
+                "endo-steel is not available to combat vehicles",
+            ),
+            (
+                "<armor>\n24",
+                "<internal_type>\n5\n</internal_type>\n<armor>\n24",
+                "composite is not available to combat vehicles",
+            ),
             (
                 "Machine Gun\n</Front",
                 "Paramedic Equipment\n</Front",

@@ -11,18 +11,12 @@ armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 14
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 14
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 16
+armor = 15
 slots = [
     { at = 1, item = "CL.ERLargeLaser" },
     { at = 2, item = "Ecm" },

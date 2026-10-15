@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("test", template).unwrap(),
+        crate::support::templates::fitted(VehicleTemplate::parse("test", template).unwrap()),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -126,8 +126,6 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         ("HardenedArmor_Tech", 81, 41, 1, 1),
         // Forty hardened points stop eighty; the other five pass at full value.
         ("HardenedArmor_Tech", 85, 43, 5, 5),
-        ("ReinforcedInternal_Tech", 43, 43, 3, 2),
-        ("CompositeInternal_Tech", 43, 43, 3, 6),
     ] {
         let text = include_str!("../game/units/Demolisher.toml");
         let text = if special.is_empty() {
@@ -391,7 +389,7 @@ async fn vacuum_penetration_disables_equipment_and_survives_environment_change_a
     let templates = [
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
@@ -708,7 +706,7 @@ fn hardened_armor_is_barred_from_hovercraft_and_vtols() {
         .is_ok()
     );
     for source in [
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         let hardened = harden(&source);

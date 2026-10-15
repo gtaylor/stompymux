@@ -130,7 +130,9 @@ async fn weight_report_permissions_literal_names_and_output_rollback() {
             if let Some(name) = critical.equipment.strip_prefix("Ammo_") {
                 critical.data = "0".into();
                 // Only machine guns may carry half-ton lots (TechManual p. 48).
-                if Weapon::parse(name).unwrap().allows_half_ton_bins() {
+                if Weapon::parse(name).unwrap().allows_half_ton_bins()
+                    && !critical.modes.iter().any(|mode| mode == "Halfton")
+                {
                     critical.modes.push("Halfton".into());
                 }
             }

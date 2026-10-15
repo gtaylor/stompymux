@@ -10,7 +10,7 @@ fn templates() -> Vec<String> {
         include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
@@ -20,7 +20,8 @@ fn templates() -> Vec<String> {
 
 /// Add probes to unoccupied slots without changing the unit's weapons or required equipment.
 fn equipment(source: &str) -> UnitTemplate {
-    let mut template = UnitTemplate::parse("test", source).unwrap();
+    let mut template =
+        crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap());
     let (section, parts) = match &mut template {
         UnitTemplate::Mech(definition) => {
             let section = definition
@@ -98,14 +99,16 @@ async fn fixture(
     let mut ids = Vec::new();
     for (index, template) in [
         equipment(source),
-        UnitTemplate::parse("test", target).unwrap(),
+        crate::support::templates::fitted_unit(UnitTemplate::parse("test", target).unwrap()),
     ]
     .into_iter()
     .enumerate()
     {
         let id = world.create(&config, format!("Sensor unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-        template.create(&mut world, id).unwrap();
+        crate::support::templates::fitted_unit(template)
+            .create(&mut world, id)
+            .unwrap();
         place_battle_unit(
             &mut world,
             id,
@@ -328,7 +331,9 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
             )
         }
         UnitTemplate::Vehicle(definition) => {
-            let unit = Vehicle::new(definition.clone()).unwrap();
+            // The saved record keeps the edited definition; a constructible copy of it, with
+            // the same slots, locates the weapon and bins.
+            let unit = Vehicle::new(crate::support::templates::fitted(definition.clone())).unwrap();
             let index = unit
                 .loadout()
                 .unwrap()
@@ -352,7 +357,7 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
                 }
             }
             (
-                serde_json::to_value(unit.definition()).unwrap(),
+                serde_json::to_value(&definition).unwrap(),
                 serde_json::to_value(ammunition).unwrap(),
                 index,
             )

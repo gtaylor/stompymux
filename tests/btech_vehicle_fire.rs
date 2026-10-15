@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                VehicleTemplate::parse("test", vehicle).unwrap(),
+                crate::support::templates::fitted(VehicleTemplate::parse("test", vehicle).unwrap()),
             )
             .unwrap();
         }
@@ -683,7 +683,10 @@ fn install_vehicle_ams(world: &mut World, target: ObjectId, weapon: Weapon) {
             )
             .replace("IS.AC/20", weapon.name())
     };
-    let unit = Vehicle::new(VehicleTemplate::parse("test", &source).unwrap()).unwrap();
+    let unit = Vehicle::new(crate::support::templates::fitted(
+        VehicleTemplate::parse("test", &source).unwrap(),
+    ))
+    .unwrap();
     world
         .btech
         .rewrite_unit_record(target, |record| {
@@ -2771,7 +2774,7 @@ async fn weapons_hold_vehicle_shooters_warn_on_mech_damage_without_blocking_it()
     for source in [
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
@@ -2817,7 +2820,7 @@ async fn weapons_hold_vehicle_targets_preserve_damage_safety_and_restart() {
     for source in [
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
@@ -2984,8 +2987,9 @@ async fn weapon_fire_preserves_target_emergency_feedback() {
         support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
         let target = base.create(&config, "Emergency target".into(), Kind::Thing);
         base.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
-        let mut template =
-            VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap();
+        let mut template = crate::support::templates::fitted(
+            VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
+        );
         for section in template.sections.values_mut() {
             section.internal = 30;
         }

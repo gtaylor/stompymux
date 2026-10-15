@@ -499,7 +499,7 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
     for source in [
         ground.into(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
-        ground.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(ground),
         ground
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),

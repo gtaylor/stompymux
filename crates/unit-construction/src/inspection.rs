@@ -60,8 +60,9 @@ fn raw_canonical_unit_internal(template: &RawTemplate, section: RawSectionCode) 
         if authored == 0 {
             return Some(0);
         }
-        let rounded = template.tons.saturating_add(5);
-        return Some((rounded.max(10) / 10).clamp(0, 255) as u16);
+        // Ten percent of the tonnage, rounded up (TechManual p. 98).
+        let rounded = template.tons.max(1).saturating_add(9);
+        return Some((rounded / 10).clamp(0, 255) as u16);
     }
     if template.class != RawUnitClass::Mech || template.tons == 0 {
         return None;

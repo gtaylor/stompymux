@@ -712,9 +712,10 @@ pub fn mech_internal(tons: u16, section: MechSection, quad: bool) -> Option<u16>
     })
 }
 
-/// Internal structure of every structured vehicle location, from tonnage (vehicle_int_check).
+/// Internal structure points of every structured vehicle location: 10 percent of the tonnage,
+/// rounded up to the next whole point (TechManual p. 98).
 pub fn vehicle_internal(tons: i64) -> u16 {
-    u16::try_from((tons + 5).max(10) / 10).unwrap_or(u16::MAX)
+    u16::try_from((tons.max(1) + 9) / 10).unwrap_or(u16::MAX)
 }
 
 /// Whether a class takes its internal structure from tonnage rather than its document.
@@ -924,6 +925,10 @@ mod tests {
         assert_eq!(mech_internal(82, MechSection::Head, false), None);
         assert_eq!(vehicle_internal(80), 8);
         assert_eq!(vehicle_internal(5), 1);
+        // A 45-ton vehicle receives 5 points and a 21-ton one 3 (TechManual p. 98).
+        assert_eq!(vehicle_internal(45), 5);
+        assert_eq!(vehicle_internal(21), 3);
+        assert_eq!(vehicle_internal(30), 3);
         assert_eq!(movement_points(64.5), Some(6));
         assert_eq!(movement_points(32.5), None);
     }

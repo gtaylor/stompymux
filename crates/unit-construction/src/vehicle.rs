@@ -143,12 +143,13 @@ impl VehicleTemplate {
     }
 
     /// Every template-level check construction makes before resolving the loadout: anatomy,
-    /// radio ratings, construction mass and, for VTOLs, the fuel capacity. A template that
-    /// passes this and resolves a [`super::VehicleLoadout`] is one the game would construct.
+    /// radio ratings, the TechManual construction rules (see
+    /// [`VehicleTemplate::construction_rules`]) and, for VTOLs, the fuel capacity. A template
+    /// that passes this and resolves a [`super::VehicleLoadout`] is one the game would construct.
     pub fn validate_construction(&self) -> Result<()> {
         self.validate_anatomy()?;
         super::validate_radio_attributes(&self.attributes)?;
-        self.mass()?;
+        self.construction_rules()?;
         if self.is_vtol() {
             self.vtol_fuel_capacity()?;
         }
@@ -256,13 +257,10 @@ impl VehicleTemplate {
                 section.name()
             );
         }
-        // The reference load forces vehicle internal structure to
-        // (tons + 5, at least 10) / 10 for every section that has any
-        // (vehicle_int_check), overriding authored Internals lines. Keeping the
-        // rewrite here, where C's parse and finalize are one operation, leaves
-        // saved definitions and later construction edits restored verbatim.
-        let expected_internal =
-            u16::try_from((i32::from(tons) + 5).max(10) / 10).expect("vehicle tonnage is bounded");
+        // Every structured location receives 10 percent of the tonnage in structure points,
+        // rounded up (TechManual p. 98), overriding authored internals. Keeping the rewrite
+        // here leaves saved definitions and later construction edits restored verbatim.
+        let expected_internal = super::construction::vehicle_internal(i64::from(tons));
         for layout in sections.values_mut() {
             if layout.internal != 0 {
                 layout.internal = expected_internal;

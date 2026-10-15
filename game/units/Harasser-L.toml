@@ -3,25 +3,26 @@ class = "vehicle"
 movement = "hover"
 tons = 25
 walk_mp = 15
+heat_sinks = 6
 specials = ["SearchLight"]
 
 [construction]
 engine = "ice"
 
 [sections.left_side]
-armor = 6
+armor = 5
 
 [sections.right_side]
-armor = 6
+armor = 5
 
 [sections.front_side]
-armor = 7
+armor = 5
 
 [sections.aft_side]
-armor = 7
+armor = 4
 
 [sections.turret]
-armor = 6
+armor = 5
 slots = [
     { at = "1-2", item = "IS.MediumLaser" },
 ]

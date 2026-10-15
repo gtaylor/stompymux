@@ -32,8 +32,7 @@ async fn fixture_sources(
             .unwrap()
             .flags
             .insert(Flag::InCharacter);
-        UnitTemplate::parse("test", source)
-            .unwrap()
+        crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap())
             .create(&mut world, id)
             .unwrap();
         ids.push(id);
@@ -386,13 +385,11 @@ fn vehicle_battle_value_applies_each_ground_movement_discount() {
     for (movement, defensive) in [
         (VehicleMovement::Tracked, 496.8),
         (VehicleMovement::Wheeled, 441.6),
-        (VehicleMovement::Hover, 386.4),
+        // The hovercraft is the 50-ton variant, with less structure than the 80-ton tank.
+        (VehicleMovement::Hover, 367.5),
         (VehicleMovement::Stationary, 460.0),
     ] {
-        let mut definition =
-            VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-                .unwrap();
-        definition.movement = movement;
+        let definition = crate::support::templates::demolisher(movement);
         let unit = Vehicle::new(definition).unwrap();
         let value = unit.battle_value().unwrap();
         assert!(
@@ -428,7 +425,7 @@ fn shipped_vehicles_and_vtols_have_finite_battle_values() {
         count += 1;
     }
     assert!(count >= 235, "only {count} ground vehicles checked");
-    assert_eq!(rotorcraft, 34);
+    assert_eq!(rotorcraft, 31);
 }
 
 /// Place XP participants and a shutdown tow load without firing or moving either carrier.
@@ -457,8 +454,10 @@ fn tow_fixture(
     create_battle_vehicle(
         world,
         load,
-        VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-            .unwrap(),
+        crate::support::templates::fitted(
+            VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
+                .unwrap(),
+        ),
     )
     .unwrap();
     support::seed_object_dice(world, load, support::FIXTURE_DICE_SEED);
@@ -654,10 +653,11 @@ async fn vtol_value_shares_vehicle_accounting_and_has_its_class_movement_bonus()
     let initial = battle_unit_value(&world, id).unwrap();
     // 24 armor and 15 structure: 82.5, times the VTOL 0.7, then 18 MP (+5) plus VTOL (+1).
     assert!((initial.defensive - 92.4).abs() < 1e-9, "{initial:?}");
-    // Two machine guns, a ton of ammunition and half of 25 tons at 18 MP's 2.72 Speed Factor.
+    // Two machine guns, a half-ton lot of ammunition and half of 25 tons at 18 MP's 2.72
+    // Speed Factor.
     let machine_guns = 2.0 * f64::from(Weapon::MachineGun.battle_value());
     assert!(
-        (initial.offensive - (machine_guns + 1.0 + 12.5) * 2.72).abs() < 1e-9,
+        (initial.offensive - (machine_guns + 0.5 + 12.5) * 2.72).abs() < 1e-9,
         "{initial:?}"
     );
     assert_eq!(world.btech, before);
@@ -752,24 +752,4 @@ async fn vtol_battle_value_experience_supports_mixed_pairs_load_and_replay() {
             replay.validate(&config).unwrap();
         }
     }
-}
-
-#[tokio::test]
-async fn authored_vtol_without_catalogued_engine_mass_survives_restart() {
-    let (_dir, config, world, id, _) = fixture_sources([
-        include_str!("../game/units/SalvageVTOLII.toml"),
-        include_str!("../game/units/Kestrel.toml"),
-    ])
-    .await;
-    let unit = &world.btech.vehicles()[&id];
-    let engine = unit.definition().engine().unwrap();
-    assert_eq!(engine.weight_rating, 860);
-    assert_eq!(engine.standard_mass, None);
-    assert_eq!(unit.mass().unwrap().engine, 0);
-    assert_eq!(unit.maximum_speed(), 161.25);
-    let value = battle_unit_value(&world, id).unwrap();
-    persistence::save(&config.database(), &world).await.unwrap();
-    let restored = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(restored.btech, world.btech);
-    assert_eq!(battle_unit_value(&restored, id).unwrap(), value);
 }

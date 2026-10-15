@@ -701,7 +701,7 @@ async fn reverse_towing_guard_is_shared_by_native_lua_and_direct_controls() {
         include_str!("../game/units/GOL-1H.toml").to_owned(),
         ground.to_owned(),
         ground.replace("movement = \"track\"", "movement = \"wheel\""),
-        ground.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(ground),
         CHASSIS[2].to_owned(),
     ] {
         let (_dir, config, mut world, _, ids) =

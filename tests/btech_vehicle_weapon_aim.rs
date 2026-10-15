@@ -32,7 +32,7 @@ async fn fixture(
             create_battle_vehicle(
                 &mut world,
                 id,
-                VehicleTemplate::parse("test", vehicle).unwrap(),
+                crate::support::templates::fitted(VehicleTemplate::parse("test", vehicle).unwrap()),
             )
             .unwrap();
         }

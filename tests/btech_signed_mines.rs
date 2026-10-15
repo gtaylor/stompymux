@@ -59,8 +59,9 @@ async fn signed_mines_share_burn_adjustments_neighbor_effects_and_restart() {
                     .replace("walk_mp = 5", "walk_mp = 0"),
                 "wheeled" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"wheel\""),
-                "hover" => include_str!("../game/units/Demolisher.toml")
-                    .replace("movement = \"track\"", "movement = \"hover\""),
+                "hover" => crate::support::templates::hovercraft(include_str!(
+                    "../game/units/Demolisher.toml"
+                )),
                 _ => include_str!("../game/units/Demolisher.toml").to_owned(),
             };
             create_battle_vehicle(

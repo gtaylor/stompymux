@@ -41,8 +41,9 @@ async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates(
                     "vtol" => include_str!("../game/units/Kestrel.toml").to_owned(),
                     "wheeled" => include_str!("../game/units/Demolisher.toml")
                         .replace("movement = \"track\"", "movement = \"wheel\""),
-                    "hover" => include_str!("../game/units/Demolisher.toml")
-                        .replace("movement = \"track\"", "movement = \"hover\""),
+                    "hover" => crate::support::templates::hovercraft(include_str!(
+                        "../game/units/Demolisher.toml"
+                    )),
                     _ => include_str!("../game/units/Demolisher.toml").to_owned(),
                 };
                 create_battle_vehicle(

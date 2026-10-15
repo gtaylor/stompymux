@@ -47,8 +47,9 @@ async fn fixture_on(chassis: &str, tile: &str) -> (tempfile::TempDir, Config, Wo
                 "vtol" => include_str!("../game/units/Kestrel.toml").to_owned(),
                 "wheel" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"wheel\""),
-                "hover" => include_str!("../game/units/Demolisher.toml")
-                    .replace("movement = \"track\"", "movement = \"hover\""),
+                "hover" => crate::support::templates::hovercraft(include_str!(
+                    "../game/units/Demolisher.toml"
+                )),
                 "stationary" => include_str!("../game/units/Demolisher.toml")
                     .replace("movement = \"track\"", "movement = \"none\"")
                     .replace("walk_mp = 5", "walk_mp = 0"),

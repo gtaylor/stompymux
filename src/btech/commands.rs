@@ -300,10 +300,15 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                 ))
             }
             "template-check" => {
-                let template = super::read_template(
-                    &ctx.config.path(&ctx.config.database.unit_database),
-                    argument,
-                )?;
+                let root = ctx.config.path(&ctx.config.database.unit_database);
+                if let Ok(super::UnitTemplate::Vehicle(vehicle)) =
+                    super::read_unit_template(&root, argument)
+                {
+                    return Ok(vehicle_template_check_text(&super::check_vehicle_template(
+                        &vehicle,
+                    )));
+                }
+                let template = super::read_template(&root, argument)?;
                 let report = super::check_template(&template);
                 if let Some(reason) = report.rejection {
                     return Ok(format!(
@@ -1292,4 +1297,30 @@ pub(crate) fn preferences_command(
         Ok(text) => CommandAction::CommitReply(text),
         Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
     })
+}
+
+/// Operator text for a vehicle template check: the verdict, then what construction spends
+/// against the TechManual limits and any warnings.
+fn vehicle_template_check_text(report: &super::VehicleTemplateCheck) -> String {
+    let heading = format!("{} ({})", report.name, report.reference);
+    if let Some(reason) = &report.rejection {
+        return format!("{heading}: not constructible: {reason}");
+    }
+    let mut lines = vec![format!(
+        "{heading}: constructible combat vehicle; {} weapons, {} ammunition bins.",
+        report.weapons, report.ammunition_bins
+    )];
+    if let Some(construction) = &report.construction {
+        lines.push(format!(
+            "Mass {} tons; item slots {} of {}; armor {} of {} points; energy weapon heat {}.",
+            super::format_tons(construction.mass.design_total),
+            construction.item_slots,
+            construction.item_slot_limit,
+            construction.armor,
+            construction.maximum_armor,
+            construction.energy_heat
+        ));
+        lines.extend(construction.warnings.iter().cloned());
+    }
+    lines.join("\r\n")
 }

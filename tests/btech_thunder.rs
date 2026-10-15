@@ -266,8 +266,7 @@ async fn active_mines_ignore_hovercraft_over_water() {
         id,
         VehicleTemplate::parse(
             "test",
-            &include_str!("../game/units/Demolisher.toml")
-                .replace("movement = \"track\"", "movement = \"hover\""),
+            &crate::support::templates::hovercraft(include_str!("../game/units/Demolisher.toml")),
         )
         .unwrap(),
     )

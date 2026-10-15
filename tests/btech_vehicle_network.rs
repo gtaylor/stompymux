@@ -93,9 +93,10 @@ async fn field_with_classic(
         let id = world.create(&config, format!("Network unit {i}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if i % 2 == 0 {
-            let mut vehicle =
+            let mut vehicle = crate::support::templates::fitted(
                 VehicleTemplate::parse("Hunter", include_str!("../game/units/Hunter.toml"))
-                    .unwrap();
+                    .unwrap(),
+            );
             let parts = &mut vehicle
                 .sections
                 .get_mut(&VehicleSection::Front)
@@ -137,7 +138,8 @@ async fn field_with_classic(
                     },
                 );
             }
-            create_battle_vehicle(&mut world, id, vehicle).unwrap();
+            create_battle_vehicle(&mut world, id, crate::support::templates::fitted(vehicle))
+                .unwrap();
         } else {
             create_battle_unit(&mut world, id, template).unwrap();
         }

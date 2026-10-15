@@ -1854,18 +1854,17 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
                 original_load.material_mass - original_cargo
                     + (value as f32 / divisor * 1024.0).trunc() as u32
             );
-            if value == 100_000 {
-                assert_eq!(load.maximum_speed(100.0).unwrap(), 0.0);
-                let world = lua.world();
-                let motion = world
-                    .btech
-                    .constructed_units()
-                    .get(&id)
-                    .and_then(Mech::motion)
-                    .or_else(|| world.btech.vehicles().get(&id).and_then(Vehicle::motion))
-                    .unwrap();
-                assert_eq!(motion.speed, 0.0);
-                assert_eq!(motion.desired_speed, 0.0);
+            // An installation that takes the unit over its tonnage is not a speed penalty;
+            // construction answers for overweight designs (TechManual p. 97).
+            let nominal = UnitLoad {
+                material_mass: u32::from(load.nominal_tons) * 1024,
+                ..load
+            };
+            if load.material_mass >= nominal.material_mass {
+                assert_eq!(
+                    load.maximum_speed(100.0).unwrap(),
+                    nominal.maximum_speed(100.0).unwrap()
+                );
             }
             let saved = lua.world().clone();
             persistence::save(&config.database(), &saved).await.unwrap();
@@ -2863,8 +2862,12 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: 
             assert_eq!(load.material_mass, mass as u32);
             assert_eq!(load.nominal_tons, original.nominal_tons);
             assert_eq!(load.carried_mass, original.carried_mass);
+            // Material above the nominal tonnage is not a speed penalty (TechManual p. 97).
             if mass == i32::MAX {
-                assert_eq!(load.maximum_speed(100.0).unwrap(), 0.0);
+                assert_eq!(
+                    load.maximum_speed(100.0).unwrap(),
+                    original.maximum_speed(100.0).unwrap()
+                );
             }
             if let Some(unit) = saved.btech.constructed_units().get(&id) {
                 assert_eq!(unit.mass().unwrap().total, original.material_mass);

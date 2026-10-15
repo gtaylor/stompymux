@@ -9,18 +9,13 @@ scan_range = 30
 
 [construction]
 engine = "ice"
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 21
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 21
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 25

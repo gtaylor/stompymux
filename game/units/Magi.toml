@@ -7,6 +7,9 @@ cargo_space = 0
 max_suits = 0
 max_ton = 1
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 43
 slots = [
@@ -30,6 +33,5 @@ slots = [
 armor = 40
 slots = [
     { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "2-3", item = "FerroFibrous" },
     { at = 4, item = "Case" },
 ]

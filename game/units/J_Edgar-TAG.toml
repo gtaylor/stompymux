@@ -9,20 +9,17 @@ scan_range = 30
 cargo_space = 0
 max_suits = 0
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 20
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 20
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 32
+armor = 31
 
 [sections.aft_side]
 armor = 12

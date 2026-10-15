@@ -3,6 +3,7 @@ class = "vehicle"
 movement = "hover"
 tons = 50
 walk_mp = 15
+heat_sinks = 11
 
 [construction]
 engine = "xl"

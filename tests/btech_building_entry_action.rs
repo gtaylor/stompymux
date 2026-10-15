@@ -611,8 +611,7 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
         include_str!("../game/units/Demolisher.toml").to_owned(),
         include_str!("../game/units/Demolisher.toml")
             .replace("movement = \"track\"", "movement = \"wheel\""),
-        include_str!("../game/units/Demolisher.toml")
-            .replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(include_str!("../game/units/Demolisher.toml")),
         include_str!("../game/units/Kestrel.toml").to_owned(),
     ] {
         for heading in [0, 90, 180, 270] {
@@ -1359,7 +1358,7 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
         include_str!("../game/units/GOL-1H.toml").to_owned(),
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         include_str!("../game/units/Kestrel.toml").to_owned(),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")

@@ -835,10 +835,10 @@ impl Vehicle {
     }
 
     fn new_mode(definition: VehicleTemplate, contract_loadout: bool) -> Result<Self> {
-        // The (tons + 5, at least 10) / 10 internal structure
-        // (vehicle_int_check) is forced while the template file is read;
-        // construction and saved-definition restore keep the stored internals
-        // verbatim.
+        // Internal structure of a tenth of the tonnage, rounded up (TechManual p. 98),
+        // is forced while the template file is read; construction and saved-definition
+        // restore keep the stored internals verbatim. Template construction applies the
+        // TechManual combat vehicle rules through `validate_construction`.
         if contract_loadout {
             definition.validate_anatomy()?;
             super::validate_radio_attributes(&definition.attributes)?;
@@ -2289,4 +2289,27 @@ pub fn damage_vehicle_motive(
     ensure!(!vehicle.is_destroyed(), "Vehicle is already destroyed");
     vehicle.apply_motive_hit(hit);
     Ok(())
+}
+
+/// The Demolisher rebuilt as a legal hovercraft for chassis-coverage tests: hovercraft weigh
+/// at most 50 tons (TechManual p. 96), so it keeps its armor and turret but carries one AC/20
+/// with two tons of ammunition, which brings it to exactly 50 tons. Autopilot encounter
+/// scenarios use it for their hovercraft too.
+pub(crate) fn hovercraft_variant(tracked: &str) -> String {
+    let hover = tracked
+        .replace("movement = \"track\"", "movement = \"hover\"")
+        .replace("tons = 80", "tons = 50")
+        .replace(
+            "{ at = \"1-2\", item = \"IS.AC/20\" }",
+            "{ at = 1, item = \"IS.AC/20\" }",
+        )
+        .replace(
+            "{ at = \"3-6\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
+            "{ at = \"3-4\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
+        );
+    assert!(
+        hover.contains("tons = 50") && hover.contains("{ at = 1, item = \"IS.AC/20\" }"),
+        "expected the Demolisher template"
+    );
+    hover
 }

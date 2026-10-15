@@ -57,6 +57,7 @@ mod vehicle;
 mod vehicle_engine;
 mod vehicle_loadout;
 mod vehicle_mass;
+mod vehicle_rules;
 
 pub use administrative::{
     administrative_technology, administrative_template_movement, administrative_template_tonnage,
@@ -114,6 +115,15 @@ pub use technology::{DamageClass, Technology, flag_spells_technology, reflective
 pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
 pub use unit::UnitTemplate;
 pub use vehicle::{VehicleMovement, VehicleSection, VehicleTemplate};
-pub use vehicle_engine::{VehicleEngine, VehiclePowerplant};
+pub use vehicle_engine::{
+    VEHICLE_MAXIMUM_ENGINE_RATING, VEHICLE_MINIMUM_ENGINE_RATING, VehicleEngine, VehiclePowerplant,
+};
 pub use vehicle_loadout::{VehicleCriticalLocation, VehicleLoadout};
-pub use vehicle_mass::{VehicleMass, VehicleMaterial};
+pub use vehicle_mass::{
+    VehicleMass, VehicleMaterial, needs_power_amplifier,
+    power_amplifier_mass as vehicle_power_amplifier_mass, turret_mass,
+};
+pub use vehicle_rules::{
+    ROTOR_MAXIMUM_ARMOR, VehicleConstruction, VehicleTemplateCheck, check_vehicle_template,
+    format_tons, occupies_vehicle_slot, vehicle_maximum_armor,
+};

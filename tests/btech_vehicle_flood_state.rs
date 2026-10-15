@@ -5,9 +5,10 @@ use stompymux_rs::*;
 
 /// Intact vehicle with a working electronic suite and command computer.
 fn template() -> VehicleTemplate {
-    let mut template =
+    let mut template = crate::support::templates::fitted(
         VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-            .unwrap();
+            .unwrap(),
+    );
     for (slot, equipment) in [(0, "Ecm"), (1, "C3Master")] {
         template
             .sections
@@ -28,7 +29,7 @@ fn template() -> VehicleTemplate {
 
 #[test]
 fn flooding_preserves_armor_ammunition_and_crew_without_reviving_a_wreck() {
-    let mut unit = Vehicle::new(template()).unwrap();
+    let mut unit = Vehicle::new(crate::support::templates::fitted(template())).unwrap();
     let before = unit.clone();
     assert!(unit.destroy_by_flooding());
     assert!(unit.flooded() && unit.is_destroyed());
@@ -68,7 +69,12 @@ async fn water_destruction_clears_controls_and_survives_sqlite_and_lua() {
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     let id = world.create(&config, "Vehicle".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    create_battle_vehicle(&mut world, id, template()).unwrap();
+    create_battle_vehicle(
+        &mut world,
+        id,
+        crate::support::templates::fitted(template()),
+    )
+    .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);

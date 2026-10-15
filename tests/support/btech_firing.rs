@@ -9,7 +9,7 @@ pub fn templates() -> Vec<String> {
         include_str!("../../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
@@ -133,16 +133,20 @@ pub fn supply_fixture_on(
             );
         }
     }
+    if let UnitTemplate::Vehicle(definition) = &mut template {
+        crate::templates::fit_vehicle(definition);
+    }
     let shooter = world.create(config, "Sighter".into(), Kind::Thing);
     let target = world.create(config, "Target".into(), Kind::Thing);
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
     template.create(&mut world, shooter).unwrap();
-    UnitTemplate::parse("target", target_source)
-        .unwrap()
-        .create(&mut world, target)
-        .unwrap();
+    let mut target_template = UnitTemplate::parse("target", target_source).unwrap();
+    if let UnitTemplate::Vehicle(definition) = &mut target_template {
+        crate::templates::fit_vehicle(definition);
+    }
+    target_template.create(&mut world, target).unwrap();
     for id in [shooter, target] {
         crate::seed_object_dice(&mut world, id, crate::FIXTURE_DICE_SEED);
     }

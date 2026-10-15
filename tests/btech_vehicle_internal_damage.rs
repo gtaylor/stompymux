@@ -18,7 +18,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("test", template).unwrap(),
+        crate::support::templates::fitted(VehicleTemplate::parse("test", template).unwrap()),
     )
     .unwrap();
     place_battle_unit(&mut world, id, map, 0, 0).unwrap();
@@ -51,11 +51,8 @@ fn rules() -> VehicleCriticalRules {
 
 #[tokio::test]
 async fn internal_damage_handles_structure_rounding_and_vehicle_local_overflow() {
-    for (special, structural, absorbed) in [
-        ("", 3, 3),
-        ("ReinforcedInternal_Tech", 2, 2),
-        ("CompositeInternal_Tech", 6, 6),
-    ] {
+    // Combat vehicles carry standard structure only (TechManual p. 98).
+    for (special, structural, absorbed) in [("", 3, 3)] {
         let text = support::templates::with_flags(
             include_str!("../game/units/Demolisher.toml"),
             &[special],

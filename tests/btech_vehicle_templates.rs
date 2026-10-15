@@ -127,12 +127,12 @@ fn vehicle_assets_accept_multiple_ammunition_mode_words() {
     }
 }
 
-/// Bare system entries in existing artillery carriers receive the ordinary empty metadata.
+/// Bare system entries in existing vehicles receive the ordinary empty metadata.
 #[test]
-fn artillery_vehicle_assets_decode_abbreviated_ecm() {
+fn vehicle_assets_decode_abbreviated_ecm() {
     for source in [
-        include_str!("../game/units/Huey.toml"),
-        include_str!("../game/units/Huitzilopochtli.toml"),
+        include_str!("../game/units/Schiltron.toml"),
+        include_str!("../game/units/Fulcrum.toml"),
     ] {
         let definition = VehicleTemplate::parse("test", source).unwrap();
         let vehicle = Vehicle::new(definition).unwrap();
@@ -218,7 +218,7 @@ fn vtol_assets_share_vehicle_anatomy_and_equipment_without_ground_admission() {
         // Parsed aircraft share material construction; world admission is checked separately.
         count += 1;
     }
-    assert_eq!(count, 34);
+    assert_eq!(count, 31);
 }
 
 /// Type/locomotion mismatches and missing rotors must not create ambiguous chassis definitions.
@@ -254,6 +254,35 @@ fn vtol_anatomy_requires_matching_type_movement_and_rotor() {
     assert_eq!(engine.weight_rating, 160);
     let mass = template.mass().unwrap();
     assert_eq!(mass.components, 2560);
-    assert_eq!(mass.cockpit, 1280);
+    // Controls weigh 5 percent, rounded up to the half ton (TechManual p. 102).
+    assert_eq!(mass.cockpit, 1536);
     assert_eq!(mass.engine, engine.installed_mass);
+}
+
+/// Every shipped vehicle and VTOL passes the TechManual combat vehicle construction check.
+#[test]
+fn shipped_vehicle_templates_pass_the_construction_check() {
+    let mut count = 0;
+    for entry in std::fs::read_dir(crate::support::repository_root().join("game/units")).unwrap() {
+        let path = entry.unwrap().path();
+        let source = std::fs::read_to_string(&path).unwrap();
+        if !source
+            .lines()
+            .any(|line| line == "class = \"vehicle\"" || line == "class = \"vtol\"")
+        {
+            continue;
+        }
+        let reference = path.file_stem().unwrap().to_str().unwrap();
+        let template = VehicleTemplate::parse(reference, &source)
+            .unwrap_or_else(|error| panic!("{}: {error:#}", path.display()));
+        let report = check_battle_vehicle_template(&template);
+        assert!(
+            report.constructible,
+            "{}: {:?}",
+            path.display(),
+            report.rejection
+        );
+        count += 1;
+    }
+    assert_eq!(count, 255);
 }

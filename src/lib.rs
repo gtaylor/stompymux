@@ -664,6 +664,12 @@ pub use btech::{VehicleEngine, VehiclePowerplant};
 /// Intact ground-vehicle component and ammunition mass diagnostics.
 pub use btech::VehicleMass;
 
+/// TechManual combat vehicle construction rules and the read-only vehicle template check.
+pub use btech::{
+    VehicleConstruction, VehicleTemplateCheck,
+    check_vehicle_template as check_battle_vehicle_template, vehicle_maximum_armor,
+};
+
 /// Owned ground-vehicle protection and ammunition state.
 pub use btech::Vehicle;
 

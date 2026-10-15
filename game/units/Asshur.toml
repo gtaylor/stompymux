@@ -9,19 +9,13 @@ heat_sinks = 10
 armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 11
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
+armor = 10
 
 [sections.right_side]
 armor = 11
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 13
+armor = 11
 slots = [
     { at = 1, item = "TAG" },
 ]
@@ -30,7 +24,7 @@ slots = [
 armor = 10
 
 [sections.turret]
-armor = 13
+armor = 11
 slots = [
     { at = "1-2", item = "CL.ERMediumLaser" },
     { at = 3, item = "CL.StreakSRM-6" },

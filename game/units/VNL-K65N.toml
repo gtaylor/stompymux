@@ -34,5 +34,5 @@ slots = [
     { at = "6-8", item = "Ammo_IS.AC/20", rounds = 5 },
     { at = 9, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 10, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100 },
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]

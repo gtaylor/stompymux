@@ -4,18 +4,19 @@ movement = "track"
 tons = 30
 walk_mp = 11
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 18
 slots = [
     { at = 1, item = "IS.MediumLaser" },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
 armor = 18
 slots = [
     { at = 1, item = "IS.MediumLaser" },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]
@@ -28,7 +29,7 @@ slots = [
 armor = 19
 
 [sections.turret]
-armor = 28
+armor = 27
 slots = [
     { at = 1, item = "IS.MediumPulseLaser" },
 ]

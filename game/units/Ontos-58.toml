@@ -6,17 +6,14 @@ walk_mp = 5
 heat_sinks = 24
 specials = ["SearchLight"]
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 32
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 32
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 40

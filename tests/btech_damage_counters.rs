@@ -112,20 +112,17 @@ async fn located_packets_count_overflow_once_and_combat_safe_counts_nothing() {
     }
 }
 
-/// Rotor scaling precedes accounting; hardened armor and internal reinforcement follow it.
-/// VTOLs cannot mount hardened armor, so the rotor case checks reinforcement alone.
+/// Rotor scaling precedes accounting; hardened armor follows it. VTOLs cannot mount hardened
+/// armor, and combat vehicles carry standard structure only (TechManual p. 98).
 #[tokio::test]
 async fn accounting_uses_the_admitted_packet_before_material_reductions() {
     for rotor in [false, true] {
         let source = if rotor {
-            crate::support::templates::with_flags(
-                include_str!("../game/units/Kestrel.toml"),
-                &["ReinforcedInternal_Tech"],
-            )
+            include_str!("../game/units/Kestrel.toml").to_owned()
         } else {
             crate::support::templates::with_flags(
                 include_str!("../game/units/Demolisher.toml"),
-                &["HardenedArmor_Tech", "ReinforcedInternal_Tech"],
+                &["HardenedArmor_Tech"],
             )
         };
         let (_dir, _, mut world, id, _, _) =
@@ -158,7 +155,7 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
         let internal =
             resolve_battle_vehicle_internal_damage(&mut world, id, VehicleSection::Rear, 5, rules)
                 .unwrap();
-        assert_eq!(internal.structural_damage, 3);
+        assert_eq!(internal.structural_damage, 5);
         assert_eq!(
             counters(&world, id),
             serde_json::json!({"taken":incoming+5,"inflicted":0})

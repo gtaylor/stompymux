@@ -15,10 +15,7 @@ fn templates() -> Vec<(&'static str, String)> {
             "Demolisher",
             vehicle.replace("movement = \"track\"", "movement = \"wheel\""),
         ),
-        (
-            "Demolisher",
-            vehicle.replace("movement = \"track\"", "movement = \"hover\""),
-        ),
+        ("Demolisher", crate::support::templates::hovercraft(vehicle)),
         (
             "Demolisher",
             vehicle

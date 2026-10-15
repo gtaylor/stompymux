@@ -35,7 +35,7 @@ async fn fixture_on_surface(
     create_battle_vehicle(
         &mut world,
         id,
-        VehicleTemplate::parse("Demolisher", template).unwrap(),
+        crate::support::templates::fitted(VehicleTemplate::parse("Demolisher", template).unwrap()),
     )
     .unwrap();
     support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
@@ -668,11 +668,13 @@ async fn transport_loss_shares_nested_chassis_destruction_and_transactional_dise
                         create_battle_vehicle(
                             &mut world,
                             id,
-                            VehicleTemplate::parse(
-                                "Demolisher",
-                                include_str!("../game/units/Demolisher.toml"),
-                            )
-                            .unwrap(),
+                            crate::support::templates::fitted(
+                                VehicleTemplate::parse(
+                                    "Demolisher",
+                                    include_str!("../game/units/Demolisher.toml"),
+                                )
+                                .unwrap(),
+                            ),
                         )
                         .unwrap();
                         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);

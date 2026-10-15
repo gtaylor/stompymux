@@ -12,7 +12,7 @@ fn templates() -> Vec<String> {
         include_str!("../game/units/GOL-1H.toml").into(),
         tracked.into(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::support::templates::hovercraft(tracked),
         tracked
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 5", "walk_mp = 0"),
@@ -51,9 +51,9 @@ async fn fixture(
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         (if index == 0 {
-            launcher(source, "Swarm")
+            crate::support::templates::fitted_unit(launcher(source, "Swarm"))
         } else {
-            UnitTemplate::parse("test", source).unwrap()
+            crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap())
         })
         .create(&mut world, id)
         .unwrap();
@@ -93,7 +93,8 @@ fn shot_rules() -> ShotRules {
 
 /// Install the same Clan LRM-20 and full Swarm bin in either construction anatomy.
 fn launcher(source: &str, mode: &str) -> UnitTemplate {
-    let mut definition = UnitTemplate::parse("test", source).unwrap();
+    let mut definition =
+        crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap());
     let part = MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
         .unwrap()
         .sections[&MechSection::LeftArm]
@@ -256,8 +257,7 @@ fn candidate(
     };
     let id = world.create(config, "Retarget candidate".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-    UnitTemplate::parse("test", source)
-        .unwrap()
+    crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap())
         .create(world, id)
         .unwrap();
     support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);

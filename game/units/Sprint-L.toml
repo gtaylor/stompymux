@@ -4,20 +4,17 @@ movement = "vtol"
 tons = 10
 walk_mp = 20
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 3
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 3
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
-armor = 7
+armor = 6
 slots = [
     { at = 1, item = "BeagleProbe" },
     { at = 2, item = "IS.MediumLaser" },

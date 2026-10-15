@@ -88,8 +88,9 @@ pub async fn run_policy(
             ),
             (
                 "hover",
-                include_str!("../../../game/units/Demolisher.toml")
-                    .replace("movement = \"track\"", "movement = \"hover\""),
+                crate::btech::vehicle::hovercraft_variant(include_str!(
+                    "../../../game/units/Demolisher.toml"
+                )),
             ),
         ] {
             for seed in 1..=seeds {

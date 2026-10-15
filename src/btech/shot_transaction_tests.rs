@@ -125,7 +125,7 @@ fn shot_transactions_match_reference_across_chassis_and_rejections() {
         mech.to_owned(),
         tracked.to_owned(),
         tracked.replace("movement = \"track\"", "movement = \"wheel\""),
-        tracked.replace("movement = \"track\"", "movement = \"hover\""),
+        crate::btech::vehicle::hovercraft_variant(tracked),
     ] {
         for recipient in [mech, tracked] {
             for seed in [3, 17, 42, 88] {
@@ -309,10 +309,13 @@ fn special_shot_effects_match_reference_validation() {
             crate::Weapon::Srm4,
         ),
         (
-            vehicle.replace(
-                "item = \"IS.AC/20\" }",
-                "item = \"IS.Flamer\", modes = [\"Heat\"] }",
-            ),
+            // Two flamers need six heat sinks (TechManual p. 104).
+            vehicle
+                .replace(
+                    "item = \"IS.AC/20\" }",
+                    "item = \"IS.Flamer\", modes = [\"Heat\"] }",
+                )
+                .replace("walk_mp = 5\n", "walk_mp = 5\nheat_sinks = 6\n"),
             crate::Weapon::Flamer,
         ),
         (

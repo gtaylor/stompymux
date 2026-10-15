@@ -42,9 +42,9 @@ specials = ["SearchLight"]
 | `class` | string | `mech`, `vehicle`, `vtol`, `naval`, `aerofighter`, `spheroid_dropship`, `aerodyne_dropship`, `mechwarrior` or `battlesuit`. |
 | `movement` | string | `biped`, `quad`, `track`, `wheel`, `hover`, `vtol`, `hull`, `foil`, `fly`, `sub` or `none`. |
 | `tons` | integer | Tonnage. |
-| `walk_mp`, `jump_mp` | integer | Cruising and jumping movement points; each is 10.75 km/h. |
+| `walk_mp`, `jump_mp` | integer | Top ground and jumping movement points; each is 10.75 km/h. For a mech `walk_mp` is the running MP; for a vehicle or VTOL it is the flank MP, and the cruising MP is the flank MP divided by 1.5 and rounded. Vehicles cannot jump. |
 | `max_speed`, `jump_speed` | number | Speeds in km/h, for the few units whose speed is not whole movement points. Give either the speed or its movement points, not both. |
-| `heat_sinks` | integer | Installed heat sinks. |
+| `heat_sinks` | integer | Installed heat sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
 | `hs_engine_override` | integer | Engine heat sink override. |
 | `radio`, `radio_type`, `radio_range` | integer | Electronics. |
 | `tac_range`, `lrs_range`, `scan_range` | integer | Sensor ranges. |
@@ -93,6 +93,41 @@ technology base. An Inner Sphere Mech with a Clan XL engine sets
 `engine_tech = "clan"`, giving the engine two slots in each side torso and the
 Clan XL engine's mass; a Clan Mech with Inner Sphere ferro-fibrous armor sets
 `armor_tech = "inner_sphere"`.
+
+### Combat vehicles
+
+Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
+95-107), and construction refuses a template that breaks them:
+
+- Hovercraft weigh at most 50 tons, VTOLs 30, wheeled vehicles 80 and tracked
+  vehicles 100.
+- Structure is standard; endo steel, composite and reinforced structure are
+  Mech technologies.
+- The Engine Rating is the tonnage times the cruising MP, less the suspension
+  factor, at least 10 and rounded up to a multiple of 5; it may not exceed 400.
+  Any fusion engine weighs half again its listed weight; an `ice` engine weighs
+  twice a standard fusion engine and needs power amplifiers (a tenth of the
+  energy weapons' mass) for lasers and PPCs.
+- Heat sinks are single, at a ton each beyond the ten a fusion engine carries
+  free, and must cover the heat of every energy weapon firing at once.
+- Armor may not exceed 3.5 points per ton plus 40, and a rotor carries at most
+  2 points. Locations have a single armor value, so `rear` is refused.
+- The vehicle has 5 item slots plus 1 per 5 tons, less 2 for an Inner Sphere XL
+  engine (1 for Clan XL or light), 2 for Inner Sphere ferro-fibrous armor (1
+  for Clan or light, 3 for heavy) and plus 1 for a compact engine. Each weapon
+  and item takes a slot, as does each ammunition type and a cargo bay; heat
+  sinks and power amplifiers take none.
+- Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or
+  triple-strength myomer. A VTOL's turret is a chin turret (TacOps AUE p. 160).
+- Everything together may not weigh more than the vehicle. Unspent tonnage is
+  cargo space or wasted weight and is only reported. Controls weigh 5 percent of
+  the vehicle and the turret 10 percent of the items in it, both rounded up to
+  the half ton.
+
+`@btech template-check <name>` reports a vehicle's verdict with its mass, item
+slots, armor and energy weapon heat against these limits. Stationary
+installations (`movement = "none"`) are not combat vehicles and only have their
+mass calculated.
 
 ## Sections
 
@@ -218,5 +253,7 @@ other files still convert, and the exit status is non-zero.
 
 MegaMek's vehicle body location has no counterpart, so body ammunition is
 placed beside a weapon it feeds and other body equipment in the first location
-with room. Vehicle heat sinks are set to cover energy weapon heat. Troop and
+with room. Vehicle heat sinks are set to cover energy weapon heat with single heat
+sinks, and vehicles with endo steel, composite or reinforced structure are
+refused. Troop and
 cargo capacity is not converted. Radios are left at their defaults.

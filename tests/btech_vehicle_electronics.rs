@@ -19,9 +19,10 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         let id = world.create(&config, "Unit".into(), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index != 1 {
-            let mut template =
+            let mut template = crate::support::templates::fitted(
                 VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))
-                    .unwrap();
+                    .unwrap(),
+            );
             for (slot, equipment) in [(0, "Ecm"), (1, "AngelEcm")] {
                 template
                     .sections
@@ -37,7 +38,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
                         },
                     );
             }
-            create_battle_vehicle(&mut world, id, template).unwrap();
+            create_battle_vehicle(&mut world, id, crate::support::templates::fitted(template))
+                .unwrap();
         } else {
             create_battle_unit(
                 &mut world,

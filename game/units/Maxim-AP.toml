@@ -15,7 +15,6 @@ armor = 23
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.right_side]
@@ -23,7 +22,6 @@ armor = 23
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.front_side]

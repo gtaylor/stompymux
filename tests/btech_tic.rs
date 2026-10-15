@@ -114,7 +114,8 @@ async fn tic_membership_native_lua_and_persistence() {
 async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
     let tracked = include_str!("../game/units/Demolisher.toml");
     let wheeled = tracked.replace("movement = \"track\"", "movement = \"wheel\"");
-    let hover = tracked.replace("movement = \"track\"", "movement = \"hover\"");
+    // A hovercraft with several weapons to group (TechManual p. 96 caps hovercraft at 50 tons).
+    let hover = include_str!("../game/units/Pegasus.toml");
     let stationary = tracked
         .replace("movement = \"track\"", "movement = \"none\"")
         .replace("walk_mp = 5", "walk_mp = 0");
@@ -124,7 +125,7 @@ async fn tic_firing_reuses_shots_and_rolls_back_callbacks() {
         (include_str!("../game/units/Demolisher.toml"), true),
         (include_str!("../game/units/Kestrel.toml"), true),
         (wheeled.as_str(), true),
-        (hover.as_str(), true),
+        (hover, true),
         (stationary.as_str(), true),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;

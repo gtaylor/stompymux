@@ -14,7 +14,7 @@ armor = 30
 armor = 30
 
 [sections.front_side]
-armor = 42
+armor = 32
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
@@ -26,7 +26,7 @@ slots = [
 ]
 
 [sections.turret]
-armor = 40
+armor = 32
 slots = [
     { at = "1-3", item = "IS.RotaryAC/2" },
 ]

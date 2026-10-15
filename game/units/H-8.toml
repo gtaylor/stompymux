@@ -12,7 +12,7 @@ armor = 10
 armor = 10
 
 [sections.front_side]
-armor = 15
+armor = 10
 slots = [
     { at = 1, item = "IS.LRM-5" },
     { at = "2-3", item = "IS.StreakSRM-2" },

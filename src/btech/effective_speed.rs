@@ -91,17 +91,13 @@ mod tests {
         .unwrap() as f32
     }
 
-    /// Underweight designs cannot gain speed; overweight designs pay a half-excess surcharge.
+    /// Underweight designs cannot gain speed, and material above the nominal tonnage is not a
+    /// speed penalty: construction refuses overweight designs (TechManual p. 97).
     #[test]
-    fn construction_weight_and_overload_boundaries() {
-        for mass in [0, 1, 1024, 35 * 1024] {
+    fn construction_weight_does_not_change_unloaded_speed() {
+        for mass in [0, 1, 1024, 35 * 1024, 60 * 1024, u32::MAX] {
             assert_eq!(mass_speed(35, mass, 118.25, false), 118.25);
         }
-        assert_eq!(mass_speed(40, 60 * 1024, 64.5, false), 64.5 * 40.0 / 70.0);
-        // Exactly three nominal masses can move; the next fixed mass unit cannot.
-        assert_eq!(mass_speed(3, 7 * 1024, 64.5, false), 21.5);
-        assert_eq!(mass_speed(3, 7 * 1024 + 1, 64.5, false), 0.0);
-        assert_eq!(mass_speed(35, u32::MAX, 118.25, false), 0.0);
         assert_eq!(mass_speed(35, 35 * 1024, 118.25, true), 0.0);
     }
 }

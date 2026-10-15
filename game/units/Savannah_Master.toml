@@ -4,9 +4,6 @@ movement = "hover"
 tons = 5
 max_speed = 216.0
 
-[construction]
-engine = "compact"
-
 [sections.left_side]
 armor = 6
 

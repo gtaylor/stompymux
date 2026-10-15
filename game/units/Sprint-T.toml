@@ -6,17 +6,14 @@ walk_mp = 20
 cargo_space = 0
 specials = ["CargoTech"]
 
+[construction]
+armor = "ferro_fibrous"
+
 [sections.left_side]
 armor = 3
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.right_side]
 armor = 3
-slots = [
-    { at = "6-12", item = "FerroFibrous" },
-]
 
 [sections.front_side]
 armor = 7

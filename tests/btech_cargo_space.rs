@@ -3,16 +3,27 @@ use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// All admitted movement classes use the same cargo-space definition.
+/// All admitted movement classes use the same cargo-space definition. The vehicles give up
+/// ammunition so that their cargo bays fit within their tonnage (TechManual p. 97).
 fn templates() -> Vec<String> {
-    let ground = include_str!("../game/units/Demolisher.toml");
+    let demolisher = include_str!("../game/units/Demolisher.toml");
+    let hover = support::templates::hovercraft(demolisher).replace(
+        "    { at = \"3-4\", item = \"Ammo_IS.AC/20\", rounds = 5 },\n",
+        "",
+    );
+    let ground = demolisher.replace(
+        "{ at = \"3-6\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
+        "{ at = \"3-4\", item = \"Ammo_IS.AC/20\", rounds = 5 }",
+    );
     vec![
         include_str!("../game/units/JR7-D.toml").into(),
         include_str!("../game/units/GOL-1H.toml").into(),
-        ground.into(),
-        ground.replace("Tracked", "Wheeled"),
-        ground.replace("Tracked", "Hover"),
-        ground.replace("Tracked", "None"),
+        ground.clone(),
+        ground.replace("movement = \"track\"", "movement = \"wheel\""),
+        hover,
+        ground
+            .replace("movement = \"track\"", "movement = \"none\"")
+            .replace("walk_mp = 5", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
     ]
 }
@@ -155,20 +166,35 @@ fn mech_cargo_installation_survives_section_loss_and_does_not_enable_suits() {
     assert!(Mech::from_template(template).is_err());
 }
 
-/// An empty but overweight cargo installation participates in the common propulsion limit.
+/// A cargo bay heavier than the chassis can carry is a construction error for a combat
+/// vehicle (TechManual p. 97); an empty installation is never a speed penalty.
 #[tokio::test]
-async fn cargo_installation_alone_applies_load_speed_limits() {
+async fn overweight_cargo_installations_are_refused_rather_than_slowed() {
     for source in templates() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Cargo".into(), Kind::Thing);
-        configured(&source, "50000", "CargoTech")
-            .create(&mut world, unit)
-            .unwrap();
-        assert_eq!(battle_inventory_mass(&world, unit).unwrap(), 0);
-        assert_eq!(
-            battle_unit_load(&world, unit, true).unwrap().carried_mass,
-            0
+        let template = configured(&source, "50000", "CargoTech");
+        let stationary = matches!(
+            &template,
+            UnitTemplate::Vehicle(vehicle) if vehicle.movement == VehicleMovement::Stationary
         );
-        assert_eq!(battle_throttle_maximum(&world, unit, true).unwrap(), 0.0);
+        let vehicle = matches!(template, UnitTemplate::Vehicle(_));
+        match template.create(&mut world, unit) {
+            Err(error) => {
+                assert!(vehicle && !stationary, "{error:#}");
+                assert!(
+                    format!("{error:#}").contains("TechManual p. 97"),
+                    "{error:#}"
+                );
+            }
+            Ok(()) => {
+                assert!(!vehicle || stationary);
+                assert_eq!(
+                    battle_unit_load(&world, unit, true).unwrap().carried_mass,
+                    0
+                );
+                assert!(battle_throttle_maximum(&world, unit, true).unwrap() > 0.0 || stationary);
+            }
+        }
     }
 }
