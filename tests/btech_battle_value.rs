@@ -8,6 +8,11 @@ const CATAPULT: &str = include_str!("fixtures/btech/units/CPLT-C1.toml");
 const TIMBER_WOLF: &str = include_str!("fixtures/btech/units/MadCat-Prime.toml");
 const VEDETTE: &str = include_str!("fixtures/btech/units/Vedette.toml");
 const MANTICORE: &str = include_str!("fixtures/btech/units/Manticore.toml");
+const RIFLEMAN: &str = include_str!("fixtures/btech/units/RFL-3N.toml");
+const STALKER: &str = include_str!("fixtures/btech/units/STK-3F.toml");
+const PHOENIX_HAWK: &str = include_str!("fixtures/btech/units/PXH-1.toml");
+const THUNDERBOLT: &str = include_str!("fixtures/btech/units/TDR-5S.toml");
+const CENTURION: &str = include_str!("fixtures/btech/units/CN9-A.toml");
 
 /// Construct a supported fixture without map or pilot dependencies.
 fn unit(source: &str) -> Mech {
@@ -41,6 +46,16 @@ fn published_battle_values() {
     score(&unit(MARAUDER), 579.04, 784.2, 1363);
     // Catapult: jumping 4 adds 2 to the speed total for a Speed Factor of 1.37.
     score(&unit(CATAPULT), 728.84, 670.2, 1399);
+    // Large lasers (123) and the AC/10 (123) at their TechManual values.
+    for (source, published) in [
+        (RIFLEMAN, 1039),
+        (STALKER, 1559),
+        (PHOENIX_HAWK, 1041),
+        (THUNDERBOLT, 1335),
+        (CENTURION, 945),
+    ] {
+        assert_eq!(unit(source).battle_value().unwrap().total, published);
+    }
     assert_eq!(vehicle(VEDETTE).battle_value().unwrap().total, 475);
     assert_eq!(vehicle(MANTICORE).battle_value().unwrap().total, 993);
 }
@@ -48,14 +63,41 @@ fn published_battle_values() {
 /// Clan side-torso ammunition is covered by assumed CASE, and machine guns generate no heat.
 #[test]
 fn clan_battle_value() {
-    // Timber Wolf (Prime): 2,737 with the TechManual Clan ER large laser value of 248.
+    // Timber Wolf (Prime): 2,737.
     let value = unit(TIMBER_WOLF).battle_value().unwrap();
-    let catalogue = f64::from(Weapon::ClanErLargeLaser.battle_value());
-    // Both ER large lasers keep their full value, so each point above 248 adds 1.37.
-    let published = value.offensive + value.defensive - (catalogue - 248.0) * 2.0 * 1.37;
-    assert_eq!(published.round(), 2737.0, "{value:?}");
+    assert_eq!(value.total, 2737, "{value:?}");
     // Side-torso LRM and machine gun ammunition carry no penalty.
     assert!((value.defensive - 962.975).abs() < 0.005, "{value:?}");
+}
+
+/// Gauss weapons count their slots against a Clan centre torso, while their
+/// inert ammunition carries no penalty.
+#[test]
+fn clan_gauss_weapon_exposure() {
+    let mut definition = MechTemplate::parse("MadCat-Prime", TIMBER_WOLF).unwrap();
+    let center = definition
+        .sections
+        .get_mut(&MechSection::CenterTorso)
+        .unwrap();
+    let (&slot, _) = center
+        .criticals
+        .iter()
+        .find(|(_, part)| part.equipment == "CL.MachineGun")
+        .unwrap();
+    center.criticals.get_mut(&slot).unwrap().equipment = "CL.APGaussRifle".into();
+    let value = Mech::from_template(definition)
+        .unwrap()
+        .battle_value()
+        .unwrap();
+    // One AP Gauss slot in the centre torso: -1 before the +3 Defensive Factor of 1.3.
+    assert!(
+        (value.defensive - (962.975 - 1.3)).abs() < 0.005,
+        "{value:?}"
+    );
+    assert!(Weapon::ClanApGaussRifle.defensive_gauss_slots().is_some());
+    assert!(!Weapon::ClanApGaussRifle.ammunition_is_explosive());
+    assert!(!Weapon::ClanPlasmaCannon.ammunition_is_explosive());
+    assert!(Weapon::ALL.iter().all(|weapon| weapon.battle_value() > 0));
 }
 
 /// Critical and ammunition loss keep installed offensive value; armor loss lowers defense.

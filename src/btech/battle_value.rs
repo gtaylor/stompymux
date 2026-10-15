@@ -8,13 +8,13 @@
 //! rating, while installed weapons, ammunition and equipment keep their value after damage or
 //! expenditure. Templates are valued by constructing the pristine unit they describe.
 use super::{
-    ArmAttack, CriticalLocation, Engine, Gyro, Mech, MechChassis, MechSection, ResolvedLoadout,
-    SpeedEnvelope, System, Technology, VehicleCriticalLocation, VehicleMovement, VehicleSection,
-    Weapon, WeaponSettings,
+    ArmAttack, CriticalLocation, Engine, Gyro, Mech, MechChassis, MechSection, PhysicalBattleValue,
+    ResolvedLoadout, SpeedEnvelope, System, SystemContext, Technology, VehicleCriticalLocation,
+    VehicleMovement, VehicleSection, Weapon, WeaponSettings,
 };
 use anyhow::Result;
 use serde::Serialize;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 /// A unit's Battle Value for the standard Gunnery 4 / Piloting 5 crew.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -237,125 +237,14 @@ struct MountFacts {
     artemis: f64,
 }
 
-/// Defensive-only weapons, valued in the Defensive Battle Rating: anti-missile systems and
-/// anti-personnel pods (TechManual pp. 317-318).
-fn is_defensive_weapon(weapon: Weapon) -> bool {
-    weapon.is_ams() || matches!(weapon, Weapon::APod | Weapon::ClanAPod)
-}
-
-/// Whether ammunition for this weapon can explode inside the unit; Gauss and plasma
-/// ammunition cannot (TechManual pp. 317-318, footnote §).
-fn explosive_ammunition(weapon: Weapon) -> bool {
-    weapon.weapon_explosion_damage() == 0
-        && !matches!(weapon, Weapon::PlasmaRifle | Weapon::ClanPlasmaRifle)
-}
-
-/// Ammunition BV per ton (TechManual pp. 317-318; TO:AUE pp. 195-197). Ammunition without a
-/// published value counts 0 (TO:AUE p. 193).
-fn ammunition_value_per_ton(weapon: Weapon) -> f64 {
-    use Weapon::*;
-    match weapon {
-        Ac2 | Lbx2 => 5.0,
-        Ac5 => 9.0,
-        Ac10 => 15.0,
-        Ac20 => 22.0,
-        Lbx5 => 10.0,
-        Lbx10 | ClanLbx10 => 19.0,
-        Lbx20 | ClanLbx20 => 30.0,
-        ClanLbx2 => 6.0,
-        ClanLbx5 => 12.0,
-        LightAc2 => 4.0,
-        LightAc5 => 8.0,
-        UltraAc2 => 7.0,
-        UltraAc5 => 14.0,
-        UltraAc10 | ClanUltraAc10 => 26.0,
-        UltraAc20 => 35.0,
-        ClanUltraAc2 => 8.0,
-        ClanUltraAc5 => 15.0,
-        ClanUltraAc20 => 42.0,
-        RotaryAc2 => 15.0,
-        RotaryAc5 => 31.0,
-        ClanRotaryAc2 => 20.0,
-        ClanRotaryAc5 => 43.0,
-        HyperAc2 => 7.0,
-        HyperAc5 => 14.0,
-        HyperAc10 => 20.0,
-        GaussRifle | ClanGaussRifle => 40.0,
-        HeavyGaussRifle => 43.0,
-        LightGaussRifle => 20.0,
-        MagshotGaussRifle => 2.0,
-        MachineGun | HeavyMachineGun | ClanMachineGun | ClanLightMachineGun
-        | ClanHeavyMachineGun | VehicleFlamer => 1.0,
-        HeavyFlamer => 2.0,
-        PlasmaRifle => 26.0,
-        ClanPlasmaRifle => 21.0,
-        AntiMissileSystem => 11.0,
-        ClanAntiMissileSystem => 22.0,
-        Lrm5 | Lrt5 => 6.0,
-        Lrm10 | Lrt10 => 11.0,
-        Lrm15 | Lrt15 => 17.0,
-        Lrm20 | Lrt20 => 23.0,
-        ClanLrm5 | ClanLrt5 | Nlrm5 => 7.0,
-        ClanLrm10 | ClanLrt10 => 14.0,
-        ClanLrm15 | ClanLrt15 => 21.0,
-        ClanLrm20 | ClanLrt20 => 27.0,
-        Nlrm10 => 13.0,
-        Nlrm15 => 20.0,
-        Nlrm20 => 26.0,
-        Elrm5 => 8.0,
-        Elrm10 => 17.0,
-        Elrm15 => 25.0,
-        Elrm20 => 34.0,
-        Srm2 | Srt2 | ClanSrm2 | ClanSrt2 => 3.0,
-        Srm4 | Srt4 | ClanSrm4 | ClanSrt4 => 5.0,
-        Srm6 | Srt6 | ClanSrm6 | ClanSrt6 => 7.0,
-        StreakSrm2 => 4.0,
-        StreakSrm4 => 7.0,
-        StreakSrm6 => 11.0,
-        ClanStreakSrm2 => 5.0,
-        ClanStreakSrm4 => 10.0,
-        ClanStreakSrm6 => 15.0,
-        ClanStreakLrm5 => 11.0,
-        ClanStreakLrm10 => 22.0,
-        ClanStreakLrm15 => 32.0,
-        ClanStreakLrm20 => 43.0,
-        Mml3 => 4.0,
-        Mml5 => 6.0,
-        Mml7 => 8.0,
-        Mml9 => 11.0,
-        Mrm10 => 7.0,
-        Mrm20 => 14.0,
-        Mrm30 => 21.0,
-        Mrm40 => 28.0,
-        ClanAtm3 => 14.0,
-        ClanAtm6 => 26.0,
-        ClanAtm9 => 36.0,
-        ClanAtm12 => 52.0,
-        Thunderbolt5 => 8.0,
-        Thunderbolt10 => 16.0,
-        Thunderbolt15 => 29.0,
-        Thunderbolt20 => 38.0,
-        ArrowIv | ClanArrowIv => 30.0,
-        LongTom => 46.0,
-        Sniper => 11.0,
-        Thumper => 5.0,
-        LongTomCannon => 41.0,
-        SniperCannon => 10.0,
-        ThumperCannon => 5.0,
-        _ => 0.0,
-    }
-}
-
-/// Unmodified BV of one mount: the runtime catalogue value, or for a one-shot launcher the
-/// published one-shot figure, one fifth of the standard launcher's value rounded to the
-/// nearest whole number (TechManual p. 317). Rocket launchers are one-shot by design and carry
-/// their own value.
+/// Unmodified BV of one mount: the runtime weapon value, or for a one-shot launcher the
+/// published one-shot figure (TechManual p. 317). Rocket launchers are one-shot by design and
+/// carry their own value.
 fn unmodified_value(settings: &WeaponSettings, weapon: Weapon, one_shot: bool) -> f64 {
-    let value = f64::from(settings.battle_value(weapon));
-    if one_shot && !weapon.is_rocket() {
-        return (value / 5.0).round();
+    if one_shot && let Some(value) = weapon.one_shot_battle_value() {
+        return f64::from(value);
     }
-    value
+    f64::from(settings.battle_value(weapon))
 }
 
 /// Heat a weapon adds to Total Weapon Heat: Ultra x2, Rotary x6, Streak x1/2 and one-shot
@@ -427,7 +316,7 @@ fn ammunition_value(
 ) -> f64 {
     let mut by_model: BTreeMap<Weapon, f64> = BTreeMap::new();
     for (weapon, half_ton) in bins {
-        let per_ton = ammunition_value_per_ton(weapon);
+        let per_ton = f64::from(weapon.ammunition_battle_value());
         *by_model.entry(weapon).or_default() += if half_ton { per_ton / 2.0 } else { per_ton };
     }
     by_model
@@ -444,7 +333,7 @@ fn defensive_weapon_value(
     bins: impl Iterator<Item = (Weapon, bool)>,
 ) -> f64 {
     let mut systems: BTreeMap<Weapon, f64> = BTreeMap::new();
-    for weapon in weapons.filter(|weapon| is_defensive_weapon(*weapon)) {
+    for weapon in weapons.filter(|weapon| weapon.is_defensive_equipment()) {
         *systems.entry(weapon).or_default() += f64::from(settings.battle_value(weapon));
     }
     let ammunition = ammunition_value(bins.filter(|(weapon, _)| weapon.is_ams()), &systems);
@@ -463,35 +352,67 @@ fn armor_type_modifier(has: impl Fn(Technology) -> bool) -> f64 {
     }
 }
 
-/// BV of a physical weapon (TechManual p. 317; TO:AUE pp. 195-197). Damage-based values use
-/// the weapon's damage after triple-strength myomer doubling.
+/// BV of a physical weapon from its catalogue entry (TechManual p. 317; TO:AUE pp. 195-197).
+/// Damage-based values use the weapon's damage after triple-strength myomer doubling.
 fn physical_weapon_value(attack: ArmAttack, tons: u16, triple_myomer: bool) -> f64 {
-    let damage = || {
-        let damage = f64::from(attack.damage(tons));
-        if triple_myomer && attack.myomer_doubles() {
-            damage * 2.0
-        } else {
-            damage
-        }
+    let Some(value) = attack.system().and_then(System::physical_battle_value) else {
+        return 0.0;
     };
-    match attack {
-        ArmAttack::Punch => 0.0,
-        ArmAttack::Axe => damage() * 1.5,
-        ArmAttack::Sword | ArmAttack::RetractableBlade | ArmAttack::ChainWhip => damage() * 1.725,
-        ArmAttack::Claw => damage() * 1.275,
-        ArmAttack::Mace | ArmAttack::Lance => damage(),
-        ArmAttack::Saw => 9.0,
-        ArmAttack::Flail => 11.0,
-        ArmAttack::WreckingBall => 8.0,
-        ArmAttack::SmallVibroblade => 12.0,
-        ArmAttack::MediumVibroblade => 17.0,
-        ArmAttack::LargeVibroblade => 24.0,
+    match value {
+        PhysicalBattleValue::Fixed(value) => f64::from(value),
+        PhysicalBattleValue::DamageTimes(factor) => {
+            let damage = f64::from(attack.damage(tons));
+            let doubled = triple_myomer && attack.myomer_doubles();
+            factor * if doubled { damage * 2.0 } else { damage }
+        }
     }
 }
 
-/// Count of complete installations from a slot count and the slots one installation uses.
-fn installations(slots: usize, size: usize) -> f64 {
-    (slots / size) as f64
+/// Defensive equipment BV of the installed systems: each complete installation's catalogue
+/// value (TechManual pp. 317-318; TO:AUE pp. 195-197). `slots` gives the slots one
+/// installation fills.
+fn defensive_system_value<L>(
+    loadout: &ResolvedLoadout<L>,
+    context: SystemContext,
+    slots: impl Fn(System) -> u16,
+) -> f64 {
+    let mut counts: BTreeMap<System, usize> = BTreeMap::new();
+    for part in &loadout.systems {
+        if part.system.defensive_battle_value(context).is_some() {
+            *counts.entry(part.system).or_default() += 1;
+        }
+    }
+    counts
+        .into_iter()
+        .map(|(system, count)| {
+            let value = system.defensive_battle_value(context).unwrap_or(0);
+            let size = usize::from(slots(system).max(1));
+            (count / size) as f64 * f64::from(value)
+        })
+        .sum()
+}
+
+/// Launcher multipliers by weapon index: each Artemis controller's catalogue multiplier for
+/// the launchers it is linked to (TechManual p. 302; TO:AUE p. 197).
+fn artemis_multipliers<L: Copy + PartialEq>(
+    loadout: &ResolvedLoadout<L>,
+    controllers: &[super::ArtemisController<L>],
+) -> BTreeMap<usize, f64> {
+    let mut multipliers = BTreeMap::new();
+    for controller in controllers {
+        let Some(multiplier) = loadout
+            .systems
+            .iter()
+            .find(|part| part.location == controller.location)
+            .and_then(|part| part.system.launcher_battle_value_multiplier())
+        else {
+            continue;
+        };
+        for &index in &controller.weapon_indices {
+            multipliers.insert(index, multiplier);
+        }
+    }
+    multipliers
 }
 
 impl Mech {
@@ -560,39 +481,24 @@ impl Mech {
                 0.5
             };
 
-        let count = |system| {
+        // Defensive equipment (TechManual pp. 317-318; TO:AUE pp. 195-197), counted by
+        // complete installations.
+        let context = SystemContext {
+            clan,
+            watchdog: definition.has_technology(Technology::Watchdog),
+            tons,
+            engine_rating: 0,
+        };
+        let defensive_equipment = defensive_system_value(&loadout, context, |system| {
+            system.installation_slots(context).unwrap_or(1)
+        }) + defensive_weapon_value(
+            settings,
+            loadout.weapons.iter().map(|mount| mount.weapon),
             loadout
-                .systems
+                .ammunition
                 .iter()
-                .filter(|part| part.system == system)
-                .count()
-        };
-        // Defensive equipment (TechManual pp. 317-318; TO:AUE pp. 195-197). Inner Sphere
-        // Guardian ECM and Beagle probes take two slots, their Clan versions one; a Watchdog
-        // CEWS is a two-slot Clan ECM suite and active probe in one.
-        let ecm = if definition.has_technology(Technology::Watchdog) {
-            installations(count(System::Ecm), 2) * 68.0
-        } else {
-            installations(count(System::Ecm), if clan { 1 } else { 2 }) * 61.0
-        };
-        let probe = if clan {
-            installations(count(System::BeagleProbe), 1) * 12.0
-        } else {
-            installations(count(System::BeagleProbe), 2) * 10.0
-        };
-        let defensive_equipment = ecm
-            + probe
-            + installations(count(System::AngelEcm), 2) * 100.0
-            + installations(count(System::LightProbe), 1) * 7.0
-            + installations(count(System::BloodhoundProbe), 3) * 25.0
-            + defensive_weapon_value(
-                settings,
-                loadout.weapons.iter().map(|mount| mount.weapon),
-                loadout
-                    .ammunition
-                    .iter()
-                    .map(|bin| (bin.weapon, bin.half_ton)),
-            );
+                .map(|bin| (bin.weapon, bin.half_ton)),
+        );
 
         // Explosive components (TechManual p. 302; TO:AUE p. 193 for CASE II and Clan XXL).
         let has = |system, section| {
@@ -632,13 +538,17 @@ impl Mech {
         let ammunition_slots = loadout
             .ammunition
             .iter()
-            .filter(|bin| explosive_ammunition(bin.weapon) && exposed(bin.location.section))
+            .filter(|bin| bin.weapon.ammunition_is_explosive() && exposed(bin.location.section))
             .count();
+        // Gauss weapons count every slot; hyper-velocity autocannons count one (TO:AUE p. 196).
         let gauss_slots = loadout
             .weapons
             .iter()
-            .filter(|mount| mount.weapon.weapon_explosion_damage() > 0)
-            .flat_map(|mount| mount.criticals.iter())
+            .filter_map(|mount| {
+                let slots = mount.weapon.defensive_gauss_slots()?;
+                Some(mount.criticals.iter().take(usize::from(slots)))
+            })
+            .flatten()
             .filter(|location| exposed(location.section))
             .count();
         let explosive_penalty = ammunition_slots as f64 * 15.0 + gauss_slots as f64;
@@ -679,11 +589,7 @@ impl Mech {
         let offense = Offense::gather(
             settings,
             &loadout,
-            self.artemis_controllers()?
-                .iter()
-                .flat_map(|controller| controller.weapon_indices.iter().copied())
-                .collect(),
-            definition.has_technology(Technology::ArtemisV),
+            artemis_multipliers(&loadout, &self.artemis_controllers()?),
             |location: CriticalLocation, rear_mount| match location.section {
                 MechSection::LeftArm | MechSection::RightArm if !quad => Arc::Unaffected,
                 _ if rear_mount => Arc::Rear,
@@ -732,39 +638,32 @@ struct Offense {
 }
 
 impl Offense {
-    /// Value every offensive weapon and its ammunition. `artemis` holds the indices of
-    /// weapons an Artemis controller is linked to; `arc` places a weapon from its primary
+    /// Value every offensive weapon and its ammunition. `artemis` maps weapon indices to their
+    /// Artemis multiplier; `arc` places a weapon from its primary
     /// critical and rear-mount flag. A targeting computer links every direct-fire weapon it
     /// supports and any weapon the template links to it explicitly.
     fn gather<L: Copy>(
         settings: &WeaponSettings,
         loadout: &ResolvedLoadout<L>,
-        artemis: BTreeSet<usize>,
-        artemis_v: bool,
+        artemis: BTreeMap<usize, f64>,
         arc: impl Fn(L, bool) -> Arc,
     ) -> Self {
         let targeting_computer = loadout
             .systems
             .iter()
             .any(|part| part.system == System::TargetingComputer);
-        // Artemis IV adds 20 percent (TechManual p. 302), Artemis V 30 (TO:AUE p. 196).
-        let artemis_factor = if artemis_v { 1.3 } else { 1.2 };
         let mounts: Vec<_> = loadout
             .weapons
             .iter()
             .enumerate()
-            .filter(|(_, mount)| !is_defensive_weapon(mount.weapon))
+            .filter(|(_, mount)| !mount.weapon.is_defensive_equipment())
             .map(|(index, mount)| MountFacts {
                 weapon: mount.weapon,
                 arc: arc(mount.criticals[0], mount.rear_mount),
                 one_shot: mount.one_shot,
                 targeting_computer: targeting_computer
                     && (mount.on_targeting_computer || mount.weapon.supports_targeting_computer()),
-                artemis: if artemis.contains(&index) {
-                    artemis_factor
-                } else {
-                    1.0
-                },
+                artemis: artemis.get(&index).copied().unwrap_or(1.0),
             })
             .collect();
         let values = value_weapons(settings, &mounts);
@@ -816,23 +715,13 @@ impl super::Vehicle {
         let armor_modifier =
             armor_type_modifier(|technology| definition.has_technology(technology));
         // Vehicles install each electronic item in a single slot.
-        let count = |system| {
-            loadout
-                .systems
-                .iter()
-                .filter(|part| part.system == system)
-                .count() as f64
+        let context = SystemContext {
+            clan,
+            watchdog: definition.has_technology(Technology::Watchdog),
+            tons: definition.tons,
+            engine_rating: 0,
         };
-        let ecm = if definition.has_technology(Technology::Watchdog) {
-            68.0
-        } else {
-            61.0
-        };
-        let defensive_equipment = count(System::Ecm) * ecm
-            + count(System::BeagleProbe) * if clan { 12.0 } else { 10.0 }
-            + count(System::AngelEcm) * 100.0
-            + count(System::LightProbe) * 7.0
-            + count(System::BloodhoundProbe) * 25.0
+        let defensive_equipment = defensive_system_value(&loadout, context, |_| 1)
             + defensive_weapon_value(
                 settings,
                 loadout.weapons.iter().map(|mount| mount.weapon),
@@ -851,8 +740,12 @@ impl super::Vehicle {
         };
         // Flanking MP, at its maximum with MASC or a supercharger (TechManual p. 316). A
         // stationary installation has none.
-        let boosters = u8::from(count(System::Masc) > 0.0)
-            + u8::from(definition.has_special("SuperCharger_Tech"));
+        let boosters = u8::from(
+            loadout
+                .systems
+                .iter()
+                .any(|part| part.system == System::Masc),
+        ) + u8::from(definition.has_special("SuperCharger_Tech"));
         let flanking = if definition.movement == VehicleMovement::Stationary {
             0
         } else {
@@ -875,11 +768,7 @@ impl super::Vehicle {
         let offense = Offense::gather(
             settings,
             &loadout,
-            self.artemis_controllers()?
-                .iter()
-                .flat_map(|controller| controller.weapon_indices.iter().copied())
-                .collect(),
-            definition.has_technology(Technology::ArtemisV),
+            artemis_multipliers(&loadout, &self.artemis_controllers()?),
             |location: VehicleCriticalLocation, _| match location.section {
                 VehicleSection::Front => Arc::Forward,
                 VehicleSection::Rear => Arc::Rear,
