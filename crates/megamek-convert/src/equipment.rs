@@ -8,7 +8,7 @@
 //! unprefixed weapon resolves to the chassis's own technology base when that base has it (a
 //! Clan unit's `Light Machine Gun` is the Clan gun), and otherwise to the other base.
 use anyhow::{Context, Result, bail, ensure};
-use stompymux_unit_construction::{AmmunitionMode, Weapon};
+use stompymux_unit_construction::{AmmunitionMode, System, Weapon};
 
 /// Technology base of a chassis or a piece of equipment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,8 +18,8 @@ pub enum TechBase {
 }
 
 impl TechBase {
-    /// The namespace stompymux weapon and ammunition names carry, and that a system both
-    /// bases build carries when its base differs from the chassis's.
+    /// The namespace stompymux weapon and ammunition names carry, as do the systems both
+    /// bases build to their own specifications.
     pub fn namespace(self) -> &'static str {
         match self {
             Self::InnerSphere => "IS",
@@ -71,10 +71,15 @@ pub enum Critical {
         modes: Vec<&'static str>,
         rounds: u16,
     },
-    /// Slot-occupying equipment such as jump jets, CASE or an ECM suite.
+    /// Slot-occupying equipment such as CASE, Endo Steel or TAG.
     System(&'static str),
-    /// An Artemis IV fire-control system, linked to a launcher once its section is known.
-    Artemis,
+    /// A system both technology bases build to their own specifications, such as jump jets,
+    /// an ECM suite or a machine gun array, with the base that built it: its item always
+    /// states that base (`IS.MGA`, `CL.Ecm`).
+    BaseSystem(&'static str, TechBase),
+    /// An Artemis IV fire-control system of the technology base that built it, linked to a
+    /// launcher once its section is known.
+    Artemis(TechBase),
     /// One slot of a Clan Artemis V fire-control system, linked like Artemis IV; a BattleMech
     /// installation fills two slots (Tactical Operations: Advanced Units & Equipment p. 217).
     ArtemisV,
@@ -94,7 +99,8 @@ impl Critical {
             Self::HeatSink(_) => "HeatSink".to_owned(),
             Self::Weapon { weapon, .. } => weapon.name().to_owned(),
             Self::Ammo { weapon, .. } => format!("Ammo_{}", weapon.name()),
-            Self::Artemis => "ArtemisIV".to_owned(),
+            Self::BaseSystem(item, tech) => format!("{}.{item}", tech.namespace()),
+            Self::Artemis(tech) => format!("{}.ArtemisIV", tech.namespace()),
             Self::ArtemisV => "ArtemisV".to_owned(),
             Self::Apollo => "ApolloFCS".to_owned(),
         })
@@ -396,8 +402,9 @@ pub fn parse_for(raw: &str, chassis: TechBase) -> Result<Critical> {
 
 /// The technology base a slot's system states, for the systems both bases build to their own
 /// specifications under one stompymux name: CASE II, ECM suites, active probes, MASC,
-/// targeting computers, Artemis IV and jump jets (see `System::built_by_either_base`). `None`
-/// when the slot names no such system or does not say which base built it.
+/// targeting computers, Artemis IV, jump jets and machine gun arrays (see
+/// `System::built_by_either_base`). `None` when the slot names no such system or does not
+/// say which base built it.
 pub fn system_tech(raw: &str) -> Option<TechBase> {
     let name = raw.split(['(', ':']).next().unwrap_or_default();
     for (tech, base) in readings(&key(name)) {
@@ -439,6 +446,8 @@ fn parse_equipment(name: &str, chassis: TechBase) -> Result<Critical> {
         return Ok(Critical::Fixed("Engine"));
     }
     let readings = readings(&full);
+    // A system both bases build is the one its name states, or else the chassis's.
+    let built_by = system_tech(name).unwrap_or(chassis);
     if full.contains("heatsink") {
         for (tech, base) in &readings {
             match *base {
@@ -457,13 +466,16 @@ fn parse_equipment(name: &str, chassis: TechBase) -> Result<Critical> {
     }
     for (_, base) in &readings {
         match *base {
-            "artemisiv" | "artemisivfcs" => return Ok(Critical::Artemis),
+            "artemisiv" | "artemisivfcs" => return Ok(Critical::Artemis(built_by)),
             "artemisv" | "artemisvfcs" => return Ok(Critical::ArtemisV),
             "apollo" | "mrmapollofcs" | "apollofcs" => return Ok(Critical::Apollo),
             "searchlight" | "mountedsearchlight" => return Ok(Critical::Searchlight),
             _ => {}
         }
         if let Some((_, item)) = SYSTEMS.iter().find(|(known, _)| known == base) {
+            if System::named(item).is_some_and(System::built_by_either_base) {
+                return Ok(Critical::BaseSystem(item, built_by));
+            }
             return Ok(Critical::System(item));
         }
     }
@@ -852,25 +864,75 @@ mod tests {
                 "CLDoubleHeatSink",
                 Critical::HeatSink(HeatSinkKind::Double(TechBase::Clan)),
             ),
-            ("Jump Jet", Critical::System("JumpJet")),
+            (
+                "Jump Jet",
+                Critical::BaseSystem("JumpJet", TechBase::InnerSphere),
+            ),
             ("ISCASE", Critical::System("Case")),
             ("Claw", Critical::System("Claw")),
             ("IS Ferro-Fibrous", Critical::System("FerroFibrous")),
             ("Clan Endo Steel", Critical::System("EndoSteel")),
-            ("ISGuardianECMSuite", Critical::System("Ecm")),
-            ("ISArtemisIV", Critical::Artemis),
+            (
+                "ISGuardianECMSuite",
+                Critical::BaseSystem("Ecm", TechBase::InnerSphere),
+            ),
+            ("ISArtemisIV", Critical::Artemis(TechBase::InnerSphere)),
             ("ISApollo (OMNIPOD)", Critical::Apollo),
             ("Talons (OMNIPOD)", Critical::System("Talons")),
             ("Spikes", Critical::System("Spikes")),
-            ("ISLMGA", Critical::System("MGA")),
+            ("ISLMGA", Critical::BaseSystem("MGA", TechBase::InnerSphere)),
             (
                 "Clan Heavy Machine Gun Array (OMNIPOD)",
-                Critical::System("MGA"),
+                Critical::BaseSystem("MGA", TechBase::Clan),
             ),
             ("CLArtemisV", Critical::ArtemisV),
             ("CLLightTAG", Critical::System("LightTAG")),
         ] {
             assert_eq!(parse(name).unwrap(), expected, "{name}");
+        }
+    }
+
+    /// Every system both bases build names the base that built it: the one its MegaMek name
+    /// states, or else the chassis's. Systems only one base builds stay unprefixed.
+    #[test]
+    fn systems_both_bases_build_state_their_base() {
+        let item = |name: &str, chassis| parse_for(name, chassis).unwrap().item().unwrap();
+        for (name, chassis, expected) in [
+            ("MGA", TechBase::InnerSphere, "IS.MGA"),
+            ("MGA", TechBase::Clan, "CL.MGA"),
+            ("ISMGA", TechBase::Clan, "IS.MGA"),
+            ("CLLMGA", TechBase::InnerSphere, "CL.MGA"),
+            ("Jump Jet", TechBase::Clan, "CL.JumpJet"),
+            ("CLECMSuite", TechBase::Clan, "CL.Ecm"),
+            ("GuardianECM", TechBase::Clan, "IS.Ecm"),
+            ("BeagleActiveProbe", TechBase::Clan, "IS.BeagleProbe"),
+            ("CLActiveProbe", TechBase::Clan, "CL.BeagleProbe"),
+            ("CLMASC", TechBase::Clan, "CL.Masc"),
+            (
+                "ISTargeting Computer",
+                TechBase::InnerSphere,
+                "IS.TargetingComputer",
+            ),
+            ("CASE II", TechBase::Clan, "CL.CASE-II"),
+            ("ArtemisIV", TechBase::Clan, "CL.ArtemisIV"),
+            ("ISCASE", TechBase::InnerSphere, "Case"),
+            ("CLLightTAG", TechBase::Clan, "LightTAG"),
+        ] {
+            assert_eq!(item(name, chassis), expected, "{name} on {chassis:?}");
+        }
+        // Each MegaMek key for such a system reads its stated base; the Guardian ECM suite and
+        // Beagle probe are Inner Sphere names whatever the prefix.
+        for (key, stock) in SYSTEMS {
+            if !System::named(stock).is_some_and(System::built_by_either_base) {
+                continue;
+            }
+            let named_is = key.starts_with("guardian") || key.starts_with("beagle");
+            let expected = if named_is { "IS" } else { "CL" };
+            assert_eq!(
+                item(&format!("CL{key}"), TechBase::InnerSphere),
+                format!("{expected}.{stock}"),
+                "{key}"
+            );
         }
     }
 

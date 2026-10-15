@@ -202,7 +202,7 @@ mod tests {
             modes: vec![],
         });
         section.slots[1] = Some(Slot {
-            item: "ArtemisIV".into(),
+            item: "IS.ArtemisIV".into(),
             rounds: None,
             link: Some(1),
             modes: vec![],
@@ -233,7 +233,7 @@ mod tests {
             draft.render(),
             "name = \"Truck\"\nclass = \"vehicle\"\nmovement = \"wheel\"\ntons = 20\nwalk_mp = 4\n\n\
              [construction]\nengine = \"ice\"\nengine_rating = 60\n\n[sections.front_side]\narmor = 10\nslots = [\n    \
-             { at = 1, item = \"IS.LRM-5\" },\n    { at = 2, item = \"ArtemisIV\", link = 1 },\n    \
+             { at = 1, item = \"IS.LRM-5\" },\n    { at = 2, item = \"IS.ArtemisIV\", link = 1 },\n    \
              { at = 3, item = \"Ammo_IS.LRM-5\", rounds = 24, modes = [\"Artemis/Mine\"] },\n]\n"
         );
     }

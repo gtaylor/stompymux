@@ -627,13 +627,30 @@ mod tests {
         for expected in [
             "{ at = 2, item = \"ApolloFCS\", link = 1 }",
             "{ at = 4, item = \"ApolloFCS\", link = 3 }",
-            "{ at = \"1-2\", item = \"IS.MachineGun\" },\n    { at = 3, item = \"MGA\" }",
+            "{ at = \"1-2\", item = \"IS.MachineGun\" },\n    { at = 3, item = \"IS.MGA\" }",
         ] {
             assert!(
                 template.contains(expected),
                 "{expected} missing from\n{template}"
             );
         }
+        // A Clan vehicle's array is a Clan one, and a mixed design's the one its name states.
+        let array = |source: &str| {
+            let draft = convert(source).unwrap().draft;
+            let front = draft
+                .sections
+                .iter()
+                .find(|section| section.heading == "front_side")
+                .unwrap();
+            front.slots[2].as_ref().unwrap().item.clone()
+        };
+        let clan = source.replace("IS Level 1", "Clan Level 2");
+        assert_eq!(array(&clan.replace("ISMGA", "MGA")), "CL.MGA");
+        assert_eq!(array(&clan), "IS.MGA");
+        let mixed = source
+            .replace("IS Level 1", "Mixed (IS Chassis) Level 3")
+            .replace("ISMGA", "CLMGA");
+        assert_eq!(array(&mixed), "CL.MGA");
     }
 
     #[test]

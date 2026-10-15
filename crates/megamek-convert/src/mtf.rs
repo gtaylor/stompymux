@@ -268,23 +268,13 @@ pub fn convert(source: &str) -> Result<Converted> {
         specials.push("SearchLight");
     }
     let mut criticals = Vec::new();
-    // Slots holding a system of the other technology base, which their item names state.
-    let mut other_base = Vec::new();
     for (mtf, heading, _, _) in locations {
         let lines = file
             .locations
             .get(*mtf)
             .with_context(|| format!("missing {mtf} critical slots"))?;
         let mut resolved = Vec::new();
-        let mut bases = Vec::new();
         for (slot, line) in lines.iter().enumerate() {
-            let item_tech = equipment::system_tech(line).filter(|item_tech| *item_tech != tech);
-            bases.push(item_tech.filter(|_| {
-                !matches!(
-                    equipment::parse_for(line, tech),
-                    Ok(Critical::Weapon { .. } | Critical::Ammo { .. })
-                )
-            }));
             let critical = equipment::parse_for(line, tech)
                 .with_context(|| format!("{heading} slot {}", slot + 1))?;
             match critical {
@@ -305,14 +295,11 @@ pub fn convert(source: &str) -> Result<Converted> {
             }
         }
         criticals.push(resolved);
-        other_base.push(bases);
     }
     feed_other_tech_launchers(&mut criticals);
     let split_mounts = split_mounts(&mut criticals, locations)?;
     let mut sections = Vec::new();
-    for (((_, heading, armor_key, rear_key), criticals), bases) in
-        locations.iter().zip(&criticals).zip(&other_base)
-    {
+    for ((_, heading, armor_key, rear_key), criticals) in locations.iter().zip(&criticals) {
         let armor = armor_value(&file, armor_key)?;
         let rear = match rear_key {
             Some(key) => armor_value(&file, key)?,
@@ -321,12 +308,6 @@ pub fn convert(source: &str) -> Result<Converted> {
         let mut section = Section::new(heading, armor, rear, true);
         section.slots =
             layout::slots(criticals, WeaponSpan::Catalogue).with_context(|| heading.to_string())?;
-        // A system of the other base states it, as `CL.Ecm` on an Inner Sphere chassis.
-        for (slot, base) in section.slots.iter_mut().zip(bases) {
-            if let (Some(slot), Some(base)) = (slot, base) {
-                slot.item = format!("{}.{}", base.namespace(), slot.item);
-            }
-        }
         sections.push(section);
     }
     let full_reference = if model.is_empty() {
@@ -838,6 +819,41 @@ mod tests {
         for line in ["Clan", "Mixed (Clan Chassis)"] {
             assert_eq!(tech_base(line).unwrap().document_spelling(), "clan");
         }
+    }
+
+    /// A machine gun array names the base that built it: the chassis's, or on a mixed design
+    /// the one its MegaMek name states (TechManual p. 228).
+    #[test]
+    fn machine_gun_arrays_state_their_technology_base() {
+        let mut source = replace_line(ATLAS, "Right Arm:", 6, "-Empty-");
+        for (offset, line) in [(6, "Machine Gun"), (7, "Machine Gun"), (8, "MGA")] {
+            source = replace_line(&source, "Left Arm:", offset, line);
+        }
+        let array = |source: &str| {
+            let draft = convert(source).unwrap().draft;
+            let arm = draft
+                .sections
+                .iter()
+                .find(|section| section.heading == "left_arm")
+                .unwrap();
+            arm.slots[7].as_ref().unwrap().item.clone()
+        };
+        assert_eq!(array(&source), "IS.MGA");
+        let (_, template) = template(&source).unwrap();
+        assert!(
+            template.contains(
+                "{ at = \"6-7\", item = \"IS.MachineGun\" },\n    { at = 8, item = \"IS.MGA\" }"
+            ),
+            "{template}"
+        );
+        // The Clan LRM 20 is a slot smaller, so the Clan Atlas keeps the Inner Sphere one.
+        let clan = source
+            .replace("techbase:Inner Sphere", "techbase:Clan")
+            .replace("LRM 20\n", "ISLRM20\n");
+        assert_eq!(array(&clan), "CL.MGA");
+        let mixed = replace_line(&source, "Left Arm:", 8, "CLMGA")
+            .replace("techbase:Inner Sphere", "techbase:Mixed (IS Chassis)");
+        assert_eq!(array(&mixed), "CL.MGA");
     }
 
     #[test]

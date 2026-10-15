@@ -44,7 +44,7 @@ pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<Vec<Option<Slot
             continue;
         };
         let link = match critical {
-            Critical::Artemis => Some(claim_launcher(&mut launchers, index)? + 1),
+            Critical::Artemis(_) => Some(claim_launcher(&mut launchers, index)? + 1),
             Critical::Apollo => Some(claim_launcher(&mut mrm_launchers, index)? + 1),
             Critical::ArtemisV => {
                 if let Some(launcher) = artemis_v.take() {
