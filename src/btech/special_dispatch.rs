@@ -104,8 +104,6 @@ fn select(ctx: &CommandContext<'_>, line: &str) -> Option<Selection> {
                 1 => Class::Ground,
                 2 => Class::Vtol,
                 3 => Class::Naval,
-                4 | 7 => Class::Dropship,
-                5 => Class::Aero,
                 6 => Class::MechWarrior,
                 8 => Class::BattleSuit,
                 _ => Class::Unknown,
