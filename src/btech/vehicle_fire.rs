@@ -289,6 +289,7 @@ fn fire_shot(
                 ams_engaged,
                 indirect: indirect_fire,
                 apollo: false,
+                array: None,
             },
             rules.shot.vehicle_impact,
             super::vehicle_salvo::SalvoContext {
@@ -317,6 +318,7 @@ fn fire_shot(
                 ams_engaged,
                 indirect: indirect_fire,
                 apollo: false,
+                array: None,
                 experience,
             },
         )?))

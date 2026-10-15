@@ -181,6 +181,7 @@ mod tests {
                     ams_engaged: false,
                     indirect: false,
                     apollo: false,
+                    array: None,
                 };
                 let actual =
                     roll_weapon_groups(request(mode), &mut Dice::seeded([seed; 32])).unwrap();
@@ -228,6 +229,7 @@ mod tests {
                                     ams_engaged: false,
                                     indirect: false,
                                     apollo: false,
+                                    array: None,
                                 },
                                 &mut dice,
                             )
@@ -254,6 +256,7 @@ mod tests {
                                     ams_engaged: true,
                                     indirect: false,
                                     apollo: false,
+                                    array: None,
                                 },
                                 &mut defended_dice,
                             )

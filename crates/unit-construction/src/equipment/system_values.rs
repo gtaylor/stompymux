@@ -108,7 +108,7 @@ impl System {
             Self::NullSignature | Self::DualSaw => 7,
             Self::Flail | Self::LargeVibroblade => 4,
             Self::WreckingBall => 5,
-            Self::SmallVibroblade | Self::Spikes => 1,
+            Self::SmallVibroblade | Self::Spikes | Self::MachineGunArray => 1,
             Self::MediumVibroblade => 2,
             // Talons fill two slots in each leg as one installation.
             Self::Talons => 2 * context.legs.max(2),
@@ -166,6 +166,8 @@ impl System {
             // Units & Equipment p. 217).
             Self::Talons => 300.0 * tons,
             Self::Spikes => 50.0 * tons,
+            // TechManual p. 292.
+            Self::MachineGunArray => 1_250.0,
             Self::DualSaw => 100_000.0,
             Self::WreckingBall => 80_000.0,
             Self::Masc => 1_000.0 * rating,

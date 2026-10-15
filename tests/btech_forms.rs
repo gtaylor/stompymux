@@ -12,7 +12,7 @@ async fn forms_cover_stock_and_share_native_lua_names_without_mutation() {
     let (_dir, config, world) = support::isolated_world().await;
     let before = world.btech.clone();
     let forms = battle_part_forms(&world, ObjectId(1)).unwrap();
-    assert_eq!(forms.len(), 606);
+    assert_eq!(forms.len(), 607);
     assert!(forms.windows(2).all(|pair| {
         let key = |f: &PartForm| (f.short_name.clone(), f.part_id);
         key(&pair[0]) < key(&pair[1])

@@ -327,6 +327,13 @@ impl VehicleTemplate {
             | System::NullSignature
             | System::Talons
             | System::Spikes => 0,
+            System::MachineGunArray => {
+                if self.has_special("Clan") {
+                    256
+                } else {
+                    512
+                }
+            }
         }
     }
 }

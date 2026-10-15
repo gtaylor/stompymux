@@ -90,7 +90,8 @@ impl System {
     /// slot may state which base built it with an `IS.` or `CL.` prefix: CASE II (1 ton
     /// against half a ton), the Guardian and Clan ECM suites, MASC (5% against 4% of the
     /// tonnage), the targeting computer (a ton per 4 against 5 tons of weapons), Artemis IV,
-    /// jump jets, and the Beagle and Clan active probes (TechManual pp. 204-238, 341-343;
+    /// jump jets, the Beagle and Clan active probes, and the machine gun array (half against a
+    /// quarter ton) (TechManual pp. 204-238, 341-343;
     /// Tactical Operations: Advanced Units & Equipment p. 217). An unprefixed slot is built
     /// from the chassis's base.
     pub fn built_by_either_base(self) -> bool {
@@ -103,6 +104,7 @@ impl System {
                 | Self::ArtemisIv
                 | Self::JumpJet
                 | Self::BeagleProbe
+                | Self::MachineGunArray
         )
     }
 

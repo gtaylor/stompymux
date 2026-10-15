@@ -68,6 +68,7 @@ fn request(weapon: Weapon) -> VehicleSalvoRequest {
         ams_engaged: false,
         indirect: false,
         apollo: false,
+        array: None,
     }
 }
 

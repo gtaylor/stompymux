@@ -492,6 +492,7 @@ pub use dfa::{DfaBalance, DfaProfile, DfaReport, dfa_profile, resolve_dfa};
 pub use jumping::launch_dfa;
 
 mod experience;
+mod machine_gun_array;
 mod physical_experience;
 mod spikes;
 mod talons;

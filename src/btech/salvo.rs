@@ -528,6 +528,8 @@ pub(super) struct ShotDamage<'a> {
     pub indirect: bool,
     /// An MRM "Apollo" fire-control system guided the launcher.
     pub apollo: bool,
+    /// Machine guns fired together as a machine gun array.
+    pub array: Option<u8>,
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
 }
 
@@ -571,6 +573,7 @@ pub(super) fn resolve_salvo_in_candidate(
             ams_engaged: damage.ams_engaged,
             indirect: damage.indirect,
             apollo: damage.apollo,
+            array: damage.array,
             incoming: damage.incoming,
         },
         effects,
@@ -621,6 +624,7 @@ enum HitGeometry {
         ams_engaged: bool,
         indirect: bool,
         apollo: bool,
+        array: Option<u8>,
         incoming: Option<u8>,
     },
 }
@@ -790,6 +794,10 @@ fn resolve_salvo_with_effects(
             ),
             indirect: matches!(geometry, HitGeometry::Direct { indirect: true, .. }),
             apollo: matches!(geometry, HitGeometry::Direct { apollo: true, .. }),
+            array: match geometry {
+                HitGeometry::Direct { array, .. } => array,
+                HitGeometry::Fixed(_) => None,
+            },
         },
         &mut unit.dice,
     )?;
@@ -830,6 +838,8 @@ fn resolve_salvo_with_effects(
         &mut packets.damage,
     )?;
     let damage_groups = packets.damage;
+    // A machine gun array's hits all strike the location its first hit found.
+    let mut shared_hit: Option<Hit> = None;
     let weapon_effect = if weapon == Weapon::PlasmaRifle {
         Some(super::impact::WeaponEffect::Plasma)
     } else if mode == super::AmmunitionMode::ArmorPiercing {
@@ -853,7 +863,9 @@ fn resolve_salvo_with_effects(
         };
         let unit = &world.btech.constructed_units()[&target];
         let mut dice = unit.dice.clone();
-        let hit = if let Some(super::UnitSection::Mech(section)) = preferred {
+        let hit = if let Some(hit) = shared_hit.filter(|_| packets.single_location) {
+            hit
+        } else if let Some(super::UnitSection::Mech(section)) = preferred {
             Hit {
                 section,
                 rear_armor: arc == HitArc::Rear
@@ -869,6 +881,9 @@ fn resolve_salvo_with_effects(
             let roll = dice.generic_roll();
             super::resolve_hit(unit, arc, roll, &mut dice)?
         };
+        if packets.single_location && shared_hit.is_none() {
+            shared_hit = Some(hit);
+        }
         let covered_legs = partial_cover && unit.chassis().is_leg(hit.section);
         world.btech.constructed.get_mut(&target).unwrap().dice = dice;
         if covered_legs {

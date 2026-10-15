@@ -162,6 +162,28 @@ fn validate_talons_and_spikes(loadout: &MechLoadout, chassis: MechChassis) -> Re
     Ok(())
 }
 
+/// Each machine gun array links two to four machine guns of one size class in its location,
+/// and a gun belongs to one array at most (TechManual p. 228).
+fn validate_machine_gun_arrays(loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
+    let mut linked = std::collections::BTreeSet::new();
+    for array in loadout.machine_gun_arrays() {
+        let name = chassis.section_name(array.location.section);
+        ensure!(
+            super::ARRAY_GUNS.contains(&array.weapon_indices.len()),
+            "A machine gun array in {name} slot {} links {} machine guns; it links two to four of one size class beside it",
+            array.location.slot + 1,
+            array.weapon_indices.len()
+        );
+        for index in array.weapon_indices {
+            ensure!(
+                linked.insert(index),
+                "A machine gun in {name} is linked to two machine gun arrays"
+            );
+        }
+    }
+    Ok(())
+}
+
 impl MechTemplate {
     /// Running MP: the walking MP x 1.5, rounded up (TM p. 48).
     pub fn running_mp(&self) -> u32 {
@@ -244,6 +266,7 @@ impl MechTemplate {
         self.validate_targeting_computer(loadout)?;
         self.validate_physical_weapons(loadout, chassis)?;
         validate_talons_and_spikes(loadout, chassis)?;
+        validate_machine_gun_arrays(loadout, chassis)?;
         self.validate_weapon_mounting(loadout, chassis)?;
         self.validate_technology_base(loadout)?;
         self.validate_total_mass(loadout)
@@ -1095,6 +1118,38 @@ mod tests {
                 ),
             ),
             "Left_Leg mounts more than one spike cluster",
+        );
+    }
+
+    /// A machine gun array needs two to four machine guns beside it (TechManual p. 228), and
+    /// weighs half a ton, or a quarter ton built by the Clans.
+    #[test]
+    fn machine_gun_arrays_link_two_to_four_guns() {
+        let torso = |slots: &str| {
+            JENNER.replace(
+                "slots = [\n    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"JumpJet\" },\n]",
+                &format!("slots = [\n    {{ at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 }},\n    {{ at = \"2-3\", item = \"JumpJet\" }},\n{slots}]"),
+            )
+        };
+        refused(
+            &torso(
+                "    { at = 4, item = \"IS.MachineGun\" },\n    { at = 5, item = \"IS.MGA\" },\n",
+            ),
+            "links 1 machine guns",
+        );
+        let pair = torso(
+            "    { at = \"4-5\", item = \"IS.MachineGun\" },\n    { at = 6, item = \"IS.MGA\" },\n",
+        );
+        // Everything else passes: two guns and the array add 2.5 tons to a full Jenner.
+        refused(&pair, "over the 35-ton chassis");
+        let template = MechTemplate::parse("JR7-D", &pair).unwrap();
+        let loadout = crate::MechLoadout::resolve(&template).unwrap();
+        let clan = MechTemplate::parse("JR7-D", &pair.replace("IS.MGA", "CL.MGA")).unwrap();
+        let clan_loadout = crate::MechLoadout::resolve(&clan).unwrap();
+        assert_eq!(
+            template.construction_mass(&loadout).unwrap().total
+                - clan.construction_mass(&clan_loadout).unwrap().total,
+            256
         );
     }
 

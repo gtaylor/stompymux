@@ -23,6 +23,9 @@ pub struct VehicleSalvoRequest {
     /// An MRM "Apollo" fire-control system guided the launcher: -1 on the Cluster Hits roll
     /// (Tactical Operations: Advanced Units & Equipment p. 143).
     pub apollo: bool,
+    /// Machine guns fired together as a machine gun array: one Cluster Hits roll, every hit
+    /// in one location (Total Warfare p. 137).
+    pub array: Option<u8>,
 }
 
 /// One independently located packet and its complete vehicle consequences.
@@ -162,6 +165,7 @@ pub(super) fn resolve_with_context_in_candidate(
             ams_engaged: request.ams_engaged,
             indirect: request.indirect,
             apollo: request.apollo,
+            array: request.array,
         },
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;
@@ -195,7 +199,10 @@ pub(super) fn resolve_with_context_in_candidate(
     }
     report.building =
         super::building_interior::absorb(world, attacker, target, &mut packets.damage)?;
+    let single_location = packets.single_location;
     let groups = packets.damage;
+    // A machine gun array's hits all strike the location its first hit found.
+    let mut shared_section = None;
     for damage in groups {
         let arc = direction.current(world, target)?;
         let award = experience
@@ -212,8 +219,13 @@ pub(super) fn resolve_with_context_in_candidate(
             .map(|aimed| aimed.preferred(world, target, arc, false))
             .transpose()?
             .flatten();
-        let forced = match preferred {
-            Some(UnitSection::Vehicle(section)) => Some(VehicleHit {
+        let forced = match (shared_section, preferred) {
+            (Some(section), _) => Some(VehicleHit {
+                section,
+                through_armor_critical: false,
+                motive: None,
+            }),
+            (None, Some(UnitSection::Vehicle(section))) => Some(VehicleHit {
                 section,
                 through_armor_critical: false,
                 motive: None,
@@ -236,6 +248,9 @@ pub(super) fn resolve_with_context_in_candidate(
             request.glancing,
             forced,
         )?;
+        if single_location && shared_section.is_none() {
+            shared_section = impact.hit.as_ref().map(|hit| hit.section);
+        }
         report.groups.push(VehicleSalvoGroup { damage, impact });
     }
     if let Some(cover) = &report.building {

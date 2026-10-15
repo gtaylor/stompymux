@@ -380,6 +380,7 @@ function btech_unit.inspect(dbref) end
 ---@field weapon_failures table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam"> Temporary conditions by mount index; existing recycle clocks govern recovery.
 ---@field gyro "standard"|"hardened"|"xl"|"compact" Construction family.
 ---@field artemis ArtemisController[] Installed controllers and resolved links.
+---@field machine_gun_arrays MachineGunArray[] Installed machine gun arrays and the guns each links.
 ---@field masc BoosterState Saved activation and overload/recovery state.
 ---@field supercharger BoosterState Independent compressor timer and failure state.
 ---@field supercharger_installed boolean Template technology flag.
@@ -2060,6 +2061,9 @@ function btech_template.check(name) end
 ---@field link integer One-based template launcher slot; zero is unassigned.
 ---@field weapon_indices integer[] Zero-based missile mounts matching the link.
 ---@field operational boolean Controller is available under the unit’s equipment damage rules.
+---@class MachineGunArray
+---@field location {section: MechSectionName, slot: integer} Zero-based array module position.
+---@field weapon_indices integer[] Zero-based machine gun mounts the array links, two to four of one size class.
 
 ---Toggle Artemis-compatible ammunition; requires a live linked controller and a recycled missile launcher.
 ---@param dbref integer

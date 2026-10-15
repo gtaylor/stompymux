@@ -104,6 +104,7 @@ pub const STOCK: &[(i32, &str, u32, PartKind)] = &[
     (457, "ApolloFCS", 1024, PartKind::Component),
     (458, "Talons", 1024, PartKind::Component),
     (459, "Spikes", 512, PartKind::Component),
+    (460, "MGA", 512, PartKind::Component),
     (512, "Ammo_LBX2", 1024, PartKind::Commodity),
     (513, "Ammo_LBX5_LBX", 1024, PartKind::Commodity),
     (514, "Ammo_LBX10_LBX", 1024, PartKind::Commodity),

@@ -112,8 +112,9 @@ CASE is an Inner Sphere item that goes in a torso; Clan CASE is built into
 every location of a Clan-structure unit rather than installed (TechManual p.
 210).
 
-CASE II, ECM suites, active probes, MASC, targeting computers, Artemis IV and
-jump jets are built by both bases to their own specifications under one name.
+CASE II, ECM suites, active probes, MASC, targeting computers, Artemis IV, jump
+jets and machine gun arrays (`MGA`) are built by both bases to their own
+specifications under one name.
 An unprefixed slot is built from the chassis's base; a slot may instead state
 its base with an `IS.` or `CL.` prefix, as `CL.Ecm` (the one-slot, one-ton Clan
 ECM suite rather than the Guardian), `CL.Masc` (4% of the tonnage rather than
@@ -311,7 +312,8 @@ converted. Mixed-technology units set `mixed_tech = true` and keep a Clan or
 Inner Sphere engine, structure or armor through the `[construction]` technology
 keys. A CASE II, ECM suite, active probe, MASC, targeting computer, Artemis IV
 or jump jet of the other technology base keeps its base as an `IS.` or `CL.`
-prefix on its item.
+prefix on its item. A machine gun array is written after the machine guns it
+links, which it finds in the slots directly above it.
 
 Every converted unit must load and construct exactly as the game would, so the
 tool refuses anything stompymux cannot field instead of dropping it: other unit

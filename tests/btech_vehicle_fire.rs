@@ -1384,6 +1384,7 @@ async fn vehicle_beacons_drive_aim_guidance_interference_and_section_loss() {
         ams_engaged: false,
         indirect: false,
         apollo: false,
+        array: None,
     };
     let enhanced = resolve_battle_vehicle_salvo(
         &mut world,

@@ -24,6 +24,9 @@ pub(super) struct WeaponGroupRequest {
     /// An MRM "Apollo" fire-control system guided the launcher: -1 on the Cluster Hits roll,
     /// never below 2 (Tactical Operations: Advanced Units & Equipment p. 143).
     pub apollo: bool,
+    /// Machine guns firing together as a machine gun array: the attack rolls on that column
+    /// of the Cluster Hits Table and every hit lands in one location (Total Warfare p. 137).
+    pub array: Option<u8>,
 }
 
 /// Shared cluster draw and ordered damage packet sizes, before cover and terrain absorption.
@@ -36,6 +39,8 @@ pub(super) struct WeaponGroups {
     pub missiles_before_defense: Option<u8>,
     /// Hits an anti-missile engagement removed from the Cluster Hits result.
     pub missiles_intercepted: Option<u8>,
+    /// Every packet lands in the first packet's location, as a machine gun array's hits do.
+    pub single_location: bool,
 }
 
 /// Consume candidate dice and size packets without assigning hit locations or applying damage.
@@ -57,22 +62,25 @@ pub(super) fn roll_weapon_groups(
         ams_engaged,
         indirect,
         apollo,
+        array,
     } = request;
+    let array = array.filter(|guns| *guns >= 2);
     let burst = fire_mode.rounds_per_cycle() > 1;
     let cluster_roll = (burst
         || weapon.profile().missiles > 0
         || weapon.is_hag()
-        || mode == AmmunitionMode::Cluster)
-        .then(|| {
-            if fire_mode == FireMode::Hotload {
-                let first = dice.d6();
-                let second = dice.d6();
-                let third = dice.d6();
-                first + second + third - first.max(second).max(third)
-            } else {
-                dice.generic_roll()
-            }
-        });
+        || mode == AmmunitionMode::Cluster
+        || array.is_some())
+    .then(|| {
+        if fire_mode == FireMode::Hotload {
+            let first = dice.d6();
+            let second = dice.d6();
+            let third = dice.d6();
+            first + second + third - first.max(second).max(third)
+        } else {
+            dice.generic_roll()
+        }
+    });
     // An Apollo system takes one from the roll the table reads, never below 2; the reported
     // roll stays the one the dice made.
     let table_roll = cluster_roll.map(|roll| {
@@ -91,7 +99,18 @@ pub(super) fn roll_weapon_groups(
     // (Total Warfare p. 139); heat-tracking targets take its heat instead of these packets.
     let plasma = (weapon == Weapon::ClanPlasmaCannon).then(|| dice.d6() + dice.d6() + dice.d6());
     let resolve = |ams_engaged: bool| -> Result<Vec<u16>> {
-        let mut damage = if let Some(total) = plasma {
+        let mut damage = if let Some(guns) = array {
+            // A glancing blow shifts a cluster roll down four, never below 2 (Tactical
+            // Operations p. 79).
+            let roll = table_roll.expect("array cluster roll");
+            let roll = if glancing {
+                roll.saturating_sub(4).max(2)
+            } else {
+                roll
+            };
+            let hits = super::salvo::cluster_hits(guns, roll)?;
+            vec![u16::from(weapon.profile().damage); usize::from(hits)]
+        } else if let Some(total) = plasma {
             let total = if glancing { total / 2 } else { total };
             let mut remaining = u16::from(total);
             let mut groups = Vec::new();
@@ -190,6 +209,7 @@ pub(super) fn roll_weapon_groups(
         damage,
         missiles_before_defense,
         missiles_intercepted,
+        single_location: array.is_some(),
     })
 }
 
@@ -250,6 +270,7 @@ mod tests {
             ams_engaged: false,
             indirect: false,
             apollo: false,
+            array: None,
         }
     }
 
@@ -544,6 +565,7 @@ mod streak_lrm_tests {
                                 ams_engaged: false,
                                 indirect: false,
                                 apollo: false,
+                                array: None,
                             },
                             &mut dice,
                         )

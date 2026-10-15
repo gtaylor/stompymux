@@ -633,6 +633,16 @@ impl Mech {
             let kick = tons / 5 * if triple_myomer { 2 } else { 1 };
             physical += f64::from(super::talons::raise(kick));
         }
+        // A machine gun array is worth the BV of the guns it links times 0.67 (TechManual
+        // p. 317, note F).
+        for array in loadout.machine_gun_arrays() {
+            let guns: u32 = array
+                .weapon_indices
+                .iter()
+                .map(|&index| u32::from(loadout.weapons[index].weapon.battle_value()))
+                .sum();
+            physical += 0.67 * f64::from(guns);
+        }
         Ok(Valuation {
             chassis: Chassis::Mech {
                 gyro,

@@ -37,6 +37,7 @@ mod fire_mode;
 mod gyro;
 mod inspection;
 mod loadout;
+mod machine_gun_array;
 mod mass;
 mod mech;
 mod mech_mass;
@@ -92,6 +93,7 @@ pub use inspection::{
 pub use loadout::{
     AmmunitionBin, CriticalLocation, MechLoadout, ResolvedLoadout, SystemCritical, WeaponMount,
 };
+pub use machine_gun_array::{ARRAY_GUNS, MachineGunArray, MachineGunClass};
 pub use mass::{
     armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
     structure_mass, system_mass, system_slot_mass,

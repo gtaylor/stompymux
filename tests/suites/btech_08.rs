@@ -8,6 +8,9 @@ mod btech_aim;
 #[path = "../btech_torso_cockpit.rs"]
 mod btech_torso_cockpit;
 
+#[path = "../btech_machine_gun_array.rs"]
+mod btech_machine_gun_array;
+
 #[path = "../btech_apods.rs"]
 mod btech_apods;
 

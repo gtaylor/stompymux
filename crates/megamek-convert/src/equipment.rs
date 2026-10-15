@@ -172,6 +172,12 @@ const SYSTEMS: &[(&str, &str)] = &[
     ("improvedc3computer", "C3i"),
     ("masc", "Masc"),
     ("talons", "Talons"),
+    ("mga", "MGA"),
+    ("lmga", "MGA"),
+    ("hmga", "MGA"),
+    ("machinegunarray", "MGA"),
+    ("lightmachinegunarray", "MGA"),
+    ("heavymachinegunarray", "MGA"),
     ("spikes", "Spikes"),
     ("tsm", "TripleStrengthMyomer"),
     ("triplestrengthmyomer", "TripleStrengthMyomer"),
@@ -396,8 +402,20 @@ pub fn system_tech(raw: &str) -> Option<TechBase> {
     let name = raw.split(['(', ':']).next().unwrap_or_default();
     for (tech, base) in readings(&key(name)) {
         match base {
-            "caseii" | "ecmsuite" | "activeprobe" | "masc" | "targetingcomputer" | "artemisiv"
-            | "artemisivfcs" | "jumpjet"
+            "caseii"
+            | "ecmsuite"
+            | "activeprobe"
+            | "masc"
+            | "targetingcomputer"
+            | "artemisiv"
+            | "artemisivfcs"
+            | "jumpjet"
+            | "mga"
+            | "lmga"
+            | "hmga"
+            | "machinegunarray"
+            | "lightmachinegunarray"
+            | "heavymachinegunarray"
                 if tech.is_some() =>
             {
                 return tech;
@@ -844,6 +862,11 @@ mod tests {
             ("ISApollo (OMNIPOD)", Critical::Apollo),
             ("Talons (OMNIPOD)", Critical::System("Talons")),
             ("Spikes", Critical::System("Spikes")),
+            ("ISLMGA", Critical::System("MGA")),
+            (
+                "Clan Heavy Machine Gun Array (OMNIPOD)",
+                Critical::System("MGA"),
+            ),
             ("CLArtemisV", Critical::ArtemisV),
             ("CLLightTAG", Critical::System("LightTAG")),
         ] {

@@ -480,6 +480,10 @@ pub enum System {
     /// kick and death from above damage by half (Tactical Operations: Advanced Units &
     /// Equipment pp. 100, 103).
     Talons,
+    /// A machine gun array: one slot linking two to four machine guns of one size class in its
+    /// location, half a ton (Inner Sphere) or a quarter ton (Clan) (TechManual pp. 228,
+    /// 341-343).
+    MachineGunArray,
     /// An Inner Sphere spike cluster: half a ton in one slot, at most one per location,
     /// blunting physical attacks against its location (Tactical Operations: Advanced Units &
     /// Equipment pp. 100, 103).
@@ -568,6 +572,7 @@ impl System {
             name if name.eq_ignore_ascii_case("Large_Vibroblade") => Some(Self::LargeVibroblade),
             name if name.eq_ignore_ascii_case("Talons") => Some(Self::Talons),
             name if name.eq_ignore_ascii_case("Spikes") => Some(Self::Spikes),
+            name if name.eq_ignore_ascii_case("MGA") => Some(Self::MachineGunArray),
             name if name.eq_ignore_ascii_case("FerroFibrous") => Some(Self::FerroFibrous),
             name if name.eq_ignore_ascii_case("EndoSteel") => Some(Self::EndoSteel),
             name if name.eq_ignore_ascii_case("TripleStrengthMyomer") => {

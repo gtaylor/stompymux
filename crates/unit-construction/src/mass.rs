@@ -77,6 +77,13 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System, clan: 
             u32::from(definition.tons.div_ceil(15)) * 1024 / (2 * legs)
         }
         System::Spikes => 512,
+        System::MachineGunArray => {
+            if clan {
+                256
+            } else {
+                512
+            }
+        }
         System::JumpJet => match definition.tons {
             0..=55 => 512,
             56..=85 => 1024,

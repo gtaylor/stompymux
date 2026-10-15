@@ -235,6 +235,7 @@ fn resolve_hex_shot_inner(
                                 .map(|unit| unit.apollo_operational(weapon_index))
                                 .transpose()?
                                 .unwrap_or(false),
+                        array: None,
                     },
                     super::dice::unit_dice_mut(world, shooter)?,
                 )?;

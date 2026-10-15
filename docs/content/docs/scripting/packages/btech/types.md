@@ -360,6 +360,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `weapon_failures`: `table<integer, "jammed"|"shorted"|"dud"|"empty"|"disabled"|"ammunition_jam"|"critical_ammunition_jam">` — Temporary conditions by mount index; existing recycle clocks govern recovery.
 - `gyro`: `"standard"|"hardened"|"xl"|"compact"` — Construction family.
 - `artemis`: `ArtemisController[]` — Installed controllers and resolved links.
+- `machine_gun_arrays`: `MachineGunArray[]` — Installed machine gun arrays and the guns each links.
 - `masc`: `BoosterState` — Saved activation and overload/recovery state.
 - `supercharger`: `BoosterState` — Independent compressor timer and failure state.
 - `supercharger_installed`: `boolean` — Template technology flag.
@@ -1229,6 +1230,11 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `link`: `integer` — One-based template launcher slot; zero is unassigned.
 - `weapon_indices`: `integer[]` — Zero-based missile mounts matching the link.
 - `operational`: `boolean` — Controller is available under the unit’s equipment damage rules.
+
+## MachineGunArray
+
+- `location`: `{section: MechSectionName, slot: integer}` — Zero-based array module position.
+- `weapon_indices`: `integer[]` — Zero-based machine gun mounts the array links, two to four of one size class.
 
 ## Unjam
 
