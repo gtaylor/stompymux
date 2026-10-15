@@ -6,7 +6,6 @@ walk_mp = 5
 heat_sinks = 9
 cargo_space = 0
 max_suits = 0
-specials = ["AntiAircraft"]
 
 [construction]
 engine = "xl"

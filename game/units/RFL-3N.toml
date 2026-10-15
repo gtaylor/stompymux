@@ -4,7 +4,7 @@ movement = "biped"
 tons = 60
 walk_mp = 6
 radio = 4
-specials = ["AntiAircraft", "SearchLight"]
+specials = ["SearchLight"]
 
 [sections.left_arm]
 armor = 15

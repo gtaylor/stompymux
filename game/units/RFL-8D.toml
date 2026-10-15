@@ -6,7 +6,7 @@ walk_mp = 6
 jump_mp = 4
 heat_sinks = 22
 radio = 4
-specials = ["AntiAircraft", "SearchLight"]
+specials = ["SearchLight"]
 
 [construction]
 engine = "xl"

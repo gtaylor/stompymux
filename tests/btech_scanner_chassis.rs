@@ -21,7 +21,7 @@ fn templates() -> Vec<String> {
 /// Add probes to unoccupied slots without changing the unit's weapons or required equipment.
 fn equipment(source: &str) -> UnitTemplate {
     let mut template = UnitTemplate::parse("test", source).unwrap();
-    let (attributes, section, parts) = match &mut template {
+    let (section, parts) = match &mut template {
         UnitTemplate::Mech(definition) => {
             let section = definition
                 .sections
@@ -38,7 +38,6 @@ fn equipment(source: &str) -> UnitTemplate {
                 .unwrap()
                 .1;
             (
-                &mut definition.attributes,
                 section,
                 vec![
                     "BeagleProbe",
@@ -51,15 +50,10 @@ fn equipment(source: &str) -> UnitTemplate {
             )
         }
         UnitTemplate::Vehicle(definition) => (
-            &mut definition.attributes,
             definition.sections.get_mut(&VehicleSection::Front).unwrap(),
             vec!["BeagleProbe", "Light_BAP", "BloodhoundProbe"],
         ),
     };
-    attributes
-        .entry("specials".into())
-        .or_default()
-        .push_str(" AntiAircraft");
     for name in parts {
         let slot = (0..12)
             .find(|slot| !section.criticals.contains_key(slot))

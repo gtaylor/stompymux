@@ -35,11 +35,7 @@ async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId)
 
 /// Demolisher with a two-slot Beagle probe in front slots 0-1 and a Bloodhound in slot 2.
 fn equipped() -> String {
-    support::templates::with_flags(
-        include_str!("../game/units/Demolisher.toml"),
-        &["AntiAircraft"],
-    )
-    .replace(
+    support::templates::with_flags(include_str!("../game/units/Demolisher.toml"), &[]).replace(
         "[sections.front_side]\n",
         r#"[sections.front_side]
 slots = [

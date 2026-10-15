@@ -4,7 +4,7 @@ movement = "biped"
 tons = 30
 walk_mp = 9
 heat_sinks = 20
-specials = ["CL_AMS", "ECM", "BeagleProbe"]
+specials = ["ECM", "BeagleProbe"]
 
 [construction]
 tech_base = "clan"

@@ -5,7 +5,6 @@ tons = 85
 walk_mp = 5
 heat_sinks = 28
 radio = 4
-specials = ["AntiAircraft"]
 
 [construction]
 engine = "xl"

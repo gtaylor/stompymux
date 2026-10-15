@@ -5,7 +5,6 @@ tons = 90
 walk_mp = 9
 heat_sinks = 40
 fuel = 600
-specials = ["CL_AMS"]
 
 [construction]
 tech_base = "clan"

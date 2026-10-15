@@ -6,7 +6,6 @@ walk_mp = 8
 jump_mp = 5
 heat_sinks = 22
 radio = 4
-specials = ["IS_AMS"]
 
 [construction]
 engine = "light"
