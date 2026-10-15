@@ -610,6 +610,34 @@ mod tests {
         }
     }
 
+    /// A vehicle's MRM Apollo systems link to the MRM launchers in their location, and a
+    /// machine gun array follows the guns it links (Tactical Operations: Advanced Units &
+    /// Equipment p. 142; TechManual p. 228).
+    #[test]
+    fn apollo_and_machine_gun_arrays_convert_for_vehicles() {
+        let source = BULLDOG
+            .replace(
+                "SRM 4\nSRM 4\nLarge Laser\n",
+                "MRM 10\nISApollo\nMRM 10\nISApollo\n",
+            )
+            .replace("IS Ammo SRM-4\nIS Ammo SRM-4\n", "IS Ammo MRM-10\n")
+            .replace(
+                "Machine Gun\n</Front",
+                "Machine Gun\nMachine Gun\nISMGA\n</Front",
+            );
+        let (_, template) = template(&source).unwrap();
+        for expected in [
+            "{ at = 2, item = \"ApolloFCS\", link = 1 }",
+            "{ at = 4, item = \"ApolloFCS\", link = 3 }",
+            "{ at = \"1-2\", item = \"IS.MachineGun\" },\n    { at = 3, item = \"MGA\" }",
+        ] {
+            assert!(
+                template.contains(expected),
+                "{expected} missing from\n{template}"
+            );
+        }
+    }
+
     #[test]
     fn unsupported_vehicles_technology_and_equipment_are_refused() {
         for (from, to, expected) in [

@@ -63,11 +63,17 @@ pub fn vehicle_maximum_armor(tons: u16) -> u32 {
 
 /// Whether a resolved system claims an item slot. Heat sinks sit deep in the body and take no
 /// space (TechManual p. 104); armor, structure and actuator placeholders are chassis facts
-/// whose slot cost comes from the chassis choice itself (TechManual pp. 101, 105).
+/// whose slot cost comes from the chassis choice itself (TechManual pp. 101, 105); and a
+/// combat vehicle counts an Artemis or MRM "Apollo" fire-control system as part of the
+/// launcher it serves (TechManual p. 206; Tactical Operations: Advanced Units & Equipment
+/// p. 142).
 pub fn occupies_vehicle_slot(system: System) -> bool {
     !matches!(
         system,
-        System::ShoulderOrHip
+        System::ArtemisIv
+            | System::ArtemisV
+            | System::ApolloFcs
+            | System::ShoulderOrHip
             | System::UpperActuator
             | System::LowerActuator
             | System::HandOrFootActuator
@@ -398,6 +404,8 @@ impl VehicleTemplate {
             !rotor,
             "No equipment may be mounted in the rotor (TechManual pp. 98, 106)"
         );
+        check_apollo(loadout)?;
+        check_machine_gun_arrays(loadout)?;
         for part in &loadout.systems {
             match part.system {
                 System::JumpJet => {
@@ -409,6 +417,63 @@ impl VehicleTemplate {
         }
         Ok(())
     }
+}
+
+/// An MRM "Apollo" fire control system serves every MRM launcher or none, one per launcher in
+/// the launcher's location (Tactical Operations: Advanced Units & Equipment p. 142).
+fn check_apollo(loadout: &VehicleLoadout) -> Result<()> {
+    let apollo: Vec<VehicleSection> = loadout
+        .systems
+        .iter()
+        .filter(|part| part.system == System::ApolloFcs)
+        .map(|part| part.location.section)
+        .collect();
+    if apollo.is_empty() {
+        return Ok(());
+    }
+    let launchers: Vec<VehicleSection> = loadout
+        .weapons
+        .iter()
+        .filter(|mount| mount.weapon.is_mrm())
+        .map(|mount| mount.criticals[0].section)
+        .collect();
+    let mut sections = apollo.clone();
+    sections.extend(&launchers);
+    sections.sort_unstable();
+    sections.dedup();
+    for section in sections {
+        let count = |list: &[VehicleSection]| list.iter().filter(|s| **s == section).count();
+        ensure!(
+            count(&apollo) == count(&launchers),
+            "An MRM Apollo fire control system must serve every MRM launcher from its location: {} has {} launchers and {} Apollo systems (Tactical Operations: Advanced Units & Equipment p. 142)",
+            section.name(),
+            count(&launchers),
+            count(&apollo)
+        );
+    }
+    Ok(())
+}
+
+/// Each machine gun array links two to four machine guns of one size class in its location,
+/// and a gun belongs to one array at most (TechManual p. 228).
+fn check_machine_gun_arrays(loadout: &VehicleLoadout) -> Result<()> {
+    let mut linked = std::collections::BTreeSet::new();
+    for array in loadout.machine_gun_arrays() {
+        let name = array.location.section.name();
+        ensure!(
+            super::ARRAY_GUNS.contains(&array.weapon_indices.len()),
+            "A machine gun array in {name} slot {} links {} machine guns; it links two to four of one size class beside it (TechManual p. 228)",
+            array.location.slot + 1,
+            array.weapon_indices.len()
+        );
+        for index in array.weapon_indices {
+            ensure!(
+                linked.insert(index),
+                "A machine gun in {name} is linked to two machine gun arrays (TechManual p. 228)"
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Read-only construction verdict for a vehicle template, the vehicle counterpart of
@@ -986,5 +1051,62 @@ slots = [
         assert_eq!(format_tons(5 * 512), "2.5");
         assert_eq!(format_tons(1024), "1");
         assert_eq!(format_tons(256), "0.25");
+    }
+
+    /// An MRM "Apollo" system serves every MRM launcher from its location and, like Artemis,
+    /// counts as part of the launcher rather than its own item (Tactical Operations: Advanced
+    /// Units & Equipment p. 142; TechManual p. 206).
+    #[test]
+    fn apollo_serves_every_mrm_from_its_location() {
+        // An MRM-10 in place of the SRM-6, with a ton of front armor freed for the system.
+        let mrm = ZHUKOV
+            .replace("IS.SRM-6", "IS.MRM-10")
+            .replace("rounds = 15", "rounds = 24")
+            .replace(
+                "armor = 44\nslots = [\n    { at = 1",
+                "armor = 28\nslots = [\n    { at = 1",
+            );
+        let plain = parse(&mrm).construction_rules().unwrap();
+        let apollo = "\n    { at = 3, item = \"ApolloFCS\", link = 1 },";
+        let guided_source = mrm.replace("rounds = 24 },", &format!("rounds = 24 }},{apollo}"));
+        let guided = parse(&guided_source);
+        let report = guided.construction_rules().unwrap();
+        assert_eq!(report.item_slots, plain.item_slots);
+        assert_eq!(report.mass.design_total, plain.mass.design_total + 1024);
+        let loadout = VehicleLoadout::resolve(&guided).unwrap();
+        assert_eq!(loadout.systems[0].system, System::ApolloFcs);
+        let misplaced = parse(&mrm.replace(
+            "{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },",
+            &format!(
+                "{{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 }},{}",
+                apollo.replace("at = 3", "at = 5")
+            ),
+        ));
+        assert!(rejection(&misplaced).contains("must serve every MRM launcher from its location"));
+    }
+
+    /// A machine gun array links two to four guns of one class beside it in its location and
+    /// takes an item slot (TechManual p. 228).
+    #[test]
+    fn machine_gun_arrays_link_two_to_four_guns() {
+        let guns = |count: u8| {
+            parse(&YELLOW_JACKET.replace(
+                "{ at = 1, item = \"IS.GaussRifle\" },\n    { at = \"2-3\", item = \"Ammo_IS.GaussRifle\", rounds = 8 },",
+                &format!(
+                    "{{ at = \"1-{count}\", item = \"IS.MachineGun\" }},\n    {{ at = {}, item = \"IS.MGA\" }},\n    {{ at = 6, item = \"Ammo_IS.MachineGun\", rounds = 200 }},",
+                    count + 1
+                ),
+            ))
+        };
+        let three = guns(3);
+        let report = three.construction_rules().unwrap();
+        // Three guns, the array and one ammunition type.
+        assert_eq!(report.item_slots, 5);
+        let arrays = VehicleLoadout::resolve(&three)
+            .unwrap()
+            .machine_gun_arrays();
+        assert_eq!(arrays.len(), 1);
+        assert_eq!(arrays[0].weapon_indices.len(), 3);
+        assert!(rejection(&guns(1)).contains("links 1 machine guns"));
     }
 }
