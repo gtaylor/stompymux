@@ -943,8 +943,9 @@ service. `@setunit unitname <name>` and `@setunit unitref <reference>` change
 the saved unit identity, preserving combat state. Each accepts 1 to 128 bytes.
 `tacrange`, `lrsrange`, and `scanrange` accept 0 to 127 hexes; `radiorange`
 accepts 0 to 32767; `radiotype` accepts the hardware bit mask from 0 to 255.
-An explicit zero persists as zero, independent of template defaults. Later sensor
-criticals still reduce assigned sensor ranges.
+Sensor ranges replace the 25-hex tactical and scan and 50-hex long-range defaults;
+an explicit zero switches that display off. Later sensor criticals still reduce
+assigned sensor ranges.
 
 Inspection includes current sensor ranges, radio range and
 hardware bits, and VTOL remaining and original fuel capacity. Sensor damage uses

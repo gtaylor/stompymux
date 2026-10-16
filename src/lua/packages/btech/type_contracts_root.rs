@@ -358,7 +358,7 @@
 //|---@field map_slot integer|nil Persisted battlefield membership order.
 //|---@field aimed_section AimSelection|nil Saved anatomy preference; independent of the current lock.
 //|---@field target_lock TargetLock|HexLock|nil
-//|---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits after sensor damage.
+//|---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Current display and scan reach in hexes after script overrides and sensor damage.
 //|---@field observer boolean Administrator-assigned observer role.
 //|---@field combat_safe boolean Operator-imposed immunity to combat damage.
 //|---@field weapons_hold boolean Operator-imposed firing restriction; mechanical readiness is independent.
@@ -484,7 +484,7 @@
 //|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 //|---@field scanner_perception integer Perception captured at startup completion.
 //|---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
-//|---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits.
+//|---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Current display and scan reach in hexes after script overrides.
 //|---@field aimed_section AimSelection|nil Saved anatomy preference; independent of the current lock.
 //|---@field target_lock TargetLock|HexLock|nil Saved selection.
 //|---@field artillery_adjustment integer Saved correction for the selected artillery coordinate.

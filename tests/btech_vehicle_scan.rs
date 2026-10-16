@@ -177,12 +177,13 @@ async fn vehicle_scan_ranges_and_observer_disclosure_follow_current_state() {
     assign_battle_pilot(&mut world, c, ObjectId(1)).unwrap();
     refresh_battle_contacts(&mut world, &[c]).unwrap();
     assert!(world.btech.vehicles()[&c].contacts().contains_key(&d));
-    world
-        .btech
-        .rewrite_unit_record(c, |record| {
-            record["definition"]["attributes"]["scan_range"] = serde_json::json!("3");
-        })
-        .unwrap();
+    stompymux_rs::btech::set_sensor_range(
+        &mut world,
+        c,
+        stompymux_rs::btech::SensorDisplay::Scan,
+        3,
+    )
+    .unwrap();
     let before = world.btech.clone();
     assert!(
         scan_battle_unit(&world, c, ObjectId(1), d, "")
@@ -376,12 +377,13 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
         .is_err()
     );
     assert_eq!(world.btech, before);
-    world
-        .btech
-        .rewrite_unit_record(observer, |record| {
-            record["definition"]["attributes"]["scan_range"] = serde_json::json!("1");
-        })
-        .unwrap();
+    stompymux_rs::btech::set_sensor_range(
+        &mut world,
+        observer,
+        stompymux_rs::btech::SensorDisplay::Scan,
+        1,
+    )
+    .unwrap();
     let limited = world.btech.clone();
     assert!(
         scan_battle_building(&mut world, observer, ObjectId(1), coordinate, 1000)
@@ -390,15 +392,13 @@ async fn vehicle_coordinate_and_structure_scans_share_native_lua_admission() {
             .contains("out of scanner range")
     );
     assert_eq!(world.btech, limited);
-    world
-        .btech
-        .rewrite_unit_record(observer, |record| {
-            record["definition"]["attributes"]
-                .as_object_mut()
-                .unwrap()
-                .remove("scan_range");
-        })
-        .unwrap();
+    stompymux_rs::btech::set_sensor_range(
+        &mut world,
+        observer,
+        stompymux_rs::btech::SensorDisplay::Scan,
+        stompymux_rs::btech::DEFAULT_SENSOR_RANGE,
+    )
+    .unwrap();
     // Hexes are perceived by sight alone: moonless night still reaches four hexes, pitch black
     // stops at three.
     set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();

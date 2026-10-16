@@ -47,7 +47,6 @@ specials = ["SearchLight"]
 | `max_speed`, `jump_speed` | number | Top and jumping speeds in km/h, for the few unconstructed units, such as battle armor, whose speed is not whole movement points. Give either the speed or its movement points, not both. Mechs and vehicles must state `walk_mp`. |
 | `heat_sinks` | integer | Installed heat sinks, counted as the record sheet counts them ("Heat Sinks: 17 (34)" is 17), not the heat they dissipate. The `[construction]` `heat_sinks` kind sets the dissipation: one heat per single sink, two per double or laser sink (TechManual p. 52; Tactical Operations: Advanced Units & Equipment). Without it a mech carries the engine's ten free sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
 | `radio`, `radio_type`, `radio_range` | integer | Electronics. |
-| `tac_range`, `lrs_range`, `scan_range` | integer | Sensor ranges. |
 | `si`, `fuel`, `cargo_space`, `max_suits`, `max_ton`, `carrier_maximum_tonnage` | integer | Class-specific capacities. |
 | `template_speed` | number | Movement baseline written when a saved unit's speed was edited. |
 | `unit_era`, `unit_tro` | string | Era and technical readout identity. |
@@ -58,6 +57,12 @@ Unknown keys, unknown flags and values of the wrong type are errors.
 `specials` cannot list a flag that a construction choice owns (for example
 `XLEngine_Tech` or `Clan`) or `FlipArms`, which a biped mech has exactly when
 neither arm carries a lower or hand actuator.
+
+Sensor reach is not a template field. Every unit sees 25 hexes on its tactical
+display and in `scan`, and 50 hexes on its long-range display. A Mech's first
+sensor critical halves each reach and its second removes it. Scripts change one unit's
+reach at runtime with `btech.unit.set_tactical_range`,
+`btech.unit.set_long_range_sensor_range` and `btech.unit.set_scan_range`.
 
 ## Construction
 

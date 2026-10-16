@@ -49,10 +49,6 @@ impl MechTemplate {
                     value.eq_ignore_ascii_case("Biped") || value.eq_ignore_ascii_case("Quad"),
                     "Unsupported movement type"
                 ),
-                "tac_range" | "lrs_range" | "scan_range" => ensure!(
-                    value.parse::<u8>().is_ok_and(|range| range <= 127),
-                    "Invalid sensor range {field}"
-                ),
                 "unit_era"
                 | "unit_tro"
                 | "radio_range"

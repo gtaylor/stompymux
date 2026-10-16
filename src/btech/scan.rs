@@ -1,10 +1,17 @@
 //! Detailed unit scans with hardware limits and separate ordinary/observer information disclosure.
+use super::hardware_settings::{HardwareSettings, RangeSetting, SensorDisplay};
 use super::{Mech, Power, System};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 
-/// Installed or administratively assigned view ranges, including sensor critical losses.
+/// Tactical display and `scan` reach, in hexes, of every unit no script has reassigned.
+pub const DEFAULT_SENSOR_RANGE: u8 = 25;
+
+/// Long-range display reach, in hexes, of every unit no script has reassigned.
+pub const DEFAULT_LONG_RANGE_SENSOR_RANGE: u8 = 50;
+
+/// Current view ranges after script overrides and sensor critical losses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct SensorRanges {
     /// Tactical display radius in hexes.
@@ -16,58 +23,54 @@ pub struct SensorRanges {
 }
 
 impl Mech {
-    /// Nonzero template ranges override technology-base defaults independently.
-    /// Template zero selects defaults; runtime zero remains zero. Subsequent sensor hits degrade ranges.
+    /// Default or assigned ranges, degraded by the sensor criticals taken since assignment.
     pub fn sensor_ranges(&self) -> SensorRanges {
-        configured_ranges(
-            &self.definition().attributes,
-            self.definition().has_special("Clan"),
-            self.system_hits(System::Sensors),
-            self.hardware,
-        )
+        configured_ranges(self.system_hits(System::Sensors), self.hardware)
     }
 }
 
 impl super::Vehicle {
-    /// Vehicle computer ranges use template overrides; vehicle sensor damage affects gunnery.
+    /// Default or assigned ranges; vehicle sensor damage affects gunnery, not reach.
     pub fn sensor_ranges(&self) -> SensorRanges {
-        configured_ranges(
-            &self.definition().attributes,
-            self.definition().has_special("Clan"),
-            0,
-            self.hardware,
-        )
+        configured_ranges(0, self.hardware)
     }
 }
 
-/// Derive shared computer defaults before applying Mech-specific sensor critical degradation.
-fn configured_ranges(
-    attributes: &std::collections::BTreeMap<String, String>,
-    clan: bool,
-    hits: u8,
-    hardware: super::hardware_settings::HardwareSettings,
-) -> SensorRanges {
-    let base = if clan { 35 } else { 25 };
-    let range = |field: &str, default, explicit: Option<super::hardware_settings::RangeSetting>| {
-        if let Some(value) = explicit {
-            return value.at_hits(hits);
-        }
-        let configured = attributes
-            .get(field)
-            .and_then(|v| v.parse::<u8>().ok())
-            .filter(|v| *v != 0)
-            .unwrap_or(default);
-        match hits {
-            0 => configured,
-            1 => configured / 2,
-            _ => 0,
-        }
+/// Apply each display's assigned reach, or the shared default, to the unit's sensor criticals.
+/// One critical halves a range and a second leaves none.
+fn configured_ranges(hits: u8, hardware: HardwareSettings) -> SensorRanges {
+    let range = |default, assigned: Option<RangeSetting>| {
+        assigned
+            .unwrap_or(RangeSetting::installed(default))
+            .at_hits(hits)
     };
     SensorRanges {
-        tactical: range("tac_range", base, hardware.tactical),
-        long_range: range("lrs_range", base * 2, hardware.long_range),
-        scan: range("scan_range", base, hardware.scan),
+        tactical: range(DEFAULT_SENSOR_RANGE, hardware.tactical),
+        long_range: range(DEFAULT_LONG_RANGE_SENSOR_RANGE, hardware.long_range),
+        scan: range(DEFAULT_SENSOR_RANGE, hardware.scan),
     }
+}
+
+/// Assign one display's current reach on a unit at runtime. The range takes effect undamaged;
+/// only sensor criticals taken afterwards degrade it, and zero switches the display off.
+pub fn set_sensor_range(
+    world: &mut World,
+    id: ObjectId,
+    display: SensorDisplay,
+    range: u8,
+) -> Result<()> {
+    super::ensure_registered_unit_runtime(world, id)?;
+    let sensor_hits = world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .map_or(0, |unit| unit.system_hits(System::Sensors));
+    let unit = world
+        .btech
+        .unit_mut(id)
+        .context("Unit runtime state is unavailable")?;
+    let hardware = super::with_unit_mut!(unit, |unit| &mut unit.hardware);
+    hardware.set_sensor_range(display, range, sensor_hits)
 }
 
 /// Select independent unit report sections without exposing cockpit-only status options.
@@ -443,4 +446,48 @@ pub(crate) fn command(
         Ok(text) => crate::CommandReport::Styled(text),
         Err(error) => crate::CommandReport::Reply(format!("{error:#}")),
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every unit shares one default, halved by one sensor critical and lost to a second.
+    #[test]
+    fn default_ranges_degrade_with_sensor_criticals() {
+        let hardware = HardwareSettings::default();
+        let expected = [(0, 25, 50), (1, 12, 25), (2, 0, 0), (3, 0, 0)];
+        for (hits, short, long) in expected {
+            assert_eq!(
+                configured_ranges(hits, hardware),
+                SensorRanges {
+                    tactical: short,
+                    long_range: long,
+                    scan: short,
+                },
+                "{hits} hits"
+            );
+        }
+    }
+
+    /// An assigned range replaces only its own display and keeps the damage already taken.
+    #[test]
+    fn assigned_ranges_replace_one_display_and_take_later_damage() {
+        let mut hardware = HardwareSettings::default();
+        hardware
+            .set_sensor_range(SensorDisplay::Scan, 7, 1)
+            .unwrap();
+        hardware
+            .set_sensor_range(SensorDisplay::Tactical, 0, 0)
+            .unwrap();
+        assert_eq!(
+            configured_ranges(1, hardware),
+            SensorRanges {
+                tactical: 0,
+                long_range: 25,
+                scan: 7,
+            }
+        );
+        assert_eq!(configured_ranges(2, hardware).scan, 0);
+    }
 }

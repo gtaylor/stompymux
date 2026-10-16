@@ -4,9 +4,6 @@ movement = "wheel"
 tons = 5
 walk_mp = 7
 radio_range = 80
-tac_range = 18
-lrs_range = 31
-scan_range = 12
 cargo_space = 0
 max_suits = 0
 

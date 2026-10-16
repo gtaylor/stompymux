@@ -5,9 +5,6 @@ tons = 35
 walk_mp = 4
 jump_mp = 4
 heat_sinks = 10
-tac_range = 30
-lrs_range = 60
-scan_range = 30
 cargo_space = 0
 max_suits = 0
 

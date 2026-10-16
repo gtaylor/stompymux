@@ -517,9 +517,6 @@ pub fn set_administrative_scalar(
                 .set_jump_raw(f64::from(value as f32 * 10.75_f32));
         }
         (_, "tons") => storage.set_administrative_attribute("administrative_tonnage", value as u32),
-        (_, "lrsrange") => storage.set_administrative_attribute("lrs_range", value as u8),
-        (_, "tacrange") => storage.set_administrative_attribute("tac_range", value as u8),
-        (_, "scanrange") => storage.set_administrative_attribute("scan_range", value as u8),
         (UnitMut::Mech(unit), "radiorange") => unit.hardware.radio_range = Some(value as u16),
         (UnitMut::Vehicle(unit), "radiorange") => unit.hardware.radio_range = Some(value as u16),
         _ => anyhow::bail!("Unknown administrative scalar"),

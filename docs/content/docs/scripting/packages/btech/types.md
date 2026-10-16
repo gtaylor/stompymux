@@ -325,7 +325,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `map_slot`: `integer|nil` — Persisted battlefield membership order.
 - `aimed_section`: `AimSelection|nil` — Saved anatomy preference; independent of the current lock.
 - `target_lock`: `TargetLock|HexLock|nil`
-- `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits after sensor damage.
+- `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Current display and scan reach in hexes after script overrides and sensor damage.
 - `observer`: `boolean` — Administrator-assigned observer role.
 - `combat_safe`: `boolean` — Operator-imposed immunity to combat damage.
 - `weapons_hold`: `boolean` — Operator-imposed firing restriction; mechanical readiness is independent.
@@ -449,7 +449,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
 - `sensor_sweep`: `integer|nil` — This turn's 2d6 sensor sweep, once rolled.
-- `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits.
+- `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Current display and scan reach in hexes after script overrides.
 - `aimed_section`: `AimSelection|nil` — Saved anatomy preference; independent of the current lock.
 - `target_lock`: `TargetLock|HexLock|nil` — Saved selection.
 - `artillery_adjustment`: `integer` — Saved correction for the selected artillery coordinate.

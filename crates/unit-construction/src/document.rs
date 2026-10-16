@@ -79,9 +79,6 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("radio", "radio", Kind::Integer),
     ("radio_type", "radiotype", Kind::Integer),
     ("radio_range", "radio_range", Kind::Integer),
-    ("tac_range", "tac_range", Kind::Integer),
-    ("lrs_range", "lrs_range", Kind::Integer),
-    ("scan_range", "scan_range", Kind::Integer),
     ("si", "si", Kind::Integer),
     ("fuel", "fuel", Kind::Integer),
     ("cargo_space", "cargo_space", Kind::Integer),
@@ -1252,6 +1249,21 @@ armor = 9
         );
         let parsed = ParsedTemplate::parse("ZEU-9S", &flipping).unwrap();
         assert!(parsed.fields["specials"].ends_with(" FlipArms"));
+    }
+
+    /// Sensor reach is a runtime default, not a template field, so the old keys are unknown.
+    #[test]
+    fn sensor_range_fields_are_unknown() {
+        for key in ["tac_range", "lrs_range", "scan_range"] {
+            let source = format!("{key} = 30\n{ZEUS}");
+            let Err(error) = ParsedTemplate::parse("ZEU-9S", &source) else {
+                panic!("{key} was accepted");
+            };
+            assert!(
+                format!("{error:#}").contains(&format!("unsupported template field {key}")),
+                "{key}: {error:#}"
+            );
+        }
     }
 
     #[test]

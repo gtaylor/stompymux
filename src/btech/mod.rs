@@ -751,7 +751,10 @@ pub use radio_targeted::{TargetedRadioReport, resolve_targeted_radio, send_targe
 pub(crate) mod scan;
 mod scan_summary;
 mod scan_weapons;
-pub use scan::{SensorRanges, scan_hex_unit_action, scan_unit, scan_unit_action};
+pub use scan::{
+    DEFAULT_LONG_RANGE_SENSOR_RANGE, DEFAULT_SENSOR_RANGE, SensorRanges, scan_hex_unit_action,
+    scan_unit, scan_unit_action, set_sensor_range,
+};
 
 mod scan_building;
 pub use scan_building::{BuildingScan, scan_building, scan_building_action};
@@ -1359,6 +1362,7 @@ pub use orbital_drop_launch::{OrbitalInsertion, initiate_action as initiate_orbi
 
 mod cockpit_links;
 mod hardware_settings;
+pub use hardware_settings::{MAX_SENSOR_RANGE, SensorDisplay};
 pub(crate) mod unit_fields;
 mod unit_identity;
 pub use unit_fields::{UnitField, UnitFieldReport, set_unit_field_action, view_unit_fields_action};

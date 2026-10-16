@@ -50,8 +50,10 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
         let mut saved = serde_json::to_value(&world.btech).unwrap();
         saved[key][id.0.to_string()]["contacts"][target.0.to_string()] =
             serde_json::json!({"identified": true});
-        saved[key][id.0.to_string()]["definition"]["attributes"]["scan_range"] = "1".into();
-        saved[key][id.0.to_string()]["definition"]["attributes"]["tac_range"] = "1".into();
+        for display in ["scan", "tactical"] {
+            saved[key][id.0.to_string()]["hardware"][display] =
+                serde_json::json!({"value": 1, "sensor_hits": 0});
+        }
         saved["vehicles"][target.0.to_string()]["radio"][0]["frequency"] = 42.into();
         saved["vehicles"][target.0.to_string()]["radio"][0]["mode"]["digital"] = true.into();
         saved["vehicles"][target.0.to_string()]["definition"]["attributes"]["radio_range"] =

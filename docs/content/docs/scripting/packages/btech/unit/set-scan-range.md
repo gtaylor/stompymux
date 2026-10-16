@@ -5,7 +5,9 @@ linkTitle: "set_scan_range"
 manualLinkTitle: "set_scan_range"
 ---
 
-Set the scan range in hexes.
+Set the unit's `scan` reach in hexes (0 to 127), replacing the 25-hex default.
+The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+turns scanning off. Read it back from `btech.unit.state(unit).sensor_ranges.scan`.
 
 ## Signature
 

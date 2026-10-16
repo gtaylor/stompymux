@@ -5,9 +5,6 @@ tons = 35
 walk_mp = 7
 jump_mp = 5
 radio = 2
-tac_range = 20
-lrs_range = 40
-scan_range = 20
 
 [construction]
 tech_base = "inner_sphere"

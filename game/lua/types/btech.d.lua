@@ -345,7 +345,7 @@ function btech_unit.inspect(dbref) end
 ---@field map_slot integer|nil Persisted battlefield membership order.
 ---@field aimed_section AimSelection|nil Saved anatomy preference; independent of the current lock.
 ---@field target_lock TargetLock|HexLock|nil
----@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits after sensor damage.
+---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Current display and scan reach in hexes after script overrides and sensor damage.
 ---@field observer boolean Administrator-assigned observer role.
 ---@field combat_safe boolean Operator-imposed immunity to combat damage.
 ---@field weapons_hold boolean Operator-imposed firing restriction; mechanical readiness is independent.
@@ -467,7 +467,7 @@ function btech_unit.inspect(dbref) end
 ---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 ---@field scanner_perception integer Perception captured at startup completion.
 ---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
----@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits.
+---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Current display and scan reach in hexes after script overrides.
 ---@field aimed_section AimSelection|nil Saved anatomy preference; independent of the current lock.
 ---@field target_lock TargetLock|HexLock|nil Saved selection.
 ---@field artillery_adjustment integer Saved correction for the selected artillery coordinate.
@@ -3703,17 +3703,23 @@ function btech_unit.set_heat_sinks(unit, count) end
 ---@param movement_points number
 function btech_unit.set_jump_speed(unit, movement_points) end
 
----Set the long-range sensor ceiling in hexes.
+---Set the unit's long-range display reach in hexes (0 to 127), replacing the 50-hex default.
+---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+---turns the display off. Read it back from `btech.unit.state(unit).sensor_ranges.long_range`.
 ---@param unit DbRef|Object
 ---@param range integer
 function btech_unit.set_long_range_sensor_range(unit, range) end
 
----Set the tactical sensor range in hexes.
+---Set the unit's tactical display reach in hexes (0 to 127), replacing the 25-hex default.
+---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+---turns the display off. Read it back from `btech.unit.state(unit).sensor_ranges.tactical`.
 ---@param unit DbRef|Object
 ---@param range integer
 function btech_unit.set_tactical_range(unit, range) end
 
----Set the scan range in hexes.
+---Set the unit's `scan` reach in hexes (0 to 127), replacing the 25-hex default.
+---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+---turns scanning off. Read it back from `btech.unit.state(unit).sensor_ranges.scan`.
 ---@param unit DbRef|Object
 ---@param range integer
 function btech_unit.set_scan_range(unit, range) end

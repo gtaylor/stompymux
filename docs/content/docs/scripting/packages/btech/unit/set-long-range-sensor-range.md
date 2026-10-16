@@ -5,7 +5,9 @@ linkTitle: "set_long_range_sensor_range"
 manualLinkTitle: "set_long_range_sensor_range"
 ---
 
-Set the long-range sensor ceiling in hexes.
+Set the unit's long-range display reach in hexes (0 to 127), replacing the 50-hex default.
+The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+turns the display off. Read it back from `btech.unit.state(unit).sensor_ranges.long_range`.
 
 ## Signature
 

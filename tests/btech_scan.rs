@@ -11,12 +11,14 @@ async fn fixture() -> (
     ObjectId,
     ObjectId,
 ) {
-    fixture_with_ranges(&[]).await
+    fixture_with_attributes(&[]).await
 }
 
-/// Construct both units using the same optional template range settings.
-async fn fixture_with_ranges(
-    ranges: &[(&str, &str)],
+/// Construct both units using the same optional template attributes. Both scanners are
+/// assigned a 20-hex tactical and scan reach and a 40-hex long-range reach, so range edges
+/// fall well inside the 60-row field.
+async fn fixture_with_attributes(
+    attributes: &[(&str, &str)],
 ) -> (
     tempfile::TempDir,
     Config,
@@ -41,13 +43,20 @@ async fn fixture_with_ranges(
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         let mut template =
             MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
-        for &(field, value) in ranges {
+        for &(field, value) in attributes {
             template.attributes.insert(field.into(), value.into());
         }
-        if ranges.contains(&("move_type", "Quad")) {
+        if attributes.contains(&("move_type", "Quad")) {
             support::templates::quad_ready_arms(&mut template);
         }
         create_battle_unit(&mut world, id, template).unwrap();
+        for (display, range) in [
+            (btech::SensorDisplay::Tactical, 20),
+            (btech::SensorDisplay::LongRange, 40),
+            (btech::SensorDisplay::Scan, 20),
+        ] {
+            btech::set_sensor_range(&mut world, id, display, range).unwrap();
+        }
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
         place_battle_unit(&mut world, id, map, 1, y).unwrap();
         units.push(id);
@@ -131,14 +140,13 @@ fn acquire(world: &mut World, source: ObjectId, target: ObjectId) {
         .unwrap();
 }
 
+/// Inner Sphere and Clan units share one default reach, halved by one sensor critical.
 #[test]
-fn sensor_defaults_follow_technology_base_and_critical_halving() {
-    for (clan, base) in [(false, 25), (true, 35)] {
+fn sensor_defaults_ignore_technology_base_and_halve_with_criticals() {
+    let base = 25;
+    for clan in [false, true] {
         let mut template =
             MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
-        for field in ["tac_range", "lrs_range", "scan_range"] {
-            template.attributes.remove(field);
-        }
         if clan {
             template
                 .attributes
@@ -4610,7 +4618,7 @@ async fn verbose_contacts_share_multiline_reports_with_lua_and_restart() {
 #[tokio::test]
 async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons() {
     let (_dir, config, world, _map, source, target) =
-        fixture_with_ranges(&[("move_type", "Quad")]).await;
+        fixture_with_attributes(&[("move_type", "Quad")]).await;
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     assert!(battle_lateral(&scripts, source, ObjectId(2), "ne").is_err());
@@ -4793,7 +4801,7 @@ async fn lateral_changes_delay_cancel_persist_and_move_without_turning_weapons()
 #[tokio::test]
 async fn cockpit_status_reports_quad_lateral_travel() {
     let (_dir, config, world, _map, source, _target) =
-        fixture_with_ranges(&[("move_type", "Quad")]).await;
+        fixture_with_attributes(&[("move_type", "Quad")]).await;
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let initial = battle_unit_status(&scripts.world(), source, "info").unwrap();
@@ -5892,94 +5900,64 @@ async fn ammunition_dump_server_retries_failed_commits_without_losing_rounds() {
     }).await;
 }
 
-/// Each explicit radius is independent, falls back at zero, and halves with integer truncation.
+/// Templates cannot carry sensor ranges, and a template radio range survives sensor damage.
 #[test]
-fn explicit_template_ranges_preserve_defaults_and_damage_limits() {
-    for value in ["0", "1", "127"] {
+fn templates_refuse_sensor_ranges_and_keep_radio_range_through_damage() {
+    let mut template =
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
+    template
+        .attributes
+        .insert("radio_range".into(), "32767".into());
+    let mut unit = Mech::from_template(template).unwrap();
+    assert_eq!(unit.radio_capabilities().range, 32767);
+    for slot in [1, 4] {
+        unit.destroy_critical(CriticalLocation {
+            section: MechSection::Head,
+            slot,
+        })
+        .unwrap();
+    }
+    assert_eq!(
+        unit.sensor_ranges(),
+        SensorRanges {
+            tactical: 0,
+            long_range: 0,
+            scan: 0
+        }
+    );
+    assert_eq!(unit.radio_capabilities().range, 32767);
+    for field in ["scan_range", "tac_range", "lrs_range"] {
         let mut template =
             MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
-        for field in ["scan_range", "tac_range", "lrs_range"] {
-            template.attributes.insert(field.into(), value.into());
-        }
+        template.attributes.insert(field.into(), "30".into());
+        assert!(Mech::from_template(template).is_err(), "{field}");
+    }
+    for value in ["-1", "65536", "abc", "1.5", "32768"] {
+        let mut template =
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap();
         template
             .attributes
-            .insert("radio_range".into(), "32767".into());
-        let mut unit = Mech::from_template(template).unwrap();
-        let expected = if value == "0" {
-            SensorRanges {
-                tactical: 25,
-                long_range: 50,
-                scan: 25,
-            }
-        } else {
-            let n = value.parse().unwrap();
-            SensorRanges {
-                tactical: n,
-                long_range: n,
-                scan: n,
-            }
-        };
-        assert_eq!(unit.sensor_ranges(), expected);
-        assert_eq!(unit.radio_capabilities().range, 32767);
-        unit.destroy_critical(CriticalLocation {
-            section: MechSection::Head,
-            slot: 1,
-        })
-        .unwrap();
-        assert_eq!(
-            unit.sensor_ranges(),
-            SensorRanges {
-                tactical: expected.tactical / 2,
-                long_range: expected.long_range / 2,
-                scan: expected.scan / 2
-            }
+            .insert("radio_range".into(), value.into());
+        assert!(
+            Mech::from_template(template).is_err(),
+            "radio_range={value}"
         );
-        unit.destroy_critical(CriticalLocation {
-            section: MechSection::Head,
-            slot: 4,
-        })
-        .unwrap();
-        assert_eq!(
-            unit.sensor_ranges(),
-            SensorRanges {
-                tactical: 0,
-                long_range: 0,
-                scan: 0
-            }
-        );
-        assert_eq!(unit.radio_capabilities().range, 32767);
-    }
-    for field in ["scan_range", "tac_range", "lrs_range", "radio_range"] {
-        for value in [
-            "-1",
-            "65536",
-            "abc",
-            "1.5",
-            if field == "radio_range" {
-                "32768"
-            } else {
-                "128"
-            },
-        ] {
-            let mut template =
-                MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
-                    .unwrap();
-            template.attributes.insert(field.into(), value.into());
-            assert!(Mech::from_template(template).is_err(), "{field}={value}");
-        }
     }
 }
 
-/// Live scan, display and radio consumers share the saved template limits.
+/// Live scan and display consumers share runtime sensor overrides, and radio consumers the
+/// saved template radio range; both survive a restart.
 #[tokio::test]
 async fn range_overrides_control_live_queries_delivery_and_restart() {
-    let (_dir, config, mut world, map, source, target) = fixture_with_ranges(&[
-        ("scan_range", "1"),
-        ("tac_range", "3"),
-        ("lrs_range", "7"),
-        ("radio_range", "1"),
-    ])
-    .await;
+    let (_dir, config, mut world, map, source, target) =
+        fixture_with_attributes(&[("radio_range", "1")]).await;
+    for (display, range) in [
+        (btech::SensorDisplay::Scan, 1),
+        (btech::SensorDisplay::Tactical, 3),
+        (btech::SensorDisplay::LongRange, 7),
+    ] {
+        btech::set_sensor_range(&mut world, source, display, range).unwrap();
+    }
     assert!(scan_battle_unit(&world, source, ObjectId(1), target, "I").is_ok());
     set_radio_mode(
         &mut world,
