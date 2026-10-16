@@ -127,6 +127,7 @@ fn light_ballistic_catalog_ranges_and_critical_ammunition() {
             Weapon::Ac5
         };
         bin.equipment = format!("Ammo_{}", other.name());
+        bin.data = other.profile().ammunition_per_ton.to_string();
         assert_eq!(
             Mech::from_template(wrong_bin)
                 .unwrap()

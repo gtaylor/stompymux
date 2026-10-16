@@ -8,9 +8,7 @@ use super::{MechLoadout, MechTemplate, Weapon};
 pub(crate) fn balance(template: &mut MechTemplate, keep: &[&str]) {
     let tons = u32::from(template.tons) * 1024;
     let mass = |template: &MechTemplate| {
-        let mut normalized = template.clone();
-        normalized.normalize_ammunition().unwrap();
-        let loadout = MechLoadout::resolve(&normalized).unwrap();
+        let loadout = MechLoadout::resolve(template).unwrap();
         template.construction_mass(&loadout).unwrap().total
     };
     while mass(template) > tons {

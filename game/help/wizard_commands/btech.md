@@ -81,8 +81,8 @@ loading units into other units are deferred. A successfully parsed
 template has not yet had its equipment and rule support validated. Use
 `template-check <name>` to preview the unit-construction checks, the first
 rejection reason, the movement points and engine rating (and whether the
-template declares the rating or derives it from movement) and any ammunition
-normalization; for a vehicle or VTOL it also
+template declares the rating or derives it from movement); for a vehicle or
+VTOL it also
 reports mass, item slots, armor and energy weapon heat against the TechManual
 limits, and any unspent tonnage. A successful check means the
 template can be constructed under the currently implemented construction rules; it

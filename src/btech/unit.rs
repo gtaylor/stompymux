@@ -860,12 +860,7 @@ impl Mech {
         Self::from_template_mode(definition, true)
     }
 
-    fn from_template_mode(mut definition: MechTemplate, contract_loadout: bool) -> Result<Self> {
-        if contract_loadout {
-            definition.normalize_contract_ammunition()?;
-        } else {
-            definition.normalize_ammunition()?;
-        }
+    fn from_template_mode(definition: MechTemplate, contract_loadout: bool) -> Result<Self> {
         // The tonnage-chart internal structure (mech_int_check) is forced while
         // the template file is read; construction and saved-definition restore
         // keep the stored internals verbatim.

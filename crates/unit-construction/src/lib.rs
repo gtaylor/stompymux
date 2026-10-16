@@ -26,7 +26,6 @@
 //! units and combat rules on top of these types.
 mod administrative;
 mod ammunition;
-mod ammunition_slots;
 mod chassis;
 mod construction;
 mod cost;
@@ -127,7 +126,7 @@ pub use speed::{
 };
 pub use tech_base::{SystemInstallation, TechBase, TechnologyInventory, check_technology_base};
 pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
-pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
+pub use template_check::{TemplateCheck, check_template};
 pub use transport_bay::{BaySize, TRANSPORT_BAYS, TransportBay, TransportBays};
 pub use unit::UnitTemplate;
 pub use vehicle::{VehicleMovement, VehicleSection, VehicleTemplate};

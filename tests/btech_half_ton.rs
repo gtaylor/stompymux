@@ -19,8 +19,8 @@ fn definition(weapon: Weapon, rounds: u16, flags: &[&str]) -> MechTemplate {
     template
 }
 
-/// Machine guns size half-ton lots; mass and explosion potential follow actual rounds. Every
-/// other ammunition weapon refuses the flag (TechManual p. 48).
+/// Machine guns take half-ton lots; mass and explosion potential follow actual rounds. Every
+/// other ammunition weapon refuses the flag (TechManual p. 57).
 #[test]
 fn half_ton_capacity_modes_mass_and_hazards() {
     for weapon in Weapon::ALL
@@ -67,13 +67,12 @@ fn half_ton_capacity_modes_mass_and_hazards() {
                 })
             );
         }
+        // A machine gun bin lists exactly what its lot holds: neither overfilled nor short,
+        // and construction never refills or resizes it.
         assert!(MechLoadout::resolve(&definition(weapon, capacity + 1, &["Halfton"])).is_err());
-        assert_eq!(
-            Mech::from_template(definition(weapon, capacity + 1, &["Halfton"]))
-                .unwrap()
-                .ammunition(),
-            &[capacity]
-        );
+        assert!(Mech::from_template(definition(weapon, capacity + 1, &["Halfton"])).is_err());
+        assert!(Mech::from_template(definition(weapon, capacity - 1, &["Halfton"])).is_err());
+        assert!(Mech::from_template(definition(weapon, capacity, &[])).is_err());
     }
     for flags in [
         vec!["Halfton", "LBX/Cluster"],

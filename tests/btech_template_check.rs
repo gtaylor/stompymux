@@ -1,36 +1,28 @@
-//! Construction diagnostics, normalization previews and read-only native/Lua inspection.
+//! Construction diagnostics and read-only native/Lua template inspection.
 use crate::support;
 use stompymux_rs::*;
 
-/// Template checks share construction rejection and retain the original source facts. A short
-/// SRM bin fills to its full ton rather than becoming a half-ton lot (TechManual p. 48).
+/// Template checks share construction rejection and leave the template unchanged. A machine
+/// gun bin must hold its full lot: a short one is refused rather than refilled or taken for a
+/// half-ton lot (TechManual p. 57).
 #[test]
-fn template_check_reports_normalization_and_construction_failures() {
-    let source = include_str!("fixtures/btech/units/JR7-D.toml").replace(
-        "item = \"Ammo_IS.SRM-4\", rounds = 25",
-        "item = \"Ammo_IS.SRM-4\", rounds = 7",
-    );
-    let template = MechTemplate::parse("JR7-D", &source).unwrap();
-    let original = template.clone();
-    let report = check_battle_template(&template);
+fn template_check_reports_construction_failures() {
+    let jenner = include_str!("fixtures/btech/units/JR7-D.toml");
+    let original = MechTemplate::parse("JR7-D", jenner).unwrap();
+    let report = check_battle_template(&original);
     assert!(report.constructible);
     assert!(report.rejection.is_none());
     assert_eq!((report.weapons, report.ammunition_bins), (5, 1));
-    assert_eq!(
-        report.ammunition_adjustments,
-        [AmmunitionAdjustment {
-            location: CriticalLocation {
-                section: MechSection::RightTorso,
-                slot: 0
-            },
-            supplied: 7,
-            normalized: 25,
-            inferred_half_ton: false,
-        }]
-    );
-    assert_eq!(template, original);
-    let unknown_weapon = source.replace("IS.MediumLaser", "IS.Unknown");
-    assert_ne!(unknown_weapon, source);
+    let short = MechTemplate::parse(
+        "JR7-D",
+        &jenner.replace(
+            "item = \"Ammo_IS.SRM-4\", rounds = 25",
+            "item = \"Ammo_IS.MachineGun\", rounds = 100",
+        ),
+    )
+    .unwrap();
+    let unknown_weapon = jenner.replace("IS.MediumLaser", "IS.Unknown");
+    assert_ne!(unknown_weapon, jenner);
     let mut missing_gyro = original.clone();
     for critical in missing_gyro
         .sections
@@ -46,16 +38,26 @@ fn template_check_reports_normalization_and_construction_failures() {
     unknown_technology
         .attributes
         .insert("specials".into(), "UnknownTechnology".into());
-    for template in [
-        MechTemplate::parse("JR7-D", &unknown_weapon).unwrap(),
-        missing_gyro,
-        unknown_technology,
+    for (template, expected) in [
+        (
+            short,
+            "lists 100 rounds; a machine gun bin holds 200 rounds a ton, or 100 in a half-ton lot marked Halfton",
+        ),
+        (
+            MechTemplate::parse("JR7-D", &unknown_weapon).unwrap(),
+            "Unsupported weapon IS.Unknown",
+        ),
+        (missing_gyro, "Incomplete conventional Gyro system"),
+        (unknown_technology, "Unsupported chassis specials"),
     ] {
-        let expected = Mech::from_template(template.clone()).unwrap_err();
+        let before = template.clone();
+        let refused = Mech::from_template(template.clone()).unwrap_err();
         let report = check_battle_template(&template);
         assert!(!report.constructible);
-        assert_eq!(report.rejection, Some(format!("{expected:#}")));
-        assert!(report.ammunition_adjustments.is_empty());
+        assert_eq!(report.rejection, Some(format!("{refused:#}")));
+        assert!(format!("{refused:#}").contains(expected), "{refused:#}");
+        assert_eq!(report.ammunition_bins, 0);
+        assert_eq!(template, before);
     }
 }
 
@@ -64,11 +66,8 @@ fn template_check_reports_normalization_and_construction_failures() {
 async fn template_check_native_lua_read_only_and_bounded_asset_access() {
     let (dir, config, world) = support::isolated_world().await;
     std::fs::create_dir_all(dir.path().join("units")).unwrap();
-    let source = include_str!("fixtures/btech/units/JR7-D.toml").replace(
-        "item = \"Ammo_IS.SRM-4\", rounds = 25",
-        "item = \"Ammo_IS.SRM-4\", rounds = 7",
-    );
-    std::fs::write(dir.path().join("units/partial.toml"), &source).unwrap();
+    let source = include_str!("fixtures/btech/units/JR7-D.toml");
+    std::fs::write(dir.path().join("units/jenner.toml"), source).unwrap();
     std::fs::write(
         dir.path().join("units/unsupported.toml"),
         source.replace("IS.MediumLaser", "IS.Unknown"),
@@ -84,28 +83,21 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
         &config,
         ObjectId(1),
         1,
-        "@btech template-check partial",
+        "@btech template-check jenner",
     );
     assert!(
         text.contains("constructible under current biped rules"),
         "{text}"
     );
-    assert!(text.contains("7 -> 25"), "{text}");
-    assert!(!text.contains("inferred half-ton bin"), "{text}");
     let report: mlua::Table = scripts
-        .eval_callback("return btech.template.check('partial')")
+        .eval_callback("return btech.template.check('jenner')")
         .unwrap();
     assert!(report.get::<bool>("constructible").unwrap());
-    let adjustment: mlua::Table = report
-        .get::<mlua::Table>("ammunition_adjustments")
-        .unwrap()
-        .get(1)
-        .unwrap();
-    assert_eq!(adjustment.get::<u16>("normalized").unwrap(), 25);
+    assert_eq!(report.get::<u32>("ammunition_bins").unwrap(), 1);
     report.set("constructible", false).unwrap();
     assert!(
         scripts
-            .eval_callback::<bool>("return btech.template.check('partial').constructible")
+            .eval_callback::<bool>("return btech.template.check('jenner').constructible")
             .unwrap()
     );
     let rejected: mlua::Table = scripts
@@ -121,7 +113,7 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
         "@btech template-check unsupported",
     );
     assert!(text.contains(&reason), "{text}");
-    for invalid in ["../partial", "missing"] {
+    for invalid in ["../jenner", "missing"] {
         assert!(
             scripts
                 .eval_callback::<mlua::Table>(&format!("return btech.template.check('{invalid}')"))
@@ -133,14 +125,14 @@ async fn template_check_native_lua_read_only_and_bounded_asset_access() {
         &config,
         ObjectId(4),
         1,
-        "@btech template-check partial",
+        "@btech template-check jenner",
     );
     assert!(!denied.contains("constructible under current biped rules"));
     assert_eq!(scripts.world().btech, world.btech);
     assert_eq!(scripts.world().objects.len(), world.objects.len());
     assert!(scripts.drain_outbox().is_empty());
     assert_eq!(
-        std::fs::read_to_string(dir.path().join("units/partial.toml")).unwrap(),
+        std::fs::read_to_string(dir.path().join("units/jenner.toml")).unwrap(),
         source
     );
 }

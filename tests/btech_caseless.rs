@@ -34,7 +34,8 @@ fn caseless_bins_have_double_capacity_and_refuse_half_ton_lots() {
                 .get_mut(&0)
                 .unwrap();
             bin.equipment = format!("Ammo_{}", weapon.name());
-            bin.data = weapon.profile().ammunition_per_ton.to_string();
+            // Caseless rounds pack twice as many shots into a ton.
+            bin.data = (u16::from(weapon.profile().ammunition_per_ton) * 2).to_string();
             bin.modes = vec!["Caseless".into()];
             if half {
                 // Half-ton lots are a machine-gun privilege (TechManual p. 48).

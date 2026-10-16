@@ -146,11 +146,6 @@ fn finish(reference: &str, draft: &draft::Draft) -> Result<String> {
             if let Some(rejection) = check.rejection {
                 bail!("stompymux cannot construct this mech: {rejection}");
             }
-            ensure!(
-                check.ammunition_adjustments.is_empty(),
-                "ammunition bins do not match stompymux capacities: {:?}",
-                check.ammunition_adjustments
-            );
             mech.to_document()?
         }
         UnitTemplate::Vehicle(vehicle) => {

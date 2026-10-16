@@ -198,6 +198,17 @@ impl MechTemplate {
             );
         }
         self.validate_cockpit_placement(loadout)?;
+        let chassis = self.chassis()?;
+        loadout.check_machine_gun_bins(
+            |location| {
+                format!(
+                    "{} slot {}",
+                    chassis.section_name(location.section),
+                    location.slot + 1
+                )
+            },
+            "TechManual p. 57",
+        )?;
         // A declared cargo installation must weigh out; live mass is measured from the same rule.
         if self
             .attributes

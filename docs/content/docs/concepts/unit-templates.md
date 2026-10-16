@@ -318,7 +318,7 @@ Each slot entry places one item in a run of consecutive critical slots:
 | --- | --- |
 | `at` | A one-based slot such as `12`, or an inclusive run such as `"4-6"`. Mech sections hold slots 1 to 12; vehicle and VTOL locations have no per-location limit (slots 1 to 255), since only the vehicle's item slots limit its equipment. |
 | `item` | Equipment name. |
-| `rounds` | Ammunition only: rounds in the bin. |
+| `rounds` | Ammunition only, and required: the rounds the bin is loaded with, at most what a ton holds. A machine gun bin is a full ton or a half-ton lot marked with the `Halfton` mode, and lists exactly what that lot holds: 200 or 100 rounds of standard or light machine gun ammunition, 100 or 50 heavy (TechManual pp. 57, 107). Construction never refills a bin or infers its size. |
 | `link` | Non-ammunition only. Required on every Artemis IV, Artemis V and `ApolloFCS` entry: the one-based slot of the first critical of the launcher it guides, in the same section. |
 | `links` | Machine gun arrays (`MGA`) only, and required on each: the one-based first slots of the two to four machine guns it links, in the same section. |
 | `modes` | Ammunition flags or weapon modes, such as `["RearMount"]` or `["Inferno"]`. |

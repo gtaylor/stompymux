@@ -442,6 +442,37 @@ pub struct ResolvedLoadout<L> {
     pub systems: Vec<SystemCritical<L>>,
 }
 
+impl<L: Copy> ResolvedLoadout<L> {
+    /// A machine gun bin is a full ton, or a half-ton lot marked `Halfton`, and lists exactly
+    /// the rounds that lot holds; construction never infers the lot size from a round count
+    /// or refills a bin. `describe` names a bin's location and `citation` the chassis's
+    /// ammunition rule (TechManual p. 57 for Mechs, p. 107 for combat vehicles).
+    pub fn check_machine_gun_bins(
+        &self,
+        describe: impl Fn(L) -> String,
+        citation: &str,
+    ) -> Result<()> {
+        for bin in &self.ammunition {
+            if !bin.weapon.allows_half_ton_bins() || bin.rounds == bin.capacity {
+                continue;
+            }
+            let ton = bin
+                .weapon
+                .profile_for_ammunition(bin.mode)
+                .ammunition_per_ton;
+            bail!(
+                "The {} bin in {} lists {} rounds; a machine gun bin holds {} rounds a ton, or {} in a half-ton lot marked Halfton ({citation})",
+                bin.weapon.name(),
+                describe(bin.location),
+                bin.rounds,
+                bin_capacity(ton, false, bin.mode),
+                bin_capacity(ton, true, bin.mode)
+            );
+        }
+        Ok(())
+    }
+}
+
 /// A BattleMech's resolved equipment.
 pub type MechLoadout = ResolvedLoadout<CriticalLocation>;
 

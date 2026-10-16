@@ -31,7 +31,7 @@ rear = 2
 armor = 6
 rear = 2
 slots = [
-    { at = 1, item = "Ammo_IS.MachineGun", rounds = 100 },
+    { at = 1, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.center_torso]

@@ -1197,13 +1197,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `errors`: `BtechErrorCodes` — Structured btech error-code tree from mux.error.code_tree('btech').
 - `error`: `{codes: BtechErrorCodes}` — Error namespace; `codes` is the same tree as `errors`.
 
-## AmmunitionAdjustment
-
-- `location`: `CriticalLocation`
-- `supplied`: `integer` — Authored initial quantity.
-- `normalized`: `integer` — Initial quantity after construction normalization.
-- `inferred_half_ton`: `boolean` — Construction would infer a half-ton bin.
-
 ## TemplateCheck
 
 - `chassis`: `"biped"|"quad"|nil` — Parsed anatomy, independent of simulation readiness.
@@ -1217,7 +1210,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `declared_engine_rating`: `integer|nil` — Rating the [construction] table declares; nil when derived.
 - `weapons`: `integer` — Resolved weapon count on success; zero on rejection.
 - `ammunition_bins`: `integer` — Resolved bin count on success; zero on rejection.
-- `ammunition_adjustments`: `AmmunitionAdjustment[]` — Changes on successful construction.
 
 ## ArtemisController
 

@@ -34,7 +34,8 @@ fn precision_bins_have_half_capacity_without_double_halving() {
                 .get_mut(&0)
                 .unwrap();
             bin.equipment = format!("Ammo_{}", weapon.name());
-            bin.data = weapon.profile().ammunition_per_ton.to_string();
+            // These rounds pack half as many shots into a ton.
+            bin.data = (weapon.profile().ammunition_per_ton / 2).to_string();
             bin.modes = vec!["Precision".into()];
             if half {
                 // Half-ton lots are a machine-gun privilege (TechManual p. 48).

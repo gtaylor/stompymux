@@ -2004,12 +2004,6 @@ function btech_unit.lbx(dbref, pilot, weapon) end
 ---@return AmmunitionMode
 function btech_unit.cluster(dbref, pilot, weapon) end
 
----@class AmmunitionAdjustment
----@field location CriticalLocation
----@field supplied integer Authored initial quantity.
----@field normalized integer Initial quantity after construction normalization.
----@field inferred_half_ton boolean Construction would infer a half-ton bin.
-
 ---@class TemplateCheck
 ---@field chassis "biped"|"quad"|nil Parsed anatomy, independent of simulation readiness.
 ---@field name string
@@ -2022,7 +2016,6 @@ function btech_unit.cluster(dbref, pilot, weapon) end
 ---@field declared_engine_rating integer|nil Rating the [construction] table declares; nil when derived.
 ---@field weapons integer Resolved weapon count on success; zero on rejection.
 ---@field ammunition_bins integer Resolved bin count on success; zero on rejection.
----@field ammunition_adjustments AmmunitionAdjustment[] Changes on successful construction.
 
 ---Preview construction without registering a unit or modifying the source asset.
 ---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.

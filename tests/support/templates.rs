@@ -270,11 +270,7 @@ pub fn book_legal_keeping(
 ) {
     use stompymux_rs::{MechLoadout, MechTemplate, System};
     template.restate_engine_rating();
-    let resolve = |template: &MechTemplate| {
-        let mut normalized = template.clone();
-        normalized.normalize_ammunition().ok()?;
-        MechLoadout::resolve(&normalized).ok()
-    };
+    let resolve = |template: &MechTemplate| MechLoadout::resolve(template).ok();
     let Some(loadout) = resolve(template) else {
         return;
     };

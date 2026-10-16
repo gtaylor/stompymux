@@ -284,7 +284,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         report.name, report.reference
                     ));
                 }
-                let mut lines = vec![
+                let lines = [
                     format!(
                         "{} ({}): constructible under current biped rules; {} weapons, {} ammunition bins.",
                         report.name, report.reference, report.weapons, report.ammunition_bins
@@ -297,20 +297,6 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         declared_rating(report.declared_engine_rating)
                     ),
                 ];
-                for change in report.ammunition_adjustments {
-                    lines.push(format!(
-                        "{} critical {}: ammunition {} -> {}{}",
-                        change.location.section.name(),
-                        change.location.slot + 1,
-                        change.supplied,
-                        change.normalized,
-                        if change.inferred_half_ton {
-                            " (inferred half-ton bin)"
-                        } else {
-                            ""
-                        }
-                    ));
-                }
                 Ok(lines.join("\r\n"))
             }
             "loadout" => {

@@ -347,13 +347,15 @@ fn conventional_autocannon_profiles_bins_and_enforcer_construction() {
             .flat_map(|section| section.criticals.values_mut())
             .find(|critical| critical.equipment.starts_with("Ammo_"))
             .unwrap();
+        // An overfilled bin is refused rather than clamped to its ton.
         bin.data = (capacity + 1).to_string();
         assert!(MechLoadout::resolve(&definition).is_err());
-        assert_eq!(
-            Mech::from_template(crate::support::templates::legal(definition))
-                .unwrap()
-                .ammunition(),
-            &[u16::from(capacity)]
+        let refused = Mech::from_template(crate::support::templates::legal(definition))
+            .map(|_| ())
+            .unwrap_err();
+        assert!(
+            format!("{refused:#}").contains("Ammunition exceeds bin capacity"),
+            "{refused:#}"
         );
     }
 }

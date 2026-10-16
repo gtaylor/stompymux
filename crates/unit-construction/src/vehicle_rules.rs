@@ -413,6 +413,10 @@ impl VehicleTemplate {
             1,
         )?;
         super::machine_gun_array::check_machine_gun_arrays(loadout, VehicleSection::name)?;
+        loadout.check_machine_gun_bins(
+            |location| format!("{} slot {}", location.section.name(), location.slot + 1),
+            "TechManual p. 107",
+        )?;
         let computers = loadout
             .systems
             .iter()
