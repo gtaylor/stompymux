@@ -192,13 +192,6 @@
     "default": 0
   },
   {
-    "path": "battletech.idf_requires_spotter",
-    "legacy_name": "btech_idf_requires_spotter",
-    "registry_type": "cf_int",
-    "rust_type": "i64",
-    "default": 1
-  },
-  {
     "path": "battletech.tsm_tow_bonus",
     "legacy_name": "btech_tsm_tow_bonus",
     "registry_type": "cf_int",

@@ -120,11 +120,6 @@
     "permission": "CA_GOD"
   },
   {
-    "name": "btech_idf_requires_spotter",
-    "parser": "cf_int",
-    "permission": "CA_GOD"
-  },
-  {
     "name": "btech_perunit_xpmod",
     "parser": "cf_int",
     "permission": "CA_GOD"

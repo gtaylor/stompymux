@@ -148,12 +148,6 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((-2147483648.0, 2147483647.0)),
     },
     KeySpec {
-        path: "battletech.idf_requires_spotter",
-        legacy: "btech_idf_requires_spotter",
-        kind: "i64",
-        bounds: Some((-2147483648.0, 2147483647.0)),
-    },
-    KeySpec {
         path: "battletech.tsm_tow_bonus",
         legacy: "btech_tsm_tow_bonus",
         kind: "i64",

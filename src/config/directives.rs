@@ -130,11 +130,6 @@ pub const DIRECTIVES: &[Directive] = &[
         permission: P::GOD,
     },
     Directive {
-        name: "btech_idf_requires_spotter",
-        parser: "cf_int",
-        permission: P::GOD,
-    },
-    Directive {
         name: "btech_perunit_xpmod",
         parser: "cf_int",
         permission: P::GOD,

@@ -964,6 +964,10 @@ or C (clear). Coordinate locks take effect at once, even outside visibility.
 attacks its current unit occupant under ordinary firing rules. The lock stays at
 the coordinates when that unit moves. Artillery always fires at the selected hex
 and arrives after a flight delay, applying its ammunition payload to the area.
+Without a spotter, artillery may still fire at a hex you cannot see (Tactical
+Operations p. 148), but that fire cannot be adjusted: a miss earns trajectory
+correction only while a friendly unit can see the target hex. Underground,
+artillery fired at your locked hex needs an observer or your own sight of it.
 
 
 Crossing into a mined hex, landing or falling can trigger its mines. Conventional
