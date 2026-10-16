@@ -864,12 +864,11 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
 }
 
 /// Six water hexes break the clear line only once the target settles below the waterline,
-/// using the retained altitude before and after a restart. Sensors are switched off so only
-/// sight answers.
+/// using the retained altitude before and after a restart. Sweeps of 12, which find nothing,
+/// leave sight alone to answer.
 #[tokio::test]
 async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, 1, 8).await;
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     for (pilot, id, y) in [(ObjectId(1), units[0], 0), (ObjectId(2), units[1], 7)] {
         stop_battle_unit(
             &mut world,
@@ -885,6 +884,7 @@ async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     for id in units {
         state["constructed"][id.0.to_string()]["posture"] = serde_json::json!("prone");
         state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(0.0);
+        state["constructed"][id.0.to_string()]["sensor_sweep"] = serde_json::json!(12);
     }
     world.btech = serde_json::from_value(state).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();

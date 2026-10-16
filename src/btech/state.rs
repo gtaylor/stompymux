@@ -66,8 +66,6 @@ pub struct StoredMap {
     pub weather: i64,
     /// Cloud boundary in elevation levels; zero disables cloud obstruction.
     pub cloud_base: i16,
-    /// Perception channels switched off for this battlefield; see `MapPerceptionFlag`.
-    pub sensor_flags: i64,
     /// Persisted wind bearing in degrees and strength used by terrain effects.
     #[serde(default)]
     pub wind_direction: i64,
@@ -363,10 +361,6 @@ impl StoredMap {
             "Invalid map wind"
         );
         ensure!(i32::try_from(self.flags).is_ok(), "Invalid map flags");
-        ensure!(
-            i32::try_from(self.sensor_flags).is_ok(),
-            "Invalid sensor flags"
-        );
         Ok(())
     }
 }
@@ -1032,7 +1026,6 @@ pub(super) fn replace_map_asset(
         map.weather = old.weather;
     }
     map.cloud_base = old.cloud_base;
-    map.sensor_flags = old.sensor_flags;
     if wind.is_none() {
         map.wind_direction = old.wind_direction;
         map.wind_speed = old.wind_speed;
@@ -1101,7 +1094,6 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         light: asset.light.unwrap_or(super::Light::Day).stored(),
         weather: asset.weather.unwrap_or(super::Weather::Clear).stored(),
         cloud_base: 200,
-        sensor_flags: 0,
         wind_direction: asset.wind.map_or(0, |wind| i64::from(wind.direction)),
         wind_speed: asset.wind.map_or(0, |wind| i64::from(wind.speed)),
         fire_dice: Some(super::Dice::fresh()),

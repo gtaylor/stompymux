@@ -68,7 +68,6 @@ fn sensors_line(profile: &PerceptionProfile) -> String {
     let sensor = &profile.sensor;
     match sensor.status {
         PerceptionStatus::Absent => return "Sensors: none".into(),
-        PerceptionStatus::Disabled => return "Sensors: disabled on this battlefield".into(),
         PerceptionStatus::Damaged => return "Sensors: destroyed".into(),
         PerceptionStatus::Ready | PerceptionStatus::Jammed => {}
     }
@@ -132,7 +131,6 @@ fn status_suffix(status: PerceptionStatus) -> &'static str {
         PerceptionStatus::Ready | PerceptionStatus::Absent => "",
         PerceptionStatus::Jammed => " (jammed by ECM)",
         PerceptionStatus::Damaged => " (destroyed)",
-        PerceptionStatus::Disabled => " (disabled on this battlefield)",
     }
 }
 
@@ -220,7 +218,7 @@ mod tests {
             probe: Some(ProbeProfile {
                 kind: ActiveProbe::Beagle,
                 range: 4,
-                status: PerceptionStatus::Disabled,
+                status: PerceptionStatus::Damaged,
             }),
             ..profile.clone()
         };
@@ -231,7 +229,7 @@ mod tests {
         );
         assert_eq!(
             probe_line(&day),
-            "Probe:   Beagle Active Probe, reveals hidden units within 4 hexes (disabled on this battlefield)"
+            "Probe:   Beagle Active Probe, reveals hidden units within 4 hexes (destroyed)"
         );
         let pending = PerceptionProfile {
             sensor: SensorProfile {

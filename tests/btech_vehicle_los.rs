@@ -139,8 +139,11 @@ async fn mech_searchlights_illuminate_vehicle_targets_and_replay_perception() {
     )
     .await;
     set_battle_map_conditions(&mut world, map, Light::Day, Weather::Clear).unwrap();
-    // With the map's sensors off, only sight reaches the target four hexes away.
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    // A sweep of 12 finds nothing, so only sight reaches the target four hexes away.
+    world
+        .btech
+        .set_unit_sensor_sweep(observer, Some(12))
+        .unwrap();
     let before = world.btech.clone();
     let sight = |world: &World| {
         battle_perceive(world, observer, target)

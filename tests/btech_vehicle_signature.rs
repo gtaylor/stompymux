@@ -117,10 +117,13 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
             .unwrap(),
     )
     .unwrap();
-    // Seventeen hexes is beyond the five-hex moonless-night sight; with the map's sensors off,
-    // only a lit target can be perceived.
+    // Seventeen hexes is beyond the five-hex moonless-night sight; with a sweep of 12, which
+    // finds nothing, only a lit target can be perceived.
     place_battle_unit(&mut world, target, map, 0, 17).unwrap();
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    world
+        .btech
+        .set_unit_sensor_sweep(observer, Some(12))
+        .unwrap();
     assert_eq!(
         world.btech.vehicles()[&target].signature(),
         UnitSignature::default()

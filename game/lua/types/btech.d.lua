@@ -64,7 +64,6 @@
 ---@field light integer 0 day, 1 dawn, 2 dusk, 3 full moon night, 4 moonless night, 5 pitch black
 ---@field weather integer Weather condition index, in the order of btech.map.weather_conditions
 ---@field visual_range integer How far units on the map see under its light and weather, in hexes
----@field sensor_flags integer Disabled perception channels: sensors bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 ---@field terrain_ready boolean Whether saved tiles have a valid dictionary.
 
 ---@class MapPointOfInterest
@@ -253,7 +252,7 @@ function btech_unit.inspect(dbref) end
 ---@field piloting_modifier integer Damage modifier for subsequent piloting checks.
 
 ---@alias DetectionChannel "sight"|"sensors"|"probe" Values from btech.unit.detection_channels.
----@alias PerceptionStatus "ready"|"jammed"|"damaged"|"disabled"|"absent"
+---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"absent"
 ---@alias SensorMode "infrared"|"magscan"|"radar"|"seismic"|"probe" A sensor system of a unit's suite.
 ---@alias SensorBand "short"|"medium"|"long"
 

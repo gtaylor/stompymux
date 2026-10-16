@@ -73,7 +73,6 @@ Alias: `"LeftArm"|"RightArm"|"LeftTorso"|"RightTorso"|"CenterTorso"|"LeftLeg"|"R
 - `light`: `integer` — 0 day, 1 dawn, 2 dusk, 3 full moon night, 4 moonless night, 5 pitch black
 - `weather`: `integer` — Weather condition index, in the order of btech.map.weather_conditions
 - `visual_range`: `integer` — How far units on the map see under its light and weather, in hexes
-- `sensor_flags`: `integer` — Disabled perception channels: sensors bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 - `terrain_ready`: `boolean` — Whether saved tiles have a valid dictionary.
 
 ## MapPointOfInterest
@@ -216,7 +215,7 @@ Alias: `"sight"|"sensors"|"probe" Values from btech.unit.detection_channels.`
 
 ## PerceptionStatus
 
-Alias: `"ready"|"jammed"|"damaged"|"disabled"|"absent"`
+Alias: `"ready"|"jammed"|"damaged"|"absent"`
 
 ## SensorMode
 

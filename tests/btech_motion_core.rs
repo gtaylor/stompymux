@@ -1381,9 +1381,8 @@ async fn sensor_command_and_lua_report_read_only_perception() {
 #[tokio::test]
 async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     use stompymux_rs::{
-        Contact, ContactTransition as Transition, Light, MapPerceptionFlag, Visibility, Weather,
-        set_battle_map_conditions, set_battle_map_perception, set_battle_visibility,
-        update_battle_contact,
+        Contact, ContactTransition as Transition, Light, Visibility, Weather,
+        set_battle_map_conditions, set_battle_visibility, update_battle_contact,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -1421,11 +1420,11 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
         .unwrap();
     assert!(corrupt.validate(&config).is_err());
     // Weather and darkness alone cannot hide a target two hexes away: heavy fog leaves five
-    // hexes of sight and even pitch black leaves three, with or without sensors.
+    // hexes of sight and even pitch black leaves three, even when the sweep finds nothing.
     set_battle_map_conditions(&mut world, map, Light::Day, Weather::HeavyFog).unwrap();
     let update = update_battle_contact(&mut world, id, target).unwrap();
     assert_eq!(update.transition, Transition::Retained);
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    world.btech.set_unit_sensor_sweep(id, Some(12)).unwrap();
     set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
     let update = update_battle_contact(&mut world, id, target).unwrap();
     assert_eq!(update.transition, Transition::Retained);
@@ -1444,7 +1443,6 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     assert_eq!(update.transition, Transition::Lost);
     assert!(world.btech.constructed_units()[&id].contacts().is_empty());
     set_battle_visibility(&mut world, target, Visibility::default()).unwrap();
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, true).unwrap();
     set_battle_map_conditions(&mut world, map, Light::Day, Weather::Clear).unwrap();
     assert_eq!(
         update_battle_contact(&mut world, id, target)
@@ -1465,18 +1463,17 @@ async fn contacts_acquire_retain_lose_and_clear_on_administrative_placement() {
     );
 }
 
-/// Saved perception switches gate contacts and leave unrelated sensor flag bits untouched.
+/// A sensor contact is an unidentified blip: it is lost once the turn's sweep finds nothing and
+/// reacquired by a sweep that does, across a restart.
 #[tokio::test]
-async fn saved_perception_disable_flags_gate_contacts_and_preserve_other_sensor_bits() {
-    use sqlx::Connection;
+async fn sensor_contacts_follow_the_sweep_across_restart() {
     use stompymux_rs::{
-        Contact, ContactTransition as Transition, DetectionChannel, Light,
-        MapPerceptionFlag as Flag, Weather, battle_perceive, set_battle_map_conditions,
-        set_battle_map_perception, update_battle_contact,
+        Contact, ContactTransition as Transition, DetectionChannel, Light, Weather,
+        battle_perceive, set_battle_map_conditions, update_battle_contact,
     };
     let (_dir, config, mut world, id) = fixture('.').await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let target = world.create(&config, "Disabled scanner target".into(), Kind::Thing);
+    let target = world.create(&config, "Swept target".into(), Kind::Thing);
     create_battle_unit(
         &mut world,
         target,
@@ -1487,10 +1484,7 @@ async fn saved_perception_disable_flags_gate_contacts_and_preserve_other_sensor_
     // infrared short band (ten hexes), so only the sensors hold the target.
     place_battle_unit(&mut world, target, map, 5, 11).unwrap();
     set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
-    world
-        .btech
-        .rewrite_unit_record(id, |record| record["sensor_sweep"] = serde_json::json!(7))
-        .unwrap();
+    world.btech.set_unit_sensor_sweep(id, Some(7)).unwrap();
     assert_eq!(
         battle_perceive(&world, id, target)
             .unwrap()
@@ -1499,25 +1493,13 @@ async fn saved_perception_disable_flags_gate_contacts_and_preserve_other_sensor_
         DetectionChannel::Sensors
     );
     persistence::save(&config.database(), &world).await.unwrap();
-    let mut sql = sqlx::SqliteConnection::connect_with(
-        &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
-    )
-    .await
-    .unwrap();
-    sqlx::query("UPDATE btech_maps SET sensor_flags=128 WHERE dbref=?")
-        .bind(map.0)
-        .execute(&mut sql)
-        .await
-        .unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     let update = update_battle_contact(&mut world, id, target).unwrap();
     assert_eq!(update.transition, Transition::Acquired);
     // A sensor blip is a position, not an identity.
     assert_eq!(update.contact, Some(Contact { identified: false }));
-    // Switching the battlefield's sensors off leaves nothing reaching the target.
-    set_battle_map_perception(&mut world, map, Flag::Sensors, false).unwrap();
-    assert_eq!(world.btech.maps()[&map].sensor_flags, 129);
-    assert!(world.btech.maps()[&map].perception_disabled(Flag::Sensors));
+    // A sweep of 12 finds nothing in any band, so nothing reaches the target.
+    world.btech.set_unit_sensor_sweep(id, Some(12)).unwrap();
     let lost = update_battle_contact(&mut world, id, target).unwrap();
     assert_eq!(lost.transition, Transition::Lost);
     let before = world.btech.clone();
@@ -1528,21 +1510,9 @@ async fn saved_perception_disable_flags_gate_contacts_and_preserve_other_sensor_
         Transition::Unseen
     );
     assert_eq!(world.btech, before);
-    set_battle_map_perception(&mut world, map, Flag::Radar, false).unwrap();
-    assert_eq!(world.btech.maps()[&map].sensor_flags, 161);
-    set_battle_map_perception(&mut world, map, Flag::Probes, false).unwrap();
-    assert_eq!(world.btech.maps()[&map].sensor_flags, 225);
-    set_battle_map_perception(&mut world, map, Flag::Sensors, true).unwrap();
-    assert_eq!(world.btech.maps()[&map].sensor_flags, 224);
-    assert!(!world.btech.maps()[&map].perception_disabled(Flag::Sensors));
-    assert!(world.btech.maps()[&map].perception_disabled(Flag::Radar));
-    assert!(world.btech.maps()[&map].perception_disabled(Flag::Probes));
-    let before = world.btech.clone();
-    assert!(set_battle_map_perception(&mut world, id, Flag::Sensors, false).is_err());
-    assert_eq!(world.btech, before);
+    world.btech.set_unit_sensor_sweep(id, Some(7)).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(world.btech.maps()[&map].sensor_flags, 224);
     assert_eq!(
         update_battle_contact(&mut world, id, target)
             .unwrap()
@@ -2098,8 +2068,8 @@ async fn aim_lock_penalty_is_flat_for_every_unselected_target() {
 #[tokio::test]
 async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts() {
     use stompymux_rs::{
-        DetectionChannel as Channel, Light, MapPerceptionFlag, PerceptionAim, Weather,
-        battle_aim_modifiers, set_battle_map_conditions, set_battle_map_perception,
+        DetectionChannel as Channel, Light, PerceptionAim, Weather, battle_aim_modifiers,
+        set_battle_map_conditions,
     };
     let (_dir, _config, mut world, id, target) = lock_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -2129,8 +2099,8 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
     set_battle_map_conditions(&mut world, map, Light::Dusk, Weather::Clear).unwrap();
     assert_eq!(aim(&world).perception, perceived(Channel::Sight, 0));
     assert_eq!(aim(&world).light, 1);
-    // Sight does not need the battlefield's sensors.
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    // Sight does not need the sensors: a sweep of 12 finds nothing.
+    world.btech.set_unit_sensor_sweep(id, Some(12)).unwrap();
     assert_eq!(aim(&world).perception, perceived(Channel::Sight, 0));
     set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
     stompymux_rs::set_battle_unit_signature(
@@ -2152,7 +2122,7 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
     assert!(aim(&world).perception.is_none());
     assert!(aim(&world).subtotal().is_none());
     assert_eq!(world.btech, before); // Reading stale saved observations cannot re-perceive them.
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, true).unwrap();
+    world.btech.set_unit_sensor_sweep(id, Some(7)).unwrap();
     assert_eq!(aim(&world).perception, perceived(Channel::Sensors, 0));
     place_battle_unit(&mut world, target, map, 5, 9).unwrap(); // Clears acquisition, despite geometric visibility.
     assert!(aim(&world).perception.is_none());

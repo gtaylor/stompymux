@@ -385,13 +385,13 @@ pub use btech::clear_recent_fire as clear_battle_recent_fire;
 
 /// Automatic perception: sight, sensor sweeps and active probes.
 pub use btech::{
-    ActiveProbe, DetectionChannel, MapFlag, MapPerceptionFlag, Perception, PerceptionProfile,
-    PerceptionReport, PerceptionStatus, ProbeProfile, SensorBand, SensorBands, SensorMode,
-    SensorProfile, SensorSystem, SweepResult, SweepTarget, TargetSystems,
+    ActiveProbe, DetectionChannel, MapFlag, Perception, PerceptionProfile, PerceptionReport,
+    PerceptionStatus, ProbeProfile, SensorBand, SensorBands, SensorMode, SensorProfile,
+    SensorSystem, SweepResult, SweepTarget, TargetSystems,
     advance_sensor_sweeps as advance_battle_sensor_sweeps, ecm_modifier as battle_ecm_modifier,
     hex_perception as battle_hex_perception, perceive as battle_perceive,
     perception_profile as battle_perception_profile, perception_report as battle_perception_report,
-    set_map_perception as set_battle_map_perception, sweep as battle_sensor_sweep,
+    sweep as battle_sensor_sweep,
 };
 
 pub use btech::{

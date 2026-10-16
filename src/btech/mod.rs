@@ -325,11 +325,10 @@ pub use stompymux_map::Light;
 
 mod perception;
 pub use perception::{
-    ActiveProbe, DetectionChannel, MapPerceptionFlag, Perception, PerceptionProfile,
-    PerceptionReport, PerceptionStatus, ProbeProfile, SensorBand, SensorBands, SensorMode,
-    SensorProfile, SensorSystem, SweepResult, SweepTarget, TargetSystems, advance_sensor_sweeps,
-    ecm_modifier, format_perception_flags, hex_perception, parse_perception_flags, perceive,
-    perception_profile, perception_report, set_map_perception, sweep,
+    ActiveProbe, DetectionChannel, Perception, PerceptionProfile, PerceptionReport,
+    PerceptionStatus, ProbeProfile, SensorBand, SensorBands, SensorMode, SensorProfile,
+    SensorSystem, SweepResult, SweepTarget, TargetSystems, advance_sensor_sweeps, ecm_modifier,
+    hex_perception, perceive, perception_profile, perception_report, sweep,
 };
 
 mod contacts;

@@ -648,9 +648,9 @@ match in full without regard to case. Lua uses
 `btech.map.set_field(actor, map, field, value)` with the same wizard authority.
 
 Writable fields are `cf`, `cfmax`, `regen_factor`, `gravity`, `temperature`,
-`maplight`, `mapname`, `mapweather`, `winddir`, `windspeed`, `cloudbase`, `flags`
-and `sensorflags`. Dimensions, `buildonmap` and `firstfree` are read-only.
-`flags` and `sensorflags` take a list of names separated by spaces or commas,
+`maplight`, `mapname`, `mapweather`, `winddir`, `windspeed`, `cloudbase` and
+`flags`. Dimensions, `buildonmap` and `firstfree` are read-only.
+`flags` takes a list of names separated by spaces or commas,
 which replaces the current set; `-` clears every flag. `@VIEWMAP` shows the same
 names. Map `flags` are:
 
@@ -662,9 +662,6 @@ names. Map `flags` are:
 | `indestructible_structures` | Weapon fire cannot damage buildings, walls or bridges. |
 | `no_friendly_fire` | Teammates cannot damage each other with weapons. |
 
-`sensorflags` switches perception off for everyone on the map: `sensors`
-disables the built-in sensors, `radar` the radar system alone and `probes`
-active probes.
 Light accepts 0–5 (day through pitch black, as for `map-conditions`) and weather
 0–17 in the order of the weather names `map-conditions` lists. Wind direction must be 0–359 and speed
 nonnegative. Integrity must stay between zero and its maximum; set the maximum

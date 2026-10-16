@@ -29,7 +29,6 @@ async fn every_writable_field_matches_lua_and_restarts_across_chassis() {
             ("windspeed", "50000"),
             ("cloudbase", "-50000"),
             ("flags", "dark vacuum"),
-            ("sensorflags", "radar,probes"),
             ("MaPnAmE", "A map with spaces and unicode 海海海海"),
             ("mapname", "海海海海海海海海海海"),
         ] {
@@ -60,7 +59,6 @@ async fn every_writable_field_matches_lua_and_restarts_across_chassis() {
         assert_eq!((record.wind_direction, record.wind_speed), (359, 32767));
         assert_eq!(record.cloud_base, -32768);
         assert_eq!(record.flags, 4 | 32);
-        assert_eq!(record.sensor_flags, 32 | 64);
         assert!(record.name.len() <= 29);
         assert_eq!(record.name, "海海海海海海海海海");
         persistence::save(&config.database(), &saved).await.unwrap();
@@ -95,7 +93,6 @@ async fn invalid_fields_and_callback_failure_restore_state_without_output() {
         ("cfmax", "-1"),
         ("gravity", "2147483648"),
         ("flags", "ab"),
-        ("sensorflags", "!"),
         ("mapname", "bad\nname"),
         ("map", "1"),
         ("firstfree", "0"),

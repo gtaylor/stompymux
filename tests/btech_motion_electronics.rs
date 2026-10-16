@@ -4370,28 +4370,24 @@ async fn indirect_hex_visibility_uses_terrain_and_perception_rules() {
     // hexes pitch black leaves.
     let point = HexCoordinate { x: 5, y: 1 };
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    for (sensors, light, expected) in [
-        (true, Light::Day, Some(DetectionChannel::Sight)),
-        (false, Light::Day, Some(DetectionChannel::Sight)),
-        (true, Light::PitchBlack, None),
-        (false, Light::PitchBlack, None),
+    // A sweep of 7 finds the infrared short band and one of 12 finds nothing; neither matters.
+    for (sweep, light, expected) in [
+        (7, Light::Day, Some(DetectionChannel::Sight)),
+        (12, Light::Day, Some(DetectionChannel::Sight)),
+        (7, Light::PitchBlack, None),
+        (12, Light::PitchBlack, None),
     ] {
         let mut state = serde_json::to_value(&world.btech).unwrap();
         state["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
-        state["constructed"][id.0.to_string()]["sensor_sweep"] = 7.into();
+        state["constructed"][id.0.to_string()]["sensor_sweep"] = sweep.into();
         state["maps"][map.0.to_string()]["light"] = light.stored().into();
         state["maps"][map.0.to_string()]["weather"] = Weather::Clear.stored().into();
-        state["maps"][map.0.to_string()]["sensor_flags"] = if sensors {
-            0.into()
-        } else {
-            MapPerceptionFlag::Sensors.bit().into()
-        };
         world.btech = serde_json::from_value(state).unwrap();
         let before = world.btech.clone();
         assert_eq!(
             battle_hex_perception(&world, id, point).unwrap(),
             expected,
-            "sensors {sensors}, light {light:?}"
+            "sweep {sweep}, light {light:?}"
         );
         assert_eq!(
             battle_hex_visible(&world, id, point).unwrap(),

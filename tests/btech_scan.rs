@@ -93,10 +93,9 @@ fn map_units(world: &World, map: ObjectId) -> Vec<ObjectId> {
 }
 
 /// Leave observers on `map` no channel that reaches a unit and only three hexes of terrain:
-/// sensors switched off, pitch-black night, and every unit on the map flagged invisible,
-/// since no light or weather ever hides a unit within three hexes under the rules.
+/// pitch-black night, and every unit on the map flagged invisible, since no light or weather
+/// ever hides a unit within three hexes under the rules and no sensor finds an invisible unit.
 fn blind(world: &mut World, map: ObjectId) {
-    set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
     set_battle_map_conditions(world, map, Light::PitchBlack, Weather::Clear).unwrap();
     for id in map_units(world, map) {
         let clairvoyant = visibility(world, id).unwrap().clairvoyant;
@@ -112,9 +111,8 @@ fn blind(world: &mut World, map: ObjectId) {
     }
 }
 
-/// Restore the fixture's clear day with sensors switched back on and every unit visible again.
+/// Restore the fixture's clear day with every unit visible again.
 fn unblind(world: &mut World, map: ObjectId) {
-    set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, true).unwrap();
     set_battle_map_conditions(world, map, Light::Day, Weather::Clear).unwrap();
     for id in map_units(world, map) {
         let clairvoyant = visibility(world, id).unwrap().clairvoyant;
@@ -1852,8 +1850,6 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
     set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::HeavyFog).unwrap();
-    // Without the sensor band, only sight (and therefore illumination) reaches past three hexes.
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 7 };
     let fire = HexCoordinate { x: 1, y: 8 };
     assert!(!battle_hex_visible(&world, source, coordinate).unwrap());
@@ -3770,39 +3766,23 @@ async fn contact_detection_rechecks_channels_without_rewriting_acquisition() {
     let baseline = world.btech.clone();
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
-    for (sensors, light, weather, sweep, expected) in [
+    for (light, weather, sweep, expected) in [
+        (Light::Day, Weather::Clear, 7, Some(DetectionChannel::Sight)),
         (
-            true,
-            Light::Day,
-            Weather::Clear,
-            7,
-            Some(DetectionChannel::Sight),
-        ),
-        (
-            true,
             Light::Day,
             Weather::HeavyFog,
             9,
             Some(DetectionChannel::Sight),
         ),
         (
-            true,
             Light::PitchBlack,
             Weather::Clear,
             7,
             Some(DetectionChannel::Sensors),
         ),
-        (true, Light::PitchBlack, Weather::Clear, 9, None),
-        (false, Light::PitchBlack, Weather::Clear, 7, None),
+        (Light::PitchBlack, Weather::Clear, 9, None),
     ] {
         shared.borrow_mut().btech = baseline.clone();
-        set_battle_map_perception(
-            &mut shared.borrow_mut(),
-            map,
-            MapPerceptionFlag::Sensors,
-            sensors,
-        )
-        .unwrap();
         set_battle_map_conditions(&mut shared.borrow_mut(), map, light, weather).unwrap();
         shared
             .borrow_mut()
@@ -4327,23 +4307,23 @@ async fn compact_building_rows_share_terrain_detection_channels() {
         .unwrap();
     assert_eq!(lua, expected);
     // Move the entrance four hexes out: fog (five hexes of sight) still reaches it, pitch black
-    // (three) does not, and the map's sensor switch changes nothing for a structure.
+    // (three) does not, and a short-band sweep that would find a unit there finds no structure.
     let far = HexCoordinate { x: 1, y: 5 };
-    for (sensors, light, weather, expected) in [
+    for (sweep, light, weather, expected) in [
         (
-            true,
+            7,
             Light::Day,
             Weather::HeavyFog,
             Some(DetectionChannel::Sight),
         ),
         (
-            false,
+            12,
             Light::Day,
             Weather::Clear,
             Some(DetectionChannel::Sight),
         ),
-        (true, Light::PitchBlack, Weather::Clear, None),
-        (false, Light::PitchBlack, Weather::Clear, None),
+        (7, Light::PitchBlack, Weather::Clear, None),
+        (12, Light::PitchBlack, Weather::Clear, None),
     ] {
         shared.borrow_mut().btech = baseline.clone();
         set_building_entrance(
@@ -4359,13 +4339,11 @@ async fn compact_building_rows_share_terrain_detection_channels() {
             }),
         )
         .unwrap();
-        set_battle_map_perception(
-            &mut shared.borrow_mut(),
-            map,
-            MapPerceptionFlag::Sensors,
-            sensors,
-        )
-        .unwrap();
+        shared
+            .borrow_mut()
+            .btech
+            .set_unit_sensor_sweep(source, Some(sweep))
+            .unwrap();
         set_battle_map_conditions(&mut shared.borrow_mut(), map, light, weather).unwrap();
         let before = scripts.world().btech.clone();
         let detection = battle_hex_perception(&scripts.world(), source, far).unwrap();

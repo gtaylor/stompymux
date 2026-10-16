@@ -543,7 +543,6 @@ mod tests {
             light: 2,
             weather: 0,
             cloud_base: 200,
-            sensor_flags: 0,
             wind_direction: 0,
             wind_speed: 0,
             fire_dice: None,

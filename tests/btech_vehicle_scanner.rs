@@ -88,11 +88,17 @@ async fn spread() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 4])
     (dir, config, world, map, ids)
 }
 
-/// Switch the map's sensors off and drop to pitch black, where sight reaches three hexes, so no
-/// unit of the [`spread`] fixture perceives another.
+/// Drop to pitch black, where sight reaches three hexes, and give every unit a sweep of 12, which
+/// finds nothing, so no unit of the [`spread`] fixture perceives another.
 fn blind_map(world: &mut World, map: ObjectId) {
-    set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
     set_battle_map_conditions(world, map, Light::PitchBlack, Weather::Clear).unwrap();
+    let ids: Vec<_> = (world.btech.vehicles().keys())
+        .chain(world.btech.constructed_units().keys())
+        .copied()
+        .collect();
+    for id in ids {
+        world.btech.set_unit_sensor_sweep(id, Some(12)).unwrap();
+    }
 }
 
 /// Mixed scans acquire every unit at once, retain contacts, lose them together when no channel

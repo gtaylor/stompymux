@@ -227,8 +227,8 @@ async fn sight_follows_the_visual_range_table() {
 #[tokio::test]
 async fn searchlights_lit_targets_and_smoke_change_the_reach_of_sight() {
     let mut lane = lane(&grass(50), Observer::Mech).await;
-    set_battle_map_perception(&mut lane.world, lane.map, MapPerceptionFlag::Sensors, false)
-        .unwrap();
+    // A sweep of 12 finds nothing, leaving sight alone.
+    lane.sweep(12);
     lane.conditions(Light::MoonlessNight, Weather::Clear);
     lane.place_target(6);
     assert_eq!(lane.perceived(), None);
@@ -346,15 +346,6 @@ async fn sensor_sweeps_find_targets_in_one_band_of_each_system() {
             .unwrap();
         assert_eq!(lane.perceived(), Some((Sensors, false)));
         assert_eq!(lane.found_by(), Some(SensorMode::Seismic));
-        // Switching the battlefield's sensors off leaves sight alone.
-        set_battle_map_perception(&mut lane.world, lane.map, MapPerceptionFlag::Sensors, false)
-            .unwrap();
-        assert_eq!(lane.perceived(), None);
-        let profile = battle_perception_report(&lane.world, lane.observer)
-            .unwrap()
-            .profile;
-        assert_eq!(profile.sensor.status, PerceptionStatus::Disabled);
-        assert!(profile.sensor.systems.is_empty());
         lane.world.validate(&lane.config).unwrap();
     }
 }
@@ -517,17 +508,6 @@ async fn probe_sweeps_with_the_probes_brackets() {
     lane.terrain(2, Hex::new(Terrain::Clear, 9));
     lane.place_target(12);
     assert_eq!(lane.perceived(), Some((Probe, false)));
-    // Switching probes off on the map leaves the built-in sensors, which the hill stops for
-    // infrared and radar but not for the magscan.
-    set_battle_map_perception(&mut lane.world, lane.map, MapPerceptionFlag::Probes, false).unwrap();
-    assert_eq!(
-        lane.perceived(),
-        None,
-        "twelve hexes is past the vehicle magscan short band"
-    );
-    lane.place_target(9);
-    assert_eq!(lane.perceived(), Some((Sensors, false)));
-    assert_eq!(lane.found_by(), Some(SensorMode::Magscan));
     assert_eq!(
         battle_ecm_modifier(
             SensorMode::Probe,

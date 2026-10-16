@@ -303,21 +303,21 @@ async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
     { at = 5, item = "Light_BAP" },
     { at = "6-8", item = "BloodhoundProbe" },"#,
     );
+    let plain = include_str!("../game/units/JR7-D.toml");
     for channel in DetectionChannel::ALL {
-        // A hill hides the target from sight; a magscan or probe sweep still finds it.
+        // A hill hides the target from sight; a magscan or probe sweep still finds it. An
+        // observer without probes finds the target behind the hill with its magscan; one with
+        // them finds it with the probe, which sweeps first.
         let blocked = channel != DetectionChannel::Sight;
+        let observer_template = if channel == DetectionChannel::Sensors {
+            plain
+        } else {
+            source.as_str()
+        };
         let (_dir, config, base, observer, target) =
-            fixture(&source, include_str!("../game/units/JR7-D.toml"), blocked).await;
+            fixture(observer_template, plain, blocked).await;
         let mut world = base.clone();
-        // Without probes the magscan sweep finds the target behind the hill; with them the
-        // probe does. A short-band sweep is already rolled, so the refresh has nothing to roll.
-        if channel == DetectionChannel::Sensors {
-            let map = world.btech.constructed_units()[&observer]
-                .position()
-                .unwrap()
-                .map;
-            set_battle_map_perception(&mut world, map, MapPerceptionFlag::Probes, false).unwrap();
-        }
+        // A short-band sweep is already rolled, so the refresh has nothing to roll.
         edit(&mut world, observer, |state| {
             state["sensor_sweep"] = 7.into();
         });

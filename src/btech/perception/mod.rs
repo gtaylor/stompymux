@@ -28,8 +28,7 @@ pub use sensors::{
 };
 
 use crate::btech::{
-    Ground, HexCoordinate, Light, Power, Range, StoredMap, System, TerrainLos, VehicleMovement,
-    Weather,
+    Ground, HexCoordinate, Light, Power, Range, System, TerrainLos, VehicleMovement, Weather,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -99,8 +98,6 @@ pub enum PerceptionStatus {
     Jammed,
     /// Destroyed or otherwise failed equipment.
     Damaged,
-    /// Switched off for this battlefield by its operators.
-    Disabled,
     /// The unit carries no such equipment.
     Absent,
 }
@@ -197,99 +194,6 @@ impl PerceptionProfile {
     }
 }
 
-/// Battlefield switches that turn off one perception channel for every unit on the map.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum MapPerceptionFlag {
-    Sensors,
-    Radar,
-    Probes,
-}
-
-impl MapPerceptionFlag {
-    /// Every perception switch, in bit order.
-    pub const ALL: [Self; 3] = [Self::Sensors, Self::Radar, Self::Probes];
-
-    /// Persisted `sensor_flags` bit. Positions match the maps shared with the reference server.
-    pub fn bit(self) -> i64 {
-        match self {
-            Self::Sensors => 1,
-            Self::Radar => 32,
-            Self::Probes => 64,
-        }
-    }
-
-    /// Operator-facing spelling used by `@SETMAP sensorflags` and `@VIEWMAP`.
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Sensors => "sensors",
-            Self::Radar => "radar",
-            Self::Probes => "probes",
-        }
-    }
-}
-
-/// Parse a whitespace- or comma-separated list of disabled perception channels; `-` means none.
-pub fn parse_perception_flags(value: &str) -> Result<i64> {
-    let value = value.trim();
-    if value == "-" {
-        return Ok(0);
-    }
-    value
-        .split([' ', '\t', ','])
-        .filter(|name| !name.is_empty())
-        .try_fold(0, |flags, name| {
-            let flag = MapPerceptionFlag::ALL
-                .into_iter()
-                .find(|flag| flag.name().eq_ignore_ascii_case(name))
-                .with_context(|| format!("Unknown sensor flag {name:?}"))?;
-            Ok(flags | flag.bit())
-        })
-}
-
-/// Display the disabled perception channels in `flags`; `-` when none are disabled.
-pub fn format_perception_flags(flags: i64) -> String {
-    let names: Vec<_> = MapPerceptionFlag::ALL
-        .into_iter()
-        .filter(|flag| flags & flag.bit() != 0)
-        .map(MapPerceptionFlag::name)
-        .collect();
-    if names.is_empty() {
-        return "-".into();
-    }
-    names.join(" ")
-}
-
-impl StoredMap {
-    /// Whether operators switched this perception channel off for the battlefield.
-    pub fn perception_disabled(&self, flag: MapPerceptionFlag) -> bool {
-        self.sensor_flags & flag.bit() != 0
-    }
-}
-
-/// Enable or disable one perception channel on a battlefield without touching other flags.
-pub fn set_map_perception(
-    world: &mut World,
-    map: ObjectId,
-    flag: MapPerceptionFlag,
-    enabled: bool,
-) -> Result<()> {
-    ensure!(
-        world
-            .objects
-            .get(&map)
-            .is_some_and(|object| !object.flags.contains(Flag::Going)),
-        "Map is unavailable"
-    );
-    let stored = world.btech.maps.get_mut(&map).context("Map not found")?;
-    if enabled {
-        stored.sensor_flags &= !flag.bit();
-    } else {
-        stored.sensor_flags |= flag.bit();
-    }
-    Ok(())
-}
-
 /// Summarize an observer's current reach without tracing any target.
 pub fn perception_profile(world: &World, observer: ObjectId) -> Result<PerceptionProfile> {
     let unit = crate::btech::scanner::scanner_unit(world, observer)
@@ -315,8 +219,8 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         sight_range
     };
     let field = crate::btech::electronic_field(world, observer)?;
-    let probe = probe_profile(world, observer, map)?;
-    let sensor = sensor_profile(world, observer, &unit, map, probe, field.disturbed)?;
+    let probe = probe_profile(world, observer)?;
+    let sensor = sensor_profile(world, observer, &unit, probe, field.disturbed)?;
     let point = crate::btech::los::unit_sight_point(world, observer)?;
     Ok(PerceptionProfile {
         light,
@@ -335,12 +239,11 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
     })
 }
 
-/// Resolve the selected sensor from equipment, damage, jamming and map switches.
+/// Resolve the selected sensor from equipment, damage and jamming.
 fn sensor_profile(
     world: &World,
     observer: ObjectId,
     unit: &crate::btech::scanner::ScannerUnit<'_>,
-    map: &StoredMap,
     probe: Option<ProbeProfile>,
     jammed: bool,
 ) -> Result<SensorProfile> {
@@ -353,9 +256,7 @@ fn sensor_profile(
             false,
         ),
     };
-    let status = if map.perception_disabled(MapPerceptionFlag::Sensors) {
-        PerceptionStatus::Disabled
-    } else if failed {
+    let status = if failed {
         PerceptionStatus::Damaged
     } else {
         PerceptionStatus::Ready
@@ -377,9 +278,6 @@ fn sensor_profile(
             SensorMode::Radar,
             SensorMode::Seismic,
         ] {
-            if mode == SensorMode::Radar && map.perception_disabled(MapPerceptionFlag::Radar) {
-                continue;
-            }
             systems.push(SensorSystem {
                 mode,
                 bands: SensorBands::of(mode, unit.vehicle, None, clan),
@@ -400,11 +298,7 @@ fn sensor_profile(
 }
 
 /// Pick the working probe with the longest reach, or else the best installed one as damaged.
-fn probe_profile(
-    world: &World,
-    observer: ObjectId,
-    map: &StoredMap,
-) -> Result<Option<ProbeProfile>> {
+fn probe_profile(world: &World, observer: ObjectId) -> Result<Option<ProbeProfile>> {
     // Build the equipment projection once and check every family against it.
     let (clan, fittings) = match world.btech.vehicles().get(&observer) {
         Some(vehicle) => {
@@ -442,15 +336,10 @@ fn probe_profile(
             });
             continue;
         }
-        let status = if map.perception_disabled(MapPerceptionFlag::Probes) {
-            PerceptionStatus::Disabled
-        } else {
-            PerceptionStatus::Ready
-        };
         return Ok(Some(ProbeProfile {
             kind,
             range,
-            status,
+            status: PerceptionStatus::Ready,
         }));
     }
     Ok(damaged)
@@ -797,33 +686,5 @@ mod tests {
         let mut sorted = DetectionChannel::ALL;
         sorted.sort();
         assert_eq!(sorted, DetectionChannel::ALL);
-    }
-
-    /// Map switches use the reference bit positions and leave other bits alone.
-    #[test]
-    fn map_flags_use_reference_bits() {
-        let mut map: StoredMap = serde_json::from_value(serde_json::json!({
-            "name": "flags", "width": 1, "height": 1, "gravity": 100, "temperature": 20,
-            "flags": 0, "light": 2, "weather": 0,
-            "cloud_base": 0, "sensor_flags": 2
-        }))
-        .unwrap();
-        assert!(!map.perception_disabled(MapPerceptionFlag::Sensors));
-        map.sensor_flags |= MapPerceptionFlag::Probes.bit();
-        assert!(map.perception_disabled(MapPerceptionFlag::Probes));
-        assert!(!map.perception_disabled(MapPerceptionFlag::Radar));
-        assert_eq!(map.sensor_flags, 66);
-        assert_eq!(
-            [
-                MapPerceptionFlag::Sensors,
-                MapPerceptionFlag::Radar,
-                MapPerceptionFlag::Probes
-            ]
-            .map(MapPerceptionFlag::bit),
-            [1, 32, 64]
-        );
-        assert_eq!(parse_perception_flags("radar, probes").unwrap(), 96);
-        assert_eq!(format_perception_flags(97), "sensors radar probes");
-        assert!(parse_perception_flags("sonar").is_err());
     }
 }
