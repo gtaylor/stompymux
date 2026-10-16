@@ -23,6 +23,9 @@ pub struct ArtilleryAimInput {
     pub gunnery: i16,
     pub observer: ArtilleryObserver,
     pub adjustment: u8,
+    /// Electromagnetic interference covers the firing unit: +2, as for every ranged weapon
+    /// attack (Tactical Operations: Advanced Rules p. 53).
+    pub interference: bool,
 }
 
 /// Range admission diagnostics retain the reference's large impossible-hit target numbers.
@@ -85,8 +88,14 @@ fn calculate(weapon: Weapon, input: ArtilleryAimInput) -> Result<ArtilleryAim> {
             ArtilleryObserver::Spotting(target) => (i32::from(target) - 4) / 2,
         }
     };
+    let interference = if input.interference {
+        i32::from(super::planetary_conditions::INTERFERENCE_AIM_MODIFIER)
+    } else {
+        0
+    };
     Ok(ArtilleryAim {
-        target_number: 7 + i32::from(input.gunnery) + visibility - i32::from(input.adjustment),
+        target_number: 7 + i32::from(input.gunnery) + visibility + interference
+            - i32::from(input.adjustment),
         maximum_range,
         range: ArtilleryRange::InRange,
     })

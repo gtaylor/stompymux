@@ -11,6 +11,9 @@ mod btech_c3_hardware;
 #[path = "../btech_clan_energy.rs"]
 mod btech_clan_energy;
 
+#[path = "../btech_electromagnetic_interference.rs"]
+mod btech_electromagnetic_interference;
+
 #[path = "../btech_jump_heading.rs"]
 mod btech_jump_heading;
 

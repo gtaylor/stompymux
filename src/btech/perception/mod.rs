@@ -98,6 +98,9 @@ pub enum PerceptionStatus {
     Jammed,
     /// Destroyed or otherwise failed equipment.
     Damaged,
+    /// Rendered useless by electromagnetic interference over the battlefield, as every active
+    /// probe is (Tactical Operations: Advanced Rules p. 53).
+    Interference,
     /// The unit carries no such equipment.
     Absent,
 }
@@ -219,7 +222,7 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         sight_range
     };
     let field = crate::btech::electronic_field(world, observer)?;
-    let probe = probe_profile(world, observer)?;
+    let probe = probe_profile(world, observer, map.electromagnetic_interference())?;
     let sensor = sensor_profile(world, observer, &unit, probe, field.disturbed)?;
     let point = crate::btech::los::unit_sight_point(world, observer)?;
     Ok(PerceptionProfile {
@@ -298,7 +301,13 @@ fn sensor_profile(
 }
 
 /// Pick the working probe with the longest reach, or else the best installed one as damaged.
-fn probe_profile(world: &World, observer: ObjectId) -> Result<Option<ProbeProfile>> {
+/// Under electromagnetic `interference` the working probe is useless: it neither sweeps,
+/// reveals hidden units nor sees through woods (Tactical Operations: Advanced Rules p. 53).
+fn probe_profile(
+    world: &World,
+    observer: ObjectId,
+    interference: bool,
+) -> Result<Option<ProbeProfile>> {
     // Build the equipment projection once and check every family against it.
     let (clan, fittings) = match world.btech.vehicles().get(&observer) {
         Some(vehicle) => {
@@ -339,7 +348,11 @@ fn probe_profile(world: &World, observer: ObjectId) -> Result<Option<ProbeProfil
         return Ok(Some(ProbeProfile {
             kind,
             range,
-            status: PerceptionStatus::Ready,
+            status: if interference {
+                PerceptionStatus::Interference
+            } else {
+                PerceptionStatus::Ready
+            },
         }));
     }
     Ok(damaged)

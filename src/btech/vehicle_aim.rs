@@ -51,6 +51,7 @@ pub(super) fn modifiers(
     aim.orbital_drop = target_terms.orbital_drop;
     aim.light = target_terms.light;
     aim.environment = super::planetary_conditions::aim_modifier(world, shooter, mount.weapon);
+    aim.interference = super::planetary_conditions::interference_aim_modifier(world, shooter);
     aim.beacon_accuracy += target_terms.beacon_accuracy;
     aim.target_lock = if indirect.is_some() {
         0

@@ -215,7 +215,7 @@ Alias: `"sight"|"sensors"|"probe" Values from btech.unit.detection_channels.`
 
 ## PerceptionStatus
 
-Alias: `"ready"|"jammed"|"damaged"|"absent"`
+Alias: `"ready"|"jammed"|"damaged"|"interference"|"absent"`
 
 ## SensorMode
 
@@ -829,6 +829,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `orbital_drop`: `integer` — Minus two while the target has an intact cocoon; zero after a breach.
 - `light`: `integer` — Darkness on the target's map, less what searchlights and target heat offset.
 - `environment`: `integer|nil` — Wind and gravity on the shooter's map for this weapon class; nil when the wind keeps the weapon from firing.
+- `interference`: `integer` — +2 for a ranged weapon attack on a battlefield under electromagnetic interference (Tactical Operations: Advanced Rules p. 53).
 - `heat`: `integer`
 - `sensors`: `integer`
 - `control_damage`: `integer` — Vehicle commander/sensor critical penalties.

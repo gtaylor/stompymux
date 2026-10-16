@@ -69,7 +69,8 @@ fn sensors_line(profile: &PerceptionProfile) -> String {
     match sensor.status {
         PerceptionStatus::Absent => return "Sensors: none".into(),
         PerceptionStatus::Damaged => return "Sensors: destroyed".into(),
-        PerceptionStatus::Ready | PerceptionStatus::Jammed => {}
+        // Electromagnetic interference silences only active probes, never the built-in sensors.
+        PerceptionStatus::Ready | PerceptionStatus::Jammed | PerceptionStatus::Interference => {}
     }
     let systems = sensor
         .systems
@@ -131,6 +132,7 @@ fn status_suffix(status: PerceptionStatus) -> &'static str {
         PerceptionStatus::Ready | PerceptionStatus::Absent => "",
         PerceptionStatus::Jammed => " (jammed by ECM)",
         PerceptionStatus::Damaged => " (destroyed)",
+        PerceptionStatus::Interference => " (useless under electromagnetic interference)",
     }
 }
 
@@ -242,6 +244,23 @@ mod tests {
         };
         assert!(sensors_line(&pending).ends_with("hexes; sweep pending"));
         assert_eq!(probe_line(&pending), "Probe:   none");
+        // Electromagnetic interference leaves the probe installed but useless: no sweep.
+        let interfered = PerceptionProfile {
+            sensor: SensorProfile {
+                systems: profile.sensor.systems[..4].to_vec(),
+                ..profile.sensor.clone()
+            },
+            probe: Some(ProbeProfile {
+                kind: ActiveProbe::Beagle,
+                range: 4,
+                status: PerceptionStatus::Interference,
+            }),
+            ..profile.clone()
+        };
+        assert_eq!(
+            probe_line(&interfered),
+            "Probe:   Beagle Active Probe, reveals hidden units within 4 hexes (useless under electromagnetic interference)"
+        );
         let silent = PerceptionProfile {
             sensor: SensorProfile {
                 systems: Vec::new(),

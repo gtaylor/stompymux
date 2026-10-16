@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
 article_tags = ["show_in_index"]
 +++
 
@@ -146,6 +146,14 @@ strong gale two to missiles and one to ballistic weapons; a storm three and two.
 tornado missiles cannot fire, ballistic weapons take three and energy weapons two; an F4
 tornado leaves only energy weapons, at three. Missiles and ballistic weapons also take one
 for every full 0.2 G the gravity differs from normal.
+
+Electromagnetic interference, when a map has it, adds two to every ranged weapon attack
+and takes two from every roll on the Cluster Hits Table (missiles, LB-X cluster rounds,
+machine gun arrays, rotary and Ultra autocannon bursts and hyper-assault Gauss rifles),
+never below 2; Lua's aim breakdowns report the +2 as their `interference` term. It also
+renders active probes useless and doubles the reach of ECM suites to twelve hexes. Physical
+attacks and the built-in sensors are unaffected (Tactical Operations: Advanced Rules p. 53).
+
 Use `unitprefs` to inspect AutoFall. `unitprefs AutoFall ON` and `OFF` set the
 preference and `unitprefs AutoFall` toggles it. The setting stays with the unit
 through shutdown and restart, and the assigned pilot can change it with the engine
@@ -697,7 +705,8 @@ attacks from outside every mount's arc preserve defensive ammunition, heat and
 recycle time. Defensive weapons cannot be fired manually.
 
 An engagement applies -4 to the attack's cluster roll, never below 2; a locked
-Streak launcher counts as a roll of 11 before the -4. A single-missile attack
+Streak launcher counts as a roll of 11 before the -4. Electromagnetic interference
+takes two more from either. A single-missile attack
 (Narc and iNarc pods, Thunderbolts) instead rolls one die and is destroyed on a
 1-3. Each engagement spends one round of ammunition and the system's heat, and
 the mount's recycle time is the once-per-turn limit. Inner Sphere and Clan
@@ -784,7 +793,8 @@ and `angeleccm` control Angel suites. Selecting the current mode again switches
 that suite off. Guardian and Angel suites operate independently; each requires
 working equipment and a running unit. Shutdown and equipment loss disable them.
 
-ECM protects friendly units and disturbs enemies within six hexes. Enemy ECCM
+ECM protects friendly units and disturbs enemies within six hexes, twelve under
+electromagnetic interference. Enemy ECCM
 cancels protection, and friendly ECCM cancels disturbance; equal strength cancels.
 Angel suites count twice. Team identifiers determine which units are friendly.
 
@@ -889,7 +899,9 @@ Watchdog 9/18/27, Bloodhound 16/32/48); nothing blocks a probe sweep but the
 surface of water, and a target it finds shows as a probe contact. Guardian and
 Angel ECM, stealth armor and null signature systems add to the sweep roll
 against them; only the Bloodhound finds stealth and null signature units. A
-damaged probe stops working; `sensor` shows its condition.
+damaged probe stops working; `sensor` shows its condition. Electromagnetic
+interference renders every probe useless: it neither sweeps, reveals hidden units nor sees
+through woods while the condition lasts.
 
 ### Radar
 

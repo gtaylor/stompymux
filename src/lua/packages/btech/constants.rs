@@ -1028,6 +1028,10 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
             name: "NO_FRIENDLY_FIRE",
             value: 256,
         },
+        Entry {
+            name: "ELECTROMAGNETIC_INTERFERENCE",
+            value: 1024,
+        },
     ],
 };
 

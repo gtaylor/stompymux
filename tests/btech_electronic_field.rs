@@ -1,7 +1,8 @@
 //! Electronic field boundaries, opposing strength, retained disturbance and guided-weapon policy.
 use stompymux_rs::*;
 
-/// One emitter with independent ordinary, Angel and personal modes.
+/// One emitter with independent ordinary, Angel and personal modes, reaching the ordinary six
+/// hexes of a battlefield without electromagnetic interference.
 fn source(
     team: i32,
     distance: f64,
@@ -12,6 +13,7 @@ fn source(
     ElectronicSource {
         team,
         distance,
+        range: ECM_RANGE,
         guardian,
         angel,
         personal,

@@ -49,6 +49,9 @@ pub struct GuidedHit {
     /// An anti-missile system engaged the flight (Total Warfare p. 129): -4 on the cluster roll,
     /// never below 2, with a locked Streak launcher treated as a roll of 11.
     pub ams_engaged: bool,
+    /// Electromagnetic interference covers the attacker: -2 on the cluster roll, never below 2
+    /// (Tactical Operations: Advanced Rules p. 53).
+    pub interference: bool,
 }
 
 /// Missile cluster hits and per-hit damage grouping for every weapon.
@@ -204,6 +207,7 @@ impl WeaponSalvo for Weapon {
             artemis_v: false,
             guidance_blocked: false,
             ams_engaged: false,
+            interference: false,
         })
     }
 
@@ -216,6 +220,7 @@ impl WeaponSalvo for Weapon {
             artemis_v,
             guidance_blocked,
             ams_engaged,
+            interference,
         } = hit;
         ensure!(!self.is_artillery(), "Artillery damage requires an arrival");
         ensure!(
@@ -299,20 +304,32 @@ impl WeaponSalvo for Weapon {
             Some(range) if range <= f64::from(self.profile().short_range) => 2,
             _ => 0,
         };
-        // Neither the glancing modifier (Tactical Operations p. 79) nor the AMS modifier (Total
-        // Warfare p. 129) takes the cluster roll below 2.
+        // Neither the glancing modifier (Tactical Operations p. 79), the AMS modifier (Total
+        // Warfare p. 129) nor electromagnetic interference (Tactical Operations: Advanced Rules
+        // p. 53) takes the cluster roll below 2.
         let ams_penalty = if ams_engaged { 4 } else { 0 };
+        let interference_penalty = if interference {
+            i16::from(super::planetary_conditions::INTERFERENCE_CLUSTER_PENALTY)
+        } else {
+            0
+        };
         let adjusted = (i16::from(roll) + artemis_bonus + atm_bonus + hag_bonus
             - if glancing { 4 } else { 0 }
-            - ams_penalty)
+            - ams_penalty
+            - interference_penalty)
             .clamp(2, 12) as u8;
         let inside_minimum = distance.is_some_and(|distance| {
             distance < f64::from(self.profile_for_ammunition(mode).minimum_range)
         });
         let mut hits = if self.is_streak() {
-            // An engaged AMS treats a locked Streak launcher as a roll of 11 before its -4.
+            // An engaged AMS treats a locked Streak launcher as a roll of 11 before its -4, and
+            // electromagnetic interference takes its two from that roll as well. Without an
+            // engagement a locked Streak makes no Cluster Hits roll at all: every missile hits.
             if ams_engaged {
-                cluster_hits(self.profile().missiles, 7)?
+                cluster_hits(
+                    self.profile().missiles,
+                    (11 - 4 - interference_penalty) as u8,
+                )?
             } else {
                 self.profile().missiles
             }
@@ -737,6 +754,14 @@ fn resolve_salvo_with_effects(
         HitGeometry::Fixed(_) => false,
         HitGeometry::Direct { shooter, .. } => super::artemis::artemis_v(world, shooter),
     };
+    // Electromagnetic interference over the attacker lowers its Cluster Hits roll; an explicitly
+    // supplied direction has no attacker.
+    let interference = match geometry {
+        HitGeometry::Fixed(_) => false,
+        HitGeometry::Direct { shooter, .. } => {
+            super::planetary_conditions::under_interference(world, shooter)
+        }
+    };
     let (guidance_blocked, angel_blocked) = match geometry {
         HitGeometry::Fixed(_) => (false, false),
         HitGeometry::Direct { shooter, .. } => {
@@ -799,6 +824,7 @@ fn resolve_salvo_with_effects(
                 HitGeometry::Fixed(_) => None,
             },
             unit_without_heat: false,
+            interference,
         },
         &mut unit.dice,
     )?;
@@ -1207,6 +1233,7 @@ mod tests {
                     artemis_v: false,
                     guidance_blocked: false,
                     ams_engaged,
+                    interference: false,
                 })
                 .unwrap()
                 .iter()
@@ -1231,6 +1258,69 @@ mod tests {
         }
     }
 
+    /// Electromagnetic interference takes two from every Cluster Hits roll, whatever the
+    /// launcher, summed with guidance bonuses, the range shift of a HAG and an AMS engagement
+    /// before the roll is floored at 2 (Tactical Operations: Advanced Rules p. 53).
+    #[test]
+    fn interference_lowers_every_cluster_roll() {
+        use super::super::AmmunitionMode as Mode;
+        let hit = |weapon: W, mode, roll, distance, ams_engaged, interference| {
+            weapon
+                .damage_groups_for_guided_hit(GuidedHit {
+                    mode,
+                    cluster_roll: Some(roll),
+                    glancing: false,
+                    distance: Some(distance),
+                    artemis_v: false,
+                    guidance_blocked: false,
+                    ams_engaged,
+                    interference,
+                })
+                .unwrap()
+                .iter()
+                .sum::<u16>()
+        };
+        for roll in 2..=12u8 {
+            let lowered = roll.saturating_sub(2).max(2);
+            let hits = |weapon: W, roll| u16::from(weapon.missile_hits(roll).unwrap());
+            assert_eq!(
+                hit(W::Lrm20, Mode::Normal, roll, 7.0, false, true),
+                hits(W::Lrm20, lowered),
+                "roll {roll}"
+            );
+            // LB-X cluster pellets read the same table.
+            assert_eq!(
+                hit(W::Lbx10, Mode::Cluster, roll, 7.0, false, true),
+                hits(W::Lbx10, lowered)
+            );
+            // Artemis's +2 cancels the -2 before the floor, so even a 2 reads as a 2.
+            assert_eq!(
+                hit(W::Lrm20, Mode::Artemis, roll, 7.0, false, true),
+                hits(W::Lrm20, roll)
+            );
+            // An AMS engagement and the interference stack.
+            assert_eq!(
+                hit(W::Lrm20, Mode::Normal, roll, 7.0, true, true),
+                hits(W::Lrm20, roll.saturating_sub(6).max(2))
+            );
+            // A HAG's +2 at short range cancels the interference; at medium range it bites.
+            assert_eq!(
+                hit(W::ClanHag20, Mode::Normal, roll, 8.0, false, true),
+                hits(W::ClanHag20, roll)
+            );
+            assert_eq!(
+                hit(W::ClanHag20, Mode::Normal, roll, 9.0, false, true),
+                hits(W::ClanHag20, lowered)
+            );
+            // An engaged Streak reads 11 - 4 - 2; a locked one rolls no table and lands all.
+            assert_eq!(
+                hit(W::StreakSrm6, Mode::Normal, roll, 7.0, true, true),
+                2 * 3
+            );
+            assert_eq!(hit(W::StreakSrm6, Mode::Normal, roll, 7.0, false, true), 12);
+        }
+    }
+
     /// The ATM's guidance adds two to the cluster roll unless ECM blocks it.
     #[test]
     fn atm_guidance_bonus_is_lost_to_ecm() {
@@ -1246,6 +1336,7 @@ mod tests {
                         artemis_v: false,
                         guidance_blocked,
                         ams_engaged: false,
+                        interference: false,
                     })
                     .unwrap()
                     .iter()

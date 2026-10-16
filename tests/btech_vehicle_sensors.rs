@@ -192,3 +192,63 @@ async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
             .ends_with("\r\nYour unit is shut down; nothing is perceived until it starts.")
     );
 }
+
+/// Electromagnetic interference renders a vehicle's probes useless while its built-in sensors
+/// keep sweeping, and the condition survives a restart (Tactical Operations: Advanced Rules
+/// p. 53).
+#[tokio::test]
+async fn vehicle_probes_are_useless_under_electromagnetic_interference() {
+    let (_dir, config, mut world, id) = fixture(&equipped()).await;
+    let map = world.btech.vehicles()[&id].position().unwrap().map;
+    let modes = |world: &World| {
+        battle_perception_profile(world, id)
+            .unwrap()
+            .sensor
+            .systems
+            .iter()
+            .map(|system| system.mode)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(modes(&world)[0], SensorMode::Probe);
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            let flags = record["flags"].as_i64().unwrap();
+            record["flags"] = MapFlag::ElectromagneticInterference
+                .apply(flags, true)
+                .into();
+        })
+        .unwrap();
+    let profile = battle_perception_profile(&world, id).unwrap();
+    assert_eq!(profile.sensor.status, PerceptionStatus::Ready);
+    assert_eq!(
+        profile.probe.unwrap().status,
+        PerceptionStatus::Interference
+    );
+    assert_eq!(
+        modes(&world),
+        [
+            SensorMode::Infrared,
+            SensorMode::Magscan,
+            SensorMode::Radar,
+            SensorMode::Seismic
+        ]
+    );
+    assert!(
+        battle_perception_report(&world, id).unwrap().text.ends_with(
+            "Probe:   Bloodhound Active Probe, reveals hidden units within 8 hexes (useless under electromagnetic interference)"
+        )
+    );
+    persistence::save(&config.database(), &world).await.unwrap();
+    let restored = persistence::load(&config.database()).await.unwrap();
+    assert_eq!(battle_perception_profile(&restored, id).unwrap(), profile);
+    let scripts =
+        Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
+    let status: String = scripts
+        .eval_callback(&format!(
+            "return btech.unit.perception({}).probe.status",
+            id.0
+        ))
+        .unwrap();
+    assert_eq!(status, "interference");
+}

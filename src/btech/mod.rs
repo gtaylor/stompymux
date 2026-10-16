@@ -17,7 +17,8 @@ pub use electronics::{
 };
 mod electronic_field;
 pub use electronic_field::{
-    ElectronicField, ElectronicMode, ElectronicSource, resolve_electronic_field,
+    ECM_RANGE, ElectronicField, ElectronicMode, ElectronicSource, ecm_range,
+    resolve_electronic_field,
 };
 mod ammunition_feed;
 mod artemis;

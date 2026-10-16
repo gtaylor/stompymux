@@ -90,6 +90,9 @@ pub struct AimModifiers {
     /// Wind and gravity on the shooter's map for this weapon's class; `None` when the wind is
     /// too strong for the weapon to fire, which leaves the shot without a target number.
     pub environment: Option<i16>,
+    /// +2 for a ranged weapon attack made on a battlefield under electromagnetic interference
+    /// (Tactical Operations: Advanced Rules p. 53).
+    pub interference: u8,
     pub heat: u8,
     pub sensors: u8,
     /// Accumulated vehicle commander and sensor critical penalties, separate from Mech sensor hits.
@@ -128,6 +131,7 @@ impl AimModifiers {
                 + i32::from(self.orbital_drop)
                 + i32::from(self.light)
                 + i32::from(self.environment?)
+                + i32::from(self.interference)
                 + i32::from(self.heat)
                 + i32::from(self.sensors)
                 + i32::from(self.control_damage)
@@ -576,6 +580,7 @@ pub(super) fn aim_modifiers_for_source(
     modifiers.orbital_drop = target_terms.orbital_drop;
     modifiers.light = target_terms.light;
     modifiers.environment = super::planetary_conditions::aim_modifier(world, shooter, mount.weapon);
+    modifiers.interference = super::planetary_conditions::interference_aim_modifier(world, shooter);
     modifiers.beacon_accuracy += target_terms.beacon_accuracy;
     modifiers.target_lock = if indirect.is_some() {
         0
@@ -654,6 +659,7 @@ pub(super) fn weapon_base(
         orbital_drop: 0,
         light: 0,
         environment: Some(0),
+        interference: 0,
         heat: 0,
         sensors: 0,
         control_damage: 0,

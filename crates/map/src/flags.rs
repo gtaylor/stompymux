@@ -19,16 +19,21 @@ pub enum MapFlag {
     IndestructibleStructures,
     /// Teammates cannot damage each other with weapons.
     NoFriendlyFire,
+    /// Electromagnetic interference covers the whole map: +2 to hit for ranged weapon attacks,
+    /// -2 on Cluster Hits Table rolls, active probes useless and ECM range doubled (Tactical
+    /// Operations: Advanced Rules p. 53).
+    ElectromagneticInterference,
 }
 
 impl MapFlag {
     /// Every flag, in bit order.
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Vacuum,
         Self::Underground,
         Self::Dark,
         Self::IndestructibleStructures,
         Self::NoFriendlyFire,
+        Self::ElectromagneticInterference,
     ];
 
     /// Persisted bit for this flag.
@@ -39,6 +44,7 @@ impl MapFlag {
             Self::Dark => 32,
             Self::IndestructibleStructures => 64,
             Self::NoFriendlyFire => 256,
+            Self::ElectromagneticInterference => 1024,
         }
     }
 
@@ -50,6 +56,7 @@ impl MapFlag {
             Self::Dark => "dark",
             Self::IndestructibleStructures => "indestructible_structures",
             Self::NoFriendlyFire => "no_friendly_fire",
+            Self::ElectromagneticInterference => "electromagnetic_interference",
         }
     }
 
@@ -65,6 +72,9 @@ impl MapFlag {
                 "Weapon fire cannot damage buildings, walls or bridges."
             }
             Self::NoFriendlyFire => "Teammates cannot damage each other with weapons.",
+            Self::ElectromagneticInterference => {
+                "Electromagnetic interference: ranged attacks +2 to hit, Cluster Hits rolls -2, active probes useless, ECM range doubled."
+            }
         }
     }
 

@@ -90,6 +90,7 @@ pub fn tag_aim_modifiers(
             .map_or(0, super::OrbitalDrop::target_modifier),
         light: super::light_aim::modifier(world, target, false)?,
         environment: Some(0),
+        interference: super::planetary_conditions::interference_aim_modifier(world, shooter),
         heat,
         sensors,
         control_damage,

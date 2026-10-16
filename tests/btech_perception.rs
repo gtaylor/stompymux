@@ -56,6 +56,19 @@ impl Lane {
         set_battle_map_conditions(&mut self.world, self.map, light, weather).unwrap();
     }
 
+    /// Switch electromagnetic interference over the lane on or off.
+    fn interference(&mut self, enabled: bool) {
+        self.world
+            .btech
+            .rewrite_map_record(self.map, |record| {
+                let flags = record["flags"].as_i64().unwrap();
+                record["flags"] = MapFlag::ElectromagneticInterference
+                    .apply(flags, enabled)
+                    .into();
+            })
+            .unwrap();
+    }
+
     /// Give the observer a fixed sweep result for the turn.
     fn sweep(&mut self, roll: u8) {
         self.world
@@ -423,9 +436,19 @@ async fn hidden_units_are_revealed_by_adjacency_and_probes() {
             .signature()
             .hidden
     );
-    // Within the Beagle's four hexes the probe finds it.
+    // Within the Beagle's four hexes the probe finds it, unless electromagnetic interference
+    // renders the probe useless (Tactical Operations: Advanced Rules p. 53).
     lane.place_target(4);
     lane.target_signature(true, false);
+    lane.interference(true);
+    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
+    assert!(events.iter().all(|event| event.revealed.is_none()));
+    assert!(
+        lane.world.btech.constructed_units()[&lane.target]
+            .signature()
+            .hidden
+    );
+    lane.interference(false);
     let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
     assert!(
         events.iter().any(|event| event.revealed.is_some()),
@@ -507,6 +530,40 @@ async fn probe_sweeps_with_the_probes_brackets() {
     // Hills do not stop a probe sweep.
     lane.terrain(2, Hex::new(Terrain::Clear, 9));
     lane.place_target(12);
+    assert_eq!(lane.perceived(), Some((Probe, false)));
+    // Electromagnetic interference renders the probe useless, leaving the built-in sensors,
+    // which the hill stops for infrared and radar but not for the magscan (Tactical
+    // Operations: Advanced Rules p. 53).
+    lane.interference(true);
+    assert_eq!(
+        lane.perceived(),
+        None,
+        "twelve hexes is past the vehicle magscan short band"
+    );
+    let report = battle_perception_report(&lane.world, lane.observer).unwrap();
+    assert_eq!(
+        report.profile.probe.unwrap().status,
+        PerceptionStatus::Interference
+    );
+    assert!(
+        report
+            .profile
+            .sensor
+            .systems
+            .iter()
+            .all(|system| system.mode != SensorMode::Probe)
+    );
+    assert!(
+        report.text.contains(
+            "Probe:   Beagle Active Probe, reveals hidden units within 4 hexes (useless under electromagnetic interference)"
+        ),
+        "{}",
+        report.text
+    );
+    lane.place_target(9);
+    assert_eq!(lane.perceived(), Some((Sensors, false)));
+    assert_eq!(lane.found_by(), Some(SensorMode::Magscan));
+    lane.interference(false);
     assert_eq!(lane.perceived(), Some((Probe, false)));
     assert_eq!(
         battle_ecm_modifier(

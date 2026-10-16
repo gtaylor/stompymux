@@ -1016,6 +1016,23 @@ hexes = [[2, 1]]
         }
     }
 
+    /// A map file declares electromagnetic interference in its flags list (Tactical Operations:
+    /// Advanced Rules p. 53), and the export writes it back by name.
+    #[test]
+    fn electromagnetic_interference_is_a_declared_flag() {
+        let source =
+            "flags = [\"electromagnetic_interference\"]\nterrain = \".\\n\"\nlevel = \"0\\n\"";
+        let map = MapAsset::parse(source).unwrap();
+        assert!(map.has_flag(MapFlag::ElectromagneticInterference));
+        assert!(!map.has_flag(MapFlag::Vacuum));
+        let text = map.to_file().unwrap();
+        assert!(
+            text.contains("flags = [\"electromagnetic_interference\"]"),
+            "{text}"
+        );
+        assert_eq!(MapAsset::parse(&text).unwrap(), map);
+    }
+
     #[test]
     fn missing_flags_keep_inherited_ones() {
         let source = "terrain = \".\\n\"\nlevel = \"0\\n\"";

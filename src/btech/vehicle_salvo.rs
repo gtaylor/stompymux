@@ -150,6 +150,8 @@ pub(super) fn resolve_with_context_in_candidate(
     let target_beacon =
         vehicle.has_beacon(BeaconKind::Narc) || vehicle.has_beacon(BeaconKind::Homing);
     let artemis_v = attacker.is_some_and(|shooter| super::artemis::artemis_v(world, shooter));
+    let interference = attacker
+        .is_some_and(|shooter| super::planetary_conditions::under_interference(world, shooter));
     let mut packets = super::weapon_groups::roll_weapon_groups(
         super::weapon_groups::WeaponGroupRequest {
             weapon,
@@ -167,6 +169,7 @@ pub(super) fn resolve_with_context_in_candidate(
             apollo: request.apollo,
             array: request.array,
             unit_without_heat: true,
+            interference,
         },
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;

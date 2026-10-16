@@ -124,7 +124,7 @@ corners = [[0, 0], [2, 0], [2, 1], [0, 1]]
 | `light` | keep current | `"day"`, `"dawn"`, `"dusk"`, `"full_moon_night"`, `"moonless_night"` or `"pitch_black"`; see [Light](#light). A new map starts in daylight. |
 | `weather` | keep current | `"clear"`, `"light_fog"`, `"heavy_fog"`, `"light_rain"`, `"moderate_rain"`, `"heavy_rain"`, `"gusting_rain"`, `"torrential_downpour"`, `"light_snow"`, `"moderate_snow"`, `"heavy_snow"`, `"snow_flurries"`, `"sleet"`, `"light_hail"`, `"heavy_hail"`, `"ice_storm"`, `"blowing_sand"` or `"lightning_storm"`; see [Weather](#weather). A new map starts clear. |
 | `wind` | keep current | `{ direction, speed }`: the bearing the wind blows from, 0 to 359, and its speed in km/h, where 0 is calm. Wind carries smoke and spreads fire. From 62 km/h it spoils missile and then ballistic fire, and from 75 km/h it makes piloting harder; see [Wind](#wind). A new map starts calm. |
-| `flags` | keep current | Map flags by name, such as `"dark"` or `"underground"`. `flags = []` clears them. See `help @setmap` for the list. |
+| `flags` | keep current | Map flags by name, such as `"dark"`, `"underground"` or `"electromagnetic_interference"`; see [Electromagnetic interference](#electromagnetic-interference). `flags = []` clears them. See `help @setmap` for the list. |
 
 Keys marked "keep current" leave a loaded map's value alone when they are
 absent, so reloading a map file does not reset light or wind that a scene
@@ -171,6 +171,16 @@ ballistic attacks and to piloting checks:
 
 Tracked and wheeled vehicles feel only tornadoes, which add +3 to their
 piloting checks (+5 in an F4 tornado).
+
+### Electromagnetic interference
+
+`flags = ["electromagnetic_interference"]` puts the whole map under the
+electromagnetic interference of Tactical Operations: Advanced Rules (p. 53).
+Every ranged weapon attack takes +2 to hit, direct or indirect, artillery
+included; every roll on the Cluster Hits Table takes -2, never below 2, whatever
+the weapon; active probes are useless; and ECM suites reach twelve hexes instead
+of six. Physical attacks and built-in sensors are unaffected. Operators switch it
+with `@setmap flags` and Lua with `btech.map.set_flag`.
 
 ## Grids
 

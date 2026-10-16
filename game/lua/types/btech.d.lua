@@ -252,7 +252,7 @@ function btech_unit.inspect(dbref) end
 ---@field piloting_modifier integer Damage modifier for subsequent piloting checks.
 
 ---@alias DetectionChannel "sight"|"sensors"|"probe" Values from btech.unit.detection_channels.
----@alias PerceptionStatus "ready"|"jammed"|"damaged"|"absent"
+---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"interference"|"absent"
 ---@alias SensorMode "infrared"|"magscan"|"radar"|"seismic"|"probe" A sensor system of a unit's suite.
 ---@alias SensorBand "short"|"medium"|"long"
 
@@ -1407,6 +1407,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
 ---@field light integer Darkness on the target's map, less what searchlights and target heat offset.
 ---@field environment integer|nil Wind and gravity on the shooter's map for this weapon class; nil when the wind keeps the weapon from firing.
+---@field interference integer +2 for a ranged weapon attack on a battlefield under electromagnetic interference (Tactical Operations: Advanced Rules p. 53).
 ---@field heat integer
 ---@field sensors integer
 ---@field control_damage integer Vehicle commander/sensor critical penalties.

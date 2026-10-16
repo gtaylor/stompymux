@@ -344,6 +344,7 @@ pub(super) fn prepare(
         gunnery: unit_artillery_gunnery_target(world, shooter)?,
         observer,
         adjustment,
+        interference: super::planetary_conditions::under_interference(world, shooter),
     })?;
     Ok(PreparedArtillery {
         map,
