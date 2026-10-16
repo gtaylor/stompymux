@@ -1013,6 +1013,30 @@ fn resolve_ground_segment(
                     .is_ok_and(|tile| tile.is_burning())
         })
     };
+    // Magma heats a 'Mech that walks through a hex without occupying it at the turn's heat
+    // reckoning: two points for crust and five for liquid magma, charged as it leaves along
+    // the ground. A 'Mech that stays takes only the hex's per-turn heat (Tactical Operations:
+    // Advanced Rules pp. 35, 61); magma heat is never capped.
+    let leaving_magma = {
+        let unit = &world.btech.constructed_units()[&id];
+        unit.position()
+            .filter(|previous| *previous != position && !unit.airborne())
+            .and_then(|previous| {
+                world.btech.maps()[&previous.map]
+                    .base_hex(i64::from(previous.x), i64::from(previous.y))
+                    .ok()
+            })
+            .map_or(0.0, |tile| {
+                let level = unit.elevation_level(tile);
+                if tile.on_magma_crust(level) {
+                    2.0
+                } else if tile.in_liquid_magma(level) {
+                    5.0
+                } else {
+                    0.0
+                }
+            })
+    };
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     if unit
         .motion
@@ -1031,6 +1055,13 @@ fn resolve_ground_segment(
         notices.push(Notice {
             unit: id,
             text: "The flames you leave behind heat your 'Mech.".to_owned(),
+        });
+    }
+    if leaving_magma > 0.0 {
+        unit.heat.stored += leaving_magma;
+        notices.push(Notice {
+            unit: id,
+            text: "Heat washes up from the magma you cross.".to_owned(),
         });
     }
     if blocked.is_some() || checked_steps.is_empty() {

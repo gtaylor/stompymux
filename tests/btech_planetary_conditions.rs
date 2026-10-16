@@ -73,6 +73,61 @@ async fn magma_heats_and_deep_snow_cools_mechs() {
     assert_eq!(cooling('+').await, cooling('.').await + 1.0);
 }
 
+/// A 'Mech walking over magma crust takes its two heat points as it leaves the hex, never on
+/// entering it, so one that stops on the crust takes only the five a turn for standing there
+/// (Tactical Operations: Advanced Rules pp. 35, 61).
+#[tokio::test]
+async fn magma_heats_a_mech_leaving_it_and_not_one_stopping_on_it() {
+    // Crust rows above and below the 'Mech's clear row, so either facing crosses one.
+    let clear = ".0".repeat(12);
+    let crust = "m0".repeat(12);
+    let rows: Vec<_> = (0..12)
+        .map(|y| if y == 4 || y == 6 { &crust } else { &clear })
+        .cloned()
+        .collect();
+    let source = format!("12 12\n{}\n", rows.join("\n"));
+    let (_dir, _config, mut world, id) = fixture_source(&source).await;
+    let start = world.btech.constructed_units()[&id].position().unwrap();
+    set_battle_speed(&mut world, id, ObjectId(1), 21.5).unwrap();
+    let heat = |world: &World| world.btech.constructed_units()[&id].heat().stored;
+    let row = |world: &World| world.btech.constructed_units()[&id].position().unwrap().y;
+    let before = heat(&world);
+    let mut entered = false;
+    for _ in 0..240 {
+        let notices = advance_battle_motion(&mut world, RULES).unwrap();
+        let y = row(&world);
+        let washed = notices
+            .iter()
+            .any(|notice| notice.text.contains("Heat washes up from the magma"));
+        if y == 4 || y == 6 {
+            // On the crust: no entry heat, whatever the turn brings later.
+            entered = true;
+            assert!(!washed);
+            assert_eq!(heat(&world), before);
+            continue;
+        }
+        if y == start.y {
+            continue;
+        }
+        assert!(entered, "the 'Mech crossed the crust");
+        assert!(washed);
+        let position = world.btech.constructed_units()[&id].position().unwrap();
+        let previous_y = if y < start.y { y + 1 } else { y - 1 };
+        let left = world.btech.maps()[&position.map]
+            .base_hex(i64::from(position.x), i64::from(previous_y))
+            .unwrap();
+        // Crust that broke under the 'Mech is liquid magma by the time it leaves.
+        let expected = if left.ground() == Ground::Magma {
+            5.0
+        } else {
+            2.0
+        };
+        assert_eq!(heat(&world), before + expected);
+        return;
+    }
+    panic!("the 'Mech never left the crust");
+}
+
 /// Standing in Depth 1 water puts only the leg heat sinks under: each dissipates double, so a
 /// Clan double heat sink in a leg adds two points, not one per critical slot, and a sink the
 /// pilot shut off adds nothing (Total Warfare p. 159).
