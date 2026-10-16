@@ -26,7 +26,7 @@ fn jenner(apollo: bool) -> MechTemplate {
 }
 
 /// The Apollo system serves the MRM in its location, raises the launcher's BV by 15 percent
-/// (Tactical Operations: Advanced Units & Equipment p. 194, note L), and every MRM needs one
+/// (Tactical Operations: Advanced Units & Equipment p. 195, note L), and every MRM needs one
 /// once any has one (ibid. p. 142).
 #[test]
 fn apollo_links_and_battle_value() {
@@ -40,15 +40,29 @@ fn apollo_links_and_battle_value() {
         .unwrap();
     assert!(guided.apollo_operational(index).unwrap());
     assert!(!guided.artemis_operational(index).unwrap());
-    // The same Mech with the system unassigned weighs the same but guides nothing.
-    let mut idle = jenner(true);
-    idle.sections
+    // A system without a link would guide nothing, so construction refuses it.
+    let mut unassigned = jenner(true);
+    unassigned
+        .sections
         .get_mut(&MechSection::LeftTorso)
         .unwrap()
         .criticals
         .get_mut(&3)
         .unwrap()
         .data = "-".into();
+    let error = Mech::from_template(unassigned).unwrap_err().to_string();
+    assert!(error.contains("has no launcher link"), "{error}");
+    // Against the same Mech with the system's ton spent on leg armor, which only the
+    // defensive rating counts; it fires a plain MRM.
+    let mut idle = jenner(true);
+    idle.sections
+        .get_mut(&MechSection::LeftTorso)
+        .unwrap()
+        .criticals
+        .remove(&3);
+    for leg in [MechSection::LeftLeg, MechSection::RightLeg] {
+        idle.sections.get_mut(&leg).unwrap().armor += 8;
+    }
     let idle = Mech::from_template(idle).unwrap();
     assert!(!idle.apollo_operational(index).unwrap());
     let launcher = f64::from(Weapon::Mrm10.battle_value());
@@ -65,7 +79,10 @@ fn apollo_links_and_battle_value() {
         .criticals
         .insert(5, apollo);
     let error = Mech::from_template(unlinked).unwrap_err().to_string();
-    assert!(error.contains("must serve every MRM launcher"), "{error}");
+    assert!(
+        error.contains("links slot 1, which is not the first slot of an MRM launcher"),
+        "{error}"
+    );
 }
 
 /// A working Apollo system negates the MRM's +1 to hit; once destroyed the launcher fires

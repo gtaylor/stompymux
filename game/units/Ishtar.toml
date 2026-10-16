@@ -23,7 +23,7 @@ slots = [
     { at = 3, item = "CL.Anti-MissileSystem" },
     { at = 4, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
     { at = 5, item = "CL.LRM-15" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 5 },
     { at = "7-8", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
 ]
 

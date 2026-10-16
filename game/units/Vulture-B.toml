@@ -31,7 +31,7 @@ armor = 16
 rear = 7
 slots = [
     { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "ArtemisIV" },
+    { at = 7, item = "ArtemisIV", link = 3 },
     { at = 8, item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = "9-10", item = "FerroFibrous" },
 ]

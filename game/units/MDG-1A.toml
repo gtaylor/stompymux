@@ -42,7 +42,7 @@ rear = 7
 slots = [
     { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
     { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
     { at = 7, item = "IS.MediumPulseLaser" },
     { at = 8, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
     { at = "9-10", item = "FerroFibrous" },
@@ -55,7 +55,7 @@ rear = 7
 slots = [
     { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
     { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
     { at = 7, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
     { at = "8-10", item = "FerroFibrous" },
     { at = "11-12", item = "EndoSteel" },

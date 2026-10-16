@@ -203,7 +203,7 @@ async fn template_lookup_is_case_insensitive_bounded_and_registry_gated() {
       assert(btech.template.exists('parity'))
       assert(not btech.template.exists('definitely-missing-template'))
       assert(not btech.template.exists(string.char(255)))
-      assert(btech.template.base_cost('parity')==8356250)
+      assert(btech.template.base_cost('parity')==3762500)
     "#,
         )
         .unwrap();
@@ -434,7 +434,7 @@ async fn engine_suspension_factor_matches_c_susp_factor() {
       local types=btech.unit.movement_types
       -- 35-ton chassis through C mech_consistency.c:170-218.
       local expected={
-        BIPED=0,TRACK=0,WHEEL=20,HOVER=175,VTOL=140,HULL=30,FOIL=195,FLY=0,QUAD=0,SUB=30,
+        BIPED=0,TRACK=0,WHEEL=20,HOVER=175,VTOL=140,HULL=30,FOIL=195,QUAD=0,SUB=30,
       }
       for name,factor in pairs(expected) do
         btech.unit.set_movement_type(unit,types[name])

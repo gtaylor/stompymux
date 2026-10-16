@@ -61,6 +61,13 @@ impl AmmunitionBin {
             !half_ton || weapon.allows_half_ton_bins(),
             "Half-ton ammunition bins are limited to machine guns"
         );
+        // Tactical Operations: Advanced Rules p. 101: only missiles are hot-loaded, so the
+        // flag is refused on ammunition for any weapon that cannot fire hot-loaded.
+        ensure!(
+            !flags.iter().any(|mode| mode == "Hotload") || weapon.supports_hotload(),
+            "{} ammunition cannot be hot-loaded (Tactical Operations: Advanced Rules p. 101)",
+            weapon.name()
+        );
         let ammunition_flags: Vec<_> = flags
             .iter()
             .filter(|mode| !matches!(mode.as_str(), "Halfton" | "Hotload" | "OnTC"))
@@ -807,6 +814,45 @@ fn split_criticals(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Only launchers that fire hot-loaded missiles take hot-loaded ammunition (Tactical
+    /// Operations: Advanced Rules p. 101): a machine gun or SRM bin refuses the flag, and the
+    /// construction error names the section, slot and weapon.
+    #[test]
+    fn hotload_ammunition_requires_a_hot_loading_launcher() {
+        assert!(AmmunitionBin::configuration(Weapon::Lrm5, &["Hotload".into()]).is_ok());
+        let error =
+            AmmunitionBin::configuration(Weapon::MachineGun, &["Hotload".into(), "Halfton".into()])
+                .unwrap_err();
+        assert!(
+            error.to_string().contains("cannot be hot-loaded"),
+            "{error}"
+        );
+        let mut template =
+            crate::MechTemplate::parse("JR7-D", include_str!("../tests/fixtures/JR7-D.toml"))
+                .unwrap();
+        let bin = template
+            .sections
+            .values_mut()
+            .flat_map(|section| section.criticals.values_mut())
+            .find(|critical| critical.equipment == "Ammo_IS.SRM-4")
+            .unwrap();
+        bin.modes.push("Hotload".into());
+        let error = format!("{:#}", MechLoadout::resolve(&template).unwrap_err());
+        assert!(
+            error.contains(&format!(
+                "{} critical 1 (Ammo_IS.SRM-4)",
+                MechSection::RightTorso.name()
+            )),
+            "{error}"
+        );
+        assert!(
+            error.contains(
+                "ammunition cannot be hot-loaded (Tactical Operations: Advanced Rules p. 101)"
+            ),
+            "{error}"
+        );
+    }
 
     /// Half-ton lots are a machine-gun privilege (TechManual p. 48); other bins refuse the flag.
     #[test]

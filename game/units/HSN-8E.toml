@@ -29,7 +29,7 @@ omit = ["hand_actuator"]
 slots = [
     { at = 4, item = "IS.ERMediumLaser" },
     { at = "5-6", item = "IS.LRM-10" },
-    { at = 12, item = "ArtemisIV" },
+    { at = 12, item = "ArtemisIV", link = 5 },
 ]
 
 [sections.left_torso]
@@ -40,7 +40,7 @@ slots = [
     { at = "7-8", item = "IS.LRM-10" },
     { at = "9-10", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
     { at = 11, item = "EndoSteel" },
-    { at = 12, item = "ArtemisIV" },
+    { at = 12, item = "ArtemisIV", link = 7 },
 ]
 
 [sections.right_torso]

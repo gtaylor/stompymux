@@ -64,7 +64,9 @@ fn artemis_links_damage_and_restoration() {
         Mech::from_template(crate::support::templates::legal(head))
             .unwrap_err()
             .to_string()
-            .contains("Artemis IV must serve every LRM, SRM and MML launcher")
+            .contains(
+                "links slot 11, which is not the first slot of an LRM, SRM or MML launcher in Head"
+            )
     );
     {
         let section = MechSection::CenterTorso;
@@ -109,22 +111,29 @@ fn artemis_links_damage_and_restoration() {
     }
 }
 
-/// Empty, zero and dangling links remain visible and cannot provide guidance.
+/// A controller weighs a ton; one with an empty, zero or dangling link guides nothing, so
+/// construction refuses it rather than building an inert controller.
 #[test]
 fn artemis_unassigned_links_and_mass() {
     let standard = Mech::from_template(
         MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
     )
     .unwrap();
-    for link in ["-", "0", "1", "255"] {
-        let unit = Mech::from_template(definition(MechSection::CenterTorso, link)).unwrap();
-        assert_eq!(
-            unit.mass().unwrap().equipment,
-            standard.mass().unwrap().equipment + 1024
-        );
-        let controller = unit.artemis_controllers().unwrap().remove(0);
-        assert!(controller.operational);
-        assert!(controller.weapon_indices.is_empty());
+    let guided = Mech::from_template(definition(MechSection::CenterTorso, "11")).unwrap();
+    assert_eq!(
+        guided.mass().unwrap().equipment,
+        standard.mass().unwrap().equipment + 1024
+    );
+    for (link, expected) in [
+        ("-", "has no launcher link"),
+        ("0", "has no launcher link"),
+        ("1", "links slot 1, which is not the first slot"),
+        ("255", "links slot 255, which is not the first slot"),
+    ] {
+        let error = Mech::from_template(definition(MechSection::CenterTorso, link))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains(expected), "{link}: {error}");
     }
     for link in ["bad", "-1", "256"] {
         assert!(Mech::from_template(definition(MechSection::CenterTorso, link)).is_err());
@@ -136,8 +145,8 @@ fn artemis_unassigned_links_and_mass() {
 #[test]
 fn artemis_v_controller_mass() {
     let standard = Mech::from_template(definition(MechSection::CenterTorso, "11")).unwrap();
-    // Artemis V fills two slots beside its launcher, so the SRM-4 moves to the right torso
-    // with its controller.
+    // Artemis V fills two slots beside its launcher, so the SRM-4 moves to right torso slot 8
+    // with its controller, whose slots both link it.
     let mut template = definition(MechSection::CenterTorso, "11");
     let center = template
         .sections
@@ -152,7 +161,7 @@ fn artemis_v_controller_mass() {
             slot,
             CriticalDefinition {
                 equipment: "ArtemisV".into(),
-                data: "-".into(),
+                data: "8".into(),
                 modes: vec![],
             },
         );
@@ -212,9 +221,9 @@ fn artemis_missile_tables_and_existing_archer() {
             assert!(unit.weapon_readiness(index).unwrap().ammunition > 0);
         }
     }
-    // ARC-5R controllers are unassigned, but their raw zero clears primary slot zero on a critical hit.
+    // Each ARC-5R controller links the first slot of the LRM-15 in its own torso.
     let controller = unit.artemis_controllers().unwrap().remove(0);
-    assert_eq!(controller.link, 0);
+    assert_eq!(controller.link, 1);
     let index = unit
         .loadout()
         .unwrap()
@@ -222,6 +231,7 @@ fn artemis_missile_tables_and_existing_archer() {
         .iter()
         .position(|mount| mount.criticals[0].section == controller.location.section)
         .unwrap();
+    assert_eq!(controller.weapon_indices, vec![index]);
     let mut damaged = unit.clone();
     damaged.destroy_critical(controller.location).unwrap();
     assert_eq!(

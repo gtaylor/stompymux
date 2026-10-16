@@ -266,8 +266,9 @@ pub fn convert(source: &str) -> Result<Converted> {
             }),
             _ => None,
         };
+        // Vehicle locations have no slot limit, so body equipment joins the bin's weapon or
+        // the first armored location.
         let heading = heading
-            .filter(|heading| located[heading].len() < 12)
             .or_else(|| {
                 [
                     "front_side",
@@ -277,10 +278,7 @@ pub fn convert(source: &str) -> Result<Converted> {
                     "turret",
                 ]
                 .into_iter()
-                .find(|heading| {
-                    armor.contains_key(heading)
-                        && located.get(heading).is_none_or(|items| items.len() < 12)
-                })
+                .find(|heading| armor.contains_key(heading))
             })
             .with_context(|| format!("no location has room for body equipment {line}"))?;
         located.entry(heading).or_default().push(critical);
@@ -608,6 +606,51 @@ mod tests {
             let error = format!("{:#}", convert(&with(lines)).err().unwrap());
             assert!(error.contains(expected), "{lines}: {error}");
         }
+    }
+
+    /// A vehicle's MRM Apollo systems link to the MRM launchers in their location, and a
+    /// machine gun array follows the guns it links (Tactical Operations: Advanced Units &
+    /// Equipment p. 142; TechManual p. 228).
+    #[test]
+    fn apollo_and_machine_gun_arrays_convert_for_vehicles() {
+        let source = BULLDOG
+            .replace(
+                "SRM 4\nSRM 4\nLarge Laser\n",
+                "MRM 10\nISApollo\nMRM 10\nISApollo\n",
+            )
+            .replace("IS Ammo SRM-4\nIS Ammo SRM-4\n", "IS Ammo MRM-10\n")
+            .replace(
+                "Machine Gun\n</Front",
+                "Machine Gun\nMachine Gun\nISMGA\n</Front",
+            );
+        let (_, template) = template(&source).unwrap();
+        for expected in [
+            "{ at = 2, item = \"ApolloFCS\", link = 1 }",
+            "{ at = 4, item = \"ApolloFCS\", link = 3 }",
+            "{ at = \"1-2\", item = \"IS.MachineGun\" },\n    { at = 3, item = \"IS.MGA\" }",
+        ] {
+            assert!(
+                template.contains(expected),
+                "{expected} missing from\n{template}"
+            );
+        }
+        // A Clan vehicle's array is a Clan one, and a mixed design's the one its name states.
+        let array = |source: &str| {
+            let draft = convert(source).unwrap().draft;
+            let front = draft
+                .sections
+                .iter()
+                .find(|section| section.heading == "front_side")
+                .unwrap();
+            front.slots[2].as_ref().unwrap().item.clone()
+        };
+        let clan = source.replace("IS Level 1", "Clan Level 2");
+        assert_eq!(array(&clan.replace("ISMGA", "MGA")), "CL.MGA");
+        assert_eq!(array(&clan), "IS.MGA");
+        let mixed = source
+            .replace("IS Level 1", "Mixed (IS Chassis) Level 3")
+            .replace("ISMGA", "CLMGA");
+        assert_eq!(array(&mixed), "CL.MGA");
     }
 
     #[test]

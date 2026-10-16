@@ -35,7 +35,7 @@ slots = [
     { at = "1-2", item = "HeatSink" },
     { at = 3, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
     { at = 4, item = "IS.LRM-10" },
-    { at = 5, item = "ArtemisIV" },
+    { at = 5, item = "ArtemisIV", link = 3 },
     { at = "6-12", item = "EndoSteel" },
 ]
 

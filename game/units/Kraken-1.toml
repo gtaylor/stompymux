@@ -37,7 +37,7 @@ rear = 10
 slots = [
     { at = "3-4", item = "Ammo_CL.UltraAC/2", rounds = 45 },
     { at = "5-8", item = "CL.MachineGun" },
-    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100 },
 ]
 
 [sections.center_torso]

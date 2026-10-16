@@ -448,6 +448,7 @@ function btech_unit.inspect(dbref) end
 ---@field beacons table<string, string[]> Attached effects keyed by surviving vehicle section.
 ---@field ams_enabled boolean Saved automatic anti-missile defense switch.
 ---@field artemis ArtemisController[] Installed controllers and resolved links.
+---@field machine_gun_arrays MachineGunArray[] Installed machine gun arrays and the guns each links.
 ---@field unjam Unjam|nil Active feed clearing attempt.
 ---@field weapon_recycle table<integer, integer> Countdown seconds by zero-based weapon index.
 ---@field spent_launchers integer[] Expended zero-based one-shot weapon indices.
@@ -2058,11 +2059,11 @@ function btech_template.check(name) end
 
 ---@class ArtemisController
 ---@field location {section: MechSectionName|VehicleSectionName, slot: integer} Zero-based controller position.
----@field link integer One-based template launcher slot; zero is unassigned.
+---@field link integer One-based template slot of the guided launcher's first critical; construction requires one.
 ---@field weapon_indices integer[] Zero-based missile mounts matching the link.
 ---@field operational boolean Controller is available under the unit’s equipment damage rules.
 ---@class MachineGunArray
----@field location {section: MechSectionName, slot: integer} Zero-based array module position.
+---@field location {section: MechSectionName|VehicleSectionName, slot: integer} Zero-based array module position.
 ---@field weapon_indices integer[] Zero-based machine gun mounts the array links, two to four of one size class.
 
 ---Toggle Artemis-compatible ammunition; requires a live linked controller and a recycled missile launcher.
@@ -2253,7 +2254,7 @@ function btech_unit.weapon_specifications(dbref) end
 ---@class CriticalReport
 ---@field section string Stable Mech or vehicle section identity.
 ---@field name string Chassis-specific display heading.
----@field slots CriticalInspection[] All six or twelve physical slots, including empty ones.
+---@field slots CriticalInspection[] Every physical slot, including empty ones: six or twelve in a Mech section, and twelve or through the last occupied slot in a vehicle section.
 
 ---Inspect equipment by cockpit section alias. The trusted query requires a callback transaction.
 ---Rows are detached from saved state; native CRITSTATUS separately requires a conscious assigned pilot.

@@ -600,6 +600,9 @@ fn destroy_weapon(
     );
     let gauss = mount.weapon.weapon_explosion_damage() > 0;
     let jammed = mount.weapon.jammed_explosion_damage() > 0 && vehicle.weapon_jammed(index)?;
+    // An unexpended B-Pod releases its charge when a critical hit destroys it (Total Warfare
+    // p. 130).
+    let b_pod = mount.weapon.is_b_pod() && !vehicle.spent_launchers().contains(&index);
     let hotload = vehicle.fire_mode(index)? == FireMode::Hotload;
     let hotload_supply = mount
         .weapon
@@ -610,6 +613,8 @@ fn destroy_weapon(
         u32::from(mount.weapon.weapon_explosion_damage())
     } else if jammed {
         u32::from(mount.weapon.jammed_explosion_damage())
+    } else if b_pod {
+        u32::from(mount.weapon.pod_explosion_damage())
     } else if hotload && supplied(hotload_supply) {
         u32::from(mount.weapon.profile_for_ammunition(hotload_supply).damage)
             * u32::from(mount.weapon.profile().missiles.max(1))
@@ -635,6 +640,8 @@ fn destroy_weapon(
             format!("It explodes for {explosion} points damage.")
         } else if jammed {
             format!("[fg=red bold]Your jammed autocannon explodes for {explosion} points of damage![reset]")
+        } else if b_pod {
+            format!("[fg=red bold]Your B-Pod explodes for {explosion} points of damage![reset]")
         } else {
             format!("[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]")
         },
@@ -648,6 +655,11 @@ fn destroy_weapon(
             )
         } else if jammed {
             " loses an autocannon in a brilliant explosion!".into()
+        } else if b_pod {
+            format!(
+                "'s {} is rocked by a pod explosion!",
+                section.name().replace('_', " ")
+            )
         } else {
             " loses a launcher in a brilliant explosion!".into()
         },

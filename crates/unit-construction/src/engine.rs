@@ -148,4 +148,46 @@ mod tests {
         assert_eq!(rated_output(50, 5), 250);
         assert_eq!(rated_output(35, 7), 245);
     }
+
+    /// Large engines follow the Advanced Engine Master Table's Large Engine Weight columns
+    /// (Tactical Operations: Advanced Units & Equipment p. 119): ICE, standard, light, XL and
+    /// XXL fusion, in tons, for every rating from 405 to 500. The standard column is the
+    /// catalogue itself; ICE is twice standard, and the light, XL and XXL columns are the TM
+    /// p. 49 multipliers (x0.75, x0.5, x1/3) rounded up to the half ton.
+    #[test]
+    fn large_engine_masses_match_the_advanced_engine_master_table() {
+        use crate::{engine_mass, half_ton};
+        // Rating, then ICE, standard, light, XL and XXL weights in half tons.
+        const TABLE: [(u32, [u32; 5]); 20] = [
+            (405, [226, 113, 85, 57, 38]),
+            (410, [244, 122, 92, 61, 41]),
+            (415, [266, 133, 100, 67, 45]),
+            (420, [290, 145, 109, 73, 49]),
+            (425, [318, 159, 120, 80, 53]),
+            (430, [350, 175, 132, 88, 59]),
+            (435, [388, 194, 146, 97, 65]),
+            (440, [430, 215, 162, 108, 72]),
+            (445, [478, 239, 180, 120, 80]),
+            (450, [534, 267, 201, 134, 89]),
+            (455, [600, 300, 225, 150, 100]),
+            (460, [674, 337, 253, 169, 113]),
+            (465, [760, 380, 285, 190, 127]),
+            (470, [858, 429, 322, 215, 143]),
+            (475, [972, 486, 365, 243, 162]),
+            (480, [1102, 551, 414, 276, 184]),
+            (485, [1252, 626, 470, 313, 209]),
+            (490, [1424, 712, 534, 356, 238]),
+            (495, [1622, 811, 609, 406, 271]),
+            (500, [1850, 925, 694, 463, 309]),
+        ];
+        for (rating, [ice, standard, light, xl, xxl]) in TABLE {
+            let base = engine_mass(rating);
+            let mass = |family: Engine| half_ton(family.unrounded_mass(base));
+            assert_eq!(half_ton(base * 2), ice * 512, "ICE {rating}");
+            assert_eq!(mass(Engine::Standard), standard * 512, "standard {rating}");
+            assert_eq!(mass(Engine::Light), light * 512, "light {rating}");
+            assert_eq!(mass(Engine::Xl), xl * 512, "XL {rating}");
+            assert_eq!(mass(Engine::Xxl), xxl * 512, "XXL {rating}");
+        }
+    }
 }

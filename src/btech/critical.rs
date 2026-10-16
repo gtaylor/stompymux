@@ -367,10 +367,10 @@ impl Mech {
                 system: System::ArtemisIv | System::ArtemisV
             }
         ) {
-            // The reference critical handler uses the raw value as a same-section zero-based slot.
+            // The controller's one-based link names its launcher's first slot in this section.
             let data =
                 &self.definition().sections[&location.section].criticals[&location.slot].data;
-            let slot = if data == "-" { 0 } else { data.parse::<u8>()? };
+            let slot = super::fire_control_link(data)? - 1;
             for (index, mount) in loadout.weapons.iter().enumerate() {
                 if mount.criticals[0]
                     == (CriticalLocation {

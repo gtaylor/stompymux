@@ -33,6 +33,7 @@ mod cost;
 mod document;
 mod engine;
 mod equipment;
+mod fire_control;
 mod fire_mode;
 mod gyro;
 mod inspection;
@@ -79,6 +80,7 @@ pub use equipment::{
     ARTILLERY_MAPSHEET_HEXES, PhysicalBattleValue, RangeBracket, System, SystemContext,
     WaterRanges, Weapon, WeaponProfile, WeaponRange, strip_name_prefix,
 };
+pub use fire_control::{FireControl, fire_control_link, is_fire_control};
 pub use fire_mode::FireMode;
 pub use gyro::Gyro;
 pub use inspection::{
@@ -99,7 +101,10 @@ pub use mass::{
     armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
     structure_mass, system_mass, system_slot_mass,
 };
-pub use mech::{CriticalDefinition, MechSection, MechTemplate, SectionDefinition};
+pub use mech::{
+    CriticalDefinition, MechSection, MechTemplate, SECTION_SLOTS, SectionDefinition,
+    VEHICLE_SECTION_SLOT_LIMIT,
+};
 pub use mech_mass::{MassItem, MechMass, armor_denominator, structure_divisor};
 pub use mech_rules::{MAXIMUM_ENGINE_RATING, MAXIMUM_HEAD_ARMOR};
 pub use metadata::{unit_metadata, validate_unit_metadata};

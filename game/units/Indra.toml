@@ -30,5 +30,5 @@ armor = 14
 armor = 17
 slots = [
     { at = "1-4", item = "CL.MachineGun" },
-    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]

@@ -656,7 +656,7 @@ pub use btech::{
 };
 
 /// Catalogue-resolved vehicle slots, distinct from live vehicle construction.
-pub use btech::{VehicleCriticalLocation, VehicleLoadout};
+pub use btech::{VEHICLE_SECTION_SLOT_LIMIT, VehicleCriticalLocation, VehicleLoadout};
 
 /// Ground-vehicle engine rating, suspension and fixed-point mass diagnostics.
 pub use btech::{VehicleEngine, VehiclePowerplant};

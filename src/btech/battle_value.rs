@@ -418,6 +418,25 @@ fn artemis_multipliers<L: Copy + PartialEq>(
     multipliers
 }
 
+/// Machine gun arrays are each worth the BV of the guns they link, but not their ammunition,
+/// times 0.1 (Tactical Operations: Advanced Units & Equipment p. 197, note L), on 'Mechs and
+/// vehicles alike. That addendum supersedes TechManual p. 317, note F's 0.67. The figure is a
+/// surcharge: the linked guns still count their own BV in full.
+fn machine_gun_array_value<S: Copy + Ord>(loadout: &ResolvedLoadout<CriticalLocation<S>>) -> f64 {
+    loadout
+        .machine_gun_arrays()
+        .iter()
+        .map(|array| {
+            let guns: u32 = array
+                .weapon_indices
+                .iter()
+                .map(|&index| u32::from(loadout.weapons[index].weapon.battle_value()))
+                .sum();
+            0.1 * f64::from(guns)
+        })
+        .sum()
+}
+
 impl Mech {
     /// Battle Value with catalogue weapon values. Armor and internal structure are current;
     /// installed weapons, ammunition, equipment, heat sinks and movement keep their design value
@@ -633,16 +652,7 @@ impl Mech {
             let kick = tons / 5 * if triple_myomer { 2 } else { 1 };
             physical += f64::from(super::talons::raise(kick));
         }
-        // A machine gun array is worth the BV of the guns it links times 0.67 (TechManual
-        // p. 317, note F).
-        for array in loadout.machine_gun_arrays() {
-            let guns: u32 = array
-                .weapon_indices
-                .iter()
-                .map(|&index| u32::from(loadout.weapons[index].weapon.battle_value()))
-                .sum();
-            physical += 0.67 * f64::from(guns);
-        }
+        physical += machine_gun_array_value(&loadout);
         Ok(Valuation {
             chassis: Chassis::Mech {
                 gyro,
@@ -810,7 +820,10 @@ impl super::Vehicle {
         let offense = Offense::gather(
             settings,
             &loadout,
-            artemis_multipliers(&loadout, &self.artemis_controllers()?),
+            artemis_multipliers(
+                &loadout,
+                &[self.artemis_controllers()?, self.apollo_controllers()?].concat(),
+            ),
             |location: VehicleCriticalLocation, _| match location.section {
                 VehicleSection::Front => Arc::Forward,
                 VehicleSection::Rear => Arc::Rear,
@@ -826,7 +839,7 @@ impl super::Vehicle {
             target_modifier,
             weapons: offense.weapons,
             ammunition: offense.ammunition,
-            equipment: 0.0,
+            equipment: machine_gun_array_value(&loadout),
             tonnage: f64::from(definition.tons) / 2.0,
             speed_mp: flanking,
             final_multiplier: 1.0,

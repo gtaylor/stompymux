@@ -34,9 +34,9 @@ armor = 68
 slots = [
     { at = 1, item = "IS.PPC" },
     { at = 2, item = "IS.LRM-15" },
-    { at = 3, item = "ArtemisIV" },
+    { at = 3, item = "ArtemisIV", link = 2 },
     { at = 4, item = "IS.LRM-15" },
-    { at = 5, item = "ArtemisIV" },
+    { at = 5, item = "ArtemisIV", link = 4 },
     { at = 6, item = "IS.LRM-15" },
-    { at = 7, item = "ArtemisIV" },
+    { at = 7, item = "ArtemisIV", link = 6 },
 ]

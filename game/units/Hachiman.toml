@@ -31,8 +31,8 @@ armor = 27
 slots = [
     { at = "1-2", item = "CL.ERMediumLaser" },
     { at = 3, item = "CL.LRM-20" },
-    { at = 4, item = "ArtemisIV" },
+    { at = 4, item = "ArtemisIV", link = 3 },
     { at = 5, item = "CL.LRM-20" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 5 },
     { at = "7-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]

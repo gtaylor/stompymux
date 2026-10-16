@@ -177,20 +177,8 @@ pub(super) static UNIT_TYPES: Catalog = Catalog {
             value: 3,
         },
         Entry {
-            name: "SPHEROID_DROPSHIP",
-            value: 4,
-        },
-        Entry {
-            name: "AERO_FIGHTER",
-            value: 5,
-        },
-        Entry {
             name: "MECHWARRIOR",
             value: 6,
-        },
-        Entry {
-            name: "AERODYNE_DROPSHIP",
-            value: 7,
         },
         Entry {
             name: "BATTLESUIT",
@@ -229,10 +217,6 @@ pub(super) static MOVEMENT_TYPES: Catalog = Catalog {
         Entry {
             name: "FOIL",
             value: 6,
-        },
-        Entry {
-            name: "FLY",
-            value: 7,
         },
         Entry {
             name: "QUAD",
@@ -355,46 +339,6 @@ pub(super) static SECTIONS: Catalog = Catalog {
         Entry {
             name: "ROTOR",
             value: 25,
-        },
-        Entry {
-            name: "NOSE",
-            value: 26,
-        },
-        Entry {
-            name: "LEFT_WING",
-            value: 27,
-        },
-        Entry {
-            name: "RIGHT_WING",
-            value: 28,
-        },
-        Entry {
-            name: "LEFT_REAR_WING",
-            value: 29,
-        },
-        Entry {
-            name: "RIGHT_REAR_WING",
-            value: 30,
-        },
-        Entry {
-            name: "AFT",
-            value: 31,
-        },
-        Entry {
-            name: "FRONT_RIGHT_SIDE",
-            value: 32,
-        },
-        Entry {
-            name: "FRONT_LEFT_SIDE",
-            value: 33,
-        },
-        Entry {
-            name: "REAR_LEFT_SIDE",
-            value: 34,
-        },
-        Entry {
-            name: "REAR_RIGHT_SIDE",
-            value: 35,
         },
     ],
 };
@@ -1842,6 +1786,19 @@ mod tests {
             );
         }
         assert_eq!(LIGHT_LEVELS.entries.len(), crate::Light::ALL.len());
+    }
+
+    /// Unit type and movement type constants carry every template class and movement code.
+    #[test]
+    fn unit_type_and_movement_catalogs_match_template_codes() {
+        assert_eq!(UNIT_TYPES.entries.len(), crate::RawUnitClass::ALL.len());
+        for (entry, class) in UNIT_TYPES.entries.iter().zip(crate::RawUnitClass::ALL) {
+            assert_eq!(entry.value, class as i32);
+        }
+        assert_eq!(MOVEMENT_TYPES.entries.len(), crate::RawMovement::ALL.len());
+        for (entry, movement) in MOVEMENT_TYPES.entries.iter().zip(crate::RawMovement::ALL) {
+            assert_eq!(entry.value, movement as i32);
+        }
     }
 
     /// Terrain constants name every Rust terrain in order.

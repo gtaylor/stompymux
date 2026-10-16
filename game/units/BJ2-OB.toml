@@ -28,7 +28,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "HeatSink" },
     { at = "6-7", item = "IS.LRM-10" },
-    { at = 8, item = "ArtemisIV" },
+    { at = 8, item = "ArtemisIV", link = 6 },
     { at = "9-10", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
 ]
 

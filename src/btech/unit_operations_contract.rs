@@ -384,20 +384,16 @@ pub(crate) fn unit_piloting_check_action(
 }
 
 pub(crate) fn reset_unit_criticals(world: &mut World, id: ObjectId) -> Result<()> {
-    if world.btech.vehicles().contains_key(&id) {
-        let touched = [
-            VehicleSection::Left,
-            VehicleSection::Right,
-            VehicleSection::Front,
-            VehicleSection::Rear,
-            VehicleSection::Turret,
-            VehicleSection::Rotor,
-        ]
-        .into_iter()
-        .flat_map(|section| {
-            (0..12).map(move |slot| super::VehicleCriticalLocation { section, slot })
-        })
-        .collect();
+    if let Some(unit) = world.btech.vehicles().get(&id) {
+        let touched = unit
+            .definition()
+            .sections
+            .iter()
+            .flat_map(|(&section, layout)| {
+                (0..layout.listed_slots())
+                    .map(move |slot| super::VehicleCriticalLocation { section, slot })
+            })
+            .collect();
         return edit_vehicle(world, id, touched, |definition| {
             for layout in definition.sections.values_mut() {
                 layout.criticals.clear();

@@ -35,5 +35,5 @@ armor = 30
 slots = [
     { at = "1-2", item = "CL.ERMediumLaser", modes = ["OnTC"] },
     { at = "3-4", item = "CL.MachineGun" },
-    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+    { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]

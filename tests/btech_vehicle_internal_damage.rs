@@ -379,6 +379,47 @@ async fn hotloaded_vehicle_criticals_require_usable_normal_ammunition() {
     }
 }
 
+/// A Weapon Destroyed critical on an unexpended B-Pod releases its 2 points of damage in the
+/// pod's location, as it does on a Mech (Total Warfare p. 130).
+#[tokio::test]
+async fn a_destroyed_b_pod_explodes_in_its_location() {
+    let stream = matching_seed(|dice| {
+        if dice.two_d6() != 11 {
+            return false;
+        }
+        dice.die(1).unwrap();
+        dice.two_d6();
+        dice.two_d6() < 6
+    });
+    let text = include_str!("../game/units/Demolisher.toml").replace(
+        "[sections.front_side]\n",
+        "[sections.front_side]\nslots = [{ at = 1, item = \"IS.B-Pod\" }]\n",
+    );
+    let (_dir, _config, mut world, id) = fixture(&text).await;
+    set_seed(&mut world, id, stream);
+    let report =
+        resolve_battle_vehicle_critical(&mut world, id, VehicleSection::Front, rules()).unwrap();
+    let vehicle = &world.btech.vehicles()[&id];
+    assert_eq!(vehicle.sections()[&VehicleSection::Front].internal, 8 - 2);
+    assert!(vehicle.critical_destroyed(VehicleCriticalLocation {
+        section: VehicleSection::Front,
+        slot: 0
+    }));
+    assert_eq!(report.internal_damage.len(), 1);
+    assert!(
+        report
+            .notices
+            .iter()
+            .any(|notice| notice.text.contains("B-Pod explodes for 2 points"))
+    );
+    assert!(
+        report
+            .broadcasts
+            .iter()
+            .any(|notice| notice.text.contains("rocked by a pod explosion"))
+    );
+}
+
 #[tokio::test]
 async fn hotloaded_hull_loss_preserves_surviving_ammunition() {
     let text = include_str!("../game/units/Demolisher.toml")

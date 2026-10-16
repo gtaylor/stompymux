@@ -27,7 +27,7 @@ armor = 12
 rear = 4
 slots = [
     { at = 1, item = "IS.SmallLaser" },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100 },
     { at = 12, item = "JumpJet" },
 ]
 

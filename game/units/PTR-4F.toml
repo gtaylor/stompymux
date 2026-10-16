@@ -20,7 +20,7 @@ omit = ["hand_actuator"]
 slots = [
     { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
     { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
 ]
 
 [sections.right_arm]
@@ -29,7 +29,7 @@ omit = ["hand_actuator"]
 slots = [
     { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
     { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 4 },
 ]
 
 [sections.left_torso]

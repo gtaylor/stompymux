@@ -35,7 +35,7 @@ rear = 3
 slots = [
     { at = "4-6", item = "HeatSink" },
     { at = "7-9", item = "IS.LRM-15" },
-    { at = 10, item = "ArtemisIV" },
+    { at = 10, item = "ArtemisIV", link = 7 },
     { at = "11-12", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
 ]
 

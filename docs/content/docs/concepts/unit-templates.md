@@ -39,12 +39,12 @@ specials = ["SearchLight"]
 | Key | Type | Meaning |
 | --- | --- | --- |
 | `name` | string | Display name. |
-| `class` | string | `mech`, `vehicle`, `vtol`, `naval`, `aerofighter`, `spheroid_dropship`, `aerodyne_dropship`, `mechwarrior` or `battlesuit`. |
-| `movement` | string | `biped`, `quad`, `track`, `wheel`, `hover`, `vtol`, `hull`, `foil`, `fly`, `sub` or `none`. |
+| `class` | string | `mech`, `vehicle`, `vtol`, `naval`, `mechwarrior` or `battlesuit`. |
+| `movement` | string | `biped`, `quad`, `track`, `wheel`, `hover`, `vtol`, `hull`, `foil`, `sub` or `none`. |
 | `tons` | integer | Tonnage. |
-| `walk_mp` | integer | Walking movement points, as the record sheet states them; each is 10.75 km/h. For a mech it is the walking MP and the running MP is walking x 1.5 rounded up (TechManual p. 48); for a vehicle, VTOL or naval unit it is the cruising MP and the flanking MP is cruising x 1.5 rounded up (TechManual p. 100); for an aerospace unit it is the safe thrust and the maximum thrust follows the same way. Infantry and battle armor have no faster gait. The engine rating is tonnage x `walk_mp`. |
+| `walk_mp` | integer | Walking movement points, as the record sheet states them; each is 10.75 km/h. For a mech it is the walking MP and the running MP is walking x 1.5 rounded up (TechManual p. 48); for a vehicle, VTOL or naval unit it is the cruising MP and the flanking MP is cruising x 1.5 rounded up (TechManual p. 100). Infantry and battle armor have no faster gait. The engine rating is tonnage x `walk_mp`. |
 | `jump_mp` | integer | Jumping movement points. Vehicles cannot jump. |
-| `max_speed`, `jump_speed` | number | Top and jumping speeds in km/h, for the few unconstructed units (aerospace, battle armor) whose speed is not whole movement points. Give either the speed or its movement points, not both. Mechs and vehicles must state `walk_mp`. |
+| `max_speed`, `jump_speed` | number | Top and jumping speeds in km/h, for the few unconstructed units, such as battle armor, whose speed is not whole movement points. Give either the speed or its movement points, not both. Mechs and vehicles must state `walk_mp`. |
 | `heat_sinks` | integer | Installed heat sinks, counted as the record sheet counts them ("Heat Sinks: 17 (34)" is 17), not the heat they dissipate. The `[construction]` `heat_sinks` kind sets the dissipation: one heat per single sink, two per double or laser sink (TechManual p. 52; Tactical Operations: Advanced Units & Equipment). Without it a mech carries the engine's ten free sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
 | `radio`, `radio_type`, `radio_range` | integer | Electronics. |
 | `tac_range`, `lrs_range`, `scan_range` | integer | Sensor ranges. |
@@ -156,7 +156,7 @@ checks:
   counts (TechManual pp. 220, 237; Tactical Operations: Advanced Units &
   Equipment).
 - Artemis IV serves every standard LRM, SRM and MML launcher from its location or
-  none; Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
+  none, each controller linked to its own launcher (see [Slots](#slots)); Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
   or the head; a Heavy Gauss Rifle sits in the torsos (TechManual pp. 46, 206,
   210, 218).
 - `OneShot` applies only to LRM, SRM, MRM and Streak SRM launchers and Narc and
@@ -195,7 +195,9 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   advanced armors). Each weapon
   and item takes a slot, as does each ammunition type, the cargo bay and each
   type of transport bay (see below); heat
-  sinks and power amplifiers take none.
+  sinks and power amplifiers take none. The item slots are the whole
+  vehicle's budget: a location has no slot limit of its own, so a turret may
+  list more than twelve entries.
 - Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or
   triple-strength myomer. A VTOL's turret is a chin turret (TacOps AUE p. 160).
 - Everything together may not weigh more than the vehicle. Unspent tonnage is
@@ -305,15 +307,34 @@ Each slot entry places one item in a run of consecutive critical slots:
 
 | Key | Meaning |
 | --- | --- |
-| `at` | A one-based slot such as `12`, or an inclusive run such as `"4-6"`, within slots 1 to 12. |
+| `at` | A one-based slot such as `12`, or an inclusive run such as `"4-6"`. Mech sections hold slots 1 to 12; vehicle and VTOL locations have no per-location limit (slots 1 to 255), since only the vehicle's item slots limit its equipment. |
 | `item` | Equipment name. |
 | `rounds` | Ammunition only: rounds in the bin. |
-| `link` | Non-ammunition only: the slot an Artemis IV or similar system controls. |
+| `link` | Non-ammunition only. Required on every Artemis IV, Artemis V and `ApolloFCS` entry: the one-based slot of the first critical of the launcher it guides, in the same section. |
 | `modes` | Ammunition flags or weapon modes, such as `["RearMount"]` or `["Inferno"]`. |
 
 A run fills every slot with the same item, so `{ at = "1-3", item = "HeatSink" }`
 is three single-slot heat sinks and `{ at = "4-6", item = "IS.ERPPC" }` is one
 three-slot PPC. Overlapping entries are errors.
+
+Fire-control systems name the launcher they guide. Each Artemis IV, Artemis V
+or MRM "Apollo" entry carries a `link` to the first slot of an applicable
+launcher in its own section: a standard LRM, SRM or MML launcher (including
+one-shot and torpedo versions) for Artemis (TechManual p. 206), an MRM launcher
+for Apollo (Tactical Operations: Advanced Units & Equipment p. 142). Because a
+run shares one `link`, give each controller its own entry:
+
+```toml
+slots = [
+    { at = "1-3", item = "IS.LRM-15" },
+    { at = 4, item = "ArtemisIV", link = 1 },
+]
+```
+
+Construction refuses a controller without a link, one whose link is not the
+first slot of an applicable launcher in its section, and two controllers that
+share a launcher. A Mech's Artemis V fills two slots, both linking the same
+launcher; each vehicle entry guides its own launcher.
 
 ## Split mounts
 

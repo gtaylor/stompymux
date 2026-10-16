@@ -27,9 +27,9 @@ armor = 32
 armor = 32
 slots = [
     { at = 1, item = "IS.LRM-15" },
-    { at = 2, item = "ArtemisIV" },
+    { at = 2, item = "ArtemisIV", link = 1 },
     { at = 3, item = "IS.LRM-15" },
-    { at = 4, item = "ArtemisIV" },
+    { at = 4, item = "ArtemisIV", link = 3 },
     { at = "5-6", item = "IS.StreakSRM-2" },
     { at = "7-9", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 10, item = "Ammo_IS.StreakSRM-2", rounds = 50 },

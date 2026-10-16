@@ -86,7 +86,7 @@ impl VehicleSection {
         }
     }
 
-    /// Parse shared vehicle anatomy without accepting BattleMech or aerospace headings.
+    /// Parse shared vehicle anatomy without accepting BattleMech headings.
     pub fn parse(name: &str) -> Result<Self> {
         [
             Self::Left,

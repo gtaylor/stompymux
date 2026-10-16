@@ -49,7 +49,7 @@ slots = [
     { at = 4, item = "IS.ERMediumLaser", modes = ["OnTC"] },
     { at = "5-7", item = "TargetingComputer" },
     { at = "8-9", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
-    { at = 10, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+    { at = 10, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 11, item = "Case" },
     { at = 12, item = "EndoSteel" },
 ]

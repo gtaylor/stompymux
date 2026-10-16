@@ -20,7 +20,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "IS.LRM-15" },
     { at = "6-11", item = "EndoSteel" },
-    { at = 12, item = "ArtemisIV" },
+    { at = 12, item = "ArtemisIV", link = 3 },
 ]
 
 [sections.right_arm]
@@ -36,7 +36,7 @@ rear = 6
 slots = [
     { at = "4-6", item = "IS.LRM-15" },
     { at = "7-10", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 11, item = "ArtemisIV" },
+    { at = 11, item = "ArtemisIV", link = 4 },
     { at = 12, item = "Case" },
 ]
 

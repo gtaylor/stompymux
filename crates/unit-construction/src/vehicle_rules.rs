@@ -63,11 +63,17 @@ pub fn vehicle_maximum_armor(tons: u16) -> u32 {
 
 /// Whether a resolved system claims an item slot. Heat sinks sit deep in the body and take no
 /// space (TechManual p. 104); armor, structure and actuator placeholders are chassis facts
-/// whose slot cost comes from the chassis choice itself (TechManual pp. 101, 105).
+/// whose slot cost comes from the chassis choice itself (TechManual pp. 101, 105); and a
+/// combat vehicle counts an Artemis or MRM "Apollo" fire-control system as part of the
+/// launcher it serves (TechManual p. 206; Tactical Operations: Advanced Units & Equipment
+/// p. 142).
 pub fn occupies_vehicle_slot(system: System) -> bool {
     !matches!(
         system,
-        System::ShoulderOrHip
+        System::ArtemisIv
+            | System::ArtemisV
+            | System::ApolloFcs
+            | System::ShoulderOrHip
             | System::UpperActuator
             | System::LowerActuator
             | System::HandOrFootActuator
@@ -398,6 +404,15 @@ impl VehicleTemplate {
             !rotor,
             "No equipment may be mounted in the rotor (TechManual pp. 98, 106)"
         );
+        // Each Artemis or Apollo entry links the first slot of the launcher it guides in its
+        // own location; every vehicle entry guides its own launcher, Artemis V included.
+        super::fire_control::check_fire_control_links(
+            loadout,
+            &self.sections,
+            VehicleSection::name,
+            1,
+        )?;
+        check_machine_gun_arrays(loadout)?;
         for part in &loadout.systems {
             match part.system {
                 System::JumpJet => {
@@ -409,6 +424,28 @@ impl VehicleTemplate {
         }
         Ok(())
     }
+}
+
+/// Each machine gun array links two to four machine guns of one size class in its location,
+/// and a gun belongs to one array at most (TechManual p. 228).
+fn check_machine_gun_arrays(loadout: &VehicleLoadout) -> Result<()> {
+    let mut linked = std::collections::BTreeSet::new();
+    for array in loadout.machine_gun_arrays() {
+        let name = array.location.section.name();
+        ensure!(
+            super::ARRAY_GUNS.contains(&array.weapon_indices.len()),
+            "A machine gun array in {name} slot {} links {} machine guns; it links two to four of one size class beside it (TechManual p. 228)",
+            array.location.slot + 1,
+            array.weapon_indices.len()
+        );
+        for index in array.weapon_indices {
+            ensure!(
+                linked.insert(index),
+                "A machine gun in {name} is linked to two machine gun arrays (TechManual p. 228)"
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Read-only construction verdict for a vehicle template, the vehicle counterpart of
@@ -986,5 +1023,214 @@ slots = [
         assert_eq!(format_tons(5 * 512), "2.5");
         assert_eq!(format_tons(1024), "1");
         assert_eq!(format_tons(256), "0.25");
+    }
+
+    /// An MRM "Apollo" system serves every MRM launcher from its location and, like Artemis,
+    /// counts as part of the launcher rather than its own item (Tactical Operations: Advanced
+    /// Units & Equipment p. 142; TechManual p. 206).
+    #[test]
+    fn apollo_serves_every_mrm_from_its_location() {
+        // An MRM-10 in place of the SRM-6, with a ton of front armor freed for the system.
+        let mrm = ZHUKOV
+            .replace("IS.SRM-6", "IS.MRM-10")
+            .replace("rounds = 15", "rounds = 24")
+            .replace(
+                "armor = 44\nslots = [\n    { at = 1",
+                "armor = 28\nslots = [\n    { at = 1",
+            );
+        let plain = parse(&mrm).construction_rules().unwrap();
+        let apollo = "\n    { at = 3, item = \"ApolloFCS\", link = 1 },";
+        let guided_source = mrm.replace("rounds = 24 },", &format!("rounds = 24 }},{apollo}"));
+        let guided = parse(&guided_source);
+        let report = guided.construction_rules().unwrap();
+        assert_eq!(report.item_slots, plain.item_slots);
+        assert_eq!(report.mass.design_total, plain.mass.design_total + 1024);
+        let loadout = VehicleLoadout::resolve(&guided).unwrap();
+        assert_eq!(loadout.systems[0].system, System::ApolloFcs);
+        let misplaced = parse(&mrm.replace(
+            "{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },",
+            &format!(
+                "{{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 }},{}",
+                apollo.replace("at = 3", "at = 5")
+            ),
+        ));
+        let refused = rejection(&misplaced);
+        assert!(
+            refused.contains(
+                "The Apollo fire control system in Turret slot 5 links slot 1, which is not the first slot of an MRM launcher in Turret"
+            ),
+            "{refused}"
+        );
+    }
+
+    /// A fire-control system serves only launchers in its own location: a turret launcher
+    /// guided from the turret builds, while one guided from the rear is refused, for Artemis
+    /// IV and V (TechManual p. 206) and the MRM "Apollo" system (Tactical Operations:
+    /// Advanced Units & Equipment p. 142).
+    #[test]
+    fn fire_control_sits_in_its_launchers_location() {
+        // The SRM-6 moves into the turret, whose mass rises half a ton; with a ton of fire
+        // control, 24 points of front armor pay for both.
+        let turret = ZHUKOV
+            .replace("    { at = 1, item = \"IS.SRM-6\" },\n", "")
+            .replace(
+                "armor = 44\nslots = [\n    { at = 2",
+                "armor = 20\nslots = [\n    { at = 2",
+            )
+            .replace(
+                "{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },",
+                "{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },\n    { at = 5, item = \"IS.SRM-6\" },",
+            );
+        let mrm = turret
+            .replace("IS.SRM-6", "IS.MRM-10")
+            .replace("rounds = 15", "rounds = 24");
+        // A controller beside the turret launcher in slot 5, or alone in the rear.
+        let local = |source: &str, controller: &str| {
+            parse(&source.replace(
+                "    { at = 5, item = ",
+                &format!(
+                    "    {{ at = 6, item = \"{controller}\", link = 5 }},\n    {{ at = 5, item = "
+                ),
+            ))
+        };
+        let rear = |source: &str, controller: &str| {
+            parse(&source.replace(
+                "[sections.aft_side]\narmor = 24\n",
+                &format!(
+                    "[sections.aft_side]\narmor = 24\nslots = [{{ at = 1, item = \"{controller}\", link = 5 }}]\n"
+                ),
+            ))
+        };
+        for (source, controller, system) in [
+            (&turret, "ArtemisIV", System::ArtemisIv),
+            (&mrm, "ApolloFCS", System::ApolloFcs),
+        ] {
+            let guided = local(source, controller);
+            guided.construction_rules().unwrap();
+            let loadout = VehicleLoadout::resolve(&guided).unwrap();
+            assert_eq!(loadout.systems[0].system, system);
+            assert_eq!(loadout.systems[0].location.section, VehicleSection::Turret);
+        }
+        let refused = rejection(&rear(&turret, "ArtemisIV"));
+        assert!(
+            refused.contains(
+                "The Artemis IV in Aft_Side slot 1 links slot 5, which is not the first slot of an LRM, SRM or MML launcher in Aft_Side"
+            ),
+            "{refused}"
+        );
+        // Artemis V is Clan technology, so the Inner Sphere chassis declares mixed technology.
+        let mixed = turret.replace("engine = \"ice\"", "engine = \"ice\"\nmixed_tech = true");
+        let refused = rejection(&rear(&mixed, "ArtemisV"));
+        assert!(
+            refused.contains("The Artemis V in Aft_Side slot 1 links slot 5"),
+            "{refused}"
+        );
+        let refused = rejection(&rear(&mrm, "ApolloFCS"));
+        assert!(
+            refused.contains(
+                "The Apollo fire control system in Aft_Side slot 1 links slot 5, which is not the first slot of an MRM launcher in Aft_Side"
+            ),
+            "{refused}"
+        );
+    }
+
+    /// Every fire-control entry names the first slot of the launcher it guides in its own
+    /// location, and no two entries share a launcher (TechManual p. 206).
+    #[test]
+    fn fire_control_links_are_explicit_and_unique() {
+        // A ton of front armor pays for each Artemis IV beside the front SRM-6.
+        let guided = |armor: u16, controllers: &[&str]| {
+            let entries: String = controllers
+                .iter()
+                .map(|entry| format!("\n    {entry},"))
+                .collect();
+            parse(
+                &ZHUKOV
+                    .replace(
+                        "armor = 44\nslots = [\n    { at = 1",
+                        &format!("armor = {armor}\nslots = [\n    {{ at = 1"),
+                    )
+                    .replace("rounds = 15 },", &format!("rounds = 15 }},{entries}")),
+            )
+        };
+        let valid = guided(28, &[r#"{ at = 3, item = "ArtemisIV", link = 1 }"#]);
+        valid.construction_rules().unwrap();
+        let refused = rejection(&guided(28, &[r#"{ at = 3, item = "ArtemisIV" }"#]));
+        assert!(
+            refused.contains("The Artemis IV in Front_Side slot 3 has no launcher link"),
+            "{refused}"
+        );
+        let refused = rejection(&guided(
+            28,
+            &[r#"{ at = 3, item = "ArtemisIV", link = 2 }"#],
+        ));
+        assert!(
+            refused.contains(
+                "The Artemis IV in Front_Side slot 3 links slot 2, which is not the first slot of an LRM, SRM or MML launcher in Front_Side"
+            ),
+            "{refused}"
+        );
+        // Turret slot 1 holds the autocannon; the SRM-6 in front slot 1 is in another section.
+        let refused = rejection(&parse(&ZHUKOV.replace(
+            "rounds = 10 },",
+            "rounds = 10 },\n    { at = 5, item = \"ArtemisIV\", link = 1 },",
+        )));
+        assert!(
+            refused.contains("The Artemis IV in Turret slot 5 links slot 1, which is not the first slot of an LRM, SRM or MML launcher in Turret"),
+            "{refused}"
+        );
+        let refused = rejection(&guided(
+            12,
+            &[
+                r#"{ at = 3, item = "ArtemisIV", link = 1 }"#,
+                r#"{ at = 4, item = "ArtemisIV", link = 1 }"#,
+            ],
+        ));
+        assert!(
+            refused.contains("2 fire-control entries link the")
+                && refused.contains("in Front_Side slot 1"),
+            "{refused}"
+        );
+        // A second SRM-6 in the turret without its own controller breaks all-or-none.
+        let refused = rejection(&parse(
+            &ZHUKOV
+                .replace(
+                    "rounds = 15 },",
+                    "rounds = 15 },\n    { at = 3, item = \"ArtemisIV\", link = 1 },",
+                )
+                .replace(
+                    "rounds = 10 },",
+                    "rounds = 10 },\n    { at = 5, item = \"IS.SRM-6\" },",
+                ),
+        ));
+        assert!(
+            refused.contains("no controller links the") && refused.contains("in Turret slot 5"),
+            "{refused}"
+        );
+    }
+
+    /// A machine gun array links two to four guns of one class beside it in its location and
+    /// takes an item slot (TechManual p. 228).
+    #[test]
+    fn machine_gun_arrays_link_two_to_four_guns() {
+        let guns = |count: u8| {
+            parse(&YELLOW_JACKET.replace(
+                "{ at = 1, item = \"IS.GaussRifle\" },\n    { at = \"2-3\", item = \"Ammo_IS.GaussRifle\", rounds = 8 },",
+                &format!(
+                    "{{ at = \"1-{count}\", item = \"IS.MachineGun\" }},\n    {{ at = {}, item = \"IS.MGA\" }},\n    {{ at = 6, item = \"Ammo_IS.MachineGun\", rounds = 200 }},",
+                    count + 1
+                ),
+            ))
+        };
+        let three = guns(3);
+        let report = three.construction_rules().unwrap();
+        // Three guns, the array and one ammunition type.
+        assert_eq!(report.item_slots, 5);
+        let arrays = VehicleLoadout::resolve(&three)
+            .unwrap()
+            .machine_gun_arrays();
+        assert_eq!(arrays.len(), 1);
+        assert_eq!(arrays[0].weapon_indices.len(), 3);
+        assert!(rejection(&guns(1)).contains("links 1 machine guns"));
     }
 }

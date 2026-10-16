@@ -132,6 +132,11 @@ fn resolve_hex_shot_inner(
         unit.check_spotter_fire(shooter, weapon_index)?;
         readiness.ready
     });
+    // Firing a gun its machine gun array links fires every ready linked gun as one attack
+    // (Total Warfare p. 137), at a hex as at a unit.
+    let volley = super::with_unit!(world.btech.unit(shooter).expect("admitted unit"), |unit| {
+        unit.array_volley(weapon_index)?
+    });
     let super::weapon_geometry::WeaponGeometry {
         weapon,
         submerged,
@@ -181,7 +186,7 @@ fn resolve_hex_shot_inner(
     };
     let target_number = aim.subtotal();
     world.attempt(|world| {
-        let launch = super::coordinate_launch::resolve(
+        let mut launch = super::coordinate_launch::resolve(
             world,
             super::weapon_launch::WeaponLaunchRequest {
                 shooter,
@@ -194,6 +199,16 @@ fn resolve_hex_shot_inner(
                 character_shooter,
             },
             false,
+        )?;
+        // The array's other guns spend their ammunition and recycle with the one fired.
+        let array = super::machine_gun_array::fire_linked_guns(
+            world,
+            shooter,
+            pilot,
+            weapon_index,
+            volley.as_deref(),
+            launch.launched,
+            &mut launch.launch_notices,
         )?;
         let intent = match aim.mode {
             HexTargetMode::Ignite => WoodlandIntent::Ignite,
@@ -228,18 +243,18 @@ fn resolve_hex_shot_inner(
                         ams_engaged: false,
                         indirect: false,
                         apollo: weapon.is_mrm()
-                            && world
-                                .btech
-                                .constructed_units()
-                                .get(&shooter)
-                                .map(|unit| unit.apollo_operational(weapon_index))
-                                .transpose()?
-                                .unwrap_or(false),
-                        array: None,
+                            && super::artemis::apollo_operational(world, shooter, weapon_index)?,
+                        array,
                     },
                     super::dice::unit_dice_mut(world, shooter)?,
                 )?;
                 cluster_roll = packets.cluster_roll;
+                // An array's hits all strike one place, so they land as one blow.
+                let packets_damage = if packets.single_location {
+                    vec![packets.damage.iter().sum()]
+                } else {
+                    packets.damage
+                };
                 if aim.mode == HexTargetMode::Hex
                     && launch.expenditure.ammunition_mode.is_thunder()
                     && weapon.profile().missiles > 0
@@ -251,14 +266,14 @@ fn resolve_hex_shot_inner(
                         map,
                         coordinate,
                         launch.expenditure.ammunition_mode,
-                        packets.damage.iter().sum(),
+                        packets_damage.iter().sum(),
                     )?;
                 } else if aim.mode != HexTargetMode::UnitAtHex {
                     let damage = if launch.expenditure.ammunition_mode == AmmunitionMode::Inferno {
                         // Inferno terrain exposure occurs once with no clearing or building damage.
                         vec![0]
                     } else {
-                        packets.damage
+                        packets_damage
                     };
                     for damage in damage {
                         if aim.mode == HexTargetMode::Building {
@@ -298,10 +313,13 @@ fn resolve_hex_shot_inner(
                 let damage = if let Some(damage) = launch.expenditure.gatling_damage {
                     u16::from(damage)
                 } else {
+                    // A missed array volley puts every gun's rounds into the hex.
+                    let guns = volley.as_ref().map_or(1, Vec::len) as u16;
                     weapon
                         .damage_groups_at_range(None, aim.modifiers.distance)?
                         .into_iter()
-                        .sum()
+                        .sum::<u16>()
+                        * guns
                 };
                 terrain.push(resolve_woodland_attack(
                     world,

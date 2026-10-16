@@ -461,7 +461,7 @@ pub fn inspect_raw_template_inventory(
             .get(section)
             .context("raw template section is missing")?;
         let mut previous = None;
-        for slot in 0..12_u8 {
+        for slot in 0..definition.listed_slots() {
             let Some(raw) = definition.criticals.get(&slot) else {
                 previous = None;
                 continue;
@@ -943,7 +943,7 @@ pub fn inspect_vehicle_weapons(unit: &super::Vehicle) -> Result<Vec<InspectionWe
         .collect()
 }
 
-/// Inspect all twelve slots of a live vehicle section.
+/// Inspect every slot of a live vehicle section: twelve, or through its last occupied slot.
 pub fn inspect_vehicle_criticals(
     unit: &super::Vehicle,
     section: super::VehicleSection,
@@ -966,8 +966,9 @@ pub fn inspect_vehicle_criticals(
             })
             .collect());
     };
-    let mut rows = Vec::with_capacity(12);
-    for slot in 0..12_u8 {
+    let slots = definition.listed_slots();
+    let mut rows = Vec::with_capacity(usize::from(slots));
+    for slot in 0..slots {
         let location = super::VehicleCriticalLocation { section, slot };
         let raw = definition.criticals.get(&slot);
         let weapon = loadout
@@ -1062,7 +1063,7 @@ pub fn inspect_vehicle_inventory(
             continue;
         };
         let mut previous = None;
-        for slot in 0..12_u8 {
+        for slot in 0..definition.listed_slots() {
             let location = super::VehicleCriticalLocation { section, slot };
             let Some(raw) = definition.criticals.get(&slot) else {
                 previous = None;

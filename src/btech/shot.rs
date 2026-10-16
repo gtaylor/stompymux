@@ -430,16 +430,15 @@ fn resolve_shot_inner(
         Some(prepared),
     )?;
     // The array's other guns spend their ammunition and recycle with the one fired.
-    if let Some(guns) = &volley {
-        for &gun in guns.iter().filter(|gun| **gun != weapon_index) {
-            super::readiness::use_weapon(&mut candidate, shooter, pilot, gun, launched, None)?;
-        }
-        launch_notices.push(super::Notice {
-            unit: shooter,
-            text: format!("Your machine gun array fires {} guns together.", guns.len()),
-        });
-    }
-    let array = volley.as_ref().map(|guns| guns.len() as u8);
+    let array = super::machine_gun_array::fire_linked_guns(
+        &mut candidate,
+        shooter,
+        pilot,
+        weapon_index,
+        volley.as_deref(),
+        launched,
+        &mut launch_notices,
+    )?;
     let beacon = weapon.beacon_kind(expenditure.ammunition_mode);
     let pod = beacon.is_some();
     let aimed = super::aimed_hit::prepare(

@@ -151,6 +151,16 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
                         .map_err(|e| error::failure("btech.operation.failed", e))?,
                 )?,
             )?;
+            state.set(
+                "machine_gun_arrays",
+                detached(
+                    lua,
+                    &vehicle
+                        .loadout()
+                        .map_err(|e| error::failure("btech.operation.failed", e))?
+                        .machine_gun_arrays(),
+                )?,
+            )?;
             state.set("beacons", detached(lua, vehicle.beacons())?)?;
             state.set("pod_removal", detached(lua, &vehicle.pod_removal())?)?;
             state.set("target_lock", detached(lua, &vehicle.target_selection())?)?;

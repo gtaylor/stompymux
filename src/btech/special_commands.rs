@@ -14,14 +14,15 @@ pub enum SpecialType {
 }
 
 /// Unit classes accepted by the reference's signed command masks.
+///
+/// Each discriminant is the class's bit in `special_commands.json` masks; bits 4 and 8 are
+/// unassigned and no catalogue mask sets them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i16)]
 pub enum CommandClass {
     Unknown = 0,
     Mech = 1,
     Ground = 2,
-    Aero = 4,
-    Dropship = 8,
     Vtol = 16,
     Naval = 32,
     BattleSuit = 64,
@@ -117,7 +118,7 @@ mod tests {
     #[test]
     fn catalogue_order_restrictions_and_dispatch_are_shared() {
         for (kind, count) in [
-            (SpecialType::Unit, 192),
+            (SpecialType::Unit, 187),
             (SpecialType::Debug, 9),
             (SpecialType::Map, 25),
             (SpecialType::Autopilot, 7),
@@ -162,7 +163,7 @@ mod tests {
 
     /// Signed masks distinguish absent records, unknown classes, inclusion and exclusion.
     #[test]
-    fn signed_masks_match_all_eight_classes() {
+    fn signed_masks_match_every_class() {
         for mask in -255_i16..=255 {
             let command = SpecialCommand {
                 class_mask: mask,
@@ -176,8 +177,6 @@ mod tests {
             for class in [
                 CommandClass::Mech,
                 CommandClass::Ground,
-                CommandClass::Aero,
-                CommandClass::Dropship,
                 CommandClass::Vtol,
                 CommandClass::Naval,
                 CommandClass::BattleSuit,

@@ -142,7 +142,8 @@ fn vehicle_catalogue_uses_shared_modes_and_supply() {
     );
 }
 
-/// Unknown equipment and invalid modes produce precise diagnostics rather than partial loadouts.
+/// Unknown equipment, invalid modes and a slot past the vehicle limit produce precise
+/// diagnostics rather than partial loadouts. Slots past twelve are legal on vehicles.
 #[test]
 fn vehicle_loadout_rejects_unknown_equipment_and_bad_slots() {
     for (equipment, data, modes, slot) in [
@@ -150,7 +151,7 @@ fn vehicle_loadout_rejects_unknown_equipment_and_bad_slots() {
         ("IS.MediumLaser", "-", vec!["Cluster"], 0),
         ("Case", "-", vec!["Hotload"], 0),
         ("IS.MediumLaser", "unknown", vec![], 0),
-        ("IS.MediumLaser", "-", vec![], 12),
+        ("IS.MediumLaser", "-", vec![], VEHICLE_SECTION_SLOT_LIMIT),
     ] {
         let mut template =
             VehicleTemplate::parse("Demolisher", include_str!("../game/units/Demolisher.toml"))

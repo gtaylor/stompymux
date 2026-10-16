@@ -505,15 +505,14 @@ bins; ordinary ammunition
 is not substituted when those bins are empty. Artemis adds two to the missile
 hit-table roll, combined with the glancing-hit adjustment and capped at twelve.
 Spotter-directed indirect fire gets no Artemis or Narc bonus (Total Warfare
-pp. 130, 139). Controllers link within their own section. Mechs can also use a head controller
-for a center-torso launcher; ground vehicles can use a rear controller for a
-turret launcher. VTOL controllers must be in the launcher’s section.
+pp. 130, 139). On Mechs, vehicles and VTOLs alike, a controller sits in its
+launcher’s own section and serves only launchers there (TechManual p. 206).
 
-An MRM "Apollo" fire control system linked to an MRM launcher cancels the
-MRM's +1 to hit and takes one from its Cluster Hits roll (never below 2); it
-needs no special ammunition and ECM does not affect it. Once destroyed, the
-launcher fires as a plain MRM (Tactical Operations: Advanced Units & Equipment
-p. 143).
+An MRM "Apollo" fire control system linked to an MRM launcher in its own
+section cancels the MRM's +1 to hit and takes one from its Cluster Hits roll
+(never below 2), on Mechs, vehicles and VTOLs alike; it needs no special
+ammunition and ECM does not affect it. Once destroyed, the launcher fires as a
+plain MRM (Tactical Operations: Advanced Units & Equipment p. 143).
 
 `unjam <selection>` begins a 60-second attempt to clear a jammed ammunition feed.
 You must be walking or slower, on the ground, with no weapons recycling. Only
@@ -713,13 +712,18 @@ seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
 ### Machine gun arrays
 
 A machine gun array links the two to four machine guns of one size class in the
-slots directly above it in its location (or, with none above, directly below).
+slots directly above it in its location (or, with none above, directly below),
+on a Mech, vehicle or VTOL.
 Firing any linked gun fires every linked gun that is ready and not set to
 rapid fire, as one attack: one to-hit roll, then a roll on the Cluster Hits
 Table column for the number of guns, every hit striking one location. Each gun
-spends its own round and recycles. A gun in rapid fire, or one left alone after
-the others are destroyed or recycling, fires by itself, and so does every gun
-once the array is destroyed (Total Warfare p. 137).
+spends its own round and recycles. A shot at a hex fires the array the same way,
+its hits striking the hex as one blow. When the bins cannot feed every gun, the
+gun you fired draws first and only the guns that get a round fire; the Cluster
+Hits column follows the guns that fired, and you are told how many did. A gun
+in rapid fire, or one left alone after the others are destroyed or recycling,
+fires by itself, and so does every gun once the array is destroyed (Total
+Warfare p. 137).
 
 ### Torso-mounted cockpits
 
@@ -752,7 +756,8 @@ yours that holds a cluster loses it on 9 or more on 2d6.
 A-Pods and B-Pods are one-shot defenses against infantry, which this game does
 not field, so neither has a target and firing one does nothing. A B-Pod weighs
 a ton in one slot anywhere on the Mech (TechManual p. 204); a critical hit on
-it releases 2 points of damage in its location (Total Warfare p. 130).
+it, on a Mech or a vehicle, releases 2 points of damage in its location (Total
+Warfare p. 130).
 
 ### Narc beacons
 

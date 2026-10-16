@@ -82,6 +82,8 @@ fn section(
         "unit runtime state is unavailable",
     ))
 }
+/// Highest one-based slot a section accepts: the chassis count for a Mech section, and the
+/// vehicle limit for a vehicle section, which has no per-location slot count.
 fn slots(shared: &SharedWorld, id: ObjectId, section: Section) -> i64 {
     match section {
         Section::Mech(section) => shared
@@ -90,7 +92,7 @@ fn slots(shared: &SharedWorld, id: ObjectId, section: Section) -> i64 {
             .constructed_units()
             .get(&id)
             .map_or(12, |unit| unit.chassis().critical_slots(section) as i64),
-        Section::Vehicle(_) => 12,
+        Section::Vehicle(_) => i64::from(crate::btech::VEHICLE_SECTION_SLOT_LIMIT),
     }
 }
 fn optional_bool(record: &Table, name: &str, argument: usize) -> mlua::Result<bool> {

@@ -3,7 +3,8 @@ use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// Supported chassis share the same report fixtures, including an authored stationary vehicle.
+/// Supported chassis share the same report fixtures, including an authored stationary vehicle
+/// and the Ontos, whose turret holds thirteen entries.
 fn templates() -> Vec<String> {
     let vehicle = include_str!("../game/units/Demolisher.toml");
     vec![
@@ -16,6 +17,7 @@ fn templates() -> Vec<String> {
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 3", "walk_mp = 0"),
         include_str!("../game/units/Kestrel.toml").into(),
+        include_str!("../game/units/Ontos-58.toml").into(),
     ]
 }
 
@@ -71,7 +73,7 @@ async fn section_reports_preserve_all_supported_chassis() {
                 .sections
                 .iter()
                 .filter(|(_, layout)| layout.internal > 0)
-                .map(|(section, _)| (section.name().to_owned(), 12))
+                .map(|(section, layout)| (section.name().to_owned(), layout.listed_slots()))
                 .collect(),
         };
         let (_dir, config, mut world, id) = fixture(template).await;
@@ -114,7 +116,7 @@ async fn section_reports_preserve_all_supported_chassis() {
             for line in rendered.lines() {
                 assert!(native.contains(line), "{native} missing {line}");
             }
-            assert_eq!(rendered.lines().count(), 1 + usize::from(*count / 2));
+            assert_eq!(rendered.lines().count(), 1 + usize::from(count.div_ceil(2)));
             let mutation = format!(
                 "local r=btech.unit.criticals({}, '{}'); r.slots[1].equipment='changed'",
                 id.0, section
@@ -284,6 +286,63 @@ async fn critical_report_material_conditions() {
         .find(|line| line.contains("Destroyed"))
         .unwrap();
     assert!(!line.contains("[000/"));
+}
+
+/// A vehicle section past twelve entries lists every slot, and a critical hit on the
+/// thirteenth disables the Artemis IV it holds.
+#[tokio::test]
+async fn vehicle_sections_list_slots_past_twelve() {
+    let (_dir, config, mut world, id) = fixture(
+        UnitTemplate::parse("Ontos-58", include_str!("../game/units/Ontos-58.toml")).unwrap(),
+    )
+    .await;
+    let turret = VehicleSection::Turret.name();
+    let report = battle_critical_report(&world, id, turret).unwrap();
+    assert_eq!(report.slots.len(), 13);
+    assert_eq!(report.slots[12].equipment, "ArtemisIV");
+    assert_eq!(report.slots[12].controls_slot, Some(12));
+    let text = battle_critical_status(&world, id, turret).unwrap();
+    assert_eq!(text.lines().count(), 1 + 7);
+    let last = text.lines().last().unwrap();
+    assert!(last.starts_with(" 7 ") && last.contains("|"), "{text}");
+    assert!(
+        text.lines().any(|line| line.contains("13 ArtemisIV")),
+        "{text}"
+    );
+    let unit = &world.btech.vehicles()[&id];
+    let srm4 = unit
+        .loadout()
+        .unwrap()
+        .weapons
+        .iter()
+        .position(|mount| mount.weapon == Weapon::Srm4)
+        .unwrap();
+    assert!(unit.artemis_operational(srm4).unwrap());
+    let location = VehicleCriticalLocation {
+        section: VehicleSection::Turret,
+        slot: 12,
+    };
+    destroy_battle_vehicle_critical(&mut world, id, location).unwrap();
+    assert!(
+        !world.btech.vehicles()[&id]
+            .artemis_operational(srm4)
+            .unwrap()
+    );
+    let row = &battle_critical_report(&world, id, turret).unwrap().slots[12];
+    assert_eq!(row.condition, EquipmentCondition::Destroyed);
+    world.validate(&config).unwrap();
+    let saved = world.clone();
+    persistence::save(&config.database(), &saved).await.unwrap();
+    let loaded = persistence::load(&config.database()).await.unwrap();
+    assert_eq!(
+        battle_critical_report(&loaded, id, turret).unwrap(),
+        battle_critical_report(&saved, id, turret).unwrap()
+    );
+    assert!(
+        !loaded.btech.vehicles()[&id]
+            .artemis_operational(srm4)
+            .unwrap()
+    );
 }
 
 /// Live one-shot state, bin capacities, Artemis links and construction names survive formatting.

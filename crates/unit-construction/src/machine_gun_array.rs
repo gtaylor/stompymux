@@ -1,6 +1,6 @@
 //! Machine gun arrays: a one-slot module that links two to four machine guns of one size
 //! class in its location so they fire as one attack (TechManual p. 228; Total Warfare p. 137).
-use super::{CriticalLocation, MechLoadout, System, Weapon};
+use super::{CriticalLocation, ResolvedLoadout, System, Weapon};
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -28,20 +28,23 @@ impl Weapon {
 /// Fewest and most machine guns an array links.
 pub const ARRAY_GUNS: std::ops::RangeInclusive<usize> = 2..=4;
 
-/// One installed machine gun array and the machine guns it links.
+/// One installed machine gun array and the machine guns it links, at a BattleMech location
+/// unless another location type is given, as vehicles do.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct MachineGunArray {
-    pub location: CriticalLocation,
+pub struct MachineGunArray<L = CriticalLocation> {
+    pub location: L,
     /// Indices of the linked machine guns in the loadout's weapons, nearest first.
     pub weapon_indices: Vec<usize>,
 }
 
-impl MechLoadout {
+impl<S: Copy + Ord> ResolvedLoadout<CriticalLocation<S>> {
     /// Each array with the guns it links: the run of up to four machine guns of one size
     /// class in the slots directly above it in its location, or, when none sit above it, in
-    /// the slots directly below. Construction checks that each links two to four guns.
-    pub fn machine_gun_arrays(&self) -> Vec<MachineGunArray> {
-        let guns: BTreeMap<CriticalLocation, (usize, super::MachineGunClass)> = self
+    /// the slots directly below. A vehicle location's item list is read the same way, so its
+    /// array sits beside the guns it links. Construction checks that each links two to four
+    /// guns.
+    pub fn machine_gun_arrays(&self) -> Vec<MachineGunArray<CriticalLocation<S>>> {
+        let guns: BTreeMap<CriticalLocation<S>, (usize, super::MachineGunClass)> = self
             .weapons
             .iter()
             .enumerate()
@@ -50,7 +53,7 @@ impl MechLoadout {
                 Some((mount.criticals[0], (index, class)))
             })
             .collect();
-        let run = |location: CriticalLocation, step: i16| {
+        let run = |location: CriticalLocation<S>, step: i16| {
             let mut indices = Vec::new();
             let mut class = None;
             let mut slot = i16::from(location.slot) + step;
@@ -91,8 +94,7 @@ impl MechLoadout {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::MechTemplate;
+    use crate::{MechLoadout, MechTemplate};
 
     /// A Jenner whose right torso holds `slots`.
     fn loadout(slots: &str) -> MechLoadout {

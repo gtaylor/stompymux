@@ -430,6 +430,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `beacons`: `table<string, string[]>` — Attached effects keyed by surviving vehicle section.
 - `ams_enabled`: `boolean` — Saved automatic anti-missile defense switch.
 - `artemis`: `ArtemisController[]` — Installed controllers and resolved links.
+- `machine_gun_arrays`: `MachineGunArray[]` — Installed machine gun arrays and the guns each links.
 - `unjam`: `Unjam|nil` — Active feed clearing attempt.
 - `weapon_recycle`: `table<integer, integer>` — Countdown seconds by zero-based weapon index.
 - `spent_launchers`: `integer[]` — Expended zero-based one-shot weapon indices.
@@ -1227,13 +1228,13 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 ## ArtemisController
 
 - `location`: `{section: MechSectionName|VehicleSectionName, slot: integer}` — Zero-based controller position.
-- `link`: `integer` — One-based template launcher slot; zero is unassigned.
+- `link`: `integer` — One-based template slot of the guided launcher's first critical; construction requires one.
 - `weapon_indices`: `integer[]` — Zero-based missile mounts matching the link.
 - `operational`: `boolean` — Controller is available under the unit’s equipment damage rules.
 
 ## MachineGunArray
 
-- `location`: `{section: MechSectionName, slot: integer}` — Zero-based array module position.
+- `location`: `{section: MechSectionName|VehicleSectionName, slot: integer}` — Zero-based array module position.
 - `weapon_indices`: `integer[]` — Zero-based machine gun mounts the array links, two to four of one size class.
 
 ## Unjam
@@ -1286,7 +1287,7 @@ Alias: `'empty'|'operational'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'
 
 - `section`: `string` — Stable Mech or vehicle section identity.
 - `name`: `string` — Chassis-specific display heading.
-- `slots`: `CriticalInspection[]` — All six or twelve physical slots, including empty ones.
+- `slots`: `CriticalInspection[]` — Every physical slot, including empty ones: six or twelve in a Mech section, and twelve or through the last occupied slot in a vehicle section.
 
 ## ElectronicMode
 

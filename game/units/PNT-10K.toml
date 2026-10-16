@@ -49,7 +49,7 @@ armor = 14
 rear = 7
 slots = [
     { at = 11, item = "IS.SRM-4", modes = ["Artemis/Mine"] },
-    { at = 12, item = "ArtemisIV" },
+    { at = 12, item = "ArtemisIV", link = 11 },
 ]
 
 [sections.left_leg]

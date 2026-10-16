@@ -42,7 +42,7 @@ rear = 10
 slots = [
     { at = 1, item = "JumpJet" },
     { at = "2-5", item = "CL.LRM-20" },
-    { at = 6, item = "ArtemisIV" },
+    { at = 6, item = "ArtemisIV", link = 2 },
     { at = "7-9", item = "Ammo_CL.GaussRifle", rounds = 8 },
     { at = "10-12", item = "FerroFibrous" },
 ]

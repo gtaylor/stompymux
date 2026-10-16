@@ -197,16 +197,17 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
         total += (4000 * tons) as f64;
     }
     let (rating, suspension) = inspect_raw_template_engine(template);
-    let engine_base = if raw_flag(template, "CompactEngine_Tech") {
-        10000_u64
+    // An internal combustion engine is never a fusion family (TechManual p. 277).
+    let engine_base = if ice {
+        1250_u64
+    } else if raw_flag(template, "CompactEngine_Tech") {
+        10000
     } else if raw_flag(template, "LightEngine_Tech") {
         15000
     } else if raw_flag(template, "XLEngine_Tech") {
         20000
     } else if raw_flag(template, "XXL_Tech") {
         100000
-    } else if ice {
-        1250
     } else {
         5000
     };
@@ -298,10 +299,7 @@ pub fn raw_template_base_cost(prices: &PartPrices, template: &RawTemplate) -> Re
             }
             Ok(final_cost(total * 0.75))
         }
-        RawUnitClass::SpheroidDropship
-        | RawUnitClass::AeroFighter
-        | RawUnitClass::MechWarrior
-        | RawUnitClass::AerodyneDropship => Ok(0),
+        RawUnitClass::MechWarrior => Ok(0),
     }
 }
 
@@ -401,7 +399,13 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
         } else {
             300000
         }) as f64;
-    let engine_base = if flag(template, "CompactEngine_Tech") {
+    // A declared internal combustion engine takes precedence over the fusion family the slot
+    // inventory suggests: a center torso with fewer than four engine slots infers a compact
+    // fusion engine, but an ICE is never one (TechManual p. 277; `Construction::from_flags`
+    // resolves the same way).
+    let engine_base = if flag(template, "ICEEngine_Tech") {
+        1250
+    } else if flag(template, "CompactEngine_Tech") {
         10000
     } else if flag(template, "LightEngine_Tech") {
         15000
@@ -409,8 +413,6 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
         20000
     } else if flag(template, "XXL_Tech") {
         100000
-    } else if flag(template, "ICEEngine_Tech") {
-        1250
     } else {
         5000
     };
@@ -556,7 +558,10 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
         total += (4000 * tons) as f64
     }
     let (rating, suspension) = inspection_vehicle_engine_rating(template)?;
-    let base = if flag_vehicle(template, "CompactEngine_Tech") {
+    // An internal combustion engine is never a fusion family (TechManual p. 277).
+    let base = if ice {
+        1250
+    } else if flag_vehicle(template, "CompactEngine_Tech") {
         10000
     } else if flag_vehicle(template, "LightEngine_Tech") {
         15000
@@ -564,8 +569,6 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
         20000
     } else if flag_vehicle(template, "XXL_Tech") {
         100000
-    } else if ice {
-        1250
     } else {
         5000
     };
@@ -654,6 +657,63 @@ fn flag_vehicle(template: &VehicleTemplate, name: &str) -> bool {
 mod tests {
     use super::*;
 
+    /// The server's PARITY template fixture (`tests/fixtures/btech/units/PARITY.toml`).
+    const PARITY: &str = r#"name = "Parity Probe"
+class = "mech"
+movement = "biped"
+tons = 75
+walk_mp = 4
+heat_sinks = 10
+
+[construction]
+tech_base = "inner_sphere"
+engine = "ice"
+engine_rating = 300
+
+[sections.left_arm]
+armor = 10
+internals = 5
+explicit = true
+slots = [
+    { at = "1-3", item = "IS.PPC" },
+]
+
+[sections.right_arm]
+armor = 11
+internals = 6
+explicit = true
+
+[sections.left_torso]
+armor = 12
+internals = 7
+rear = 3
+
+[sections.right_torso]
+armor = 13
+internals = 8
+rear = 4
+
+[sections.center_torso]
+armor = 20
+internals = 12
+rear = 5
+explicit = true
+
+[sections.left_leg]
+armor = 14
+internals = 9
+explicit = true
+
+[sections.right_leg]
+armor = 15
+internals = 10
+explicit = true
+
+[sections.head]
+armor = 9
+explicit = true
+"#;
+
     fn jenner() -> MechTemplate {
         MechTemplate::parse("JR7-D", include_str!("../tests/fixtures/JR7-D.toml")).unwrap()
     }
@@ -669,6 +729,23 @@ mod tests {
         assert_eq!(
             template_base_cost(&PartPrices::new(), &jenner()).unwrap(),
             3_161_925
+        );
+    }
+
+    /// The PARITY fixture: an ICE Mech whose center torso lists no engine slots, which would
+    /// otherwise infer a compact fusion engine, prices its declared ICE. By hand from TechManual
+    /// pp. 277-285: structure 400 x 75 = 30,000, cockpit 200,000, life support 50,000, sensors
+    /// and musculature 2,000 x 75 = 150,000 each, a 3-ton gyro 900,000, the 300 ICE
+    /// 1,250 x 300 x 75 / 75 = 375,000, ten sinks with a non-fusion engine 20,000, 116 armor
+    /// points (7.5 tons) 75,000 and a PPC 200,000. It lists no actuators. The 2,150,000 total
+    /// times 1.75 is 3,762,500.
+    #[test]
+    fn declared_ice_engine_outranks_an_inferred_compact_engine() {
+        let template = MechTemplate::parse("PARITY", PARITY).unwrap();
+        assert!(flag(&template, "CompactEngine_Tech"));
+        assert_eq!(
+            template_base_cost(&PartPrices::new(), &template).unwrap(),
+            3_762_500
         );
     }
 

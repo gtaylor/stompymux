@@ -22,13 +22,7 @@ fn shipped_mech_templates_pass_construction() {
     let mut rejected = Vec::new();
     for path in entries {
         let source = std::fs::read_to_string(&path).unwrap();
-        // DropShips and other non-Mech classes the parser refuses share the `mech` class
-        // spelling; only biped and quad chassis are BattleMechs.
-        if !source.lines().any(|line| line == "class = \"mech\"")
-            || !source
-                .lines()
-                .any(|line| line == "movement = \"biped\"" || line == "movement = \"quad\"")
-        {
+        if !source.lines().any(|line| line == "class = \"mech\"") {
             continue;
         }
         let reference = path.file_stem().unwrap().to_str().unwrap();

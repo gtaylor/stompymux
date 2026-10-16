@@ -277,14 +277,14 @@ pub use stompymux_unit_construction::{
     PartForm, PartKind, PartNames, PartPrices, PhysicalBattleValue, RangeBracket, RawMovement,
     RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout, SectionDefinition, System,
     SystemContext, SystemCritical, TechBase, Technology, TemplateCheck, TemplateRegistryCache,
-    UnitTemplate, VehicleCriticalLocation, VehicleEngine, VehicleLoadout, VehicleMass,
-    VehicleMaterial, VehicleMovement, VehiclePowerplant, VehicleSection, VehicleTemplate,
-    WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount, WeaponProfile, WeaponRange,
-    administrative_technology, administrative_template_movement, administrative_template_tonnage,
-    armor_mass, cargo_space_mass, check_template, edit_special, engine_mass,
-    finalize_raw_load_specials, flag_spells_technology, half_ton, inspect_raw_template_armor,
-    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_weapons,
-    inspection_ammunition_modes, inspection_canonical_mech_internal,
+    UnitTemplate, VEHICLE_SECTION_SLOT_LIMIT, VehicleCriticalLocation, VehicleEngine,
+    VehicleLoadout, VehicleMass, VehicleMaterial, VehicleMovement, VehiclePowerplant,
+    VehicleSection, VehicleTemplate, WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount,
+    WeaponProfile, WeaponRange, administrative_technology, administrative_template_movement,
+    administrative_template_tonnage, armor_mass, cargo_space_mass, check_template, edit_special,
+    engine_mass, finalize_raw_load_specials, flag_spells_technology, half_ton,
+    inspect_raw_template_armor, inspect_raw_template_criticals, inspect_raw_template_engine,
+    inspect_raw_template_weapons, inspection_ammunition_modes, inspection_canonical_mech_internal,
     inspection_compatible_template, inspection_compatible_vehicle_template,
     inspection_configured_technology, inspection_configured_technology_attributes,
     inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
@@ -299,10 +299,10 @@ pub use stompymux_unit_construction::{
     validate_unit_metadata, vehicle_template_base_cost, write_template, write_template_speed,
 };
 pub use stompymux_unit_construction::{
-    ROTOR_MAXIMUM_ARMOR, VEHICLE_MAXIMUM_ENGINE_RATING, VEHICLE_MINIMUM_ENGINE_RATING,
-    VehicleConstruction, VehicleTemplateCheck, check_vehicle_template, format_tons,
-    needs_power_amplifier, occupies_vehicle_slot, turret_mass, vehicle_maximum_armor,
-    vehicle_power_amplifier_mass,
+    FireControl, ROTOR_MAXIMUM_ARMOR, VEHICLE_MAXIMUM_ENGINE_RATING, VEHICLE_MINIMUM_ENGINE_RATING,
+    VehicleConstruction, VehicleTemplateCheck, check_vehicle_template, fire_control_link,
+    format_tons, is_fire_control, needs_power_amplifier, occupies_vehicle_slot, turret_mass,
+    vehicle_maximum_armor, vehicle_power_amplifier_mass,
 };
 
 pub(crate) use motion::set_speed_autopilot;
@@ -825,14 +825,15 @@ pub(crate) use unit_operations_contract::{
     set_unit_weapon_modes, unit_piloting_check_action,
 };
 mod admin_contract;
+use admin_contract::section_destroyed;
 pub use admin_contract::{
-    AdministrativeRepairKind, ReattachHull, administrative_assigned_pilot,
-    administrative_is_fixable, administrative_section_info, administrative_section_valid,
-    administrative_unit_class, administrative_unit_movement, administrative_unit_tonnage,
-    apply_administrative_repair, clear_administrative_technologies, set_administrative_armor,
-    set_administrative_assigned_pilot, set_administrative_cargo, set_administrative_heat_sinks,
-    set_administrative_movement_type, set_administrative_radio_quality, set_administrative_scalar,
-    set_administrative_technology, set_administrative_unit_type,
+    AdministrativeRepairKind, administrative_assigned_pilot, administrative_is_fixable,
+    administrative_section_info, administrative_section_valid, administrative_unit_class,
+    administrative_unit_movement, administrative_unit_tonnage, apply_administrative_repair,
+    clear_administrative_technologies, set_administrative_armor, set_administrative_assigned_pilot,
+    set_administrative_cargo, set_administrative_heat_sinks, set_administrative_movement_type,
+    set_administrative_radio_quality, set_administrative_scalar, set_administrative_technology,
+    set_administrative_unit_type,
 };
 mod unit_configuration;
 pub use unit_configuration::{
