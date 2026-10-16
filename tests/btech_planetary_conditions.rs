@@ -73,6 +73,51 @@ async fn magma_heats_and_deep_snow_cools_mechs() {
     assert_eq!(cooling('+').await, cooling('.').await + 1.0);
 }
 
+/// Standing in Depth 1 water puts only the leg heat sinks under: each dissipates double, so a
+/// Clan double heat sink in a leg adds two points, not one per critical slot, and a sink the
+/// pilot shut off adds nothing (Total Warfare p. 159).
+#[tokio::test]
+async fn wading_doubles_only_switched_on_leg_heat_sinks() {
+    let source = include_str!("fixtures/btech/units/MadCat-Prime.toml")
+        .replacen(
+            "    { at = \"4-5\", item = \"HeatSink\" },\n    { at = 6, item = \"CL.ERLargeLaser\" },",
+            "    { at = \"4-5\", item = \"EndoSteel\" },\n    { at = 6, item = \"CL.ERLargeLaser\" },",
+            1,
+        )
+        .replacen(
+            "[sections.left_leg]\narmor = 32\nslots = [\n    { at = \"5-6\", item = \"EndoSteel\" },",
+            "[sections.left_leg]\narmor = 32\nslots = [\n    { at = \"5-6\", item = \"HeatSink\" },",
+            1,
+        );
+    let template = MechTemplate::parse("MadCat", &source).unwrap();
+    let rates = |terrain: &'static str, shut_off: u16| {
+        let template = template.clone();
+        async move {
+            let row = terrain.repeat(12);
+            let source = format!("12 12\n{}", format!("{row}\n").repeat(12));
+            let (_dir, _config, mut world, id) = fixture_assets(&source, template).await;
+            set_battle_heat_cutoff(&mut world, id, ObjectId(1), shut_off).unwrap();
+            for _ in 0..31 {
+                if !world.btech.constructed_units()[&id].heat_cutoff().pending() {
+                    break;
+                }
+                advance_battle_heat(&mut world);
+            }
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.heat_cutoff().shut_off, shut_off);
+            assert_eq!(unit.working_heat_sinks(), 17);
+            unit.heat_rates(&world).dissipation
+        }
+    };
+    for (shut_off, extra) in [(0, 2.0), (16, 2.0), (17, 0.0)] {
+        assert_eq!(
+            rates("~1", shut_off).await - rates(".0", shut_off).await,
+            extra,
+            "{shut_off} sinks shut off"
+        );
+    }
+}
+
 /// Every piloting roll a unit makes picks up its hex's Tactical Operations modifier and gale
 /// penalties, which differ between 'Mechs, tracked vehicles and hovercraft.
 #[tokio::test]

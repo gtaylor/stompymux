@@ -159,11 +159,15 @@ impl Mech {
         if tile.immerses(elevation) {
             // Heat sinks under water dissipate twice as much, up to six extra points a turn
             // (Total Warfare p. 159). Wading puts only the leg sinks under; deeper water, or
-            // lying in it, puts them all under.
+            // lying in it, puts them all under. Shut-off sinks dissipate nothing, so the pilot
+            // is taken to have switched off sinks above the water first.
             let wading = elevation == i32::from(tile.water_line()) - 1;
-            let points_each = f64::from(self.heat_sink_points_each());
+            let points_each = self.heat_sink_points_each();
             let submerged_points = if wading && self.posture() != super::Posture::Prone {
-                self.leg_heat_sinks() as f64 * points_each
+                let switched_on = self
+                    .working_heat_sinks()
+                    .saturating_sub(self.heat_cutoff().shut_off);
+                f64::from(self.leg_heat_sinks().min(switched_on) * points_each)
             } else {
                 rates.dissipation
             };
@@ -177,17 +181,22 @@ impl Mech {
     }
 
     /// Working heat sinks mounted in the legs, which water and snow around the feet cool.
-    fn leg_heat_sinks(&self) -> usize {
-        self.loadout()
+    /// Sinks are counted, not the critical slots they fill: a double heat sink is one sink
+    /// across two or three slots, and one damaged slot puts the whole sink out of action.
+    fn leg_heat_sinks(&self) -> u16 {
+        let groups = self
+            .loadout()
             .expect("validated unit loadout")
-            .systems
+            .heat_sink_groups(self.definition().heat_sink_slots())
+            .expect("validated heat sink groups");
+        groups
             .iter()
-            .filter(|part| {
-                part.system == System::HeatSink
-                    && self.chassis().is_leg(part.location.section)
-                    && !self.critical_unavailable(part.location)
+            .filter(|group| {
+                group.iter().all(|location| {
+                    self.chassis().is_leg(location.section) && !self.critical_unavailable(*location)
+                })
             })
-            .count()
+            .count() as u16
     }
 
     /// Whether the Mech stands in the flames of a burning hex and so absorbs five heat points
