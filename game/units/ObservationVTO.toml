@@ -4,7 +4,6 @@ movement = "none"
 tons = 20
 walk_mp = 0
 radio_range = 1000
-cargo_space = 0
 specials = ["SalvageTech"]
 
 [construction]

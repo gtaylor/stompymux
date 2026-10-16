@@ -2,7 +2,7 @@
 //! as a whole item and rounded the way the book rounds it, so the total can be compared with
 //! the Mech's tonnage (TM pp. 46-57). Live mass with damage is the server's concern.
 use super::{
-    Engine, Gyro, MechLoadout, MechTemplate, System, Technology, armor_mass, cargo_space_mass,
+    Engine, Gyro, MechLoadout, MechTemplate, System, Technology, armor_mass, cargo_mass,
     engine_mass, half_ton, one_shot_mass, power_amplifier_mass, rated_output, structure_mass,
     system_mass,
 };
@@ -105,11 +105,7 @@ impl MechTemplate {
         // Fusion engines carry ten heat sinks for free; combustion engines carry none.
         let free = if ice { 0 } else { 10 };
         let heat_sinks = u32::from(self.heat_sinks).saturating_sub(free) * 1024;
-        let cargo = cargo_space_mass(
-            self.attributes.get("cargo_space").map(String::as_str),
-            self.has_special("Carrier_Tech"),
-            self.has_special("CargoTech"),
-        )?;
+        let cargo = cargo_mass(self.attributes.get(super::CARGO_TONS).map(String::as_str))?;
 
         let mut items: BTreeMap<String, MassItem> = BTreeMap::new();
         let mut add = |name: &str, count: u32, mass: u32| {

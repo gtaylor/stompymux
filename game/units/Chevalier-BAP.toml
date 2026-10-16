@@ -4,7 +4,6 @@ movement = "wheel"
 tons = 35
 walk_mp = 6
 heat_sinks = 12
-cargo_space = 0
 max_suits = 0
 
 [construction]

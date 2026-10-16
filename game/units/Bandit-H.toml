@@ -3,7 +3,7 @@ class = "vehicle"
 movement = "hover"
 tons = 50
 walk_mp = 9
-cargo_space = 800
+cargo_tons = 8
 specials = ["CargoTech"]
 
 [construction]

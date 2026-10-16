@@ -1,9 +1,10 @@
-//! Cargo installations share construction accounting across chassis without absorbing loose-stock mass.
+//! Cargo bays share construction accounting across chassis without absorbing loose-stock mass:
+//! a bay weighs its capacity in tons whatever the unit's technology flags (TechManual p. 239).
 use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// All admitted movement classes use the same cargo-space definition. The vehicles give up
+/// All admitted movement classes use the same cargo bay definition. The vehicles give up
 /// ammunition so that their cargo bays fit within their tonnage (TechManual p. 97).
 fn templates() -> Vec<String> {
     let demolisher = include_str!("../game/units/Demolisher.toml");
@@ -28,8 +29,8 @@ fn templates() -> Vec<String> {
     ]
 }
 
-/// Preserve other construction technologies while changing only cargo installation facts.
-fn configured(source: &str, space: &str, flags: &str) -> UnitTemplate {
+/// Preserve other construction technologies while changing only the cargo bay and flags.
+fn configured(source: &str, tons: &str, flags: &str) -> UnitTemplate {
     let mut template = UnitTemplate::parse("test", source).unwrap();
     let attributes = match &mut template {
         UnitTemplate::Mech(template) => &mut template.attributes,
@@ -54,9 +55,9 @@ fn configured(source: &str, space: &str, flags: &str) -> UnitTemplate {
             technologies.join(" ")
         },
     );
-    attributes.insert("cargo_space".into(), space.into());
-    // A Mech's cargo installation comes out of its armor, so the design stays at its tonnage.
-    if space.parse::<u32>().is_ok_and(|space| space < 1_000_000) {
+    attributes.insert(CARGO_TONS.into(), tons.into());
+    // A Mech's cargo bay comes out of its armor, so the design stays at its tonnage.
+    if cargo_mass(Some(tons)).is_ok_and(|mass| mass < 1000 * 1024) {
         return crate::support::templates::legal_unit(template);
     }
     template
@@ -72,23 +73,20 @@ fn mass(world: &World, id: ObjectId) -> (u32, u32) {
     (mass.cargo, mass.total)
 }
 
-/// Fractional installation mass, technology precedence, stock separation and restart agree on every chassis.
+/// A bay weighs its capacity whatever the technology flags; stock separation and restart agree
+/// on every chassis.
 #[tokio::test]
-async fn cargo_space_mass_is_shared_and_persists_with_ordinary_stock() {
+async fn cargo_bay_mass_is_shared_and_persists_with_ordinary_stock() {
     for source in templates() {
-        for (flags, expected) in [
-            ("", 251),
-            ("CargoTech", 1259),
-            ("Carrier_Tech", 125),
-            ("CargoTech Carrier_Tech", 125),
-        ] {
+        for flags in ["", "CargoTech", "Carrier_Tech", "CargoTech Carrier_Tech"] {
+            let expected = 3 * 512;
             let (_dir, config, mut world) = support::isolated_world().await;
             let empty = world.create(&config, "Empty".into(), Kind::Thing);
             configured(&source, "0", flags)
                 .create(&mut world, empty)
                 .unwrap();
             let unit = world.create(&config, "Cargo".into(), Kind::Thing);
-            configured(&source, "123", flags)
+            configured(&source, "1.5", flags)
                 .create(&mut world, unit)
                 .unwrap();
             // A Mech gives up armor for the installation; a vehicle adds it to its weight.
@@ -112,7 +110,8 @@ async fn cargo_space_mass_is_shared_and_persists_with_ordinary_stock() {
                 view_battle_unit_fields_action(&scripts, &config, ObjectId(1), unit, "cargo")
                     .unwrap();
             assert_eq!(fields.fields[0].name, "cargospace");
-            assert_eq!(fields.fields[0].value.as_deref(), Some("123"));
+            // The field states the capacity in hundredths of a ton.
+            assert_eq!(fields.fields[0].value.as_deref(), Some("150"));
             let lua: mlua::Table = scripts
                 .eval_callback(&format!("return btech.unit.fields(1,{},'cargo')", unit.0))
                 .unwrap();
@@ -130,25 +129,20 @@ async fn cargo_space_mass_is_shared_and_persists_with_ordinary_stock() {
     }
 }
 
-/// Invalid capacities and totals cannot publish a partially constructed unit.
+/// Invalid capacities and totals cannot publish a partially constructed unit: a bay is a
+/// nonnegative whole number of half tons (TechManual p. 239).
 #[tokio::test]
-async fn cargo_space_rejects_invalid_capacity_and_mass_overflow_before_creation() {
+async fn cargo_bay_rejects_invalid_capacity_and_mass_overflow_before_creation() {
     for source in templates() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Cargo".into(), Kind::Thing);
-        for (space, flags) in [
-            ("-1", ""),
-            ("1.5", ""),
-            ("4294967296", ""),
-            ("4294967295", "CargoTech"),
-            ("4194303750", "Carrier_Tech"),
-        ] {
+        for tons in ["-1", "1.2", "NaN", "inf", "4194304"] {
             let before = world.btech.clone();
             assert!(
-                configured(&source, space, flags)
+                configured(&source, tons, "CargoTech")
                     .create(&mut world, unit)
                     .is_err(),
-                "{space} {flags}"
+                "{tons}"
             );
             assert_eq!(world.btech, before);
         }
@@ -158,7 +152,7 @@ async fn cargo_space_rejects_invalid_capacity_and_mass_overflow_before_creation(
 /// Losing a limb changes surviving material but does not erase an unlocated cargo installation.
 #[test]
 fn mech_cargo_installation_survives_section_loss_and_does_not_enable_suits() {
-    let UnitTemplate::Mech(template) = configured(&templates()[0], "500", "CargoTech") else {
+    let UnitTemplate::Mech(template) = configured(&templates()[0], "5", "CargoTech") else {
         unreachable!()
     };
     let unit = Mech::from_template(crate::support::templates::legal(template.clone())).unwrap();
@@ -182,7 +176,7 @@ async fn overweight_cargo_installations_are_refused_rather_than_slowed() {
     for source in templates() {
         let (_dir, config, mut world) = support::isolated_world().await;
         let unit = world.create(&config, "Cargo".into(), Kind::Thing);
-        let template = configured(&source, "50000", "CargoTech");
+        let template = configured(&source, "500", "CargoTech");
         let stationary = matches!(
             &template,
             UnitTemplate::Vehicle(vehicle) if vehicle.movement == VehicleMovement::Stationary

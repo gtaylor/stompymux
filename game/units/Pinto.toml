@@ -3,7 +3,7 @@ class = "vtol"
 movement = "vtol"
 tons = 30
 walk_mp = 10
-cargo_space = 50
+cargo_tons = 1
 max_suits = 0
 max_ton = 1
 specials = ["CargoTech"]
@@ -30,7 +30,7 @@ slots = [
 ]
 
 [sections.aft_side]
-armor = 14
+armor = 13
 
 [sections.rotor]
 armor = 2

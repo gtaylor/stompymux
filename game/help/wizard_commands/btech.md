@@ -329,12 +329,11 @@ and survive restart and same-size terrain reload. Cockpit loading checks this po
 
 ## Cargo-space construction
 
-Mech and vehicle templates accept nonnegative `Cargo_Space` values in hundredths
-of a ton. The installation contributes construction mass independently of its
-loose-stock contents: ordinary installations divide capacity by 500, CargoTech
-by 100, and Carrier_Tech by 1000 before conversion to 1/1024-ton mass units.
-Carrier_Tech takes precedence when both flags are present. Fractional mass is
-truncated after conversion. Invalid or overflowing capacities are rejected.
+Mech and vehicle templates state a standard cargo bay as `cargo_tons`, its
+capacity in tons and half tons. The bay weighs its capacity, a ton per ton,
+whatever the unit's specials (TechManual p. 239), independently of its
+loose-stock contents. Negative, fractional-half-ton or overflowing capacities
+are rejected.
 
 Lua `btech.unit.state(unit).mass.cargo` reports this installation mass; inventory
 mass remains available separately. Cargo installations participate in shared
@@ -944,8 +943,8 @@ and regulation. These edits do not trigger heat damage or consume dice.
 `centdist` and `centbearing` report horizontal distance and bearing to the
 current hex center using the same geometry as `findcenter`.
 
-`cargospace` reports authored cargo capacity, independently of cargo-installation
-mass and carried stock. `C3iNetworkSize` reports the number of other eligible
+`cargospace` reports the cargo bay's capacity in hundredths of a ton,
+independently of carried stock. `C3iNetworkSize` reports the number of other eligible
 members in the unit's C3i network; an unlinked unit reports zero.
 
 `jumpheading` and `jumplength` retain the last admitted jump's bearing and
@@ -1097,9 +1096,10 @@ selection does not require an acquired contact; ordinary firing checks still
 apply. `-1` clears all targeting modes. Both fields use the same operations through
 Lua unit field access and participate in callback rollback.
 
-`@setunit cargospace <capacity>` updates the cargo installation on a Mech, ground
-vehicle or VTOL. Capacity must be a nonnegative 32-bit integer whose installation
-mass fits the unit mass representation. Mass and movement limits update
+`@setunit cargospace <capacity>` updates the cargo bay on a Mech, ground vehicle
+or VTOL. Capacity is in hundredths of a ton and must be a nonnegative multiple of
+50, since a bay is built in half tons, whose mass fits the unit mass
+representation. Mass and movement limits update
 immediately. Existing loose stock remains aboard when capacity is reduced. Lua
 unit-field edits use the same operation.
 

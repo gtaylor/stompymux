@@ -4,7 +4,6 @@ movement = "track"
 tons = 95
 walk_mp = 3
 heat_sinks = 20
-cargo_space = 0
 max_suits = 0
 
 [construction]

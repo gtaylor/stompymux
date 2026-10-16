@@ -4,7 +4,7 @@ movement = "wheel"
 tons = 60
 walk_mp = 5
 radio = 4
-cargo_space = 2000
+cargo_tons = 4
 max_suits = 0
 max_ton = 5
 

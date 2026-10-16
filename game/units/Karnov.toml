@@ -3,7 +3,7 @@ class = "vtol"
 movement = "vtol"
 tons = 30
 walk_mp = 11
-cargo_space = 600
+cargo_tons = 6
 max_suits = 0
 max_ton = 1
 

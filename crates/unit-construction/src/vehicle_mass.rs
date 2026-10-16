@@ -23,7 +23,7 @@ pub struct VehicleMass {
     /// Power amplifiers an ICE vehicle carries for its energy weapons (TechManual p. 106).
     pub power_amplifiers: u32,
     pub cooling: u32,
-    /// The standard cargo bay `cargo_space` describes plus every other transport bay
+    /// The standard cargo bay `cargo_tons` describes plus every other transport bay
     /// (TechManual p. 239).
     pub cargo: u32,
     /// Physical mass of listed or currently loaded rounds in surviving sections.
@@ -184,13 +184,10 @@ impl VehicleTemplate {
         // free (TechManual p. 104). Sinks take no item slot and no location.
         let sinks = u32::from(self.heat_sink_capacity());
         let cooling = sinks.saturating_sub(if combustion { 0 } else { 10 }) * 1024;
-        let cargo = super::mass::cargo_space_mass(
-            self.attributes.get("cargo_space").map(String::as_str),
-            self.has_special("Carrier_Tech"),
-            self.has_special("CargoTech"),
-        )?
-        .checked_add(self.transport_bays()?.mass())
-        .context("vehicle mass overflow")?;
+        let cargo =
+            super::mass::cargo_mass(self.attributes.get(super::CARGO_TONS).map(String::as_str))?
+                .checked_add(self.transport_bays()?.mass())
+                .context("vehicle mass overflow")?;
         let ammunition = loadout
             .ammunition
             .iter()

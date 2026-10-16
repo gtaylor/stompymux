@@ -3,7 +3,7 @@ class = "vehicle"
 movement = "track"
 tons = 80
 walk_mp = 4
-cargo_space = 250
+cargo_tons = 1
 specials = ["SearchLight"]
 
 [construction]
@@ -11,19 +11,19 @@ tech_base = "inner_sphere"
 engine_rating = 320
 
 [sections.left_side]
-armor = 40
+armor = 39
 
 [sections.right_side]
-armor = 40
+armor = 39
 
 [sections.front_side]
 armor = 60
 
 [sections.aft_side]
-armor = 40
+armor = 36
 
 [sections.turret]
-armor = 60
+armor = 58
 slots = [
     { at = 1, item = "IS.GaussRifle" },
     { at = "2-3", item = "Ammo_IS.GaussRifle", rounds = 8 },

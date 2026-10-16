@@ -1,7 +1,7 @@
 //! Combat vehicle transport bays other than the standard cargo bay: infantry compartments,
 //! infantry and battle armor bays, and the specialized cargo bays of the TechManual Transport
 //! Bay table (p. 239). The game has no infantry units and loads stock only into the standard
-//! cargo bay that `cargo_space` describes, so these bays are construction data: they weigh
+//! cargo bay that `cargo_tons` describes, so these bays are construction data: they weigh
 //! what the table says, claim item slots, cost C-bills and add no Battle Value.
 use anyhow::{Context, Result, bail, ensure};
 use std::collections::BTreeMap;

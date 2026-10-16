@@ -5,7 +5,6 @@ tons = 40
 walk_mp = 7
 jump_mp = 7
 heat_sinks = 10
-cargo_space = 0
 max_suits = 0
 
 [construction]

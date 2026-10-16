@@ -56,3 +56,4 @@ Numeric values and unit locations are validated before a change is applied.
 Armor values must be integers from `0` through `255`, and rear armor is valid
 only for sections that support it. Speed values must be finite and
 non-negative. `RESTOCK` requires a live ammunition critical slot.
+`setcargospace` sets the cargo bay in half tons (`4` is a 2-ton bay).

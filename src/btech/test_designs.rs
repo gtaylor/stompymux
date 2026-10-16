@@ -3,8 +3,8 @@
 use super::{MechLoadout, MechTemplate, Weapon};
 
 /// Bring an edited design to its tonnage: while it is overweight, shed the lightest weapon
-/// outside `keep` (ammunition included); spare tonnage then becomes cargo space, which weighs a
-/// ton per 500 units (TechManual pp. 46, 57).
+/// outside `keep` (ammunition included); spare tonnage then becomes a cargo bay, which weighs a
+/// ton per ton of capacity (TechManual pp. 46, 57, 239).
 pub(crate) fn balance(template: &mut MechTemplate, keep: &[&str]) {
     let tons = u32::from(template.tons) * 1024;
     let mass = |template: &MechTemplate| {
@@ -38,10 +38,12 @@ pub(crate) fn balance(template: &mut MechTemplate, keep: &[&str]) {
             .criticals
             .retain(|_, critical| critical.equipment != lightest.1);
     }
+    // Whole half tons of spare mass become a cargo bay, which weighs its capacity.
     let spare = tons - mass(template);
     if spare >= 512 {
-        template
-            .attributes
-            .insert("cargo_space".into(), (spare * 500 / 1024).to_string());
+        template.attributes.insert(
+            super::CARGO_TONS.into(),
+            (f64::from(spare / 512) / 2.0).to_string(),
+        );
     }
 }

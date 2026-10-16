@@ -69,8 +69,8 @@ pub struct Draft {
     /// `[construction]` keys and document spellings for every non-default choice.
     pub construction: Vec<(&'static str, &'static str)>,
     pub specials: Vec<&'static str>,
-    /// Standard cargo bay capacity in hundredths of a ton, which `CargoTech` declares.
-    pub cargo_space: Option<u32>,
+    /// Standard cargo bay capacity in tons, written as `cargo_tons` (TechManual p. 239).
+    pub cargo_tons: Option<String>,
     /// `[transport_bays]` keys with their TOML values: tons for a variable bay, a count for a
     /// fixed one.
     pub transport_bays: Vec<(&'static str, String)>,
@@ -93,8 +93,8 @@ impl Draft {
         if let Some(heat_sinks) = self.heat_sinks {
             let _ = writeln!(out, "heat_sinks = {heat_sinks}");
         }
-        if let Some(space) = self.cargo_space {
-            let _ = writeln!(out, "cargo_space = {space}");
+        if let Some(tons) = &self.cargo_tons {
+            let _ = writeln!(out, "cargo_tons = {tons}");
         }
         if !self.specials.is_empty() {
             let _ = writeln!(out, "specials = {}", list(&self.specials));
@@ -233,7 +233,7 @@ mod tests {
             engine_rating: 60,
             construction: vec![("engine", "ice")],
             specials: vec![],
-            cargo_space: None,
+            cargo_tons: None,
             transport_bays: vec![],
             sections: vec![section],
             split_mounts: vec![],

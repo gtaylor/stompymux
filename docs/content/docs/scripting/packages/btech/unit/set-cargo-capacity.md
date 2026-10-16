@@ -5,7 +5,7 @@ linkTitle: "set_cargo_capacity"
 manualLinkTitle: "set_cargo_capacity"
 ---
 
-Set cargo space and the maximum carried tonnage.
+Set the cargo bay's capacity and the maximum carried tonnage.
 
 ## Signature
 
@@ -18,7 +18,7 @@ btech.unit.set_cargo_capacity(unit, space, maximum_tons)
 | Name | Type | Description |
 | --- | --- | --- |
 | `unit` | `DbRef\|Object` |  |
-| `space` | `integer` |  |
+| `space` | `integer` | Cargo bay capacity in half tons. |
 | `maximum_tons` | `integer` |  |
 
 ## Returns

@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 70
 walk_mp = 3
-cargo_space = 0
 max_suits = 0
 specials = ["SearchLight"]
 

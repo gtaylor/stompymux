@@ -3651,9 +3651,9 @@ function btech_unit.set_armor(unit, section, patch) end
 ---@param pilot DbRef|Object|nil Player object.
 function btech_unit.set_assigned_pilot(unit, pilot) end
 
----Set cargo space and the maximum carried tonnage.
+---Set the cargo bay's capacity and the maximum carried tonnage.
 ---@param unit DbRef|Object
----@param space integer
+---@param space integer Cargo bay capacity in half tons.
 ---@param maximum_tons integer
 function btech_unit.set_cargo_capacity(unit, space, maximum_tons) end
 

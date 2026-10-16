@@ -570,7 +570,11 @@ pub fn set_administrative_cargo(
 ) -> Result<()> {
     super::ensure_registered_unit_runtime(world, id)?;
     let mut storage = storage(world, id)?;
-    storage.set_administrative_attribute("cargo_space", space.saturating_mul(50));
+    // The administrative space counts half tons.
+    storage.set_administrative_attribute(
+        super::CARGO_TONS,
+        super::load::cargo_tons(space.saturating_mul(50))?,
+    );
     storage.set_administrative_attribute("carrier_maximum_tonnage", maximum_tons);
     Ok(())
 }

@@ -685,10 +685,11 @@ async fn c_schema_unit_configuration_normalizes_empty_invalid_and_stale_rows() {
         0.0,
     )
     .unwrap();
+    // One half ton of cargo bay.
     stompymux_rs::btech::set_administrative_cargo(
         &mut s.world_mut(),
         stompymux_rs::ObjectId(14),
-        4,
+        1,
         20,
     )
     .unwrap();

@@ -1466,11 +1466,12 @@ impl Vehicle {
         self.definition.restate_engine_rating();
     }
 
-    /// Update the owned cargo installation; the shared load service reconciles motion.
-    pub(super) fn set_cargo_space(&mut self, value: u32) {
+    /// Update the owned cargo bay's capacity in tons; the shared load service reconciles
+    /// motion.
+    pub(super) fn set_cargo_tons(&mut self, tons: String) {
         self.definition
             .attributes
-            .insert("cargo_space".into(), value.to_string());
+            .insert(super::CARGO_TONS.into(), tons);
     }
 
     /// Edit identity through shared validation without rebuilding or resetting unit state.

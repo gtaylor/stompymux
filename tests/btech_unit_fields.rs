@@ -1722,55 +1722,10 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             });
         }
         let original_load = battle_unit_load(&world, id, true).unwrap();
-        let (original_cargo, carrier, cargo) =
-            if let Some(unit) = world.btech.constructed_units().get(&id) {
-                (
-                    unit.mass().unwrap().cargo,
-                    unit.definition()
-                        .attributes
-                        .get("specials")
-                        .is_some_and(|flags| {
-                            flags
-                                .split_whitespace()
-                                .any(|flag| flag.eq_ignore_ascii_case("Carrier_Tech"))
-                        }),
-                    unit.definition()
-                        .attributes
-                        .get("specials")
-                        .is_some_and(|flags| {
-                            flags
-                                .split_whitespace()
-                                .any(|flag| flag.eq_ignore_ascii_case("CargoTech"))
-                        }),
-                )
-            } else {
-                let unit = &world.btech.vehicles()[&id];
-                (
-                    unit.mass().unwrap().cargo,
-                    unit.definition()
-                        .attributes
-                        .get("specials")
-                        .is_some_and(|flags| {
-                            flags
-                                .split_whitespace()
-                                .any(|flag| flag.eq_ignore_ascii_case("Carrier_Tech"))
-                        }),
-                    unit.definition()
-                        .attributes
-                        .get("specials")
-                        .is_some_and(|flags| {
-                            flags
-                                .split_whitespace()
-                                .any(|flag| flag.eq_ignore_ascii_case("CargoTech"))
-                        }),
-                )
-            };
-        let divisor = if carrier {
-            1000.0
-        } else if cargo {
-            100.0
+        let original_cargo = if let Some(unit) = world.btech.constructed_units().get(&id) {
+            unit.mass().unwrap().cargo
         } else {
-            500.0
+            world.btech.vehicles()[&id].mass().unwrap().cargo
         };
         let stock = battle_inventory(&world, id).unwrap().to_vec();
         let native = &f.native;
@@ -1780,7 +1735,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
         // to a design already at its weight (TechManual p. 46).
         if world.btech.constructed_units().contains_key(&id) {
             let before = lua.world().btech.clone();
-            for value in [123, 100_000] {
+            for value in [150, 100_000] {
                 assert!(
                     set_battle_unit_field_action(
                         lua,
@@ -1796,7 +1751,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             }
             continue;
         }
-        for value in [123, 100_000, 0] {
+        for value in [150, 100_000, 0] {
             let before = lua.world().btech.clone();
             lua.drain_outbox();
             assert!(
@@ -1833,8 +1788,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             assert_eq!(load.carried_mass, original_load.carried_mass);
             assert_eq!(
                 load.material_mass,
-                original_load.material_mass - original_cargo
-                    + (value as f32 / divisor * 1024.0).trunc() as u32
+                original_load.material_mass - original_cargo + value * 1024 / 100
             );
             // An installation that takes the unit over its tonnage is not a speed penalty;
             // construction answers for overweight designs (TechManual p. 97).
@@ -1854,7 +1808,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             assert_eq!(loaded.btech, saved.btech);
         }
         let before = lua.world().btech.clone();
-        for value in ["-1", "2147483648", "2147483647", "NaN", "1.5"] {
+        for value in ["-1", "2147483648", "2147483647", "NaN", "1.5", "123"] {
             assert!(
                 set_battle_unit_field_action(lua, config, ObjectId(1), id, "cargospace", value)
                     .is_err()

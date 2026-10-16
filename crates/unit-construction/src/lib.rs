@@ -100,7 +100,7 @@ pub use machine_gun_array::{
     store_machine_gun_array_links,
 };
 pub use mass::{
-    armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
+    CARGO_TONS, armor_mass, cargo_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
     structure_mass, system_mass, system_slot_mass, targeting_computer_tons,
 };
 pub use mech::{

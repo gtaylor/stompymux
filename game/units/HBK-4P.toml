@@ -4,7 +4,6 @@ movement = "biped"
 tons = 50
 walk_mp = 4
 heat_sinks = 23
-cargo_space = 0
 max_suits = 0
 
 [construction]

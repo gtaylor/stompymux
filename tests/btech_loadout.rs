@@ -158,8 +158,11 @@ async fn adapters_report_resolved_equipment_and_preserve_callback_guards() {
 fn awesome_and_hunchback_resolve_conventional_energy_loadouts() {
     use stompymux_rs::Mech;
     let cargo = include_str!("../game/units/HBK-4P.toml");
-    for invalid in ["1.5", "-1", "\"invalid\""] {
-        let source = cargo.replace("cargo_space = 0", &format!("cargo_space = {invalid}"));
+    for invalid in ["1.2", "-1", "\"invalid\""] {
+        let source = cargo.replace(
+            "walk_mp = 4\n",
+            &format!("walk_mp = 4\ncargo_tons = {invalid}\n"),
+        );
         assert_ne!(source, cargo);
         assert!(
             MechTemplate::parse("HBK-4P", &source)

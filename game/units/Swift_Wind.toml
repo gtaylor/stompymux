@@ -6,7 +6,6 @@ walk_mp = 10
 radio = 5
 radio_type = 126
 radio_range = 210
-cargo_space = 0
 max_suits = 0
 
 [construction]

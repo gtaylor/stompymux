@@ -332,7 +332,7 @@ pub fn convert(source: &str) -> Result<Converted> {
             heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
             construction,
             specials,
-            cargo_space: None,
+            cargo_tons: None,
             transport_bays: Vec::new(),
             sections,
             split_mounts,

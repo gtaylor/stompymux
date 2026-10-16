@@ -1896,9 +1896,9 @@
 // lua-types-end
 
 // lua-types-begin btech 00506
-//|---Set cargo space and the maximum carried tonnage.
+//|---Set the cargo bay's capacity and the maximum carried tonnage.
 //|---@param unit DbRef|Object
-//|---@param space integer
+//|---@param space integer Cargo bay capacity in half tons.
 //|---@param maximum_tons integer
 //|function btech_unit.set_cargo_capacity(unit, space, maximum_tons) end
 // lua-types-end

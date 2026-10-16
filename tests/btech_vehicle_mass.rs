@@ -99,30 +99,27 @@ fn vehicle_mass_applies_chassis_material_cooling_and_cargo_rules() {
     }
     // Combat vehicles mount single heat sinks only, whatever their technology base
     // (TechManual p. 104).
+    // A cargo bay weighs its capacity whatever the flags (TechManual p. 239).
     for (flags, cooling, cargo) in [
-        ("-", 15 * 1024, 2048),
-        ("DoubleHS", 15 * 1024, 2048),
-        ("Clan", 15 * 1024, 2048),
-        ("ICEEngine_Tech", 25 * 1024, 2048),
+        ("-", 15 * 1024, 10 * 1024),
+        ("DoubleHS", 15 * 1024, 10 * 1024),
+        ("Clan", 15 * 1024, 10 * 1024),
+        ("ICEEngine_Tech", 25 * 1024, 10 * 1024),
         ("ICEEngine_Tech DoubleHS CargoTech", 25 * 1024, 10 * 1024),
-        ("Carrier_Tech CargoTech", 15 * 1024, 1024),
+        ("Carrier_Tech CargoTech", 15 * 1024, 10 * 1024),
     ] {
         let mut template = vehicle(flags);
         template.heat_sinks = Some(25);
-        template
-            .attributes
-            .insert("cargo_space".into(), "1000".into());
+        template.attributes.insert(CARGO_TONS.into(), "10".into());
         let mass = template.mass().unwrap();
         assert_eq!((mass.cooling, mass.cargo), (cooling, cargo), "{flags}");
     }
     let mut template = vehicle("-");
-    for value in ["-1", "NaN", "4294967295"] {
-        template
-            .attributes
-            .insert("cargo_space".into(), value.into());
+    for value in ["-1", "NaN", "0.3", "4294967295"] {
+        template.attributes.insert(CARGO_TONS.into(), value.into());
         assert!(template.mass().is_err(), "{value}");
     }
-    template.attributes.remove("cargo_space");
+    template.attributes.remove(CARGO_TONS);
     // An 11-ton tank at 1 cruising MP rates 11, rounded up to 15 (TechManual p. 100): a
     // half-ton standard engine, a ton with shielding.
     template.tons = 11;

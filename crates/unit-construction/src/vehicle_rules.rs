@@ -131,7 +131,7 @@ impl VehicleTemplate {
 
     /// Item slots the loadout occupies: one per weapon and per equipment item, one per
     /// ammunition type however many tons it holds, one for the standard cargo bay that
-    /// `cargo_space` describes (TechManual pp. 98, 106), one per other type of transport bay and
+    /// `cargo_tons` describes (TechManual pp. 98, 106), one per other type of transport bay and
     /// one per cargo container (TechManual pp. 107, 239). Heat sinks and power amplifiers take
     /// none (TechManual pp. 104, 106).
     pub fn item_slots(&self, loadout: &VehicleLoadout) -> u16 {
@@ -147,11 +147,8 @@ impl VehicleTemplate {
                 ammunition.push((bin.weapon, bin.mode));
             }
         }
-        let cargo = self
-            .attributes
-            .get("cargo_space")
-            .and_then(|space| space.parse::<u32>().ok())
-            .is_some_and(|space| space > 0);
+        let cargo = super::cargo_mass(self.attributes.get(super::CARGO_TONS).map(String::as_str))
+            .is_ok_and(|mass| mass > 0);
         let bays = self
             .transport_bays()
             .map_or(0, |bays| bays.item_slots() as usize);
@@ -902,7 +899,7 @@ slots = [
     }
 
     /// Transport bays weigh, take slots and cost as the Transport Bay table says (TechManual
-    /// p. 239), alongside the standard cargo bay `cargo_space` describes, and survive a
+    /// p. 239), alongside the standard cargo bay `cargo_tons` describes, and survive a
     /// document round trip; Mechs carry none.
     #[test]
     fn transport_bays_weigh_claim_slots_and_cost() {
@@ -934,10 +931,7 @@ slots = [
         let bay = parse(
             &carrier
                 .replace("infantry_compartment = 4", "foot_infantry_bay = 1")
-                .replace(
-                    "walk_mp = 3\n",
-                    "walk_mp = 3\ncargo_space = 100\nspecials = [\"CargoTech\"]\n",
-                ),
+                .replace("walk_mp = 3\n", "walk_mp = 3\ncargo_tons = 1\n"),
         );
         assert_eq!(bay.mass().unwrap().cargo, 6 * 1024);
         assert_eq!(bay.item_slots(&VehicleLoadout::resolve(&bay).unwrap()), 5);

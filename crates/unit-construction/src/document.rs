@@ -81,7 +81,7 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("radio_range", "radio_range", Kind::Integer),
     ("si", "si", Kind::Integer),
     ("fuel", "fuel", Kind::Integer),
-    ("cargo_space", "cargo_space", Kind::Integer),
+    ("cargo_tons", "cargo_tons", Kind::Float),
     ("max_suits", "max_suits", Kind::Integer),
     ("max_ton", "max_ton", Kind::Integer),
     (
@@ -330,7 +330,7 @@ impl ParsedTemplate {
         }
         if let Some(bays) = transport_bays {
             // Transport bays are combat vehicle construction (TechManual p. 239); Mechs carry
-            // cargo only through `cargo_space`.
+            // cargo only in the standard cargo bay `cargo_tons` states.
             ensure!(
                 matches!(class, Some(RawUnitClass::Vehicle | RawUnitClass::Vtol)),
                 "{TRANSPORT_BAYS} are only for vehicles and VTOLs"
@@ -822,7 +822,11 @@ pub fn render(
                     writeln!(output, "{key} = {points}")?;
                     continue;
                 }
-                toml::Value::Float(value).to_string()
+                if *attribute == super::CARGO_TONS && value.fract() == 0.0 {
+                    (value as i64).to_string()
+                } else {
+                    toml::Value::Float(value).to_string()
+                }
             }
             Kind::Text if matches!(*name, "class" | "movement") => {
                 quote(&value.to_ascii_lowercase())
