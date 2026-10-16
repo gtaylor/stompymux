@@ -1163,21 +1163,13 @@ impl Vehicle {
         {
             return;
         }
-        match hit {
-            super::VehicleMotiveHit::Immobilize => self.immobilized = true,
-            super::VehicleMotiveHit::SpeedLoss { movement_points } => {
-                self.propulsion.lower(f64::from(movement_points) * 10.75);
-                self.motive_speed_loss = (self.motive_speed_loss
-                    + f64::from(movement_points) * 10.75)
-                    .min(self.definition.max_speed);
-            }
-            // Heavy motive damage halves the remaining movement (TW p. 193).
-            super::VehicleMotiveHit::HalveSpeed => {
-                let remaining = (self.definition.max_speed - self.motive_speed_loss).max(0.0);
-                self.propulsion.lower(remaining / 2.0);
-                self.motive_speed_loss =
-                    (self.motive_speed_loss + remaining / 2.0).min(self.definition.max_speed);
-            }
+        if hit == super::VehicleMotiveHit::Immobilize {
+            self.immobilized = true;
+        } else {
+            let remaining = (self.definition.max_speed - self.motive_speed_loss).max(0.0);
+            let lost = super::vehicle_motive_effects::flank_speed_lost(remaining, hit);
+            self.propulsion.lower(lost);
+            self.motive_speed_loss = (self.motive_speed_loss + lost).min(self.definition.max_speed);
         }
         let maximum = self.maximum_speed();
         if maximum == 0.0 {

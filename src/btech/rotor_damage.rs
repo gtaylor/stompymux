@@ -48,9 +48,9 @@ impl Vehicle {
                     self.gunnery_damage = self.gunnery_damage.saturating_add(1).min(127);
                 }
             }
+            // Each rotor hit costs one Cruising MP (Total Warfare p. 197).
             RotorHit::Damage if !fallen => {
-                let movement_points = flank_loss_for_cruising_mp(self.maximum_speed(), 1);
-                self.apply_motive_hit(VehicleMotiveHit::SpeedLoss { movement_points })
+                self.apply_motive_hit(VehicleMotiveHit::SpeedLoss { movement_points: 1 })
             }
             RotorHit::Damage => {}
             RotorHit::Destroy => {
@@ -67,17 +67,6 @@ impl Vehicle {
             grounded: false,
         })
     }
-}
-
-/// Flank MP lost when rotor damage removes `points` cruising MP (Total Warfare p. 197):
-/// cruising MP is the flank value divided by 1.5, and flank is recomputed as 1.5 times the
-/// reduced cruising MP, rounded up, so a hit costs one or two flank MP.
-pub(super) fn flank_loss_for_cruising_mp(maximum_kph: f64, points: u8) -> u8 {
-    let flank = (maximum_kph / 10.75).round().max(0.0) as i64;
-    let cruise = (flank as f64 / 1.5).round() as i64;
-    let remaining = (cruise - i64::from(points)).max(0);
-    let recomputed = (remaining as f64 * 1.5).ceil() as i64;
-    (flank - recomputed).clamp(0, 255) as u8
 }
 
 impl RotorDamage {
@@ -141,20 +130,4 @@ pub(super) fn apply_in_world(
     }
     unit.apply_motive_hit(VehicleMotiveHit::Immobilize);
     Ok(report)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::flank_loss_for_cruising_mp;
-
-    /// Losing one cruising MP costs one flank MP from a 12/18 rotorcraft and two from 11/17.
-    #[test]
-    fn cruising_mp_loss_recomputes_flank_movement() {
-        assert_eq!(flank_loss_for_cruising_mp(18.0 * 10.75, 1), 1);
-        assert_eq!(flank_loss_for_cruising_mp(17.0 * 10.75, 1), 2);
-        assert_eq!(flank_loss_for_cruising_mp(8.0 * 10.75, 1), 2);
-        assert_eq!(flank_loss_for_cruising_mp(2.0 * 10.75, 1), 2);
-        assert_eq!(flank_loss_for_cruising_mp(0.0, 1), 0);
-        assert_eq!(flank_loss_for_cruising_mp(18.0 * 10.75, 12), 18);
-    }
 }

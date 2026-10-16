@@ -80,11 +80,13 @@ async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
     damage_battle_vehicle_motive(
         &mut world,
         id,
-        VehicleMotiveHit::SpeedLoss { movement_points: 3 },
+        VehicleMotiveHit::SpeedLoss { movement_points: 2 },
     )
     .unwrap();
-    // Motive damage lowers the cruising speed that separates cruising from flank fire (Total
-    // Warfare pp. 106 and 193): a speed that was cruising before the hit may now be flank.
+    // Two Cruising MP lost leave the 5/8 truck at 3/5 (Total Warfare p. 193), and the lower
+    // cruising speed separates cruising from flank fire (p. 106): a speed that was cruising
+    // before the hit may now be flank.
+    assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 53.75);
     let cruise = world.btech.vehicles()[&id].maximum_speed() * 2.0 / 3.0;
     assert!(cruise < 86.0 * 2.0 / 3.0 - 1.0);
     for (speed, attack) in [(cruise - 1.0, 1), (cruise + 1.0, 2)] {
