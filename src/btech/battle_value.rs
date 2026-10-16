@@ -178,8 +178,10 @@ impl Valuation {
         if heated.iter().map(|weapon| weapon.heat).sum::<f64>() <= heat_efficiency {
             return total + heated.iter().map(|weapon| weapon.value).sum::<f64>();
         }
-        // Steps 4-7: highest modified BV first, ties by least heat. The weapon that reaches or
-        // exceeds the efficiency keeps its full value; every later weapon counts half.
+        // Steps 4-7: highest modified BV first, ties by least heat. Each weapon is added in full
+        // and its heat accumulated until the running heat reaches or exceeds the efficiency;
+        // every later weapon counts half. The first weapon always counts in full, even when
+        // the efficiency is zero or negative.
         heated.sort_by(|left, right| {
             right
                 .value
@@ -187,13 +189,15 @@ impl Valuation {
                 .then(left.heat.total_cmp(&right.heat))
         });
         let mut heat = 0.0;
+        let mut over_efficiency = false;
         for weapon in heated {
-            if heat < heat_efficiency {
-                total += weapon.value;
-                heat += weapon.heat;
-            } else {
+            if over_efficiency {
                 total += weapon.value / 2.0;
+                continue;
             }
+            total += weapon.value;
+            heat += weapon.heat;
+            over_efficiency = heat >= heat_efficiency;
         }
         total
     }
@@ -944,6 +948,17 @@ mod tests {
         assert_eq!(valuation.weapon_rating(), 46.0 * 4.0 + 19.5 + 5.0);
         valuation.chassis = Chassis::Vehicle { unit_type: 1.0 };
         assert_eq!(valuation.weapon_rating(), 46.0 * 4.0 + 39.0 + 5.0);
+    }
+
+    /// With a heat efficiency of zero or less the first weapon chosen still counts in full;
+    /// only the weapons after it are halved (TechManual p. 303 steps 4-7).
+    #[test]
+    fn first_weapon_counts_in_full_without_heat_efficiency() {
+        for efficiency in [0.0, -3.0] {
+            let mut valuation = mech(efficiency);
+            valuation.weapons = vec![weapon(18.0, 3.0), weapon(62.0, 5.0), weapon(4.0, 0.0)];
+            assert_eq!(valuation.weapon_rating(), 62.0 + 9.0 + 4.0, "{efficiency}");
+        }
     }
 
     /// Equal modified BV resolves by the least heat first.
