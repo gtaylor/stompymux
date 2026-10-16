@@ -132,7 +132,10 @@ async fn loadable_template_projects_exact_reference_rows() {
       assert(btech.template.exists('parity') and not btech.template.exists('missing-template'))
       local engine=btech.template.engine('parity')
       assert(engine.rating==300 and engine.suspension_factor==0,'engine')
-      assert(btech.template.base_cost('parity')==8356250,'cost')
+      -- TM pp. 277-285: structure 30,000, cockpit 200,000, life support 50,000, sensors and
+      -- musculature 150,000 each, 3-ton gyro 900,000, 300 ICE 375,000, ten non-fusion sinks
+      -- 20,000, 7.5 tons of armor 75,000 and a PPC 200,000; no actuators. 2,150,000 x 1.75.
+      assert(btech.template.base_cost('parity')==3762500,'cost')
       local bv=btech.template.battle_value('parity')
       -- 116 armor, 114 structure and a 37.5 gyro at +2 (1.2); one PPC and 75 tons at 1.12.
       assert(bv.total==879,'total '..bv.total..' '..bv.offensive..' '..bv.defensive)
