@@ -97,20 +97,21 @@ pub(super) fn distance(speed: f64) -> u8 {
     ((speed.abs() / 10.75) / 2.0).ceil().clamp(1.0, 255.0) as u8
 }
 
-/// Whether moving off `tile` after turning on it risks a skid: any speed on ice, and running
-/// or flank speed, above two-thirds of `maximum`, on pavement, a road or a bridge deck.
-pub(super) fn risks_skid(tile: Hex, speed: f64, maximum: f64) -> bool {
-    tile.is_slick() && (tile.is_icy() || speed.abs() > maximum * 2.0 / 3.0 + 0.1)
+/// Whether moving off `tile` after turning on it risks a skid: any speed on ice, and on
+/// pavement, a road or a bridge deck only for a unit running or flanking, that is moving
+/// faster than its walking or cruising speed `walking` (Total Warfare pp. 60, 62).
+pub(super) fn risks_skid(tile: Hex, speed: f64, walking: f64) -> bool {
+    tile.is_slick() && (tile.is_icy() || speed.abs() > walking + 0.1)
 }
 
 /// Whether a vehicle moving off `tile` after turning on it risks losing its line: a hovercraft
 /// sideslips at flank speed whatever the ground under it (Total Warfare pp. 62, 67); any other
-/// vehicle skids as [`risks_skid`] says.
-pub(super) fn risks_slide(tile: Hex, speed: f64, maximum: f64, hover: bool) -> bool {
+/// vehicle skids as [`risks_skid`] says. `cruising` is the vehicle's cruising speed.
+pub(super) fn risks_slide(tile: Hex, speed: f64, cruising: f64, hover: bool) -> bool {
     if hover {
-        return speed.abs() > maximum * 2.0 / 3.0 + 0.1;
+        return speed.abs() > cruising + 0.1;
     }
-    risks_skid(tile, speed, maximum)
+    risks_skid(tile, speed, cruising)
 }
 
 /// What a skid or sideslip check produced; the caller publishes notices and nested falls.
@@ -1142,29 +1143,36 @@ mod tests {
         }
     }
 
-    /// Ice skids at any speed; pavement only above walking or cruising speed.
+    /// Ice skids at any speed; pavement only above walking or cruising speed (Total Warfare
+    /// pp. 60, 62). A 6/9 'Mech walks at 64.5 kph: turning at that speed on pavement is safe,
+    /// and any faster is running and checks.
     #[test]
     fn slick_surfaces_risk_skids_by_speed() {
         let pavement = Hex::new(Terrain::Pavement, 0);
         let ice = Hex::new(Terrain::Ice, 1);
         let clear = Hex::new(Terrain::Clear, 0);
-        assert!(!risks_skid(pavement, 60.0, 90.0));
-        assert!(risks_skid(pavement, 61.0, 90.0));
-        assert!(risks_skid(pavement, -61.0, 90.0));
-        assert!(risks_skid(ice, 1.0, 90.0));
-        assert!(!risks_skid(clear, 90.0, 90.0));
+        let walking = 6.0 * 10.75;
+        assert!(!risks_skid(pavement, 4.5 * 10.75, walking));
+        assert!(!risks_skid(pavement, walking, walking));
+        assert!(!risks_skid(pavement, -walking, walking));
+        assert!(risks_skid(pavement, 6.5 * 10.75, walking));
+        assert!(risks_skid(pavement, 9.0 * 10.75, walking));
+        assert!(risks_skid(pavement, -6.5 * 10.75, walking));
+        assert!(risks_skid(ice, 1.0, walking));
+        assert!(!risks_skid(clear, 9.0 * 10.75, walking));
     }
 
-    /// A hovercraft at flank speed risks a sideslip on any ground, and never below flank.
+    /// A hovercraft above cruising speed risks a sideslip on any ground, and never at or below
+    /// cruising speed.
     #[test]
     fn hovercraft_sideslip_at_flank_speed_regardless_of_terrain() {
         let clear = Hex::new(Terrain::Clear, 0);
         let ice = Hex::new(Terrain::Ice, 1);
-        assert!(risks_slide(clear, 61.0, 90.0, true));
-        assert!(!risks_slide(clear, 60.0, 90.0, true));
-        assert!(!risks_slide(ice, 30.0, 90.0, true));
-        assert!(!risks_slide(clear, 90.0, 90.0, false));
-        assert!(risks_slide(ice, 1.0, 90.0, false));
+        assert!(risks_slide(clear, 61.0, 60.0, true));
+        assert!(!risks_slide(clear, 60.0, 60.0, true));
+        assert!(!risks_slide(ice, 30.0, 60.0, true));
+        assert!(!risks_slide(clear, 90.0, 60.0, false));
+        assert!(risks_slide(ice, 1.0, 60.0, false));
     }
 
     /// Tracking starts on a slick hex, notes a turn there and forgets elsewhere.

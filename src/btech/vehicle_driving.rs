@@ -188,7 +188,8 @@ pub(super) fn advance(
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             });
-        let flank_ceiling = vehicle.maximum_speed();
+        // Vehicles still take cruising speed as two-thirds of their flank ceiling.
+        let cruise_ceiling = vehicle.maximum_speed() * 2.0 / 3.0;
         let movement = vehicle.definition().movement;
         let hover = movement == VehicleMovement::Hover;
         let ground = super::vehicle_motion::ground_movement(movement);
@@ -200,7 +201,7 @@ pub(super) fn advance(
         let held = vehicle.slick.heading;
         if leaving
             && vehicle.slick.turned
-            && super::skid::risks_slide(current, next.speed, flank_ceiling, hover)
+            && super::skid::risks_slide(current, next.speed, cruise_ceiling, hover)
         {
             vehicle.slick.reset();
             let skid = super::skid::resolve_vehicle(
