@@ -1028,10 +1028,6 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
             name: "NO_FRIENDLY_FIRE",
             value: 256,
         },
-        Entry {
-            name: "NO_PHYSICAL_ATTACKS",
-            value: 512,
-        },
     ],
 };
 

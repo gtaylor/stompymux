@@ -19,19 +19,16 @@ pub enum MapFlag {
     IndestructibleStructures,
     /// Teammates cannot damage each other with weapons.
     NoFriendlyFire,
-    /// Physical attacks are not allowed.
-    NoPhysicalAttacks,
 }
 
 impl MapFlag {
     /// Every flag, in bit order.
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 5] = [
         Self::Vacuum,
         Self::Underground,
         Self::Dark,
         Self::IndestructibleStructures,
         Self::NoFriendlyFire,
-        Self::NoPhysicalAttacks,
     ];
 
     /// Persisted bit for this flag.
@@ -42,7 +39,6 @@ impl MapFlag {
             Self::Dark => 32,
             Self::IndestructibleStructures => 64,
             Self::NoFriendlyFire => 256,
-            Self::NoPhysicalAttacks => 512,
         }
     }
 
@@ -54,7 +50,6 @@ impl MapFlag {
             Self::Dark => "dark",
             Self::IndestructibleStructures => "indestructible_structures",
             Self::NoFriendlyFire => "no_friendly_fire",
-            Self::NoPhysicalAttacks => "no_physical_attacks",
         }
     }
 
@@ -70,7 +65,6 @@ impl MapFlag {
                 "Weapon fire cannot damage buildings, walls or bridges."
             }
             Self::NoFriendlyFire => "Teammates cannot damage each other with weapons.",
-            Self::NoPhysicalAttacks => "Physical attacks are not allowed.",
         }
     }
 

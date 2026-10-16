@@ -823,10 +823,6 @@ fn attack_profile_inner(
         "Target is on another battlefield"
     );
     let map = &world.btech.maps()[&position.map];
-    ensure!(
-        !map.has_flag(super::MapFlag::NoPhysicalAttacks),
-        "You cannot perform physical attacks here!"
-    );
     if source.signature().team == victim.team {
         ensure!(
             !source.friendly_fire_safety(),
