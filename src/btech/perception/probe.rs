@@ -16,17 +16,18 @@ pub enum ActiveProbe {
 
 impl ActiveProbe {
     /// Every family, longest reach first.
-    pub const BY_REACH: [Self; 4] = [Self::Bloodhound, Self::Watchdog, Self::Beagle, Self::Light];
+    pub const BY_REACH: [Self; 4] = [Self::Bloodhound, Self::Beagle, Self::Watchdog, Self::Light];
 
     /// Hardware reach before the stationary-installation bonus. A Clan Beagle slot (a Clan
-    /// chassis's, or one stated `CL.BeagleProbe`) is the Clan active probe, which reaches as
-    /// far as the Watchdog.
+    /// chassis's, or one stated `CL.BeagleProbe`) is the Clan active probe, which reaches five
+    /// hexes. The Watchdog CEWS carries a light active probe and reaches three, like the Light
+    /// Active Probe (Tactical Operations: Advanced Units & Equipment, Watchdog CEWS rules and
+    /// equipment table, range —/—/—/3).
     pub fn range(self, clan: bool) -> u8 {
         match self {
             Self::Beagle if clan => 5,
             Self::Beagle => 4,
-            Self::Watchdog => 5,
-            Self::Light => 3,
+            Self::Watchdog | Self::Light => 3,
             Self::Bloodhound => 8,
         }
     }
@@ -156,12 +157,15 @@ impl Vehicle {
 mod tests {
     use super::*;
 
-    /// Reach ordering drives profile selection; only the Bloodhound sees concealed units.
+    /// Reach ordering drives profile selection; only the Bloodhound sees concealed units. The
+    /// Watchdog's light probe reaches three hexes (TO:AUE equipment table, —/—/—/3) and the
+    /// Clan active probe five.
     #[test]
     fn families_order_by_reach_and_concealment() {
         let ranges = |clan| ActiveProbe::BY_REACH.map(|probe| probe.range(clan));
-        assert_eq!(ranges(false), [8, 5, 4, 3]);
-        assert_eq!(ranges(true), [8, 5, 5, 3]);
+        assert_eq!(ranges(false), [8, 4, 3, 3]);
+        assert_eq!(ranges(true), [8, 5, 3, 3]);
+        assert_eq!(ActiveProbe::Watchdog.range(true), 3);
         assert_eq!(
             ActiveProbe::BY_REACH.map(ActiveProbe::sees_concealed),
             [true, false, false, false]

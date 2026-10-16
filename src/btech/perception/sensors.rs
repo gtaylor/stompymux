@@ -194,12 +194,14 @@ impl TargetSystems {
 }
 
 /// What a sweep of `mode` adds to its result for each of the target's systems: the Tactical
-/// Operations ECM/Stealth Modifier Table (p. 190). Passive infrared, magscan and seismic
-/// sensors are not fooled by any of them.
+/// Operations ECM/Stealth Modifier Table (p. 191). A Beagle slot on Clan equipment (`clan`)
+/// is the Clan active probe and takes that row. Passive infrared, magscan and seismic sensors
+/// are not fooled by any of them.
 pub fn ecm_modifier(
     mode: SensorMode,
     vehicle: bool,
     probe: Option<ActiveProbe>,
+    clan: bool,
     systems: TargetSystems,
 ) -> i16 {
     // Columns: Angel ECM, null signature, Guardian/Clan/Watchdog ECM, stealth armor.
@@ -208,6 +210,7 @@ pub fn ecm_modifier(
         SensorMode::Radar if vehicle => Some([7, 7, 6, 5]),
         SensorMode::Radar => Some([7, 6, 5, 4]),
         SensorMode::Probe => match probe {
+            Some(ActiveProbe::Beagle) if clan => Some([5, 5, 4, 3]),
             Some(ActiveProbe::Beagle) => Some([6, 5, 4, 3]),
             Some(ActiveProbe::Bloodhound) => Some([4, 3, 2, 1]),
             Some(ActiveProbe::Light) => Some([6, 6, 5, 4]),
@@ -267,16 +270,18 @@ pub struct SweepResult {
     pub jammed: bool,
 }
 
-/// Resolve one sensor sweep against one target.
+/// Resolve one sensor sweep against one target. `clan` marks Clan sensors, whose Beagle slot
+/// is the Clan active probe.
 pub fn sweep(
     mode: SensorMode,
     bands: SensorBands,
     vehicle: bool,
     probe: Option<ActiveProbe>,
+    clan: bool,
     roll: u8,
     target: SweepTarget<'_>,
 ) -> SweepResult {
-    let modifier = ecm_modifier(mode, vehicle, probe, target.systems);
+    let modifier = ecm_modifier(mode, vehicle, probe, clan, target.systems);
     let band = SensorBand::of_result(i16::from(roll) + modifier);
     let unmodified = SensorBand::of_result(i16::from(roll));
     let reaches = |band: Option<SensorBand>| {
@@ -287,8 +292,10 @@ pub fn sweep(
             return false;
         }
         let terrain = target.terrain;
+        // Any building hex blocks radar and magscan, hardened ones included (Tactical
+        // Operations p. 190, Sensor Range Table).
         if (mode.blocked_by_hills() && terrain.hills)
-            || (mode.blocked_by_buildings() && terrain.buildings > 0)
+            || (mode.blocked_by_buildings() && terrain.building_hexes() > 0)
         {
             return false;
         }
@@ -297,12 +304,14 @@ pub fn sweep(
             SensorMode::Seismic if !target.moving_on_ground => return false,
             _ => {}
         }
+        // Heavy woods and ordinary buildings take a hex off every bracket, ultra-heavy woods
+        // and hardened buildings two (Tactical Operations p. 190, Sensor Range Table).
         let shrink = if mode.shrunk_by_cover() {
             terrain
                 .heavy_woods
                 .saturating_add(terrain.ultra_woods.saturating_mul(2))
                 .saturating_add(terrain.buildings)
-                .saturating_add(terrain.hardened_buildings)
+                .saturating_add(terrain.hardened_buildings.saturating_mul(2))
         } else {
             0
         };
@@ -366,6 +375,7 @@ mod tests {
                 bands,
                 false,
                 None,
+                false,
                 roll,
                 target(&clear, distance),
             );
@@ -424,6 +434,7 @@ mod tests {
                 SensorBands::of(mode, false, Some(ActiveProbe::Beagle), false),
                 false,
                 Some(ActiveProbe::Beagle),
+                false,
                 7,
                 target(terrain, distance),
             )
@@ -444,6 +455,44 @@ mod tests {
         assert!(detects(SensorMode::Magscan, &woods, 10));
     }
 
+    /// Tactical Operations p. 190, Sensor Range Table: a hardened building hex takes two hexes
+    /// off infrared and radar brackets where an ordinary one takes one, and any building hex,
+    /// hardened included, blocks radar and magscan outright.
+    #[test]
+    fn hardened_buildings_shrink_twice_and_block_radar_and_magscan() {
+        let hardened = TerrainLos {
+            hardened_buildings: 1,
+            blocked: true,
+            ..TerrainLos::default()
+        };
+        let ordinary = TerrainLos {
+            buildings: 1,
+            blocked: true,
+            ..TerrainLos::default()
+        };
+        let detects = |mode, terrain: &TerrainLos, distance| {
+            sweep(
+                mode,
+                SensorBands::of(mode, false, None, false),
+                false,
+                None,
+                false,
+                7,
+                target(terrain, distance),
+            )
+            .detected
+        };
+        // The 'Mech infrared short bracket reaches ten hexes on open ground.
+        assert!(detects(SensorMode::Infrared, &ordinary, 9));
+        assert!(!detects(SensorMode::Infrared, &ordinary, 10));
+        assert!(detects(SensorMode::Infrared, &hardened, 8));
+        assert!(!detects(SensorMode::Infrared, &hardened, 9));
+        for mode in [SensorMode::Radar, SensorMode::Magscan] {
+            assert!(!detects(mode, &hardened, 1), "{mode:?}");
+            assert!(!detects(mode, &ordinary, 1), "{mode:?}");
+        }
+    }
+
     /// Heat stretches infrared brackets toward the spotter, mass stretches magscan, light
     /// units and industrial hexes hide from magscan, and seismic needs ground movement.
     #[test]
@@ -452,28 +501,82 @@ mod tests {
         let bands = SensorBands::of(SensorMode::Infrared, false, None, false);
         // A medium-band sweep misses eight hexes until the target carries fifteen heat.
         let mut cold = target(&clear, 8);
-        assert!(!sweep(SensorMode::Infrared, bands, false, None, 5, cold).detected);
+        assert!(!sweep(SensorMode::Infrared, bands, false, None, false, 5, cold).detected);
         cold.heat_penalties = 3;
-        assert!(sweep(SensorMode::Infrared, bands, false, None, 5, cold).detected);
+        assert!(sweep(SensorMode::Infrared, bands, false, None, false, 5, cold).detected);
         let magscan = SensorBands::of(SensorMode::Magscan, false, None, false);
         let mut heavy = target(&clear, 11);
         heavy.tons = 85;
-        assert!(sweep(SensorMode::Magscan, magscan, false, None, 7, heavy).detected);
+        assert!(sweep(SensorMode::Magscan, magscan, false, None, false, 7, heavy).detected);
         heavy.tons = 15;
-        assert!(!sweep(SensorMode::Magscan, magscan, false, None, 7, heavy).detected);
+        assert!(!sweep(SensorMode::Magscan, magscan, false, None, false, 7, heavy).detected);
         heavy.tons = 85;
         heavy.heavy_industrial = true;
-        assert!(!sweep(SensorMode::Magscan, magscan, false, None, 7, heavy).detected);
+        assert!(!sweep(SensorMode::Magscan, magscan, false, None, false, 7, heavy).detected);
         let seismic = SensorBands::of(SensorMode::Seismic, false, None, false);
         let mut still = target(&clear, 2);
         still.moving_on_ground = false;
-        assert!(!sweep(SensorMode::Seismic, seismic, false, None, 7, still).detected);
+        assert!(!sweep(SensorMode::Seismic, seismic, false, None, false, 7, still).detected);
         still.moving_on_ground = true;
-        assert!(sweep(SensorMode::Seismic, seismic, false, None, 7, still).detected);
+        assert!(sweep(SensorMode::Seismic, seismic, false, None, false, 7, still).detected);
         let mut submerged = target(&clear, 5);
         submerged.across_water_surface = true;
-        assert!(!sweep(SensorMode::Infrared, bands, false, None, 7, submerged).detected);
-        assert!(sweep(SensorMode::Magscan, magscan, false, None, 7, submerged).detected);
+        assert!(
+            !sweep(
+                SensorMode::Infrared,
+                bands,
+                false,
+                None,
+                false,
+                7,
+                submerged
+            )
+            .detected
+        );
+        assert!(
+            sweep(
+                SensorMode::Magscan,
+                magscan,
+                false,
+                None,
+                false,
+                7,
+                submerged
+            )
+            .detected
+        );
+    }
+
+    /// Tactical Operations p. 191, ECM/Stealth Modifier Table: the Clan active probe takes
+    /// +5 against Angel ECM and null signature, +4 against other ECM and +3 against stealth,
+    /// where the Inner Sphere Beagle takes +6 against Angel. The Watchdog keeps its own row.
+    #[test]
+    fn clan_active_probe_takes_its_own_ecm_row() {
+        let row = |probe, clan| {
+            [
+                TargetSystems {
+                    angel: true,
+                    ..TargetSystems::default()
+                },
+                TargetSystems {
+                    null_signature: true,
+                    ..TargetSystems::default()
+                },
+                TargetSystems {
+                    guardian: true,
+                    ..TargetSystems::default()
+                },
+                TargetSystems {
+                    stealth: true,
+                    ..TargetSystems::default()
+                },
+            ]
+            .map(|systems| ecm_modifier(SensorMode::Probe, false, Some(probe), clan, systems))
+        };
+        assert_eq!(row(ActiveProbe::Beagle, true), [5, 5, 4, 3]);
+        assert_eq!(row(ActiveProbe::Beagle, false), [6, 5, 4, 3]);
+        assert_eq!(row(ActiveProbe::Watchdog, true), [6, 5, 4, 3]);
+        assert_eq!(row(ActiveProbe::Light, true), [6, 6, 5, 4]);
     }
 
     /// The ECM/Stealth Modifier Table pushes radar and probe sweeps past the detecting
@@ -485,13 +588,20 @@ mod tests {
             guardian: true,
             ..TargetSystems::default()
         };
-        assert_eq!(ecm_modifier(SensorMode::Radar, false, None, guardian), 5);
-        assert_eq!(ecm_modifier(SensorMode::Radar, true, None, guardian), 6);
+        assert_eq!(
+            ecm_modifier(SensorMode::Radar, false, None, false, guardian),
+            5
+        );
+        assert_eq!(
+            ecm_modifier(SensorMode::Radar, true, None, false, guardian),
+            6
+        );
         assert_eq!(
             ecm_modifier(
                 SensorMode::Probe,
                 false,
                 Some(ActiveProbe::Beagle),
+                false,
                 guardian
             ),
             4
@@ -501,6 +611,7 @@ mod tests {
                 SensorMode::Probe,
                 false,
                 Some(ActiveProbe::Bloodhound),
+                false,
                 TargetSystems {
                     angel: true,
                     stealth: true,
@@ -509,23 +620,29 @@ mod tests {
             ),
             5
         );
-        assert_eq!(ecm_modifier(SensorMode::Infrared, false, None, guardian), 0);
-        assert_eq!(ecm_modifier(SensorMode::Seismic, true, None, guardian), 0);
+        assert_eq!(
+            ecm_modifier(SensorMode::Infrared, false, None, false, guardian),
+            0
+        );
+        assert_eq!(
+            ecm_modifier(SensorMode::Seismic, true, None, false, guardian),
+            0
+        );
         let clear = TerrainLos::default();
         let bands = SensorBands::of(SensorMode::Radar, false, None, false);
         let mut covered = target(&clear, 5);
         covered.systems = guardian;
-        let result = sweep(SensorMode::Radar, bands, false, None, 7, covered);
+        let result = sweep(SensorMode::Radar, bands, false, None, false, 7, covered);
         assert!(!result.detected && result.jammed && result.band.is_none());
         covered.systems = TargetSystems {
             null_signature: true,
             ..TargetSystems::default()
         };
-        let quiet = sweep(SensorMode::Radar, bands, false, None, 7, covered);
+        let quiet = sweep(SensorMode::Radar, bands, false, None, false, 7, covered);
         assert!(!quiet.detected && !quiet.jammed);
         // A low roll with ECM climbs into a detecting band.
         covered.systems = guardian;
-        let climbed = sweep(SensorMode::Radar, bands, false, None, 2, covered);
+        let climbed = sweep(SensorMode::Radar, bands, false, None, false, 2, covered);
         assert_eq!(climbed.band, Some(SensorBand::Short));
         assert!(climbed.detected);
     }

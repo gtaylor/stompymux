@@ -533,6 +533,7 @@ async fn probe_sweeps_with_the_probes_brackets() {
             SensorMode::Probe,
             true,
             Some(ActiveProbe::Beagle),
+            false,
             TargetSystems {
                 angel: false,
                 guardian: true,

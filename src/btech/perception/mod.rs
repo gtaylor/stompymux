@@ -122,6 +122,8 @@ pub struct SensorProfile {
     pub band: Option<SensorBand>,
     /// The installed probe the probe sweep uses.
     pub probe: Option<ActiveProbe>,
+    /// Clan sensors: the brackets and ECM row of a Beagle slot are the Clan active probe's.
+    pub clan: bool,
 }
 
 /// One sensor system of a unit's suite and the brackets it detects in.
@@ -393,6 +395,7 @@ fn sensor_profile(
             .sensor_sweep
             .and_then(|roll| SensorBand::of_result(i16::from(roll))),
         probe: probe_kind,
+        clan,
     })
 }
 
@@ -654,6 +657,7 @@ fn sweep_suite(
             (system.mode == SensorMode::Probe)
                 .then_some(profile.sensor.probe)
                 .flatten(),
+            profile.sensor.clan,
             roll,
             sweep_target,
         );

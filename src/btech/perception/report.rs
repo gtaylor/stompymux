@@ -173,6 +173,7 @@ mod tests {
                 sweep: Some(6),
                 band: Some(super::super::SensorBand::Medium),
                 probe: Some(ActiveProbe::Beagle),
+                clan: false,
             },
             probe: Some(ProbeProfile {
                 kind: ActiveProbe::Beagle,

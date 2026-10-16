@@ -76,9 +76,9 @@ sensor contact tells you where something is, not what it is.
 
 | Sensor | Mech | Vehicle | Blocked by | Notes |
 | --- | --- | --- | --- | --- |
-| Infrared | 10/20/30 | 9/18/27 | Hills | Heavy woods -1, ultra-heavy -2, buildings -1 per hex; a hot Mech is found one hex farther per heat movement penalty, plus one for a unit in a burning hex or a stationary unit burning with inferno jelly |
-| Magscan | 10/20/30 | 9/18/27 | Buildings | 80-100 ton targets +1 hex, heavier +2; units under 20 tons and heavy industrial hexes hide |
-| Radar | 8/16/24 | 6/12/18 | Hills, buildings | Woods and buildings shorten it like infrared |
+| Infrared | 10/20/30 | 9/18/27 | Hills | Heavy woods -1, ultra-heavy -2, buildings -1, hardened buildings -2 per hex; a hot Mech is found one hex farther per heat movement penalty, plus one for a unit in a burning hex or a stationary unit burning with inferno jelly |
+| Magscan | 10/20/30 | 9/18/27 | Buildings, hardened included | 80-100 ton targets +1 hex, heavier +2; units under 20 tons and heavy industrial hexes hide |
+| Radar | 8/16/24 | 6/12/18 | Hills, buildings, hardened included | Woods and buildings shorten it like infrared |
 | Seismic | 2/4/6 | 1/2/3 | Nothing | Finds only units moving on the ground |
 | Active probe | Probe ranges | Probe ranges | Nothing | Beagle 12/24/36, Clan 15/30/45, Light and Watchdog 9/18/27, Bloodhound 16/32/48 |
 
@@ -126,7 +126,7 @@ A unit may `hide` where Total Warfare allows it: not on pavement, a road or a
 bridge, Mechs not in clear terrain, and in water only when fully submerged. Hidden
 units are not perceived by the enemy at any range until something reveals them:
 an enemy unit moving adjacent, an enemy active probe in range (Beagle four hexes,
-Clan probe and Watchdog five, Light three, Bloodhound eight) with a clear line,
+Clan probe five, Light and Watchdog three, Bloodhound eight) with a clear line,
 or the hidden unit moving, firing or being hit.
 
 ## Spotting for your side

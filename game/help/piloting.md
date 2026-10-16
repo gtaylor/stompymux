@@ -882,7 +882,7 @@ inspection includes `null_signature` and its pending destination/countdown.
 ### Active probes
 
 A working Beagle, Light, Watchdog or Bloodhound Active Probe reveals hidden units
-within four, three, five or eight hexes (Clan probes five) when it has a clear
+within four, three, three or eight hexes (Clan probes five) when it has a clear
 line to them, and lets you ignore one point of woods when aiming at a target in
 that reach. It also sweeps with your sensor suite, ahead of the built-in
 sensors, using its longer brackets (Beagle 12/24/36, Clan 15/30/45, Light and
