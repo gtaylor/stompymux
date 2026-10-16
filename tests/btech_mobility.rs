@@ -11,10 +11,11 @@ fn unit() -> Mech {
     .unwrap()
 }
 
-/// A destroyed hip halves walking MP before each other leg actuator takes one (Total Warfare
-/// p. 125), whatever order the hits land in, and running is refigured from what is left.
+/// A destroyed hip halves walking MP and supersedes the actuator hits in its own leg, which
+/// then cost neither MP nor piloting modifiers (Total Warfare p. 127), whatever order the hits
+/// land in; running is refigured from what is left.
 #[test]
-fn hips_halve_walking_before_actuators_and_hit_order_does_not_matter() {
+fn hip_supersedes_its_legs_actuators_whatever_the_hit_order() {
     let mut a = unit();
     let mut b = a.clone();
     let hip = CriticalLocation {
@@ -33,17 +34,29 @@ fn hips_halve_walking_before_actuators_and_hit_order_does_not_matter() {
     b.destroy_critical(hip).unwrap();
     b.destroy_critical(upper).unwrap();
     assert_eq!(a.mobility(), b.mobility());
-    // Walk 7 halved is 4, less one actuator is 3; run 3 x 1.5 rounded up is 5.
-    assert_eq!(a.mobility().walking_speed, 32.25);
-    assert_eq!(a.mobility().maximum_speed, 53.75);
-    assert_eq!(a.mobility().piloting_modifier, 3);
+    // Walk 7 halved is 4 and the locked leg's upper actuator no longer counts; run 4 x 1.5 is
+    // 6. The hip's +2 replaces the actuator's +1.
+    assert_eq!(a.mobility().walking_speed, 43.0);
+    assert_eq!(a.mobility().maximum_speed, 64.5);
+    assert_eq!(a.mobility().piloting_modifier, 2);
+    // An actuator hit in the other leg still costs its MP after the halving, and its +1.
+    let mut c = a.clone();
+    c.destroy_critical(CriticalLocation {
+        section: Section::RightLeg,
+        slot: 1,
+    })
+    .unwrap();
+    assert_eq!(c.mobility().walking_speed, 32.25);
+    assert_eq!(c.mobility().maximum_speed, 53.75);
+    assert_eq!(c.mobility().piloting_modifier, 3);
+    // The second hip leaves no MP and adds another +2.
     a.destroy_critical(CriticalLocation {
         section: Section::RightLeg,
         slot: 0,
     })
     .unwrap();
     assert_eq!(a.mobility().maximum_speed, 0.0);
-    assert_eq!(a.mobility().piloting_modifier, 5);
+    assert_eq!(a.mobility().piloting_modifier, 4);
 }
 
 #[test]
