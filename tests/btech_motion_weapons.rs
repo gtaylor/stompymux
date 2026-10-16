@@ -6929,16 +6929,11 @@ async fn plasma_hit_boundaries_keep_heat_separate_from_material_damage() {
         assert_eq!(salvo.groups.len(), 1);
         let group = &salvo.groups[0];
         assert_eq!(group.damage, if roll == number { 5 } else { 10 });
-        assert!(!group.impact.plasma_heat.is_empty());
-        assert!(group.impact.plasma_heat.iter().all(|v| (1..=6).contains(v)));
+        let heat = group.impact.plasma_heat.expect("plasma heat roll");
+        assert!((1..=6).contains(&heat));
         assert_eq!(
             world.btech.constructed_units()[&target].heat().stored,
-            group
-                .impact
-                .plasma_heat
-                .iter()
-                .map(|&v| f64::from(v))
-                .sum::<f64>()
+            f64::from(heat)
         );
     }
 }

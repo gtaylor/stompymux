@@ -875,7 +875,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `damage`: `integer`
 - `hit`: `{section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean}`
-- `impact`: `table` — Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat rolls, searchlight_destroyed and remaining scenario effects.
+- `impact`: `table` — Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat roll, searchlight_destroyed and remaining scenario effects.
 - `pilot_injuries`: `table[]` — Applied tactical injuries and consciousness results.
 - `notices`: `{unit: integer, text: string}[]` — Already staged by unit.fire.
 - `balance`: `table[]` — Applied balance checks and any nested falls.

@@ -182,6 +182,7 @@ mod tests {
                     indirect: false,
                     apollo: false,
                     array: None,
+                    unit_without_heat: false,
                 };
                 let actual =
                     roll_weapon_groups(request(mode), &mut Dice::seeded([seed; 32])).unwrap();
@@ -230,6 +231,7 @@ mod tests {
                                     indirect: false,
                                     apollo: false,
                                     array: None,
+                                    unit_without_heat: false,
                                 },
                                 &mut dice,
                             )
@@ -257,6 +259,7 @@ mod tests {
                                     indirect: false,
                                     apollo: false,
                                     array: None,
+                                    unit_without_heat: false,
                                 },
                                 &mut defended_dice,
                             )

@@ -2111,13 +2111,15 @@ fn tactical_shot(
     .unwrap()
 }
 
-/// IS plasma heats Mechs only; vehicle impacts use catalogue damage without an extra thermal draw.
+/// IS plasma heats Mechs only; against a vehicle, which tracks no heat, a plasma rifle adds
+/// 2D6 to its 10 points and deals the total in five-point groups (Total Warfare p. 139). The
+/// extra dice come from the target's stream, and a glancing blow halves the total.
 #[tokio::test]
 async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
     for vehicle in [false, true] {
         let (_dir, config, base, shooter, target, index) =
             weapon_engagement(vehicle, Weapon::PlasmaRifle).await;
-        for damage in [0u32, 5, 10] {
+        for outcome in ["miss", "glancing", "hit"] {
             let mut world = base.clone();
             let rules = fire_rules();
             let threshold =
@@ -2125,9 +2127,9 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
                     .unwrap()
                     .subtotal()
                     .unwrap();
-            let roll = match damage {
-                0 => 2,
-                5 => threshold as u8,
+            let roll = match outcome {
+                "miss" => 2,
+                "glancing" => threshold as u8,
                 _ => 12,
             };
             let value = (0..=255)
@@ -2139,23 +2141,21 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
             saved["vehicles"][target.0.to_string()]["dice"] =
                 serde_json::to_value(Dice::seeded([17; 32])).unwrap();
             world.btech = serde_json::from_value(saved).unwrap();
-            let mut expected = world.clone();
-            if damage > 0 {
-                let direction = battle_unit_range(&expected, target, shooter).unwrap();
-                let heading = expected.btech.vehicles()[&target].motion().unwrap().heading;
-                let arc =
-                    HitArc::from_bearing(direction.bearing.unwrap_or(180.0), heading).unwrap();
-                let impact = resolve_battle_vehicle_impact(
-                    &mut expected,
-                    target,
-                    arc,
-                    damage,
-                    None,
-                    rules.shot.vehicle_impact,
-                )
-                .unwrap();
-                assert!(impact.damage.is_some());
-            }
+            let mut extra = Dice::seeded([17; 32]);
+            let full = 10 + u64::from(extra.d6()) + u64::from(extra.d6());
+            let damage = match outcome {
+                "miss" => 0,
+                "glancing" => full / 2,
+                _ => full,
+            };
+            let material = |world: &World| -> u64 {
+                world.btech.vehicles()[&target]
+                    .sections()
+                    .values()
+                    .map(|section| u64::from(section.armor) + u64::from(section.internal))
+                    .sum()
+            };
+            let before = material(&world);
             persistence::save(&config.database(), &world).await.unwrap();
             let mut replay = persistence::load(&config.database()).await.unwrap();
             let report = tactical_shot(&mut world, shooter, target, index, rules);
@@ -2164,19 +2164,22 @@ async fn plasma_vehicle_targets_share_damage_glancing_misses_and_replay() {
                 tactical_shot(&mut replay, shooter, target, index, rules)
             );
             assert_eq!(world.btech, replay.btech);
-            assert_eq!(
-                world.btech.vehicles()[&target],
-                expected.btech.vehicles()[&target]
-            );
+            assert_eq!(before - material(&world), damage, "{outcome}");
             assert!(report["heat_transfer"].is_null());
             assert!(report["narc"].is_null());
             if damage == 0 {
                 assert!(report["salvo"].is_null());
             } else {
                 assert_eq!(report["salvo"]["kind"], "vehicle");
-                let groups = report["salvo"]["report"]["groups"].as_array().unwrap();
-                assert_eq!(groups.len(), 1);
-                assert_eq!(groups[0]["damage"], damage);
+                let groups: Vec<u64> = report["salvo"]["report"]["groups"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|group| group["damage"].as_u64().unwrap())
+                    .collect();
+                assert_eq!(groups.iter().sum::<u64>(), damage, "{outcome}");
+                assert!(groups.iter().all(|&group| group <= 5), "{groups:?}");
+                assert_eq!(groups.len() as u64, damage.div_ceil(5), "{groups:?}");
             }
             world.validate(&config).unwrap();
         }

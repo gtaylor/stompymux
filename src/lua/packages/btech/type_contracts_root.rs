@@ -889,7 +889,7 @@
 //|---@class SalvoGroup
 //|---@field damage integer
 //|---@field hit {section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean}
-//|---@field impact table Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat rolls, searchlight_destroyed and remaining scenario effects.
+//|---@field impact table Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat roll, searchlight_destroyed and remaining scenario effects.
 //|---@field pilot_injuries table[] Applied tactical injuries and consciousness results.
 //|---@field notices {unit: integer, text: string}[] Already staged by unit.fire.
 //|---@field balance table[] Applied balance checks and any nested falls.

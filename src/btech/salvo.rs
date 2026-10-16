@@ -798,6 +798,7 @@ fn resolve_salvo_with_effects(
                 HitGeometry::Direct { array, .. } => array,
                 HitGeometry::Fixed(_) => None,
             },
+            unit_without_heat: false,
         },
         &mut unit.dice,
     )?;

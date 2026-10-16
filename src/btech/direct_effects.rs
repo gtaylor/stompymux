@@ -160,6 +160,7 @@ fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u1
             indirect: false,
             apollo: false,
             array: None,
+            unit_without_heat: false,
         },
         super::dice::unit_dice_mut(world, request.shooter)?,
     )?;

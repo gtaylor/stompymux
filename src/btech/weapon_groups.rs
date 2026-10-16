@@ -27,6 +27,9 @@ pub(super) struct WeaponGroupRequest {
     /// Machine guns firing together as a machine gun array: the attack rolls on that column
     /// of the Cluster Hits Table and every hit lands in one location (Total Warfare p. 137).
     pub array: Option<u8>,
+    /// The target is a unit that tracks no heat, such as a vehicle: a plasma rifle adds 2D6
+    /// to its damage instead of heating it (Total Warfare p. 139).
+    pub unit_without_heat: bool,
 }
 
 /// Shared cluster draw and ordered damage packet sizes, before cover and terrain absorption.
@@ -63,6 +66,7 @@ pub(super) fn roll_weapon_groups(
         indirect,
         apollo,
         array,
+        unit_without_heat,
     } = request;
     let array = array.filter(|guns| *guns >= 2);
     let burst = fire_mode.rounds_per_cycle() > 1;
@@ -95,9 +99,17 @@ pub(super) fn roll_weapon_groups(
     } else {
         weapon.profile_for_ammunition(mode).damage
     };
-    // A plasma cannon deals 3D6 to a target that does not track heat, in five-point groups
-    // (Total Warfare p. 139); heat-tracking targets take its heat instead of these packets.
-    let plasma = (weapon == Weapon::ClanPlasmaCannon).then(|| dice.d6() + dice.d6() + dice.d6());
+    // Against a target that does not track heat, a plasma cannon deals 3D6 and a plasma rifle
+    // its 10 plus 2D6 against a unit, both in five-point groups (Total Warfare p. 139). A
+    // 'Mech takes the cannon's heat instead of these packets, and the rifle's single 10-point
+    // hit with its heat.
+    let plasma = match weapon {
+        Weapon::ClanPlasmaCannon => Some(dice.d6() + dice.d6() + dice.d6()),
+        Weapon::PlasmaRifle if unit_without_heat => {
+            Some(weapon.profile().damage + dice.d6() + dice.d6())
+        }
+        _ => None,
+    };
     let resolve = |ams_engaged: bool| -> Result<Vec<u16>> {
         let mut damage = if let Some(guns) = array {
             // A glancing blow shifts a cluster roll down four, never below 2 (Tactical
@@ -271,6 +283,49 @@ mod tests {
             indirect: false,
             apollo: false,
             array: None,
+            unit_without_heat: false,
+        }
+    }
+
+    /// Against a unit that tracks no heat a plasma rifle adds 2D6 to its 10 and a plasma
+    /// cannon rolls 3D6, both dealt in five-point groups (Total Warfare p. 139).
+    #[test]
+    fn plasma_weapons_add_damage_against_units_without_heat() {
+        for seed in 0..=31 {
+            for (weapon, dice_count, base) in [
+                (Weapon::PlasmaRifle, 2, 10),
+                (Weapon::ClanPlasmaCannon, 3, 0),
+            ] {
+                let mut expected = Dice::seeded([seed; 32]);
+                let total: u16 = base
+                    + (0..dice_count)
+                        .map(|_| u16::from(expected.d6()))
+                        .sum::<u16>();
+                let groups = roll_weapon_groups(
+                    WeaponGroupRequest {
+                        unit_without_heat: true,
+                        ..request(weapon, AmmunitionMode::Normal, FireMode::Normal)
+                    },
+                    &mut Dice::seeded([seed; 32]),
+                )
+                .unwrap()
+                .damage;
+                assert_eq!(groups.iter().sum::<u16>(), total, "{weapon:?}");
+                assert!(groups.iter().all(|&group| group <= 5), "{weapon:?}");
+                assert_eq!(groups.len(), usize::from(total.div_ceil(5)), "{weapon:?}");
+            }
+            // A 'Mech takes the rifle's plain 10 points; its heat is rolled with the impact.
+            let mech = roll_weapon_groups(
+                request(
+                    Weapon::PlasmaRifle,
+                    AmmunitionMode::Normal,
+                    FireMode::Normal,
+                ),
+                &mut Dice::seeded([seed; 32]),
+            )
+            .unwrap()
+            .damage;
+            assert_eq!(mech, vec![10]);
         }
     }
 
@@ -566,6 +621,7 @@ mod streak_lrm_tests {
                                 indirect: false,
                                 apollo: false,
                                 array: None,
+                                unit_without_heat: false,
                             },
                             &mut dice,
                         )

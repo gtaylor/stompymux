@@ -53,8 +53,9 @@ pub struct ImpactReport {
     /// Character injuries applied at their event positions in an in-character action.
     pub character_injuries: Vec<super::CharacterPilotInjury>,
     pub destroyed: bool,
-    /// Plasma heat rolls after the primary damage path, in transfer-unwind order.
-    pub plasma_heat: Vec<u8>,
+    /// The plasma rifle's 1D6 heat roll, made once per hit after the primary damage path
+    /// however far the damage transferred (Total Warfare p. 139).
+    pub plasma_heat: Option<u8>,
     /// Dumped salvo ignition, distinct from an internal ammunition-bin explosion.
     pub dump_ignitions: Vec<super::DumpIgnition>,
     /// This hit destroyed the unit's searchlight.
@@ -1514,6 +1515,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
     // The first location that takes the damage; the hit location critical and armor-piercing
     // checks belong to it alone (Total Warfare p. 124 and 140).
     let mut original = true;
+    // Locations the damage reached; a plasma hit that reached any heats the 'Mech once.
     let mut plasma_returns = 0;
     let mut ignition_section = None;
     while damage > 0 {
@@ -1699,14 +1701,12 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         };
         section = next;
     }
-    if matches!(weapon_effect, Some(WeaponEffect::Plasma)) {
-        for _ in 0..plasma_returns {
-            // Plasma heat is an outside heat source, capped at fifteen a turn (Total Warfare
-            // p. 159).
-            let heat = context.unit_mut().dice.d6();
-            context.unit_mut().absorb_outside_heat(heat);
-            context.report.impact.plasma_heat.push(heat);
-        }
+    if matches!(weapon_effect, Some(WeaponEffect::Plasma)) && plasma_returns > 0 {
+        // A plasma rifle hit delivers one 1D6 of heat however the damage transferred (Total
+        // Warfare p. 139); it is an outside heat source, capped at fifteen a turn (p. 159).
+        let heat = context.unit_mut().dice.d6();
+        context.unit_mut().absorb_outside_heat(heat);
+        context.report.impact.plasma_heat = Some(heat);
     }
     if let Some(section) = ignition_section {
         resolve_dump_ignition(context, section)?;
