@@ -101,10 +101,11 @@ pub(super) fn render(world: &World, id: ObjectId) -> Result<String> {
         } else {
             name.into()
         };
-        let linked = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
-            unit.loadout()?.weapons[i].on_targeting_computer
-        });
-        let computer = linked && super::technology::device(world, id, System::TargetingComputer)?.1;
+        // A working targeting computer assists the direct-fire weapons that size it (TechManual
+        // p. 238), never cluster rounds (Total Warfare p. 113).
+        let computer = weapon.supports_targeting_computer()
+            && row.ammunition_mode != AmmunitionMode::Cluster
+            && super::technology::device(world, id, System::TargetingComputer)?.1;
         let modes = if weapon.is_ams() {
             if ams { "  ON ".into() } else { " OFF ".into() }
         } else {

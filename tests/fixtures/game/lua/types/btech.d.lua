@@ -100,7 +100,6 @@
 ---@field initial_ammunition_mode AmmunitionMode
 ---@field initial_fire_mode FireMode Template mode; live mode is reported by unit.weapons.
 ---@field rear_mount boolean
----@field on_targeting_computer boolean Explicit authored link, separate from automatic eligibility.
 
 ---@class AmmunitionBin
 ---@field location CriticalLocation
@@ -3607,7 +3606,6 @@ function btech_unit.section_condition(unit, section) end
 ---@field section UnitSection
 ---@field slots integer[] Zero-based critical slots.
 ---@field rear_facing? boolean
----@field targeting_computer? boolean
 ---@field one_shot? boolean
 
 ---@class AmmunitionConfiguration

@@ -183,7 +183,7 @@ local SPECS = {
   {
     page = 5, path = 'btech.unit.fire_modes', cross = 'btech_types',
     names = { 'DESTROYED', 'DISABLED', 'BROKEN', 'DAMAGED',
-      'TARGETING_COMPUTER', 'REAR_MOUNT', 'HOTLOAD', 'HALF_TON', 'ONE_SHOT',
+      'REAR_MOUNT', 'HOTLOAD', 'HALF_TON', 'ONE_SHOT',
       'ONE_SHOT_USED', 'ULTRA', 'RAPID_FIRE', 'GATLING', 'ROTARY_TWO_SHOT',
       'ROTARY_THREE_SHOT', 'ROTARY_FOUR_SHOT', 'ROTARY_FIVE_SHOT', 'ROTARY_SIX_SHOT', 'HEAT', 'BACKPACK', 'JETTISONED',
       'OMNI_BASE', 'ROCKET_FIRED' },

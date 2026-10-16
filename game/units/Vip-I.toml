@@ -35,8 +35,8 @@ slots = [
     { at = "3-4", item = "EndoSteel" },
     { at = "5-6", item = "CL.UltraAC/2" },
     { at = "7-8", item = "Ammo_CL.UltraAC/2", rounds = 45 },
-    { at = "9-10", item = "CL.SmallPulseLaser", modes = ["OnTC"] },
-    { at = 11, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "9-10", item = "CL.SmallPulseLaser" },
+    { at = 11, item = "CL.MediumPulseLaser" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -45,9 +45,9 @@ armor = 22
 rear = 10
 slots = [
     { at = "3-4", item = "EndoSteel" },
-    { at = 5, item = "CL.ERLargeLaser", modes = ["OnTC"] },
-    { at = "9-10", item = "CL.SmallPulseLaser", modes = ["OnTC"] },
-    { at = 11, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = 5, item = "CL.ERLargeLaser" },
+    { at = "9-10", item = "CL.SmallPulseLaser" },
+    { at = 11, item = "CL.MediumPulseLaser" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -74,5 +74,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = 4, item = "CL.MediumPulseLaser" },
 ]

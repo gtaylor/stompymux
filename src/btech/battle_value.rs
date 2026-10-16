@@ -708,7 +708,7 @@ impl Offense {
                 arc: arc(mount.criticals[0], mount.rear_mount),
                 one_shot: mount.one_shot,
                 targeting_computer: targeting_computer
-                    && (mount.on_targeting_computer || mount.weapon.supports_targeting_computer()),
+                    && mount.weapon.supports_targeting_computer(),
                 artemis: artemis.get(&index).copied().unwrap_or(1.0),
             })
             .collect();

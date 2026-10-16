@@ -40,7 +40,8 @@ pub async fn fixture_with_target(
     fixture_with_computer(source, weapon, target_source, false).await
 }
 
-/// Optional authored computer linkage exercises aim and per-packet guidance with the same loadout.
+/// An optional installed targeting computer exercises aim and per-packet guidance with the same
+/// loadout; it assists only the weapons eligible for it.
 pub async fn fixture_with_computer(
     source: &str,
     weapon: Option<Weapon>,
@@ -112,11 +113,7 @@ pub fn supply_fixture_on(
                 CriticalDefinition {
                     equipment: weapon.name().into(),
                     data: "-".into(),
-                    modes: if computer {
-                        vec!["OnTC".into()]
-                    } else {
-                        vec![]
-                    },
+                    modes: vec![],
                 },
             );
         }

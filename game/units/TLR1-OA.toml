@@ -20,7 +20,7 @@ heat_sinks = "double"
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.ERPPC", modes = ["OnTC"] },
+    { at = "3-5", item = "IS.ERPPC" },
     { at = "6-8", item = "HeatSink" },
     { at = "9-12", item = "EndoSteel" },
 ]
@@ -29,7 +29,7 @@ slots = [
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-9", item = "IS.UltraAC/10", modes = ["OnTC"] },
+    { at = "3-9", item = "IS.UltraAC/10" },
     { at = "10-11", item = "IS.StreakSRM-6" },
     { at = 12, item = "EndoSteel" },
 ]

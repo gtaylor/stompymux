@@ -119,7 +119,6 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 - `initial_ammunition_mode`: `AmmunitionMode`
 - `initial_fire_mode`: `FireMode` — Template mode; live mode is reported by unit.weapons.
 - `rear_mount`: `boolean`
-- `on_targeting_computer`: `boolean` — Explicit authored link, separate from automatic eligibility.
 
 ## AmmunitionBin
 
@@ -1736,7 +1735,6 @@ Alias: `PartDefinition|{id: integer}|integer|string`
 - `section`: `UnitSection`
 - `slots`: `integer[]` — Zero-based critical slots.
 - `rear_facing`: `boolean`
-- `targeting_computer`: `boolean`
 - `one_shot`: `boolean`
 
 ## AmmunitionConfiguration

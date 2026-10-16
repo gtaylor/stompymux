@@ -1601,7 +1601,6 @@ pub(super) fn replace_critical_modes(
         "Disabled",
         "Broken",
         "Damaged",
-        "OnTC",
         "RearMount",
         "Hotload",
         "Halfton",

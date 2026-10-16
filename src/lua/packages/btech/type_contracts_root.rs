@@ -130,7 +130,6 @@
 //|---@field initial_ammunition_mode AmmunitionMode
 //|---@field initial_fire_mode FireMode Template mode; live mode is reported by unit.weapons.
 //|---@field rear_mount boolean
-//|---@field on_targeting_computer boolean Explicit authored link, separate from automatic eligibility.
 // lua-types-end
 
 // lua-types-begin btech 00016
@@ -1893,7 +1892,6 @@
 //|---@field section UnitSection
 //|---@field slots integer[] Zero-based critical slots.
 //|---@field rear_facing? boolean
-//|---@field targeting_computer? boolean
 //|---@field one_shot? boolean
 // lua-types-end
 

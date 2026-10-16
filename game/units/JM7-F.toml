@@ -19,7 +19,7 @@ heat_sinks = "double"
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "IS.RotaryAC/5", modes = ["OnTC"] },
+    { at = "3-8", item = "IS.RotaryAC/5" },
     { at = "9-12", item = "FerroFibrous" },
 ]
 
@@ -27,7 +27,7 @@ slots = [
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "IS.RotaryAC/5", modes = ["OnTC"] },
+    { at = "3-8", item = "IS.RotaryAC/5" },
     { at = "9-12", item = "FerroFibrous" },
 ]
 
@@ -53,7 +53,7 @@ slots = [
 armor = 34
 rear = 6
 slots = [
-    { at = "11-12", item = "IS.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "11-12", item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_leg]

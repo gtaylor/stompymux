@@ -16,7 +16,7 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 3
 slots = [
-    { at = "5-8", item = "CL.HeavySmallLaser", modes = ["OnTC"] },
+    { at = "5-8", item = "CL.HeavySmallLaser" },
     { at = 9, item = "EndoSteel" },
     { at = 10, item = "FerroFibrous" },
 ]
@@ -24,7 +24,7 @@ slots = [
 [sections.right_arm]
 armor = 3
 slots = [
-    { at = "5-9", item = "CL.HeavySmallLaser", modes = ["OnTC"] },
+    { at = "5-9", item = "CL.HeavySmallLaser" },
     { at = 10, item = "EndoSteel" },
     { at = 11, item = "FerroFibrous" },
 ]

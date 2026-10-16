@@ -41,7 +41,7 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "IS.ERPPC", modes = ["OnTC"] },
+    { at = "4-6", item = "IS.ERPPC" },
     { at = "7-9", item = "HeatSink" },
     { at = "10-12", item = "EndoSteel" },
 ]

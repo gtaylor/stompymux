@@ -25,7 +25,7 @@ slots = [
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-9", item = "IS.RotaryAC/5", modes = ["OnTC"] },
+    { at = "4-9", item = "IS.RotaryAC/5" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -51,7 +51,7 @@ slots = [
 armor = 22
 rear = 7
 slots = [
-    { at = "11-12", item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "11-12", item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_leg]

@@ -15,9 +15,9 @@ armor = "ferro_fibrous"
 armor = 28
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "4-5", item = "CL.ERPPC" },
     { at = 6, item = "FerroFibrous" },
-    { at = "7-8", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "7-8", item = "CL.ERPPC" },
     { at = 9, item = "CL.LRM-10" },
     { at = 10, item = "Ammo_CL.LRM-10", rounds = 12 },
 ]
@@ -26,9 +26,9 @@ slots = [
 armor = 28
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "4-5", item = "CL.ERPPC" },
     { at = 6, item = "FerroFibrous" },
-    { at = "7-8", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "7-8", item = "CL.ERPPC" },
 ]
 
 [sections.left_torso]

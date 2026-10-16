@@ -16,7 +16,7 @@ structure = "endo_steel"
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERLargeLaser", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.ERLargeLaser" },
     { at = "5-12", item = "HeatSink" },
 ]
 
@@ -24,7 +24,7 @@ slots = [
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERLargeLaser", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.ERLargeLaser" },
     { at = "5-12", item = "HeatSink" },
 ]
 

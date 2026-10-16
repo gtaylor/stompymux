@@ -18,8 +18,8 @@ armor = 17
 omit = ["hand_actuator"]
 slots = [
     { at = "4-9", item = "HeatSink" },
-    { at = 10, item = "CL.ERLargeLaser", modes = ["OnTC"] },
-    { at = 11, item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = 10, item = "CL.ERLargeLaser" },
+    { at = 11, item = "CL.ERMediumLaser" },
     { at = 12, item = "FerroFibrous" },
 ]
 
@@ -28,8 +28,8 @@ armor = 17
 omit = ["hand_actuator"]
 slots = [
     { at = "4-9", item = "HeatSink" },
-    { at = 10, item = "CL.ERLargeLaser", modes = ["OnTC"] },
-    { at = 11, item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = 10, item = "CL.ERLargeLaser" },
+    { at = 11, item = "CL.ERMediumLaser" },
     { at = 12, item = "FerroFibrous" },
 ]
 
@@ -37,7 +37,7 @@ slots = [
 armor = 22
 rear = 7
 slots = [
-    { at = 3, item = "CL.MachineGun", modes = ["OnTC"] },
+    { at = 3, item = "CL.MachineGun" },
     { at = 4, item = "CL.Anti-MissileSystem" },
     { at = 5, item = "Ammo_CL.MachineGun", rounds = 200 },
     { at = "6-7", item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
@@ -50,7 +50,7 @@ rear = 7
 slots = [
     { at = "3-4", item = "TargetingComputer" },
     { at = 5, item = "CL.Anti-MissileSystem" },
-    { at = 6, item = "CL.MachineGun", modes = ["OnTC"] },
+    { at = 6, item = "CL.MachineGun" },
     { at = "7-8", item = "FerroFibrous" },
 ]
 

@@ -24,7 +24,7 @@ slots = [
 [sections.right_arm]
 armor = 18
 slots = [
-    { at = "5-7", item = "IS.RotaryAC/2", modes = ["OnTC"] },
+    { at = "5-7", item = "IS.RotaryAC/2" },
     { at = 8, item = "EndoSteel" },
 ]
 
@@ -70,5 +70,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = 4, item = "IS.ERMediumLaser" },
 ]

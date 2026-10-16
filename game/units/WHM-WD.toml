@@ -16,7 +16,7 @@ armor = "ferro_fibrous"
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "4-5", item = "CL.ERPPC" },
     { at = "6-12", item = "EndoSteel" },
 ]
 
@@ -24,7 +24,7 @@ slots = [
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "4-5", item = "CL.ERPPC" },
     { at = "6-12", item = "FerroFibrous" },
 ]
 
@@ -32,7 +32,7 @@ slots = [
 armor = 22
 rear = 8
 slots = [
-    { at = 3, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = 3, item = "CL.MediumPulseLaser" },
     { at = "4-7", item = "TargetingComputer" },
     { at = "8-11", item = "HeatSink" },
 ]
@@ -43,7 +43,7 @@ rear = 8
 slots = [
     { at = "3-4", item = "CL.StreakSRM-6" },
     { at = 5, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = 6, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = 6, item = "CL.MediumPulseLaser" },
     { at = "7-8", item = "HeatSink" },
 ]
 
@@ -63,5 +63,5 @@ armor = 30
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = 4, item = "CL.ERMediumLaser" },
 ]

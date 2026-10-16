@@ -24,50 +24,50 @@ slots = [
 [sections.right_arm]
 armor = 22
 slots = [
-    { at = "5-8", item = "TargetingComputer" },
+    { at = "5-8", item = "CL.TargetingComputer" },
     { at = 9, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 22
-rear = 8
+rear = 10
 slots = [
-    { at = "3-4", item = "JumpJet" },
-    { at = "5-6", item = "CL.LargePulseLaser", modes = ["OnTC"] },
-    { at = 7, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
-    { at = "8-9", item = "CL.SmallPulseLaser", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.JumpJet" },
+    { at = "5-6", item = "CL.LargePulseLaser" },
+    { at = 7, item = "CL.MediumPulseLaser" },
+    { at = "8-9", item = "CL.SmallPulseLaser" },
     { at = 10, item = "EndoSteel" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 22
-rear = 8
+rear = 10
 slots = [
-    { at = "3-4", item = "JumpJet" },
-    { at = "5-6", item = "CL.LargePulseLaser", modes = ["OnTC"] },
-    { at = 7, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
-    { at = "8-9", item = "CL.SmallPulseLaser", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.JumpJet" },
+    { at = "5-6", item = "CL.LargePulseLaser" },
+    { at = 7, item = "CL.MediumPulseLaser" },
+    { at = "8-9", item = "CL.SmallPulseLaser" },
     { at = 10, item = "EndoSteel" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 30
-rear = 9
+rear = 12
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
-armor = 25
+armor = 26
 slots = [
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
-armor = 25
+armor = 26
 slots = [
     { at = "5-6", item = "EndoSteel" },
 ]

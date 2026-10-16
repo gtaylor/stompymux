@@ -16,7 +16,7 @@ armor = "ferro_fibrous"
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.ERPPC" },
     { at = 5, item = "FerroFibrous" },
 ]
 
@@ -24,7 +24,7 @@ slots = [
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.ERPPC" },
     { at = 5, item = "FerroFibrous" },
 ]
 

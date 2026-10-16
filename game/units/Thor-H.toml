@@ -18,8 +18,8 @@ armor = 17
 omit = ["hand_actuator"]
 slots = [
     { at = "4-7", item = "HeatSink" },
-    { at = "8-10", item = "CL.HeavyLargeLaser", modes = ["OnTC"] },
-    { at = 11, item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "8-10", item = "CL.HeavyLargeLaser" },
+    { at = 11, item = "CL.ERMediumLaser" },
     { at = 12, item = "FerroFibrous" },
 ]
 
@@ -28,8 +28,8 @@ armor = 17
 omit = ["hand_actuator"]
 slots = [
     { at = "4-7", item = "HeatSink" },
-    { at = "8-10", item = "CL.HeavyLargeLaser", modes = ["OnTC"] },
-    { at = 11, item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "8-10", item = "CL.HeavyLargeLaser" },
+    { at = 11, item = "CL.ERMediumLaser" },
     { at = 12, item = "FerroFibrous" },
 ]
 

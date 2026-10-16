@@ -20,8 +20,8 @@ heat_sinks = "double"
 armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.ERLargeLaser", modes = ["OnTC"] },
-    { at = 5, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "3-4", item = "IS.ERLargeLaser" },
+    { at = 5, item = "IS.ERMediumLaser" },
     { at = "6-12", item = "EndoSteel" },
 ]
 
@@ -29,7 +29,7 @@ slots = [
 armor = 20
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "4-5", item = "IS.ERMediumLaser" },
     { at = "6-12", item = "EndoSteel" },
 ]
 
@@ -39,7 +39,7 @@ rear = 7
 slots = [
     { at = 1, item = "JumpJet" },
     { at = "2-4", item = "HeatSink" },
-    { at = 5, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = 5, item = "IS.ERMediumLaser" },
     { at = "6-9", item = "TargetingComputer" },
 ]
 
@@ -49,7 +49,7 @@ rear = 7
 slots = [
     { at = 1, item = "JumpJet" },
     { at = "2-7", item = "HeatSink" },
-    { at = "8-9", item = "IS.ERLargeLaser", modes = ["OnTC"] },
+    { at = "8-9", item = "IS.ERLargeLaser" },
     { at = 10, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
     { at = 11, item = "Case" },
 ]

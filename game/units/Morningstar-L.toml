@@ -22,7 +22,7 @@ armor = 31
 [sections.front_side]
 armor = 43
 slots = [
-    { at = 1, item = "IS.LargeLaser", modes = ["OnTC"] },
+    { at = 1, item = "IS.LargeLaser" },
 ]
 
 [sections.aft_side]
@@ -35,5 +35,5 @@ slots = [
 [sections.turret]
 armor = 25
 slots = [
-    { at = 1, item = "IS.AC/10", modes = ["OnTC"] },
+    { at = 1, item = "IS.AC/10" },
 ]

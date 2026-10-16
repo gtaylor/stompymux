@@ -27,7 +27,7 @@ slots = [
 armor = 18
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = 4, item = "CL.MediumPulseLaser" },
     { at = "10-11", item = "FerroFibrous" },
     { at = 12, item = "EndoSteel" },
 ]

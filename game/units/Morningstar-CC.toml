@@ -44,5 +44,5 @@ slots = [
 [sections.turret]
 armor = 24
 slots = [
-    { at = 1, item = "IS.AC/5", modes = ["OnTC"] },
+    { at = 1, item = "IS.AC/5" },
 ]

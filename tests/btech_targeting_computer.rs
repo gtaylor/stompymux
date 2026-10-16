@@ -98,7 +98,7 @@ fn targeting_computer_slots_mass_damage_and_flooding() {
     }
 }
 
-/// Existing explicitly linked weapons and a six-slot computer load without changing the Black Knight asset.
+/// The Black Knight's six-slot computer loads from its shipped template.
 #[test]
 fn targeting_computer_black_knight_constructs_unchanged() {
     let source =
@@ -117,39 +117,52 @@ fn targeting_computer_black_knight_constructs_unchanged() {
     );
 }
 
-/// Authored machine-gun links survive construction; ammunition flags do not link their weapons.
+/// A targeting computer assists a weapon because a working computer is installed and the weapon
+/// is eligible, never because the template says so: the Viper and Thor machine guns gain
+/// nothing, and an `OnTC` mode is refused (TechManual p. 238; Total Warfare p. 143).
 #[test]
-fn authored_links_construct_without_changing_automatic_eligibility() {
+fn targeting_computer_assists_only_eligible_weapons() {
     for source in [
         include_str!("../game/units/Viper-2.toml"),
         include_str!("../game/units/Thor-D.toml"),
     ] {
         let unit = Mech::from_template(MechTemplate::parse("test", source).unwrap()).unwrap();
         assert!(unit.targeting_computer_operational().unwrap());
+        let loadout = unit.loadout().unwrap();
+        let computer = || {
+            loadout
+                .systems
+                .iter()
+                .filter(|part| part.system == System::TargetingComputer)
+                .map(|_| true)
+        };
         assert!(
-            unit.loadout()
-                .unwrap()
+            loadout
                 .weapons
                 .iter()
-                .any(|mount| mount.weapon == Weapon::ClanMachineGun && mount.on_targeting_computer)
+                .any(|mount| mount.weapon == Weapon::ClanMachineGun)
         );
-        assert!(!Weapon::ClanMachineGun.supports_targeting_computer());
-        let restored: Mech = serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
-        assert_eq!(restored.loadout().unwrap(), unit.loadout().unwrap());
-    }
-    let mut template =
-        MechTemplate::parse("Mas-A", include_str!("../game/units/Mas-A.toml")).unwrap();
-    let with_flag = Mech::from_template(template.clone()).unwrap();
-    for section in template.sections.values_mut() {
-        for critical in section.criticals.values_mut() {
-            if critical.equipment.starts_with("Ammo_") {
-                critical.modes.retain(|flag| flag != "OnTC");
-            }
+        for mount in &loadout.weapons {
+            assert_eq!(
+                mount.computer_assists(AmmunitionMode::Normal, computer()),
+                mount.weapon.supports_targeting_computer(),
+                "{:?}",
+                mount.weapon
+            );
         }
+        let linked = source.replacen(
+            "item = \"CL.MachineGun\" }",
+            "item = \"CL.MachineGun\", modes = [\"OnTC\"] }",
+            1,
+        );
+        assert_ne!(linked, source);
+        let refused = MechTemplate::parse("test", &linked)
+            .and_then(Mech::from_template)
+            .map(|_| ())
+            .unwrap_err();
+        assert!(
+            format!("{refused:#}").contains("Unsupported weapon modes"),
+            "{refused:#}"
+        );
     }
-    let without_flag = Mech::from_template(template).unwrap();
-    assert_eq!(
-        with_flag.loadout().unwrap(),
-        without_flag.loadout().unwrap()
-    );
 }

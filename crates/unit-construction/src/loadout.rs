@@ -19,8 +19,6 @@ pub struct WeaponMount<L = CriticalLocation> {
     /// Primary-section slots come first, followed by any linked extension slots.
     pub criticals: Vec<L>,
     pub rear_mount: bool,
-    /// Explicit authored computer link, independent of automatic equipment eligibility.
-    pub on_targeting_computer: bool,
     /// The mount carries one self-contained salvo instead of drawing from bins.
     pub one_shot: bool,
     /// Templates may explicitly represent an already expended launcher.
@@ -70,7 +68,7 @@ impl AmmunitionBin {
         );
         let ammunition_flags: Vec<_> = flags
             .iter()
-            .filter(|mode| !matches!(mode.as_str(), "Halfton" | "Hotload" | "OnTC"))
+            .filter(|mode| !matches!(mode.as_str(), "Halfton" | "Hotload"))
             .cloned()
             .collect();
         let mode = super::AmmunitionMode::from_flags(weapon, &ammunition_flags)?;
@@ -155,8 +153,10 @@ impl<L> SystemCritical<L> {
 }
 
 impl<L> WeaponMount<L> {
-    /// Explicit links survive without computer slots; automatic links require installed hardware.
-    /// Any unavailable computer slot disables assistance, and cluster ammunition never benefits.
+    /// Whether a targeting computer assists this weapon: one must be installed with every slot
+    /// available, and only the direct-fire energy, ballistic and pulse weapons that size it
+    /// benefit, never machine guns, flamers, artillery or missiles (TechManual p. 238; Total
+    /// Warfare p. 143). Cluster rounds never benefit (Total Warfare p. 113).
     pub fn computer_assists(
         &self,
         ammunition: super::AmmunitionMode,
@@ -172,7 +172,7 @@ impl<L> WeaponMount<L> {
                 return false;
             }
         }
-        self.on_targeting_computer || (installed && self.weapon.supports_targeting_computer())
+        installed && self.weapon.supports_targeting_computer()
     }
 
     /// Validate shared weapon flags independently of chassis-specific slot allocation.
@@ -209,7 +209,6 @@ impl<L> WeaponMount<L> {
                             | "Rotary_FiveShot"
                             | "Rotary_SixShot"
                     ) && weapon.is_rotary())
-                    || mode == "OnTC"
                     // TM p. 342: only LRM, SRM, MRM and Streak SRM launchers and Narc
                     // and iNarc beacons come in one-shot versions.
                     || (matches!(mode.as_str(), "OneShot" | "OneShot_Used")
@@ -253,7 +252,6 @@ impl<L> WeaponMount<L> {
             one_shot,
             initially_spent,
             rear_mount: critical.modes.iter().any(|mode| mode == "RearMount"),
-            on_targeting_computer: critical.modes.iter().any(|mode| mode == "OnTC"),
             initial_fire_mode: if critical.modes.iter().any(|mode| mode == "Heat") {
                 super::FireMode::Heat
             } else if critical.modes.iter().any(|mode| mode == "Hotload") {
@@ -326,7 +324,6 @@ fn is_contract_fire_mode(mode: &str) -> bool {
             | "Disabled"
             | "Broken"
             | "Damaged"
-            | "OnTC"
             | "RearMount"
             | "Hotload"
             | "Halfton"
@@ -911,45 +908,57 @@ mod tests {
         }
     }
 
-    /// Automatic eligibility, explicit links, hardware loss and cluster exclusion compose independently.
+    /// A targeting computer assists only eligible weapons, only while every computer slot is
+    /// installed and available, and never with cluster rounds (TechManual p. 238; Total
+    /// Warfare pp. 113, 143). An `OnTC` mode is refused like any unknown mode.
     #[test]
-    fn computer_links_share_hardware_and_ammunition_rules() {
-        for weapon in [Weapon::MediumLaser, Weapon::MachineGun, Weapon::Lbx10] {
-            for linked in [false, true] {
-                let critical = super::super::CriticalDefinition {
-                    equipment: weapon.name().into(),
-                    data: "-".into(),
-                    modes: if linked {
-                        vec!["OnTC".into()]
-                    } else {
-                        Vec::new()
-                    },
-                };
-                let mount =
-                    WeaponMount::<CriticalLocation>::from_critical(weapon, &critical, Vec::new())
-                        .unwrap();
-                for slots in [
-                    vec![],
-                    vec![true],
-                    vec![true, true],
-                    vec![true, false],
-                    vec![false, true],
-                ] {
-                    let expected = slots.iter().all(|&available| available)
-                        && (linked || (!slots.is_empty() && weapon.supports_targeting_computer()));
-                    assert_eq!(
-                        mount
-                            .computer_assists(crate::AmmunitionMode::Normal, slots.iter().copied()),
-                        expected
-                    );
-                    assert!(
-                        !mount.computer_assists(
-                            crate::AmmunitionMode::Cluster,
-                            slots.iter().copied()
-                        )
-                    );
-                }
+    fn computer_assistance_follows_the_weapon_and_hardware() {
+        for weapon in [
+            Weapon::MediumLaser,
+            Weapon::MachineGun,
+            Weapon::Lbx10,
+            Weapon::Lrm10,
+            Weapon::Flamer,
+        ] {
+            let critical = super::super::CriticalDefinition {
+                equipment: weapon.name().into(),
+                data: "-".into(),
+                modes: Vec::new(),
+            };
+            let mount =
+                WeaponMount::<CriticalLocation>::from_critical(weapon, &critical, Vec::new())
+                    .unwrap();
+            for slots in [
+                vec![],
+                vec![true],
+                vec![true, true],
+                vec![true, false],
+                vec![false, true],
+            ] {
+                let expected = !slots.is_empty()
+                    && slots.iter().all(|&available| available)
+                    && weapon.supports_targeting_computer();
+                assert_eq!(
+                    mount.computer_assists(crate::AmmunitionMode::Normal, slots.iter().copied()),
+                    expected,
+                    "{weapon:?} {slots:?}"
+                );
+                assert!(
+                    !mount.computer_assists(crate::AmmunitionMode::Cluster, slots.iter().copied())
+                );
             }
+            let linked = super::super::CriticalDefinition {
+                modes: vec!["OnTC".into()],
+                ..critical
+            };
+            assert!(
+                WeaponMount::<CriticalLocation>::from_critical(weapon, &linked, Vec::new())
+                    .is_err()
+            );
         }
+        assert!(!Weapon::MachineGun.supports_targeting_computer());
+        assert!(!Weapon::Lrm10.supports_targeting_computer());
+        assert!(!Weapon::Flamer.supports_targeting_computer());
+        assert!(AmmunitionBin::configuration(Weapon::Ac10, &["OnTC".into()]).is_err());
     }
 }

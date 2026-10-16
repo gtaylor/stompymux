@@ -1175,7 +1175,7 @@ heat_sinks = "double"
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", modes = ["OnTC"] },
+    { at = "4-6", item = "IS.ERPPC", modes = ["RearMount"] },
 ]
 
 [sections.right_arm]
@@ -1224,7 +1224,7 @@ armor = 9
         assert_eq!(arm.criticals[&0].equipment, "ShoulderOrHip");
         assert_eq!(arm.criticals[&2].equipment, "LowerActuator");
         assert_eq!(arm.criticals[&3].equipment, "IS.ERPPC");
-        assert_eq!(arm.criticals[&4].modes, ["OnTC"]);
+        assert_eq!(arm.criticals[&4].modes, ["RearMount"]);
         let torso = &parsed.sections["left_torso"];
         assert_eq!(torso.criticals[&0].data, "8");
         assert_eq!(torso.criticals[&1].data, "2");

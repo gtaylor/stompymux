@@ -16,7 +16,7 @@ armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-6", item = "HeatSink" },
-    { at = "7-8", item = "CL.LargePulseLaser", modes = ["OnTC"] },
+    { at = "7-8", item = "CL.LargePulseLaser" },
     { at = 9, item = "FerroFibrous" },
 ]
 
@@ -25,7 +25,7 @@ armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-6", item = "CL.LargePulseLaser", modes = ["OnTC"] },
+    { at = "5-6", item = "CL.LargePulseLaser" },
     { at = 7, item = "FerroFibrous" },
 ]
 
@@ -34,7 +34,7 @@ armor = 20
 rear = 8
 slots = [
     { at = "1-6", item = "HeatSink" },
-    { at = "7-8", item = "CL.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "7-8", item = "CL.MediumPulseLaser" },
     { at = 9, item = "EndoSteel" },
     { at = "10-11", item = "FerroFibrous" },
 ]
@@ -45,7 +45,7 @@ rear = 8
 slots = [
     { at = "1-2", item = "HeatSink" },
     { at = "3-6", item = "TargetingComputer" },
-    { at = "7-9", item = "CL.SmallPulseLaser", modes = ["OnTC"] },
+    { at = "7-9", item = "CL.SmallPulseLaser" },
     { at = 10, item = "EndoSteel" },
     { at = "11-12", item = "FerroFibrous" },
 ]
