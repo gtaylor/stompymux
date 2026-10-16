@@ -320,6 +320,7 @@ Each slot entry places one item in a run of consecutive critical slots:
 | `item` | Equipment name. |
 | `rounds` | Ammunition only: rounds in the bin. |
 | `link` | Non-ammunition only. Required on every Artemis IV, Artemis V and `ApolloFCS` entry: the one-based slot of the first critical of the launcher it guides, in the same section. |
+| `links` | Machine gun arrays (`MGA`) only, and required on each: the one-based first slots of the two to four machine guns it links, in the same section. |
 | `modes` | Ammunition flags or weapon modes, such as `["RearMount"]` or `["Inferno"]`. |
 
 A run fills every slot with the same item, so `{ at = "1-3", item = "HeatSink" }`
@@ -344,6 +345,22 @@ Construction refuses a controller without a link, one whose link is not the
 first slot of an applicable launcher in its section, and two controllers that
 share a launcher. A Mech's Artemis V fills two slots, both linking the same
 launcher; each vehicle entry guides its own launcher.
+
+A machine gun array names the guns it links the same way, with `links` listing
+the first slots of two to four machine guns of one size class (light, standard
+or heavy) in its own section (TechManual p. 228). The guns may sit anywhere in
+the section, before or after the array:
+
+```toml
+slots = [
+    { at = "1-3", item = "IS.MachineGun" },
+    { at = 4, item = "IS.MGA", links = [1, 2, 3] },
+]
+```
+
+Construction refuses an array without links, with fewer than two or more than
+four, one that links anything but a machine gun's first slot in its section or
+guns of two size classes, and two arrays that share a gun.
 
 ## Split mounts
 
@@ -392,8 +409,8 @@ converted. Mixed-technology units set `mixed_tech = true` and keep a Clan or
 Inner Sphere engine, structure or armor through the `[construction]` technology
 keys. A CASE II, ECM suite, active probe, MASC, targeting computer, Artemis IV
 or jump jet of the other technology base keeps its base as an `IS.` or `CL.`
-prefix on its item. A machine gun array is written after the machine guns it
-links, which it finds in the slots directly above it.
+prefix on its item. A machine gun array lists in `links` up to four machine
+guns of the size class its MegaMek name gives, in its location, nearest first.
 
 Every converted unit must load and construct exactly as the game would, so the
 tool refuses anything stompymux cannot field instead of dropping it: other unit

@@ -627,7 +627,7 @@ mod tests {
         for expected in [
             "{ at = 2, item = \"ApolloFCS\", link = 1 }",
             "{ at = 4, item = \"ApolloFCS\", link = 3 }",
-            "{ at = \"1-2\", item = \"IS.MachineGun\" },\n    { at = 3, item = \"IS.MGA\" }",
+            "{ at = \"1-2\", item = \"IS.MachineGun\" },\n    { at = 3, item = \"IS.MGA\", links = [1, 2] }",
         ] {
             assert!(
                 template.contains(expected),

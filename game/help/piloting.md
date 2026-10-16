@@ -711,9 +711,8 @@ seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
 
 ### Machine gun arrays
 
-A machine gun array links the two to four machine guns of one size class in the
-slots directly above it in its location (or, with none above, directly below),
-on a Mech, vehicle or VTOL.
+A machine gun array links the two to four machine guns of one size class in its
+location that its design lists, on a Mech, vehicle or VTOL (TechManual p. 228).
 Firing any linked gun fires every linked gun that is ready and not set to
 rapid fire, as one attack: one to-hit roll, then a roll on the Cluster Hits
 Table column for the number of guns, every hit striking one location. Each gun

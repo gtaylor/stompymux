@@ -412,7 +412,7 @@ impl VehicleTemplate {
             VehicleSection::name,
             1,
         )?;
-        check_machine_gun_arrays(loadout)?;
+        super::machine_gun_array::check_machine_gun_arrays(loadout, VehicleSection::name)?;
         let computers = loadout
             .systems
             .iter()
@@ -433,28 +433,6 @@ impl VehicleTemplate {
         }
         Ok(())
     }
-}
-
-/// Each machine gun array links two to four machine guns of one size class in its location,
-/// and a gun belongs to one array at most (TechManual p. 228).
-fn check_machine_gun_arrays(loadout: &VehicleLoadout) -> Result<()> {
-    let mut linked = std::collections::BTreeSet::new();
-    for array in loadout.machine_gun_arrays() {
-        let name = array.location.section.name();
-        ensure!(
-            super::ARRAY_GUNS.contains(&array.weapon_indices.len()),
-            "A machine gun array in {name} slot {} links {} machine guns; it links two to four of one size class beside it (TechManual p. 228)",
-            array.location.slot + 1,
-            array.weapon_indices.len()
-        );
-        for index in array.weapon_indices {
-            ensure!(
-                linked.insert(index),
-                "A machine gun in {name} is linked to two machine gun arrays (TechManual p. 228)"
-            );
-        }
-    }
-    Ok(())
 }
 
 /// Read-only construction verdict for a vehicle template, the vehicle counterpart of
@@ -666,6 +644,27 @@ slots = [
             "{}",
             rejection(&doubled)
         );
+    }
+
+    /// A vehicle location lists more than twelve items, and an array listed past the twelfth
+    /// links the guns its `links` name (TechManual p. 228).
+    #[test]
+    fn machine_gun_arrays_link_guns_past_the_twelfth_item() {
+        let zhukov = parse(&ZHUKOV.replace(
+            "    { at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },\n",
+            "    { at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },\n    { at = \"13-14\", item = \"IS.MachineGun\" },\n    { at = 15, item = \"IS.MGA\", links = [13, 14] },\n",
+        ));
+        let loadout = VehicleLoadout::resolve(&zhukov).unwrap();
+        let arrays = loadout.machine_gun_arrays();
+        assert_eq!(arrays.len(), 1);
+        let slots: Vec<_> = arrays[0]
+            .weapon_indices
+            .iter()
+            .map(|&index| loadout.weapons[index].criticals[0].slot)
+            .collect();
+        assert_eq!(slots, [12, 13]);
+        super::super::machine_gun_array::check_machine_gun_arrays(&loadout, VehicleSection::name)
+            .unwrap();
     }
 
     /// Unspent tonnage is cargo or waste, reported as a warning; overweight is refused.
@@ -1261,8 +1260,9 @@ slots = [
             parse(&YELLOW_JACKET.replace(
                 "{ at = 1, item = \"IS.GaussRifle\" },\n    { at = \"2-3\", item = \"Ammo_IS.GaussRifle\", rounds = 8 },",
                 &format!(
-                    "{{ at = \"1-{count}\", item = \"IS.MachineGun\" }},\n    {{ at = {}, item = \"IS.MGA\" }},\n    {{ at = 6, item = \"Ammo_IS.MachineGun\", rounds = 200 }},",
-                    count + 1
+                    "{{ at = \"1-{count}\", item = \"IS.MachineGun\" }},\n    {{ at = {}, item = \"IS.MGA\", links = {:?} }},\n    {{ at = 6, item = \"Ammo_IS.MachineGun\", rounds = 200 }},",
+                    count + 1,
+                    (1..=count).collect::<Vec<_>>()
                 ),
             ))
         };
@@ -1275,6 +1275,6 @@ slots = [
             .machine_gun_arrays();
         assert_eq!(arrays.len(), 1);
         assert_eq!(arrays[0].weapon_indices.len(), 3);
-        assert!(rejection(&guns(1)).contains("links 1 machine guns"));
+        assert!(rejection(&guns(1)).contains("links 1 slots"));
     }
 }

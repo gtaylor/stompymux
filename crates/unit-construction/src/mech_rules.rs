@@ -165,23 +165,9 @@ fn validate_talons_and_spikes(loadout: &MechLoadout, chassis: MechChassis) -> Re
 /// Each machine gun array links two to four machine guns of one size class in its location,
 /// and a gun belongs to one array at most (TechManual p. 228).
 fn validate_machine_gun_arrays(loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
-    let mut linked = std::collections::BTreeSet::new();
-    for array in loadout.machine_gun_arrays() {
-        let name = chassis.section_name(array.location.section);
-        ensure!(
-            super::ARRAY_GUNS.contains(&array.weapon_indices.len()),
-            "A machine gun array in {name} slot {} links {} machine guns; it links two to four of one size class beside it",
-            array.location.slot + 1,
-            array.weapon_indices.len()
-        );
-        for index in array.weapon_indices {
-            ensure!(
-                linked.insert(index),
-                "A machine gun in {name} is linked to two machine gun arrays"
-            );
-        }
-    }
-    Ok(())
+    super::machine_gun_array::check_machine_gun_arrays(loadout, |section| {
+        chassis.section_name(section)
+    })
 }
 
 impl MechTemplate {
@@ -1134,7 +1120,7 @@ mod tests {
         );
     }
 
-    /// A machine gun array needs two to four machine guns beside it (TechManual p. 228), and
+    /// A machine gun array links two to four machine guns in its location (TechManual p. 228), and
     /// weighs half a ton, or a quarter ton built by the Clans.
     #[test]
     fn machine_gun_arrays_link_two_to_four_guns() {
@@ -1146,12 +1132,12 @@ mod tests {
         };
         refused(
             &torso(
-                "    { at = 4, item = \"IS.MachineGun\" },\n    { at = 5, item = \"IS.MGA\" },\n",
+                "    { at = 4, item = \"IS.MachineGun\" },\n    { at = 5, item = \"IS.MGA\", links = [4] },\n",
             ),
-            "links 1 machine guns",
+            "links 1 slots",
         );
         let pair = torso(
-            "    { at = \"4-5\", item = \"IS.MachineGun\" },\n    { at = 6, item = \"IS.MGA\" },\n",
+            "    { at = \"4-5\", item = \"IS.MachineGun\" },\n    { at = 6, item = \"IS.MGA\", links = [4, 5] },\n",
         );
         // Everything else passes: two guns and the array add 2.5 tons to a full Jenner.
         refused(&pair, "over the 35-ton chassis");

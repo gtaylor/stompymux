@@ -108,6 +108,21 @@ impl AmmunitionBin {
     }
 }
 
+/// Whether a system critical's stored data is what its system reads: none, a fire-control
+/// system's one-based launcher link, or a machine gun array's links.
+pub(crate) fn system_data_supported(critical: &super::CriticalDefinition) -> bool {
+    if critical.data == "-" {
+        return true;
+    }
+    match System::installation(&critical.equipment).map(|(system, _)| system) {
+        Some(System::ArtemisIv | System::ArtemisV | System::ApolloFcs) => {
+            critical.data.parse::<u8>().is_ok()
+        }
+        Some(System::MachineGunArray) => super::machine_gun_array_links(&critical.data).is_ok(),
+        _ => false,
+    }
+}
+
 /// Salvos one bin holds. A half-ton lot holds half a ton's rounds. Precision and armor-piercing
 /// autocannon rounds (Total Warfare p. 141) and the Augmented, Active and Vibrabomb Thunder
 /// rounds (Tactical Operations: Advanced Units & Equipment p. 228) pack half as many shots into
@@ -142,6 +157,34 @@ pub struct SystemCritical<L = CriticalLocation> {
     /// The technology base the slot's `IS.` or `CL.` prefix states; `None` builds the system
     /// from the chassis's base (see [`System::installation`]).
     pub tech_base: Option<super::TechBase>,
+    /// The one-based first slots of the machine guns a machine gun array links in its own
+    /// location, as its template `links` list them (TechManual p. 228); empty for every other
+    /// system.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub links: Vec<u8>,
+}
+
+impl<L> SystemCritical<L> {
+    /// A resolved system critical at `location`, reading a machine gun array's links from the
+    /// critical's stored data.
+    pub fn resolve(
+        location: L,
+        system: System,
+        tech_base: Option<super::TechBase>,
+        critical: &super::CriticalDefinition,
+    ) -> Result<Self> {
+        let links = if system == System::MachineGunArray {
+            super::machine_gun_array_links(&critical.data)?
+        } else {
+            Vec::new()
+        };
+        Ok(Self {
+            location,
+            system,
+            tech_base,
+            links,
+        })
+    }
 }
 
 impl<L> SystemCritical<L> {
@@ -479,15 +522,7 @@ impl MechLoadout {
                         return Ok(());
                     }
                     ensure!(
-                        critical.data == "-"
-                            || (matches!(
-                                super::System::named(&critical.equipment),
-                                Some(
-                                    super::System::ArtemisIv
-                                        | super::System::ArtemisV
-                                        | super::System::ApolloFcs
-                                )
-                            ) && critical.data.parse::<u8>().is_ok()),
+                        system_data_supported(critical),
                         "Unsupported critical data {}",
                         critical.data
                     );
@@ -545,11 +580,9 @@ impl MechLoadout {
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
                     let (system, tech_base) = System::installation(&critical.equipment)
                         .with_context(|| format!("Unsupported equipment {}", critical.equipment))?;
-                    loadout.systems.push(SystemCritical {
-                        location,
-                        system,
-                        tech_base,
-                    });
+                    loadout.systems.push(SystemCritical::resolve(
+                        location, system, tech_base, critical,
+                    )?);
                     Ok(())
                 })()
                 .with_context(|| {
@@ -620,7 +653,9 @@ impl MechLoadout {
                     // Artemis consumes only a one-byte link later; retaining the integer here
                     // lets construction and inspection round-trip other registered specials.
                     ensure!(
-                        critical.data == "-" || critical.data.parse::<i32>().is_ok(),
+                        critical.data == "-"
+                            || critical.data.parse::<i32>().is_ok()
+                            || system_data_supported(critical),
                         "Unsupported critical data {}",
                         critical.data
                     );
@@ -704,11 +739,9 @@ impl MechLoadout {
                         None => bail!("Unsupported equipment {}", critical.equipment),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    loadout.systems.push(SystemCritical {
-                        location,
-                        system,
-                        tech_base,
-                    });
+                    loadout.systems.push(SystemCritical::resolve(
+                        location, system, tech_base, critical,
+                    )?);
                     Ok(())
                 })()
                 .with_context(|| {

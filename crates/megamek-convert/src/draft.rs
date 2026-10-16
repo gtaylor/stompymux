@@ -10,6 +10,8 @@ pub struct Slot {
     pub rounds: Option<u16>,
     /// One-based slot of the launcher an Artemis system guides.
     pub link: Option<u8>,
+    /// One-based first slots of the machine guns a machine gun array links.
+    pub links: Vec<u8>,
     pub modes: Vec<&'static str>,
 }
 
@@ -148,6 +150,10 @@ impl Draft {
                 if let Some(link) = slot.link {
                     let _ = write!(out, ", link = {link}");
                 }
+                if !slot.links.is_empty() {
+                    let links: Vec<_> = slot.links.iter().map(u8::to_string).collect();
+                    let _ = write!(out, ", links = [{}]", links.join(", "));
+                }
                 if !slot.modes.is_empty() {
                     let _ = write!(out, ", modes = {}", list(&slot.modes));
                 }
@@ -199,18 +205,21 @@ mod tests {
             item: "IS.LRM-5".into(),
             rounds: None,
             link: None,
+            links: vec![],
             modes: vec![],
         });
         section.slots[1] = Some(Slot {
             item: "IS.ArtemisIV".into(),
             rounds: None,
             link: Some(1),
+            links: vec![],
             modes: vec![],
         });
         section.slots[2] = Some(Slot {
             item: "Ammo_IS.LRM-5".into(),
             rounds: Some(24),
             link: None,
+            links: vec![],
             modes: vec!["Artemis/Mine"],
         });
         let draft = Draft {

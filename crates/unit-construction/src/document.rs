@@ -143,6 +143,8 @@ struct SlotDocument {
     item: String,
     rounds: Option<u32>,
     link: Option<i32>,
+    /// The one-based first slots of the machine guns a machine gun array links.
+    links: Option<Vec<u8>>,
     #[serde(default)]
     modes: Vec<String>,
 }
@@ -634,6 +636,26 @@ fn slot_critical(slot: SlotDocument) -> Result<CriticalDefinition> {
             .all(|mode| !mode.is_empty() && !mode.contains(char::is_whitespace)),
         "modes must be single words"
     );
+    let array = is_machine_gun_array(&slot.item);
+    ensure!(
+        array || slot.links.is_none(),
+        "only a machine gun array takes links"
+    );
+    ensure!(
+        !array || slot.link.is_none(),
+        "a machine gun array lists the guns it links with links, not link"
+    );
+    if let Some(links) = &slot.links {
+        ensure!(
+            links.iter().all(|&link| link > 0),
+            "links are one-based slots"
+        );
+        return Ok(CriticalDefinition {
+            equipment: slot.item,
+            data: super::store_machine_gun_array_links(links),
+            modes: slot.modes,
+        });
+    }
     let data = slot
         .rounds
         .map(|rounds| rounds.to_string())
@@ -1065,7 +1087,12 @@ fn render_section(
             range(first, last),
             quote(&critical.equipment)
         );
-        if critical.data != "-" {
+        if critical.data != "-" && is_machine_gun_array(&critical.equipment) {
+            let links = super::machine_gun_array_links(&critical.data)
+                .with_context(|| format!("unsupported data on {}", critical.equipment))?;
+            let links: Vec<_> = links.iter().map(u8::to_string).collect();
+            write!(entry, ", links = [{}]", links.join(", "))?;
+        } else if critical.data != "-" {
             let value: i64 = critical.data.parse().with_context(|| {
                 format!(
                     "unsupported data {} on {}",
@@ -1124,6 +1151,12 @@ fn render_split_mount(
     )?;
     writeln!(output, "]")?;
     Ok(())
+}
+
+/// Whether a slot item is a machine gun array, which lists the guns it links.
+fn is_machine_gun_array(item: &str) -> bool {
+    super::System::installation(item)
+        .is_some_and(|(system, _)| system == super::System::MachineGunArray)
 }
 
 /// Append modes to an inline slot entry.
@@ -1455,6 +1488,52 @@ placements = [
             })
             .collect();
         render(&parsed.fields, &sections).unwrap()
+    }
+
+    /// A machine gun array's `links` store as its critical data and render back; no other
+    /// item takes links, and an array takes no `link`.
+    #[test]
+    fn machine_gun_array_links_round_trip() {
+        let source = ZEUS.replace(
+            "[sections.right_torso]\narmor = 25\nrear = 6\n",
+            "[sections.right_torso]\narmor = 25\nrear = 6\nslots = [\n    { at = \"4-5\", item = \"IS.MachineGun\" },\n    { at = 6, item = \"IS.MGA\", links = [4, 5] },\n]\n",
+        );
+        let parsed = ParsedTemplate::parse("ZEU-9S", &source).unwrap();
+        assert_eq!(parsed.sections["right_torso"].criticals[&5].data, "4,5");
+        let rendered = render_mech(&parsed);
+        assert!(
+            rendered.contains("{ at = 6, item = \"IS.MGA\", links = [4, 5] }"),
+            "{rendered}"
+        );
+        assert_eq!(
+            ParsedTemplate::parse("ZEU-9S", &rendered).unwrap().sections,
+            parsed.sections
+        );
+        for (from, to, expected) in [
+            (
+                "item = \"IS.MGA\", links = [4, 5]",
+                "item = \"IS.MGA\", link = 1",
+                "lists the guns it links with links",
+            ),
+            (
+                "item = \"IS.MGA\", links = [4, 5]",
+                "item = \"IS.MGA\", links = [0, 5]",
+                "one-based",
+            ),
+            (
+                "{ at = \"4-5\", item = \"IS.MachineGun\" }",
+                "{ at = \"4-5\", item = \"IS.MachineGun\", links = [6] }",
+                "only a machine gun array takes links",
+            ),
+        ] {
+            let error = format!(
+                "{:#}",
+                ParsedTemplate::parse("ZEU-9S", &source.replace(from, to))
+                    .err()
+                    .unwrap()
+            );
+            assert!(error.contains(expected), "{error}");
+        }
     }
 
     #[test]

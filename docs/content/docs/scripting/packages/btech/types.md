@@ -134,6 +134,7 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 
 - `location`: `CriticalLocation`
 - `system`: `string` — Snake_case system identity.
+- `links`: `integer[]` — One-based first slots of the machine guns a machine gun array links in its location.
 
 ## MechLoadout
 

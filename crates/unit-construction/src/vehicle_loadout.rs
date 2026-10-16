@@ -54,17 +54,11 @@ impl VehicleLoadout {
                     }
                     ensure!(
                         if contract {
-                            critical.data == "-" || critical.data.parse::<i32>().is_ok()
-                        } else {
                             critical.data == "-"
-                                || (matches!(
-                                    super::System::named(&critical.equipment),
-                                    Some(
-                                        super::System::ArtemisIv
-                                            | super::System::ArtemisV
-                                            | super::System::ApolloFcs
-                                    )
-                                ) && critical.data.parse::<u8>().is_ok())
+                                || critical.data.parse::<i32>().is_ok()
+                                || super::loadout::system_data_supported(critical)
+                        } else {
+                            super::loadout::system_data_supported(critical)
                         },
                         "Unsupported critical data {}",
                         critical.data
@@ -106,11 +100,9 @@ impl VehicleLoadout {
                         None => bail!("Unsupported equipment {}", critical.equipment),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    loadout.systems.push(SystemCritical {
-                        location,
-                        system,
-                        tech_base,
-                    });
+                    loadout.systems.push(SystemCritical::resolve(
+                        location, system, tech_base, critical,
+                    )?);
                     Ok(())
                 })()
                 .with_context(|| {

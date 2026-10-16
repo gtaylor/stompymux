@@ -8,7 +8,7 @@
 //! unprefixed weapon resolves to the chassis's own technology base when that base has it (a
 //! Clan unit's `Light Machine Gun` is the Clan gun), and otherwise to the other base.
 use anyhow::{Context, Result, bail, ensure};
-use stompymux_unit_construction::{AmmunitionMode, System, Weapon};
+use stompymux_unit_construction::{AmmunitionMode, MachineGunClass, System, Weapon};
 
 /// Technology base of a chassis or a piece of equipment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,6 +77,10 @@ pub enum Critical {
     /// an ECM suite or a machine gun array, with the base that built it: its item always
     /// states that base (`IS.MGA`, `CL.Ecm`).
     BaseSystem(&'static str, TechBase),
+    /// A machine gun array of the technology base that built it, for machine guns of one size
+    /// class, linked to the guns of that class in its section once the section is known
+    /// (TechManual p. 228).
+    MachineGunArray(TechBase, MachineGunClass),
     /// An Artemis IV fire-control system of the technology base that built it, linked to a
     /// launcher once its section is known.
     Artemis(TechBase),
@@ -100,6 +104,7 @@ impl Critical {
             Self::Weapon { weapon, .. } => weapon.name().to_owned(),
             Self::Ammo { weapon, .. } => format!("Ammo_{}", weapon.name()),
             Self::BaseSystem(item, tech) => format!("{}.{item}", tech.namespace()),
+            Self::MachineGunArray(tech, _) => format!("{}.MGA", tech.namespace()),
             Self::Artemis(tech) => format!("{}.ArtemisIV", tech.namespace()),
             Self::ArtemisV => "ArtemisV".to_owned(),
             Self::Apollo => "ApolloFCS".to_owned(),
@@ -178,12 +183,6 @@ const SYSTEMS: &[(&str, &str)] = &[
     ("improvedc3computer", "C3i"),
     ("masc", "Masc"),
     ("talons", "Talons"),
-    ("mga", "MGA"),
-    ("lmga", "MGA"),
-    ("hmga", "MGA"),
-    ("machinegunarray", "MGA"),
-    ("lightmachinegunarray", "MGA"),
-    ("heavymachinegunarray", "MGA"),
     ("spikes", "Spikes"),
     ("tsm", "TripleStrengthMyomer"),
     ("triplestrengthmyomer", "TripleStrengthMyomer"),
@@ -470,6 +469,18 @@ fn parse_equipment(name: &str, chassis: TechBase) -> Result<Critical> {
             "artemisv" | "artemisvfcs" => return Ok(Critical::ArtemisV),
             "apollo" | "mrmapollofcs" | "apollofcs" => return Ok(Critical::Apollo),
             "searchlight" | "mountedsearchlight" => return Ok(Critical::Searchlight),
+            "mga" | "machinegunarray" => {
+                return Ok(Critical::MachineGunArray(
+                    built_by,
+                    MachineGunClass::Standard,
+                ));
+            }
+            "lmga" | "lightmachinegunarray" => {
+                return Ok(Critical::MachineGunArray(built_by, MachineGunClass::Light));
+            }
+            "hmga" | "heavymachinegunarray" => {
+                return Ok(Critical::MachineGunArray(built_by, MachineGunClass::Heavy));
+            }
             _ => {}
         }
         if let Some((_, item)) = SYSTEMS.iter().find(|(known, _)| known == base) {
@@ -880,10 +891,17 @@ mod tests {
             ("ISApollo (OMNIPOD)", Critical::Apollo),
             ("Talons (OMNIPOD)", Critical::System("Talons")),
             ("Spikes", Critical::System("Spikes")),
-            ("ISLMGA", Critical::BaseSystem("MGA", TechBase::InnerSphere)),
+            (
+                "ISLMGA",
+                Critical::MachineGunArray(TechBase::InnerSphere, MachineGunClass::Light),
+            ),
             (
                 "Clan Heavy Machine Gun Array (OMNIPOD)",
-                Critical::BaseSystem("MGA", TechBase::Clan),
+                Critical::MachineGunArray(TechBase::Clan, MachineGunClass::Heavy),
+            ),
+            (
+                "ISMGA",
+                Critical::MachineGunArray(TechBase::InnerSphere, MachineGunClass::Standard),
             ),
             ("CLArtemisV", Critical::ArtemisV),
             ("CLLightTAG", Critical::System("LightTAG")),

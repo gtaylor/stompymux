@@ -842,7 +842,7 @@ mod tests {
         let (_, template) = template(&source).unwrap();
         assert!(
             template.contains(
-                "{ at = \"6-7\", item = \"IS.MachineGun\" },\n    { at = 8, item = \"IS.MGA\" }"
+                "{ at = \"6-7\", item = \"IS.MachineGun\" },\n    { at = 8, item = \"IS.MGA\", links = [6, 7] }"
             ),
             "{template}"
         );

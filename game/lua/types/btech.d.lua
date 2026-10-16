@@ -113,6 +113,7 @@
 ---@class SystemCritical
 ---@field location CriticalLocation
 ---@field system string Snake_case system identity.
+---@field links? integer[] One-based first slots of the machine guns a machine gun array links in its location.
 
 ---@class MechLoadout
 ---@field weapons WeaponMount[]

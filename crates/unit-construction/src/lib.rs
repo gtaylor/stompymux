@@ -96,7 +96,10 @@ pub use inspection::{
 pub use loadout::{
     AmmunitionBin, CriticalLocation, MechLoadout, ResolvedLoadout, SystemCritical, WeaponMount,
 };
-pub use machine_gun_array::{ARRAY_GUNS, MachineGunArray, MachineGunClass};
+pub use machine_gun_array::{
+    ARRAY_GUNS, MachineGunArray, MachineGunClass, machine_gun_array_links,
+    store_machine_gun_array_links,
+};
 pub use mass::{
     armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
     structure_mass, system_mass, system_slot_mass, targeting_computer_tons,
