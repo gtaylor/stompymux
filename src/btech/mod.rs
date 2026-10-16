@@ -647,7 +647,10 @@ mod weapon_launch;
 
 mod woodland;
 pub use woodland::TerrainIgnition;
-pub use woodland::{WoodlandClearing, WoodlandEffect, WoodlandIntent, resolve_woodland_effect};
+pub use woodland::{
+    WoodlandClearing, WoodlandEffect, WoodlandIntent, WoodlandReduction, reduce_woodland,
+    resolve_woodland_effect,
+};
 
 mod woodland_map;
 pub use woodland_map::{WoodlandChange, apply_woodland_clearing};

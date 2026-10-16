@@ -420,7 +420,10 @@ pub use btech::{
     pilot_hex_aim_modifiers as battle_pilot_hex_aim_modifiers,
 };
 
-pub use btech::{WoodlandClearing, WoodlandEffect, WoodlandIntent, resolve_woodland_effect};
+pub use btech::{
+    WoodlandClearing, WoodlandEffect, WoodlandIntent, WoodlandReduction, reduce_woodland,
+    resolve_woodland_effect,
+};
 
 pub use btech::{WoodlandChange, apply_woodland_clearing};
 

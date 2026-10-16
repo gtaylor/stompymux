@@ -86,9 +86,9 @@ pub fn resolve_woodland_attack(
             .insert(index, total);
             None
         }
-        WoodlandEffect::Clear { clearing } => {
+        WoodlandEffect::Clear { total, .. } => {
             let _change =
-                super::apply_woodland_clearing(&mut candidate, map, coordinate, tile, clearing)?;
+                super::apply_woodland_clearing(&mut candidate, map, coordinate, tile, total)?;
             Some("clear")
         }
         WoodlandEffect::Ignite { seconds } => {

@@ -121,6 +121,13 @@ impl StoredMap {
         Ok((i64::from(coordinate.y) * self.width + i64::from(coordinate.x)) as u32)
     }
 
+    /// Damage the growth at `coordinate` has taken against its own terrain factor (Total
+    /// Warfare p. 112), zero when none is recorded.
+    pub fn terrain_damage_at(&self, coordinate: super::HexCoordinate) -> Result<u16> {
+        let index = self.tile_index(coordinate)?;
+        Ok(self.terrain_damage.get(&index).copied().unwrap_or(0))
+    }
+
     /// Inspect a decoded tile, rejecting ambiguous maps and invalid coordinates.
     pub fn hex(&self, x: i64, y: i64) -> Result<Hex> {
         let hex = self.base_hex(x, y)?;

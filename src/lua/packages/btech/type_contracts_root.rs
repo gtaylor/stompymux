@@ -908,7 +908,7 @@
 //|---@class WoodlandImpact
 //|---@field map integer
 //|---@field coordinate HexCoordinate
-//|---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"}|{effect: "damage", total: integer} What the attack did to the woods; damage is the terrain factor spent so far.
+//|---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough", total: integer}|{effect: "damage", total: integer} What the attack did to the woods; total is the terrain factor spent so far against the growth the hex held before the attack.
 //|---@field notices Notice[]
 //|---@class StrayHit
 //|---@field coordinate HexCoordinate The building hex the miss struck.

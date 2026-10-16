@@ -1,5 +1,5 @@
 //! Atomic woodland reductions on occupied maps, with terrain-only result data.
-use super::{Hex, HexCoordinate, WoodlandClearing};
+use super::{Hex, HexCoordinate};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -14,7 +14,11 @@ pub struct WoodlandChange {
     pub after: Hex,
 }
 
-/// Apply one successful clearing result without consuming another random draw.
+/// Apply one successful clearing result without consuming another random draw: spend `total`
+/// accumulated damage against the growth in the expected tile (see `reduce_woodland`) and keep
+/// whatever damage the lighter growth carries against its own terrain factor, so damage is
+/// tracked across density changes (Total Warfare p. 112). Damage that leaves the growth
+/// unchanged is not a clearing and is refused.
 /// The expected tile prevents a detached result from being applied to changed terrain.
 /// Authority, attack rolls and notification routing belong to the caller. Minefields stay intact.
 pub fn apply_woodland_clearing(
@@ -22,7 +26,7 @@ pub fn apply_woodland_clearing(
     map: ObjectId,
     coordinate: HexCoordinate,
     expected: Hex,
-    clearing: WoodlandClearing,
+    total: u16,
 ) -> Result<WoodlandChange> {
     ensure!(
         world
@@ -39,14 +43,19 @@ pub fn apply_woodland_clearing(
         "Woodland changed before the clearing result was applied"
     );
     ensure!(!before.is_burning(), "Invalid woodland reduction");
-    let after = clearing
-        .apply(before.with_overlay(None))
+    let reduction = super::reduce_woodland(before.with_overlay(None), total)
         .context("Invalid woodland reduction")?;
+    let after = reduction.hex;
     world.attempt(|world| {
         let record = world.btech.maps.get_mut(&map).unwrap();
         record.write_hex(i64::from(coordinate.x), i64::from(coordinate.y), after)?;
         let index = record.tile_index(coordinate)?;
-        std::sync::Arc::make_mut(&mut record.terrain_damage).remove(&index);
+        let damage = std::sync::Arc::make_mut(&mut record.terrain_damage);
+        if reduction.carried == 0 {
+            damage.remove(&index);
+        } else {
+            damage.insert(index, reduction.carried);
+        }
         world.btech.validate(world)?;
         Ok(WoodlandChange {
             map,

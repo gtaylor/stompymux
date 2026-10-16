@@ -1,9 +1,11 @@
 //! Woodland attack outcomes, independent of map storage and command publication.
 //!
-//! Woods, jungle and crops wear down under fire by Total Warfare's Terrain Factor (p. 112): a
-//! hex takes damage until its factor is spent, then heavy growth thins a density, light growth
-//! falls to rough ground and crops are flattened. Fires start by Tactical Operations' starting
-//! fires table (p. 41), with a target number by weapon class and a modifier for the ground.
+//! Woods, jungle and crops wear down under fire by Total Warfare's Terrain Factor (p. 112):
+//! damage to a hex accumulates across the game, and its growth takes a lighter type as soon as
+//! the remaining factor falls below that type's factor. Heavy woods (90) become light woods
+//! after 41 damage and rough ground after 90, in one attack if it is big enough; crops are
+//! flattened once their factor is spent. Fires start by Tactical Operations' starting fires
+//! table (p. 41), with a target number by weapon class and a modifier for the ground.
 use super::{AmmunitionMode, Condition, Dice, Foliage, Ground, Hex, Weapon};
 use serde::{Deserialize, Serialize};
 
@@ -28,9 +30,11 @@ pub enum WoodlandEffect {
     Ignite {
         seconds: u16,
     },
-    /// Woods cut back, keeping the hex's height.
+    /// Woods cut back, keeping the hex's height. `total` is the damage spent against the
+    /// growth the hex held before the attack, its own earlier damage included.
     Clear {
         clearing: WoodlandClearing,
+        total: u16,
     },
     /// The hex's growth took damage but still stands; `total` is what it has taken so far.
     Damage {
@@ -42,7 +46,8 @@ pub enum WoodlandEffect {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WoodlandClearing {
-    /// Heavy or ultra-heavy woods or jungle thin by one density.
+    /// Heavy or ultra-heavy woods or jungle thin to a lighter density: by one density when a
+    /// fire burns out, and by as many as the spent terrain factor reaches under fire.
     Thin,
     /// Planted fields are flattened to clear ground.
     CutToClear,
@@ -74,6 +79,60 @@ impl WoodlandClearing {
             _ => return None,
         })
     }
+}
+
+/// A wooded hex after accumulated damage spends part of its growth's terrain factor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WoodlandReduction {
+    /// The hex with its lighter growth, or with the growth felled.
+    pub hex: Hex,
+    /// Damage the remaining growth carries against its own terrain factor; zero once felled.
+    pub carried: u16,
+    /// How the growth changed.
+    pub clearing: WoodlandClearing,
+}
+
+/// Spend `total` accumulated damage against the terrain factor of the growth in `hex` (Total
+/// Warfare p. 112; Tactical Operations p. 63). The growth keeps its type until the remaining
+/// factor falls below a lighter type's factor, then takes the lightest type whose factor the
+/// remainder is still below, carrying the difference as damage against that type's factor: a
+/// heavy woods hex (90) with 41 damage is light woods (50) with 1 carried. Once the whole
+/// factor is spent woods and jungle fall to rough ground and crops to clear ground, whatever
+/// density they started at. `None` when the hex has no growth or the growth still stands
+/// unchanged.
+pub fn reduce_woodland(hex: Hex, total: u16) -> Option<WoodlandReduction> {
+    let foliage = hex.foliage()?;
+    let factor = foliage.terrain_factor();
+    if total >= factor {
+        let (cleared, clearing) = if foliage.density().is_some() {
+            (
+                hex.with_foliage(None).with_ground(Ground::Rough),
+                WoodlandClearing::CutToRough,
+            )
+        } else {
+            (hex.with_foliage(None), WoodlandClearing::CutToClear)
+        };
+        return Some(WoodlandReduction {
+            hex: cleared,
+            carried: 0,
+            clearing,
+        });
+    }
+    let remaining = factor - total;
+    let mut reduced = foliage;
+    while let Some(thinner) = reduced.thinned()
+        && remaining < thinner.terrain_factor()
+    {
+        reduced = thinner;
+    }
+    if reduced == foliage {
+        return None;
+    }
+    Some(WoodlandReduction {
+        hex: hex.with_foliage(Some(reduced)),
+        carried: reduced.terrain_factor() - remaining,
+        clearing: WoodlandClearing::Thin,
+    })
 }
 
 /// The roll a weapon needs to ignite woodland.
@@ -116,11 +175,12 @@ pub fn ignition_terrain_modifier(hex: Hex) -> Option<i16> {
 }
 
 /// Resolve woodland checks against `hex` using the caller's candidate dice stream.
-/// `terrain_damage` is what the hex's growth has already taken. This does not authorize fire,
+/// `terrain_damage` is what the hex's current growth has already taken against its terrain
+/// factor. This does not authorize fire,
 /// mutate a map, clear mines, or publish notifications.
 ///
 /// A shot aimed at the hex, or absorbed by its trees, adds its damage to the terrain factor
-/// and clears the growth once the factor is spent; an aimed shot that leaves the growth
+/// and reduces the growth as `reduce_woodland` describes; an aimed shot that leaves the growth
 /// standing, and a stray shot, lets a weapon that can start fires roll 2d6 against its
 /// starting-fire number plus the ground's modifier. Burning growth neither clears nor ignites
 /// again. Fire duration is inclusive 60–180 seconds.
@@ -133,10 +193,7 @@ pub fn resolve_woodland_effect(
     terrain_damage: u16,
     dice: &mut Dice,
 ) -> WoodlandEffect {
-    let Some(foliage) = hex.foliage() else {
-        return WoodlandEffect::None;
-    };
-    if hex.is_burning() {
+    if hex.foliage().is_none() || hex.is_burning() {
         return WoodlandEffect::None;
     }
     if matches!(intent, WoodlandIntent::Clear | WoodlandIntent::Absorb)
@@ -144,9 +201,10 @@ pub fn resolve_woodland_effect(
         && damage > 0
     {
         let total = terrain_damage.saturating_add(damage);
-        if total >= foliage.terrain_factor() {
+        if let Some(reduction) = reduce_woodland(hex, total) {
             return WoodlandEffect::Clear {
-                clearing: WoodlandClearing::of(foliage),
+                clearing: reduction.clearing,
+                total,
             };
         }
         if intent == WoodlandIntent::Absorb {
@@ -263,13 +321,14 @@ mod tests {
             AmmunitionMode::Normal,
             15,
             WoodlandIntent::Clear,
-            75,
+            26,
             &mut dice,
         );
         assert_eq!(
             effect,
             WoodlandEffect::Clear {
-                clearing: WoodlandClearing::Thin
+                clearing: WoodlandClearing::Thin,
+                total: 41,
             }
         );
         assert_eq!(
@@ -288,7 +347,8 @@ mod tests {
                 &mut dice,
             ),
             WoodlandEffect::Clear {
-                clearing: WoodlandClearing::CutToRough
+                clearing: WoodlandClearing::CutToRough,
+                total: 50,
             }
         );
         assert_eq!(
@@ -307,7 +367,8 @@ mod tests {
                 &mut dice,
             ),
             WoodlandEffect::Clear {
-                clearing: WoodlandClearing::CutToClear
+                clearing: WoodlandClearing::CutToClear,
+                total: 30,
             }
         );
         assert_eq!(
@@ -335,6 +396,83 @@ mod tests {
                 WoodlandEffect::None
             );
         }
+    }
+
+    /// Total Warfare p. 112: damage carries across density changes. A heavy woods hex that
+    /// has taken 35 stays heavy, 6 more make it light woods, and it falls to rough at 90 in
+    /// all; 90 at once fells it outright. Tactical Operations p. 63: ultra-heavy jungle needs
+    /// 130 to reach rough ground, and ultra-heavy woods (120) pass heavy (90) and light (50).
+    #[test]
+    fn spent_terrain_factor_carries_across_density_changes() {
+        let heavy = Hex::new(Terrain::HeavyWoods, 2);
+        assert_eq!(reduce_woodland(heavy, 35), None);
+        assert_eq!(reduce_woodland(heavy, 40), None);
+        let light = reduce_woodland(heavy, 41).unwrap();
+        assert_eq!(light.hex, Hex::new(Terrain::LightWoods, 2));
+        assert_eq!(light.carried, 1);
+        assert_eq!(light.clearing, WoodlandClearing::Thin);
+        assert_eq!(reduce_woodland(light.hex, 48), None);
+        let rough = reduce_woodland(light.hex, light.carried + 49).unwrap();
+        assert_eq!(rough.hex.terrain(), Terrain::Rough);
+        assert_eq!(rough.hex.level(), 2);
+        assert_eq!(
+            (rough.carried, rough.clearing),
+            (0, WoodlandClearing::CutToRough)
+        );
+        let felled = reduce_woodland(heavy, 90).unwrap();
+        assert_eq!(felled.hex, rough.hex);
+        // The same 90 points through the attack path: 35, then 6, then the light woods' 49.
+        let mut dice = Dice::seeded([5; 32]);
+        let mut hex = heavy;
+        let mut stored = 0;
+        for damage in [35, 6, 49] {
+            match resolve_woodland_effect(
+                hex,
+                Weapon::GaussRifle,
+                AmmunitionMode::Normal,
+                damage,
+                WoodlandIntent::Absorb,
+                stored,
+                &mut dice,
+            ) {
+                WoodlandEffect::Damage { total } => stored = total,
+                WoodlandEffect::Clear { total, .. } => {
+                    let reduction = reduce_woodland(hex, total).unwrap();
+                    hex = reduction.hex;
+                    stored = reduction.carried;
+                }
+                effect => panic!("unexpected {effect:?}"),
+            }
+        }
+        assert_eq!(hex.terrain(), Terrain::Rough);
+        let jungle = Hex::new(Terrain::UltraHeavyJungle, 0);
+        assert_eq!(
+            reduce_woodland(jungle, 129).unwrap().hex,
+            Hex::new(Terrain::LightJungle, 0)
+        );
+        assert_eq!(
+            reduce_woodland(jungle, 130).unwrap().hex.terrain(),
+            Terrain::Rough
+        );
+        let ultra = Hex::new(Terrain::UltraHeavyWoods, 0);
+        assert_eq!(reduce_woodland(ultra, 30), None);
+        let thinned = reduce_woodland(ultra, 31).unwrap();
+        assert_eq!(
+            (thinned.hex.terrain(), thinned.carried),
+            (Terrain::HeavyWoods, 1)
+        );
+        let thinned = reduce_woodland(ultra, 71).unwrap();
+        assert_eq!(
+            (thinned.hex.terrain(), thinned.carried),
+            (Terrain::LightWoods, 1)
+        );
+        let fields = Hex::new(Terrain::PlantedFields, 0);
+        assert_eq!(reduce_woodland(fields, 29), None);
+        assert_eq!(
+            reduce_woodland(fields, 30).unwrap().hex,
+            Hex::new(Terrain::Clear, 0)
+        );
+        assert_eq!(reduce_woodland(Hex::new(Terrain::Clear, 0), 500), None);
     }
 
     /// Ignition rolls follow the weapon's number plus the ground's modifier, and only woods

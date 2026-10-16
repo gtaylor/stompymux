@@ -892,7 +892,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `map`: `integer`
 - `coordinate`: `HexCoordinate`
-- `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"}|{effect: "damage", total: integer}` — What the attack did to the woods; damage is the terrain factor spent so far.
+- `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough", total: integer}|{effect: "damage", total: integer}` — What the attack did to the woods; total is the terrain factor spent so far against the growth the hex held before the attack.
 - `notices`: `Notice[]`
 
 ## StrayHit
