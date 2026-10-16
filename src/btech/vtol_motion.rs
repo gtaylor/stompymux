@@ -44,7 +44,6 @@ pub struct VtolMotionStep {
     pub ceiling_reached: bool,
     /// Inputs bind a proposal to the material state from which it was calculated.
     pub(super) origin: (Motion, super::VtolFlight, super::Position),
-    movement_modifier: i64,
 }
 
 impl VtolMotionStep {
@@ -105,8 +104,8 @@ impl VtolMotionStep {
 impl Vehicle {
     /// Project an airborne movement event after horizontal turning and acceleration.
     /// Uses the saved continuous altitude; commit only after resolving terrain traversal.
-    /// Movement modifiers affect horizontal distance only. Falling uses the separate fall event.
-    pub fn vtol_motion_step(&self, movement_modifier: i64) -> Result<VtolMotionStep> {
+    /// Falling uses the separate fall event.
+    pub fn vtol_motion_step(&self) -> Result<VtolMotionStep> {
         ensure!(
             self.definition().is_vtol(),
             "Flight movement requires a VTOL"
@@ -130,12 +129,7 @@ impl Vehicle {
             flight,
             self.position().context("Aircraft is not placed")?,
         );
-        let rate = if movement_modifier > 0 {
-            movement_modifier as f64 / 100.0
-        } else {
-            1.0
-        };
-        motion.point = motion.project_step(rate)?;
+        motion.point = motion.project_step()?;
         motion.point.containing_hex()?;
         let mut altitude = flight.altitude + flight.vertical_speed / VERTICAL_KPH_PER_LEVEL_SECOND;
         ensure!(
@@ -156,7 +150,6 @@ impl Vehicle {
             },
             ceiling_reached,
             origin,
-            movement_modifier,
         })
     }
 
@@ -173,7 +166,7 @@ impl Vehicle {
         point: super::Point,
     ) -> Result<()> {
         ensure!(
-            self.vtol_motion_step(step.movement_modifier)? == step,
+            self.vtol_motion_step()? == step,
             "Stale or altered flight proposal"
         );
         let coordinate = point.containing_hex()?;
@@ -215,7 +208,6 @@ mod tests {
                     y: 0,
                 },
             ),
-            movement_modifier: 0,
         }
     }
 

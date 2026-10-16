@@ -231,12 +231,12 @@ impl JumpFlight {
         self.path.distance() > 0.0 && self.travelled == self.path.distance()
     }
 
-    /// Advance one second using current gravity-adjusted thrust and the map's movement percentage.
-    /// Nonpositive movement percentages use the standard rate, as in ground movement.
+    /// Advance one second using current gravity-adjusted thrust: one jump movement point covers
+    /// one hex every 60 seconds, as in ground movement.
     /// A requested landing returns the current sample for ordinary landing resolution.
     /// Invalid inputs and complete flights leave the cursor unchanged; absent thrust returns
     /// a stationary segment so the caller can apply a fall at the last airborne position.
-    pub fn advance(&mut self, capacity: JumpCapacity, movement_modifier: i64) -> Result<JumpStep> {
+    pub fn advance(&mut self, capacity: JumpCapacity) -> Result<JumpStep> {
         ensure!(
             !self.arrived(),
             "Jump flight has already reached its destination"
@@ -257,12 +257,7 @@ impl JumpFlight {
                 outcome: JumpOutcome::LostThrust,
             });
         }
-        let rate = if movement_modifier > 0 {
-            movement_modifier as f64 / 100.0
-        } else {
-            1.0
-        };
-        let distance = capacity.speed / 645.0 * rate;
+        let distance = capacity.speed / 645.0;
         let remaining = self.path.distance() - self.travelled;
         // Avoid adding an extra tick solely for accumulated floating-point roundoff.
         let arrived = remaining <= distance + self.path.distance() * f64::EPSILON * 16.0;
@@ -308,7 +303,7 @@ mod tests {
         let capacity = JumpCapacity::from_speed(43.0).unwrap();
         let mut flight = JumpFlight::new(path).with_dfa_target(crate::ObjectId(99));
         for _ in 0..12 {
-            let step = flight.advance(capacity, 100).unwrap();
+            let step = flight.advance(capacity).unwrap();
             assert_ne!(step.outcome, JumpOutcome::LostThrust);
         }
         for heading in [90.0, 180.0] {
@@ -330,9 +325,9 @@ mod tests {
             );
             let mut restored: JumpFlight =
                 serde_json::from_value(serde_json::to_value(flight).unwrap()).unwrap();
-            let next = flight.advance(capacity, 100).unwrap();
+            let next = flight.advance(capacity).unwrap();
             assert_eq!(next.from, origin);
-            assert_eq!(restored.advance(capacity, 100).unwrap(), next);
+            assert_eq!(restored.advance(capacity).unwrap(), next);
             assert_eq!(restored, flight);
             assert!(flight.total_travelled() > before.total_travelled());
         }
@@ -340,7 +335,7 @@ mod tests {
             if flight.arrived() {
                 break;
             }
-            let step = flight.advance(capacity, 100).unwrap();
+            let step = flight.advance(capacity).unwrap();
             assert_ne!(step.outcome, JumpOutcome::LostThrust);
         }
         assert!(flight.arrived());
@@ -355,7 +350,7 @@ mod tests {
         let path = JumpPath::new(start, start.project(0.0, 3.0).unwrap(), 0, 0, 4).unwrap();
         let mut flight = JumpFlight::new(path);
         let step = flight
-            .advance(JumpCapacity::from_speed(43.0).unwrap(), 100)
+            .advance(JumpCapacity::from_speed(43.0).unwrap())
             .unwrap();
         assert_eq!(step.outcome, JumpOutcome::Airborne);
         let before = flight;

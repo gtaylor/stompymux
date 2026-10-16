@@ -189,7 +189,7 @@ impl Pursuit {
     }
 
     /// Estimate reachable lead using allowed own speed and public map bounds.
-    /// `speed` is in map units per simulation second, already adjusted for map rate.
+    /// `speed` is in map units per simulation second.
     pub fn predict(
         &mut self,
         now: i64,

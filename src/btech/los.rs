@@ -540,7 +540,6 @@ mod tests {
             building_entry_points: Default::default(),
             building_exits: Default::default(),
             authored_link: None,
-            movement_modifier: 100,
             light: 2,
             weather: 0,
             cloud_base: 200,

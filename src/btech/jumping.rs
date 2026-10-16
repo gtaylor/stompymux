@@ -615,7 +615,7 @@ fn advance_jumps_inner(
         let mut position = unit.position().context("Airborne unit is not placed")?;
         let map = &candidate.btech.maps()[&position.map];
         let from = flight.sample().point;
-        let step = flight.advance(unit.jump_capacity(map.gravity)?, map.movement_modifier)?;
+        let step = flight.advance(unit.jump_capacity(map.gravity)?)?;
         if step.outcome == JumpOutcome::LostThrust {
             notices.push(Notice {
                 unit: id,

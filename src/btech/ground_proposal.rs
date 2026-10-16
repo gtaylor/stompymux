@@ -88,14 +88,9 @@ pub fn propose_mech_ground_motion(
         super::motion_controls::acceleration_ceiling(world, id, policy)?,
     );
     motion.accelerate(target, acceleration, maximum);
-    let rate = if map.movement_modifier > 0 {
-        map.movement_modifier as f64 / 100.0
-    } else {
-        1.0
-    };
     // Beyond the battlefield diagonal every path must already cross a map edge.
     let distance =
-        (motion.speed.abs() / 645.0 * rate).min((map.width as f64).hypot(map.height as f64) + 2.0);
+        (motion.speed.abs() / 645.0).min((map.width as f64).hypot(map.height as f64) + 2.0);
     let proposed = motion.point.project(
         motion.heading
             + f64::from(unit.lateral().active.offset())
@@ -155,7 +150,6 @@ pub fn propose_vehicle_ground_motion(
         },
         super::VehicleMotionRules {
             speed_demon: advantage,
-            movement_modifier: map.movement_modifier,
             extra_cost: map.weather_condition()?.movement_cost()
                 + vehicle.level_entry_cost()
                 + super::building_interior::floor_cost_at(

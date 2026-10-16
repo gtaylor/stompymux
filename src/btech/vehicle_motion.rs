@@ -6,8 +6,6 @@ use anyhow::{Result, ensure};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VehicleMotionRules {
     pub speed_demon: bool,
-    /// Positive map movement percentage; nonpositive values use the ordinary rate.
-    pub movement_modifier: i64,
     /// Movement points the battlefield adds to every hex entered beyond the terrain's own:
     /// fog slows everything that drives (Tactical Operations p. 55), a building's floors
     /// cost by its class (Total Warfare p. 167), and each level climbed or descended to enter
@@ -16,10 +14,9 @@ pub struct VehicleMotionRules {
 }
 
 impl VehicleMotionRules {
-    /// Ordinary ground rules without pilot advantages or map rate changes.
+    /// Ordinary ground rules without pilot advantages or battlefield movement costs.
     pub const STANDARD: Self = Self {
         speed_demon: false,
-        movement_modifier: 0,
         extra_cost: 0,
     };
 }
@@ -73,12 +70,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
         maximum: f64,
     ) -> Result<Motion> {
         motion = self.control_at_maximum(motion, hex, rules, maximum)?;
-        let rate = if rules.movement_modifier > 0 {
-            rules.movement_modifier as f64 / 100.0
-        } else {
-            1.0
-        };
-        motion.point = motion.project_step(rate)?;
+        motion.point = motion.project_step()?;
         motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
         Ok(motion)
     }

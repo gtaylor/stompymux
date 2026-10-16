@@ -155,50 +155,34 @@ async fn controls_rollback_and_map_edges_stop_without_losing_position() {
     );
 }
 
-/// Exercise the saved map percentage through normal load/save boundaries.
-async fn movement_rate(config: &stompymux_rs::Config, world: &mut stompymux_rs::World, rate: i64) {
-    use sqlx::Connection;
-    persistence::save(&config.database(), world).await.unwrap();
-    let mut sql = sqlx::SqliteConnection::connect_with(
-        &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
-    )
-    .await
-    .unwrap();
-    sqlx::query("UPDATE btech_maps SET move_mod=?")
-        .bind(rate)
-        .execute(&mut sql)
-        .await
-        .unwrap();
-    *world = persistence::load(&config.database()).await.unwrap();
-}
-
 #[tokio::test]
-async fn saved_map_rates_scale_displacement_and_crossed_obstacles_cannot_be_skipped() {
-    for (rate, scale) in [(50, 0.5), (200, 2.0), (0, 1.0), (-100, 1.0)] {
-        let (_dir, config, mut world, id) = fixture('.').await;
-        movement_rate(&config, &mut world, rate).await;
-        let before = world.btech.constructed_units()[&id].motion().unwrap().point;
-        set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
-        assert!(advance_battle_motion(&mut world, RULES).unwrap().is_empty());
-        let after = world.btech.constructed_units()[&id].motion().unwrap().point;
-        assert!((before.range(after).unwrap() - 118.25 / 20.0 / 645.0 * scale).abs() < 1e-12);
-        persistence::save(&config.database(), &world).await.unwrap();
-        assert_eq!(
-            persistence::load(&config.database()).await.unwrap().btech,
-            world.btech
-        );
-    }
+async fn a_second_covers_a_sixtieth_of_the_speed_and_crossed_obstacles_stop_movement() {
+    let (_dir, config, mut world, id) = fixture('.').await;
+    let before = world.btech.constructed_units()[&id].motion().unwrap().point;
+    set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
+    assert!(advance_battle_motion(&mut world, RULES).unwrap().is_empty());
+    let after = world.btech.constructed_units()[&id].motion().unwrap().point;
+    // One movement point (10.75 kph) covers one hex every 60 seconds.
+    assert!((before.range(after).unwrap() - 118.25 / 20.0 / 645.0).abs() < 1e-12);
+    persistence::save(&config.database(), &world).await.unwrap();
+    assert_eq!(
+        persistence::load(&config.database()).await.unwrap().btech,
+        world.btech
+    );
     for hazard in [false, true] {
         let mut source = String::from("12 12\n");
         for y in 0..12 {
             source.push_str(&if hazard && y == 3 { "=9" } else { ".0" }.repeat(12));
             source.push('\n');
         }
-        let (_dir, config, mut world, id) = fixture_source(&source).await;
-        movement_rate(&config, &mut world, 50000).await;
+        let (_dir, _, mut world, id) = fixture_source(&source).await;
         let before = world.btech.constructed_units()[&id].motion().unwrap().point;
         set_battle_speed(&mut world, id, ObjectId(1), 118.25).unwrap();
-        let notices = advance_battle_motion(&mut world, RULES).unwrap();
+        // Run north until the cliff or the map edge stops the 'Mech.
+        let notices = (0..600)
+            .map(|_| advance_battle_motion(&mut world, RULES).unwrap())
+            .find(|notices| !notices.is_empty())
+            .expect("the 'Mech reaches the cliff or the map edge");
         if hazard {
             assert!(notices[0].text.contains("too steep"));
             assert_eq!(
@@ -214,15 +198,10 @@ async fn saved_map_rates_scale_displacement_and_crossed_obstacles_cannot_be_skip
                     > before.y - 2.0
             );
         } else {
-            assert!(notices.is_empty());
+            assert!(notices[0].text.contains("Map edge"));
             assert_eq!(
                 world.btech.constructed_units()[&id].position().unwrap().y,
                 0
-            );
-            assert!(
-                advance_battle_motion(&mut world, RULES).unwrap()[0]
-                    .text
-                    .contains("Map edge")
             );
         }
     }

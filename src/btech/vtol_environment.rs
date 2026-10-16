@@ -43,22 +43,17 @@ impl Vehicle {
     /// Ground contact attempts ordinary landing; every other contact, and a failed landing,
     /// requires the shared host crash action. The host owns map identity, landing mines,
     /// notifications, callbacks and casualty publication.
-    pub fn advance_vtol_environment(
-        &mut self,
-        map: &MapAsset,
-        movement_modifier: i64,
-    ) -> Result<VtolEnvironment> {
-        self.advance_environment_with(&|hex| Ok(map.hex(hex.x, hex.y)), movement_modifier)
+    pub fn advance_vtol_environment(&mut self, map: &MapAsset) -> Result<VtolEnvironment> {
+        self.advance_environment_with(&|hex| Ok(map.hex(hex.x, hex.y)))
     }
 
     /// Resolve contact against current terrain using the same classifier as decoded assets.
     fn advance_environment_with(
         &mut self,
         lookup: &impl Fn(super::HexCoordinate) -> Result<Option<super::Hex>>,
-        movement_modifier: i64,
     ) -> Result<VtolEnvironment> {
         let mut candidate = self.clone();
-        let path = candidate.advance_vtol_clear_path_with(lookup, movement_modifier)?;
+        let path = candidate.advance_vtol_clear_path_with(lookup)?;
         if let VtolPath::MapEdge { last, altitude, .. } = path {
             candidate.place_at(last, last.center(), altitude)?;
             candidate.motion.as_mut().unwrap().stop_translation();
@@ -198,7 +193,7 @@ pub(super) fn advance_in_candidate(
     };
     let mut candidate = world.clone();
     let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
-    let mut outcome = unit.advance_environment_with(&lookup, map.movement_modifier)?;
+    let mut outcome = unit.advance_environment_with(&lookup)?;
     if let VtolEnvironment::CrashRequired { path, levels } = outcome {
         unit.place_contact(path)?;
         // Crossing exposes the aircraft before armor damage can ruin its cover.

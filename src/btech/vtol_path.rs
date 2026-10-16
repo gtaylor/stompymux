@@ -153,21 +153,16 @@ impl Vehicle {
     /// Advance an unobstructed aircraft event against the supplied current map asset.
     /// Map identity, horizontal control updates, fuel, effects and collision resolution belong to the host.
     /// Any obstruction returns before mutation; failures also preserve position and saved altitude.
-    pub fn advance_vtol_clear_path(
-        &mut self,
-        map: &MapAsset,
-        movement_modifier: i64,
-    ) -> Result<VtolPath> {
-        self.advance_vtol_clear_path_with(&|hex| Ok(map.hex(hex.x, hex.y)), movement_modifier)
+    pub fn advance_vtol_clear_path(&mut self, map: &MapAsset) -> Result<VtolPath> {
+        self.advance_vtol_clear_path_with(&|hex| Ok(map.hex(hex.x, hex.y)))
     }
 
     /// Trace either decoded assets or current world terrain without copying a map.
     pub(super) fn advance_vtol_clear_path_with(
         &mut self,
         lookup: &impl Fn(HexCoordinate) -> Result<Option<super::Hex>>,
-        movement_modifier: i64,
     ) -> Result<VtolPath> {
-        let step = self.vtol_motion_step(movement_modifier)?;
+        let step = self.vtol_motion_step()?;
         if let Some(obstruction) = step.first_obstruction(lookup)? {
             return Ok(obstruction);
         }

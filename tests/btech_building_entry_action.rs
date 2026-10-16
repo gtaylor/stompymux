@@ -648,8 +648,11 @@ async fn movement_edges_dispatch_shared_exits_and_keep_blocked_units_stopped() {
                 .get(&id)
                 .is_some_and(|unit| unit.definition().is_vtol());
             let mut saved = serde_json::to_value(&world.btech).unwrap();
-            saved["maps"][interior.0.to_string()]["movement_modifier"] = 6450.into();
             let unit = &mut saved[key][id.0.to_string()];
+            // 43 kph covers a fifteenth of a hex each second, so start closer than that to the
+            // edge the unit is heading for.
+            unit["motion"]["point"] =
+                short_of_hex_edge(&unit["motion"]["point"], f64::from(heading), 0.03);
             unit["motion"]["heading"] = heading.into();
             unit["motion"]["desired_heading"] = heading.into();
             unit["motion"]["speed"] = 43.into();
@@ -1339,6 +1342,34 @@ fn cover_state(world: &World, id: ObjectId) -> (bool, Option<u16>) {
     (unit.signature().hidden, unit.hide_elapsed())
 }
 
+/// A saved motion point moved along `heading` to `gap` hex heights short of where a straight
+/// course leaves its hex. One movement point covers a hex a minute, so a unit only crosses a
+/// hex edge in its next second when it starts this close to it.
+fn short_of_hex_edge(point: &serde_json::Value, heading: f64, gap: f64) -> serde_json::Value {
+    let point: Point = serde_json::from_value(point.clone()).unwrap();
+    let hex = point.containing_hex().unwrap();
+    let (mut inside, mut outside) = (0.0, 2.0);
+    for _ in 0..60 {
+        let middle = (inside + outside) / 2.0;
+        if point
+            .project(heading, middle)
+            .unwrap()
+            .containing_hex()
+            .unwrap()
+            == hex
+        {
+            inside = middle;
+        } else {
+            outside = middle;
+        }
+    }
+    assert!(
+        inside > gap,
+        "the point is already within {gap} of the edge"
+    );
+    serde_json::to_value(point.project(heading, inside - gap).unwrap()).unwrap()
+}
+
 /// Add quoted special flags to a template document's existing or new top-level `specials` array.
 fn with_specials(source: &str, flags: &str) -> String {
     if source.starts_with("specials = [") || source.contains("\nspecials = [") {
@@ -1391,13 +1422,14 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
                 assert_eq!(cover_state(&scripts.world(), id), (true, Some(7)));
             }
             let mut saved = serde_json::to_value(&scripts.world().btech).unwrap();
-            saved["maps"][interior.0.to_string()]["movement_modifier"] = 645000.into();
             let key = if scripts.world().btech.vehicles().contains_key(&carrier) {
                 "vehicles"
             } else {
                 "constructed"
             };
             let unit = &mut saved[key][carrier.0.to_string()];
+            // One kph covers a 645th of a hex each second: start just short of the south edge.
+            unit["motion"]["point"] = short_of_hex_edge(&unit["motion"]["point"], 180.0, 0.001);
             unit["motion"]["heading"] = 180.into();
             unit["motion"]["desired_heading"] = 180.into();
             unit["motion"]["speed"] = 1.into();

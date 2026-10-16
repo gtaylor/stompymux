@@ -578,7 +578,7 @@ mod tests {
         let mut flight = super::super::JumpFlight::new(path);
         assert_eq!(flight.sample(), start);
         let step = flight
-            .advance(JumpCapacity::from_speed(32.25).unwrap(), 100)
+            .advance(JumpCapacity::from_speed(32.25).unwrap())
             .unwrap();
         assert_eq!(step.from, start);
         assert!(flight.travelled() > 0.0);
