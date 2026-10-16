@@ -545,6 +545,11 @@ pub(super) fn aim_modifiers_for_source(
         distance,
     )?;
     let mut modifiers = weapon_modifiers(attacker, weapon_index, mount, distance, gunnery)?;
+    let indirect = indirect.map(|aim| IndirectAim {
+        tag_guided: target_terms.tag_guided,
+        ..aim
+    });
+    modifiers.indirect = indirect;
     let submerged = super::weapon_geometry::apply_water_range(
         world,
         shooter,
@@ -556,16 +561,11 @@ pub(super) fn aim_modifiers_for_source(
         world,
         shooter,
         super::network_range::NetworkTarget::Unit(target),
-        mount.weapon,
+        (mount.weapon, attacker.ammunition_mode(weapon_index)?),
         submerged,
         &mut modifiers,
     )?;
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut modifiers)?;
-    let indirect = indirect.map(|aim| IndirectAim {
-        tag_guided: target_terms.tag_guided,
-        ..aim
-    });
-    modifiers.indirect = indirect;
     modifiers.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     modifiers.range = modifiers
         .range

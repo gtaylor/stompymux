@@ -76,7 +76,7 @@ pub(super) fn modifiers(
         world,
         shooter,
         super::network_range::NetworkTarget::Unit(target),
-        mount.weapon,
+        (mount.weapon, ammunition),
         submerged,
         &mut aim,
     )?;

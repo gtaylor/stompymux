@@ -1,6 +1,8 @@
 //! Shared command-network range selection without changing physical distance or firing permission.
 use super::network_unit::unit as network_unit;
-use super::{AimModifiers, HexCoordinate, Power, RangeBracket, Weapon, WeaponRange};
+use super::{
+    AimModifiers, AmmunitionMode, HexCoordinate, Power, RangeBracket, Weapon, WeaponRange,
+};
 use crate::{CommandNetwork, ObjectId, World};
 use anyhow::Result;
 use serde::Serialize;
@@ -23,20 +25,25 @@ pub(super) enum NetworkTarget {
     Hex(HexCoordinate),
 }
 
-/// Apply command-network assistance only after physical reach and raw minimum-range checks have admitted network use.
+/// Apply command-network assistance only after physical reach and raw minimum-range checks have
+/// admitted network use. Minimum range is always measured from the attacker to the target, so
+/// a shot inside it keeps its own bracket, and a network gives no help to LRM indirect fire
+/// (Total Warfare pp. 131-132); callers set `aim.indirect` first. Brackets follow the
+/// ammunition the weapon fires, such as an MML's LRM rounds or an ATM's ER rounds.
 pub(super) fn apply(
     world: &World,
     shooter: ObjectId,
     target: NetworkTarget,
-    weapon: Weapon,
+    (weapon, ammunition): (Weapon, AmmunitionMode),
     submerged: bool,
     aim: &mut AimModifiers,
 ) -> Result<()> {
     let unit = network_unit(world, shooter)?;
-    let minimum = weapon.profile().minimum_range;
     if (unit.c3i_network.is_none() && unit.c3_network.is_none())
-        || aim.range.is_none()
-        || (minimum > 0 && aim.distance <= f64::from(minimum))
+        || aim.indirect.is_some()
+        || aim
+            .range
+            .is_none_or(|range| range.bracket == RangeBracket::Minimum)
         || unit.power() != Power::Running
         || super::electronic_field(world, shooter)?.blocks_outgoing_guidance()
     {
@@ -51,13 +58,24 @@ pub(super) fn apply(
     };
     let members = super::command_network::active_members(world, shooter, kind, false)?;
     let selected = select(world, shooter, target, aim.distance, &members, kind)?;
-    aim.range = bracket(weapon, aim.distance, selected.distance, submerged);
+    aim.range = bracket(
+        (weapon, ammunition),
+        aim.distance,
+        selected.distance,
+        submerged,
+    );
     aim.network_range = Some(selected);
     Ok(())
 }
 
 /// C3 brackets use shared distance, ignore a peer's minimum range, and disable extended range.
-fn bracket(weapon: Weapon, physical: f64, shared: f64, submerged: bool) -> Option<WeaponRange> {
+/// Out of water they follow the loaded ammunition's range profile (Total Warfare p. 131).
+fn bracket(
+    (weapon, ammunition): (Weapon, AmmunitionMode),
+    physical: f64,
+    shared: f64,
+    submerged: bool,
+) -> Option<WeaponRange> {
     let (short, medium, maximum) = if submerged {
         let profile = weapon.water_ranges()?;
         (
@@ -66,7 +84,7 @@ fn bracket(weapon: Weapon, physical: f64, shared: f64, submerged: bool) -> Optio
             profile.effective_range(),
         )
     } else {
-        let profile = weapon.profile();
+        let profile = weapon.profile_for_ammunition(ammunition);
         (
             profile.short_range,
             profile.medium_range,
@@ -148,31 +166,86 @@ mod tests {
     fn water_network_uses_water_bands_and_physical_limit() {
         for (shared, expected) in [(0.0, 0), (4.04, 0), (4.06, 2), (7.04, 2), (7.06, 4)] {
             assert_eq!(
-                bracket(Weapon::Ppc, 10.04, shared, true).unwrap().modifier,
+                bracket((Weapon::Ppc, AmmunitionMode::Normal), 10.04, shared, true)
+                    .unwrap()
+                    .modifier,
                 expected
             );
         }
-        assert!(bracket(Weapon::Ppc, 10.06, 0.0, true).is_none());
-        assert!(bracket(Weapon::SmallLaser, 2.04, 0.0, true).is_some());
-        assert!(bracket(Weapon::SmallLaser, 2.06, 0.0, true).is_none());
-        assert!(bracket(Weapon::Lrm20, 1.0, 0.0, true).is_none());
+        assert!(bracket((Weapon::Ppc, AmmunitionMode::Normal), 10.06, 0.0, true).is_none());
+        assert!(
+            bracket(
+                (Weapon::SmallLaser, AmmunitionMode::Normal),
+                2.04,
+                0.0,
+                true
+            )
+            .is_some()
+        );
+        assert!(
+            bracket(
+                (Weapon::SmallLaser, AmmunitionMode::Normal),
+                2.06,
+                0.0,
+                true
+            )
+            .is_none()
+        );
+        assert!(bracket((Weapon::Lrm20, AmmunitionMode::Normal), 1.0, 0.0, true).is_none());
     }
 
     #[test]
     fn brackets_preserve_rounding_and_ignore_peer_minimum_range() {
         for (distance, expected) in [(7.049, 0), (7.051, 2), (14.049, 2), (14.051, 4)] {
             assert_eq!(
-                bracket(Weapon::Lrm20, 20.0, distance, false)
-                    .unwrap()
-                    .modifier,
+                bracket(
+                    (Weapon::Lrm20, AmmunitionMode::Normal),
+                    20.0,
+                    distance,
+                    false
+                )
+                .unwrap()
+                .modifier,
                 expected
             );
         }
         assert_eq!(
-            bracket(Weapon::Lrm20, 20.0, 0.0, false).unwrap().modifier,
+            bracket((Weapon::Lrm20, AmmunitionMode::Normal), 20.0, 0.0, false)
+                .unwrap()
+                .modifier,
             0
         );
-        assert!(bracket(Weapon::Lrm20, 21.051, 1.0, false).is_none());
-        assert!(bracket(Weapon::Lrm20, 21.049, 1.0, false).is_some());
+        assert!(bracket((Weapon::Lrm20, AmmunitionMode::Normal), 21.051, 1.0, false).is_none());
+        assert!(bracket((Weapon::Lrm20, AmmunitionMode::Normal), 21.049, 1.0, false).is_some());
+    }
+
+    /// Shared brackets follow the ammunition being fired (Total Warfare p. 131; TechManual
+    /// p. 229): an MML on LRM rounds reaches 21 hexes on 7/14/21, its SRM rounds stop at 9, and
+    /// an ATM on ER rounds reaches 27 hexes on 9/18/27 instead of the standard 15.
+    #[test]
+    fn brackets_follow_the_loaded_ammunition() {
+        let mml_lrm = (Weapon::Mml9, AmmunitionMode::MmlLrm);
+        for (shared, expected) in [(7.049, 0), (7.051, 2), (14.049, 2), (14.051, 4)] {
+            assert_eq!(
+                bracket(mml_lrm, 20.0, shared, false).unwrap().modifier,
+                expected
+            );
+        }
+        assert!(bracket(mml_lrm, 21.049, 1.0, false).is_some());
+        assert!(bracket(mml_lrm, 21.051, 1.0, false).is_none());
+        let mml_srm = (Weapon::Mml9, AmmunitionMode::Normal);
+        assert!(bracket(mml_srm, 9.049, 1.0, false).is_some());
+        assert!(bracket(mml_srm, 9.051, 1.0, false).is_none());
+        let atm_er = (Weapon::ClanAtm6, AmmunitionMode::ExtendedRange);
+        for (shared, expected) in [(9.049, 0), (9.051, 2), (18.049, 2), (18.051, 4)] {
+            assert_eq!(
+                bracket(atm_er, 26.0, shared, false).unwrap().modifier,
+                expected
+            );
+        }
+        assert!(bracket(atm_er, 27.049, 1.0, false).is_some());
+        assert!(bracket(atm_er, 27.051, 1.0, false).is_none());
+        let atm_he = (Weapon::ClanAtm6, AmmunitionMode::HighExplosive);
+        assert!(bracket(atm_he, 9.051, 1.0, false).is_none());
     }
 }
