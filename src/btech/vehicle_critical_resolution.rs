@@ -402,6 +402,10 @@ fn pilot_hit(
     let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
     let flight = unit.vtol_flight.as_mut().unwrap();
     if flight.altitude - 1.0 <= f64::from(surface) {
+        // Dropping onto the ground is a crash (Total Warfare pp. 68 and 197): the aircraft
+        // starts its descent from the surface, so the next descent event strikes the ground
+        // whether or not the rotor still brakes, and the crash rules decide whether it lands.
+        flight.altitude = f64::from(surface);
         unit.lose_vtol_lift();
         resolution.notices.push(Notice {
             unit: id,
