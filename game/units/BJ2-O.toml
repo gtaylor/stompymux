@@ -54,7 +54,7 @@ slots = [
 armor = 22
 rear = 9
 slots = [
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100 },
     { at = 12, item = "EndoSteel" },
 ]
 

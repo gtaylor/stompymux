@@ -49,7 +49,7 @@ armor = 26
 rear = 11
 slots = [
     { at = 11, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = 12, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+    { at = 12, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.left_leg]

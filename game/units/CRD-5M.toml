@@ -29,7 +29,7 @@ slots = [
     { at = 8, item = "IS.Flamer" },
     { at = 9, item = "IS.MachineGun" },
     { at = 10, item = "IS.MediumLaser" },
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100 },
 ]
 
 [sections.left_torso]

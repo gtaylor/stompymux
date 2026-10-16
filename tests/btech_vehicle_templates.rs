@@ -103,9 +103,10 @@ fn vehicle_asset_reader_is_confined() {
     assert!(read_battle_vehicle_template(directory.path(), "/etc/passwd").is_err());
 }
 
-/// Bundled vehicle ammunition rows retain whitespace-separated loading and half-ton flags.
+/// Bundled vehicle machine gun bins keep their half-ton flag and carry no hot-loading, which
+/// only missile launchers take (Tactical Operations: Advanced Rules p. 101).
 #[test]
-fn vehicle_assets_accept_multiple_ammunition_mode_words() {
+fn vehicle_assets_keep_half_ton_machine_gun_bins() {
     for source in [
         include_str!("../game/units/Jeep.toml"),
         include_str!("../game/units/HTracked_APC.toml"),
@@ -120,7 +121,7 @@ fn vehicle_assets_accept_multiple_ammunition_mode_words() {
             .unwrap();
         assert_eq!(bin.capacity, 100);
         assert!(bin.half_ton);
-        assert!(bin.hotload);
+        assert!(!bin.hotload);
         let restored: Vehicle =
             serde_json::from_value(serde_json::to_value(&unit).unwrap()).unwrap();
         assert_eq!(unit, restored);

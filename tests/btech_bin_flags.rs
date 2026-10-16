@@ -1,7 +1,9 @@
 //! Bin fire metadata is retained independently of launcher modes and ammunition type.
 use stompymux_rs::*;
 
-/// Compare construction, supply and explosive contents for flagged and unflagged bins.
+/// Compare construction, supply and explosive contents for flagged and unflagged bins. Only
+/// ammunition for a launcher that fires hot-loaded takes the flag (Tactical Operations:
+/// Advanced Rules p. 101); every other bin refuses it.
 #[test]
 fn bin_hotload_does_not_change_supply_or_launcher_behavior() {
     for &weapon in Weapon::ALL
@@ -29,6 +31,10 @@ fn bin_hotload_does_not_change_supply_or_launcher_behavior() {
             .unwrap()
             .modes
             .push("Hotload".into());
+        if !weapon.supports_hotload() {
+            assert!(Mech::from_template(template).is_err(), "{weapon:?}");
+            continue;
+        }
         let flagged = Mech::from_template(template).unwrap();
         let bin = &flagged.loadout().unwrap().ammunition[0];
         assert!(bin.hotload);
@@ -72,11 +78,21 @@ fn bin_hotload_filling_and_artemis_remain_independent() {
         .unwrap();
     part.data = "7".into();
     part.modes = vec!["Hotload".into(), "Artemis/Mine".into()];
+    // The SRM-4 bin cannot be hot-loaded; an LRM-5 bin can.
+    assert!(Mech::from_template(template.clone()).is_err());
+    template
+        .sections
+        .get_mut(&MechSection::RightTorso)
+        .unwrap()
+        .criticals
+        .get_mut(&0)
+        .unwrap()
+        .equipment = "Ammo_IS.LRM-5".into();
     let unit = Mech::from_template(template.clone()).unwrap();
     let bin = &unit.loadout().unwrap().ammunition[0];
     assert!(bin.hotload && !bin.half_ton);
-    assert_eq!(bin.capacity, 25);
-    assert_eq!(bin.rounds, 25);
+    assert_eq!(bin.capacity, 24);
+    assert_eq!(bin.rounds, 24);
     assert_eq!(bin.mode, AmmunitionMode::Artemis);
     template
         .sections

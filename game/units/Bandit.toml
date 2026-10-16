@@ -23,7 +23,7 @@ armor = 42
 slots = [
     { at = 1, item = "IS.MachineGun" },
     { at = 2, item = "IS.SRM-2" },
-    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload", "Halfton"] },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 4, item = "IS.SRM-2" },
     { at = 5, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]

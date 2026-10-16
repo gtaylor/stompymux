@@ -36,7 +36,7 @@ armor = 21
 rear = 6
 slots = [
     { at = "1-2", item = "CL.StreakSRM-6" },
-    { at = 3, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 3, item = "Ammo_CL.MachineGun", rounds = 100 },
     { at = 4, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
     { at = 5, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
 ]

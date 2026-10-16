@@ -34,7 +34,7 @@ rear = 6
 slots = [
     { at = "1-6", item = "HeatSink" },
     { at = "7-8", item = "IS.MachineGun" },
-    { at = 9, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 9, item = "Ammo_IS.MachineGun", rounds = 100 },
     { at = "10-12", item = "FerroFibrous" },
 ]
 

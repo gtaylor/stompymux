@@ -34,7 +34,7 @@ slots = [
     { at = "3-4", item = "JumpJet" },
     { at = "5-8", item = "CL.LRM-10" },
     { at = "9-11", item = "Ammo_CL.LRM-10", rounds = 12 },
-    { at = 12, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 12, item = "Ammo_CL.MachineGun", rounds = 100 },
 ]
 
 [sections.right_torso]

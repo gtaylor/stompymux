@@ -29,7 +29,7 @@ slots = [
     { at = 5, item = "CL.StreakSRM-4" },
     { at = "6-7", item = "CL.MachineGun" },
     { at = 8, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
-    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100 },
     { at = 10, item = "EndoSteel" },
     { at = 11, item = "FerroFibrous" },
 ]

@@ -29,7 +29,7 @@ rear = 7
 slots = [
     { at = 1, item = "IS.SRM-4" },
     { at = 2, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Hotload"] },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100 },
     { at = "4-5", item = "HeatSink" },
 ]
 
