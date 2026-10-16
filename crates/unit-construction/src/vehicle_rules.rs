@@ -413,6 +413,15 @@ impl VehicleTemplate {
             1,
         )?;
         check_machine_gun_arrays(loadout)?;
+        let computers = loadout
+            .systems
+            .iter()
+            .filter(|part| part.system == System::TargetingComputer)
+            .count();
+        ensure!(
+            computers <= 1,
+            "A combat vehicle mounts one targeting computer, a single item sized by its direct-fire weapons; found {computers} entries (TechManual p. 238)"
+        );
         for part in &loadout.systems {
             match part.system {
                 System::JumpJet => {
@@ -622,6 +631,41 @@ slots = [
         assert_eq!((report.item_slots, report.item_slot_limit), (5, 20));
         assert_eq!(zhukov.sections[&VehicleSection::Turret].internal, 8);
         assert!(check_vehicle_template(&zhukov).constructible);
+    }
+
+    /// A vehicle targeting computer is one item in one slot that weighs the direct-fire weapon
+    /// tonnage over 4 (Inner Sphere) or 5 (Clan), rounded up; missiles do not count, and a
+    /// second entry is refused (TechManual p. 238).
+    #[test]
+    fn targeting_computer_is_one_item_sized_by_its_weapons() {
+        let zhukov = parse(ZHUKOV);
+        let bare = zhukov.construction_rules().unwrap();
+        let computer = parse(&ZHUKOV.replace(
+            "[sections.aft_side]\narmor = 24\n",
+            "[sections.aft_side]\narmor = 24\nslots = [\n    { at = 1, item = \"TargetingComputer\" },\n]\n",
+        ));
+        let loadout = VehicleLoadout::resolve(&computer).unwrap();
+        let part = &loadout.systems[0];
+        // Two AC/10s weigh 24 tons; the SRM-6 is a missile launcher and does not count.
+        assert_eq!(computer.system_mass(&loadout, part), 6 * 1024);
+        let mass = computer.mass().unwrap();
+        assert_eq!(mass.equipment, bare.mass.equipment + 6 * 1024);
+        assert_eq!(computer.item_slots(&loadout), bare.item_slots + 1);
+        let weapons = loadout.weapons.iter().map(|mount| mount.weapon);
+        assert_eq!(
+            super::super::targeting_computer_tons(weapons.clone(), false),
+            6
+        );
+        assert_eq!(super::super::targeting_computer_tons(weapons, true), 5);
+        let doubled = parse(&ZHUKOV.replace(
+            "[sections.aft_side]\narmor = 24\n",
+            "[sections.aft_side]\narmor = 24\nslots = [\n    { at = \"1-2\", item = \"TargetingComputer\" },\n]\n",
+        ));
+        assert!(
+            rejection(&doubled).contains("mounts one targeting computer"),
+            "{}",
+            rejection(&doubled)
+        );
     }
 
     /// Unspent tonnage is cargo or waste, reported as a warning; overweight is refused.
@@ -980,10 +1024,10 @@ slots = [
         );
         let ice = parse(&lasers);
         assert_eq!(ice.mass().unwrap().power_amplifiers, 512);
-        assert_eq!(ice.system_mass(System::Case), 512);
+        assert_eq!(ice.fixed_system_mass(System::Case), 512);
         let fusion = parse(&lasers.replace("engine = \"ice\"", "tech_base = \"clan\""));
         assert_eq!(fusion.mass().unwrap().power_amplifiers, 0);
-        assert_eq!(fusion.system_mass(System::Case), 0);
+        assert_eq!(fusion.fixed_system_mass(System::Case), 0);
     }
 
     /// A vehicle mounts its own technology base's weapons unless it declares mixed

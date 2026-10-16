@@ -203,6 +203,10 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   sinks and power amplifiers take none. The item slots are the whole
   vehicle's budget: a location has no slot limit of its own, so a turret may
   list more than twelve entries.
+- A targeting computer is a single `TargetingComputer` entry and one item slot,
+  whatever it weighs: the tonnage of the direct-fire weapons (not machine guns,
+  flamers or missiles) divided by 4, or 5 for a Clan computer, rounded up to
+  the full ton (TechManual p. 238).
 - Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or
   triple-strength myomer. A VTOL's turret is a chin turret (TacOps AUE p. 160).
 - Everything together may not weigh more than the vehicle. Unspent tonnage is

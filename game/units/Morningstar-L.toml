@@ -4,7 +4,7 @@ movement = "wheel"
 tons = 60
 walk_mp = 5
 radio = 4
-cargo_space = 2500
+cargo_space = 2000
 max_suits = 0
 max_ton = 5
 
@@ -14,10 +14,10 @@ engine = "xl"
 engine_rating = 280
 
 [sections.left_side]
-armor = 29
+armor = 31
 
 [sections.right_side]
-armor = 29
+armor = 31
 
 [sections.front_side]
 armor = 43
@@ -26,14 +26,14 @@ slots = [
 ]
 
 [sections.aft_side]
-armor = 19
+armor = 20
 slots = [
     { at = "1-2", item = "Ammo_IS.AC/10", rounds = 10 },
     { at = 3, item = "TargetingComputer" },
 ]
 
 [sections.turret]
-armor = 24
+armor = 25
 slots = [
     { at = 1, item = "IS.AC/10", modes = ["OnTC"] },
 ]

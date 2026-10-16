@@ -622,11 +622,17 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
         engine_rating: u16::try_from(rating).unwrap_or(u16::MAX),
         legs: 0,
     };
-    // Vehicle templates list each system once, whatever its BattleMech slot count.
+    // Vehicle templates list each system once, whatever its BattleMech slot count. A targeting
+    // computer is priced per ton it weighs (TechManual pp. 238, 293).
     for part in &loadout.systems {
         let equipment =
             &template.sections[&part.location.section].criticals[&part.location.slot].equipment;
-        total += vehicle_system_price(prices, part.system, context, equipment)?;
+        let installations = if part.system == System::TargetingComputer {
+            f64::from(compatible.system_mass(&loadout, part) / 1024)
+        } else {
+            1.0
+        };
+        total += installations * vehicle_system_price(prices, part.system, context, equipment)?;
     }
     // Transport bays beyond the free standard cargo bay (TechManual p. 293).
     total += template.transport_bays()?.cost();

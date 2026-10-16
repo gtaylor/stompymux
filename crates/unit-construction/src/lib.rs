@@ -99,7 +99,7 @@ pub use loadout::{
 pub use machine_gun_array::{ARRAY_GUNS, MachineGunArray, MachineGunClass};
 pub use mass::{
     armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
-    structure_mass, system_mass, system_slot_mass,
+    structure_mass, system_mass, system_slot_mass, targeting_computer_tons,
 };
 pub use mech::{
     CriticalDefinition, MechSection, MechTemplate, SECTION_SLOTS, SectionDefinition,

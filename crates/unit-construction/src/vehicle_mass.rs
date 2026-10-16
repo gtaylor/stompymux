@@ -2,8 +2,9 @@
 //! material: structure, engine, controls, lift equipment or rotors, turret, heat sinks, armor,
 //! power amplifiers, weapons, equipment, cargo and ammunition.
 use super::{
-    System, VehicleLoadout, VehicleMovement, VehiclePowerplant, VehicleSection, VehicleTemplate,
-    Weapon, mass::half_ton,
+    System, SystemCritical, VehicleCriticalLocation, VehicleLoadout, VehicleMovement,
+    VehiclePowerplant, VehicleSection, VehicleTemplate, Weapon,
+    mass::{half_ton, targeting_computer_tons},
 };
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
@@ -165,7 +166,7 @@ impl VehicleTemplate {
                 .systems
                 .iter()
                 .filter(|part| present(part.location.section))
-                .map(|part| self.system_mass(part.system))
+                .map(|part| self.system_mass(&loadout, part))
                 .sum::<u32>();
         let combustion = engine.powerplant == VehiclePowerplant::Combustion;
         let power_amplifiers = if combustion {
@@ -252,11 +253,27 @@ impl VehicleTemplate {
         })
     }
 
-    /// Whole vehicle systems have their own mass, independent of Mech multi-critical installation sizes.
-    pub fn system_mass(&self, system: System) -> u32 {
+    /// Mass of one installed vehicle system. Each entry is a whole installation in one item
+    /// slot, whatever its Mech critical count. A targeting computer weighs the tonnage of the
+    /// vehicle's direct-fire weapons divided by 4 for an Inner Sphere computer or 5 for a Clan
+    /// one, rounded up to the full ton (TechManual p. 238).
+    pub fn system_mass(
+        &self,
+        loadout: &VehicleLoadout,
+        part: &SystemCritical<VehicleCriticalLocation>,
+    ) -> u32 {
+        if part.system != System::TargetingComputer {
+            return self.fixed_system_mass(part.system);
+        }
+        let clan = part.is_clan(self.has_special("Clan"));
+        targeting_computer_tons(loadout.weapons.iter().map(|mount| mount.weapon), clan) * 1024
+    }
+
+    /// Mass of a vehicle system whose weight does not depend on the rest of the loadout. The
+    /// targeting computer is sized by [`Self::system_mass`] and weighs nothing here.
+    pub(crate) fn fixed_system_mass(&self, system: System) -> u32 {
         match system {
-            System::TargetingComputer
-            | System::Axe
+            System::Axe
             | System::Claw
             | System::Mace
             | System::DualSaw
@@ -330,7 +347,8 @@ impl VehicleTemplate {
             | System::LaserReflective
             | System::NullSignature
             | System::Talons
-            | System::Spikes => 0,
+            | System::Spikes
+            | System::TargetingComputer => 0,
             System::MachineGunArray => {
                 if self.has_special("Clan") {
                     256
@@ -390,7 +408,7 @@ impl VehicleTemplate {
             .systems
             .iter()
             .filter(|part| part.location.section == VehicleSection::Turret)
-            .map(|part| self.system_mass(part.system))
+            .map(|part| self.system_mass(loadout, part))
             .sum();
         weapons + systems
     }

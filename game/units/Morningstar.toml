@@ -4,7 +4,7 @@ movement = "wheel"
 tons = 60
 walk_mp = 5
 radio = 4
-cargo_space = 2500
+cargo_space = 2000
 max_suits = 0
 max_ton = 5
 
@@ -37,7 +37,7 @@ slots = [
     { at = "1-2", item = "Ammo_IS.AC/10", rounds = 10 },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
     { at = 4, item = "C3Master" },
-    { at = "5-6", item = "TargetingComputer" },
+    { at = 5, item = "TargetingComputer" },
 ]
 
 [sections.turret]

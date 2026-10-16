@@ -27,7 +27,7 @@ slots = [
 [sections.aft_side]
 armor = 24
 slots = [
-    { at = "1-6", item = "TargetingComputer" },
+    { at = 1, item = "TargetingComputer" },
 ]
 
 [sections.turret]

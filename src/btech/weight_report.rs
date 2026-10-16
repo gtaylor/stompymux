@@ -118,7 +118,12 @@ pub fn weight_report(world: &World, actor: ObjectId, id: ObjectId) -> Result<Wei
         for part in &loadout.systems {
             let name = &definition.sections[&part.location.section].criticals[&part.location.slot]
                 .equipment;
-            add(&mut equipment, name, 1, definition.system_mass(part.system));
+            add(
+                &mut equipment,
+                name,
+                1,
+                definition.system_mass(&loadout, part),
+            );
         }
         for bin in &loadout.ammunition {
             add(

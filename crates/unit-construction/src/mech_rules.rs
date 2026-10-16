@@ -567,8 +567,10 @@ impl MechTemplate {
             .filter(|mount| mount.weapon.is_direct_fire())
             .map(|mount| mount.weapon.mass())
             .sum();
-        let divisor = if clan { 5 } else { 4 };
-        let expected = weapons.div_ceil(1024 * divisor) as usize;
+        let expected = super::mass::targeting_computer_tons(
+            loadout.weapons.iter().map(|mount| mount.weapon),
+            clan,
+        ) as usize;
         let locations: Vec<_> = computer.iter().map(|part| part.location).collect();
         ensure!(
             computer.len() == expected && contiguous(&locations),

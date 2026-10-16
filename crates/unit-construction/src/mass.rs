@@ -123,6 +123,22 @@ pub fn system_mass(
     .unwrap_or(u32::MAX)
 }
 
+/// Whole tons a targeting computer weighs: the tonnage of the direct-fire weapons it serves
+/// (not machine guns, flamers, artillery or missiles) divided by 4 for an Inner Sphere computer
+/// or 5 for a Clan one, rounded up to the full ton (TechManual p. 238). A Mech computer fills
+/// one critical slot per ton; a vehicle computer is one item.
+pub fn targeting_computer_tons(
+    weapons: impl IntoIterator<Item = super::Weapon>,
+    clan: bool,
+) -> u32 {
+    let direct_fire: u32 = weapons
+        .into_iter()
+        .filter(|weapon| weapon.is_direct_fire())
+        .map(super::Weapon::mass)
+        .sum();
+    direct_fire.div_ceil(1024 * if clan { 5 } else { 4 })
+}
+
 /// A one-shot launcher weighs half a ton more than the launcher it adapts; rocket launchers are
 /// built as one-shot weapons and their catalogue mass already counts it.
 pub fn one_shot_mass<L>(mount: &super::WeaponMount<L>) -> u32 {
