@@ -4632,14 +4632,26 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     // Heavy woods thin to light woods when the fire burns out.
     let burnt = world.btech.maps()[&map].hex(1, 1).unwrap();
     assert_eq!(burnt, Hex::new(Terrain::LightWoods, 2));
-    for x in 0..3 {
+    // The map's wind blows from the north (bearing 0), so smoke lies downwind to the south:
+    // the hex below the fire and the two hexes 60 degrees either side of it (Tactical
+    // Operations pp. 43-45).
+    for (x, y) in [(1, 2), (0, 1), (2, 1)] {
         let smoke = world.btech.maps()[&map]
-            .decoration(HexCoordinate { x, y: 0 })
+            .decoration(HexCoordinate { x, y })
             .unwrap()
             .unwrap();
         assert_eq!(smoke.kind, DecorationKind::Smoke);
         assert!((89..=149).contains(&smoke.remaining));
         assert_eq!(smoke.next_spread, None);
+    }
+    for x in 0..3 {
+        assert!(
+            world.btech.maps()[&map]
+                .decoration(HexCoordinate { x, y: 0 })
+                .unwrap()
+                .is_none(),
+            "no smoke upwind at {x},0"
+        );
     }
     for id in units {
         assert_eq!(
@@ -4661,7 +4673,7 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     }
     assert!(!map_smoke_pending(&world));
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
+        world.btech.maps()[&map].hex(1, 2).unwrap().terrain(),
         Terrain::HeavyWoods
     );
 }
@@ -4669,7 +4681,8 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
 #[tokio::test]
 async fn strong_wind_fire_replays_new_ignition_and_retains_scheduled_delay() {
     let (_dir, config, mut world, map, _units) = fixture_field(Terrain::LightWoods, 1, 5).await;
-    set_map_wind(&mut world, map, 0, 0).unwrap();
+    // A wind from the south (bearing 180) carries the fire north, toward row 2.
+    set_map_wind(&mut world, map, 180, 0).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 3 };
     set_map_decoration(
         &mut world,
@@ -4692,7 +4705,7 @@ async fn strong_wind_fire_replays_new_ignition_and_retains_scheduled_delay() {
         advance_map_fire(&mut world).unwrap();
     }
     // Wind changes affect subsequent scheduling, not a check already counting down.
-    set_map_wind(&mut world, map, 0, 60).unwrap();
+    set_map_wind(&mut world, map, 180, 60).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut replay = persistence::load(&config.database()).await.unwrap();
     for _ in 0..50 {

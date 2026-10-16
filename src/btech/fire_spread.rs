@@ -161,10 +161,13 @@ fn spread(map: &mut StoredMap, index: u32, replaced: &mut BTreeSet<u32>) -> Resu
 }
 
 /// Wind-relative candidate cells: the downwind neighbor, the neighbors on either side of it
-/// (counter-clockwise, then clockwise), and the second cell directly downwind.
+/// (counter-clockwise, then clockwise), and the second cell directly downwind. Fire and smoke
+/// travel the way the wind blows (Tactical Operations pp. 43-45); the map stores the bearing
+/// the wind blows from, so downwind is the opposite bearing.
 fn spread_hexes(map: &StoredMap, origin: HexCoordinate) -> Result<[Option<u32>; 4]> {
-    // A direction index into `StoredMap::neighbors`, clockwise from north.
-    let downwind = ((map.wind_direction + 30) / 60 % 6) as usize;
+    // A direction index into `StoredMap::neighbors`, clockwise from north, rounded to the
+    // nearest hexside.
+    let downwind = ((map.wind_direction + 180 + 30) / 60 % 6) as usize;
     let around = map.neighbors(origin)?;
     let first = around[downwind];
     let second = match first {
@@ -194,13 +197,14 @@ mod tests {
         let even = HexCoordinate { x: 2, y: 2 };
         let odd = HexCoordinate { x: 3, y: 2 };
         // Downwind, counter-clockwise side, clockwise side, second downwind; index y * 6 + x.
+        // The bearing is where the wind blows from, so a north wind carries fire south.
         let expected = [
-            (0, [8, 13, 15, 2], [9, 8, 10, 3]),
-            (60, [15, 8, 21, 10], [10, 9, 16, 11]),
-            (120, [21, 15, 20, 22], [16, 10, 21, 23]),
-            (180, [20, 21, 19, 26], [21, 16, 14, 27]),
-            (240, [19, 20, 13, 18], [14, 21, 8, 19]),
-            (300, [13, 19, 8, 6], [8, 14, 9, 7]),
+            (0, [20, 21, 19, 26], [21, 16, 14, 27]),
+            (60, [19, 20, 13, 18], [14, 21, 8, 19]),
+            (120, [13, 19, 8, 6], [8, 14, 9, 7]),
+            (180, [8, 13, 15, 2], [9, 8, 10, 3]),
+            (240, [15, 8, 21, 10], [10, 9, 16, 11]),
+            (300, [21, 15, 20, 22], [16, 10, 21, 23]),
         ];
         for (direction, from_even, from_odd) in expected {
             map.wind_direction = direction;
@@ -218,15 +222,49 @@ mod tests {
         // Bearings round to the nearest of the six directions.
         for direction in [29, 330, 359] {
             map.wind_direction = direction;
-            assert_eq!(spread_hexes(&map, even).unwrap(), [8, 13, 15, 2].map(Some));
+            assert_eq!(
+                spread_hexes(&map, even).unwrap(),
+                [20, 21, 19, 26].map(Some)
+            );
         }
         map.wind_direction = 30;
-        assert_eq!(spread_hexes(&map, even).unwrap(), [15, 8, 21, 10].map(Some));
-        map.wind_direction = 0;
+        assert_eq!(
+            spread_hexes(&map, even).unwrap(),
+            [19, 20, 13, 18].map(Some)
+        );
+        map.wind_direction = 180;
         assert_eq!(
             spread_hexes(&map, HexCoordinate { x: 0, y: 0 }).unwrap(),
             [None, None, Some(1), None]
         );
+    }
+
+    /// Tactical Operations pp. 43-45: fire spreads, and fires place smoke, in the hex directly
+    /// downwind and the hexes 60 degrees either side of it, where the wind blows the smoke.
+    /// A wind from the west (bearing 270) blows east and carries them east; a wind from the
+    /// east (bearing 90) carries them west.
+    #[test]
+    fn fire_and_smoke_travel_downwind() {
+        let mut map: StoredMap = serde_json::from_value(serde_json::json!({
+            "name":"wind", "width":6, "height":6, "gravity":100, "temperature":20,
+            "flags":0, "light":2, "weather":0, "cloud_base":200, "sensor_flags":0
+        }))
+        .unwrap();
+        let width = map.width;
+        let column = |index: Option<u32>| i64::from(index.unwrap()) % width;
+        for origin in [HexCoordinate { x: 2, y: 2 }, HexCoordinate { x: 3, y: 2 }] {
+            let x = i64::from(origin.x);
+            map.wind_direction = 270;
+            let east = spread_hexes(&map, origin).unwrap();
+            assert_eq!(column(east[0]), x + 1, "downwind of {origin:?}");
+            assert_eq!(column(east[3]), x + 2, "second downwind of {origin:?}");
+            assert!(east.iter().all(|&hex| column(hex) >= x), "{origin:?}");
+            map.wind_direction = 90;
+            let west = spread_hexes(&map, origin).unwrap();
+            assert_eq!(column(west[0]), x - 1, "downwind of {origin:?}");
+            assert_eq!(column(west[3]), x - 2, "second downwind of {origin:?}");
+            assert!(west.iter().all(|&hex| column(hex) <= x), "{origin:?}");
+        }
     }
 
     /// Burnout spends the growth's terrain factor: heavy growth thins, light growth leaves
