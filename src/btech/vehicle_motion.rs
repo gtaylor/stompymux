@@ -9,8 +9,9 @@ pub struct VehicleMotionRules {
     /// Positive map movement percentage; nonpositive values use the ordinary rate.
     pub movement_modifier: i64,
     /// Movement points the battlefield adds to every hex entered beyond the terrain's own:
-    /// fog slows everything that drives (Tactical Operations p. 55), and a building's floors
-    /// cost by its class (Total Warfare p. 167).
+    /// fog slows everything that drives (Tactical Operations p. 55), a building's floors
+    /// cost by its class (Total Warfare p. 167), and each level climbed or descended to enter
+    /// the hex costs two (TW pp. 48, 52).
     pub extra_cost: u8,
 }
 

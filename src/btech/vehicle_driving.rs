@@ -328,6 +328,7 @@ pub(super) fn advance(
             )?;
             let previous_height = previous.elevation_level(previous_tile);
             let previous_under = previous.under_bridge();
+            let previous_entry = previous.level_entry;
             reached = point;
             let mut entry_motion = next;
             entry_motion.point = point;
@@ -349,6 +350,13 @@ pub(super) fn advance(
             vehicle.ground_elevation = (i32::from(support_height)
                 != vehicle.terrain_elevation(tile, entry_under))
             .then_some(f64::from(support_height));
+            // The level changed to enter the hex is paid while crossing it, like its terrain
+            // cost (see `propose_vehicle_ground_motion`).
+            vehicle.level_entry = Some(super::LevelEntry {
+                x: u16::try_from(hex.x)?,
+                y: u16::try_from(hex.y)?,
+                levels: u8::try_from(change.unsigned_abs()).unwrap_or(u8::MAX),
+            });
             let mut fall_rules = rules.fall;
             fall_rules.toughness |= world.btech.vehicles()[&id]
                 .pilot()
@@ -435,6 +443,7 @@ pub(super) fn advance(
                     previous_point,
                     i16::try_from(previous_height)?,
                     previous_under,
+                    previous_entry,
                 );
                 unit.halt();
                 next = unit.motion().unwrap();
@@ -449,6 +458,7 @@ pub(super) fn advance(
                     previous_point,
                     i16::try_from(previous_height)?,
                     previous_under,
+                    previous_entry,
                 );
                 unit.halt();
                 report.notices.push(Notice { unit: id, text });
@@ -496,6 +506,7 @@ pub(super) fn advance(
                             previous_point,
                             i16::try_from(previous_height)?,
                             previous_under,
+                            previous_entry,
                         );
                     }
                     unit.halt();
@@ -530,17 +541,6 @@ pub(super) fn advance(
                     interrupted = true;
                     break;
                 }
-            }
-            if change.abs() == 1 {
-                let motion = world
-                    .btech
-                    .vehicles
-                    .get_mut(&id)
-                    .unwrap()
-                    .motion
-                    .as_mut()
-                    .unwrap();
-                motion.speed = motion.speed.signum() * (motion.speed.abs() - 21.5).max(0.0);
             }
             if let Some(breach) = super::building_interior::breach(
                 world,

@@ -57,8 +57,12 @@ async fn fixture(
     (dir, config, world, id)
 }
 
+/// A ground vehicle pays two MP for each level it changes (Total Warfare pp. 48, 52). Under
+/// the realtime scale that cost is charged like the hex's terrain cost: every second spent
+/// crossing a hex it climbed or descended into is proposed with two extra movement points,
+/// and the hexes beyond cost nothing extra.
 #[tokio::test]
-async fn vehicle_slopes_reduce_speed_once_per_step_and_replay_mid_climb() {
+async fn vehicle_slopes_charge_two_movement_points_per_level_and_replay_mid_climb() {
     for (movement, reverse) in [
         (VehicleMovement::Tracked, false),
         (VehicleMovement::Wheeled, false),
@@ -74,19 +78,21 @@ async fn vehicle_slopes_reduce_speed_once_per_step_and_replay_mid_climb() {
                 .ground_motion_step(
                     unit.motion().unwrap(),
                     Hex::new(Terrain::Clear, 0),
-                    VehicleMotionRules::STANDARD,
+                    VehicleMotionRules {
+                        extra_cost: unit.level_entry_cost(),
+                        ..VehicleMotionRules::STANDARD
+                    },
                 )
                 .unwrap();
             let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
             assert!(notices.is_empty(), "{movement:?} {reverse}: {notices:?}");
+            let unit = &world.btech.vehicles()[&id];
+            assert!((unit.motion().unwrap().speed - proposed.speed).abs() < 1e-10);
             let height = battle_unit_elevation(&world, id).unwrap().unwrap();
             if height != old_height {
                 changes += 1;
                 assert_eq!((height - old_height).abs(), 1);
-                let expected = proposed.speed.signum() * (proposed.speed.abs() - 21.5).max(0.0);
-                assert!(
-                    (world.btech.vehicles()[&id].motion().unwrap().speed - expected).abs() < 1e-10
-                );
+                assert_eq!(unit.level_entry_cost(), 2);
                 if changes == 1 {
                     persistence::save(&config.database(), &world).await.unwrap();
                     let restored = persistence::load(&config.database()).await.unwrap();
@@ -267,10 +273,10 @@ async fn retained_height_applies_only_to_the_departure_hex() {
         if unit.position().unwrap().x == 3 {
             entered = true;
             assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(3));
-            assert_eq!(
-                unit.motion().unwrap().speed,
-                (proposed.speed - 21.5).max(0.0)
-            );
+            // The climb from the retained level 2 is one level, paid as two MP while the
+            // vehicle crosses the new hex rather than as a cut on entry.
+            assert_eq!(unit.motion().unwrap().speed, proposed.speed);
+            assert_eq!(unit.level_entry_cost(), 2);
             assert!(serde_json::to_value(unit).unwrap()["ground_elevation"].is_null());
             break;
         }

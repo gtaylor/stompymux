@@ -64,6 +64,9 @@ pub struct Vehicle {
     /// Heading held on the pavement or ice the vehicle is crossing, for the skid rule.
     #[serde(default)]
     pub(super) slick: super::SlickTrack,
+    /// Levels climbed or descended into the current hex, charged while crossing it.
+    #[serde(default)]
+    pub(super) level_entry: Option<super::LevelEntry>,
     #[serde(default)]
     contract_loadout: bool,
     #[serde(default)]
@@ -263,6 +266,8 @@ struct VehicleRecord {
     bogged_down: bool,
     #[serde(default)]
     slick: super::SlickTrack,
+    #[serde(default)]
+    level_entry: Option<super::LevelEntry>,
     definition: VehicleTemplate,
     sections: BTreeMap<VehicleSection, SectionState>,
     ammunition: Vec<u16>,
@@ -510,6 +515,7 @@ super::saved_parts::saved_parts!(Vehicle {
         hide_elapsed,
         bogged_down,
         slick,
+        level_entry,
         inferno_remaining,
         unjam,
         pod_removal,
@@ -975,6 +981,7 @@ impl Vehicle {
             visibility: super::Visibility::default(),
             bogged_down: false,
             slick: Default::default(),
+            level_entry: None,
             experience: Default::default(),
             friendly_fire_safety: false,
             auto_fall: false,
@@ -1304,17 +1311,30 @@ impl Vehicle {
     }
 
     /// Restore a rejected terrain entry while preserving any fall-induced heading and damage.
+    /// `entry` is the level change the vehicle was still paying for in the restored hex.
     pub(super) fn restore_ground_position(
         &mut self,
         position: super::Position,
         point: super::Point,
         height: i16,
         under_bridge: bool,
+        entry: Option<super::LevelEntry>,
     ) {
         let mut motion = self.motion.expect("Placed vehicle has motion");
         motion.point = point;
         self.update_motion(motion, position, under_bridge);
         self.ground_elevation = Some(f64::from(height));
+        self.level_entry = entry;
+    }
+
+    /// Movement points still being paid for the levels climbed or descended into the current
+    /// hex: a ground vehicle pays two MP per level (Total Warfare pp. 48, 52), charged like the
+    /// hex's own terrain cost.
+    pub fn level_entry_cost(&self) -> u8 {
+        match (self.level_entry, self.position()) {
+            (Some(entry), Some(position)) => entry.cost_at(position).saturating_mul(2),
+            _ => 0,
+        }
     }
 
     /// Stop translation and turning while preserving the current point and facing.
@@ -1659,6 +1679,7 @@ impl Vehicle {
             visibility: record.visibility,
             bogged_down: record.bogged_down,
             slick: record.slick,
+            level_entry: record.level_entry,
             definition: record.definition,
             sections: record.sections,
             ammunition: record.ammunition,

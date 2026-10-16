@@ -189,9 +189,10 @@ impl MovementRules {
     };
 }
 
-/// The levels a Mech climbed or descended to enter the hex it stands in. Each level costs
-/// one MP (Total Warfare pp. 48 and 52), charged like the hex's own terrain cost: the
-/// unit crosses the hex that many hex-widths slower (see `ground_proposal`).
+/// The levels a ground unit climbed or descended to enter the hex it stands in. Each level
+/// costs a Mech one MP and a ground vehicle two (Total Warfare pp. 48 and 52), charged like
+/// the hex's own terrain cost: the unit crosses the hex that many hex-widths slower (see
+/// `ground_proposal`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LevelEntry {

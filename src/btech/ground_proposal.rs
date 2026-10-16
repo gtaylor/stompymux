@@ -157,6 +157,7 @@ pub fn propose_vehicle_ground_motion(
             speed_demon: advantage,
             movement_modifier: map.movement_modifier,
             extra_cost: map.weather_condition()?.movement_cost()
+                + vehicle.level_entry_cost()
                 + super::building_interior::floor_cost_at(
                     current,
                     vehicle.elevation_level(current),
