@@ -18,12 +18,15 @@ pub(super) fn surface(tile: Hex, elevation: i32) -> i16 {
     tile.surface_height()
 }
 
-/// Fall damage: one point per ten tons, rounded up, per level fallen plus one (Total Warfare
-/// p. 68). Water halves it (p. 57), and unusual gravity scales it by the world's G-rating in
-/// either direction (Tactical Operations p. 53). `levels` is the multiplier, levels fallen plus one.
+/// Fall damage: tonnage divided by ten, rounded up, times the levels fallen plus one (Total
+/// Warfare p. 68). Water halves it, rounding the final damage down (p. 57), and unusual
+/// gravity scales it by the world's G-rating in either direction (Tactical Operations p. 53).
+/// `levels` is the multiplier, levels fallen plus one.
 pub(super) fn damage(tons: u32, levels: i32, wet: bool, gravity: Option<i64>) -> Result<u32> {
-    let mut damage =
-        u64::from(levels.max(0) as u32) * (u64::from(tons) + 5) / if wet { 20 } else { 10 };
+    let mut damage = u64::from(levels.max(0) as u32) * u64::from(tons.div_ceil(10));
+    if wet {
+        damage /= 2;
+    }
     if let Some(gravity) = gravity {
         damage = damage * gravity.max(0) as u64 / 100;
     }
@@ -56,6 +59,24 @@ mod tests {
         assert_eq!(damage(50, 1, false, Some(50)).unwrap(), 2);
         assert_eq!(damage(50, 1, false, Some(200)).unwrap(), 10);
         assert_eq!(damage(50, 1, false, Some(-5)).unwrap(), 0);
+    }
+
+    /// Total Warfare p. 68 divides the tonnage by ten and rounds up before multiplying by the
+    /// levels fallen plus one; p. 57 halves a water fall and rounds the result down.
+    #[test]
+    fn damage_rounds_tonnage_up_before_multiplying() {
+        // A 50-ton 'Mech falling one level: 5 x 2.
+        assert_eq!(damage(50, 2, false, None).unwrap(), 10);
+        // A 40-ton 'Mech missing a death from above falls two levels' worth: 4 x 3.
+        assert_eq!(damage(40, 3, false, None).unwrap(), 12);
+        // A 100-ton 'Mech falling three levels: 10 x 4.
+        assert_eq!(damage(100, 4, false, None).unwrap(), 40);
+        // A 50-ton 'Mech tumbling into Depth 2 water: 5 x 3 / 2, rounded down.
+        assert_eq!(damage(50, 3, true, None).unwrap(), 7);
+        // A 21-ton vehicle's same-level fall: 2.1 rounds up to 3.
+        assert_eq!(damage(21, 1, false, None).unwrap(), 3);
+        assert_eq!(damage(8, 1, false, None).unwrap(), 1);
+        assert_eq!(damage(21, 0, false, None).unwrap(), 0);
     }
 
     #[test]

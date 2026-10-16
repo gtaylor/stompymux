@@ -5615,11 +5615,14 @@ async fn character_thermal_action_orders_casualties_and_shutdown_falls() {
         } else {
             assert!(report.shutdown);
             let fall = report.fall.as_ref().unwrap();
-            if cause == "ground" {
-                assert_eq!(fall.damage, 0);
-            } else {
-                assert!(fall.damage > 0);
-            }
+            // Shutdown falls on the ground and in the air are ordinary falls of no levels,
+            // tonnage/10 rounded up (Total Warfare p. 68).
+            let tons = u32::from(
+                scripts.world().btech.constructed_units()[&id]
+                    .definition()
+                    .tons,
+            );
+            assert_eq!(fall.damage, tons.div_ceil(10));
         }
         let candidate = scripts.world().clone();
         assert_eq!(

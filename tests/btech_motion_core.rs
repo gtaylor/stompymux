@@ -5526,9 +5526,10 @@ async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown
 }
 
 /// An involuntary shutdown forces a +3 Piloting Skill Roll whatever the speed (Total Warfare
-/// p. 60); the fall it causes does no structural damage, and the MechWarrior keeps the cockpit.
+/// p. 60); the fall it causes is an ordinary fall of no levels, tonnage/10 rounded up (p. 68),
+/// and the MechWarrior keeps the cockpit.
 #[tokio::test]
-async fn overheat_shutdown_forces_a_balance_roll_at_any_speed_without_structural_fall_damage() {
+async fn overheat_shutdown_forces_a_balance_roll_at_any_speed_and_an_ordinary_fall() {
     use stompymux_rs::advance_battle_overheat;
     let seed = {
         let (_dir, _config, mut probe, id) = fixture('.').await;
@@ -5577,11 +5578,11 @@ async fn overheat_shutdown_forces_a_balance_roll_at_any_speed_without_structural
         let fall = report
             .fall
             .expect("a failed balance roll topples the Mech at any speed");
-        assert_eq!(fall.damage, 0);
-        assert!(fall.groups.is_empty());
-        assert!(fall.pilot_injury.is_none());
+        let tons = u32::from(before.constructed_units()[&id].definition().tons);
+        assert_eq!(fall.damage, tons.div_ceil(10));
+        assert!(!fall.groups.is_empty());
         let unit = &world.btech.constructed_units()[&id];
-        assert_eq!(unit.sections(), before.constructed_units()[&id].sections());
+        assert_ne!(unit.sections(), before.constructed_units()[&id].sections());
         assert_eq!(unit.power(), Power::Off);
         assert_eq!(unit.pilot(), Some(ObjectId(1)));
         assert_eq!(unit.posture(), stompymux_rs::Posture::Prone);
