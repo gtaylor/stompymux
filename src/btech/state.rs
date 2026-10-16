@@ -414,9 +414,6 @@ pub struct BtechState {
     pub(crate) inventories: SharedMap<ObjectId, Vec<super::InventoryEntry>>,
     #[serde(default)]
     pub(crate) part_costs: Arc<BTreeMap<i32, u64>>,
-    /// Runtime catalogue overrides reset on reload; saved countdowns retain their remaining time.
-    #[serde(default)]
-    pub(crate) weapon_settings: super::WeaponSettings,
     /// Seconds until a fully destroyed native unit retires from the battlefield.
     #[serde(default)]
     pub(crate) wrecks: Arc<BTreeMap<ObjectId, u8>>,
@@ -455,11 +452,6 @@ impl BtechState {
     /// Elapsed committed simulation seconds, shared by observations and outcomes.
     pub fn simulation_time(&self) -> i64 {
         self.simulation_seconds
-    }
-
-    /// Shared effective weapon values for the current runtime.
-    pub fn weapon_settings(&self) -> &super::WeaponSettings {
-        &self.weapon_settings
     }
 
     /// Ground autopilot controllers keyed by controlled unit identity.
@@ -614,7 +606,6 @@ impl BtechState {
         ensure!(self.simulation_seconds >= 0, "Invalid simulation time");
         super::autopilot::validate_controllers(&self.controllers)?;
         super::battlefield_identity::validate(self)?;
-        self.weapon_settings.validate()?;
         super::inventory::validate(world)?;
         super::self_destruct::validate(self)?;
         super::wreck_cleanup::validate(self)?;

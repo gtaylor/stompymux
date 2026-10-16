@@ -1,7 +1,7 @@
 +++
 title = "@btech"
 description = "Manage BattleTech assets, maps, runtime settings and inventory"
-keywords = ["snipe", "@setunit", "@viewunit", "@setspecial", "@viewspecial", "@ood", "setmapindx", "setxy", "@weight", "@damage", "@damagesection", "@losemit", "setteam", "eventstats", "memstats", "listforms", "savedb", "xptop", "setxplevel", "@viewmap", "fixmap", "@setmap", "addmine", "list", "delobj", "addfire", "addsmoke", "addblock", "loadmap", "savemap", "setmapsize", "clearunits", "@mapemit", "addhex", "addice", "delice", "setcond", "addstuff", "removestuff", "clearstuff", "@btech", "btech inspection", "setvrt", "setwbv", "cargo-point"]
+keywords = ["snipe", "@setunit", "@viewunit", "@setspecial", "@viewspecial", "@ood", "setmapindx", "setxy", "@weight", "@damage", "@damagesection", "@losemit", "setteam", "eventstats", "memstats", "listforms", "savedb", "xptop", "setxplevel", "@viewmap", "fixmap", "@setmap", "addmine", "list", "delobj", "addfire", "addsmoke", "addblock", "loadmap", "savemap", "setmapsize", "clearunits", "@mapemit", "addhex", "addice", "delice", "setcond", "addstuff", "removestuff", "clearstuff", "@btech", "btech inspection", "cargo-point"]
 article_tags = ["wizard_commands"]
 wizard_only = true
 +++
@@ -12,9 +12,6 @@ Inspect the BattleTech foundation:
 
 ```text
 @btech status
-@btech weapon-settings IS.MediumLaser
-@btech setvrt IS.MediumLaser 25
-@btech setwbv IS.MediumLaser 46
 @btech skill-threshold Piloting-Biped
 @btech skill-threshold Piloting-Biped=3000
 @btech template JR7-D
@@ -56,8 +53,8 @@ To create a DEBUG command object, use an existing Thing you control:
 The switches may be abbreviated to `/r`, `/i`, and `/u`. Bare `@btech #42` also
 reports its registered type. Registration preserves the object and its location;
 unregistration removes its DEBUG role. A DEBUG object supplies its commands when
-it is the actor, the actor's location, or carried by the actor. Its `SETWBV`
-command is public, as in the reference; other DEBUG controls require Wizard access.
+it is the actor, the actor's location, or carried by the actor. Every DEBUG
+control requires Wizard access.
 Registration and removal survive saving and restart.
 
 `@btech/register #43=MAP` initializes a live Thing as a 21 by 11 map of clear ground
@@ -287,25 +284,6 @@ apply to Mechs and supported vehicles. Trusted Lua uses
 to read the current flags.
 
 `@btech unit-combat-safe <unit>=on|off` grants or removes damage immunity for a constructed unit. Trusted Lua uses `btech.unit.combat_safe(unit, enabled)`. The flag survives restart. Map building flag 2 also suppresses damage originating inside that map; entrance safety flag 8 does not grant immunity.
-
-## Runtime weapon settings
-
-`weapon-settings <weapon>` shows the current recycle time and Battle Value.
-`setvrt <weapon> <seconds>` accepts 1 through 127 seconds; `setwbv <weapon> <value>`
-accepts 0 through 2147483647. Use canonical weapon names such as `IS.MediumLaser`
-or `CL.LRM-20`; the setting applies to every installation of that weapon. Names
-ignore ASCII case and do not accept wildcards. An equals sign can replace the space before the value.
-
-These Wizard settings apply to every supported chassis. New weapon and AMS
-activations use the recycle override, while active countdowns keep their remaining
-time. Weapon specifications, unit Battle Value and Battle Value experience use the
-same current values. Restart restores catalogue defaults; an existing countdown
-still finishes normally even if it exceeds the restored default.
-
-Trusted callbacks can inspect with `btech.weapon.settings(name)` and change values
-with `btech.weapon.set_recycle(actor, name, seconds)` or
-`btech.weapon.set_battle_value(actor, name, value)`. Both setters require a Wizard
-actor and participate in callback rollback.
 
 ## Parts inventory administration
 
@@ -729,17 +707,7 @@ view (255 displays as -1). Flag values display all supported letters a–z/A–F
 with `-` for zero. Titles use the map object's name; `mapname` is the saved map
 asset name. Use one column to see longer field labels.
 
-
-## Runtime weapon settings
-
-`SETVRT weapon seconds` changes future activations to use a recycle duration of
-1–127 seconds. `SETWBV weapon value` sets Battle Value from 0–2147483647.
-Both require wizard authority, accept exactly two arguments and share the
-`@btech setvrt`/`@btech setwbv` controls. Weapon names are exact and case-insensitive.
-These runtime settings apply across unit types and reset on database reload.
-Existing active recycle countdowns are preserved. Lua uses
-`btech.weapon.set_recycle` and `btech.weapon.set_battle_value`.
-
+## Skill XP thresholds
 
 `SETXPLEVEL skill threshold` silently sets a runtime XP threshold as a wizard.
 It accepts exactly two arguments; the threshold must be 0–2147483647. Zero
@@ -1063,8 +1031,7 @@ usual ammunition and readiness. Queued artillery survives a server restart.
 `@viewunit bv` reports the unit's Battle Value (TechManual BV 2.0) as a whole
 number for a Gunnery 4 / Piloting 5 crew. It uses current armor and internal
 structure, the installed equipment and the design's maximum movement; towing and
-carried load do not change it. The field is read-only; `setwbv` changes the
-weapon values used by the calculation.
+carried load do not change it. The field is read-only.
 
 `@viewunit unitdamage` reads a compact damage report: `A:section/loss` for armor,
 `A(R):section/loss` for rear armor, `I:section/loss` for internal structure,

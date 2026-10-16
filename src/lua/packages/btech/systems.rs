@@ -1,41 +1,9 @@
-//! Weapon settings, calculations, networks, and shared unit-system native bindings.
+//! Calculations, networks, and shared unit-system native bindings.
 
 use super::*;
 
 /// Register this package slice on the private native table.
-pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::Result<()> {
-    let shared = world.clone();
-    let settings = lua.create_function(move |lua, name: String| {
-        crate::lua::transactions::require(lua)?;
-        let weapon = crate::Weapon::parse(&name).map_err(mlua::Error::external)?;
-        detached(lua, &shared.borrow().btech.weapon_settings().get(weapon))
-    })?;
-    native.set(
-        "weapon_settings",
-        error::wrap(lua, settings, "btech.operation.failed")?,
-    )?;
-    for (name, recycle) in [
-        ("weapon_set_recycle", true),
-        ("weapon_set_battle_value", false),
-    ] {
-        let setting =
-            lua.create_function(move |lua, (actor, name, value): (i64, String, i64)| {
-                crate::lua::transactions::require(lua)?;
-                let scripts = crate::Scripts::services(lua)?;
-                crate::lua::transactions::run(lua, &scripts.world, || {
-                    let values = crate::edit_battle_weapon_settings(
-                        &scripts,
-                        ObjectId(actor),
-                        &name,
-                        value,
-                        recycle,
-                    )
-                    .map_err(mlua::Error::external)?;
-                    detached(lua, &values)
-                })
-            })?;
-        native.set(name, error::wrap(lua, setting, "btech.operation.failed")?)?;
-    }
+pub(super) fn register(lua: &Lua, native: &Table) -> mlua::Result<()> {
     let bootlegger = lua.create_function(
         |lua, (unit, pilot, arguments): (i64, i64, Option<String>)| {
             crate::lua::transactions::require(lua)?;

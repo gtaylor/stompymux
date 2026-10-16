@@ -1822,32 +1822,6 @@ function btech_unit.prone(dbref, pilot) end
 ---@return boolean accepted Timer and cockpit feedback commit with the callback.
 function btech_unit.hide(dbref, pilot) end
 
----@class WeaponValues
----@field recycle_seconds integer Effective runtime recycle time, from 1 through 127 seconds.
----@field battle_value integer Effective runtime Battle Value, from 0 through 2147483647.
-
-local btech_weapon = {}
-
----Read detached effective values using a canonical weapon name.
----Examples: IS.MediumLaser or CL.LRM-20; exact names ignore ASCII case.
----@param name string
----@return WeaponValues
-function btech_weapon.settings(name) end
-
----Wizard-only runtime override. Existing countdowns are unchanged; restart restores catalogue defaults.
----@param actor integer
----@param name string
----@param seconds integer From 1 through 127.
----@return WeaponValues
-function btech_weapon.set_recycle(actor, name, seconds) end
-
----Wizard-only runtime override used by valuation and Battle Value XP. Restart restores catalogue defaults.
----@param actor integer
----@param name string
----@param value integer From 0 through 2147483647.
----@return WeaponValues
-function btech_weapon.set_battle_value(actor, name, value) end
-
 ---@class InventoryEntry
 ---@field part_id integer Stable game-directory part identifier.
 ---@field quantity integer Positive stock quantity, at most 2147483647.
@@ -1978,7 +1952,6 @@ local btech_runtime = {}
 ---@field database btech.database Explicit world checkpoints.
 ---@field cargo table Cockpit stock reports and transfers.
 ---@field inventory table Shared loose-parts stock.
----@field weapon table Runtime weapon settings.
 ---@field character table
 ---@field template table
 ---@field map table
@@ -1996,7 +1969,6 @@ btech = {
   database = btech_database,
   cargo = btech_cargo,
   inventory = btech_inventory,
-  weapon = btech_weapon,
   player = btech_player,
   character = btech_character,
   template = btech_template,

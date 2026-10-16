@@ -20,7 +20,7 @@ pub fn inspection_effective_maximum_speed(
     super::effective_speed::configured(world, id, super::SpeedPolicy::configured(config))
 }
 
-/// Battle Value of a live unit with the world's runtime weapon values.
+/// Battle Value of a live unit.
 pub fn inspection_battle_value(
     world: &crate::World,
     id: crate::ObjectId,

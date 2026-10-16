@@ -10,7 +10,7 @@
 use super::{
     ArmAttack, CriticalLocation, Engine, Gyro, Mech, MechChassis, MechSection, PhysicalBattleValue,
     ResolvedLoadout, SpeedEnvelope, System, SystemContext, Technology, VehicleCriticalLocation,
-    VehicleMovement, VehicleSection, Weapon, WeaponSettings,
+    VehicleMovement, VehicleSection, Weapon,
 };
 use anyhow::Result;
 use serde::Serialize;
@@ -237,14 +237,14 @@ struct MountFacts {
     artemis: f64,
 }
 
-/// Unmodified BV of one mount: the runtime weapon value, or for a one-shot launcher the
+/// Unmodified BV of one mount: the catalogue weapon value, or for a one-shot launcher the
 /// published one-shot figure (TechManual p. 317). Rocket launchers are one-shot by design and
 /// carry their own value.
-fn unmodified_value(settings: &WeaponSettings, weapon: Weapon, one_shot: bool) -> f64 {
+fn unmodified_value(weapon: Weapon, one_shot: bool) -> f64 {
     if one_shot && let Some(value) = weapon.one_shot_battle_value() {
         return f64::from(value);
     }
-    f64::from(settings.battle_value(weapon))
+    f64::from(weapon.battle_value())
 }
 
 /// Heat a weapon adds to Total Weapon Heat: Ultra x2, Rotary x6, Streak x1/2 and one-shot
@@ -273,12 +273,12 @@ struct WeaponValues {
 
 /// Apply the weapon modifiers of TechManual p. 302: rear-firing halving (or forward halving
 /// when rear-firing weapons are worth more), targeting computer x1.25 and Artemis.
-fn value_weapons(settings: &WeaponSettings, mounts: &[MountFacts]) -> WeaponValues {
+fn value_weapons(mounts: &[MountFacts]) -> WeaponValues {
     let arc_total = |arc| {
         mounts
             .iter()
             .filter(|mount| mount.arc == arc)
-            .map(|mount| unmodified_value(settings, mount.weapon, mount.one_shot))
+            .map(|mount| unmodified_value(mount.weapon, mount.one_shot))
             .sum::<f64>()
     };
     let halved = if arc_total(Arc::Forward) < arc_total(Arc::Rear) {
@@ -291,7 +291,7 @@ fn value_weapons(settings: &WeaponSettings, mounts: &[MountFacts]) -> WeaponValu
         models: BTreeMap::new(),
     };
     for mount in mounts {
-        let unmodified = unmodified_value(settings, mount.weapon, mount.one_shot);
+        let unmodified = unmodified_value(mount.weapon, mount.one_shot);
         *values.models.entry(mount.weapon).or_default() += unmodified;
         let mut value = unmodified * mount.artemis;
         if mount.targeting_computer {
@@ -328,13 +328,12 @@ fn ammunition_value(
 /// Defensive weapon BV plus anti-missile ammunition up to the value of the matching
 /// anti-missile systems (TechManual p. 302).
 fn defensive_weapon_value(
-    settings: &WeaponSettings,
     weapons: impl Iterator<Item = Weapon>,
     bins: impl Iterator<Item = (Weapon, bool)>,
 ) -> f64 {
     let mut systems: BTreeMap<Weapon, f64> = BTreeMap::new();
     for weapon in weapons.filter(|weapon| weapon.is_defensive_equipment()) {
-        *systems.entry(weapon).or_default() += f64::from(settings.battle_value(weapon));
+        *systems.entry(weapon).or_default() += f64::from(weapon.battle_value());
     }
     let ammunition = ammunition_value(bins.filter(|(weapon, _)| weapon.is_ams()), &systems);
     systems.values().sum::<f64>() + ammunition
@@ -442,16 +441,11 @@ impl Mech {
     /// installed weapons, ammunition, equipment, heat sinks and movement keep their design value
     /// after damage or expenditure.
     pub fn battle_value(&self) -> Result<BattleValue> {
-        self.battle_value_with(&WeaponSettings::default())
-    }
-
-    /// Battle Value with the runtime weapon values.
-    pub(crate) fn battle_value_with(&self, settings: &WeaponSettings) -> Result<BattleValue> {
-        Ok(self.valuation(settings)?.evaluate())
+        Ok(self.valuation()?.evaluate())
     }
 
     /// Gather the 'Mech facts of TechManual pp. 302-303.
-    fn valuation(&self, settings: &WeaponSettings) -> Result<Valuation> {
+    fn valuation(&self) -> Result<Valuation> {
         let definition = self.definition();
         let loadout = self.loadout()?;
         let clan = definition.has_special("Clan");
@@ -525,7 +519,6 @@ impl Mech {
         let defensive_equipment = defensive_system_value(&loadout, context, |system, context| {
             system.installation_slots(context).unwrap_or(1)
         }) + defensive_weapon_value(
-            settings,
             loadout.weapons.iter().map(|mount| mount.weapon),
             loadout
                 .ammunition
@@ -620,7 +613,6 @@ impl Mech {
         let heat_efficiency = 6.0 + f64::from(definition.heat_dissipation()) - movement_heat;
 
         let offense = Offense::gather(
-            settings,
             &loadout,
             artemis_multipliers(
                 &loadout,
@@ -694,7 +686,6 @@ impl Offense {
     /// critical and rear-mount flag. A targeting computer links every direct-fire weapon it
     /// supports and any weapon the template links to it explicitly.
     fn gather<L: Copy>(
-        settings: &WeaponSettings,
         loadout: &ResolvedLoadout<L>,
         artemis: BTreeMap<usize, f64>,
         arc: impl Fn(L, bool) -> Arc,
@@ -717,7 +708,7 @@ impl Offense {
                 artemis: artemis.get(&index).copied().unwrap_or(1.0),
             })
             .collect();
-        let values = value_weapons(settings, &mounts);
+        let values = value_weapons(&mounts);
         let ammunition = ammunition_value(
             loadout
                 .ammunition
@@ -738,16 +729,11 @@ impl super::Vehicle {
     /// installed weapons, ammunition, equipment and movement keep their design value after
     /// damage or expenditure.
     pub fn battle_value(&self) -> Result<BattleValue> {
-        self.battle_value_with(&WeaponSettings::default())
-    }
-
-    /// Battle Value with the runtime weapon values.
-    pub(crate) fn battle_value_with(&self, settings: &WeaponSettings) -> Result<BattleValue> {
-        Ok(self.valuation(settings)?.evaluate())
+        Ok(self.valuation()?.evaluate())
     }
 
     /// Gather the vehicle facts of TechManual p. 306.
-    fn valuation(&self, settings: &WeaponSettings) -> Result<Valuation> {
+    fn valuation(&self) -> Result<Valuation> {
         let definition = self.definition();
         let loadout = self.loadout()?;
         let clan = definition.has_special("Clan");
@@ -775,7 +761,6 @@ impl super::Vehicle {
         };
         let defensive_equipment = defensive_system_value(&loadout, context, |_, _| 1)
             + defensive_weapon_value(
-                settings,
                 loadout.weapons.iter().map(|mount| mount.weapon),
                 loadout
                     .ammunition
@@ -818,7 +803,6 @@ impl super::Vehicle {
             };
         // Turret and side weapons are in no arc and keep their full value (TechManual p. 306).
         let offense = Offense::gather(
-            settings,
             &loadout,
             artemis_multipliers(
                 &loadout,
@@ -847,15 +831,14 @@ impl super::Vehicle {
     }
 }
 
-/// Battle Value of a live unit with the world's runtime weapon values. Towing, carried load,
+/// Battle Value of a live unit. Towing, carried load,
 /// heat and map conditions do not change it.
 pub fn unit_battle_value(world: &crate::World, id: crate::ObjectId) -> Result<BattleValue> {
     let unit = world
         .btech
         .unit(id)
         .ok_or_else(|| anyhow::anyhow!("Unit construction is unavailable"))?;
-    super::with_unit!(unit, |unit| unit
-        .battle_value_with(world.btech.weapon_settings()))
+    super::with_unit!(unit, |unit| unit.battle_value())
 }
 
 #[cfg(test)]
@@ -1011,7 +994,6 @@ mod tests {
     /// and the second ER medium laser crossing its 26-point heat efficiency.
     #[test]
     fn thunderbolt_worked_example() {
-        let settings = WeaponSettings::default();
         let tc = |weapon| MountFacts {
             weapon,
             arc: Arc::Unaffected,
@@ -1019,16 +1001,13 @@ mod tests {
             targeting_computer: weapon.supports_targeting_computer(),
             artemis: 1.0,
         };
-        let values = value_weapons(
-            &settings,
-            &[
-                tc(Weapon::Lrm10),
-                tc(Weapon::ErPpc),
-                tc(Weapon::ErMediumLaser),
-                tc(Weapon::ErMediumLaser),
-                tc(Weapon::ErMediumLaser),
-            ],
-        );
+        let values = value_weapons(&[
+            tc(Weapon::Lrm10),
+            tc(Weapon::ErPpc),
+            tc(Weapon::ErMediumLaser),
+            tc(Weapon::ErMediumLaser),
+            tc(Weapon::ErMediumLaser),
+        ]);
         let valuation = Valuation {
             chassis: Chassis::Mech {
                 gyro: 32.5,
@@ -1075,7 +1054,6 @@ mod tests {
     /// forward-firing weapons halve instead; arm weapons are never halved.
     #[test]
     fn rear_arc_halving() {
-        let settings = WeaponSettings::default();
         let mount = |weapon, arc| MountFacts {
             weapon,
             arc,
@@ -1083,25 +1061,19 @@ mod tests {
             targeting_computer: false,
             artemis: 1.0,
         };
-        let values = value_weapons(
-            &settings,
-            &[
-                mount(Weapon::LargeLaser, Arc::Forward),
-                mount(Weapon::MediumLaser, Arc::Rear),
-                mount(Weapon::MediumLaser, Arc::Unaffected),
-            ],
-        );
-        let large = f64::from(settings.battle_value(Weapon::LargeLaser));
+        let values = value_weapons(&[
+            mount(Weapon::LargeLaser, Arc::Forward),
+            mount(Weapon::MediumLaser, Arc::Rear),
+            mount(Weapon::MediumLaser, Arc::Unaffected),
+        ]);
+        let large = f64::from(Weapon::LargeLaser.battle_value());
         assert_eq!(values.weapons[0].value, large);
         assert_eq!(values.weapons[1].value, 23.0);
         assert_eq!(values.weapons[2].value, 46.0);
-        let values = value_weapons(
-            &settings,
-            &[
-                mount(Weapon::SmallLaser, Arc::Forward),
-                mount(Weapon::MediumLaser, Arc::Rear),
-            ],
-        );
+        let values = value_weapons(&[
+            mount(Weapon::SmallLaser, Arc::Forward),
+            mount(Weapon::MediumLaser, Arc::Rear),
+        ]);
         assert_eq!(values.weapons[0].value, 4.5);
         assert_eq!(values.weapons[1].value, 46.0);
     }
@@ -1110,9 +1082,8 @@ mod tests {
     /// Ultra, Rotary and Streak heat use their Total Weapon Heat multipliers.
     #[test]
     fn one_shot_and_heat_adjustments() {
-        let settings = WeaponSettings::default();
-        assert_eq!(unmodified_value(&settings, Weapon::Srm6, true), 12.0);
-        assert_eq!(unmodified_value(&settings, Weapon::Lrm15, true), 27.0);
+        assert_eq!(unmodified_value(Weapon::Srm6, true), 12.0);
+        assert_eq!(unmodified_value(Weapon::Lrm15, true), 27.0);
         assert_eq!(weapon_heat(Weapon::Srm6, true), 1.0);
         assert_eq!(weapon_heat(Weapon::UltraAc5, false), 2.0);
         assert_eq!(weapon_heat(Weapon::RotaryAc5, false), 6.0);
@@ -1138,10 +1109,8 @@ mod tests {
     /// AMS ammunition counts toward defense only up to the AMS value.
     #[test]
     fn anti_missile_ammunition_cap() {
-        let settings = WeaponSettings::default();
-        let ams = f64::from(settings.battle_value(Weapon::AntiMissileSystem));
+        let ams = f64::from(Weapon::AntiMissileSystem.battle_value());
         let value = defensive_weapon_value(
-            &settings,
             [Weapon::AntiMissileSystem, Weapon::MediumLaser].into_iter(),
             std::iter::repeat_n((Weapon::AntiMissileSystem, false), 5),
         );

@@ -484,14 +484,6 @@
       "c_permissions": "CA_WIZARD",
       "switch_table": "nullptr"
     },
-    "setvrt": {
-      "c_permissions": "CA_WIZARD",
-      "switch_table": "nullptr"
-    },
-    "setwbv": {
-      "c_permissions": "CA_WIZARD",
-      "switch_table": "nullptr"
-    },
     "setxplevel": {
       "c_permissions": "CA_WIZARD",
       "switch_table": "nullptr"

@@ -2041,7 +2041,7 @@ impl Vehicle {
                         <= if self.weapon_failures.contains_key(index) {
                             120
                         } else {
-                            super::weapon_settings::MAX_RECYCLE_SECONDS
+                            super::readiness::MAX_RECYCLE_SECONDS
                         }
                     && !self.critical_unavailable(mount.criticals[0]))),
             "Invalid vehicle weapon recycle timer"

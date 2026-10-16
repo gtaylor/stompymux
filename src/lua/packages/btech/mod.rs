@@ -34,7 +34,7 @@ use mlua::{Lua, LuaSerdeExt, Table, Value};
 pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Result<()> {
     let native = lua.create_table()?;
     inventory::register(lua, &native, world)?;
-    systems::register(lua, &native, world)?;
+    systems::register(lua, &native)?;
     characters::register(lua, &native, world)?;
     character_contract::register(lua, &native, world)?;
     autopilot_contract::register(lua, &native, world)?;

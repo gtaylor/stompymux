@@ -36,9 +36,6 @@ pub(crate) fn admit(ctx: &CommandContext<'_>, line: &str) -> Result<Option<Comma
                 (Special::Map, "view") => super::map_view::command(&selected, &input),
                 // Map STORES is the actor-location manifest, unlike cockpit STORES.
                 (Special::Map, "stores") => super::cargo::manifest_command(&selected, &input),
-                (Special::Debug, "setwbv" | "setvrt") => {
-                    super::weapon_settings::debug_command(&selected, &input)
-                }
                 (Special::Debug, "shutdown") => super::map_clear::debug_command(&selected, &input),
                 _ => {
                     let (definition, input) = ctx

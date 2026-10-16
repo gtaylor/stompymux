@@ -1341,23 +1341,9 @@
     },
     {
       "class_mask": 0,
-      "syntax": "SETVRT <WEAPON> <NUM>",
-      "description": "Sets the VariableRecycleTime for weapon <WEAPON> to <NUM>",
-      "restricted": true,
-      "category": false
-    },
-    {
-      "class_mask": 0,
       "syntax": "SETXPLEVEL <SKILL> <NUM>",
       "description": "Sets the XP threshold for skill <skill> to <num>",
       "restricted": true,
-      "category": false
-    },
-    {
-      "class_mask": 0,
-      "syntax": "SETWBV <WEAPON> <NUM>",
-      "description": "Sets the BattleValue for weapon <WEAPON> to <NUM",
-      "restricted": false,
       "category": false
     },
     {

@@ -498,18 +498,6 @@ impl CommandRegistry {
                 crate::btech::skill_catalog::threshold_command,
             )
             .policy(SwitchPolicy::Reject("SETXPLEVEL takes no switches."), false),
-            CommandDefinition::native(
-                "setvrt",
-                P::WIZARD,
-                crate::btech::weapon_settings::recycle_command,
-            )
-            .policy(SwitchPolicy::Reject("SETVRT takes no switches."), false),
-            CommandDefinition::native(
-                "setwbv",
-                P::WIZARD,
-                crate::btech::weapon_settings::battle_value_command,
-            )
-            .policy(SwitchPolicy::Reject("SETWBV takes no switches."), false),
             CommandDefinition::native("@setspecial", P::WIZARD, |ctx, input| {
                 crate::btech::special_fields::command(ctx, input, true)
             })

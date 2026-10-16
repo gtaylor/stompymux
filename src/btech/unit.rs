@@ -1465,7 +1465,7 @@ impl Mech {
                 .weapons
                 .get(*index)
                 .is_some_and(
-                    |_| *remaining > 0 && *remaining <= super::weapon_settings::MAX_RECYCLE_SECONDS
+                    |_| *remaining > 0 && *remaining <= super::readiness::MAX_RECYCLE_SECONDS
                 )),
             "Invalid weapon recycle timer"
         );

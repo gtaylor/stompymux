@@ -179,7 +179,7 @@ pub(super) fn expend(
     weapon: Weapon,
     bin: Option<usize>,
 ) -> Result<u16> {
-    let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
+    let recycle = weapon.profile().recycle_seconds;
     if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         let spent = bin.map_or(0, |bin| unit.ammunition()[bin].min(1));
         if let Some(bin) = bin {

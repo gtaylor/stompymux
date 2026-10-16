@@ -1200,11 +1200,6 @@ mod hit_direction;
 
 mod target_hit;
 
-pub(crate) mod weapon_settings;
-pub use weapon_settings::{
-    WeaponSettings, WeaponValues, set_weapon_battle_value, set_weapon_recycle,
-};
-
 mod inventory;
 pub use inventory::{
     InventoryEntry, inventory, part_cost, set_inventory_quantity, set_inventory_quantity_action,
@@ -1305,7 +1300,7 @@ pub(crate) mod forms_report;
 pub use stock_selection::part_forms;
 
 mod operator_settings;
-pub use operator_settings::{edit_skill_threshold, edit_weapon_settings};
+pub use operator_settings::edit_skill_threshold;
 
 mod combat_operator;
 

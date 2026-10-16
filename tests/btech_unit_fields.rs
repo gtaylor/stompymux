@@ -1264,8 +1264,8 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
     }
 }
 
-/// Named BV follows saved damage and current runtime weapon values, which reset on reload.
-async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(f: &UnitFields) {
+/// Named BV follows saved damage, read-only, across reload.
+async fn battle_value_field_tracks_live_damage_scenario(f: &UnitFields) {
     let config = &f.config;
     for source in firing::templates() {
         let (mut world, id, _, _) = f.supply(&source, Some(Weapon::MediumLaser), &source, None);
@@ -1280,10 +1280,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
         });
         let damaged = battle_unit_value(&world, id).unwrap().total;
         assert!(damaged < baseline);
-        set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.MediumLaser", 1000).unwrap();
-        let increased = battle_unit_value(&world, id).unwrap().total;
-        assert!(increased > damaged);
-        let expected = format!("{increased:.2}");
+        let expected = format!("{damaged:.2}");
         let before = world.btech.clone();
         let scripts = &f.native;
         support::install(scripts, world.clone());
@@ -1322,14 +1319,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
         let scripts = Scripts::new(config, Rc::new(RefCell::new(restored))).unwrap();
         let report =
             view_battle_unit_fields_action(&scripts, config, ObjectId(1), id, "bv").unwrap();
-        assert_eq!(field(&report, "bv"), Some(format!("{damaged:.2}").as_str()));
-        set_battle_weapon_battle_value(
-            &mut scripts.world_mut(),
-            ObjectId(1),
-            "IS.MediumLaser",
-            1000,
-        )
-        .unwrap();
+        assert_eq!(field(&report, "bv"), Some(expected.as_str()));
         assert_eq!(scripts.world().btech, before);
     }
 }
@@ -3305,7 +3295,7 @@ async fn unit_fields_navigation_metadata_and_history_harness() {
 async fn unit_fields_preferences_values_and_construction_harness() {
     let f = UnitFields::new().await;
     preference_fields_share_cockpit_state_validation_and_restart_scenario(&f).await;
-    battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(&f).await;
+    battle_value_field_tracks_live_damage_scenario(&f).await;
     construction_fields_share_storage_authority_and_restart_without_changing_physics_scenario(&f)
         .await;
     inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scenario(&f).await;

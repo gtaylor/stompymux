@@ -1182,16 +1182,6 @@
 //|---@field partial_cover boolean
 // lua-types-end
 
-// lua-types-begin btech 00219
-//|---@class WeaponValues
-//|---@field recycle_seconds integer Effective runtime recycle time, from 1 through 127 seconds.
-//|---@field battle_value integer Effective runtime Battle Value, from 0 through 2147483647.
-// lua-types-end
-
-// lua-types-begin btech 00220
-//|local btech_weapon = {}
-// lua-types-end
-
 // lua-types-begin btech 00224
 //|---@class InventoryEntry
 //|---@field part_id integer Stable game-directory part identifier.
@@ -1241,7 +1231,6 @@
 //|---@field database btech.database Explicit world checkpoints.
 //|---@field cargo table Cockpit stock reports and transfers.
 //|---@field inventory table Shared loose-parts stock.
-//|---@field weapon table Runtime weapon settings.
 //|---@field character table
 //|---@field template table
 //|---@field map table
@@ -1259,7 +1248,6 @@
 //|  database = btech_database,
 //|  cargo = btech_cargo,
 //|  inventory = btech_inventory,
-//|  weapon = btech_weapon,
 //|  player = btech_player,
 //|  character = btech_character,
 //|  template = btech_template,

@@ -879,7 +879,7 @@ pub use btech::throttle_maximum as battle_throttle_maximum;
 /// World-aware transfer speed derived from live mass and external tow load.
 pub use btech::unit_effective_maximum_speed as battle_effective_maximum_speed;
 
-/// Battle Value of a live unit with the world's runtime weapon values.
+/// Battle Value of a live unit.
 pub use btech::unit_battle_value as battle_unit_value;
 
 /// Shared pickup eligibility and persisted scenario towing permission.
@@ -983,11 +983,6 @@ pub use btech::{
 };
 
 pub use btech::{
-    WeaponSettings, WeaponValues, set_weapon_battle_value as set_battle_weapon_battle_value,
-    set_weapon_recycle as set_battle_weapon_recycle,
-};
-
-pub use btech::{
     InventoryEntry, inventory as battle_inventory,
     set_inventory_quantity as set_battle_inventory_quantity,
     set_inventory_quantity_action as set_battle_inventory_quantity_action,
@@ -1077,10 +1072,7 @@ pub use btech::request_database_save as request_battle_database_save;
 
 pub use btech::{PartForm, part_forms as battle_part_forms};
 
-pub use btech::{
-    edit_skill_threshold as edit_battle_skill_threshold,
-    edit_weapon_settings as edit_battle_weapon_settings,
-};
+pub use btech::edit_skill_threshold as edit_battle_skill_threshold;
 
 pub use btech::{RuntimeStats, runtime_stats as battle_runtime_stats};
 

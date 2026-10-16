@@ -1157,11 +1157,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `gatling_roll`: `integer|nil` — Preparation intensity, without an ammunition cap.
 - `partial_cover`: `boolean`
 
-## WeaponValues
-
-- `recycle_seconds`: `integer` — Effective runtime recycle time, from 1 through 127 seconds.
-- `battle_value`: `integer` — Effective runtime Battle Value, from 0 through 2147483647.
-
 ## InventoryEntry
 
 - `part_id`: `integer` — Stable game-directory part identifier.
@@ -1189,7 +1184,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `database`: `btech.database` — Explicit world checkpoints.
 - `cargo`: `table` — Cockpit stock reports and transfers.
 - `inventory`: `table` — Shared loose-parts stock.
-- `weapon`: `table` — Runtime weapon settings.
 - `character`: `table`
 - `template`: `table`
 - `map`: `table`

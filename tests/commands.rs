@@ -90,8 +90,6 @@ async fn native_catalog_permissions_and_aliases() {
             "+show",
             "xptop",
             "setxplevel",
-            "setvrt",
-            "setwbv",
             "@setspecial",
             "@viewspecial",
             "@setunit",
