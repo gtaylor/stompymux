@@ -403,12 +403,12 @@ pub(super) fn target_motion(speed: f64) -> i8 {
     6
 }
 
-/// Perceive the target afresh; coordinate spotting replaces the perception term with zero.
+/// Perceive the target afresh; a TAG-guided shot replaces the perception term with zero.
 pub(super) fn perception_aim(
     world: &World,
     viewer: ObjectId,
     target: ObjectId,
-    coordinate_spotting: bool,
+    tag_guided: bool,
 ) -> Result<Option<PerceptionAim>> {
     let attacker = super::scanner::scanner_unit(world, viewer).context("Shooter is unavailable")?;
     if attacker.power != super::Power::Running {
@@ -452,7 +452,7 @@ pub(super) fn perception_aim(
     Ok(Some(PerceptionAim {
         channel,
         direct_fire,
-        modifier: if coordinate_spotting { 0 } else { modifier },
+        modifier: if tag_guided { 0 } else { modifier },
     }))
 }
 
@@ -586,9 +586,9 @@ pub(super) fn aim_modifiers_for_source(
         world,
         indirect.map_or(shooter, |aim| aim.spotter),
         target,
-        indirect.is_some_and(|aim| {
-            aim.tag_guided || super::spotter::coordinate_target(world, aim.spotter)
-        }),
+        // The spotter's terrain modifiers apply however it designated the target (Total
+        // Warfare p. 111); only a TAG-guided shot drops them.
+        indirect.is_some_and(|aim| aim.tag_guided),
     )?;
     Ok(modifiers)
 }

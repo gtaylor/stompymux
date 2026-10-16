@@ -17,6 +17,23 @@ async fn fixture_with_mml(
     vehicle_observer: bool,
     mml: bool,
 ) -> (tempfile::TempDir, Config, World, [ObjectId; 3], usize) {
+    fixture_on(
+        "3 3\n.0.0.0\n.0=8.0\n.0.0.0\n",
+        vehicle_shooter,
+        vehicle_observer,
+        mml,
+    )
+    .await
+}
+
+/// Build the observer fixture on `cells`, a 3x3 map whose (1,1) hex hides the target at (1,0)
+/// from the shooter at (1,2).
+async fn fixture_on(
+    cells: &str,
+    vehicle_shooter: bool,
+    vehicle_observer: bool,
+    mml: bool,
+) -> (tempfile::TempDir, Config, World, [ObjectId; 3], usize) {
     let source = |text: &str| {
         if mml {
             text.replace(
@@ -39,7 +56,7 @@ async fn fixture_with_mml(
         &mut world,
         map,
         "test",
-        MapAsset::from_cells("3 3\n.0.0.0\n.0=8.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells(cells).unwrap(),
     )
     .unwrap();
     let mut ids = Vec::new();
@@ -799,5 +816,42 @@ async fn mml_indirect_fire_requires_lrm_selection() {
         let indirect: mlua::Table = aim.get("indirect").unwrap();
         assert_eq!(indirect.get::<i64>("spotter").unwrap(), ids[1].0);
         scripts.world().validate(&config).unwrap();
+    }
+}
+
+/// The spotter's terrain modifiers reach an indirect shot however the spotter designated the
+/// target (Total Warfare p. 111): locking the target's hex instead of the unit keeps the woods
+/// the target stands in.
+#[tokio::test]
+async fn hex_locked_spotters_keep_the_targets_terrain_modifiers() {
+    for (vehicle_shooter, vehicle_observer) in [(false, false), (true, true)] {
+        let (_dir, _config, mut world, ids, index) = fixture_on(
+            "3 3\n.0`0.0\n.0=8.0\n.0.0.0\n",
+            vehicle_shooter,
+            vehicle_observer,
+            false,
+        )
+        .await;
+        let [shooter, observer, target] = ids;
+        select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
+        select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
+        let rules = AimRules {
+            override_weapon_arcs: false,
+        };
+        let unit_lock = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();
+        assert_eq!(unit_lock.indirect.unwrap().spotter, observer);
+        let woods = unit_lock.perception.unwrap().modifier;
+        assert!(woods > 0, "light woods must cost the indirect shot");
+        select_battle_hex_target(
+            &mut world,
+            observer,
+            ObjectId(2),
+            HexCoordinate { x: 1, y: 0 },
+            HexTargetMode::Hex,
+        )
+        .unwrap();
+        let hex_lock = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();
+        assert_eq!(hex_lock.indirect.unwrap().spotter, observer);
+        assert_eq!(hex_lock.perception.unwrap().modifier, woods);
     }
 }

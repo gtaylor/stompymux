@@ -61,9 +61,9 @@ pub(super) fn modifiers(
         world,
         indirect.map_or(shooter, |aim| aim.spotter),
         target,
-        indirect.is_some_and(|aim| {
-            aim.tag_guided || super::spotter::coordinate_target(world, aim.spotter)
-        }),
+        // The spotter's terrain modifiers apply however it designated the target (Total
+        // Warfare p. 111); only a TAG-guided shot drops them.
+        indirect.is_some_and(|aim| aim.tag_guided),
     )?;
     let submerged = super::weapon_geometry::apply_water_range(
         world,

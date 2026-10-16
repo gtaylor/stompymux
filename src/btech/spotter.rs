@@ -246,7 +246,8 @@ pub fn spotter_target(world: &World, firer: ObjectId) -> Result<SpotterTarget> {
     Ok(SpotterTarget { spotter, target })
 }
 
-/// Coordinate spotting omits the observer's terrain aim contribution and spotting awards.
+/// Coordinate spotting earns no spotting awards; the shot still takes the observer's terrain
+/// modifiers to the unit standing in that hex (Total Warfare p. 111).
 pub(super) fn coordinate_target(world: &World, observer: ObjectId) -> bool {
     matches!(
         super::targeting::selection(world, observer),
