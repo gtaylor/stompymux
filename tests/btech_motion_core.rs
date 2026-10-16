@@ -8068,3 +8068,33 @@ async fn split_weapon_native_lua_fire_guards_and_recycle_restart() {
         );
     }
 }
+
+/// Firing movement compares the Mech's speed with its current walking MP (Total Warfare
+/// p. 106), which heat lowers by one MP per five points (p. 159): a 7/11 Jenner at 10 excess
+/// heat walks 5 MP, so 6 MP of movement is running fire although its template walks 7.
+#[tokio::test]
+async fn heat_slowed_mechs_fire_as_running_above_their_reduced_walking_speed() {
+    let (_dir, _config, base, id) = fixture('.').await;
+    for (excess, speed, expected) in [
+        (0.0, 64.5, 1),
+        (0.0, 75.25, 1),
+        (0.0, 76.0, 2),
+        (10.0, 53.75, 1),
+        (10.0, 64.5, 2),
+    ] {
+        let mut world = base.clone();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["heat"] = serde_json::json!({"stored": excess, "excess": excess});
+                record["motion"]["speed"] = serde_json::json!(speed);
+                record["motion"]["desired_speed"] = serde_json::json!(speed);
+            })
+            .unwrap();
+        assert_eq!(
+            world.btech.constructed_units()[&id].attacker_movement_modifier(),
+            expected,
+            "excess {excess}, speed {speed}"
+        );
+    }
+}

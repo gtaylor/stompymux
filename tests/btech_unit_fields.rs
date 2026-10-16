@@ -2342,16 +2342,9 @@ async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_e
             } else {
                 saved.btech.vehicles()[&id].attacker_movement_modifier()
             };
-            assert_eq!(
-                penalty,
-                if !movable {
-                    0
-                } else if baseline == 0 {
-                    2
-                } else {
-                    1
-                }
-            );
+            // Firing movement follows the unit's current walking or cruising speed (Total
+            // Warfare p. 106), not the recorded template baseline.
+            assert_eq!(penalty, u8::from(movable));
             let mut actual = serde_json::to_value(&saved.btech).unwrap();
             let collection = if saved.btech.vehicles().contains_key(&id) {
                 "vehicles"

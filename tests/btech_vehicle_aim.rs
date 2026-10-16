@@ -83,9 +83,18 @@ async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
         VehicleMotiveHit::SpeedLoss { movement_points: 3 },
     )
     .unwrap();
-    // Damage lowers the throttle limit, while the firing threshold remains construction-based.
-    assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 53.75);
-    assert_eq!(world.btech.vehicles()[&id].attacker_movement_modifier(), 1);
+    // Motive damage lowers the cruising speed that separates cruising from flank fire (Total
+    // Warfare pp. 106 and 193): a speed that was cruising before the hit may now be flank.
+    let cruise = world.btech.vehicles()[&id].maximum_speed() * 2.0 / 3.0;
+    assert!(cruise < 86.0 * 2.0 / 3.0 - 1.0);
+    for (speed, attack) in [(cruise - 1.0, 1), (cruise + 1.0, 2)] {
+        let mut probe = world.clone();
+        motion(&mut probe, id, speed, false);
+        assert_eq!(
+            probe.btech.vehicles()[&id].attacker_movement_modifier(),
+            attack
+        );
+    }
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);

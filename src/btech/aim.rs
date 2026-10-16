@@ -145,7 +145,7 @@ impl AimModifiers {
 }
 
 impl Mech {
-    /// Jumping and stabilization precede ground speed and the template's walking threshold.
+    /// Jumping and stabilization precede ground speed and the current walking threshold.
     pub fn attacker_movement_modifier(&self) -> u8 {
         if self.airborne() {
             return 3;
@@ -159,13 +159,10 @@ impl Mech {
         {
             return penalty;
         }
-        // The template's walking MP, two higher while hot myomer is active (Total Warfare
-        // p. 139), separates walking from running fire.
-        let mut envelope = super::SpeedEnvelope::from_running(self.template_speed());
-        if self.triple_myomer_active() {
-            envelope = envelope.with_walking_mp_delta(2.0);
-        }
-        ground_attacker_movement(self.motion(), envelope.walking)
+        // The current walking MP separates walking from running fire (Total Warfare
+        // p. 106): leg damage and heat lower it (p. 159) and hot myomer raises it (p. 139), so
+        // a heat-slowed Mech moving faster than its reduced walking speed fires as running.
+        ground_attacker_movement(self.motion(), self.walking_speed())
     }
 
     /// Firing when down (Total Warfare p. 113; Tactical Operations p. 83): +2 for a prone
@@ -263,7 +260,8 @@ impl Mech {
     }
 }
 
-/// Ground firing penalties use the construction's walking threshold, including after motive damage.
+/// Ground firing penalties: +1 at or below the current walking (cruising) speed and +2 above it
+/// (Total Warfare p. 106).
 fn ground_attacker_movement(motion: Option<super::Motion>, walking: f64) -> u8 {
     let Some(motion) = motion else {
         return 0;
@@ -279,8 +277,10 @@ fn ground_attacker_movement(motion: Option<super::Motion>, walking: f64) -> u8 {
 
 impl super::Vehicle {
     /// Ground speed and optional hull-turn penalty; turret rotation does not add a movement penalty.
+    /// Cruising is judged against the current cruising speed, so motive damage that lowers it
+    /// turns a formerly cruising speed into flank fire (Total Warfare pp. 106 and 193).
     pub fn attacker_movement_modifier(&self) -> u8 {
-        ground_attacker_movement(self.motion(), self.template_speed() * 2.0 / 3.0)
+        ground_attacker_movement(self.motion(), self.maximum_speed() * 2.0 / 3.0)
     }
 }
 

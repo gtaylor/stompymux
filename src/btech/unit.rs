@@ -1055,13 +1055,13 @@ impl Mech {
         &self.definition
     }
 
-    /// Construction baseline used by the shared attacker movement calculation.
+    /// Construction speed recorded on the template, which the TEMPLATESP field reads and sets.
     pub fn template_speed(&self) -> f64 {
         super::read_template_speed(&self.definition.attributes, self.definition.max_speed)
             .expect("validated template speed")
     }
 
-    /// Set the independent firing-movement baseline without changing propulsion.
+    /// Set the recorded construction speed without changing propulsion.
     pub(super) fn set_template_speed(&mut self, speed: f64) {
         super::write_template_speed(&mut self.definition.attributes, speed);
     }
