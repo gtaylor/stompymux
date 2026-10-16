@@ -209,8 +209,9 @@ async fn vehicle_streak_failure_recycles_without_ammunition_even_when_confused()
 
 #[tokio::test]
 async fn vehicle_gatling_preparation_precedes_attack_and_burst_supply_falls_back() {
+    // Full one-ton machine gun bins, which the record rewrite below empties.
     let template = with_modes(
-        &demolisher_with("IS.MachineGun"),
+        &demolisher_with("IS.MachineGun").replace("rounds = 5", "rounds = 200"),
         "IS.MachineGun",
         &["Gattling"],
     );

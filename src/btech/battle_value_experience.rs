@@ -33,15 +33,6 @@ impl BattleValueExperienceInput {
     /// Apply configured multipliers literally, followed by the damage percentage and award cap.
     /// Zero multipliers still receive one XP; impossible and optionally trivial hits receive none.
     pub fn calculate(self, config: &XpConfig) -> Result<Option<BattleValueExperienceCalculation>> {
-        self.calculate_with_settings(config, &super::WeaponSettings::default())
-    }
-
-    /// Apply the same formula with the current runtime catalogue overrides.
-    pub fn calculate_with_settings(
-        self,
-        config: &XpConfig,
-        settings: &super::WeaponSettings,
-    ) -> Result<Option<BattleValueExperienceCalculation>> {
         if self.damage == 0 || self.base_to_hit > 12 || (config.bthmod != 0 && self.base_to_hit < 3)
         {
             return Ok(None);
@@ -86,7 +77,7 @@ impl BattleValueExperienceInput {
             "Gunnery-Ballistic" => config.ammomod as f64,
             _ => 1.0,
         };
-        let recycle = f64::from(settings.recycle_seconds(self.weapon));
+        let recycle = f64::from(self.weapon.profile().recycle_seconds);
         let recycle_modifier = if config.vrtmod != 0 && recycle < 30.0 {
             (recycle / 30.0).sqrt()
         } else {
@@ -102,10 +93,9 @@ impl BattleValueExperienceInput {
         let numerator = ((target + 1.0) * target_speed * config.defaultweapbv as f64
             / config.defaultweapdam as f64)
             .sqrt();
-        let denominator =
-            ((source + 1.0) * source_speed * f64::from(settings.battle_value(self.weapon))
-                / damage_divisor)
-                .sqrt();
+        let denominator = ((source + 1.0) * source_speed * f64::from(self.weapon.battle_value())
+            / damage_divisor)
+            .sqrt();
         let mut difficulty =
             recycle_modifier * weapon_modifier * multiplier * numerator / denominator;
         if config.perunit_xpmod != 0 {
@@ -190,7 +180,7 @@ pub fn award_battle_value_gunnery_experience(
         base_to_hit: request.base_to_hit,
         unit_modifier: source_settings.multiplier,
     }
-    .calculate_with_settings(config, world.btech.weapon_settings())?
+    .calculate(config)?
     .expect("Eligible nonzero damage has battle-value difficulty");
     let skill = super::gunnery_experience::award_skill(world, request);
     world.attempt(|world| {

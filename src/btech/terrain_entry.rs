@@ -1,7 +1,7 @@
 //! Terrain hazards a 'Mech meets as it steps into a hex, inside a movement transaction: the
-//! piloting rolls rubble and ice take to cross, soft ground that can bog it down, the heat of
-//! magma underfoot and magma crust that may break beneath it. Water has its own entry rules in
-//! `water_movement.rs`.
+//! piloting rolls rubble and ice take to cross, soft ground that can bog it down and magma
+//! crust that may break beneath it. Water has its own entry rules in `water_movement.rs`;
+//! magma heat is charged on leaving the hex (`motion.rs`) and while standing in it (`heat.rs`).
 use super::{FallRules, Notice, Posture};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result};
@@ -113,21 +113,6 @@ pub(super) fn enter(
         );
         report.notices.extend(bog.notices);
         report.experience_messages.extend(bog.experience_messages);
-    }
-    // Magma heats a 'Mech that passes over it even before it stands there a turn: two points
-    // for crust and five for liquid (Tactical Operations p. 34).
-    let entry_heat = match tile.ground() {
-        super::Ground::MagmaCrust if tile.on_magma_crust(level) => 2.0,
-        super::Ground::Magma if tile.in_liquid_magma(level) => 5.0,
-        _ => 0.0,
-    };
-    if entry_heat > 0.0 {
-        let unit = world.btech.constructed.get_mut(&id).unwrap();
-        unit.heat.stored += entry_heat;
-        report.notices.push(Notice {
-            unit: id,
-            text: "Heat washes up from the magma beneath your feet.".into(),
-        });
     }
     report.notices.extend(super::magma::crack_crust(
         world,

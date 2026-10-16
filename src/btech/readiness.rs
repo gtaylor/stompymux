@@ -5,6 +5,9 @@ use anyhow::{Context, Result, ensure};
 use serde::Serialize;
 use std::collections::BTreeMap;
 
+/// Largest recycle countdown a saved unit record may hold.
+pub(super) const MAX_RECYCLE_SECONDS: u16 = 127;
+
 /// Mechanical readiness; authorization and target-dependent firing checks remain separate.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct WeaponReadiness {
@@ -283,7 +286,7 @@ pub(super) fn use_weapon(
         );
         draws
     };
-    let recycle = world.btech.weapon_settings.recycle_seconds(weapon);
+    let recycle = weapon.profile().recycle_seconds;
     let now = world.btech.simulation_time();
     let unit = world.btech.constructed.get_mut(&id).unwrap();
     if fire_mode == super::FireMode::Normal {

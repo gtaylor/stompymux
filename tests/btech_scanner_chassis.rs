@@ -300,8 +300,9 @@ fn install_gatling(world: &mut World, id: ObjectId, supply: u16) -> usize {
     section.criticals.insert(
         slots[1],
         CriticalDefinition {
+            // A full ton; the live supply below empties it to `supply` rounds.
             equipment: "Ammo_IS.MachineGun".into(),
-            data: supply.to_string(),
+            data: "200".into(),
             modes: vec![],
         },
     );

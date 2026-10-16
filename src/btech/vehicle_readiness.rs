@@ -272,7 +272,7 @@ pub(super) fn reserve_prepared_weapon(
         launched || mount.weapon.is_streak(),
         "Only Streak weapons can fail to lock"
     );
-    let timer = u16::from(world.btech.weapon_settings.recycle_seconds(mount.weapon));
+    let timer = u16::from(mount.weapon.profile().recycle_seconds);
     ensure!(timer > 0, "Weapon has no firing cycle");
     let fire_mode = vehicle.effective_fire_mode(index)?;
     let mut dice = vehicle.dice.clone();

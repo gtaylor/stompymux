@@ -247,7 +247,7 @@ pub fn derived_engine_rating(source: &str) -> String {
 /// the installed jets, the declared heat sinks fit the engine and the installed sinks, a
 /// targeting computer fits the direct-fire weapons, weapons of the other technology base mark
 /// the design mixed technology, armor comes off the most heavily armored locations while the
-/// Mech is overweight, and authored cargo space takes up spare tonnage while it is underweight.
+/// Mech is overweight, and an authored cargo bay takes up spare tonnage while it is underweight.
 pub fn book_legal(template: &mut stompymux_rs::MechTemplate) {
     book_legal_keeping(template, None);
 }
@@ -263,18 +263,14 @@ pub fn book_legal(template: &mut stompymux_rs::MechTemplate) {
 /// ammunition outside `keep` other than the heaviest weapon (the one a scenario adds); with
 /// `keep` it slows down first and sheds weapons before armor. Armor that turns out not to be
 /// needed comes back.
-/// Spare tonnage becomes authored cargo space.
+/// Spare tonnage becomes an authored cargo bay.
 pub fn book_legal_keeping(
     template: &mut stompymux_rs::MechTemplate,
     keep: Option<stompymux_rs::MechSection>,
 ) {
     use stompymux_rs::{MechLoadout, MechTemplate, System};
     template.restate_engine_rating();
-    let resolve = |template: &MechTemplate| {
-        let mut normalized = template.clone();
-        normalized.normalize_ammunition().ok()?;
-        MechLoadout::resolve(&normalized).ok()
-    };
+    let resolve = |template: &MechTemplate| MechLoadout::resolve(template).ok();
     let Some(loadout) = resolve(template) else {
         return;
     };
@@ -374,31 +370,22 @@ pub fn book_legal_keeping(
             }
         }
     }
+    // Whole half tons of spare mass join the cargo bay, which weighs its capacity
+    // (TechManual p. 239); less than half a ton may stay unspent (TechManual p. 57).
     let spare = tons.saturating_sub(mass(template));
     if spare >= 512 {
-        let space: u32 = template
-            .attributes
-            .get("cargo_space")
-            .and_then(|space| space.parse().ok())
-            .unwrap_or(0);
-        // Cargo space weighs a ton per 500 units, per 100 with CargoTech and per 1000 for a
-        // carrier.
-        let per_ton = if template.has_special("Carrier_Tech") {
-            1000
-        } else if template.has_special("CargoTech") {
-            100
-        } else {
-            500
-        };
-        let added = (spare * per_ton).div_ceil(1024);
-        template
-            .attributes
-            .insert("cargo_space".into(), (space + added).to_string());
-        if mass(template) > tons {
+        let cargo = stompymux_rs::cargo_mass(
             template
                 .attributes
-                .insert("cargo_space".into(), (space + added - 1).to_string());
-        }
+                .get(stompymux_rs::CARGO_TONS)
+                .map(String::as_str),
+        )
+        .unwrap_or(0);
+        let halves = (cargo + spare) / 512;
+        template.attributes.insert(
+            stompymux_rs::CARGO_TONS.into(),
+            (f64::from(halves) / 2.0).to_string(),
+        );
     }
 }
 

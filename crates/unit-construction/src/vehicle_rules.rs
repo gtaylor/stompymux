@@ -131,7 +131,7 @@ impl VehicleTemplate {
 
     /// Item slots the loadout occupies: one per weapon and per equipment item, one per
     /// ammunition type however many tons it holds, one for the standard cargo bay that
-    /// `cargo_space` describes (TechManual pp. 98, 106), one per other type of transport bay and
+    /// `cargo_tons` describes (TechManual pp. 98, 106), one per other type of transport bay and
     /// one per cargo container (TechManual pp. 107, 239). Heat sinks and power amplifiers take
     /// none (TechManual pp. 104, 106).
     pub fn item_slots(&self, loadout: &VehicleLoadout) -> u16 {
@@ -147,11 +147,8 @@ impl VehicleTemplate {
                 ammunition.push((bin.weapon, bin.mode));
             }
         }
-        let cargo = self
-            .attributes
-            .get("cargo_space")
-            .and_then(|space| space.parse::<u32>().ok())
-            .is_some_and(|space| space > 0);
+        let cargo = super::cargo_mass(self.attributes.get(super::CARGO_TONS).map(String::as_str))
+            .is_ok_and(|mass| mass > 0);
         let bays = self
             .transport_bays()
             .map_or(0, |bays| bays.item_slots() as usize);
@@ -412,7 +409,20 @@ impl VehicleTemplate {
             VehicleSection::name,
             1,
         )?;
-        check_machine_gun_arrays(loadout)?;
+        super::machine_gun_array::check_machine_gun_arrays(loadout, VehicleSection::name)?;
+        loadout.check_machine_gun_bins(
+            |location| format!("{} slot {}", location.section.name(), location.slot + 1),
+            "TechManual p. 107",
+        )?;
+        let computers = loadout
+            .systems
+            .iter()
+            .filter(|part| part.system == System::TargetingComputer)
+            .count();
+        ensure!(
+            computers <= 1,
+            "A combat vehicle mounts one targeting computer, a single item sized by its direct-fire weapons; found {computers} entries (TechManual p. 238)"
+        );
         for part in &loadout.systems {
             match part.system {
                 System::JumpJet => {
@@ -424,28 +434,6 @@ impl VehicleTemplate {
         }
         Ok(())
     }
-}
-
-/// Each machine gun array links two to four machine guns of one size class in its location,
-/// and a gun belongs to one array at most (TechManual p. 228).
-fn check_machine_gun_arrays(loadout: &VehicleLoadout) -> Result<()> {
-    let mut linked = std::collections::BTreeSet::new();
-    for array in loadout.machine_gun_arrays() {
-        let name = array.location.section.name();
-        ensure!(
-            super::ARRAY_GUNS.contains(&array.weapon_indices.len()),
-            "A machine gun array in {name} slot {} links {} machine guns; it links two to four of one size class beside it (TechManual p. 228)",
-            array.location.slot + 1,
-            array.weapon_indices.len()
-        );
-        for index in array.weapon_indices {
-            ensure!(
-                linked.insert(index),
-                "A machine gun in {name} is linked to two machine gun arrays (TechManual p. 228)"
-            );
-        }
-    }
-    Ok(())
 }
 
 /// Read-only construction verdict for a vehicle template, the vehicle counterpart of
@@ -622,6 +610,62 @@ slots = [
         assert_eq!((report.item_slots, report.item_slot_limit), (5, 20));
         assert_eq!(zhukov.sections[&VehicleSection::Turret].internal, 8);
         assert!(check_vehicle_template(&zhukov).constructible);
+    }
+
+    /// A vehicle targeting computer is one item in one slot that weighs the direct-fire weapon
+    /// tonnage over 4 (Inner Sphere) or 5 (Clan), rounded up; missiles do not count, and a
+    /// second entry is refused (TechManual p. 238).
+    #[test]
+    fn targeting_computer_is_one_item_sized_by_its_weapons() {
+        let zhukov = parse(ZHUKOV);
+        let bare = zhukov.construction_rules().unwrap();
+        let computer = parse(&ZHUKOV.replace(
+            "[sections.aft_side]\narmor = 24\n",
+            "[sections.aft_side]\narmor = 24\nslots = [\n    { at = 1, item = \"TargetingComputer\" },\n]\n",
+        ));
+        let loadout = VehicleLoadout::resolve(&computer).unwrap();
+        let part = &loadout.systems[0];
+        // Two AC/10s weigh 24 tons; the SRM-6 is a missile launcher and does not count.
+        assert_eq!(computer.system_mass(&loadout, part), 6 * 1024);
+        let mass = computer.mass().unwrap();
+        assert_eq!(mass.equipment, bare.mass.equipment + 6 * 1024);
+        assert_eq!(computer.item_slots(&loadout), bare.item_slots + 1);
+        let weapons = loadout.weapons.iter().map(|mount| mount.weapon);
+        assert_eq!(
+            super::super::targeting_computer_tons(weapons.clone(), false),
+            6
+        );
+        assert_eq!(super::super::targeting_computer_tons(weapons, true), 5);
+        let doubled = parse(&ZHUKOV.replace(
+            "[sections.aft_side]\narmor = 24\n",
+            "[sections.aft_side]\narmor = 24\nslots = [\n    { at = \"1-2\", item = \"TargetingComputer\" },\n]\n",
+        ));
+        assert!(
+            rejection(&doubled).contains("mounts one targeting computer"),
+            "{}",
+            rejection(&doubled)
+        );
+    }
+
+    /// A vehicle location lists more than twelve items, and an array listed past the twelfth
+    /// links the guns its `links` name (TechManual p. 228).
+    #[test]
+    fn machine_gun_arrays_link_guns_past_the_twelfth_item() {
+        let zhukov = parse(&ZHUKOV.replace(
+            "    { at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },\n",
+            "    { at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },\n    { at = \"13-14\", item = \"IS.MachineGun\" },\n    { at = 15, item = \"IS.MGA\", links = [13, 14] },\n",
+        ));
+        let loadout = VehicleLoadout::resolve(&zhukov).unwrap();
+        let arrays = loadout.machine_gun_arrays();
+        assert_eq!(arrays.len(), 1);
+        let slots: Vec<_> = arrays[0]
+            .weapon_indices
+            .iter()
+            .map(|&index| loadout.weapons[index].criticals[0].slot)
+            .collect();
+        assert_eq!(slots, [12, 13]);
+        super::super::machine_gun_array::check_machine_gun_arrays(&loadout, VehicleSection::name)
+            .unwrap();
     }
 
     /// Unspent tonnage is cargo or waste, reported as a warning; overweight is refused.
@@ -855,7 +899,7 @@ slots = [
     }
 
     /// Transport bays weigh, take slots and cost as the Transport Bay table says (TechManual
-    /// p. 239), alongside the standard cargo bay `cargo_space` describes, and survive a
+    /// p. 239), alongside the standard cargo bay `cargo_tons` describes, and survive a
     /// document round trip; Mechs carry none.
     #[test]
     fn transport_bays_weigh_claim_slots_and_cost() {
@@ -887,10 +931,7 @@ slots = [
         let bay = parse(
             &carrier
                 .replace("infantry_compartment = 4", "foot_infantry_bay = 1")
-                .replace(
-                    "walk_mp = 3\n",
-                    "walk_mp = 3\ncargo_space = 100\nspecials = [\"CargoTech\"]\n",
-                ),
+                .replace("walk_mp = 3\n", "walk_mp = 3\ncargo_tons = 1\n"),
         );
         assert_eq!(bay.mass().unwrap().cargo, 6 * 1024);
         assert_eq!(bay.item_slots(&VehicleLoadout::resolve(&bay).unwrap()), 5);
@@ -980,10 +1021,10 @@ slots = [
         );
         let ice = parse(&lasers);
         assert_eq!(ice.mass().unwrap().power_amplifiers, 512);
-        assert_eq!(ice.system_mass(System::Case), 512);
+        assert_eq!(ice.fixed_system_mass(System::Case), 512);
         let fusion = parse(&lasers.replace("engine = \"ice\"", "tech_base = \"clan\""));
         assert_eq!(fusion.mass().unwrap().power_amplifiers, 0);
-        assert_eq!(fusion.system_mass(System::Case), 0);
+        assert_eq!(fusion.fixed_system_mass(System::Case), 0);
     }
 
     /// A vehicle mounts its own technology base's weapons unless it declares mixed
@@ -1217,8 +1258,9 @@ slots = [
             parse(&YELLOW_JACKET.replace(
                 "{ at = 1, item = \"IS.GaussRifle\" },\n    { at = \"2-3\", item = \"Ammo_IS.GaussRifle\", rounds = 8 },",
                 &format!(
-                    "{{ at = \"1-{count}\", item = \"IS.MachineGun\" }},\n    {{ at = {}, item = \"IS.MGA\" }},\n    {{ at = 6, item = \"Ammo_IS.MachineGun\", rounds = 200 }},",
-                    count + 1
+                    "{{ at = \"1-{count}\", item = \"IS.MachineGun\" }},\n    {{ at = {}, item = \"IS.MGA\", links = {:?} }},\n    {{ at = 6, item = \"Ammo_IS.MachineGun\", rounds = 200 }},",
+                    count + 1,
+                    (1..=count).collect::<Vec<_>>()
                 ),
             ))
         };
@@ -1231,6 +1273,6 @@ slots = [
             .machine_gun_arrays();
         assert_eq!(arrays.len(), 1);
         assert_eq!(arrays[0].weapon_indices.len(), 3);
-        assert!(rejection(&guns(1)).contains("links 1 machine guns"));
+        assert!(rejection(&guns(1)).contains("links 1 slots"));
     }
 }

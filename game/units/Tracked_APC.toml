@@ -3,7 +3,7 @@ class = "vehicle"
 movement = "track"
 tons = 10
 walk_mp = 6
-cargo_space = 500
+cargo_tons = 1
 max_suits = 0
 max_ton = 4
 

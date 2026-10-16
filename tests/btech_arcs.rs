@@ -7,7 +7,6 @@ fn mount(section: Section, rear_mount: bool) -> WeaponMount {
         weapon: Weapon::MediumLaser,
         criticals: vec![CriticalLocation { section, slot: 0 }],
         rear_mount,
-        on_targeting_computer: false,
         one_shot: false,
         initially_spent: false,
         initial_ammunition_mode: stompymux_rs::AmmunitionMode::Normal,

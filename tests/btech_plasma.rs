@@ -1,10 +1,13 @@
-//! Plasma heat follows primary damage transfers and shares persistent target dice.
+//! Plasma heat arrives once per hit, after primary damage transfers, from persistent target
+//! dice.
 use crate::support;
 use stompymux_rs::*;
 
-/// Compare identical material hits, then account for exactly the post-damage plasma rolls.
+/// Compare identical material hits, then account for the single post-damage plasma roll: a
+/// plasma rifle hit heats a 'Mech by 1D6 once, however far its damage transfers (Total
+/// Warfare p. 139).
 #[tokio::test]
-async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
+async fn plasma_heat_rolls_once_per_hit_and_replays_saved_dice() {
     let (_dir, config, mut base) = support::isolated_world().await;
     let id = base.create(&config, "Plasma target".into(), Kind::Thing);
     let object = base.objects.get_mut(&id).unwrap();
@@ -17,8 +20,11 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
     )
     .unwrap();
     support::seed_object_dice(&mut base, id, support::FIXTURE_DICE_SEED);
-    for (transfer, fatal, expected_rolls) in [(false, false, 1), (true, false, 3), (false, true, 0)]
-    {
+    for (transfer, fatal, heated) in [
+        (false, false, true),
+        (true, false, true),
+        (false, true, false),
+    ] {
         let mut scenario = base.clone();
         scenario
             .btech
@@ -85,13 +91,13 @@ async fn plasma_heat_transfer_unwind_and_saved_dice_replay() {
         let mut expected = serde_json::to_value(&ordinary.btech).unwrap();
         let unit = &mut expected["constructed"][id.0.to_string()];
         let mut dice: Dice = serde_json::from_value(unit["dice"].clone()).unwrap();
-        let rolls: Vec<_> = (0..expected_rolls).map(|_| dice.d6()).collect();
+        let roll = heated.then(|| dice.d6());
         unit["dice"] = serde_json::to_value(dice).unwrap();
         // Weapon heat counts as outside heat, capped at fifteen points per turn (TW p. 159).
-        let applied = rolls.iter().map(|&v| u32::from(v)).sum::<u32>().min(15);
+        let applied = roll.map_or(0, u32::from).min(15);
         unit["heat"]["stored"] = f64::from(applied).into();
         unit["overheat_clock"]["outside_heat"] = applied.into();
-        assert_eq!(report.groups[0].impact.plasma_heat, rolls);
+        assert_eq!(report.groups[0].impact.plasma_heat, roll);
         assert_eq!(
             report.groups[0].impact.phases,
             ordinary_report.groups[0].impact.phases

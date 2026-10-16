@@ -5,7 +5,6 @@ tons = 90
 walk_mp = 4
 heat_sinks = 15
 radio = 4
-cargo_space = 0
 
 [construction]
 tech_base = "inner_sphere"

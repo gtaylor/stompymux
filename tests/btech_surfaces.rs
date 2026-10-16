@@ -4390,36 +4390,24 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
     let coordinate = HexCoordinate { x: 1, y: 1 };
     let original = world.clone();
     let before = world.btech.maps()[&map].hex(1, 1).unwrap();
+    // Forty points leave heavy woods standing, so there is nothing to clear.
+    assert!(apply_woodland_clearing(&mut world, map, coordinate, before, 40).is_err());
     assert!(
-        apply_woodland_clearing(
-            &mut world,
-            map,
-            coordinate,
-            before,
-            WoodlandClearing::CutToClear
-        )
-        .is_err()
-    );
-    assert!(
-        apply_woodland_clearing(
-            &mut world,
-            map,
-            HexCoordinate { x: -1, y: 1 },
-            before,
-            WoodlandClearing::Thin
-        )
-        .is_err()
-    );
-    assert_eq!(world.btech, original.btech);
-    let report =
-        apply_woodland_clearing(&mut world, map, coordinate, before, WoodlandClearing::Thin)
-            .unwrap();
-    assert_eq!(report.before, before);
-    assert_eq!(report.after, Hex::new(Terrain::LightWoods, 2));
-    assert!(
-        apply_woodland_clearing(&mut world, map, coordinate, before, WoodlandClearing::Thin)
+        apply_woodland_clearing(&mut world, map, HexCoordinate { x: -1, y: 1 }, before, 41)
             .is_err()
     );
+    assert_eq!(world.btech, original.btech);
+    let report = apply_woodland_clearing(&mut world, map, coordinate, before, 41).unwrap();
+    assert_eq!(report.before, before);
+    assert_eq!(report.after, Hex::new(Terrain::LightWoods, 2));
+    // The light woods keep the one point spent past the heavy woods' threshold.
+    assert_eq!(
+        world.btech.maps()[&map]
+            .terrain_damage_at(coordinate)
+            .unwrap(),
+        1
+    );
+    assert!(apply_woodland_clearing(&mut world, map, coordinate, before, 41).is_err());
     for id in units {
         assert_eq!(
             world.btech.constructed_units()[&id],
@@ -4432,45 +4420,27 @@ async fn woodland_clearing_on_occupied_map_is_durable_and_rejects_stale_results(
         persistence::load(&config.database()).await.unwrap().btech,
         world.btech
     );
-    let report = apply_woodland_clearing(
-        &mut world,
-        map,
-        coordinate,
-        report.after,
-        WoodlandClearing::CutToRough,
-    )
-    .unwrap();
+    let report = apply_woodland_clearing(&mut world, map, coordinate, report.after, 50).unwrap();
     assert_eq!(report.after.level(), 2);
+    assert_eq!(report.after.terrain(), Terrain::Rough);
+    assert_eq!(
+        world.btech.maps()[&map]
+            .terrain_damage_at(coordinate)
+            .unwrap(),
+        0
+    );
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
         world.btech
     );
     let unchanged = world.btech.clone();
-    assert!(
-        apply_woodland_clearing(
-            &mut world,
-            map,
-            coordinate,
-            report.after,
-            WoodlandClearing::CutToClear
-        )
-        .is_err()
-    );
+    assert!(apply_woodland_clearing(&mut world, map, coordinate, report.after, 200).is_err());
     assert_eq!(world.btech, unchanged);
     // Two reductions in a single saved transaction are also valid with occupants present.
     let coordinate = HexCoordinate { x: 0, y: 0 };
-    let first =
-        apply_woodland_clearing(&mut world, map, coordinate, before, WoodlandClearing::Thin)
-            .unwrap();
-    let _second = apply_woodland_clearing(
-        &mut world,
-        map,
-        coordinate,
-        first.after,
-        WoodlandClearing::CutToClear,
-    )
-    .unwrap();
+    let first = apply_woodland_clearing(&mut world, map, coordinate, before, 41).unwrap();
+    let _second = apply_woodland_clearing(&mut world, map, coordinate, first.after, 50).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
@@ -4662,14 +4632,26 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     // Heavy woods thin to light woods when the fire burns out.
     let burnt = world.btech.maps()[&map].hex(1, 1).unwrap();
     assert_eq!(burnt, Hex::new(Terrain::LightWoods, 2));
-    for x in 0..3 {
+    // The map's wind blows from the north (bearing 0), so smoke lies downwind to the south:
+    // the hex below the fire and the two hexes 60 degrees either side of it (Tactical
+    // Operations pp. 43-45).
+    for (x, y) in [(1, 2), (0, 1), (2, 1)] {
         let smoke = world.btech.maps()[&map]
-            .decoration(HexCoordinate { x, y: 0 })
+            .decoration(HexCoordinate { x, y })
             .unwrap()
             .unwrap();
         assert_eq!(smoke.kind, DecorationKind::Smoke);
         assert!((89..=149).contains(&smoke.remaining));
         assert_eq!(smoke.next_spread, None);
+    }
+    for x in 0..3 {
+        assert!(
+            world.btech.maps()[&map]
+                .decoration(HexCoordinate { x, y: 0 })
+                .unwrap()
+                .is_none(),
+            "no smoke upwind at {x},0"
+        );
     }
     for id in units {
         assert_eq!(
@@ -4691,7 +4673,7 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
     }
     assert!(!map_smoke_pending(&world));
     assert_eq!(
-        world.btech.maps()[&map].hex(1, 0).unwrap().terrain(),
+        world.btech.maps()[&map].hex(1, 2).unwrap().terrain(),
         Terrain::HeavyWoods
     );
 }
@@ -4699,7 +4681,8 @@ async fn calm_fire_spreads_smoke_then_burns_out_with_saved_replay() {
 #[tokio::test]
 async fn strong_wind_fire_replays_new_ignition_and_retains_scheduled_delay() {
     let (_dir, config, mut world, map, _units) = fixture_field(Terrain::LightWoods, 1, 5).await;
-    set_map_wind(&mut world, map, 0, 0).unwrap();
+    // A wind from the south (bearing 180) carries the fire north, toward row 2.
+    set_map_wind(&mut world, map, 180, 0).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 3 };
     set_map_decoration(
         &mut world,
@@ -4722,7 +4705,7 @@ async fn strong_wind_fire_replays_new_ignition_and_retains_scheduled_delay() {
         advance_map_fire(&mut world).unwrap();
     }
     // Wind changes affect subsequent scheduling, not a check already counting down.
-    set_map_wind(&mut world, map, 0, 60).unwrap();
+    set_map_wind(&mut world, map, 180, 60).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut replay = persistence::load(&config.database()).await.unwrap();
     for _ in 0..50 {
@@ -4903,12 +4886,13 @@ async fn woodland_impacts_commit_dice_terrain_and_notices_with_restart_replay() 
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() >= 4)
             .unwrap();
-        // Heavy woods have a terrain factor of ninety; most of it is already spent, so one
-        // fifteen-point slug aimed at the hex fells a density.
+        // Heavy woods have a terrain factor of ninety and become light woods once forty-one
+        // is spent (Total Warfare p. 112); thirty is already spent, so one fifteen-point slug
+        // aimed at the hex thins them without felling them.
         world
             .btech
             .rewrite_map_record(map, |record| {
-                record["terrain_damage"] = serde_json::json!({ "1": 80 });
+                record["terrain_damage"] = serde_json::json!({ "1": 30 });
             })
             .unwrap();
         world
@@ -5327,7 +5311,7 @@ async fn minefields_persist_all_kinds_and_survive_woodland_clearing() {
             .btech
             .rewrite_map_record(map, |record| {
                 let index = (record["width"].as_i64().unwrap() + 1).to_string();
-                record["terrain_damage"] = serde_json::json!({ index: 80 });
+                record["terrain_damage"] = serde_json::json!({ index: 30 });
             })
             .unwrap();
         let report = resolve_woodland_attack(

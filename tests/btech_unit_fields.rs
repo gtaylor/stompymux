@@ -1264,8 +1264,8 @@ async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f
     }
 }
 
-/// Named BV follows saved damage and current runtime weapon values, which reset on reload.
-async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(f: &UnitFields) {
+/// Named BV follows saved damage, read-only, across reload.
+async fn battle_value_field_tracks_live_damage_scenario(f: &UnitFields) {
     let config = &f.config;
     for source in firing::templates() {
         let (mut world, id, _, _) = f.supply(&source, Some(Weapon::MediumLaser), &source, None);
@@ -1280,10 +1280,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
         });
         let damaged = battle_unit_value(&world, id).unwrap().total;
         assert!(damaged < baseline);
-        set_battle_weapon_battle_value(&mut world, ObjectId(1), "IS.MediumLaser", 1000).unwrap();
-        let increased = battle_unit_value(&world, id).unwrap().total;
-        assert!(increased > damaged);
-        let expected = format!("{increased:.2}");
+        let expected = format!("{damaged:.2}");
         let before = world.btech.clone();
         let scripts = &f.native;
         support::install(scripts, world.clone());
@@ -1322,14 +1319,7 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario
         let scripts = Scripts::new(config, Rc::new(RefCell::new(restored))).unwrap();
         let report =
             view_battle_unit_fields_action(&scripts, config, ObjectId(1), id, "bv").unwrap();
-        assert_eq!(field(&report, "bv"), Some(format!("{damaged:.2}").as_str()));
-        set_battle_weapon_battle_value(
-            &mut scripts.world_mut(),
-            ObjectId(1),
-            "IS.MediumLaser",
-            1000,
-        )
-        .unwrap();
+        assert_eq!(field(&report, "bv"), Some(expected.as_str()));
         assert_eq!(scripts.world().btech, before);
     }
 }
@@ -1732,55 +1722,10 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             });
         }
         let original_load = battle_unit_load(&world, id, true).unwrap();
-        let (original_cargo, carrier, cargo) =
-            if let Some(unit) = world.btech.constructed_units().get(&id) {
-                (
-                    unit.mass().unwrap().cargo,
-                    unit.definition()
-                        .attributes
-                        .get("specials")
-                        .is_some_and(|flags| {
-                            flags
-                                .split_whitespace()
-                                .any(|flag| flag.eq_ignore_ascii_case("Carrier_Tech"))
-                        }),
-                    unit.definition()
-                        .attributes
-                        .get("specials")
-                        .is_some_and(|flags| {
-                            flags
-                                .split_whitespace()
-                                .any(|flag| flag.eq_ignore_ascii_case("CargoTech"))
-                        }),
-                )
-            } else {
-                let unit = &world.btech.vehicles()[&id];
-                (
-                    unit.mass().unwrap().cargo,
-                    unit.definition()
-                        .attributes
-                        .get("specials")
-                        .is_some_and(|flags| {
-                            flags
-                                .split_whitespace()
-                                .any(|flag| flag.eq_ignore_ascii_case("Carrier_Tech"))
-                        }),
-                    unit.definition()
-                        .attributes
-                        .get("specials")
-                        .is_some_and(|flags| {
-                            flags
-                                .split_whitespace()
-                                .any(|flag| flag.eq_ignore_ascii_case("CargoTech"))
-                        }),
-                )
-            };
-        let divisor = if carrier {
-            1000.0
-        } else if cargo {
-            100.0
+        let original_cargo = if let Some(unit) = world.btech.constructed_units().get(&id) {
+            unit.mass().unwrap().cargo
         } else {
-            500.0
+            world.btech.vehicles()[&id].mass().unwrap().cargo
         };
         let stock = battle_inventory(&world, id).unwrap().to_vec();
         let native = &f.native;
@@ -1790,7 +1735,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
         // to a design already at its weight (TechManual p. 46).
         if world.btech.constructed_units().contains_key(&id) {
             let before = lua.world().btech.clone();
-            for value in [123, 100_000] {
+            for value in [150, 100_000] {
                 assert!(
                     set_battle_unit_field_action(
                         lua,
@@ -1806,7 +1751,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             }
             continue;
         }
-        for value in [123, 100_000, 0] {
+        for value in [150, 100_000, 0] {
             let before = lua.world().btech.clone();
             lua.drain_outbox();
             assert!(
@@ -1843,8 +1788,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             assert_eq!(load.carried_mass, original_load.carried_mass);
             assert_eq!(
                 load.material_mass,
-                original_load.material_mass - original_cargo
-                    + (value as f32 / divisor * 1024.0).trunc() as u32
+                original_load.material_mass - original_cargo + value * 1024 / 100
             );
             // An installation that takes the unit over its tonnage is not a speed penalty;
             // construction answers for overweight designs (TechManual p. 97).
@@ -1864,7 +1808,7 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             assert_eq!(loaded.btech, saved.btech);
         }
         let before = lua.world().btech.clone();
-        for value in ["-1", "2147483648", "2147483647", "NaN", "1.5"] {
+        for value in ["-1", "2147483648", "2147483647", "NaN", "1.5", "123"] {
             assert!(
                 set_battle_unit_field_action(lua, config, ObjectId(1), id, "cargospace", value)
                     .is_err()
@@ -2352,16 +2296,9 @@ async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_e
             } else {
                 saved.btech.vehicles()[&id].attacker_movement_modifier()
             };
-            assert_eq!(
-                penalty,
-                if !movable {
-                    0
-                } else if baseline == 0 {
-                    2
-                } else {
-                    1
-                }
-            );
+            // Firing movement follows the unit's current walking or cruising speed (Total
+            // Warfare p. 106), not the recorded template baseline.
+            assert_eq!(penalty, u8::from(movable));
             let mut actual = serde_json::to_value(&saved.btech).unwrap();
             let collection = if saved.btech.vehicles().contains_key(&id) {
                 "vehicles"
@@ -2473,9 +2410,15 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
         } else {
             let mut unit = loaded.btech.vehicles()[&id].clone();
             unit.apply_motive_hit(VehicleMotiveHit::SpeedLoss { movement_points: 1 });
+            // One Cruising MP off the construction refigures its flank (Total Warfare p. 193):
+            // a 3/5 Demolisher drops to 2/3. The edited live maximum drops by the same amount.
+            let flank = unit.definition().max_speed / 10.75;
+            let refigured = (((flank / 1.5).round() - 1.0) * 1.5).ceil();
+            let lost = unit.motive_speed_loss();
+            assert_eq!(lost, (flank - refigured) * 10.75);
             let value = serde_json::to_value(unit).unwrap();
             firing::edit(&mut loaded, id, |unit| *unit = value);
-            40.0 - 10.75
+            40.0 - lost
         };
         let after = Scripts::new(config, Rc::new(RefCell::new(loaded))).unwrap();
         let report =
@@ -3305,7 +3248,7 @@ async fn unit_fields_navigation_metadata_and_history_harness() {
 async fn unit_fields_preferences_values_and_construction_harness() {
     let f = UnitFields::new().await;
     preference_fields_share_cockpit_state_validation_and_restart_scenario(&f).await;
-    battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(&f).await;
+    battle_value_field_tracks_live_damage_scenario(&f).await;
     construction_fields_share_storage_authority_and_restart_without_changing_physics_scenario(&f)
         .await;
     inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scenario(&f).await;

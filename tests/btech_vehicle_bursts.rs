@@ -136,8 +136,10 @@ async fn vehicle_bursts_span_bins_and_persist_single_shot_supply_fallback() {
 
 #[tokio::test]
 async fn vehicle_gatling_caps_damage_by_supply_and_replays_its_single_roll() {
+    // Full one-ton machine gun bins, which `supply` then empties.
     let template = include_str!("../game/units/Demolisher.toml")
         .replace("IS.AC/20", "IS.MachineGun")
+        .replace("rounds = 5", "rounds = 200")
         .replace(
             "item = \"IS.MachineGun\" }",
             "item = \"IS.MachineGun\", modes = [\"Gattling\"] }",

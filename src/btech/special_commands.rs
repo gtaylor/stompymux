@@ -119,7 +119,7 @@ mod tests {
     fn catalogue_order_restrictions_and_dispatch_are_shared() {
         for (kind, count) in [
             (SpecialType::Unit, 187),
-            (SpecialType::Debug, 9),
+            (SpecialType::Debug, 7),
             (SpecialType::Map, 25),
             (SpecialType::Autopilot, 7),
         ] {
@@ -149,10 +149,9 @@ mod tests {
         );
         assert!(
             SpecialType::Debug
-                .find_command("setwbv", None)
-                .unwrap()
-                .0
-                .visible(false)
+                .visible_commands(None, false)
+                .next()
+                .is_none()
         );
         assert!(
             SpecialType::Unit

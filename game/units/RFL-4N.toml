@@ -4,7 +4,6 @@ movement = "biped"
 tons = 60
 walk_mp = 4
 radio = 4
-cargo_space = 0
 specials = ["SearchLight"]
 
 [construction]

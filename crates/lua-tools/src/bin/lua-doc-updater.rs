@@ -222,7 +222,6 @@ fn subpackage_description(path: &str) -> Option<&'static str> {
         "btech/system" => Some("Server-wide BattleTech queries."),
         "btech/template" => Some("Unit-template inspection and displays."),
         "btech/unit" => Some("Live-unit state, combat queries, and mutations."),
-        "btech/weapon" => Some("Runtime weapon settings."),
         _ => None,
     }
 }

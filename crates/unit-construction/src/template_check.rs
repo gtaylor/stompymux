@@ -1,17 +1,8 @@
 //! Read-only construction diagnostics for a Mech template: whether construction would accept
-//! it, why not, and the ammunition bins construction would resize or refill. Operator and Lua
-//! inspection and the template tools report these without changing the source.
-use super::{CriticalLocation, MechChassis, MechLoadout, MechTemplate};
+//! it and why not. Operator and Lua inspection and the template tools report these without
+//! changing the source.
+use super::{MechChassis, MechLoadout, MechTemplate};
 use serde::Serialize;
-
-/// A quantity or inferred bin-size adjustment that construction would make to an owned template.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct AmmunitionAdjustment {
-    pub location: CriticalLocation,
-    pub supplied: u16,
-    pub normalized: u16,
-    pub inferred_half_ton: bool,
-}
 
 /// Construction readiness under currently implemented biped rules, not a claim of complete gameplay parity.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -33,7 +24,6 @@ pub struct TemplateCheck {
     pub declared_engine_rating: Option<u32>,
     pub weapons: usize,
     pub ammunition_bins: usize,
-    pub ammunition_adjustments: Vec<AmmunitionAdjustment>,
 }
 
 /// Validate a parsed template using unit construction without registering an object or changing the source.
@@ -50,7 +40,6 @@ pub fn check_template(template: &MechTemplate) -> TemplateCheck {
         declared_engine_rating: template.declared_engine_rating().ok().flatten(),
         weapons: 0,
         ammunition_bins: 0,
-        ammunition_adjustments: Vec::new(),
     };
     let loadout = match construct(template) {
         Ok(loadout) => loadout,
@@ -62,33 +51,15 @@ pub fn check_template(template: &MechTemplate) -> TemplateCheck {
     report.constructible = true;
     report.weapons = loadout.weapons.len();
     report.ammunition_bins = loadout.ammunition.len();
-    for bin in &loadout.ammunition {
-        let source = &template.sections[&bin.location.section].criticals[&bin.location.slot];
-        let supplied = source
-            .data
-            .parse()
-            .expect("construction validated ammunition syntax");
-        let inferred_half_ton = bin.half_ton && !source.modes.iter().any(|flag| flag == "Halfton");
-        if supplied != bin.rounds || inferred_half_ton {
-            report.ammunition_adjustments.push(AmmunitionAdjustment {
-                location: bin.location,
-                supplied,
-                normalized: bin.rounds,
-                inferred_half_ton,
-            });
-        }
-    }
     report
 }
 
-/// Run construction on a copy of the template, in the order the game constructs a live Mech,
-/// and return the normalized loadout it would field.
+/// Run construction in the order the game constructs a live Mech and return the loadout it
+/// would field.
 fn construct(template: &MechTemplate) -> anyhow::Result<MechLoadout> {
-    let mut normalized = template.clone();
-    normalized.normalize_ammunition()?;
-    normalized.validate_definition()?;
-    let loadout = MechLoadout::resolve(&normalized)?;
-    normalized.validate_loadout(&loadout)?;
+    template.validate_definition()?;
+    let loadout = MechLoadout::resolve(template)?;
+    template.validate_loadout(&loadout)?;
     Ok(loadout)
 }
 
@@ -99,37 +70,54 @@ mod tests {
 
     const JENNER: &str = include_str!("../tests/fixtures/JR7-D.toml");
 
-    /// A short SRM bin fills to its full ton, while a short machine-gun bin becomes a half-ton lot.
+    /// A machine gun bin holds a full ton, or a half-ton lot marked `Halfton`; construction
+    /// refuses any other count rather than refilling or resizing the bin, and loads other bins
+    /// with the rounds they list (TechManual p. 57). The source is never changed.
     #[test]
-    fn constructible_templates_report_normalized_bins_and_keep_the_source() {
-        for (bin, supplied, normalized, inferred_half_ton) in [
-            ("Ammo_IS.SRM-4", 7, 25, false),
-            ("Ammo_IS.MachineGun", 40, 100, true),
+    fn bins_hold_what_their_lot_holds() {
+        for (bin, rounds, modes, expected) in [
+            ("Ammo_IS.SRM-4", 7, "", None),
+            (
+                "Ammo_IS.MachineGun",
+                100,
+                "",
+                Some(
+                    "lists 100 rounds; a machine gun bin holds 200 rounds a ton, or 100 in a half-ton lot marked Halfton",
+                ),
+            ),
+            (
+                "Ammo_IS.MachineGun",
+                200,
+                ", modes = [\"Halfton\"]",
+                Some("Ammunition exceeds bin capacity"),
+            ),
+            (
+                "Ammo_IS.MachineGun",
+                40,
+                ", modes = [\"Halfton\"]",
+                Some("lists 40 rounds"),
+            ),
+            ("Ammo_IS.MachineGun", 100, ", modes = [\"Halfton\"]", None),
+            ("Ammo_IS.MachineGun", 200, "", None),
         ] {
             let source = JENNER.replace(
                 "item = \"Ammo_IS.SRM-4\", rounds = 25",
-                &format!("item = \"{bin}\", rounds = {supplied}"),
+                &format!("item = \"{bin}\", rounds = {rounds}{modes}"),
             );
             assert_ne!(source, JENNER);
             let template = MechTemplate::parse("JR7-D", &source).unwrap();
             let original = template.clone();
             let report = check_template(&template);
-            assert!(report.constructible, "{:?}", report.rejection);
-            assert_eq!(report.chassis, Some(MechChassis::Biped));
-            assert_eq!((report.weapons, report.ammunition_bins), (5, 1));
-            assert_eq!(
-                report.ammunition_adjustments,
-                [AmmunitionAdjustment {
-                    location: CriticalLocation {
-                        section: MechSection::RightTorso,
-                        slot: 0
-                    },
-                    supplied,
-                    normalized,
-                    inferred_half_ton,
-                }]
-            );
             assert_eq!(template, original);
+            let Some(expected) = expected else {
+                assert!(report.constructible, "{:?}", report.rejection);
+                assert_eq!(report.chassis, Some(MechChassis::Biped));
+                assert_eq!((report.weapons, report.ammunition_bins), (5, 1));
+                continue;
+            };
+            assert!(!report.constructible);
+            let rejection = report.rejection.unwrap();
+            assert!(rejection.contains(expected), "{rejection}");
         }
     }
 
@@ -186,7 +174,7 @@ mod tests {
             assert!(!report.constructible);
             let rejection = report.rejection.unwrap();
             assert!(rejection.contains(expected), "{rejection}");
-            assert!(report.ammunition_adjustments.is_empty());
+            assert_eq!(report.ammunition_bins, 0);
         }
     }
 }

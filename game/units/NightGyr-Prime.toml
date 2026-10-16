@@ -6,7 +6,6 @@ walk_mp = 4
 jump_mp = 4
 heat_sinks = 20
 radio = 5
-cargo_space = 0
 max_suits = 0
 specials = ["OmniMech_Tech"]
 

@@ -36,8 +36,10 @@ impl Mech {
     ///
     /// Walking MP is the template's own figure. A destroyed hip halves it, rounding up,
     /// before each other damaged leg actuator takes one more point (Total Warfare p. 125);
-    /// running is then refigured as walking x 1.5 rounded up. A destroyed leg adds +5 to a
-    /// biped's rolls and leaves it walking at 1 MP without running (TW pp. 60, 122). A
+    /// running is then refigured as walking x 1.5 rounded up. On a biped, a destroyed hip
+    /// supersedes the actuator hits in its own leg, which then cost neither MP nor piloting
+    /// modifiers (p. 127); a quad counts every leg critical (p. 125). A destroyed leg adds
+    /// +5 to a biped's rolls and leaves it walking at 1 MP without running (TW pp. 60, 122). A
     /// quad missing one leg loses one walking MP and its -2 bonus but takes no leg modifier
     /// of its own; missing two it is restricted like a one-legged biped, and three like a
     /// legless one (p. 123). Hardened armor costs one running MP throughout.
@@ -74,9 +76,16 @@ impl Mech {
                 })
                 .filter_map(|(_, part)| System::named(&part.equipment))
                 .collect();
-            if damaged.contains(&System::ShoulderOrHip) {
+            let hip = damaged.contains(&System::ShoulderOrHip);
+            if hip {
                 hips += 1;
                 piloting_modifier += 2;
+            }
+            // A biped's locked hip works as a crutch: the leg's other actuator hits no longer
+            // cost MP or add to rolls (Total Warfare p. 127). A quad's leg damage is
+            // cumulative (p. 125).
+            if hip && chassis == MechChassis::Biped {
+                continue;
             }
             let hit = damaged
                 .iter()

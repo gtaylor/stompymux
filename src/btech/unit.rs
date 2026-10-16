@@ -860,12 +860,7 @@ impl Mech {
         Self::from_template_mode(definition, true)
     }
 
-    fn from_template_mode(mut definition: MechTemplate, contract_loadout: bool) -> Result<Self> {
-        if contract_loadout {
-            definition.normalize_contract_ammunition()?;
-        } else {
-            definition.normalize_ammunition()?;
-        }
+    fn from_template_mode(definition: MechTemplate, contract_loadout: bool) -> Result<Self> {
         // The tonnage-chart internal structure (mech_int_check) is forced while
         // the template file is read; construction and saved-definition restore
         // keep the stored internals verbatim.
@@ -1042,7 +1037,7 @@ impl Mech {
             && unit
                 .definition
                 .attributes
-                .get("cargo_space")
+                .get(super::CARGO_TONS)
                 .is_some_and(|value| value != "0")
         {
             unit.mass()?;
@@ -1055,13 +1050,13 @@ impl Mech {
         &self.definition
     }
 
-    /// Construction baseline used by the shared attacker movement calculation.
+    /// Construction speed recorded on the template, which the TEMPLATESP field reads and sets.
     pub fn template_speed(&self) -> f64 {
         super::read_template_speed(&self.definition.attributes, self.definition.max_speed)
             .expect("validated template speed")
     }
 
-    /// Set the independent firing-movement baseline without changing propulsion.
+    /// Set the recorded construction speed without changing propulsion.
     pub(super) fn set_template_speed(&mut self, speed: f64) {
         super::write_template_speed(&mut self.definition.attributes, speed);
     }
@@ -1087,11 +1082,12 @@ impl Mech {
         self.definition.restate_engine_rating();
     }
 
-    /// Update the owned cargo installation; the shared load service reconciles motion.
-    pub(super) fn set_cargo_space(&mut self, value: u32) {
+    /// Update the owned cargo bay's capacity in tons; the shared load service reconciles
+    /// motion.
+    pub(super) fn set_cargo_tons(&mut self, tons: String) {
         self.definition
             .attributes
-            .insert("cargo_space".into(), value.to_string());
+            .insert(super::CARGO_TONS.into(), tons);
     }
 
     /// Edit identity through shared validation without rebuilding or resetting unit state.
@@ -1374,7 +1370,7 @@ impl Mech {
             if self
                 .definition
                 .attributes
-                .get("cargo_space")
+                .get(super::CARGO_TONS)
                 .is_some_and(|value| value != "0")
             {
                 self.mass()?;
@@ -1465,7 +1461,7 @@ impl Mech {
                 .weapons
                 .get(*index)
                 .is_some_and(
-                    |_| *remaining > 0 && *remaining <= super::weapon_settings::MAX_RECYCLE_SECONDS
+                    |_| *remaining > 0 && *remaining <= super::readiness::MAX_RECYCLE_SECONDS
                 )),
             "Invalid weapon recycle timer"
         );
@@ -1601,7 +1597,6 @@ pub(super) fn replace_critical_modes(
         "Disabled",
         "Broken",
         "Damaged",
-        "OnTC",
         "RearMount",
         "Hotload",
         "Halfton",

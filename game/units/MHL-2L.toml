@@ -6,7 +6,6 @@ walk_mp = 4
 jump_mp = 4
 heat_sinks = 11
 radio = 4
-cargo_space = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -34,7 +33,7 @@ rear = 6
 slots = [
     { at = "1-6", item = "HeatSink" },
     { at = "7-8", item = "IS.MachineGun" },
-    { at = 9, item = "Ammo_IS.MachineGun", rounds = 100 },
+    { at = 9, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = "10-12", item = "FerroFibrous" },
 ]
 

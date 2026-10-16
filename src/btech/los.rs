@@ -40,9 +40,10 @@ pub struct TerrainLos {
     /// Intervening ground (a hill) blocks the line; infrared and radar sensors cannot pass it.
     pub hills: bool,
     /// Building or wall hexes along the line that are not hardened; they block radar and
-    /// magscans and shorten infrared brackets.
+    /// magscans and shorten infrared brackets by a hex each.
     pub buildings: u8,
-    /// Hardened building hexes along the line, which shorten infrared brackets twice as much.
+    /// Hardened building hexes along the line, which block radar and magscans like any other
+    /// building and shorten infrared brackets by two hexes each.
     pub hardened_buildings: u8,
     /// Heavy woods or jungle hexes along the line, which shorten infrared and radar brackets.
     pub heavy_woods: u8,
@@ -54,6 +55,11 @@ impl TerrainLos {
     /// Woods and smoke points together; three or more block the line.
     pub fn obscuring_points(self) -> u8 {
         self.woods.saturating_add(self.smoke)
+    }
+
+    /// Building hexes of any class along the line, hardened ones included.
+    pub fn building_hexes(self) -> u8 {
+        self.buildings.saturating_add(self.hardened_buildings)
     }
 }
 
@@ -140,9 +146,6 @@ fn terrain_los_at_heights(
         target_smoke: visible_destination.smoke_density(),
         ..TerrainLos::default()
     };
-    if start_height > 10.0 && end_height > 10.0 {
-        return Ok(report);
-    }
     if underwater != target_underwater {
         report.blocked = true;
         return Ok(report);
@@ -171,7 +174,7 @@ fn terrain_los_at_heights(
         // Sensors care what the line crosses even where sight is already blocked, but once a
         // hill and a building both lie on it no sensor's answer can change: hills stop infrared
         // and radar, buildings stop magscans, and seismic sensors and probes ignore terrain.
-        if report.hills && (report.buildings > 0 || report.hardened_buildings > 0) {
+        if report.hills && report.building_hexes() > 0 {
             break;
         }
         let tile = hex(point)?;
@@ -730,6 +733,43 @@ mod tests {
             .unwrap()
             .blocked
         );
+    }
+
+    /// Intervening terrain is checked at any height (Total Warfare pp. 99-100): a level-20
+    /// mountain still blocks two 'Mechs standing on level-11 hills, woods between them still
+    /// count, and two VTOLs flying above level 10 still lose sight across the peak.
+    #[test]
+    fn terrain_intervenes_between_units_above_level_ten() {
+        use Terrain::*;
+        let ridge = [
+            (Clear, 11),
+            (Clear, 11),
+            (Clear, 20),
+            (Clear, 11),
+            (Clear, 11),
+        ];
+        let report = sight(&ridge);
+        assert!(report.blocked);
+        assert!(report.hills);
+        let woods = sight(&[(Clear, 11), (HeavyWoods, 11), (LightWoods, 11), (Clear, 11)]);
+        assert_eq!(woods.woods, 3);
+        assert!(!woods.blocked);
+        assert!(!sight(&[(Clear, 11); 5]).blocked);
+        let map = lane(&ridge);
+        let flying = |altitude: f64| {
+            terrain_los_at_heights(
+                &map,
+                HexCoordinate { x: 1, y: 0 },
+                HexCoordinate { x: 1, y: 4 },
+                (0.5, 0.5),
+                (Some(altitude), Some(altitude)),
+                TraceOptions::default(),
+            )
+            .unwrap()
+            .blocked
+        };
+        assert!(flying(15.0));
+        assert!(!flying(21.0));
     }
 
     /// Partial cover needs an attacker no higher than the target, or water around the legs.

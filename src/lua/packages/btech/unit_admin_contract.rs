@@ -205,38 +205,21 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             })?,
         )?;
     }
-    for (key, public, label, value_label, min, max) in [
+    for (key, public, display) in [
         (
             "unit_set_lrs_contract",
             "set_long_range_sensor_range",
-            "lrsrange",
-            "range",
-            0,
-            127,
+            crate::btech::SensorDisplay::LongRange,
         ),
         (
             "unit_set_tactical_contract",
             "set_tactical_range",
-            "tacrange",
-            "range",
-            0,
-            127,
+            crate::btech::SensorDisplay::Tactical,
         ),
         (
             "unit_set_scan_contract",
             "set_scan_range",
-            "scanrange",
-            "range",
-            0,
-            127,
-        ),
-        (
-            "unit_set_radio_range_contract",
-            "set_radio_range",
-            "radiorange",
-            "range",
-            0,
-            32767,
+            crate::btech::SensorDisplay::Scan,
         ),
     ] {
         contract::bind(
@@ -247,24 +230,49 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             public,
             lua.create_function(move |lua, args: mlua::MultiValue| {
                 admit(lua, &args)?;
-                let value = integer(
+                let range = integer(
                     args.get(1).cloned().unwrap_or(Value::Nil),
-                    value_label,
-                    min,
-                    max,
+                    "range",
+                    0,
+                    i64::from(crate::btech::MAX_SENSOR_RANGE),
                     2,
                 )?;
                 let scripts = crate::Scripts::services(lua)?;
                 let id = unit(lua, &scripts.world(), args[0].clone())?;
-                zero(crate::btech::set_administrative_scalar(
+                zero(crate::btech::set_sensor_range(
                     &mut scripts.world_mut(),
                     id,
-                    label,
-                    value as f64,
+                    display,
+                    range as u8,
                 ))
             })?,
         )?;
     }
+    contract::bind(
+        lua,
+        native,
+        "unit_set_radio_range_contract",
+        "unit",
+        "set_radio_range",
+        lua.create_function(|lua, args: mlua::MultiValue| {
+            admit(lua, &args)?;
+            let range = integer(
+                args.get(1).cloned().unwrap_or(Value::Nil),
+                "range",
+                0,
+                32767,
+                2,
+            )?;
+            let scripts = crate::Scripts::services(lua)?;
+            let id = unit(lua, &scripts.world(), args[0].clone())?;
+            zero(crate::btech::set_administrative_scalar(
+                &mut scripts.world_mut(),
+                id,
+                "radiorange",
+                range as f64,
+            ))
+        })?,
+    )?;
     contract::bind(
         lua,
         native,

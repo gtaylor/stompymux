@@ -111,14 +111,16 @@ pub(super) struct BlastEffects {
     pub pilot_notices: Vec<PilotNotice>,
 }
 
-/// Finish every packet before heat, preserving the blast cell's rear-armor selector.
+/// Finish every packet before heat. Torso hits strike rear armor only when this occupant's own
+/// facing puts the blast behind it: each unit in a hex resolves its own attack direction from
+/// the line to the attacker (Tactical Operations: Advanced Rules p. 150).
 pub(super) fn resolve(
     world: &mut World,
     id: ObjectId,
     request: BlastDamage,
-    rear: &mut bool,
     rules: FallRules,
 ) -> Result<BlastEffects> {
+    let rear = request.arc == HitArc::Rear;
     ensure!(
         request.packet_size > 0,
         "Blast packet size must be positive"
@@ -147,7 +149,7 @@ pub(super) fn resolve(
                 attacker: None,
                 class: request.class,
             },
-            *rear,
+            rear,
             rules,
         )?;
         impact.append_feedback(&mut effects.pilot_notices, effects.notices.len());

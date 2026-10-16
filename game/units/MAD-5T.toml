@@ -19,8 +19,8 @@ armor = 23
 omit = ["hand_actuator"]
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-8", item = "IS.LargePulseLaser", modes = ["OnTC"] },
-    { at = 9, item = "IS.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "7-8", item = "IS.LargePulseLaser" },
+    { at = 9, item = "IS.MediumPulseLaser" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -29,8 +29,8 @@ armor = 23
 omit = ["hand_actuator"]
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-8", item = "IS.LargePulseLaser", modes = ["OnTC"] },
-    { at = 9, item = "IS.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "7-8", item = "IS.LargePulseLaser" },
+    { at = 9, item = "IS.MediumPulseLaser" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -46,7 +46,7 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = "4-9", item = "IS.RotaryAC/5", modes = ["OnTC"] },
+    { at = "4-9", item = "IS.RotaryAC/5" },
     { at = "10-11", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
     { at = 12, item = "Case" },
 ]

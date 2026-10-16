@@ -317,7 +317,6 @@ pub fn inspection_fire_modes(flags: &[String]) -> Vec<i32> {
         ("RocketFired", 1048576),
         ("Rotary_ThreeShot", 2097152),
         ("Rotary_FiveShot", 4194304),
-        ("OnTC", 16),
     ];
     MODES
         .iter()

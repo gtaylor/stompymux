@@ -120,14 +120,18 @@ async fn weight_report_permissions_literal_names_and_output_rollback() {
                 .collect(),
         };
         for critical in criticals {
-            if let Some(name) = critical.equipment.strip_prefix("Ammo_") {
-                critical.data = "0".into();
-                // Only machine guns may carry half-ton lots (TechManual p. 48).
-                if Weapon::parse(name).unwrap().allows_half_ton_bins()
-                    && !critical.modes.iter().any(|mode| mode == "Halfton")
-                {
+            let Some(name) = critical.equipment.strip_prefix("Ammo_") else {
+                continue;
+            };
+            critical.data = "0".into();
+            // Only machine guns may carry half-ton lots, which list the rounds the lot holds
+            // (TechManual p. 57); every other bin is left empty.
+            let weapon = Weapon::parse(name).unwrap();
+            if weapon.allows_half_ton_bins() {
+                if !critical.modes.iter().any(|mode| mode == "Halfton") {
                     critical.modes.push("Halfton".into());
                 }
+                critical.data = (weapon.profile().ammunition_per_ton / 2).to_string();
             }
         }
         template.create(&mut world, unit).unwrap();

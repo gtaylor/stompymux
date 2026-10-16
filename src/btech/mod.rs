@@ -270,30 +270,29 @@ pub use geometry::{Range, unit_elevation, unit_range};
 pub use stompymux_map::{HexCoordinate, Point};
 
 pub use stompymux_unit_construction::{
-    AMMUNITION_PART_OFFSET, ARTILLERY_MAPSHEET_HEXES, AmmunitionAdjustment, AmmunitionBin,
-    AmmunitionMode, CriticalDefinition, CriticalLocation, DamageClass, Engine, FireMode, Gyro,
-    InspectionArmor, InspectionCritical, InspectionPart, InspectionWeapon, MassItem, MechChassis,
-    MechLoadout, MechMass, MechSection, MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part,
-    PartForm, PartKind, PartNames, PartPrices, PhysicalBattleValue, RangeBracket, RawMovement,
-    RawSectionCode, RawTemplate, RawUnitClass, ResolvedLoadout, SectionDefinition, System,
-    SystemContext, SystemCritical, TechBase, Technology, TemplateCheck, TemplateRegistryCache,
-    UnitTemplate, VEHICLE_SECTION_SLOT_LIMIT, VehicleCriticalLocation, VehicleEngine,
-    VehicleLoadout, VehicleMass, VehicleMaterial, VehicleMovement, VehiclePowerplant,
-    VehicleSection, VehicleTemplate, WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount,
-    WeaponProfile, WeaponRange, administrative_technology, administrative_template_movement,
-    administrative_template_tonnage, armor_mass, cargo_space_mass, check_template, edit_special,
-    engine_mass, finalize_raw_load_specials, flag_spells_technology, half_ton,
-    inspect_raw_template_armor, inspect_raw_template_criticals, inspect_raw_template_engine,
-    inspect_raw_template_weapons, inspection_ammunition_modes, inspection_canonical_mech_internal,
-    inspection_compatible_template, inspection_compatible_vehicle_template,
-    inspection_configured_technology, inspection_configured_technology_attributes,
-    inspection_engine_rating, inspection_fire_modes, inspection_normalized_jump_speed,
-    inspection_raw_part, inspection_template_part, inspection_vehicle_engine_rating,
-    inspection_vehicle_engine_values, mixed_technology_flag, one_shot_mass, parse_template_speed,
-    part_abbreviation, part_catalogue, part_names, part_price, part_short_name,
-    power_amplifier_mass, rated_output, raw_default_mech_criticals, raw_template_base_cost,
-    read_resolved_raw_template, read_resolved_template, read_template_document,
-    read_template_speed, reflective_armor_slots, resolve_template_path,
+    AMMUNITION_PART_OFFSET, ARTILLERY_MAPSHEET_HEXES, AmmunitionBin, AmmunitionMode, CARGO_TONS,
+    CriticalDefinition, CriticalLocation, DamageClass, Engine, FireMode, Gyro, InspectionArmor,
+    InspectionCritical, InspectionPart, InspectionWeapon, MassItem, MechChassis, MechLoadout,
+    MechMass, MechSection, MechTemplate, PART_ID_LIMIT, ParsedTemplate, Part, PartForm, PartKind,
+    PartNames, PartPrices, PhysicalBattleValue, RangeBracket, RawMovement, RawSectionCode,
+    RawTemplate, RawUnitClass, ResolvedLoadout, SectionDefinition, System, SystemContext,
+    SystemCritical, TechBase, Technology, TemplateCheck, TemplateRegistryCache, UnitTemplate,
+    VEHICLE_SECTION_SLOT_LIMIT, VehicleCriticalLocation, VehicleEngine, VehicleLoadout,
+    VehicleMass, VehicleMaterial, VehicleMovement, VehiclePowerplant, VehicleSection,
+    VehicleTemplate, WEAPON_PART_IDS, WaterRanges, Weapon, WeaponMount, WeaponProfile, WeaponRange,
+    administrative_technology, administrative_template_movement, administrative_template_tonnage,
+    armor_mass, cargo_mass, check_template, edit_special, engine_mass, finalize_raw_load_specials,
+    flag_spells_technology, half_ton, inspect_raw_template_armor, inspect_raw_template_criticals,
+    inspect_raw_template_engine, inspect_raw_template_weapons, inspection_ammunition_modes,
+    inspection_canonical_mech_internal, inspection_compatible_template,
+    inspection_compatible_vehicle_template, inspection_configured_technology,
+    inspection_configured_technology_attributes, inspection_engine_rating, inspection_fire_modes,
+    inspection_normalized_jump_speed, inspection_raw_part, inspection_template_part,
+    inspection_vehicle_engine_rating, inspection_vehicle_engine_values, mixed_technology_flag,
+    one_shot_mass, parse_template_speed, part_abbreviation, part_catalogue, part_names, part_price,
+    part_short_name, power_amplifier_mass, rated_output, raw_default_mech_criticals,
+    raw_template_base_cost, read_resolved_raw_template, read_resolved_template,
+    read_template_document, read_template_speed, reflective_armor_slots, resolve_template_path,
     resolve_template_path_bytes_cached, resolve_template_path_cached, strip_name_prefix,
     structure_mass, system_slot_mass, template_base_cost, unit_metadata, validate_radio_attributes,
     validate_unit_metadata, vehicle_template_base_cost, write_template, write_template_speed,
@@ -647,7 +646,10 @@ mod weapon_launch;
 
 mod woodland;
 pub use woodland::TerrainIgnition;
-pub use woodland::{WoodlandClearing, WoodlandEffect, WoodlandIntent, resolve_woodland_effect};
+pub use woodland::{
+    WoodlandClearing, WoodlandEffect, WoodlandIntent, WoodlandReduction, reduce_woodland,
+    resolve_woodland_effect,
+};
 
 mod woodland_map;
 pub use woodland_map::{WoodlandChange, apply_woodland_clearing};
@@ -748,7 +750,10 @@ pub use radio_targeted::{TargetedRadioReport, resolve_targeted_radio, send_targe
 pub(crate) mod scan;
 mod scan_summary;
 mod scan_weapons;
-pub use scan::{SensorRanges, scan_hex_unit_action, scan_unit, scan_unit_action};
+pub use scan::{
+    DEFAULT_LONG_RANGE_SENSOR_RANGE, DEFAULT_SENSOR_RANGE, SensorRanges, scan_hex_unit_action,
+    scan_unit, scan_unit_action, set_sensor_range,
+};
 
 mod scan_building;
 pub use scan_building::{BuildingScan, scan_building, scan_building_action};
@@ -1194,11 +1199,6 @@ mod hit_direction;
 
 mod target_hit;
 
-pub(crate) mod weapon_settings;
-pub use weapon_settings::{
-    WeaponSettings, WeaponValues, set_weapon_battle_value, set_weapon_recycle,
-};
-
 mod inventory;
 pub use inventory::{
     InventoryEntry, inventory, part_cost, set_inventory_quantity, set_inventory_quantity_action,
@@ -1299,7 +1299,7 @@ pub(crate) mod forms_report;
 pub use stock_selection::part_forms;
 
 mod operator_settings;
-pub use operator_settings::{edit_skill_threshold, edit_weapon_settings};
+pub use operator_settings::edit_skill_threshold;
 
 mod combat_operator;
 
@@ -1356,6 +1356,7 @@ pub use orbital_drop_launch::{OrbitalInsertion, initiate_action as initiate_orbi
 
 mod cockpit_links;
 mod hardware_settings;
+pub use hardware_settings::{MAX_SENSOR_RANGE, SensorDisplay};
 pub(crate) mod unit_fields;
 mod unit_identity;
 pub use unit_fields::{UnitField, UnitFieldReport, set_unit_field_action, view_unit_fields_action};

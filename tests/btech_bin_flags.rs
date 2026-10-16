@@ -92,7 +92,8 @@ fn bin_hotload_filling_and_artemis_remain_independent() {
     let bin = &unit.loadout().unwrap().ammunition[0];
     assert!(bin.hotload && !bin.half_ton);
     assert_eq!(bin.capacity, 24);
-    assert_eq!(bin.rounds, 24);
+    // A short bin loads the rounds it lists; construction never refills it.
+    assert_eq!(bin.rounds, 7);
     assert_eq!(bin.mode, AmmunitionMode::Artemis);
     template
         .sections

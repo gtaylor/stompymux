@@ -18,8 +18,8 @@ armor = 31
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-8", item = "HeatSink" },
-    { at = "9-10", item = "IS.LargePulseLaser", modes = ["OnTC"] },
-    { at = 11, item = "IS.MediumPulseLaser", modes = ["OnTC"] },
+    { at = "9-10", item = "IS.LargePulseLaser" },
+    { at = 11, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.right_arm]
@@ -27,9 +27,9 @@ armor = 31
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-8", item = "HeatSink" },
-    { at = "9-10", item = "IS.LargePulseLaser", modes = ["OnTC"] },
-    { at = 11, item = "IS.MediumPulseLaser", modes = ["OnTC"] },
-    { at = 12, item = "IS.SmallPulseLaser", modes = ["OnTC"] },
+    { at = "9-10", item = "IS.LargePulseLaser" },
+    { at = 11, item = "IS.MediumPulseLaser" },
+    { at = 12, item = "IS.SmallPulseLaser" },
 ]
 
 [sections.left_torso]
@@ -37,7 +37,7 @@ armor = 30
 rear = 10
 slots = [
     { at = "4-9", item = "HeatSink" },
-    { at = "10-12", item = "IS.ERPPC", modes = ["OnTC"] },
+    { at = "10-12", item = "IS.ERPPC" },
 ]
 
 [sections.right_torso]
@@ -45,7 +45,7 @@ armor = 30
 rear = 10
 slots = [
     { at = "4-11", item = "TargetingComputer" },
-    { at = 12, item = "IS.MediumPulseLaser", modes = ["OnTC"] },
+    { at = 12, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.center_torso]
@@ -53,7 +53,7 @@ armor = 44
 rear = 15
 slots = [
     { at = 11, item = "JumpJet" },
-    { at = 12, item = "IS.MediumPulseLaser", modes = ["RearMount", "OnTC"] },
+    { at = 12, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
 ]
 
 [sections.left_leg]
@@ -71,5 +71,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser", modes = ["RearMount", "OnTC"] },
+    { at = 4, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
 ]

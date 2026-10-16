@@ -1,4 +1,13 @@
-//! LuaLS contract blocks for the btech unit surface.
+//|---Set the unit's `scan` reach in hexes (0 to 127), replacing the 25-hex default.
+//|---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0 turns
+//|---scanning off. Read the current reach back from `btech.unit.state(unit).sensor_ranges.scan`.
+|---Set the unit's tactical display reach in hexes (0 to 127), replacing the 25-hex default.
+//|---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0 turns
+//|---the display off. Read the current reach back from `btech.unit.state(unit).sensor_ranges.tactical`.
+|---Set the unit's long-range display reach in hexes (0 to 127), replacing the 50-hex default.
+//|---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0 turns
+//|---the display off. Read the current reach back from `btech.unit.state(unit).sensor_ranges.long_range`.
+! LuaLS contract blocks for the btech unit surface.
 // This file is read by lua-type-updater. Keep declarations next to the bindings.
 
 // lua-types-begin btech 00034
@@ -1887,9 +1896,9 @@
 // lua-types-end
 
 // lua-types-begin btech 00506
-//|---Set cargo space and the maximum carried tonnage.
+//|---Set the cargo bay's capacity and the maximum carried tonnage.
 //|---@param unit DbRef|Object
-//|---@param space integer
+//|---@param space integer Cargo bay capacity in half tons.
 //|---@param maximum_tons integer
 //|function btech_unit.set_cargo_capacity(unit, space, maximum_tons) end
 // lua-types-end
@@ -1909,21 +1918,27 @@
 // lua-types-end
 
 // lua-types-begin btech 00509
-//|---Set the long-range sensor ceiling in hexes.
+//|---Set the unit's long-range display reach in hexes (0 to 127), replacing the 50-hex default.
+//|---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+//|---turns the display off. Read it back from `btech.unit.state(unit).sensor_ranges.long_range`.
 //|---@param unit DbRef|Object
 //|---@param range integer
 //|function btech_unit.set_long_range_sensor_range(unit, range) end
 // lua-types-end
 
 // lua-types-begin btech 00510
-//|---Set the tactical sensor range in hexes.
+//|---Set the unit's tactical display reach in hexes (0 to 127), replacing the 25-hex default.
+//|---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+//|---turns the display off. Read it back from `btech.unit.state(unit).sensor_ranges.tactical`.
 //|---@param unit DbRef|Object
 //|---@param range integer
 //|function btech_unit.set_tactical_range(unit, range) end
 // lua-types-end
 
 // lua-types-begin btech 00511
-//|---Set the scan range in hexes.
+//|---Set the unit's `scan` reach in hexes (0 to 127), replacing the 25-hex default.
+//|---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+//|---turns scanning off. Read it back from `btech.unit.state(unit).sensor_ranges.scan`.
 //|---@param unit DbRef|Object
 //|---@param range integer
 //|function btech_unit.set_scan_range(unit, range) end

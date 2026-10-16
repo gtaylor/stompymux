@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 4
 heat_sinks = 16
 radio = 4
-cargo_space = 0
 max_suits = 0
 
 [construction]
@@ -17,15 +16,15 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 24
 slots = [
-    { at = 5, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = 5, item = "IS.ERMediumLaser" },
     { at = "6-11", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 24
 slots = [
-    { at = "5-7", item = "IS.ERPPC", modes = ["OnTC"] },
-    { at = 8, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "5-7", item = "IS.ERPPC" },
+    { at = 8, item = "IS.ERMediumLaser" },
     { at = "9-11", item = "HeatSink" },
 ]
 
@@ -34,8 +33,8 @@ armor = 24
 rear = 8
 slots = [
     { at = "1-6", item = "TargetingComputer" },
-    { at = "7-8", item = "IS.LargeLaser", modes = ["OnTC"] },
-    { at = 9, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "7-8", item = "IS.LargeLaser" },
+    { at = 9, item = "IS.ERMediumLaser" },
     { at = "10-12", item = "HeatSink" },
 ]
 
@@ -43,8 +42,8 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = "1-2", item = "IS.LargeLaser", modes = ["OnTC"] },
-    { at = 3, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = 3, item = "IS.ERMediumLaser" },
     { at = "4-9", item = "HeatSink" },
     { at = "10-11", item = "EndoSteel" },
 ]

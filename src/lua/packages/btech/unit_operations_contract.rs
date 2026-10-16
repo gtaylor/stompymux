@@ -305,7 +305,6 @@ fn fire_mode_names(bits: &[i32]) -> Vec<String> {
                 2 => Some("Disabled"),
                 4 => Some("Broken"),
                 8 => Some("Damaged"),
-                16 => Some("OnTC"),
                 32 => Some("RearMount"),
                 64 => Some("Hotload"),
                 128 => Some("Halfton"),
@@ -599,14 +598,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let request = table(arg(&args, 1), 2)?;
             contract::check_options(
                 &request,
-                &[
-                    "part",
-                    "section",
-                    "slots",
-                    "rear_facing",
-                    "targeting_computer",
-                    "one_shot",
-                ],
+                &["part", "section", "slots", "rear_facing", "one_shot"],
                 2,
             )?;
             let part = parts_contract::check_part(contract::field(&request, "part")?, 2, records)?
@@ -652,9 +644,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             let mut modes = Vec::new();
             if optional_bool(&request, "rear_facing", 2)? {
                 modes.push("RearMount".into())
-            }
-            if optional_bool(&request, "targeting_computer", 2)? {
-                modes.push("OnTC".into())
             }
             if optional_bool(&request, "one_shot", 2)? {
                 modes.push("OneShot".into())

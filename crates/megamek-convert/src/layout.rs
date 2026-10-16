@@ -1,5 +1,6 @@
 //! Turns one location's resolved MegaMek equipment into template slots, linking each Artemis
-//! or MRM Apollo fire-control system to the missile launcher it guides.
+//! or MRM Apollo fire-control system to the missile launcher it guides and each machine gun
+//! array to the machine guns of its size class in the location.
 use crate::draft::Slot;
 use crate::equipment::Critical;
 use anyhow::{Result, bail};
@@ -35,6 +36,7 @@ pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<Vec<Option<Slot
     }
     let mut launchers = launcher_starts(criticals, span, |_| true);
     let mut mrm_launchers = launcher_starts(criticals, span, |weapon| weapon.is_mrm());
+    let mut guns = gun_starts(criticals);
     let mut slots = vec![None; criticals.len().max(usize::from(SECTION_SLOTS))];
     // The launcher the first slot of a two-slot Mech Artemis V installation claimed.
     let mut artemis_v: Option<usize> = None;
@@ -62,6 +64,10 @@ pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<Vec<Option<Slot
         if !matches!(critical, Critical::ArtemisV) {
             artemis_v = None;
         }
+        let links = match critical {
+            Critical::MachineGunArray(_, class) => claim_guns(&mut guns, index, *class),
+            _ => Vec::new(),
+        };
         slots[index] = Some(Slot {
             item,
             rounds: match critical {
@@ -69,6 +75,7 @@ pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<Vec<Option<Slot
                 _ => None,
             },
             link: link.map(|slot| slot as u8),
+            links,
             modes: critical.modes(),
         });
     }
@@ -102,6 +109,40 @@ fn launcher_starts(
         index += run;
     }
     starts
+}
+
+/// Zero-based slots of every machine gun in a section, with its size class.
+fn gun_starts(
+    criticals: &[Critical],
+) -> Vec<(usize, stompymux_unit_construction::MachineGunClass)> {
+    criticals
+        .iter()
+        .enumerate()
+        .filter_map(|(index, critical)| match critical {
+            Critical::Weapon { weapon, .. } => Some((index, weapon.machine_gun_class()?)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Take up to four unclaimed machine guns of an array's size class in its section, nearest
+/// the array first, as the one-based slots its `links` list in slot order (TechManual
+/// p. 228). Construction refuses an array left with fewer than two.
+fn claim_guns(
+    guns: &mut Vec<(usize, stompymux_unit_construction::MachineGunClass)>,
+    array: usize,
+    class: stompymux_unit_construction::MachineGunClass,
+) -> Vec<u8> {
+    let mut matching: Vec<_> = guns
+        .iter()
+        .filter(|(_, gun)| *gun == class)
+        .map(|(slot, _)| *slot)
+        .collect();
+    matching.sort_by_key(|slot| (slot.abs_diff(array), *slot));
+    matching.truncate(*stompymux_unit_construction::ARRAY_GUNS.end());
+    guns.retain(|(slot, _)| !matching.contains(slot));
+    matching.sort_unstable();
+    matching.into_iter().map(|slot| slot as u8 + 1).collect()
 }
 
 /// Take the nearest launcher before an Artemis slot, as MegaMek lists Artemis after its
@@ -139,6 +180,32 @@ mod tests {
         criticals.push(parse("ISMediumLaser").unwrap());
         assert!(super::slots(&criticals, WeaponSpan::Catalogue).is_err());
         assert_eq!(super::slots(&[], WeaponSpan::Single).unwrap().len(), 12);
+    }
+
+    /// A machine gun array links up to four machine guns of its own size class in its
+    /// section, nearest first, wherever they sit, even past a vehicle location's twelfth item
+    /// (TechManual p. 228).
+    #[test]
+    fn machine_gun_arrays_link_guns_of_their_class() {
+        let mut names = vec!["ISMediumLaser"; 12];
+        names.extend([
+            "Machine Gun",
+            "Light Machine Gun",
+            "Machine Gun",
+            "ISMGA",
+            "Machine Gun",
+            "Machine Gun",
+            "Machine Gun",
+            "ISLMGA",
+            "Light Machine Gun",
+        ]);
+        let criticals: Vec<_> = names.iter().map(|name| parse(name).unwrap()).collect();
+        let slots = slots(&criticals, WeaponSpan::Single).unwrap();
+        let standard = slots[15].as_ref().unwrap();
+        assert_eq!(standard.item, "IS.MGA");
+        assert_eq!(standard.links, [13, 15, 17, 18]);
+        let light = slots[19].as_ref().unwrap();
+        assert_eq!(light.links, [14, 21]);
     }
 
     /// An Apollo system links to the MRM launcher in its section, passing over other

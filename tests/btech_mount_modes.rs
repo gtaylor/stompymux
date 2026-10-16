@@ -52,7 +52,6 @@ fn primary_only_modes_resolve_like_repeated_modes() {
         (Weapon::Lbx10, vec!["LBX/Cluster", "RearMount"]),
         (Weapon::Rocket20, vec!["OneShot", "OneShot_Used"]),
         (Weapon::Lrm20, vec!["OneShot"]),
-        (Weapon::LargeLaser, vec!["OnTC"]),
     ] {
         let source = template(weapon, &modes);
         let loadout = MechLoadout::resolve(&source).unwrap();

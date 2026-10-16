@@ -47,8 +47,8 @@ specials = ["SearchLight"]
 | `max_speed`, `jump_speed` | number | Top and jumping speeds in km/h, for the few unconstructed units, such as battle armor, whose speed is not whole movement points. Give either the speed or its movement points, not both. Mechs and vehicles must state `walk_mp`. |
 | `heat_sinks` | integer | Installed heat sinks, counted as the record sheet counts them ("Heat Sinks: 17 (34)" is 17), not the heat they dissipate. The `[construction]` `heat_sinks` kind sets the dissipation: one heat per single sink, two per double or laser sink (TechManual p. 52; Tactical Operations: Advanced Units & Equipment). Without it a mech carries the engine's ten free sinks. Vehicles mount single heat sinks only, at least one per point of energy weapon heat. |
 | `radio`, `radio_type`, `radio_range` | integer | Electronics. |
-| `tac_range`, `lrs_range`, `scan_range` | integer | Sensor ranges. |
-| `si`, `fuel`, `cargo_space`, `max_suits`, `max_ton`, `carrier_maximum_tonnage` | integer | Class-specific capacities. |
+| `si`, `fuel`, `max_suits`, `max_ton`, `carrier_maximum_tonnage` | integer | Class-specific capacities. |
+| `cargo_tons` | number | The standard cargo bay's capacity in tons, a whole number of half tons; the bay weighs its capacity (TechManual p. 239). |
 | `template_speed` | number | Movement baseline written when a saved unit's speed was edited. |
 | `unit_era`, `unit_tro` | string | Era and technical readout identity. |
 | `specials` | array of strings | Feature flags such as `SearchLight`, `CargoTech` or `ECM`, one word each, matched case-insensitively against the known flags. |
@@ -58,6 +58,12 @@ Unknown keys, unknown flags and values of the wrong type are errors.
 `specials` cannot list a flag that a construction choice owns (for example
 `XLEngine_Tech` or `Clan`) or `FlipArms`, which a biped mech has exactly when
 neither arm carries a lower or hand actuator.
+
+Sensor reach is not a template field. Every unit sees 25 hexes on its tactical
+display and in `scan`, and 50 hexes on its long-range display. A Mech's first
+sensor critical halves each reach and its second removes it. Scripts change one unit's
+reach at runtime with `btech.unit.set_tactical_range`,
+`btech.unit.set_long_range_sensor_range` and `btech.unit.set_scan_range`.
 
 ## Construction
 
@@ -198,6 +204,10 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   sinks and power amplifiers take none. The item slots are the whole
   vehicle's budget: a location has no slot limit of its own, so a turret may
   list more than twelve entries.
+- A targeting computer is a single `TargetingComputer` entry and one item slot,
+  whatever it weighs: the tonnage of the direct-fire weapons (not machine guns,
+  flamers or missiles) divided by 4, or 5 for a Clan computer, rounded up to
+  the full ton (TechManual p. 238).
 - Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or
   triple-strength myomer. A VTOL's turret is a chin turret (TacOps AUE p. 160).
 - Everything together may not weigh more than the vehicle. Unspent tonnage is
@@ -215,9 +225,9 @@ mass calculated.
 
 A vehicle carries cargo in two ways (TechManual p. 239, Transport Bays):
 
-- `cargo_space` is the standard cargo bay, the only bay the game loads stock
-  into. With the `CargoTech` special it is counted in hundredths of a ton
-  (`cargo_space = 400` is a 4-ton bay); it weighs what it holds and takes one
+- `cargo_tons` is the standard cargo bay, the only bay the game loads stock
+  into, stated in tons and half tons (`cargo_tons = 4` is a 4-ton bay). It
+  weighs what it holds whatever the unit's specials and takes one
   item slot.
 - A `[transport_bays]` table lists every other bay. The game has no infantry
   units and does not load anything into these bays, so they are construction
@@ -309,8 +319,9 @@ Each slot entry places one item in a run of consecutive critical slots:
 | --- | --- |
 | `at` | A one-based slot such as `12`, or an inclusive run such as `"4-6"`. Mech sections hold slots 1 to 12; vehicle and VTOL locations have no per-location limit (slots 1 to 255), since only the vehicle's item slots limit its equipment. |
 | `item` | Equipment name. |
-| `rounds` | Ammunition only: rounds in the bin. |
+| `rounds` | Ammunition only, and required: the rounds the bin is loaded with, at most what a ton holds. A machine gun bin is a full ton or a half-ton lot marked with the `Halfton` mode, and lists exactly what that lot holds: 200 or 100 rounds of standard or light machine gun ammunition, 100 or 50 heavy (TechManual pp. 57, 107). Construction never refills a bin or infers its size. |
 | `link` | Non-ammunition only. Required on every Artemis IV, Artemis V and `ApolloFCS` entry: the one-based slot of the first critical of the launcher it guides, in the same section. |
+| `links` | Machine gun arrays (`MGA`) only, and required on each: the one-based first slots of the two to four machine guns it links, in the same section. |
 | `modes` | Ammunition flags or weapon modes, such as `["RearMount"]` or `["Inferno"]`. |
 
 A run fills every slot with the same item, so `{ at = "1-3", item = "HeatSink" }`
@@ -335,6 +346,22 @@ Construction refuses a controller without a link, one whose link is not the
 first slot of an applicable launcher in its section, and two controllers that
 share a launcher. A Mech's Artemis V fills two slots, both linking the same
 launcher; each vehicle entry guides its own launcher.
+
+A machine gun array names the guns it links the same way, with `links` listing
+the first slots of two to four machine guns of one size class (light, standard
+or heavy) in its own section (TechManual p. 228). The guns may sit anywhere in
+the section, before or after the array:
+
+```toml
+slots = [
+    { at = "1-3", item = "IS.MachineGun" },
+    { at = 4, item = "IS.MGA", links = [1, 2, 3] },
+]
+```
+
+Construction refuses an array without links, with fewer than two or more than
+four, one that links anything but a machine gun's first slot in its section or
+guns of two size classes, and two arrays that share a gun.
 
 ## Split mounts
 
@@ -383,8 +410,8 @@ converted. Mixed-technology units set `mixed_tech = true` and keep a Clan or
 Inner Sphere engine, structure or armor through the `[construction]` technology
 keys. A CASE II, ECM suite, active probe, MASC, targeting computer, Artemis IV
 or jump jet of the other technology base keeps its base as an `IS.` or `CL.`
-prefix on its item. A machine gun array is written after the machine guns it
-links, which it finds in the slots directly above it.
+prefix on its item. A machine gun array lists in `links` up to four machine
+guns of the size class its MegaMek name gives, in its location, nearest first.
 
 Every converted unit must load and construct exactly as the game would, so the
 tool refuses anything stompymux cannot field instead of dropping it: other unit
@@ -398,8 +425,8 @@ MegaMek's vehicle body location has no counterpart, so body ammunition is
 placed beside a weapon it feeds and other body equipment in the first location
 with room. Vehicle heat sinks are set to cover energy weapon heat with single heat
 sinks, and vehicles with endo steel, composite or reinforced structure are
-refused. A `cargobay` becomes the standard cargo bay (`cargo_space` in
-hundredths of a ton, with `CargoTech`); `troopspace` becomes an
+refused. A `cargobay` becomes the standard cargo bay (`cargo_tons`, with
+`CargoTech` so the unit can load stock); `troopspace` becomes an
 `infantry_compartment`, `infantrybay` lines become infantry bays counted in
 platoon bays, and liquid, insulated, refrigerated and livestock bays, which
 MegaMek sizes by capacity, become `[transport_bays]` weights. Battle armor bays

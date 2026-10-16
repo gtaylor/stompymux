@@ -4,10 +4,7 @@ movement = "biped"
 tons = 50
 walk_mp = 5
 jump_mp = 5
-heat_sinks = 10
 radio = 4
-cargo_space = 0
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -18,23 +15,22 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 16
-omit = ["hand_actuator"]
 slots = [
-    { at = "6-11", item = "EndoSteel" },
+    { at = "5-10", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-10", item = "IS.GaussRifle", modes = ["OnTC"] },
+    { at = "4-10", item = "IS.GaussRifle" },
 ]
 
 [sections.left_torso]
 armor = 19
 rear = 5
 slots = [
-    { at = "5-12", item = "EndoSteel" },
+    { at = "4-11", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -42,28 +38,27 @@ armor = 19
 rear = 5
 slots = [
     { at = "4-5", item = "Ammo_IS.GaussRifle", rounds = 8 },
-    { at = "6-9", item = "TargetingComputer" },
-    { at = 12, item = "Case" },
+    { at = "6-9", item = "IS.TargetingComputer" },
 ]
 
 [sections.center_torso]
 armor = 24
 rear = 7
 slots = [
-    { at = 11, item = "JumpJet" },
-    { at = 12, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = 11, item = "IS.JumpJet" },
+    { at = 12, item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_leg]
-armor = 20
+armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
-armor = 20
+armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

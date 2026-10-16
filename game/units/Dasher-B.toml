@@ -26,7 +26,7 @@ armor = 3
 slots = [
     { at = 5, item = "Ecm" },
     { at = "6-7", item = "CL.MachineGun" },
-    { at = 8, item = "Ammo_CL.MachineGun", rounds = 100 },
+    { at = 8, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 9, item = "EndoSteel" },
     { at = 10, item = "FerroFibrous" },
 ]

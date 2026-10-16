@@ -471,10 +471,12 @@ fn resolve_shutdown(
             report
                 .notices
                 .extend(super::broadcast::observer_notices(world, id, "falls down!"));
+            // A failed shutdown check is an ordinary fall: tonnage/10 for falling no levels
+            // (Total Warfare pp. 60 and 68).
             let fall = if character_unit {
-                super::fall::resolve_character_fall(world, id, 0, fall_rules)?
+                super::fall::resolve_character_fall(world, id, 1, fall_rules)?
             } else {
-                super::fall::resolve_zero_fall(world, id, fall_rules)?
+                super::resolve_fall(world, id, 1, fall_rules)?
             };
             report.notices.push(Notice {
                 unit: id,

@@ -1,5 +1,5 @@
 //! Construction mass arithmetic in 1/1024-ton units: engines, structure, armor, systems and
-//! cargo space, shared by Mech and vehicle mass calculations.
+//! cargo bays, shared by Mech and vehicle mass calculations.
 use super::{MechSection, System, WeaponMount};
 use anyhow::{Context, Result, ensure};
 
@@ -123,6 +123,22 @@ pub fn system_mass(
     .unwrap_or(u32::MAX)
 }
 
+/// Whole tons a targeting computer weighs: the tonnage of the direct-fire weapons it serves
+/// (not machine guns, flamers, artillery or missiles) divided by 4 for an Inner Sphere computer
+/// or 5 for a Clan one, rounded up to the full ton (TechManual p. 238). A Mech computer fills
+/// one critical slot per ton; a vehicle computer is one item.
+pub fn targeting_computer_tons(
+    weapons: impl IntoIterator<Item = super::Weapon>,
+    clan: bool,
+) -> u32 {
+    let direct_fire: u32 = weapons
+        .into_iter()
+        .filter(|weapon| weapon.is_direct_fire())
+        .map(super::Weapon::mass)
+        .sum();
+    direct_fire.div_ceil(1024 * if clan { 5 } else { 4 })
+}
+
 /// A one-shot launcher weighs half a ton more than the launcher it adapts; rocket launchers are
 /// built as one-shot weapons and their catalogue mass already counts it.
 pub fn one_shot_mass<L>(mount: &super::WeaponMount<L>) -> u32 {
@@ -196,31 +212,53 @@ pub fn engine_mass(rating: u32) -> u32 {
     u32::from(HALF_TONS[((rating - 10) / 5) as usize]) * 512
 }
 
-/// Construction mass for authored cargo space, shared by Mechs and vehicles.
-/// This measures the cargo installation; loose stock is accounted for separately.
-pub fn cargo_space_mass(space: Option<&str>, carrier: bool, cargo: bool) -> Result<u32> {
-    let space = space
-        .map(|value| value.parse::<u32>().context("Invalid cargo space"))
-        .transpose()?
-        .unwrap_or(0);
-    let divisor = if carrier {
-        1000.0
-    } else if cargo {
-        100.0
-    } else {
-        500.0
+/// The template attribute stating the standard cargo bay's capacity in tons.
+pub const CARGO_TONS: &str = "cargo_tons";
+
+/// Mass of a standard cargo bay holding `tons`, shared by Mechs and vehicles: a bay weighs its
+/// capacity, a ton per ton (TechManual p. 239, Transport Bay table), built in half-ton steps
+/// like every other component. `None` is no bay. Loose stock aboard is accounted for
+/// separately.
+pub fn cargo_mass(tons: Option<&str>) -> Result<u32> {
+    let Some(text) = tons else {
+        return Ok(0);
     };
-    let mass = (space as f32 / divisor * 1024.0).trunc();
+    let tons: f64 = text
+        .trim()
+        .parse()
+        .with_context(|| format!("Invalid cargo tonnage {text:?}"))?;
     ensure!(
-        f64::from(mass) <= f64::from(u32::MAX),
-        "Cargo space mass overflow"
+        tons.is_finite() && tons >= 0.0,
+        "Cargo tonnage must be a nonnegative number of tons, not {text}"
     );
-    Ok(mass as u32)
+    let halves = tons * 2.0;
+    ensure!(
+        halves.fract() == 0.0,
+        "A cargo bay is built in half-ton steps; {text} tons is not one (TechManual p. 239)"
+    );
+    ensure!(
+        halves <= f64::from(u32::MAX / 512),
+        "Cargo tonnage {text} overflows"
+    );
+    Ok(halves as u32 * 512)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A cargo bay weighs its capacity in half-ton steps, whatever technology flags the unit
+    /// carries (TechManual p. 239).
+    #[test]
+    fn cargo_bays_weigh_their_capacity() {
+        assert_eq!(cargo_mass(None).unwrap(), 0);
+        assert_eq!(cargo_mass(Some("0")).unwrap(), 0);
+        assert_eq!(cargo_mass(Some("6")).unwrap(), 6 * 1024);
+        assert_eq!(cargo_mass(Some("2.5")).unwrap(), 5 * 512);
+        for refused in ["1.2", "-1", "NaN", "inf", "six", "9e99"] {
+            assert!(cargo_mass(Some(refused)).is_err(), "{refused}");
+        }
+    }
 
     #[test]
     fn fixed_point_rounding_and_engine_catalog_boundaries() {

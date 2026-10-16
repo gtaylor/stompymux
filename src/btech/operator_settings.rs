@@ -13,36 +13,6 @@ fn audit(scripts: &Scripts, message: String) -> Result<()> {
     Ok(())
 }
 
-/// Change weapon settings through the shared typed control and audit recycle edits.
-pub fn edit_weapon_settings(
-    scripts: &Scripts,
-    actor: ObjectId,
-    name: &str,
-    value: i64,
-    recycle: bool,
-) -> Result<super::WeaponValues> {
-    let mut candidate = scripts.world().clone();
-    let values = if recycle {
-        super::set_weapon_recycle(&mut candidate, actor, name, value)?
-    } else {
-        super::set_weapon_battle_value(&mut candidate, actor, name, value)?
-    };
-    if recycle {
-        let weapon = super::Weapon::parse(name)?;
-        audit(
-            scripts,
-            format!(
-                "VRT for {} set to {} by #{}",
-                weapon.name(),
-                values.recycle_seconds,
-                actor.0
-            ),
-        )?;
-    }
-    *scripts.world_mut() = candidate;
-    Ok(values)
-}
-
 /// Change a skill threshold with canonical naming and atomic audit admission.
 pub fn edit_skill_threshold(
     scripts: &Scripts,

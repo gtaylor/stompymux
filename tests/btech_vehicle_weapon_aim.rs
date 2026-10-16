@@ -304,9 +304,11 @@ async fn mech_and_vehicle_aim_share_vehicle_target_terms_without_spending_dice()
     assert_eq!(world.btech, before);
 }
 
-/// Ammunition-fed flamer variants receive the same computer assistance on either target chassis.
+/// A vehicle's targeting computer assists its direct-fire weapons only: ammunition-fed flamers
+/// and machine guns beside an assisted large laser gain nothing, against either target chassis
+/// (TechManual p. 238; Total Warfare p. 143).
 #[tokio::test]
-async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss() {
+async fn vehicle_targeting_computer_assists_only_eligible_weapons() {
     for weapon in [
         Weapon::HeavyFlamer,
         Weapon::VehicleFlamer,
@@ -315,10 +317,21 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
     ] {
         let template = include_str!("../game/units/Demolisher.toml")
             .replace(
-                r#"item = "IS.AC/20" }"#,
-                &format!(r#"item = "{}", modes = ["OnTC"] }}"#, weapon.name()),
+                r#"{ at = "1-2", item = "IS.AC/20" }"#,
+                &format!(
+                    r#"{{ at = 1, item = "IS.LargeLaser" }},
+    {{ at = 2, item = "{}" }}"#,
+                    weapon.name()
+                ),
             )
-            .replace("Ammo_IS.AC/20", &format!("Ammo_{}", weapon.name()))
+            .replace(
+                r#"{ at = "3-6", item = "Ammo_IS.AC/20", rounds = 5 }"#,
+                &format!(
+                    r#"{{ at = 3, item = "Ammo_{}", rounds = {} }}"#,
+                    weapon.name(),
+                    weapon.profile().ammunition_per_ton
+                ),
+            )
             .replace(
                 "[sections.front_side]\n",
                 "[sections.front_side]\nslots = [{ at = 1, item = \"TargetingComputer\" }]\n",
@@ -332,8 +345,10 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
         refresh_battle_contacts(&mut world, &[shooter]).unwrap();
         for target in [ids[0], ids[3]] {
             let before = world.btech.clone();
-            let assisted = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
-            assert_eq!(assisted.targeting_computer, -1);
+            let laser = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
+            assert_eq!(laser.targeting_computer, -1);
+            let unassisted = battle_aim_modifiers(&world, shooter, target, 1, 6, rules()).unwrap();
+            assert_eq!(unassisted.targeting_computer, 0, "{weapon:?}");
             assert_eq!(world.btech, before);
             let mut damaged = world.clone();
             destroy_battle_vehicle_critical(
@@ -347,10 +362,7 @@ async fn explicit_vehicle_links_share_targeting_computer_aim_and_critical_loss()
             .unwrap();
             let unaided = battle_aim_modifiers(&damaged, shooter, target, 0, 6, rules()).unwrap();
             assert_eq!(unaided.targeting_computer, 0);
-            assert_eq!(
-                unaided.subtotal(),
-                assisted.subtotal().map(|value| value + 1)
-            );
+            assert_eq!(unaided.subtotal(), laser.subtotal().map(|value| value + 1));
         }
         world.validate(&config).unwrap();
         persistence::save(&config.database(), &world).await.unwrap();

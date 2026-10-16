@@ -13,7 +13,6 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.unit.fire_modes.DISABLED` | `2` |  |
 | `btech.unit.fire_modes.BROKEN` | `4` |  |
 | `btech.unit.fire_modes.DAMAGED` | `8` |  |
-| `btech.unit.fire_modes.TARGETING_COMPUTER` | `16` |  |
 | `btech.unit.fire_modes.REAR_MOUNT` | `32` |  |
 | `btech.unit.fire_modes.HOTLOAD` | `64` |  |
 | `btech.unit.fire_modes.HALF_TON` | `128` |  |

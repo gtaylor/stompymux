@@ -3,7 +3,7 @@ class = "vehicle"
 movement = "hover"
 tons = 50
 walk_mp = 8
-cargo_space = 800
+cargo_tons = 3
 max_suits = 0
 max_ton = 4
 
@@ -38,7 +38,7 @@ slots = [
 armor = 16
 
 [sections.turret]
-armor = 20
+armor = 17
 slots = [
     { at = 1, item = "IS.SRM-6" },
     { at = "2-3", item = "IS.MachineGun" },

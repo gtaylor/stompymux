@@ -655,10 +655,6 @@ pub(super) static FIRE_MODES: Catalog = Catalog {
             value: 8,
         },
         Entry {
-            name: "TARGETING_COMPUTER",
-            value: 16,
-        },
-        Entry {
             name: "REAR_MOUNT",
             value: 32,
         },

@@ -6,7 +6,7 @@ use crate::btech_vehicle_apollo::{engagement, rules, seed_roll, shooters};
 use stompymux_rs::*;
 
 /// Front slots of three machine guns, the array linking them and their ammunition.
-const FRONT: &str = "{ at = \"1-3\", item = \"IS.MachineGun\" },\n    { at = 4, item = \"IS.MGA\" },\n    { at = 5, item = \"Ammo_IS.MachineGun\", rounds = 200 },";
+const FRONT: &str = "{ at = \"1-3\", item = \"IS.MachineGun\" },\n    { at = 4, item = \"IS.MGA\", links = [1, 2, 3] },\n    { at = 5, item = \"Ammo_IS.MachineGun\", rounds = 200 },";
 
 /// The array module's slot in the front.
 const ARRAY: VehicleCriticalLocation = VehicleCriticalLocation {

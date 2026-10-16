@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 4
 heat_sinks = 12
 radio = 4
-cargo_space = 0
 specials = ["OmniMech_Tech"]
 
 [construction]

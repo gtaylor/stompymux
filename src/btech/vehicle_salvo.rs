@@ -166,6 +166,7 @@ pub(super) fn resolve_with_context_in_candidate(
             indirect: request.indirect,
             apollo: request.apollo,
             array: request.array,
+            unit_without_heat: true,
         },
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;

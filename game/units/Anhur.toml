@@ -5,7 +5,7 @@ tons = 30
 walk_mp = 8
 heat_sinks = 13
 radio = 5
-cargo_space = 700
+cargo_tons = 7
 specials = ["CargoTech"]
 
 [construction]

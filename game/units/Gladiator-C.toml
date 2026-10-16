@@ -27,7 +27,7 @@ slots = [
 armor = 32
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-10", item = "CL.UltraAC/20", modes = ["OnTC"] },
+    { at = "3-10", item = "CL.UltraAC/20" },
     { at = 11, item = "FerroFibrous" },
 ]
 
@@ -36,7 +36,7 @@ armor = 20
 rear = 10
 slots = [
     { at = "3-6", item = "Masc" },
-    { at = 7, item = "CL.ERSmallLaser", modes = ["OnTC"] },
+    { at = 7, item = "CL.ERSmallLaser" },
 ]
 
 [sections.right_torso]

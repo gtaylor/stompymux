@@ -20,11 +20,13 @@ pub struct VehicleHit {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum VehicleMotiveHit {
-    /// Reduce maximum speed by this many movement points (10.75 kph each).
+    /// Reduce Cruising MP by this many points and refigure flank from it (Total Warfare
+    /// pp. 193, 197).
     SpeedLoss {
         movement_points: u8,
     },
-    /// Halve the remaining movement.
+    /// Halve the remaining Cruising MP, rounding up, and refigure flank from it (Total
+    /// Warfare p. 193).
     HalveSpeed,
     Immobilize,
 }

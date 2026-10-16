@@ -138,23 +138,33 @@ fn towing_mass(material: u32, salvage: bool, hot_myomer: bool, carrier: bool) ->
     mass
 }
 
-/// Authored cargo capacity shared by load admission and administrative inspection.
+/// The cargo bay's capacity in hundredths of a ton, as the `cargospace` field states it, shared
+/// by load admission and administrative inspection; zero without a bay.
 pub(super) fn cargo_capacity(world: &World, id: ObjectId) -> u32 {
-    let cargo_space = world
+    let tons = world
         .btech
         .constructed_units()
         .get(&id)
-        .and_then(|unit| unit.definition().attributes.get("cargo_space"))
+        .and_then(|unit| unit.definition().attributes.get(super::CARGO_TONS))
         .or_else(|| {
             world
                 .btech
                 .vehicles()
                 .get(&id)
-                .and_then(|unit| unit.definition().attributes.get("cargo_space"))
+                .and_then(|unit| unit.definition().attributes.get(super::CARGO_TONS))
         });
-    cargo_space
-        .and_then(|space| space.parse::<u32>().ok())
-        .unwrap_or(0)
+    // Half-ton steps of 512/1024 ton are exactly 50 hundredths each.
+    super::cargo_mass(tons.map(String::as_str)).map_or(0, |mass| mass / 512 * 50)
+}
+
+/// The `cargo_tons` text for a cargo bay of `hundredths` of a ton. A bay is built in half-ton
+/// steps (TechManual p. 239), so the capacity must be a multiple of 50.
+pub(super) fn cargo_tons(hundredths: u32) -> Result<String> {
+    ensure!(
+        hundredths.is_multiple_of(50),
+        "Cargo capacity is set in half tons: a multiple of 50 hundredths of a ton (TechManual p. 239)"
+    );
+    Ok((f64::from(hundredths) / 100.0).to_string())
 }
 
 /// Edit installation capacity without discarding stock; the caller owns transaction rollback.
@@ -169,10 +179,11 @@ pub(super) fn set_cargo_capacity(
         .parse::<i32>()
         .context("Expected a nonnegative 32-bit cargo capacity")?;
     ensure!(capacity >= 0, "Cargo capacity cannot be negative");
+    let tons = cargo_tons(capacity as u32)?;
     crate::btech::with_unit_mut!(
         world.btech.unit_mut(id).context("Unit is unavailable")?,
         |unit| {
-            unit.set_cargo_space(capacity as u32);
+            unit.set_cargo_tons(tons);
         }
     );
     // Evaluate construction even when zero capacity bypasses ordinary load penalties.

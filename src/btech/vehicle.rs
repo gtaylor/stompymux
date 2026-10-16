@@ -64,6 +64,9 @@ pub struct Vehicle {
     /// Heading held on the pavement or ice the vehicle is crossing, for the skid rule.
     #[serde(default)]
     pub(super) slick: super::SlickTrack,
+    /// Levels climbed or descended into the current hex, charged while crossing it.
+    #[serde(default)]
+    pub(super) level_entry: Option<super::LevelEntry>,
     #[serde(default)]
     contract_loadout: bool,
     #[serde(default)]
@@ -263,6 +266,8 @@ struct VehicleRecord {
     bogged_down: bool,
     #[serde(default)]
     slick: super::SlickTrack,
+    #[serde(default)]
+    level_entry: Option<super::LevelEntry>,
     definition: VehicleTemplate,
     sections: BTreeMap<VehicleSection, SectionState>,
     ammunition: Vec<u16>,
@@ -510,6 +515,7 @@ super::saved_parts::saved_parts!(Vehicle {
         hide_elapsed,
         bogged_down,
         slick,
+        level_entry,
         inferno_remaining,
         unjam,
         pod_removal,
@@ -975,6 +981,7 @@ impl Vehicle {
             visibility: super::Visibility::default(),
             bogged_down: false,
             slick: Default::default(),
+            level_entry: None,
             experience: Default::default(),
             friendly_fire_safety: false,
             auto_fall: false,
@@ -1163,21 +1170,13 @@ impl Vehicle {
         {
             return;
         }
-        match hit {
-            super::VehicleMotiveHit::Immobilize => self.immobilized = true,
-            super::VehicleMotiveHit::SpeedLoss { movement_points } => {
-                self.propulsion.lower(f64::from(movement_points) * 10.75);
-                self.motive_speed_loss = (self.motive_speed_loss
-                    + f64::from(movement_points) * 10.75)
-                    .min(self.definition.max_speed);
-            }
-            // Heavy motive damage halves the remaining movement (TW p. 193).
-            super::VehicleMotiveHit::HalveSpeed => {
-                let remaining = (self.definition.max_speed - self.motive_speed_loss).max(0.0);
-                self.propulsion.lower(remaining / 2.0);
-                self.motive_speed_loss =
-                    (self.motive_speed_loss + remaining / 2.0).min(self.definition.max_speed);
-            }
+        if hit == super::VehicleMotiveHit::Immobilize {
+            self.immobilized = true;
+        } else {
+            let remaining = (self.definition.max_speed - self.motive_speed_loss).max(0.0);
+            let lost = super::vehicle_motive_effects::flank_speed_lost(remaining, hit);
+            self.propulsion.lower(lost);
+            self.motive_speed_loss = (self.motive_speed_loss + lost).min(self.definition.max_speed);
         }
         let maximum = self.maximum_speed();
         if maximum == 0.0 {
@@ -1312,17 +1311,30 @@ impl Vehicle {
     }
 
     /// Restore a rejected terrain entry while preserving any fall-induced heading and damage.
+    /// `entry` is the level change the vehicle was still paying for in the restored hex.
     pub(super) fn restore_ground_position(
         &mut self,
         position: super::Position,
         point: super::Point,
         height: i16,
         under_bridge: bool,
+        entry: Option<super::LevelEntry>,
     ) {
         let mut motion = self.motion.expect("Placed vehicle has motion");
         motion.point = point;
         self.update_motion(motion, position, under_bridge);
         self.ground_elevation = Some(f64::from(height));
+        self.level_entry = entry;
+    }
+
+    /// Movement points still being paid for the levels climbed or descended into the current
+    /// hex: a ground vehicle pays two MP per level (Total Warfare pp. 48, 52), charged like the
+    /// hex's own terrain cost.
+    pub fn level_entry_cost(&self) -> u8 {
+        match (self.level_entry, self.position()) {
+            (Some(entry), Some(position)) => entry.cost_at(position).saturating_mul(2),
+            _ => 0,
+        }
     }
 
     /// Stop translation and turning while preserving the current point and facing.
@@ -1406,13 +1418,13 @@ impl Vehicle {
         &self.definition
     }
 
-    /// Construction baseline used by the shared attacker movement calculation.
+    /// Construction speed baseline that damage recalculation rebuilds propulsion from.
     pub fn template_speed(&self) -> f64 {
         super::read_template_speed(&self.definition.attributes, self.definition.max_speed)
             .expect("validated template speed")
     }
 
-    /// Set the independent firing-movement baseline without changing propulsion.
+    /// Set the recorded construction speed without changing propulsion.
     pub(super) fn set_template_speed(&mut self, speed: f64) {
         super::write_template_speed(&mut self.definition.attributes, speed);
     }
@@ -1454,11 +1466,12 @@ impl Vehicle {
         self.definition.restate_engine_rating();
     }
 
-    /// Update the owned cargo installation; the shared load service reconciles motion.
-    pub(super) fn set_cargo_space(&mut self, value: u32) {
+    /// Update the owned cargo bay's capacity in tons; the shared load service reconciles
+    /// motion.
+    pub(super) fn set_cargo_tons(&mut self, tons: String) {
         self.definition
             .attributes
-            .insert("cargo_space".into(), value.to_string());
+            .insert(super::CARGO_TONS.into(), tons);
     }
 
     /// Edit identity through shared validation without rebuilding or resetting unit state.
@@ -1667,6 +1680,7 @@ impl Vehicle {
             visibility: record.visibility,
             bogged_down: record.bogged_down,
             slick: record.slick,
+            level_entry: record.level_entry,
             definition: record.definition,
             sections: record.sections,
             ammunition: record.ammunition,
@@ -2041,7 +2055,7 @@ impl Vehicle {
                         <= if self.weapon_failures.contains_key(index) {
                             120
                         } else {
-                            super::weapon_settings::MAX_RECYCLE_SECONDS
+                            super::readiness::MAX_RECYCLE_SECONDS
                         }
                     && !self.critical_unavailable(mount.criticals[0]))),
             "Invalid vehicle weapon recycle timer"

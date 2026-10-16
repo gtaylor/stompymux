@@ -306,8 +306,7 @@ mod tests {
         let (_dir, mut server) = fixture().await;
         let (capture, _guard) = crate::logging::Capture::install("info");
         let before = server.scripts.world().clone();
-        crate::edit_battle_weapon_settings(&server.scripts, ObjectId(1), "IS.SmallLaser", 17, true)
-            .unwrap();
+        crate::edit_battle_skill_threshold(&server.scripts, ObjectId(1), "PilBip", 11).unwrap();
         assert_eq!(server.scripts.effects.checkpoint().records.len(), 1);
         server
             .scripts

@@ -28,7 +28,6 @@ no_list: true
 | [`btech.tactical`](tactical/) | Filtered friendly-force snapshots and atomic unit intentions. |
 | [`btech.template`](template/) | Unit-template inspection and displays. |
 | [`btech.unit`](unit/) | Live-unit state, combat queries, and mutations. |
-| [`btech.weapon`](weapon/) | Runtime weapon settings. |
 
 
 ## Constants

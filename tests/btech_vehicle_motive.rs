@@ -42,6 +42,8 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     (dir, config, world, id, map)
 }
 
+/// Two Cruising MP of motive damage leave the 5/8 truck at 3/5 (Total Warfare pp. 53, 193):
+/// flank, and the reverse limit derived from it, drop to the refigured 5 MP.
 #[tokio::test]
 async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
     for reverse in [false, true] {
@@ -65,16 +67,11 @@ async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
         let vehicle = &world.btech.vehicles()[&id];
         assert_eq!(vehicle.definition(), original.definition());
         assert_eq!(vehicle.sections(), original.sections());
-        assert_eq!(vehicle.motive_speed_loss(), 21.5);
-        assert_eq!(vehicle.maximum_speed(), 64.5);
-        assert_eq!(
-            vehicle.motion().unwrap().speed,
-            if reverse { -43.0 } else { 64.5 }
-        );
-        assert_eq!(
-            vehicle.motion().unwrap().desired_speed,
-            if reverse { -43.0 } else { 64.5 }
-        );
+        let limit = if reverse { -53.75 * 2.0 / 3.0 } else { 53.75 };
+        assert_eq!(vehicle.motive_speed_loss(), 32.25);
+        assert_eq!(vehicle.maximum_speed(), 53.75);
+        assert!((vehicle.motion().unwrap().speed - limit).abs() < 1e-9);
+        assert!((vehicle.motion().unwrap().desired_speed - limit).abs() < 1e-9);
         let before = world.btech.clone();
         assert!(set_battle_speed(&mut world, id, ObjectId(1), desired).is_err());
         assert_eq!(world.btech, before);
@@ -97,10 +94,10 @@ async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
                 .motion()
                 .unwrap()
                 .desired_speed,
-            64.5
+            53.75
         );
         let state: (f64,f64,bool) = scripts.eval_callback(&format!("local u=btech.unit.state({}); return u.maximum_speed,u.motive_speed_loss,u.immobilized",id.0)).unwrap();
-        assert_eq!(state, (64.5, 21.5, false));
+        assert_eq!(state, (53.75, 32.25, false));
     }
 }
 

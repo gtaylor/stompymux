@@ -4,7 +4,6 @@ movement = "biped"
 tons = 40
 walk_mp = 6
 radio = 4
-cargo_space = 0
 
 [construction]
 tech_base = "inner_sphere"

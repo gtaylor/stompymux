@@ -49,10 +49,6 @@ impl MechTemplate {
                     value.eq_ignore_ascii_case("Biped") || value.eq_ignore_ascii_case("Quad"),
                     "Unsupported movement type"
                 ),
-                "tac_range" | "lrs_range" | "scan_range" => ensure!(
-                    value.parse::<u8>().is_ok_and(|range| range <= 127),
-                    "Invalid sensor range {field}"
-                ),
                 "unit_era"
                 | "unit_tro"
                 | "radio_range"
@@ -62,7 +58,9 @@ impl MechTemplate {
                 | "administrative_unit_type"
                 | "administrative_movement_type"
                 | "carrier_maximum_tonnage" => {}
-                "cargo_space" => ensure!(value.parse::<u32>().is_ok(), "Invalid cargo space"),
+                super::CARGO_TONS => {
+                    super::cargo_mass(Some(value))?;
+                }
                 "max_suits" => ensure!(
                     value.parse::<u16>() == Ok(0),
                     "Suit capacity is unsupported"
@@ -202,18 +200,19 @@ impl MechTemplate {
             );
         }
         self.validate_cockpit_placement(loadout)?;
-        // A declared cargo installation must weigh out; live mass is measured from the same rule.
-        if self
-            .attributes
-            .get("cargo_space")
-            .is_some_and(|value| value != "0")
-        {
-            super::cargo_space_mass(
-                self.attributes.get("cargo_space").map(String::as_str),
-                self.has_special("Carrier_Tech"),
-                self.has_special("CargoTech"),
-            )?;
-        }
+        let chassis = self.chassis()?;
+        loadout.check_machine_gun_bins(
+            |location| {
+                format!(
+                    "{} slot {}",
+                    chassis.section_name(location.section),
+                    location.slot + 1
+                )
+            },
+            "TechManual p. 57",
+        )?;
+        // A declared cargo bay must weigh out; live mass is measured from the same rule.
+        super::cargo_mass(self.attributes.get(super::CARGO_TONS).map(String::as_str))?;
         self.validate_construction(loadout)
     }
 }

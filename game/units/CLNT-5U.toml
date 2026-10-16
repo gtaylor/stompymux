@@ -6,10 +6,6 @@ walk_mp = 6
 jump_mp = 6
 heat_sinks = 12
 radio = 4
-tac_range = 30
-lrs_range = 60
-scan_range = 30
-cargo_space = 0
 max_suits = 0
 
 [construction]

@@ -145,7 +145,7 @@ impl AimModifiers {
 }
 
 impl Mech {
-    /// Jumping and stabilization precede ground speed and the template's walking threshold.
+    /// Jumping and stabilization precede ground speed and the current walking threshold.
     pub fn attacker_movement_modifier(&self) -> u8 {
         if self.airborne() {
             return 3;
@@ -159,13 +159,10 @@ impl Mech {
         {
             return penalty;
         }
-        // The template's walking MP, two higher while hot myomer is active (Total Warfare
-        // p. 139), separates walking from running fire.
-        let mut envelope = super::SpeedEnvelope::from_running(self.template_speed());
-        if self.triple_myomer_active() {
-            envelope = envelope.with_walking_mp_delta(2.0);
-        }
-        ground_attacker_movement(self.motion(), envelope.walking)
+        // The current walking MP separates walking from running fire (Total Warfare
+        // p. 106): leg damage and heat lower it (p. 159) and hot myomer raises it (p. 139), so
+        // a heat-slowed Mech moving faster than its reduced walking speed fires as running.
+        ground_attacker_movement(self.motion(), self.walking_speed())
     }
 
     /// Firing when down (Total Warfare p. 113; Tactical Operations p. 83): +2 for a prone
@@ -263,7 +260,8 @@ impl Mech {
     }
 }
 
-/// Ground firing penalties use the construction's walking threshold, including after motive damage.
+/// Ground firing penalties: +1 at or below the current walking (cruising) speed and +2 above it
+/// (Total Warfare p. 106).
 fn ground_attacker_movement(motion: Option<super::Motion>, walking: f64) -> u8 {
     let Some(motion) = motion else {
         return 0;
@@ -279,8 +277,10 @@ fn ground_attacker_movement(motion: Option<super::Motion>, walking: f64) -> u8 {
 
 impl super::Vehicle {
     /// Ground speed and optional hull-turn penalty; turret rotation does not add a movement penalty.
+    /// Cruising is judged against the current cruising speed, so motive damage that lowers it
+    /// turns a formerly cruising speed into flank fire (Total Warfare pp. 106 and 193).
     pub fn attacker_movement_modifier(&self) -> u8 {
-        ground_attacker_movement(self.motion(), self.template_speed() * 2.0 / 3.0)
+        ground_attacker_movement(self.motion(), self.maximum_speed() * 2.0 / 3.0)
     }
 }
 
@@ -403,12 +403,12 @@ pub(super) fn target_motion(speed: f64) -> i8 {
     6
 }
 
-/// Perceive the target afresh; coordinate spotting replaces the perception term with zero.
+/// Perceive the target afresh; a TAG-guided shot replaces the perception term with zero.
 pub(super) fn perception_aim(
     world: &World,
     viewer: ObjectId,
     target: ObjectId,
-    coordinate_spotting: bool,
+    tag_guided: bool,
 ) -> Result<Option<PerceptionAim>> {
     let attacker = super::scanner::scanner_unit(world, viewer).context("Shooter is unavailable")?;
     if attacker.power != super::Power::Running {
@@ -452,7 +452,7 @@ pub(super) fn perception_aim(
     Ok(Some(PerceptionAim {
         channel,
         direct_fire,
-        modifier: if coordinate_spotting { 0 } else { modifier },
+        modifier: if tag_guided { 0 } else { modifier },
     }))
 }
 
@@ -545,6 +545,11 @@ pub(super) fn aim_modifiers_for_source(
         distance,
     )?;
     let mut modifiers = weapon_modifiers(attacker, weapon_index, mount, distance, gunnery)?;
+    let indirect = indirect.map(|aim| IndirectAim {
+        tag_guided: target_terms.tag_guided,
+        ..aim
+    });
+    modifiers.indirect = indirect;
     let submerged = super::weapon_geometry::apply_water_range(
         world,
         shooter,
@@ -556,16 +561,11 @@ pub(super) fn aim_modifiers_for_source(
         world,
         shooter,
         super::network_range::NetworkTarget::Unit(target),
-        mount.weapon,
+        (mount.weapon, attacker.ammunition_mode(weapon_index)?),
         submerged,
         &mut modifiers,
     )?;
     super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut modifiers)?;
-    let indirect = indirect.map(|aim| IndirectAim {
-        tag_guided: target_terms.tag_guided,
-        ..aim
-    });
-    modifiers.indirect = indirect;
     modifiers.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     modifiers.range = modifiers
         .range
@@ -586,9 +586,9 @@ pub(super) fn aim_modifiers_for_source(
         world,
         indirect.map_or(shooter, |aim| aim.spotter),
         target,
-        indirect.is_some_and(|aim| {
-            aim.tag_guided || super::spotter::coordinate_target(world, aim.spotter)
-        }),
+        // The spotter's terrain modifiers apply however it designated the target (Total
+        // Warfare p. 111); only a TAG-guided shot drops them.
+        indirect.is_some_and(|aim| aim.tag_guided),
     )?;
     Ok(modifiers)
 }

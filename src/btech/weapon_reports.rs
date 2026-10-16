@@ -200,7 +200,7 @@ pub fn weapon_specifications(world: &World, id: ObjectId) -> Result<Vec<WeaponSp
                 short_range: profile.short_range,
                 medium_range: profile.medium_range,
                 long_range: weapon.effective_range_for_ammunition(ammunition),
-                recycle_seconds: world.btech.weapon_settings.recycle_seconds(weapon),
+                recycle_seconds: profile.recycle_seconds,
             }
         })
         .collect())

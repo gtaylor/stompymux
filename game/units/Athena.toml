@@ -18,7 +18,7 @@ armor = 26
 [sections.front_side]
 armor = 38
 slots = [
-    { at = "1-2", item = "CL.GaussRifle", modes = ["OnTC"] },
+    { at = "1-2", item = "CL.GaussRifle" },
     { at = "3-6", item = "Ammo_CL.GaussRifle", rounds = 8 },
     { at = 7, item = "CL.LRM-10" },
     { at = 8, item = "Ammo_CL.LRM-10", rounds = 12 },
@@ -27,13 +27,13 @@ slots = [
 [sections.aft_side]
 armor = 24
 slots = [
-    { at = "1-6", item = "TargetingComputer" },
+    { at = 1, item = "TargetingComputer" },
 ]
 
 [sections.turret]
 armor = 30
 slots = [
-    { at = "1-2", item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "1-2", item = "CL.ERMediumLaser" },
     { at = "3-4", item = "CL.MachineGun" },
     { at = 5, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]

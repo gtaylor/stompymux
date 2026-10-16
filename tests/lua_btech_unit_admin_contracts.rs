@@ -403,6 +403,63 @@ async fn registered_default_admin_materializes_only_after_validated_update_and_p
     assert!(restored.btech.constructed_units().get(&id).is_some());
 }
 
+/// Every unit starts at the shared 25/50/25 hex sensor reach; a script replaces each display's
+/// reach independently, reads it back from the unit state, and survives a save and load.
+/// Out-of-range values are refused without changing the unit.
+#[tokio::test(flavor = "current_thread")]
+async fn sensor_range_overrides_replace_defaults_and_read_back() {
+    let (_d, config, s) = isolated_scripts().await;
+    let unit = stompymux_rs::ObjectId(14);
+    let template =
+        stompymux_rs::MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml"))
+            .unwrap();
+    stompymux_rs::create_battle_unit(&mut s.world_mut(), unit, template).unwrap();
+    s.inspect_lua().globals().set("unit_id", unit.0).unwrap();
+    let read = r#"
+      local r=assert(btech.unit.state(unit_id)).sensor_ranges
+      return r.tactical,r.long_range,r.scan
+    "#;
+    assert_eq!(
+        s.eval_callback::<(u8, u8, u8)>(read).unwrap(),
+        (
+            stompymux_rs::btech::DEFAULT_SENSOR_RANGE,
+            stompymux_rs::btech::DEFAULT_LONG_RANGE_SENSOR_RANGE,
+            stompymux_rs::btech::DEFAULT_SENSOR_RANGE,
+        )
+    );
+    s.eval_callback::<()>(
+        r#"
+      local u=mux.world.object(unit_id);local api=btech.unit
+      assert(select('#',api.set_tactical_range(u,40))==0)
+      assert(select('#',api.set_long_range_sensor_range(u,90))==0)
+      assert(select('#',api.set_scan_range(u,0))==0)
+      local ok,e=mux.error.pcall(api.set_scan_range,u,128)
+      assert(not ok and e.code=='mux.arg.invalid' and e.detail.argument==2,'scan-high')
+      ok,e=mux.error.pcall(api.set_tactical_range,u,-1)
+      assert(not ok and e.code=='mux.arg.invalid' and e.detail.argument==2,'tactical-low')
+    "#,
+    )
+    .unwrap();
+    assert_eq!(s.eval_callback::<(u8, u8, u8)>(read).unwrap(), (40, 90, 0));
+    let expected = stompymux_rs::btech::SensorRanges {
+        tactical: 40,
+        long_range: 90,
+        scan: 0,
+    };
+    assert_eq!(
+        s.world().btech.unit(unit).unwrap().sensor_ranges(),
+        expected
+    );
+    let world_snapshot = s.world().clone();
+    stompymux_rs::persistence::save(&config.database(), &world_snapshot)
+        .await
+        .unwrap();
+    let restored = stompymux_rs::persistence::load(&config.database())
+        .await
+        .unwrap();
+    assert_eq!(restored.btech.unit(unit).unwrap().sensor_ranges(), expected);
+}
+
 /// btech.unit.unregister is a documented Rust extension with no C Lua callable:
 /// the reference exposes teardown only through the native @btech/unregister
 /// command, and the binding calls that command's shared teardown helper. It
@@ -628,10 +685,11 @@ async fn c_schema_unit_configuration_normalizes_empty_invalid_and_stale_rows() {
         0.0,
     )
     .unwrap();
+    // One half ton of cargo bay.
     stompymux_rs::btech::set_administrative_cargo(
         &mut s.world_mut(),
         stompymux_rs::ObjectId(14),
-        4,
+        1,
         20,
     )
     .unwrap();

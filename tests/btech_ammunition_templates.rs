@@ -1,4 +1,5 @@
-//! Construction-only ammunition normalization and separation from persisted live ammunition.
+//! Template ammunition bins: explicit lot sizes and round counts, and their separation from
+//! persisted live ammunition.
 use crate::support;
 use stompymux_rs::*;
 
@@ -19,10 +20,12 @@ fn definition(weapon: Weapon, quantity: u16, flags: &[&str]) -> MechTemplate {
     template
 }
 
-/// Template quantities select a size and fill it once, including zero, odd capacities and
-/// overfilled bins. Only machine guns infer or accept half-ton lots (TechManual p. 48).
+/// A bin's lot size and rounds are what the template says: construction never infers a
+/// half-ton lot or refills a bin. Only machine guns take half-ton lots, and a machine gun bin
+/// lists exactly the rounds its lot holds; any other bin is loaded with up to a ton's rounds
+/// (TechManual p. 57).
 #[test]
-fn ammunition_template_normalization_boundaries() {
+fn ammunition_template_bin_boundaries() {
     for weapon in Weapon::ALL
         .iter()
         .copied()
@@ -39,8 +42,15 @@ fn ammunition_template_normalization_boundaries() {
                     vec![]
                 };
                 let template = definition(weapon, quantity, &flags);
-                if explicit_half && !half_lots {
-                    assert!(Mech::from_template(template).is_err(), "{weapon:?}");
+                let capacity = if explicit_half { half } else { full };
+                if (explicit_half && !half_lots)
+                    || quantity > capacity
+                    || (half_lots && quantity != capacity)
+                {
+                    assert!(
+                        Mech::from_template(template).is_err(),
+                        "{weapon:?} {quantity} {explicit_half}"
+                    );
                     continue;
                 }
                 let original = template.clone();
@@ -52,28 +62,19 @@ fn ammunition_template_normalization_boundaries() {
                 }
                 let lowercase_unit = Mech::from_template(lowercase).unwrap();
                 let unit = Mech::from_template(template).unwrap();
-                let expected_half = half_lots && (explicit_half || quantity <= half);
-                let capacity = if expected_half { half } else { full };
                 let loadout = unit.loadout().unwrap();
                 assert_eq!(lowercase_unit.loadout().unwrap(), loadout);
                 assert_eq!(lowercase_unit.ammunition(), unit.ammunition());
                 let bin = &loadout.ammunition[0];
-                assert_eq!(bin.half_ton, expected_half);
-                assert_eq!(bin.rounds, capacity);
+                assert_eq!(bin.half_ton, explicit_half);
+                assert_eq!(bin.rounds, quantity);
                 assert_eq!(bin.capacity, capacity);
-                assert_eq!(unit.ammunition(), [capacity]);
-                assert_eq!(
-                    original.sections[&MechSection::RightTorso].criticals[&0].data,
-                    quantity.to_string()
-                );
-                assert_eq!(
-                    unit.definition().sections[&MechSection::RightTorso].criticals[&0].data,
-                    capacity.to_string()
-                );
+                assert_eq!(unit.ammunition(), [quantity]);
+                assert_eq!(unit.definition(), &original);
             }
         }
     }
-    let unit = Mech::from_template(definition(Weapon::Lbx2, 1, &["LBX/Cluster"])).unwrap();
+    let unit = Mech::from_template(definition(Weapon::Lbx2, 45, &["LBX/Cluster"])).unwrap();
     assert_eq!(
         unit.loadout().unwrap().ammunition[0].mode,
         AmmunitionMode::Cluster
@@ -84,11 +85,12 @@ fn ammunition_template_normalization_boundaries() {
         vec!["UnknownBinFlag"],
         vec!["LBX/Cluster"],
     ] {
-        assert!(Mech::from_template(definition(Weapon::MachineGun, 1, &flags)).is_err());
+        assert!(Mech::from_template(definition(Weapon::MachineGun, 100, &flags)).is_err());
     }
 }
 
-/// Native/Lua construction normalize identically; callback rollback and restart never refill live bins.
+/// Native and Lua construction load a short bin as listed; callback rollback and restart never
+/// refill live bins.
 #[tokio::test(flavor = "current_thread")]
 async fn ammunition_template_native_lua_creation_and_empty_restart() {
     let (dir, config, mut world) = support::isolated_world().await;
@@ -134,8 +136,8 @@ async fn ammunition_template_native_lua_creation_and_empty_restart() {
         built.btech.constructed_units()[&id].definition(),
         scripted.btech.constructed_units()[&id].definition()
     );
-    assert_eq!(built.btech.constructed_units()[&id].ammunition(), [25]);
-    assert_eq!(scripted.btech.constructed_units()[&id].ammunition(), [25]);
+    assert_eq!(built.btech.constructed_units()[&id].ammunition(), [7]);
+    assert_eq!(scripted.btech.constructed_units()[&id].ammunition(), [7]);
     let bin = built.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
@@ -152,7 +154,7 @@ async fn ammunition_template_native_lua_creation_and_empty_restart() {
             .unwrap()
             .ammunition[0]
             .rounds,
-        25
+        7
     );
     assert_eq!(
         std::fs::read_to_string(dir.path().join("units/partial.toml")).unwrap(),

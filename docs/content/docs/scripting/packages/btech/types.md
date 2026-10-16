@@ -119,7 +119,6 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 - `initial_ammunition_mode`: `AmmunitionMode`
 - `initial_fire_mode`: `FireMode` — Template mode; live mode is reported by unit.weapons.
 - `rear_mount`: `boolean`
-- `on_targeting_computer`: `boolean` — Explicit authored link, separate from automatic eligibility.
 
 ## AmmunitionBin
 
@@ -135,6 +134,7 @@ Alias: `"normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|
 
 - `location`: `CriticalLocation`
 - `system`: `string` — Snake_case system identity.
+- `links`: `integer[]` — One-based first slots of the machine guns a machine gun array links in its location.
 
 ## MechLoadout
 
@@ -325,7 +325,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `map_slot`: `integer|nil` — Persisted battlefield membership order.
 - `aimed_section`: `AimSelection|nil` — Saved anatomy preference; independent of the current lock.
 - `target_lock`: `TargetLock|HexLock|nil`
-- `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits after sensor damage.
+- `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Current display and scan reach in hexes after script overrides and sensor damage.
 - `observer`: `boolean` — Administrator-assigned observer role.
 - `combat_safe`: `boolean` — Operator-imposed immunity to combat damage.
 - `weapons_hold`: `boolean` — Operator-imposed firing restriction; mechanical readiness is independent.
@@ -449,7 +449,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
 - `sensor_sweep`: `integer|nil` — This turn's 2d6 sensor sweep, once rolled.
-- `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Computer-derived hex limits.
+- `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Current display and scan reach in hexes after script overrides.
 - `aimed_section`: `AimSelection|nil` — Saved anatomy preference; independent of the current lock.
 - `target_lock`: `TargetLock|HexLock|nil` — Saved selection.
 - `artillery_adjustment`: `integer` — Saved correction for the selected artillery coordinate.
@@ -875,7 +875,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `damage`: `integer`
 - `hit`: `{section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean}`
-- `impact`: `table` — Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat rolls, searchlight_destroyed and remaining scenario effects.
+- `impact`: `table` — Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat roll, searchlight_destroyed and remaining scenario effects.
 - `pilot_injuries`: `table[]` — Applied tactical injuries and consciousness results.
 - `notices`: `{unit: integer, text: string}[]` — Already staged by unit.fire.
 - `balance`: `table[]` — Applied balance checks and any nested falls.
@@ -892,7 +892,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `map`: `integer`
 - `coordinate`: `HexCoordinate`
-- `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"}|{effect: "damage", total: integer}` — What the attack did to the woods; damage is the terrain factor spent so far.
+- `effect`: `{effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough", total: integer}|{effect: "damage", total: integer}` — What the attack did to the woods; total is the terrain factor spent so far against the growth the hex held before the attack.
 - `notices`: `Notice[]`
 
 ## StrayHit
@@ -1157,11 +1157,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `gatling_roll`: `integer|nil` — Preparation intensity, without an ammunition cap.
 - `partial_cover`: `boolean`
 
-## WeaponValues
-
-- `recycle_seconds`: `integer` — Effective runtime recycle time, from 1 through 127 seconds.
-- `battle_value`: `integer` — Effective runtime Battle Value, from 0 through 2147483647.
-
 ## InventoryEntry
 
 - `part_id`: `integer` — Stable game-directory part identifier.
@@ -1189,7 +1184,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `database`: `btech.database` — Explicit world checkpoints.
 - `cargo`: `table` — Cockpit stock reports and transfers.
 - `inventory`: `table` — Shared loose-parts stock.
-- `weapon`: `table` — Runtime weapon settings.
 - `character`: `table`
 - `template`: `table`
 - `map`: `table`
@@ -1202,13 +1196,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `tactical`: `BtechTacticalAPI` — Filtered group observations and atomic intentions.
 - `errors`: `BtechErrorCodes` — Structured btech error-code tree from mux.error.code_tree('btech').
 - `error`: `{codes: BtechErrorCodes}` — Error namespace; `codes` is the same tree as `errors`.
-
-## AmmunitionAdjustment
-
-- `location`: `CriticalLocation`
-- `supplied`: `integer` — Authored initial quantity.
-- `normalized`: `integer` — Initial quantity after construction normalization.
-- `inferred_half_ton`: `boolean` — Construction would infer a half-ton bin.
 
 ## TemplateCheck
 
@@ -1223,7 +1210,6 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `declared_engine_rating`: `integer|nil` — Rating the [construction] table declares; nil when derived.
 - `weapons`: `integer` — Resolved weapon count on success; zero on rejection.
 - `ammunition_bins`: `integer` — Resolved bin count on success; zero on rejection.
-- `ammunition_adjustments`: `AmmunitionAdjustment[]` — Changes on successful construction.
 
 ## ArtemisController
 
@@ -1742,7 +1728,6 @@ Alias: `PartDefinition|{id: integer}|integer|string`
 - `section`: `UnitSection`
 - `slots`: `integer[]` — Zero-based critical slots.
 - `rear_facing`: `boolean`
-- `targeting_computer`: `boolean`
 - `one_shot`: `boolean`
 
 ## AmmunitionConfiguration

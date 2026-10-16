@@ -185,38 +185,6 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
         });
     }
-    if matches!(
-        operation.to_ascii_lowercase().as_str(),
-        "setvrt" | "setwbv" | "weapon-settings"
-    ) {
-        let result = (|| -> Result<String> {
-            if operation.eq_ignore_ascii_case("weapon-settings") {
-                let weapon = super::Weapon::parse(argument.trim())?;
-                let values = ctx.scripts.world().btech.weapon_settings().get(weapon);
-                return Ok(format!(
-                    "{}: recycle {} seconds; Battle Value {}.",
-                    weapon.name(),
-                    values.recycle_seconds,
-                    values.battle_value
-                ));
-            }
-            let (name, value) = argument
-                .trim()
-                .split_once('=')
-                .or_else(|| argument.trim().rsplit_once(char::is_whitespace))
-                .context(
-                    "Usage: @btech setvrt <weapon> <seconds> or @btech setwbv <weapon> <value>",
-                )?;
-            let value: i64 = value.trim().parse().context("Expected an integer value")?;
-            let name = name.trim();
-            let recycle = operation.eq_ignore_ascii_case("setvrt");
-            super::weapon_settings::edit_command(ctx, name, value, recycle)
-        })();
-        return Ok(match result {
-            Ok(text) => CommandAction::CommitReply(text),
-            Err(error) => CommandAction::Report(CommandReport::Reply(format!("{error:#}"))),
-        });
-    }
     if operation.eq_ignore_ascii_case("skill-threshold") {
         let result = (|| -> Result<String> {
             if let Some((name, value)) = argument.trim().split_once('=') {
@@ -316,7 +284,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         report.name, report.reference
                     ));
                 }
-                let mut lines = vec![
+                let lines = [
                     format!(
                         "{} ({}): constructible under current biped rules; {} weapons, {} ammunition bins.",
                         report.name, report.reference, report.weapons, report.ammunition_bins
@@ -329,20 +297,6 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                         declared_rating(report.declared_engine_rating)
                     ),
                 ];
-                for change in report.ammunition_adjustments {
-                    lines.push(format!(
-                        "{} critical {}: ammunition {} -> {}{}",
-                        change.location.section.name(),
-                        change.location.slot + 1,
-                        change.supplied,
-                        change.normalized,
-                        if change.inferred_half_ton {
-                            " (inferred half-ton bin)"
-                        } else {
-                            ""
-                        }
-                    ));
-                }
                 Ok(lines.join("\r\n"))
             }
             "loadout" => {

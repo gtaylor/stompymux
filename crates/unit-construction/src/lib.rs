@@ -26,7 +26,6 @@
 //! units and combat rules on top of these types.
 mod administrative;
 mod ammunition;
-mod ammunition_slots;
 mod chassis;
 mod construction;
 mod cost;
@@ -96,10 +95,13 @@ pub use inspection::{
 pub use loadout::{
     AmmunitionBin, CriticalLocation, MechLoadout, ResolvedLoadout, SystemCritical, WeaponMount,
 };
-pub use machine_gun_array::{ARRAY_GUNS, MachineGunArray, MachineGunClass};
+pub use machine_gun_array::{
+    ARRAY_GUNS, MachineGunArray, MachineGunClass, machine_gun_array_links,
+    store_machine_gun_array_links,
+};
 pub use mass::{
-    armor_mass, cargo_space_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
-    structure_mass, system_mass, system_slot_mass,
+    CARGO_TONS, armor_mass, cargo_mass, engine_mass, half_ton, one_shot_mass, power_amplifier_mass,
+    structure_mass, system_mass, system_slot_mass, targeting_computer_tons,
 };
 pub use mech::{
     CriticalDefinition, MechSection, MechTemplate, SECTION_SLOTS, SectionDefinition,
@@ -124,7 +126,7 @@ pub use speed::{
 };
 pub use tech_base::{SystemInstallation, TechBase, TechnologyInventory, check_technology_base};
 pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
-pub use template_check::{AmmunitionAdjustment, TemplateCheck, check_template};
+pub use template_check::{TemplateCheck, check_template};
 pub use transport_bay::{BaySize, TRANSPORT_BAYS, TransportBay, TransportBays};
 pub use unit::UnitTemplate;
 pub use vehicle::{VehicleMovement, VehicleSection, VehicleTemplate};

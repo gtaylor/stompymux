@@ -3,7 +3,7 @@ class = "vehicle"
 movement = "track"
 tons = 45
 walk_mp = 4
-cargo_space = 300
+cargo_tons = 3
 specials = ["CargoTech"]
 
 [construction]

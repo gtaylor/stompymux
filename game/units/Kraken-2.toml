@@ -36,7 +36,7 @@ armor = 32
 rear = 10
 slots = [
     { at = "3-6", item = "CL.MachineGun" },
-    { at = 7, item = "Ammo_CL.MachineGun", rounds = 100 },
+    { at = 7, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = "8-12", item = "Ammo_CL.UltraAC/10", rounds = 10 },
 ]
 

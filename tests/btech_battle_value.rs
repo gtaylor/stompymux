@@ -14,6 +14,7 @@ const PHOENIX_HAWK: &str = include_str!("fixtures/btech/units/PXH-1.toml");
 const THUNDERBOLT: &str = include_str!("fixtures/btech/units/TDR-5S.toml");
 const CENTURION: &str = include_str!("fixtures/btech/units/CN9-A.toml");
 const ONTOS: &str = include_str!("../game/units/Ontos-58.toml");
+const WASP_3L: &str = include_str!("../game/units/WSP-3L.toml");
 
 /// Construct a supported fixture without map or pilot dependencies.
 fn unit(source: &str) -> Mech {
@@ -70,6 +71,10 @@ fn published_battle_values() {
     ] {
         assert_eq!(unit(source).battle_value().unwrap().total, published);
     }
+    // Wasp WSP-3L: ten single sinks against jumping 6 and stealth armor leave a heat
+    // efficiency of 0. The ER medium laser still counts in full and the RL-10 half, for a
+    // Weapon Battle Rating of 91 and a Speed Factor of 1.89 (TechManual p. 303).
+    score(&unit(WASP_3L), 171.99, 420.75, 593);
     assert_eq!(vehicle(VEDETTE).battle_value().unwrap().total, 475);
     assert_eq!(vehicle(MANTICORE).battle_value().unwrap().total, 993);
     // Ontos (Upgrade, TRO 3058): Artemis IV on the LRM-15, SRM-6 and SRM-4.

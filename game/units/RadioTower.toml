@@ -4,7 +4,6 @@ movement = "none"
 tons = 70
 walk_mp = 0
 heat_sinks = 12
-cargo_space = 0
 max_suits = 0
 specials = ["CritProof_Tech"]
 

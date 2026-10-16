@@ -6,7 +6,6 @@ max_speed = 5.0
 radio = 1
 radio_type = 129
 radio_range = 30
-scan_range = 1
 
 [sections.left_arm]
 armor = 0

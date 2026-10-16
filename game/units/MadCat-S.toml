@@ -39,7 +39,7 @@ slots = [
     { at = "3-4", item = "JumpJet" },
     { at = 5, item = "CL.MachineGun" },
     { at = "6-7", item = "CL.SRM-6" },
-    { at = 8, item = "Ammo_CL.MachineGun", rounds = 100 },
+    { at = 8, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 9, item = "EndoSteel" },
     { at = "10-11", item = "FerroFibrous" },
 ]

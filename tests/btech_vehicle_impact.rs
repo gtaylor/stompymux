@@ -176,7 +176,8 @@ async fn motive_impacts_commit_steering_speed_and_penetration_together() {
     );
     assert_eq!(motive.driving_penalty, 2);
     assert_eq!(world.btech.vehicles()[&id].piloting_damage(), 2);
-    assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 43.0);
+    // Moderate damage leaves the 3/5 Demolisher at 2/3 (Total Warfare p. 193).
+    assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 32.25);
     assert_eq!(
         world.btech.vehicles()[&id].sections()[&VehicleSection::Front].internal,
         7
@@ -214,8 +215,9 @@ async fn driving_penalties_apply_once_per_tier_and_an_immobilized_hovercraft_sin
             resolve_battle_vehicle_impact(&mut world, id, HitArc::Front, 1, None, rules()).unwrap();
         assert_eq!(world.btech.vehicles()[&id].piloting_damage(), expected);
     }
-    // The −1 MP tier still stacks its movement loss while its +2 applies only once.
-    for (expected_penalty, expected_speed) in [(3, 43.0), (3, 32.25)] {
+    // The −1 Cruising MP tier still stacks its movement loss while its +2 applies only once:
+    // the 3/5 hovercraft drops to 2/3, then 1/2 (Total Warfare p. 193).
+    for (expected_penalty, expected_speed) in [(3, 32.25), (3, 21.5)] {
         set_seed(
             &mut world,
             id,

@@ -57,33 +57,36 @@ pub(super) fn modifiers_for_source(
         "Shooter is unavailable"
     );
     let (_, distance) = super::los::unit_hex_los(world, shooter, hex)?;
-    let (weapon, mut modifiers) = if let Some(unit) = world.btech.vehicles().get(&shooter) {
-        let weapon = unit
-            .loadout()?
-            .weapons
-            .get(weapon_index)
-            .context("Weapon index out of bounds")?
-            .weapon;
-        (
-            weapon,
-            super::vehicle_aim::weapon_modifiers(unit, weapon_index, distance, gunnery)?,
-        )
-    } else {
-        let unit = world
-            .btech
-            .constructed_units()
-            .get(&shooter)
-            .context("Shooter is not constructed")?;
-        let loadout = unit.loadout()?;
-        let mount = loadout
-            .weapons
-            .get(weapon_index)
-            .context("Weapon index out of bounds")?;
-        (
-            mount.weapon,
-            super::aim::weapon_modifiers(unit, weapon_index, mount, distance, gunnery)?,
-        )
-    };
+    let (weapon, ammunition, mut modifiers) =
+        if let Some(unit) = world.btech.vehicles().get(&shooter) {
+            let weapon = unit
+                .loadout()?
+                .weapons
+                .get(weapon_index)
+                .context("Weapon index out of bounds")?
+                .weapon;
+            (
+                weapon,
+                unit.ammunition_mode(weapon_index)?,
+                super::vehicle_aim::weapon_modifiers(unit, weapon_index, distance, gunnery)?,
+            )
+        } else {
+            let unit = world
+                .btech
+                .constructed_units()
+                .get(&shooter)
+                .context("Shooter is not constructed")?;
+            let loadout = unit.loadout()?;
+            let mount = loadout
+                .weapons
+                .get(weapon_index)
+                .context("Weapon index out of bounds")?;
+            (
+                mount.weapon,
+                unit.ammunition_mode(weapon_index)?,
+                super::aim::weapon_modifiers(unit, weapon_index, mount, distance, gunnery)?,
+            )
+        };
     let indirect = super::spotter::indirect_hex_for_source(world, source, weapon_index)?;
     if let Some((observer, coordinate)) = indirect {
         ensure!(
@@ -104,7 +107,7 @@ pub(super) fn modifiers_for_source(
         world,
         shooter,
         super::network_range::NetworkTarget::Hex(hex),
-        weapon,
+        (weapon, ammunition),
         submerged,
         &mut modifiers,
     )?;

@@ -14,6 +14,25 @@ pub(super) fn modifier(movement: VehicleMovement) -> u8 {
     }
 }
 
+/// Flank speed, in km/h, that a motive or rotor hit takes from a vehicle whose flank speed
+/// before the hit is `flank_kph`. Both reduce Cruising MP: one point per `SpeedLoss` point
+/// for moderate motive damage or a rotor hit, and half, rounded up, for heavy motive damage
+/// (Total Warfare pp. 193, 197). Flank MP is then refigured as the reduced Cruising MP x 1.5,
+/// rounded up (p. 53), so a 5/8 tank left at 4 cruising MP flanks at 6, not 7.
+pub(super) fn flank_speed_lost(flank_kph: f64, hit: VehicleMotiveHit) -> f64 {
+    let flank = (flank_kph / 10.75).round().max(0.0);
+    let cruising = (flank / 1.5).round();
+    let reduced = match hit {
+        VehicleMotiveHit::SpeedLoss { movement_points } => {
+            (cruising - f64::from(movement_points)).max(0.0)
+        }
+        VehicleMotiveHit::HalveSpeed => (cruising / 2.0).ceil(),
+        VehicleMotiveHit::Immobilize => 0.0,
+    };
+    let refigured = (reduced * 1.5).ceil().min(flank);
+    (flank_kph - refigured * 10.75).clamp(0.0, flank_kph)
+}
+
 /// Attack-direction modifier to the motive roll: rear +1, sides +2.
 pub(super) fn direction_modifier(arc: HitArc) -> u8 {
     match arc {
@@ -266,6 +285,37 @@ mod tests {
             outcome(M::Hover, 9),
             (Some(VehicleMotiveHit::Immobilize), 0)
         );
+    }
+
+    /// Moderate damage takes one Cruising MP and heavy damage half of it, rounded up; flank
+    /// is refigured from what is left (Total Warfare pp. 53, 193, 197).
+    #[test]
+    fn motive_hits_reduce_cruising_mp_and_refigure_flank() {
+        let kph = |mp: f64| mp * 10.75;
+        let lost = |flank: f64, hit| flank_speed_lost(kph(flank), hit) / 10.75;
+        let moderate = VehicleMotiveHit::SpeedLoss { movement_points: 1 };
+        // 5/8 moderate: 4/6. 5/8 heavy: 3/5. 3/5 heavy: 2/3.
+        assert_eq!(lost(8.0, moderate), 2.0);
+        assert_eq!(lost(8.0, VehicleMotiveHit::HalveSpeed), 3.0);
+        assert_eq!(lost(5.0, VehicleMotiveHit::HalveSpeed), 2.0);
+        // Losses accumulate on the refigured movement: 4/6 moderate again is 3/5.
+        assert_eq!(lost(6.0, moderate), 1.0);
+        // A 12/18 rotorcraft loses one flank MP to a rotor hit, an 11/17 two.
+        assert_eq!(lost(18.0, moderate), 1.0);
+        assert_eq!(lost(17.0, moderate), 2.0);
+        // 1/2 halved stays at 1/2; any loss beyond the remaining cruise leaves nothing.
+        assert_eq!(lost(2.0, VehicleMotiveHit::HalveSpeed), 0.0);
+        assert_eq!(lost(2.0, moderate), 2.0);
+        assert_eq!(
+            lost(
+                18.0,
+                VehicleMotiveHit::SpeedLoss {
+                    movement_points: 12
+                }
+            ),
+            18.0
+        );
+        assert_eq!(lost(0.0, moderate), 0.0);
     }
 
     #[test]

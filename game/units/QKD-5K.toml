@@ -6,7 +6,6 @@ walk_mp = 5
 jump_mp = 5
 heat_sinks = 17
 radio = 4
-cargo_space = 0
 max_suits = 0
 
 [construction]

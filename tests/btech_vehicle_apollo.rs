@@ -196,9 +196,12 @@ fn vehicle_apollo_and_array_battle_value() {
     let gained = guided.battle_value().unwrap().offensive - idle.battle_value().unwrap().offensive;
     // The Zhukov's flanking MP of 5 has a Speed Factor of 1.
     assert!((gained - launcher * 0.15).abs() < 0.001, "{gained}");
-    let guns = "{ at = \"1-3\", item = \"IS.MachineGun\" },\n    { at = 4, item = \"IS.MGA\" },\n    { at = 5, item = \"Ammo_IS.MachineGun\", rounds = 200 },";
+    let guns = "{ at = \"1-3\", item = \"IS.MachineGun\" },\n    { at = 4, item = \"IS.MGA\", links = [1, 2, 3] },\n    { at = 5, item = \"Ammo_IS.MachineGun\", rounds = 200 },";
     let [linked, _] = shooters(guns);
-    let [loose, _] = shooters(&guns.replace("{ at = 4, item = \"IS.MGA\" },\n    ", ""));
+    let [loose, _] = shooters(&guns.replace(
+        "{ at = 4, item = \"IS.MGA\", links = [1, 2, 3] },\n    ",
+        "",
+    ));
     let gained = vehicle(&linked).battle_value().unwrap().offensive
         - vehicle(&loose).battle_value().unwrap().offensive;
     let value = 0.1 * 3.0 * f64::from(Weapon::MachineGun.battle_value());

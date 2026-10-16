@@ -79,12 +79,9 @@ const FIELDS: &[(&str, &str, Kind)] = &[
     ("radio", "radio", Kind::Integer),
     ("radio_type", "radiotype", Kind::Integer),
     ("radio_range", "radio_range", Kind::Integer),
-    ("tac_range", "tac_range", Kind::Integer),
-    ("lrs_range", "lrs_range", Kind::Integer),
-    ("scan_range", "scan_range", Kind::Integer),
     ("si", "si", Kind::Integer),
     ("fuel", "fuel", Kind::Integer),
-    ("cargo_space", "cargo_space", Kind::Integer),
+    ("cargo_tons", "cargo_tons", Kind::Float),
     ("max_suits", "max_suits", Kind::Integer),
     ("max_ton", "max_ton", Kind::Integer),
     (
@@ -146,6 +143,8 @@ struct SlotDocument {
     item: String,
     rounds: Option<u32>,
     link: Option<i32>,
+    /// The one-based first slots of the machine guns a machine gun array links.
+    links: Option<Vec<u8>>,
     #[serde(default)]
     modes: Vec<String>,
 }
@@ -331,7 +330,7 @@ impl ParsedTemplate {
         }
         if let Some(bays) = transport_bays {
             // Transport bays are combat vehicle construction (TechManual p. 239); Mechs carry
-            // cargo only through `cargo_space`.
+            // cargo only in the standard cargo bay `cargo_tons` states.
             ensure!(
                 matches!(class, Some(RawUnitClass::Vehicle | RawUnitClass::Vtol)),
                 "{TRANSPORT_BAYS} are only for vehicles and VTOLs"
@@ -637,6 +636,26 @@ fn slot_critical(slot: SlotDocument) -> Result<CriticalDefinition> {
             .all(|mode| !mode.is_empty() && !mode.contains(char::is_whitespace)),
         "modes must be single words"
     );
+    let array = is_machine_gun_array(&slot.item);
+    ensure!(
+        array || slot.links.is_none(),
+        "only a machine gun array takes links"
+    );
+    ensure!(
+        !array || slot.link.is_none(),
+        "a machine gun array lists the guns it links with links, not link"
+    );
+    if let Some(links) = &slot.links {
+        ensure!(
+            links.iter().all(|&link| link > 0),
+            "links are one-based slots"
+        );
+        return Ok(CriticalDefinition {
+            equipment: slot.item,
+            data: super::store_machine_gun_array_links(links),
+            modes: slot.modes,
+        });
+    }
     let data = slot
         .rounds
         .map(|rounds| rounds.to_string())
@@ -803,7 +822,11 @@ pub fn render(
                     writeln!(output, "{key} = {points}")?;
                     continue;
                 }
-                toml::Value::Float(value).to_string()
+                if *attribute == super::CARGO_TONS && value.fract() == 0.0 {
+                    (value as i64).to_string()
+                } else {
+                    toml::Value::Float(value).to_string()
+                }
             }
             Kind::Text if matches!(*name, "class" | "movement") => {
                 quote(&value.to_ascii_lowercase())
@@ -1068,7 +1091,12 @@ fn render_section(
             range(first, last),
             quote(&critical.equipment)
         );
-        if critical.data != "-" {
+        if critical.data != "-" && is_machine_gun_array(&critical.equipment) {
+            let links = super::machine_gun_array_links(&critical.data)
+                .with_context(|| format!("unsupported data on {}", critical.equipment))?;
+            let links: Vec<_> = links.iter().map(u8::to_string).collect();
+            write!(entry, ", links = [{}]", links.join(", "))?;
+        } else if critical.data != "-" {
             let value: i64 = critical.data.parse().with_context(|| {
                 format!(
                     "unsupported data {} on {}",
@@ -1129,6 +1157,12 @@ fn render_split_mount(
     Ok(())
 }
 
+/// Whether a slot item is a machine gun array, which lists the guns it links.
+fn is_machine_gun_array(item: &str) -> bool {
+    super::System::installation(item)
+        .is_some_and(|(system, _)| system == super::System::MachineGunArray)
+}
+
 /// Append modes to an inline slot entry.
 fn push_metadata(entry: &mut String, critical: &CriticalDefinition) {
     if !critical.modes.is_empty() {
@@ -1178,7 +1212,7 @@ heat_sinks = "double"
 armor = 22
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC", modes = ["OnTC"] },
+    { at = "4-6", item = "IS.ERPPC", modes = ["RearMount"] },
 ]
 
 [sections.right_arm]
@@ -1227,7 +1261,7 @@ armor = 9
         assert_eq!(arm.criticals[&0].equipment, "ShoulderOrHip");
         assert_eq!(arm.criticals[&2].equipment, "LowerActuator");
         assert_eq!(arm.criticals[&3].equipment, "IS.ERPPC");
-        assert_eq!(arm.criticals[&4].modes, ["OnTC"]);
+        assert_eq!(arm.criticals[&4].modes, ["RearMount"]);
         let torso = &parsed.sections["left_torso"];
         assert_eq!(torso.criticals[&0].data, "8");
         assert_eq!(torso.criticals[&1].data, "2");
@@ -1252,6 +1286,21 @@ armor = 9
         );
         let parsed = ParsedTemplate::parse("ZEU-9S", &flipping).unwrap();
         assert!(parsed.fields["specials"].ends_with(" FlipArms"));
+    }
+
+    /// Sensor reach is a runtime default, not a template field, so the old keys are unknown.
+    #[test]
+    fn sensor_range_fields_are_unknown() {
+        for key in ["tac_range", "lrs_range", "scan_range"] {
+            let source = format!("{key} = 30\n{ZEUS}");
+            let Err(error) = ParsedTemplate::parse("ZEU-9S", &source) else {
+                panic!("{key} was accepted");
+            };
+            assert!(
+                format!("{error:#}").contains(&format!("unsupported template field {key}")),
+                "{key}: {error:#}"
+            );
+        }
     }
 
     #[test]
@@ -1443,6 +1492,52 @@ placements = [
             })
             .collect();
         render(&parsed.fields, &sections).unwrap()
+    }
+
+    /// A machine gun array's `links` store as its critical data and render back; no other
+    /// item takes links, and an array takes no `link`.
+    #[test]
+    fn machine_gun_array_links_round_trip() {
+        let source = ZEUS.replace(
+            "[sections.right_torso]\narmor = 25\nrear = 6\n",
+            "[sections.right_torso]\narmor = 25\nrear = 6\nslots = [\n    { at = \"4-5\", item = \"IS.MachineGun\" },\n    { at = 6, item = \"IS.MGA\", links = [4, 5] },\n]\n",
+        );
+        let parsed = ParsedTemplate::parse("ZEU-9S", &source).unwrap();
+        assert_eq!(parsed.sections["right_torso"].criticals[&5].data, "4,5");
+        let rendered = render_mech(&parsed);
+        assert!(
+            rendered.contains("{ at = 6, item = \"IS.MGA\", links = [4, 5] }"),
+            "{rendered}"
+        );
+        assert_eq!(
+            ParsedTemplate::parse("ZEU-9S", &rendered).unwrap().sections,
+            parsed.sections
+        );
+        for (from, to, expected) in [
+            (
+                "item = \"IS.MGA\", links = [4, 5]",
+                "item = \"IS.MGA\", link = 1",
+                "lists the guns it links with links",
+            ),
+            (
+                "item = \"IS.MGA\", links = [4, 5]",
+                "item = \"IS.MGA\", links = [0, 5]",
+                "one-based",
+            ),
+            (
+                "{ at = \"4-5\", item = \"IS.MachineGun\" }",
+                "{ at = \"4-5\", item = \"IS.MachineGun\", links = [6] }",
+                "only a machine gun array takes links",
+            ),
+        ] {
+            let error = format!(
+                "{:#}",
+                ParsedTemplate::parse("ZEU-9S", &source.replace(from, to))
+                    .err()
+                    .unwrap()
+            );
+            assert!(error.contains(expected), "{error}");
+        }
     }
 
     #[test]

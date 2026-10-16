@@ -124,7 +124,6 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         simulation_seconds,
         inventories: super::btech_inventory::load(c).await?.into(),
         part_costs: super::btech_part_costs::load(c).await?.into(),
-        weapon_settings: Default::default(),
         wrecks: super::btech_wrecks::load(c).await?.into(),
         tows: super::btech_tows::load(c).await?.into(),
         player_preferences: player_preferences.into(),
@@ -206,7 +205,6 @@ pub(super) fn validate_changes(
     expected.inventories = after.btech.inventories.clone();
     expected.part_costs = after.btech.part_costs.clone();
     expected.skill_thresholds = after.btech.skill_thresholds.clone();
-    expected.weapon_settings = after.btech.weapon_settings.clone();
     if let Some(purges) = purges {
         expected.purge(purges);
     }

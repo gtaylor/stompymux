@@ -75,14 +75,6 @@ pub fn part_forms(world: &crate::World, actor: crate::ObjectId) -> anyhow::Resul
     Ok(forms)
 }
 
-/// DEBUG controls use exact very-long catalogue names.
-pub(super) fn canonical_part(name: &str) -> Option<i32> {
-    part_names()
-        .canonical
-        .get(&name.to_ascii_lowercase())
-        .copied()
-}
-
 /// Transfer matching resolves exact abbreviations and canonical names before wildcard stock filtering.
 pub(super) struct TransferSelector<'a> {
     exact: Option<i32>,

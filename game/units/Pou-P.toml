@@ -17,7 +17,7 @@ armor = "ferro_fibrous"
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.ERPPC" },
     { at = 5, item = "FerroFibrous" },
 ]
 
@@ -25,7 +25,7 @@ slots = [
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC", modes = ["OnTC"] },
+    { at = "3-4", item = "CL.ERPPC" },
     { at = 5, item = "FerroFibrous" },
 ]
 
@@ -37,7 +37,7 @@ slots = [
     { at = 1, item = "EndoSteel" },
     { at = "2-3", item = "FerroFibrous" },
     { at = "6-7", item = "JumpJet" },
-    { at = 8, item = "CL.ERSmallLaser", modes = ["OnTC"] },
+    { at = 8, item = "CL.ERSmallLaser" },
     { at = "9-12", item = "HeatSink" },
 ]
 

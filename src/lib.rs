@@ -22,9 +22,9 @@ pub use btech::{
 pub use btech::{MinePlacement, add_mine_action as add_battle_mine_action};
 
 pub use btech::{
-    AimModifiers, AimRules, AmmunitionAdjustment, AmmunitionBin, AmmunitionDraw, AmmunitionHazard,
-    AmmunitionMode, AmsReport, ArtemisController, BalanceCause, BalanceReport, BeaconKind,
-    BtechState, BuildingCover, BuildingInterior, Character, CharacterInjury, CharacterNotice,
+    AimModifiers, AimRules, AmmunitionBin, AmmunitionDraw, AmmunitionHazard, AmmunitionMode,
+    AmsReport, ArtemisController, BalanceCause, BalanceReport, BeaconKind, BtechState,
+    BuildingCover, BuildingInterior, CARGO_TONS, Character, CharacterInjury, CharacterNotice,
     CharacterValue, ConsciousnessCheck, Contact, ContactEvent, ContactTransition, ContactUpdate,
     ContactView, CriticalDefinition, CriticalLocation, CriticalLoss, DamagePhase, DamageResult,
     Dice, ElectronicField, ElectronicMode, ElectronicSource, ElectronicSuite, Electronics, Engine,
@@ -55,7 +55,7 @@ pub use btech::{
     aim_modifiers as battle_aim_modifiers, apply_damage_phase, assign_pilot as assign_battle_pilot,
     begin_stand as begin_battle_stand, begin_unjam as begin_battle_unjam,
     break_bridge as break_battle_bridge, break_ice as break_battle_ice, building_collapse_damage,
-    building_entry_level, building_floor_cost, check_character_consciousness,
+    building_entry_level, building_floor_cost, cargo_mass, check_character_consciousness,
     check_template as check_battle_template, collapse_structure as collapse_battle_structure,
     contact_observers as battle_contact_observers, create_map as create_battle_map,
     create_unit as create_battle_unit, destroy_unit_critical as destroy_battle_critical,
@@ -420,7 +420,10 @@ pub use btech::{
     pilot_hex_aim_modifiers as battle_pilot_hex_aim_modifiers,
 };
 
-pub use btech::{WoodlandClearing, WoodlandEffect, WoodlandIntent, resolve_woodland_effect};
+pub use btech::{
+    WoodlandClearing, WoodlandEffect, WoodlandIntent, WoodlandReduction, reduce_woodland,
+    resolve_woodland_effect,
+};
 
 pub use btech::{WoodlandChange, apply_woodland_clearing};
 
@@ -876,7 +879,7 @@ pub use btech::throttle_maximum as battle_throttle_maximum;
 /// World-aware transfer speed derived from live mass and external tow load.
 pub use btech::unit_effective_maximum_speed as battle_effective_maximum_speed;
 
-/// Battle Value of a live unit with the world's runtime weapon values.
+/// Battle Value of a live unit.
 pub use btech::unit_battle_value as battle_unit_value;
 
 /// Shared pickup eligibility and persisted scenario towing permission.
@@ -980,11 +983,6 @@ pub use btech::{
 };
 
 pub use btech::{
-    WeaponSettings, WeaponValues, set_weapon_battle_value as set_battle_weapon_battle_value,
-    set_weapon_recycle as set_battle_weapon_recycle,
-};
-
-pub use btech::{
     InventoryEntry, inventory as battle_inventory,
     set_inventory_quantity as set_battle_inventory_quantity,
     set_inventory_quantity_action as set_battle_inventory_quantity_action,
@@ -1074,10 +1072,7 @@ pub use btech::request_database_save as request_battle_database_save;
 
 pub use btech::{PartForm, part_forms as battle_part_forms};
 
-pub use btech::{
-    edit_skill_threshold as edit_battle_skill_threshold,
-    edit_weapon_settings as edit_battle_weapon_settings,
-};
+pub use btech::edit_skill_threshold as edit_battle_skill_threshold;
 
 pub use btech::{RuntimeStats, runtime_stats as battle_runtime_stats};
 

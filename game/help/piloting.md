@@ -711,9 +711,8 @@ seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
 
 ### Machine gun arrays
 
-A machine gun array links the two to four machine guns of one size class in the
-slots directly above it in its location (or, with none above, directly below),
-on a Mech, vehicle or VTOL.
+A machine gun array links the two to four machine guns of one size class in its
+location that its design lists, on a Mech, vehicle or VTOL (TechManual p. 228).
 Firing any linked gun fires every linked gun that is ready and not set to
 rapid fire, as one attack: one to-hit roll, then a roll on the Cluster Hits
 Table column for the number of guns, every hit striking one location. Each gun
@@ -882,7 +881,7 @@ inspection includes `null_signature` and its pending destination/countdown.
 ### Active probes
 
 A working Beagle, Light, Watchdog or Bloodhound Active Probe reveals hidden units
-within four, three, five or eight hexes (Clan probes five) when it has a clear
+within four, three, three or eight hexes (Clan probes five) when it has a clear
 line to them, and lets you ignore one point of woods when aiming at a target in
 that reach. It also sweeps with your sensor suite, ahead of the built-in
 sensors, using its longer brackets (Beagle 12/24/36, Clan 15/30/45, Light and
@@ -1003,7 +1002,8 @@ Use `scan AB` (or a unit dbref) to inspect an acquired visible contact. Use `sca
 with no target to inspect your selected unit or coordinate lock. Add `A`, `I`, or `W` for armor,
 information or weapons; `scan AB AIW` includes all three. Your unit must be running,
 you must be its conscious assigned pilot, and the target must be within scanner
-range with clear line of sight. Sensor damage reduces or disables scanner range.
+range with clear line of sight. Scanner range is 25 hexes; one sensor critical
+halves it and a second disables it.
 
 Armor uses condition symbols: `O` above 90%, `o` above 70%, `x` above 45%,
 `X` critical, `*` open and `-` destroyed. Weapons show ready, recycling (`-----`)
@@ -1057,6 +1057,8 @@ project the center: `lrs T 180 20`. Negative distance looks behind that bearing.
 Display windows stay inside the map. You must be the conscious assigned pilot
 of a running unit with working scanners. These displays do not acquire contacts
 or alert other units.
+A long-range display can center on a contact or point up to 50 hexes away; one
+sensor critical halves that reach and a second disables the display.
 
 Use `lrs C` for terrain-colored elevation, including explicit zeroes. With ANSI
 enabled, terrain and unit modes use map colors: your marker is bold, friends are
@@ -1080,6 +1082,8 @@ and enemy IDs uppercase. Fire (`&`) and smoke (`:`) fill the top of a hex, and t
 terrain beneath them stays in the bottom. Use `L` to show only visible terrain. Dark maps always hide unseen terrain. Omit the center to
 use your unit, supply a known contact ID, or give a bearing and signed distance.
 The display needs a running unit and working tactical sensors. Use `navigate` for a local hex-shaped view.
+A tactical display can center on a contact or point up to 25 hexes away; one
+sensor critical halves that reach and a second disables the display.
 
 
 `tactical C` highlights mech cliffs (three or more elevation levels);

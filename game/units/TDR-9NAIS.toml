@@ -23,7 +23,7 @@ slots = [
 [sections.right_arm]
 armor = 18
 slots = [
-    { at = "5-10", item = "IS.RotaryAC/5", modes = ["OnTC"] },
+    { at = "5-10", item = "IS.RotaryAC/5" },
 ]
 
 [sections.left_torso]
@@ -32,7 +32,7 @@ rear = 7
 slots = [
     { at = "4-7", item = "TargetingComputer" },
     { at = "8-9", item = "IS.StreakSRM-6" },
-    { at = "10-12", item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "10-12", item = "IS.ERMediumLaser" },
 ]
 
 [sections.right_torso]

@@ -18,8 +18,8 @@ armor = 24
 omit = ["hand_actuator"]
 slots = [
     { at = "4-9", item = "HeatSink" },
-    { at = "10-11", item = "IS.ERLargeLaser", modes = ["OnTC"] },
-    { at = 12, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "10-11", item = "IS.ERLargeLaser" },
+    { at = 12, item = "IS.ERMediumLaser" },
 ]
 
 [sections.right_arm]
@@ -27,8 +27,8 @@ armor = 24
 omit = ["hand_actuator"]
 slots = [
     { at = "4-9", item = "HeatSink" },
-    { at = "10-11", item = "IS.ERLargeLaser", modes = ["OnTC"] },
-    { at = 12, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = "10-11", item = "IS.ERLargeLaser" },
+    { at = 12, item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_torso]
@@ -44,7 +44,7 @@ slots = [
 armor = 23
 rear = 8
 slots = [
-    { at = "4-9", item = "IS.RotaryAC/5", modes = ["OnTC"] },
+    { at = "4-9", item = "IS.RotaryAC/5" },
 ]
 
 [sections.center_torso]

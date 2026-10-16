@@ -5526,9 +5526,10 @@ async fn overheat_life_support_injury_precedes_ammunition_explosion_and_shutdown
 }
 
 /// An involuntary shutdown forces a +3 Piloting Skill Roll whatever the speed (Total Warfare
-/// p. 60); the fall it causes does no structural damage, and the MechWarrior keeps the cockpit.
+/// p. 60); the fall it causes is an ordinary fall of no levels, tonnage/10 rounded up (p. 68),
+/// and the MechWarrior keeps the cockpit.
 #[tokio::test]
-async fn overheat_shutdown_forces_a_balance_roll_at_any_speed_without_structural_fall_damage() {
+async fn overheat_shutdown_forces_a_balance_roll_at_any_speed_and_an_ordinary_fall() {
     use stompymux_rs::advance_battle_overheat;
     let seed = {
         let (_dir, _config, mut probe, id) = fixture('.').await;
@@ -5577,11 +5578,11 @@ async fn overheat_shutdown_forces_a_balance_roll_at_any_speed_without_structural
         let fall = report
             .fall
             .expect("a failed balance roll topples the Mech at any speed");
-        assert_eq!(fall.damage, 0);
-        assert!(fall.groups.is_empty());
-        assert!(fall.pilot_injury.is_none());
+        let tons = u32::from(before.constructed_units()[&id].definition().tons);
+        assert_eq!(fall.damage, tons.div_ceil(10));
+        assert!(!fall.groups.is_empty());
         let unit = &world.btech.constructed_units()[&id];
-        assert_eq!(unit.sections(), before.constructed_units()[&id].sections());
+        assert_ne!(unit.sections(), before.constructed_units()[&id].sections());
         assert_eq!(unit.power(), Power::Off);
         assert_eq!(unit.pilot(), Some(ObjectId(1)));
         assert_eq!(unit.posture(), stompymux_rs::Posture::Prone);
@@ -8064,6 +8065,36 @@ async fn split_weapon_native_lua_fire_guards_and_recycle_restart() {
             fired.btech.constructed_units()[&id]
                 .weapon_recycle()
                 .is_empty()
+        );
+    }
+}
+
+/// Firing movement compares the Mech's speed with its current walking MP (Total Warfare
+/// p. 106), which heat lowers by one MP per five points (p. 159): a 7/11 Jenner at 10 excess
+/// heat walks 5 MP, so 6 MP of movement is running fire although its template walks 7.
+#[tokio::test]
+async fn heat_slowed_mechs_fire_as_running_above_their_reduced_walking_speed() {
+    let (_dir, _config, base, id) = fixture('.').await;
+    for (excess, speed, expected) in [
+        (0.0, 64.5, 1),
+        (0.0, 75.25, 1),
+        (0.0, 76.0, 2),
+        (10.0, 53.75, 1),
+        (10.0, 64.5, 2),
+    ] {
+        let mut world = base.clone();
+        world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["heat"] = serde_json::json!({"stored": excess, "excess": excess});
+                record["motion"]["speed"] = serde_json::json!(speed);
+                record["motion"]["desired_speed"] = serde_json::json!(speed);
+            })
+            .unwrap();
+        assert_eq!(
+            world.btech.constructed_units()[&id].attacker_movement_modifier(),
+            expected,
+            "excess {excess}, speed {speed}"
         );
     }
 }

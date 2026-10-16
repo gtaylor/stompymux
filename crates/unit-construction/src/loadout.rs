@@ -19,8 +19,6 @@ pub struct WeaponMount<L = CriticalLocation> {
     /// Primary-section slots come first, followed by any linked extension slots.
     pub criticals: Vec<L>,
     pub rear_mount: bool,
-    /// Explicit authored computer link, independent of automatic equipment eligibility.
-    pub on_targeting_computer: bool,
     /// The mount carries one self-contained salvo instead of drawing from bins.
     pub one_shot: bool,
     /// Templates may explicitly represent an already expended launcher.
@@ -70,7 +68,7 @@ impl AmmunitionBin {
         );
         let ammunition_flags: Vec<_> = flags
             .iter()
-            .filter(|mode| !matches!(mode.as_str(), "Halfton" | "Hotload" | "OnTC"))
+            .filter(|mode| !matches!(mode.as_str(), "Halfton" | "Hotload"))
             .cloned()
             .collect();
         let mode = super::AmmunitionMode::from_flags(weapon, &ammunition_flags)?;
@@ -110,6 +108,21 @@ impl AmmunitionBin {
     }
 }
 
+/// Whether a system critical's stored data is what its system reads: none, a fire-control
+/// system's one-based launcher link, or a machine gun array's links.
+pub(crate) fn system_data_supported(critical: &super::CriticalDefinition) -> bool {
+    if critical.data == "-" {
+        return true;
+    }
+    match System::installation(&critical.equipment).map(|(system, _)| system) {
+        Some(System::ArtemisIv | System::ArtemisV | System::ApolloFcs) => {
+            critical.data.parse::<u8>().is_ok()
+        }
+        Some(System::MachineGunArray) => super::machine_gun_array_links(&critical.data).is_ok(),
+        _ => false,
+    }
+}
+
 /// Salvos one bin holds. A half-ton lot holds half a ton's rounds. Precision and armor-piercing
 /// autocannon rounds (Total Warfare p. 141) and the Augmented, Active and Vibrabomb Thunder
 /// rounds (Tactical Operations: Advanced Units & Equipment p. 228) pack half as many shots into
@@ -144,6 +157,34 @@ pub struct SystemCritical<L = CriticalLocation> {
     /// The technology base the slot's `IS.` or `CL.` prefix states; `None` builds the system
     /// from the chassis's base (see [`System::installation`]).
     pub tech_base: Option<super::TechBase>,
+    /// The one-based first slots of the machine guns a machine gun array links in its own
+    /// location, as its template `links` list them (TechManual p. 228); empty for every other
+    /// system.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub links: Vec<u8>,
+}
+
+impl<L> SystemCritical<L> {
+    /// A resolved system critical at `location`, reading a machine gun array's links from the
+    /// critical's stored data.
+    pub fn resolve(
+        location: L,
+        system: System,
+        tech_base: Option<super::TechBase>,
+        critical: &super::CriticalDefinition,
+    ) -> Result<Self> {
+        let links = if system == System::MachineGunArray {
+            super::machine_gun_array_links(&critical.data)?
+        } else {
+            Vec::new()
+        };
+        Ok(Self {
+            location,
+            system,
+            tech_base,
+            links,
+        })
+    }
 }
 
 impl<L> SystemCritical<L> {
@@ -155,8 +196,10 @@ impl<L> SystemCritical<L> {
 }
 
 impl<L> WeaponMount<L> {
-    /// Explicit links survive without computer slots; automatic links require installed hardware.
-    /// Any unavailable computer slot disables assistance, and cluster ammunition never benefits.
+    /// Whether a targeting computer assists this weapon: one must be installed with every slot
+    /// available, and only the direct-fire energy, ballistic and pulse weapons that size it
+    /// benefit, never machine guns, flamers, artillery or missiles (TechManual p. 238; Total
+    /// Warfare p. 143). Cluster rounds never benefit (Total Warfare p. 113).
     pub fn computer_assists(
         &self,
         ammunition: super::AmmunitionMode,
@@ -172,7 +215,7 @@ impl<L> WeaponMount<L> {
                 return false;
             }
         }
-        self.on_targeting_computer || (installed && self.weapon.supports_targeting_computer())
+        installed && self.weapon.supports_targeting_computer()
     }
 
     /// Validate shared weapon flags independently of chassis-specific slot allocation.
@@ -209,7 +252,6 @@ impl<L> WeaponMount<L> {
                             | "Rotary_FiveShot"
                             | "Rotary_SixShot"
                     ) && weapon.is_rotary())
-                    || mode == "OnTC"
                     // TM p. 342: only LRM, SRM, MRM and Streak SRM launchers and Narc
                     // and iNarc beacons come in one-shot versions.
                     || (matches!(mode.as_str(), "OneShot" | "OneShot_Used")
@@ -253,7 +295,6 @@ impl<L> WeaponMount<L> {
             one_shot,
             initially_spent,
             rear_mount: critical.modes.iter().any(|mode| mode == "RearMount"),
-            on_targeting_computer: critical.modes.iter().any(|mode| mode == "OnTC"),
             initial_fire_mode: if critical.modes.iter().any(|mode| mode == "Heat") {
                 super::FireMode::Heat
             } else if critical.modes.iter().any(|mode| mode == "Hotload") {
@@ -326,7 +367,6 @@ fn is_contract_fire_mode(mode: &str) -> bool {
             | "Disabled"
             | "Broken"
             | "Damaged"
-            | "OnTC"
             | "RearMount"
             | "Hotload"
             | "Halfton"
@@ -400,6 +440,37 @@ pub struct ResolvedLoadout<L> {
     pub weapons: Vec<WeaponMount<L>>,
     pub ammunition: Vec<AmmunitionBin<L>>,
     pub systems: Vec<SystemCritical<L>>,
+}
+
+impl<L: Copy> ResolvedLoadout<L> {
+    /// A machine gun bin is a full ton, or a half-ton lot marked `Halfton`, and lists exactly
+    /// the rounds that lot holds; construction never infers the lot size from a round count
+    /// or refills a bin. `describe` names a bin's location and `citation` the chassis's
+    /// ammunition rule (TechManual p. 57 for Mechs, p. 107 for combat vehicles).
+    pub fn check_machine_gun_bins(
+        &self,
+        describe: impl Fn(L) -> String,
+        citation: &str,
+    ) -> Result<()> {
+        for bin in &self.ammunition {
+            if !bin.weapon.allows_half_ton_bins() || bin.rounds == bin.capacity {
+                continue;
+            }
+            let ton = bin
+                .weapon
+                .profile_for_ammunition(bin.mode)
+                .ammunition_per_ton;
+            bail!(
+                "The {} bin in {} lists {} rounds; a machine gun bin holds {} rounds a ton, or {} in a half-ton lot marked Halfton ({citation})",
+                bin.weapon.name(),
+                describe(bin.location),
+                bin.rounds,
+                bin_capacity(ton, false, bin.mode),
+                bin_capacity(ton, true, bin.mode)
+            );
+        }
+        Ok(())
+    }
 }
 
 /// A BattleMech's resolved equipment.
@@ -482,15 +553,7 @@ impl MechLoadout {
                         return Ok(());
                     }
                     ensure!(
-                        critical.data == "-"
-                            || (matches!(
-                                super::System::named(&critical.equipment),
-                                Some(
-                                    super::System::ArtemisIv
-                                        | super::System::ArtemisV
-                                        | super::System::ApolloFcs
-                                )
-                            ) && critical.data.parse::<u8>().is_ok()),
+                        system_data_supported(critical),
                         "Unsupported critical data {}",
                         critical.data
                     );
@@ -548,11 +611,9 @@ impl MechLoadout {
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
                     let (system, tech_base) = System::installation(&critical.equipment)
                         .with_context(|| format!("Unsupported equipment {}", critical.equipment))?;
-                    loadout.systems.push(SystemCritical {
-                        location,
-                        system,
-                        tech_base,
-                    });
+                    loadout.systems.push(SystemCritical::resolve(
+                        location, system, tech_base, critical,
+                    )?);
                     Ok(())
                 })()
                 .with_context(|| {
@@ -623,7 +684,9 @@ impl MechLoadout {
                     // Artemis consumes only a one-byte link later; retaining the integer here
                     // lets construction and inspection round-trip other registered specials.
                     ensure!(
-                        critical.data == "-" || critical.data.parse::<i32>().is_ok(),
+                        critical.data == "-"
+                            || critical.data.parse::<i32>().is_ok()
+                            || system_data_supported(critical),
                         "Unsupported critical data {}",
                         critical.data
                     );
@@ -707,11 +770,9 @@ impl MechLoadout {
                         None => bail!("Unsupported equipment {}", critical.equipment),
                     };
                     ensure!(critical.modes.is_empty(), "Unsupported system mode");
-                    loadout.systems.push(SystemCritical {
-                        location,
-                        system,
-                        tech_base,
-                    });
+                    loadout.systems.push(SystemCritical::resolve(
+                        location, system, tech_base, critical,
+                    )?);
                     Ok(())
                 })()
                 .with_context(|| {
@@ -911,45 +972,57 @@ mod tests {
         }
     }
 
-    /// Automatic eligibility, explicit links, hardware loss and cluster exclusion compose independently.
+    /// A targeting computer assists only eligible weapons, only while every computer slot is
+    /// installed and available, and never with cluster rounds (TechManual p. 238; Total
+    /// Warfare pp. 113, 143). An `OnTC` mode is refused like any unknown mode.
     #[test]
-    fn computer_links_share_hardware_and_ammunition_rules() {
-        for weapon in [Weapon::MediumLaser, Weapon::MachineGun, Weapon::Lbx10] {
-            for linked in [false, true] {
-                let critical = super::super::CriticalDefinition {
-                    equipment: weapon.name().into(),
-                    data: "-".into(),
-                    modes: if linked {
-                        vec!["OnTC".into()]
-                    } else {
-                        Vec::new()
-                    },
-                };
-                let mount =
-                    WeaponMount::<CriticalLocation>::from_critical(weapon, &critical, Vec::new())
-                        .unwrap();
-                for slots in [
-                    vec![],
-                    vec![true],
-                    vec![true, true],
-                    vec![true, false],
-                    vec![false, true],
-                ] {
-                    let expected = slots.iter().all(|&available| available)
-                        && (linked || (!slots.is_empty() && weapon.supports_targeting_computer()));
-                    assert_eq!(
-                        mount
-                            .computer_assists(crate::AmmunitionMode::Normal, slots.iter().copied()),
-                        expected
-                    );
-                    assert!(
-                        !mount.computer_assists(
-                            crate::AmmunitionMode::Cluster,
-                            slots.iter().copied()
-                        )
-                    );
-                }
+    fn computer_assistance_follows_the_weapon_and_hardware() {
+        for weapon in [
+            Weapon::MediumLaser,
+            Weapon::MachineGun,
+            Weapon::Lbx10,
+            Weapon::Lrm10,
+            Weapon::Flamer,
+        ] {
+            let critical = super::super::CriticalDefinition {
+                equipment: weapon.name().into(),
+                data: "-".into(),
+                modes: Vec::new(),
+            };
+            let mount =
+                WeaponMount::<CriticalLocation>::from_critical(weapon, &critical, Vec::new())
+                    .unwrap();
+            for slots in [
+                vec![],
+                vec![true],
+                vec![true, true],
+                vec![true, false],
+                vec![false, true],
+            ] {
+                let expected = !slots.is_empty()
+                    && slots.iter().all(|&available| available)
+                    && weapon.supports_targeting_computer();
+                assert_eq!(
+                    mount.computer_assists(crate::AmmunitionMode::Normal, slots.iter().copied()),
+                    expected,
+                    "{weapon:?} {slots:?}"
+                );
+                assert!(
+                    !mount.computer_assists(crate::AmmunitionMode::Cluster, slots.iter().copied())
+                );
             }
+            let linked = super::super::CriticalDefinition {
+                modes: vec!["OnTC".into()],
+                ..critical
+            };
+            assert!(
+                WeaponMount::<CriticalLocation>::from_critical(weapon, &linked, Vec::new())
+                    .is_err()
+            );
         }
+        assert!(!Weapon::MachineGun.supports_targeting_computer());
+        assert!(!Weapon::Lrm10.supports_targeting_computer());
+        assert!(!Weapon::Flamer.supports_targeting_computer());
+        assert!(AmmunitionBin::configuration(Weapon::Ac10, &["OnTC".into()]).is_err());
     }
 }

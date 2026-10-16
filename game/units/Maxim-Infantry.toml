@@ -3,10 +3,7 @@ class = "vehicle"
 movement = "hover"
 tons = 50
 walk_mp = 8
-tac_range = 30
-lrs_range = 60
-scan_range = 30
-cargo_space = 1150
+cargo_tons = 12
 max_suits = 0
 specials = ["CargoTech"]
 
@@ -28,7 +25,7 @@ armor = 25
 armor = 16
 
 [sections.turret]
-armor = 21
+armor = 20
 slots = [
     { at = 1, item = "IS.StreakSRM-6" },
     { at = "2-3", item = "IS.ERMediumLaser" },

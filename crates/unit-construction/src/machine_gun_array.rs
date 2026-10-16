@@ -1,8 +1,11 @@
 //! Machine gun arrays: a one-slot module that links two to four machine guns of one size
 //! class in its location so they fire as one attack (TechManual p. 228; Total Warfare p. 137).
+//! A template names the guns an array links with `links`, the one-based first slots of the
+//! guns in the array's location, and construction checks them.
 use super::{CriticalLocation, ResolvedLoadout, System, Weapon};
+use anyhow::{Result, anyhow, bail, ensure};
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 /// Machine gun size classes; an array links guns of one class only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -33,68 +36,126 @@ pub const ARRAY_GUNS: std::ops::RangeInclusive<usize> = 2..=4;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MachineGunArray<L = CriticalLocation> {
     pub location: L,
-    /// Indices of the linked machine guns in the loadout's weapons, nearest first.
+    /// Indices of the linked machine guns in the loadout's weapons, in the order the template
+    /// lists their slots.
     pub weapon_indices: Vec<usize>,
 }
 
+/// The one-based first slots of the machine guns a machine gun array critical's stored data
+/// links, in the array's own location: a comma-separated list, as the template's `links`
+/// array stores it. A critical with no stored data links nothing, which construction refuses.
+pub fn machine_gun_array_links(data: &str) -> Result<Vec<u8>> {
+    if data == "-" {
+        return Ok(Vec::new());
+    }
+    data.split(',')
+        .map(|slot| {
+            let slot: u8 = slot
+                .trim()
+                .parse()
+                .map_err(|_| anyhow!("has an invalid machine gun link {data:?}"))?;
+            ensure!(slot > 0, "has an invalid machine gun link {data:?}");
+            Ok(slot)
+        })
+        .collect()
+}
+
+/// Store machine gun array links in a critical's data, the form
+/// [`machine_gun_array_links`] reads.
+pub fn store_machine_gun_array_links(links: &[u8]) -> String {
+    if links.is_empty() {
+        return "-".into();
+    }
+    links
+        .iter()
+        .map(u8::to_string)
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 impl<S: Copy + Ord> ResolvedLoadout<CriticalLocation<S>> {
-    /// Each array with the guns it links: the run of up to four machine guns of one size
-    /// class in the slots directly above it in its location, or, when none sit above it, in
-    /// the slots directly below. A vehicle location's item list is read the same way, so its
-    /// array sits beside the guns it links. Construction checks that each links two to four
-    /// guns.
+    /// Each array with the guns its template `links` name: the machine guns whose first slot
+    /// is a linked slot in the array's location. Construction refuses an array whose links do
+    /// not name two to four machine guns of one size class there, so every constructed unit's
+    /// arrays link exactly the guns their templates list.
     pub fn machine_gun_arrays(&self) -> Vec<MachineGunArray<CriticalLocation<S>>> {
-        let guns: BTreeMap<CriticalLocation<S>, (usize, super::MachineGunClass)> = self
-            .weapons
-            .iter()
-            .enumerate()
-            .filter_map(|(index, mount)| {
-                let class = mount.weapon.machine_gun_class()?;
-                Some((mount.criticals[0], (index, class)))
-            })
-            .collect();
-        let run = |location: CriticalLocation<S>, step: i16| {
-            let mut indices = Vec::new();
-            let mut class = None;
-            let mut slot = i16::from(location.slot) + step;
-            while (0..12).contains(&slot) && indices.len() < *ARRAY_GUNS.end() {
-                let at = CriticalLocation {
-                    section: location.section,
-                    slot: slot as u8,
-                };
-                let Some(&(index, gun)) = guns.get(&at) else {
-                    break;
-                };
-                if class.is_some_and(|class| class != gun) {
-                    break;
-                }
-                class = Some(gun);
-                indices.push(index);
-                slot += step;
-            }
-            indices
-        };
         self.systems
             .iter()
             .filter(|part| part.system == System::MachineGunArray)
-            .map(|part| {
-                let above = run(part.location, -1);
-                MachineGunArray {
-                    location: part.location,
-                    weapon_indices: if above.is_empty() {
-                        run(part.location, 1)
-                    } else {
-                        above
-                    },
-                }
+            .map(|part| MachineGunArray {
+                location: part.location,
+                weapon_indices: part
+                    .links
+                    .iter()
+                    .filter_map(|&link| self.linked_gun(part.location, link))
+                    .collect(),
             })
             .collect()
     }
+
+    /// The machine gun whose first critical is one-based slot `link` in `array`'s location.
+    fn linked_gun(&self, array: CriticalLocation<S>, link: u8) -> Option<usize> {
+        let target = CriticalLocation {
+            section: array.section,
+            slot: link.checked_sub(1)?,
+        };
+        self.weapons.iter().position(|mount| {
+            mount.criticals[0] == target && mount.weapon.machine_gun_class().is_some()
+        })
+    }
+}
+
+/// Check every machine gun array's links: each lists the first slots of two to four machine
+/// guns of one size class in the array's own location, and a gun belongs to one array at most
+/// (TechManual p. 228).
+pub(crate) fn check_machine_gun_arrays<S: Copy + Ord>(
+    loadout: &ResolvedLoadout<CriticalLocation<S>>,
+    section_name: impl Fn(S) -> &'static str,
+) -> Result<()> {
+    let mut linked = BTreeSet::new();
+    for part in loadout
+        .systems
+        .iter()
+        .filter(|part| part.system == System::MachineGunArray)
+    {
+        let name = section_name(part.location.section);
+        let here = format!(
+            "The machine gun array in {name} slot {}",
+            part.location.slot + 1
+        );
+        ensure!(
+            ARRAY_GUNS.contains(&part.links.len()),
+            "{here} links {} slots; its `links` must list the first slots of two to four machine guns of one size class in {name} (TechManual p. 228)",
+            part.links.len()
+        );
+        let mut class = None;
+        let mut slots = BTreeSet::new();
+        for &link in &part.links {
+            ensure!(slots.insert(link), "{here} links slot {link} twice");
+            let Some(index) = loadout.linked_gun(part.location, link) else {
+                bail!(
+                    "{here} links slot {link}, which is not the first slot of a machine gun in {name} (TechManual p. 228)"
+                );
+            };
+            let gun = loadout.weapons[index].weapon.machine_gun_class();
+            ensure!(
+                class.is_none_or(|class| Some(class) == gun),
+                "{here} links machine guns of more than one size class (TechManual p. 228)"
+            );
+            class = gun;
+            ensure!(
+                linked.insert(index),
+                "The machine gun in {name} slot {link} is linked to two machine gun arrays (TechManual p. 228)"
+            );
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{MechLoadout, MechTemplate};
+    use super::*;
+    use crate::{MechLoadout, MechSection, MechTemplate};
 
     /// A Jenner whose right torso holds `slots`.
     fn loadout(slots: &str) -> MechLoadout {
@@ -105,23 +166,81 @@ mod tests {
         MechLoadout::resolve(&MechTemplate::parse("JR7-D", &jenner).unwrap()).unwrap()
     }
 
+    /// Stored links parse to positive slots; anything else is refused.
     #[test]
-    fn arrays_link_the_adjacent_guns_of_one_class() {
-        let above = loadout(
-            "    { at = \"1-3\", item = \"IS.MachineGun\" },\n    { at = 4, item = \"IS.MGA\" },\n",
+    fn links_round_trip_through_critical_data() {
+        assert_eq!(machine_gun_array_links("-").unwrap(), Vec::<u8>::new());
+        assert_eq!(machine_gun_array_links("1,3,4").unwrap(), [1, 3, 4]);
+        assert_eq!(store_machine_gun_array_links(&[1, 3, 4]), "1,3,4");
+        assert_eq!(store_machine_gun_array_links(&[]), "-");
+        for data in ["0", "1,,2", "x", "1,256"] {
+            assert!(machine_gun_array_links(data).is_err(), "{data}");
+        }
+    }
+
+    /// An array links exactly the guns its links name, wherever they sit in the location.
+    #[test]
+    fn arrays_link_the_listed_guns() {
+        let spread = loadout(
+            "    { at = 1, item = \"IS.MachineGun\" },\n    { at = 4, item = \"IS.MGA\", links = [1, 9] },\n    { at = 9, item = \"IS.MachineGun\" },\n    { at = 10, item = \"IS.MachineGun\" },\n",
         );
-        let arrays = above.machine_gun_arrays();
+        let arrays = spread.machine_gun_arrays();
         assert_eq!(arrays.len(), 1);
-        assert_eq!(arrays[0].weapon_indices.len(), 3);
-        let below = loadout(
-            "    { at = 1, item = \"CL.MGA\" },\n    { at = \"2-3\", item = \"IS.LightMachineGun\" },\n    { at = 4, item = \"IS.MachineGun\" },\n",
+        let slots: Vec<_> = arrays[0]
+            .weapon_indices
+            .iter()
+            .map(|&index| spread.weapons[index].criticals[0])
+            .collect();
+        assert_eq!(
+            slots,
+            [0, 8].map(|slot| CriticalLocation {
+                section: MechSection::RightTorso,
+                slot
+            })
         );
-        let arrays = below.machine_gun_arrays();
-        // The standard gun after the light ones is another class.
-        assert_eq!(arrays[0].weapon_indices.len(), 2);
-        let five = loadout(
-            "    { at = \"1-5\", item = \"IS.HeavyMachineGun\" },\n    { at = 6, item = \"IS.MGA\" },\n",
+        assert!(check_machine_gun_arrays(&spread, |_| "Right Torso").is_ok());
+    }
+
+    /// Construction refuses an array whose links are missing, too few or too many, name
+    /// anything but a machine gun's first slot, mix size classes or share a gun.
+    #[test]
+    fn construction_refuses_bad_links() {
+        let refused = |slots: &str, expected: &str| {
+            let error = check_machine_gun_arrays(&loadout(slots), |_| "Right Torso")
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains(expected), "{error}");
+        };
+        let guns = "    { at = \"1-3\", item = \"IS.MachineGun\" },\n    { at = 5, item = \"IS.HeavyMachineGun\" },\n";
+        refused(
+            &format!("{guns}    {{ at = 4, item = \"IS.MGA\" }},\n"),
+            "links 0 slots",
         );
-        assert_eq!(five.machine_gun_arrays()[0].weapon_indices.len(), 4);
+        refused(
+            &format!("{guns}    {{ at = 4, item = \"IS.MGA\", links = [1] }},\n"),
+            "links 1 slots",
+        );
+        refused(
+            &format!("{guns}    {{ at = 4, item = \"IS.MGA\", links = [1, 2, 3, 5, 1] }},\n"),
+            "links 5 slots",
+        );
+        refused(
+            &format!("{guns}    {{ at = 4, item = \"IS.MGA\", links = [1, 1] }},\n"),
+            "links slot 1 twice",
+        );
+        refused(
+            &format!("{guns}    {{ at = 4, item = \"IS.MGA\", links = [1, 6] }},\n"),
+            "not the first slot of a machine gun",
+        );
+        refused(
+            &format!("{guns}    {{ at = 4, item = \"IS.MGA\", links = [1, 5] }},\n"),
+            "more than one size class",
+        );
+        refused(
+            &format!(
+                "{guns}    {{ at = 4, item = \"IS.MGA\", links = [1, 2] }},\n    {{ at = 6, item = \"IS.MGA\", links = [2, 3] }},\n"
+            ),
+            "linked to two machine gun arrays",
+        );
     }
 }

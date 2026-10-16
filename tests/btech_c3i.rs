@@ -567,9 +567,10 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     assert_eq!(minimum.range.unwrap().modifier, 2);
     assert!(minimum.network_range.is_none());
     toggle_battle_hotload(&mut world, first, pilot, lrm).unwrap();
+    // Hot-loaded LRMs have no minimum range, so nothing stops the peer's sighting applying.
     let hot = battle_aim_modifiers(&world, first, target, lrm, 4, aim_rules()).unwrap();
     assert_eq!(hot.range.unwrap().modifier, 0);
-    assert!(hot.network_range.is_none());
+    assert_eq!(hot.network_range.unwrap().source, Some(peer));
 
     // Total Warfare p. 131: the network never extends a weapon beyond its own maximum range.
     relocate(&mut world, first, 8);
@@ -579,6 +580,145 @@ async fn shared_range_preserves_physical_minimum_maximum_and_extended_rules() {
     join_leave_battle_c3i(&mut world, first, pilot, None).unwrap();
     let ordinary = battle_aim_modifiers(&world, first, target, ac, 4, aim_rules()).unwrap();
     assert!(ordinary.range.is_none());
+    world.validate(&config).unwrap();
+}
+
+/// A C3i shooter at (10, 2), its network peer at (10, 17) and an enemy at (10, 18), all facing
+/// south. `mml` refits the shooter's LRM-20 as an MML-9 firing LRM rounds; `wall` raises a wall
+/// at (10, 10) that hides the target from the shooter but not from the peer.
+async fn column(
+    mml: bool,
+    wall: bool,
+) -> (tempfile::TempDir, Config, World, [(ObjectId, ObjectId); 3]) {
+    let (dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Network column".into(), Kind::Room);
+    let mut rows = vec![".0".repeat(20); 20];
+    if wall {
+        rows[10].replace_range(20..22, "=8");
+    }
+    create_battle_map(
+        &mut world,
+        map,
+        "column.map",
+        MapAsset::from_cells(&format!("20 20\n{}\n", rows.join("\n"))).unwrap(),
+    )
+    .unwrap();
+    let source = include_str!("fixtures/btech/units/AS7-D.toml");
+    let mut units = Vec::new();
+    for (i, y) in [2, 17, 18].into_iter().enumerate() {
+        let text = if mml && i == 0 {
+            source
+                .replace(
+                    "item = \"Ammo_IS.LRM-20\", rounds = 6",
+                    "item = \"Ammo_IS.MML-9\", rounds = 13, modes = [\"MML_LRM\"]",
+                )
+                .replace(
+                    "item = \"IS.LRM-20\"",
+                    "item = \"IS.MML-9\", modes = [\"MML_LRM\"]",
+                )
+        } else {
+            source.into()
+        };
+        let mut template = MechTemplate::parse("AS7-D", &text).unwrap();
+        for slot in [10, 11] {
+            template
+                .sections
+                .get_mut(&MechSection::CenterTorso)
+                .unwrap()
+                .criticals
+                .insert(
+                    slot,
+                    CriticalDefinition {
+                        equipment: "C3i".into(),
+                        data: "-".into(),
+                        modes: vec![],
+                    },
+                );
+        }
+        let id = world.create(&config, format!("Column unit {i}"), Kind::Thing);
+        world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+        create_battle_unit(&mut world, id, crate::support::templates::legal(template)).unwrap();
+        place_battle_unit(&mut world, id, map, 10, y).unwrap();
+        let pilot = if i == 0 {
+            ObjectId(1)
+        } else {
+            world.create(&config, format!("Pilot {i}"), Kind::Player)
+        };
+        world.objects.get_mut(&pilot).unwrap().location = Some(id);
+        assign_battle_pilot(&mut world, id, pilot).unwrap();
+        start_battle_unit(&mut world, id, pilot, true).unwrap();
+        units.push((id, pilot));
+    }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
+    for _ in 0..5 {
+        advance_battle_units(&mut world, 0, true);
+    }
+    let mut encoded = serde_json::to_value(&world.btech).unwrap();
+    for &(id, _) in &units {
+        for &(other, _) in &units {
+            if id != other {
+                encoded["constructed"][id.0.to_string()]["contacts"][other.0.to_string()] =
+                    serde_json::json!({"identified":true});
+            }
+        }
+    }
+    world.btech = serde_json::from_value(encoded).unwrap();
+    for (&(id, _), y) in units.iter().zip([2, 17, 18]) {
+        relocate(&mut world, id, y);
+    }
+    let [(first, pilot), (peer, _), (target, _)] = [units[0], units[1], units[2]];
+    join_leave_battle_c3i(&mut world, first, pilot, Some(peer)).unwrap();
+    set_battle_unit_signature(
+        &mut world,
+        target,
+        UnitSignature {
+            team: 1,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    (dir, config, world, units.try_into().unwrap())
+}
+
+/// A network shares range on the brackets of the ammunition the weapon fires, and minimum
+/// range is always measured from the shooter (Total Warfare pp. 131-132; TechManual p. 229):
+/// an MML on LRM rounds reaches its 21-hex long range through a peer and keeps the LRM
+/// minimum range when the shooter itself is close.
+#[tokio::test]
+async fn shared_range_follows_mml_lrm_ammunition_and_its_minimum_range() {
+    let (_dir, config, mut world, units) = column(true, false).await;
+    let [(first, _), (peer, _), (target, _)] = units;
+    let mml = weapon_index(&world, first, Weapon::Mml9);
+    let aim = battle_aim_modifiers(&world, first, target, mml, 4, aim_rules()).unwrap();
+    assert!((aim.distance - 16.0).abs() < 1e-8);
+    assert_eq!(aim.network_range.unwrap().source, Some(peer));
+    assert_eq!(aim.range.unwrap().modifier, 0);
+
+    // Five hexes from the target the shooter is inside the LRM rounds' six-hex minimum range.
+    relocate(&mut world, first, 13);
+    let minimum = battle_aim_modifiers(&world, first, target, mml, 4, aim_rules()).unwrap();
+    assert_eq!(minimum.range.unwrap().bracket, RangeBracket::Minimum);
+    assert_eq!(minimum.range.unwrap().modifier, 2);
+    assert!(minimum.network_range.is_none());
+    world.validate(&config).unwrap();
+}
+
+/// A C3 network does not help LRM indirect fire (Total Warfare p. 132): the indirect shot
+/// keeps the range from the shooter even though its spotter is also its network peer.
+#[tokio::test]
+async fn shared_range_gives_indirect_fire_no_benefit() {
+    let (_dir, config, mut world, units) = column(false, true).await;
+    let [(first, pilot), (peer, peer_pilot), (target, _)] = units;
+    select_battle_spotter(&mut world, peer, peer_pilot, Some(peer)).unwrap();
+    select_battle_target(&mut world, peer, peer_pilot, Some(target)).unwrap();
+    select_battle_spotter(&mut world, first, pilot, Some(peer)).unwrap();
+    let lrm = weapon_index(&world, first, Weapon::Lrm20);
+    let aim = battle_aim_modifiers(&world, first, target, lrm, 4, aim_rules()).unwrap();
+    assert_eq!(aim.indirect.unwrap().spotter, peer);
+    assert!(aim.network_range.is_none());
+    assert!((aim.distance - 16.0).abs() < 1e-8);
+    assert_eq!(aim.range.unwrap().bracket, RangeBracket::Long);
+    assert_eq!(aim.range.unwrap().modifier, 4);
     world.validate(&config).unwrap();
 }
 

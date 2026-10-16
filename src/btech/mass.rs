@@ -1,6 +1,6 @@
 //! Current conventional biped mass derived from durable construction and damage facts.
 use super::{
-    Engine, Mech, MechSection, System, Technology, armor_mass, cargo_space_mass, engine_mass,
+    CARGO_TONS, Engine, Mech, MechSection, System, Technology, armor_mass, cargo_mass, engine_mass,
     half_ton, one_shot_mass, power_amplifier_mass, rated_output, structure_mass, system_slot_mass,
 };
 use anyhow::{Context, Result};
@@ -167,11 +167,7 @@ impl Mech {
                     )
             })
             .sum();
-        let cargo = cargo_space_mass(
-            definition.attributes.get("cargo_space").map(String::as_str),
-            definition.has_special("Carrier_Tech"),
-            definition.has_special("CargoTech"),
-        )?;
+        let cargo = cargo_mass(definition.attributes.get(CARGO_TONS).map(String::as_str))?;
         let total = (i64::from(engine)
             + i64::from(cockpit)
             + i64::from(gyro)

@@ -42,6 +42,26 @@ fn install(world: &mut World, id: ObjectId, unit: &Vehicle, seed: u8, airborne: 
     world.btech = serde_json::from_value(state).unwrap();
 }
 
+/// Run a falling aircraft's descent clock to its impact, which must come without recovery.
+fn crash(world: &mut World, id: ObjectId) {
+    for _ in 0..100 {
+        match advance_battle_vtol_fall(world, id, MovementRules::STANDARD.fall).unwrap() {
+            VehicleDescentEvent::Impact { .. } => return,
+            VehicleDescentEvent::Recovered => panic!("an aircraft that cannot fly recovered"),
+            VehicleDescentEvent::Waiting | VehicleDescentEvent::Descending => {}
+        }
+    }
+    panic!("the descent never reached the ground");
+}
+
+/// A VTOL wrecked by its crash: on the ground, with its rotor smashed (Total Warfare p. 68).
+fn assert_wrecked(world: &World, id: ObjectId) {
+    let unit = &world.btech.vehicles()[&id];
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
+    assert!(unit.rotor_destroyed());
+    assert!(unit.is_destroyed());
+}
+
 fn kestrel() -> Vehicle {
     Vehicle::new(
         VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap(),
@@ -203,6 +223,12 @@ async fn rotor_damage_that_leaves_no_movement_forces_an_engine_damage_landing() 
                 VtolFlightPhase::Falling
             }
         );
+        // Treated as Engine Damage (TW p. 196), a failed landing destroys the VTOL: with no
+        // movement left it cannot brake its fall even though the engine still runs.
+        if !success {
+            crash(&mut world, id);
+            assert_wrecked(&world, id);
+        }
     }
 }
 
@@ -426,6 +452,13 @@ async fn airborne_pilot_hits_roll_for_control_and_drop_a_level_on_failure() {
         world.btech.vehicles()[&id].vtol_flight().unwrap().phase,
         VtolFlightPhase::Falling
     );
+    // The drop puts the VTOL on the ground (TW p. 197): it crashes rather than recovering in
+    // the air. A hovering, still-flyable VTOL over clear ground has then landed (TW p. 68).
+    crash(&mut world, id);
+    let unit = &world.btech.vehicles()[&id];
+    assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
+    assert_eq!(unit.vtol_flight().unwrap().altitude, 3.0);
+    assert!(!unit.is_destroyed());
 }
 
 #[tokio::test]
@@ -567,6 +600,11 @@ async fn engine_emergency_landings_roll_at_plus_four_and_commit_failed_attempts_
             );
             assert_eq!(changed.vtol_flight().unwrap().altitude, 5.0);
             assert!(changed.vtol_flight().unwrap().fall.is_some());
+            // A failed landing roll destroys the VTOL (TW p. 197): its dead engine gives no
+            // lift, so the fall runs unbraked into a wrecking crash.
+            let mut crashing = world.clone();
+            crash(&mut crashing, id);
+            assert_wrecked(&crashing, id);
             // A second Engine Hit no longer applies; the column moves on to Ammunition.
             world
                 .btech
@@ -626,6 +664,9 @@ async fn engine_loss_over_water_starts_falling_without_a_landing_roll() {
         serde_json::to_value(unit).unwrap()["dice"],
         serde_json::to_value(dice).unwrap()
     );
+    // Engine damage over terrain it cannot land on destroys the VTOL (TW p. 197).
+    crash(&mut world, id);
+    assert_wrecked(&world, id);
 }
 
 /// Emergency landing rolls reach only the assigned pilot before the landing outcome.

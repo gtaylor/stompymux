@@ -77,8 +77,5 @@ mod btech_vehicle_state;
 #[path = "../btech_vtol_impact.rs"]
 mod btech_vtol_impact;
 
-#[path = "../btech_weapon_settings.rs"]
-mod btech_weapon_settings;
-
 #[path = "../btech_xptop.rs"]
 mod btech_xptop;

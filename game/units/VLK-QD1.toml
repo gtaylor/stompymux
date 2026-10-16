@@ -25,7 +25,7 @@ slots = [
 armor = 9
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.ERMediumLaser", modes = ["OnTC"] },
+    { at = 4, item = "IS.ERMediumLaser" },
     { at = "5-11", item = "EndoSteel" },
 ]
 

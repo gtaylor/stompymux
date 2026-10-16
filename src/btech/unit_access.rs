@@ -221,8 +221,7 @@ impl<'a> UnitRef<'a> {
         pub fn self_destruct(&self) -> Option<SelfDestruct>;
         /// Scenario protection from ammunition self-destruct admission.
         pub fn self_destruct_safe(&self) -> bool;
-        /// Nonzero template ranges override technology-base defaults independently.
-        /// Template zero selects defaults; runtime zero remains zero. Subsequent sensor hits degrade ranges.
+        /// Default or script-assigned display and scan reach, degraded by later sensor criticals.
         pub fn sensor_ranges(&self) -> SensorRanges;
         /// This turn's 2d6 sensor sweep, once rolled.
         pub fn sensor_sweep(&self) -> Option<u8>;

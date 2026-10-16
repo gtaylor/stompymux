@@ -318,7 +318,8 @@ pub fn convert(source: &str) -> Result<Converted> {
     }
     let mut warnings = Vec::new();
     let transport = transporters(file.lines("transporters"), &mut warnings)?;
-    if transport.cargo_space.is_some() {
+    // A unit with a cargo bay loads and unloads stock (`help cargo`).
+    if transport.cargo_tons.is_some() {
         push_special(&mut specials, "CargoTech");
     }
     let reference = if model.is_empty() {
@@ -340,7 +341,7 @@ pub fn convert(source: &str) -> Result<Converted> {
             heat_sinks: (heat_sinks != free).then_some(heat_sinks),
             construction,
             specials,
-            cargo_space: transport.cargo_space,
+            cargo_tons: transport.cargo_tons,
             transport_bays: transport.bays,
             sections,
             split_mounts: Vec::new(),
@@ -351,8 +352,8 @@ pub fn convert(source: &str) -> Result<Converted> {
 
 /// The bays a `<transporters>` block converts to.
 struct Transport {
-    /// Standard cargo in hundredths of a ton.
-    cargo_space: Option<u32>,
+    /// Standard cargo in tons, a whole number of half tons.
+    cargo_tons: Option<String>,
     /// `[transport_bays]` keys and values.
     bays: Vec<(&'static str, String)>,
 }
@@ -438,13 +439,13 @@ fn transporters(lines: &[String], warnings: &mut Vec<String>) -> Result<Transpor
             .into_iter()
             .map(|(key, count)| (key, count.to_string())),
     );
-    let hundredths = (cargo * 100.0).round();
+    let halves = (cargo * 2.0).round();
     ensure!(
-        (cargo * 100.0 - hundredths).abs() < 0.01,
-        "unsupported cargo bay of {cargo} tons"
+        (cargo * 2.0 - halves).abs() < 0.01,
+        "unsupported cargo bay of {cargo} tons: not a whole number of half tons"
     );
     Ok(Transport {
-        cargo_space: (hundredths > 0.0).then_some(hundredths as u32),
+        cargo_tons: (halves > 0.0).then(|| format!("{}", halves / 2.0)),
         bays,
     })
 }
@@ -562,7 +563,7 @@ mod tests {
     /// specialized bays their own transport bays (TechManual p. 239); non-bay transporters are
     /// reported and left out, and battle armor bays refused.
     #[test]
-    fn transporters_become_cargo_space_and_transport_bays() {
+    fn transporters_become_a_cargo_bay_and_transport_bays() {
         let with = |lines: &str| {
             BULLDOG.replacen(
                 "<tonnage>",
@@ -575,7 +576,7 @@ mod tests {
              infantrybay:1.0:1:1:Foot:-1:0\nBattleArmorHandles - troopers:-1",
         ))
         .unwrap();
-        assert_eq!(converted.draft.cargo_space, Some(100));
+        assert_eq!(converted.draft.cargo_tons.as_deref(), Some("1"));
         assert!(converted.draft.specials.contains(&"CargoTech"));
         assert_eq!(
             converted.draft.transport_bays,
@@ -590,7 +591,7 @@ mod tests {
             ["ignoring transporter BattleArmorHandles - troopers:-1"]
         );
         let rendered = converted.draft.render();
-        assert!(rendered.contains("cargo_space = 100\n"), "{rendered}");
+        assert!(rendered.contains("cargo_tons = 1\n"), "{rendered}");
         assert!(
             rendered.contains("[transport_bays]\ninfantry_compartment = 4\nliquid_cargo = 0.5\n"),
             "{rendered}"
@@ -627,7 +628,7 @@ mod tests {
         for expected in [
             "{ at = 2, item = \"ApolloFCS\", link = 1 }",
             "{ at = 4, item = \"ApolloFCS\", link = 3 }",
-            "{ at = \"1-2\", item = \"IS.MachineGun\" },\n    { at = 3, item = \"IS.MGA\" }",
+            "{ at = \"1-2\", item = \"IS.MachineGun\" },\n    { at = 3, item = \"IS.MGA\", links = [1, 2] }",
         ] {
             assert!(
                 template.contains(expected),

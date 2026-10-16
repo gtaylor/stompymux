@@ -100,7 +100,6 @@
 ---@field initial_ammunition_mode AmmunitionMode
 ---@field initial_fire_mode FireMode Template mode; live mode is reported by unit.weapons.
 ---@field rear_mount boolean
----@field on_targeting_computer boolean Explicit authored link, separate from automatic eligibility.
 
 ---@class AmmunitionBin
 ---@field location CriticalLocation
@@ -114,6 +113,7 @@
 ---@class SystemCritical
 ---@field location CriticalLocation
 ---@field system string Snake_case system identity.
+---@field links? integer[] One-based first slots of the machine guns a machine gun array links in its location.
 
 ---@class MechLoadout
 ---@field weapons WeaponMount[]
@@ -345,7 +345,7 @@ function btech_unit.inspect(dbref) end
 ---@field map_slot integer|nil Persisted battlefield membership order.
 ---@field aimed_section AimSelection|nil Saved anatomy preference; independent of the current lock.
 ---@field target_lock TargetLock|HexLock|nil
----@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits after sensor damage.
+---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Current display and scan reach in hexes after script overrides and sensor damage.
 ---@field observer boolean Administrator-assigned observer role.
 ---@field combat_safe boolean Operator-imposed immunity to combat damage.
 ---@field weapons_hold boolean Operator-imposed firing restriction; mechanical readiness is independent.
@@ -467,7 +467,7 @@ function btech_unit.inspect(dbref) end
 ---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 ---@field scanner_perception integer Perception captured at startup completion.
 ---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
----@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Computer-derived hex limits.
+---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Current display and scan reach in hexes after script overrides.
 ---@field aimed_section AimSelection|nil Saved anatomy preference; independent of the current lock.
 ---@field target_lock TargetLock|HexLock|nil Saved selection.
 ---@field artillery_adjustment integer Saved correction for the selected artillery coordinate.
@@ -1448,7 +1448,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@class SalvoGroup
 ---@field damage integer
 ---@field hit {section: MechSectionName, rear_armor: boolean, through_armor_critical: boolean}
----@field impact table Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat rolls, searchlight_destroyed and remaining scenario effects.
+---@field impact table Ordered material phases, critical losses, exposures (SectionExposureReport[]), dump_ignitions, plasma_heat roll, searchlight_destroyed and remaining scenario effects.
 ---@field pilot_injuries table[] Applied tactical injuries and consciousness results.
 ---@field notices {unit: integer, text: string}[] Already staged by unit.fire.
 ---@field balance table[] Applied balance checks and any nested falls.
@@ -1463,7 +1463,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@class WoodlandImpact
 ---@field map integer
 ---@field coordinate HexCoordinate
----@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough"}|{effect: "damage", total: integer} What the attack did to the woods; damage is the terrain factor spent so far.
+---@field effect {effect: "none"}|{effect: "ignite", seconds: integer}|{effect: "clear", clearing: "thin"|"cut_to_clear"|"cut_to_rough", total: integer}|{effect: "damage", total: integer} What the attack did to the woods; total is the terrain factor spent so far against the growth the hex held before the attack.
 ---@field notices Notice[]
 ---@class StrayHit
 ---@field coordinate HexCoordinate The building hex the miss struck.
@@ -1822,32 +1822,6 @@ function btech_unit.prone(dbref, pilot) end
 ---@return boolean accepted Timer and cockpit feedback commit with the callback.
 function btech_unit.hide(dbref, pilot) end
 
----@class WeaponValues
----@field recycle_seconds integer Effective runtime recycle time, from 1 through 127 seconds.
----@field battle_value integer Effective runtime Battle Value, from 0 through 2147483647.
-
-local btech_weapon = {}
-
----Read detached effective values using a canonical weapon name.
----Examples: IS.MediumLaser or CL.LRM-20; exact names ignore ASCII case.
----@param name string
----@return WeaponValues
-function btech_weapon.settings(name) end
-
----Wizard-only runtime override. Existing countdowns are unchanged; restart restores catalogue defaults.
----@param actor integer
----@param name string
----@param seconds integer From 1 through 127.
----@return WeaponValues
-function btech_weapon.set_recycle(actor, name, seconds) end
-
----Wizard-only runtime override used by valuation and Battle Value XP. Restart restores catalogue defaults.
----@param actor integer
----@param name string
----@param value integer From 0 through 2147483647.
----@return WeaponValues
-function btech_weapon.set_battle_value(actor, name, value) end
-
 ---@class InventoryEntry
 ---@field part_id integer Stable game-directory part identifier.
 ---@field quantity integer Positive stock quantity, at most 2147483647.
@@ -1978,7 +1952,6 @@ local btech_runtime = {}
 ---@field database btech.database Explicit world checkpoints.
 ---@field cargo table Cockpit stock reports and transfers.
 ---@field inventory table Shared loose-parts stock.
----@field weapon table Runtime weapon settings.
 ---@field character table
 ---@field template table
 ---@field map table
@@ -1996,7 +1969,6 @@ btech = {
   database = btech_database,
   cargo = btech_cargo,
   inventory = btech_inventory,
-  weapon = btech_weapon,
   player = btech_player,
   character = btech_character,
   template = btech_template,
@@ -2032,12 +2004,6 @@ function btech_unit.lbx(dbref, pilot, weapon) end
 ---@return AmmunitionMode
 function btech_unit.cluster(dbref, pilot, weapon) end
 
----@class AmmunitionAdjustment
----@field location CriticalLocation
----@field supplied integer Authored initial quantity.
----@field normalized integer Initial quantity after construction normalization.
----@field inferred_half_ton boolean Construction would infer a half-ton bin.
-
 ---@class TemplateCheck
 ---@field chassis "biped"|"quad"|nil Parsed anatomy, independent of simulation readiness.
 ---@field name string
@@ -2050,7 +2016,6 @@ function btech_unit.cluster(dbref, pilot, weapon) end
 ---@field declared_engine_rating integer|nil Rating the [construction] table declares; nil when derived.
 ---@field weapons integer Resolved weapon count on success; zero on rejection.
 ---@field ammunition_bins integer Resolved bin count on success; zero on rejection.
----@field ammunition_adjustments AmmunitionAdjustment[] Changes on successful construction.
 
 ---Preview construction without registering a unit or modifying the source asset.
 ---@param name string Template reference: the file stem of a `.toml` document anywhere under database.unit_database.
@@ -3635,7 +3600,6 @@ function btech_unit.section_condition(unit, section) end
 ---@field section UnitSection
 ---@field slots integer[] Zero-based critical slots.
 ---@field rear_facing? boolean
----@field targeting_computer? boolean
 ---@field one_shot? boolean
 
 ---@class AmmunitionConfiguration
@@ -3687,9 +3651,9 @@ function btech_unit.set_armor(unit, section, patch) end
 ---@param pilot DbRef|Object|nil Player object.
 function btech_unit.set_assigned_pilot(unit, pilot) end
 
----Set cargo space and the maximum carried tonnage.
+---Set the cargo bay's capacity and the maximum carried tonnage.
 ---@param unit DbRef|Object
----@param space integer
+---@param space integer Cargo bay capacity in half tons.
 ---@param maximum_tons integer
 function btech_unit.set_cargo_capacity(unit, space, maximum_tons) end
 
@@ -3703,17 +3667,23 @@ function btech_unit.set_heat_sinks(unit, count) end
 ---@param movement_points number
 function btech_unit.set_jump_speed(unit, movement_points) end
 
----Set the long-range sensor ceiling in hexes.
+---Set the unit's long-range display reach in hexes (0 to 127), replacing the 50-hex default.
+---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+---turns the display off. Read it back from `btech.unit.state(unit).sensor_ranges.long_range`.
 ---@param unit DbRef|Object
 ---@param range integer
 function btech_unit.set_long_range_sensor_range(unit, range) end
 
----Set the tactical sensor range in hexes.
+---Set the unit's tactical display reach in hexes (0 to 127), replacing the 25-hex default.
+---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+---turns the display off. Read it back from `btech.unit.state(unit).sensor_ranges.tactical`.
 ---@param unit DbRef|Object
 ---@param range integer
 function btech_unit.set_tactical_range(unit, range) end
 
----Set the scan range in hexes.
+---Set the unit's `scan` reach in hexes (0 to 127), replacing the 25-hex default.
+---The reach applies as given; only sensor criticals taken afterwards halve or remove it, and 0
+---turns scanning off. Read it back from `btech.unit.state(unit).sensor_ranges.scan`.
 ---@param unit DbRef|Object
 ---@param range integer
 function btech_unit.set_scan_range(unit, range) end

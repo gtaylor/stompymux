@@ -214,6 +214,9 @@ impl Vehicle {
 impl Vehicle {
     /// Advance the shared descent clock, braking when power, rotor and fuel provide lift.
     /// Recovery clears the cursor; impact leaves state unchanged until host damage commits.
+    /// An aircraft left with no movement, by an Engine Damage critical or by damage that cuts
+    /// its MP to zero, cannot fly at all: a failed emergency landing destroys it (Total Warfare
+    /// pp. 196-197), so its descent runs unbraked into a crash.
     pub fn advance_vtol_fall(&mut self, surface: i32) -> Result<super::FreeFallStep> {
         let mut flight = self
             .vtol_flight
@@ -225,9 +228,8 @@ impl Vehicle {
         let mut fall = flight
             .fall
             .ok_or_else(|| anyhow::anyhow!("Aircraft fall cursor is unavailable"))?;
-        let lift = !self.is_destroyed()
-            && self.power() == super::Power::Running
-            && !self.rotor_destroyed()
+        let lift = self.power() == super::Power::Running
+            && self.maximum_speed() > 0.0
             && self.has_vtol_fuel();
         let step = fall.advance_with_lift(surface, lift)?;
         if step == super::FreeFallStep::Recovered {

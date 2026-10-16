@@ -16,14 +16,14 @@ armor = "ferro_fibrous"
 armor = 32
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-10", item = "CL.UltraAC/20", modes = ["OnTC"] },
+    { at = "3-10", item = "CL.UltraAC/20" },
     { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 32
 slots = [
-    { at = "5-7", item = "CL.HeavyLargeLaser", modes = ["OnTC"] },
+    { at = "5-7", item = "CL.HeavyLargeLaser" },
     { at = 8, item = "FerroFibrous" },
 ]
 
@@ -42,7 +42,7 @@ rear = 10
 slots = [
     { at = "3-4", item = "HeatSink" },
     { at = "5-8", item = "TargetingComputer" },
-    { at = "9-10", item = "CL.ERMediumLaser", modes = ["OnTC"] },
+    { at = "9-10", item = "CL.ERMediumLaser" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 

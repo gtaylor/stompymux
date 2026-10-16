@@ -158,8 +158,11 @@ async fn adapters_report_resolved_equipment_and_preserve_callback_guards() {
 fn awesome_and_hunchback_resolve_conventional_energy_loadouts() {
     use stompymux_rs::Mech;
     let cargo = include_str!("../game/units/HBK-4P.toml");
-    for invalid in ["1.5", "-1", "\"invalid\""] {
-        let source = cargo.replace("cargo_space = 0", &format!("cargo_space = {invalid}"));
+    for invalid in ["1.2", "-1", "\"invalid\""] {
+        let source = cargo.replace(
+            "walk_mp = 4\n",
+            &format!("walk_mp = 4\ncargo_tons = {invalid}\n"),
+        );
         assert_ne!(source, cargo);
         assert!(
             MechTemplate::parse("HBK-4P", &source)
@@ -347,13 +350,15 @@ fn conventional_autocannon_profiles_bins_and_enforcer_construction() {
             .flat_map(|section| section.criticals.values_mut())
             .find(|critical| critical.equipment.starts_with("Ammo_"))
             .unwrap();
+        // An overfilled bin is refused rather than clamped to its ton.
         bin.data = (capacity + 1).to_string();
         assert!(MechLoadout::resolve(&definition).is_err());
-        assert_eq!(
-            Mech::from_template(crate::support::templates::legal(definition))
-                .unwrap()
-                .ammunition(),
-            &[u16::from(capacity)]
+        let refused = Mech::from_template(crate::support::templates::legal(definition))
+            .map(|_| ())
+            .unwrap_err();
+        assert!(
+            format!("{refused:#}").contains("Ammunition exceeds bin capacity"),
+            "{refused:#}"
         );
     }
 }

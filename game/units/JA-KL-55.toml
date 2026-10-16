@@ -5,7 +5,6 @@ tons = 30
 walk_mp = 7
 heat_sinks = 10
 radio = 4
-cargo_space = 0
 max_suits = 0
 
 [construction]
@@ -41,7 +40,7 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "IS.ERPPC", modes = ["OnTC"] },
+    { at = "4-6", item = "IS.ERPPC" },
     { at = "7-9", item = "HeatSink" },
     { at = "10-12", item = "EndoSteel" },
 ]

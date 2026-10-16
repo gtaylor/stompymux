@@ -1,7 +1,7 @@
 +++
 title = "@btech"
 description = "Manage BattleTech assets, maps, runtime settings and inventory"
-keywords = ["snipe", "@setunit", "@viewunit", "@setspecial", "@viewspecial", "@ood", "setmapindx", "setxy", "@weight", "@damage", "@damagesection", "@losemit", "setteam", "eventstats", "memstats", "listforms", "savedb", "xptop", "setxplevel", "@viewmap", "fixmap", "@setmap", "addmine", "list", "delobj", "addfire", "addsmoke", "addblock", "loadmap", "savemap", "setmapsize", "clearunits", "@mapemit", "addhex", "addice", "delice", "setcond", "addstuff", "removestuff", "clearstuff", "@btech", "btech inspection", "setvrt", "setwbv", "cargo-point"]
+keywords = ["snipe", "@setunit", "@viewunit", "@setspecial", "@viewspecial", "@ood", "setmapindx", "setxy", "@weight", "@damage", "@damagesection", "@losemit", "setteam", "eventstats", "memstats", "listforms", "savedb", "xptop", "setxplevel", "@viewmap", "fixmap", "@setmap", "addmine", "list", "delobj", "addfire", "addsmoke", "addblock", "loadmap", "savemap", "setmapsize", "clearunits", "@mapemit", "addhex", "addice", "delice", "setcond", "addstuff", "removestuff", "clearstuff", "@btech", "btech inspection", "cargo-point"]
 article_tags = ["wizard_commands"]
 wizard_only = true
 +++
@@ -12,9 +12,6 @@ Inspect the BattleTech foundation:
 
 ```text
 @btech status
-@btech weapon-settings IS.MediumLaser
-@btech setvrt IS.MediumLaser 25
-@btech setwbv IS.MediumLaser 46
 @btech skill-threshold Piloting-Biped
 @btech skill-threshold Piloting-Biped=3000
 @btech template JR7-D
@@ -56,8 +53,8 @@ To create a DEBUG command object, use an existing Thing you control:
 The switches may be abbreviated to `/r`, `/i`, and `/u`. Bare `@btech #42` also
 reports its registered type. Registration preserves the object and its location;
 unregistration removes its DEBUG role. A DEBUG object supplies its commands when
-it is the actor, the actor's location, or carried by the actor. Its `SETWBV`
-command is public, as in the reference; other DEBUG controls require Wizard access.
+it is the actor, the actor's location, or carried by the actor. Every DEBUG
+control requires Wizard access.
 Registration and removal survive saving and restart.
 
 `@btech/register #43=MAP` initializes a live Thing as a 21 by 11 map of clear ground
@@ -84,8 +81,8 @@ loading units into other units are deferred. A successfully parsed
 template has not yet had its equipment and rule support validated. Use
 `template-check <name>` to preview the unit-construction checks, the first
 rejection reason, the movement points and engine rating (and whether the
-template declares the rating or derives it from movement) and any ammunition
-normalization; for a vehicle or VTOL it also
+template declares the rating or derives it from movement); for a vehicle or
+VTOL it also
 reports mass, item slots, armor and energy weapon heat against the TechManual
 limits, and any unspent tonnage. A successful check means the
 template can be constructed under the currently implemented construction rules; it
@@ -288,25 +285,6 @@ to read the current flags.
 
 `@btech unit-combat-safe <unit>=on|off` grants or removes damage immunity for a constructed unit. Trusted Lua uses `btech.unit.combat_safe(unit, enabled)`. The flag survives restart. Map building flag 2 also suppresses damage originating inside that map; entrance safety flag 8 does not grant immunity.
 
-## Runtime weapon settings
-
-`weapon-settings <weapon>` shows the current recycle time and Battle Value.
-`setvrt <weapon> <seconds>` accepts 1 through 127 seconds; `setwbv <weapon> <value>`
-accepts 0 through 2147483647. Use canonical weapon names such as `IS.MediumLaser`
-or `CL.LRM-20`; the setting applies to every installation of that weapon. Names
-ignore ASCII case and do not accept wildcards. An equals sign can replace the space before the value.
-
-These Wizard settings apply to every supported chassis. New weapon and AMS
-activations use the recycle override, while active countdowns keep their remaining
-time. Weapon specifications, unit Battle Value and Battle Value experience use the
-same current values. Restart restores catalogue defaults; an existing countdown
-still finishes normally even if it exceeds the restored default.
-
-Trusted callbacks can inspect with `btech.weapon.settings(name)` and change values
-with `btech.weapon.set_recycle(actor, name, seconds)` or
-`btech.weapon.set_battle_value(actor, name, value)`. Both setters require a Wizard
-actor and participate in callback rollback.
-
 ## Parts inventory administration
 
 `@btech inventory <object>` lists an object's loose-parts stock by the identifiers
@@ -351,12 +329,11 @@ and survive restart and same-size terrain reload. Cockpit loading checks this po
 
 ## Cargo-space construction
 
-Mech and vehicle templates accept nonnegative `Cargo_Space` values in hundredths
-of a ton. The installation contributes construction mass independently of its
-loose-stock contents: ordinary installations divide capacity by 500, CargoTech
-by 100, and Carrier_Tech by 1000 before conversion to 1/1024-ton mass units.
-Carrier_Tech takes precedence when both flags are present. Fractional mass is
-truncated after conversion. Invalid or overflowing capacities are rejected.
+Mech and vehicle templates state a standard cargo bay as `cargo_tons`, its
+capacity in tons and half tons. The bay weighs its capacity, a ton per ton,
+whatever the unit's specials (TechManual p. 239), independently of its
+loose-stock contents. Negative, fractional-half-ton or overflowing capacities
+are rejected.
 
 Lua `btech.unit.state(unit).mass.cargo` reports this installation mass; inventory
 mass remains available separately. Cargo installations participate in shared
@@ -729,17 +706,7 @@ view (255 displays as -1). Flag values display all supported letters a–z/A–F
 with `-` for zero. Titles use the map object's name; `mapname` is the saved map
 asset name. Use one column to see longer field labels.
 
-
-## Runtime weapon settings
-
-`SETVRT weapon seconds` changes future activations to use a recycle duration of
-1–127 seconds. `SETWBV weapon value` sets Battle Value from 0–2147483647.
-Both require wizard authority, accept exactly two arguments and share the
-`@btech setvrt`/`@btech setwbv` controls. Weapon names are exact and case-insensitive.
-These runtime settings apply across unit types and reset on database reload.
-Existing active recycle countdowns are preserved. Lua uses
-`btech.weapon.set_recycle` and `btech.weapon.set_battle_value`.
-
+## Skill XP thresholds
 
 `SETXPLEVEL skill threshold` silently sets a runtime XP threshold as a wizard.
 It accepts exactly two arguments; the threshold must be 0–2147483647. Zero
@@ -943,8 +910,9 @@ service. `@setunit unitname <name>` and `@setunit unitref <reference>` change
 the saved unit identity, preserving combat state. Each accepts 1 to 128 bytes.
 `tacrange`, `lrsrange`, and `scanrange` accept 0 to 127 hexes; `radiorange`
 accepts 0 to 32767; `radiotype` accepts the hardware bit mask from 0 to 255.
-An explicit zero persists as zero, independent of template defaults. Later sensor
-criticals still reduce assigned sensor ranges.
+Sensor ranges replace the 25-hex tactical and scan and 50-hex long-range defaults;
+an explicit zero switches that display off. Later sensor criticals still reduce
+assigned sensor ranges.
 
 Inspection includes current sensor ranges, radio range and
 hardware bits, and VTOL remaining and original fuel capacity. Sensor damage uses
@@ -975,8 +943,8 @@ and regulation. These edits do not trigger heat damage or consume dice.
 `centdist` and `centbearing` report horizontal distance and bearing to the
 current hex center using the same geometry as `findcenter`.
 
-`cargospace` reports authored cargo capacity, independently of cargo-installation
-mass and carried stock. `C3iNetworkSize` reports the number of other eligible
+`cargospace` reports the cargo bay's capacity in hundredths of a ton,
+independently of carried stock. `C3iNetworkSize` reports the number of other eligible
 members in the unit's C3i network; an unlinked unit reports zero.
 
 `jumpheading` and `jumplength` retain the last admitted jump's bearing and
@@ -1062,8 +1030,7 @@ usual ammunition and readiness. Queued artillery survives a server restart.
 `@viewunit bv` reports the unit's Battle Value (TechManual BV 2.0) as a whole
 number for a Gunnery 4 / Piloting 5 crew. It uses current armor and internal
 structure, the installed equipment and the design's maximum movement; towing and
-carried load do not change it. The field is read-only; `setwbv` changes the
-weapon values used by the calculation.
+carried load do not change it. The field is read-only.
 
 `@viewunit unitdamage` reads a compact damage report: `A:section/loss` for armor,
 `A(R):section/loss` for rear armor, `I:section/loss` for internal structure,
@@ -1129,9 +1096,10 @@ selection does not require an acquired contact; ordinary firing checks still
 apply. `-1` clears all targeting modes. Both fields use the same operations through
 Lua unit field access and participate in callback rollback.
 
-`@setunit cargospace <capacity>` updates the cargo installation on a Mech, ground
-vehicle or VTOL. Capacity must be a nonnegative 32-bit integer whose installation
-mass fits the unit mass representation. Mass and movement limits update
+`@setunit cargospace <capacity>` updates the cargo bay on a Mech, ground vehicle
+or VTOL. Capacity is in hundredths of a ton and must be a nonnegative multiple of
+50, since a bay is built in half tons, whose mass fits the unit mass
+representation. Mass and movement limits update
 immediately. Existing loose stock remains aboard when capacity is reduced. Lua
 unit-field edits use the same operation.
 

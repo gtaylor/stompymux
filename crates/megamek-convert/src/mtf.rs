@@ -332,7 +332,7 @@ pub fn convert(source: &str) -> Result<Converted> {
             heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
             construction,
             specials,
-            cargo_space: None,
+            cargo_tons: None,
             transport_bays: Vec::new(),
             sections,
             split_mounts,
@@ -842,7 +842,7 @@ mod tests {
         let (_, template) = template(&source).unwrap();
         assert!(
             template.contains(
-                "{ at = \"6-7\", item = \"IS.MachineGun\" },\n    { at = 8, item = \"IS.MGA\" }"
+                "{ at = \"6-7\", item = \"IS.MachineGun\" },\n    { at = 8, item = \"IS.MGA\", links = [6, 7] }"
             ),
             "{template}"
         );
