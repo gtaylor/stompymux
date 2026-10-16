@@ -188,7 +188,6 @@ fn hit_cell(
         lower,
         upper,
     };
-    let mut rear = false;
     for id in super::map_slots::all_unit_order(world, report.map)? {
         let Some(target) = blast.target(world, id, rules)? else {
             continue;
@@ -209,7 +208,6 @@ fn hit_cell(
             continue;
         }
         let arc = target.arc;
-        rear |= arc == HitArc::Rear;
         let rules = target.rules;
         let (observer, cockpit) = if table == HitTable::Punch {
             if damage > 2 {
@@ -248,7 +246,6 @@ fn hit_cell(
                 character: is_character,
                 class: DamageClass::AreaEffect,
             },
-            &mut rear,
             rules,
         )?;
         hit.impacts = effects.impacts;

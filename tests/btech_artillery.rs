@@ -1,4 +1,5 @@
 //! Artillery timing, bounded effect geometry, scatter and saved random-stream replay.
+use crate::support;
 use stompymux_rs::*;
 
 /// Advance an isolated shot to arrival without applying its effects to a live world.
@@ -377,4 +378,106 @@ fn artillery_catalogue_admits_delayed_launchers() {
     }
     template.jump_speed = 0.0;
     assert!(Mech::from_template(crate::support::templates::legal(template.clone())).is_ok());
+}
+
+/// Every occupant of a shelled hex takes its own attack direction from the line to the gun
+/// (Tactical Operations: Advanced Rules p. 150). A Mech facing the gun keeps its rear armor
+/// even after a Mech earlier in the same hex was struck from behind.
+#[tokio::test]
+async fn artillery_occupants_resolve_their_own_attack_direction() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Artillery field".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        map,
+        "test",
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+    )
+    .unwrap();
+    let mut ids = Vec::new();
+    // The first Mech faces away from the gun to the north, the second faces it.
+    for heading in [180.0, 0.0] {
+        let id = world.create(&config, "Target".into(), Kind::Thing);
+        world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+        create_battle_unit(
+            &mut world,
+            id,
+            MechTemplate::parse("AS7-D", include_str!("../game/units/AS7-D.toml")).unwrap(),
+        )
+        .unwrap();
+        place_battle_unit(&mut world, id, map, 1, 2).unwrap();
+        world
+            .btech
+            .edit_unit_motion(id, |motion| {
+                motion.heading = heading;
+                motion.desired_heading = heading;
+            })
+            .unwrap();
+        ids.push(id);
+    }
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
+    let before = world.clone();
+    let mut flight = ArtilleryFlight::new(
+        HexCoordinate { x: 1, y: 0 },
+        HexCoordinate { x: 1, y: 2 },
+        Weapon::LongTom,
+        ArtilleryMode::Standard,
+        true,
+    )
+    .unwrap();
+    let report = loop {
+        if let Some(report) =
+            advance_artillery_flight(&mut world, map, &mut flight, MovementRules::STANDARD.fall)
+                .unwrap()
+        {
+            break report;
+        }
+    };
+    assert_eq!(
+        report
+            .hits
+            .iter()
+            .map(|hit| (hit.unit, hit.arc))
+            .collect::<Vec<_>>(),
+        [(ids[0], HitArc::Rear), (ids[1], HitArc::Front)]
+    );
+    let torsos = [
+        MechSection::LeftTorso,
+        MechSection::CenterTorso,
+        MechSection::RightTorso,
+    ];
+    let armor = |world: &World, id: ObjectId| {
+        torsos.map(|section| {
+            let state = &world.btech.constructed_units()[&id].sections()[&section];
+            (state.armor, state.rear)
+        })
+    };
+    let (rear_hit, facing) = (armor(&world, ids[0]), armor(&world, ids[1]));
+    let (rear_before, facing_before) = (armor(&before, ids[0]), armor(&before, ids[1]));
+    // The Mech struck from behind loses rear torso armor and keeps its front torso armor.
+    assert!(
+        rear_hit
+            .iter()
+            .zip(rear_before)
+            .any(|(now, was)| now.1 < was.1)
+    );
+    assert!(
+        rear_hit
+            .iter()
+            .zip(rear_before)
+            .all(|(now, was)| now.0 == was.0)
+    );
+    // The Mech facing the gun takes its torso hits on the front and keeps its rear armor.
+    assert!(
+        facing
+            .iter()
+            .zip(facing_before)
+            .any(|(now, was)| now.0 < was.0)
+    );
+    assert!(
+        facing
+            .iter()
+            .zip(facing_before)
+            .all(|(now, was)| now.1 == was.1)
+    );
 }

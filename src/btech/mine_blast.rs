@@ -220,7 +220,6 @@ fn hit_hex(
     // Mines strike from below: every unit takes the blast on its front (Tactical Operations
     // p. 176).
     let arc = HitArc::Front;
-    let mut rear = false;
     for id in super::map_slots::all_unit_order(world, report.map)? {
         let Some(target) = blast.target(world, id, rules)? else {
             continue;
@@ -287,7 +286,6 @@ fn hit_hex(
                 heat,
                 character: is_character,
             },
-            &mut rear,
             rules,
         )?;
         hit.impacts = effects.impacts;
