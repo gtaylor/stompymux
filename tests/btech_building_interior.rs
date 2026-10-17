@@ -541,6 +541,80 @@ async fn artillery_reaches_every_floor_and_damages_the_building() {
     assert_eq!(cf(&world, map, 0, 1), 40 - 15);
 }
 
+/// A 'Mech on a level below the one an artillery round bursts on takes its hits on the Special
+/// 'Mech Hit Location Table, from above, so never on its legs (Total Warfare p. 173).
+#[tokio::test]
+async fn artillery_bursting_overhead_never_finds_the_legs() {
+    for seed in 0..6u8 {
+        let (_dir, _config, mut world, map, [inside, _]) =
+            field(&[".0.0.0", "@3@3@3", ".0.0.0"]).await;
+        rebuild(&mut world, map, (1, 1), ConstructionClass::Hardened, 150);
+        step_inside(&mut world, inside, 2);
+        world
+            .btech
+            .set_unit_dice(inside, Dice::seeded([seed; 32]))
+            .unwrap();
+        let before = world.btech.constructed_units()[&inside].sections().clone();
+        let report = shell(&mut world, map);
+        assert_eq!(blast(&report, inside), 15);
+        let after = world.btech.constructed_units()[&inside].sections();
+        assert_ne!(after, &before);
+        for leg in [MechSection::LeftLeg, MechSection::RightLeg] {
+            assert_eq!(after[&leg], before[&leg], "seed {seed}");
+        }
+    }
+}
+
+/// A minefield in a building hex lies on the building's ground floor unless a weapon laid it,
+/// in which case it lies on the roof (Tactical Operations p. 175): only a unit on that level
+/// sets it off, and its blast follows the area-effect rules for buildings, whole on the
+/// field's level and half on the levels just above and below it (Total Warfare p. 172).
+#[tokio::test]
+async fn building_minefields_lie_on_their_own_level() {
+    for (owner, trigger_inside, roof_damage, top_floor_damage, ground_damage) in [
+        (ObjectId(1), true, 0, 0, 20),
+        (ObjectId(0), false, 20, 10, 0),
+    ] {
+        let (_dir, config, mut world, map, [inside, roof]) =
+            field(&[".0.0.0", "@3@3@3", ".0.0.0"]).await;
+        step_inside(&mut world, inside, 0);
+        let ordinal = insert_minefield(
+            &mut world,
+            map,
+            Minefield {
+                coordinate: HexCoordinate { x: 1, y: 1 },
+                kind: MineKind::Standard,
+                strength: 20,
+                extra: 0,
+                owner,
+            },
+        )
+        .unwrap();
+        let triggers = |world: &World, id| {
+            !mine_activations(world, id, MineTriggerReason::Step)
+                .unwrap()
+                .is_empty()
+        };
+        assert_eq!(triggers(&world, inside), trigger_inside, "{owner:?}");
+        assert_eq!(triggers(&world, roof), !trigger_inside, "{owner:?}");
+        let damage = |report: &MineBlastReport, id| {
+            report
+                .hits
+                .iter()
+                .filter(|hit| hit.unit == id)
+                .map(|hit| hit.damage)
+                .sum::<u16>()
+        };
+        let report = resolve_mine_blast(&mut world.clone(), map, ordinal, rules()).unwrap();
+        assert_eq!(damage(&report, inside), ground_damage, "{owner:?}");
+        assert_eq!(damage(&report, roof), roof_damage, "{owner:?}");
+        step_inside(&mut world, inside, 2);
+        let report = resolve_mine_blast(&mut world, map, ordinal, rules()).unwrap();
+        assert_eq!(damage(&report, inside), top_floor_damage, "{owner:?}");
+        world.validate(&config).unwrap();
+    }
+}
+
 /// Inside a hardened building the round bursts on the roof: the roof and the level below take
 /// the full Damage Value, the next level half, and the floors below nothing (Total Warfare
 /// p. 173).

@@ -98,6 +98,10 @@ pub(super) struct BlastDamage {
     /// Artillery and minefields are area-effect damage (Tactical Operations: Advanced Rules
     /// p. 175).
     pub class: DamageClass,
+    /// A 'Mech on a level above or below the blast's own level within a building or water hex
+    /// takes its hits on the Special 'Mech Hit Location Table (Total Warfare p. 173): `true`
+    /// when the blast is above it. Other units, and `None`, use `table`.
+    pub special: Option<bool>,
 }
 
 /// Ordered material and thermal effects from one admitted occupant.
@@ -139,20 +143,24 @@ pub(super) fn resolve(
     while remaining > 0 {
         let amount = remaining.min(u16::from(request.packet_size));
         remaining -= amount;
-        let (impact, notices) = resolve_packet(
-            world,
-            id,
-            MaterialPacket {
-                amount,
-                table: request.table,
-                arc: request.arc,
-                character: request.character,
-                attacker: None,
-                class: request.class,
-            },
-            rear,
-            rules,
-        )?;
+        let packet = MaterialPacket {
+            amount,
+            table: request.table,
+            arc: request.arc,
+            character: request.character,
+            attacker: None,
+            class: request.class,
+        };
+        let (impact, notices) = match request.special.filter(|_| !vehicle) {
+            Some(above) => {
+                let unit = &world.btech.constructed_units()[&id];
+                let mut dice = unit.dice.clone();
+                let hit = super::hit::special_hit(unit, above, request.arc, &mut dice)?;
+                world.btech.constructed.get_mut(&id).unwrap().dice = dice;
+                resolve_mech_packet(world, id, packet, hit, rules, false)?
+            }
+            None => resolve_packet(world, id, packet, rear, rules)?,
+        };
         impact.append_feedback(&mut effects.pilot_notices, effects.notices.len());
         effects.notices.extend(notices);
         effects.impacts.push(impact);
@@ -251,6 +259,18 @@ pub(super) fn resolve_attack_packet(
         }
     };
     world.btech.constructed.get_mut(&id).unwrap().dice = dice;
+    resolve_mech_packet(world, id, request, location, rules, glancing)
+}
+
+/// Apply one packet to a 'Mech at an already rolled location.
+fn resolve_mech_packet(
+    world: &mut World,
+    id: ObjectId,
+    request: MaterialPacket,
+    location: Hit,
+    rules: FallRules,
+    glancing: bool,
+) -> Result<(BlastImpact, Vec<Notice>)> {
     // Unplaced scenario units have material damage but no battlefield fall or flooding effects.
     let environment = world.btech.constructed_units()[&id]
         .position()

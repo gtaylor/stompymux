@@ -222,15 +222,9 @@ pub fn mine_activations(
         return Ok(Vec::new());
     }
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let surface = i32::from(tile.standing_height());
     let (elevation, mass) = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         (unit.elevation_level(tile), unit.effective_mass()?)
     });
-    // Only active mines reach a unit hovering or flying one level above the surface.
-    if elevation > surface + 1 {
-        return Ok(Vec::new());
-    }
-    let airborne = elevation > surface;
     let tons = i64::from(mass / 1024);
     let mover = Mover {
         mech: world.btech.constructed_units().contains_key(&id),
@@ -242,8 +236,19 @@ pub fn mine_activations(
     };
     let mut activations = Vec::new();
     for (&ordinal, &mine) in map.ordered_minefields() {
-        // Nothing on the ground reaches a unit holding itself above the surface.
-        if airborne && mine.kind != MineKind::Active {
+        // A field in a building hex lies on the roof when a weapon laid it and on the ground
+        // floor otherwise, and only a unit on that level sets it off (Tactical Operations
+        // p. 175). Only active mines reach a unit hovering or flying one level above the field;
+        // nothing reaches one below it.
+        let surface = if tile.has_building() {
+            super::mine_blast::field_level(world, &mine, tile)
+        } else {
+            i32::from(tile.standing_height())
+        };
+        if (elevation < surface && tile.has_building()) || elevation > surface + 1 {
+            continue;
+        }
+        if elevation > surface && mine.kind != MineKind::Active {
             continue;
         }
         if let Some(response) = mine.response(coordinate, tons, reason, mover)? {

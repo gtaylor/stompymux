@@ -65,3 +65,33 @@ pub fn apply_woodland_clearing(
         })
     })
 }
+
+/// Area-effect damage against the growth in a hex (Total Warfare p. 112): an area-effect weapon
+/// always strikes the woods or jungle in a hex it damages, at double its Damage Value against
+/// the growth's terrain factor, thinning or felling it as other damage does. A burning hex is
+/// left to its fire. Returns the change when the growth changed type.
+pub(super) fn area_effect_woodland(
+    world: &mut World,
+    map: ObjectId,
+    coordinate: HexCoordinate,
+    damage: u16,
+) -> Result<Option<WoodlandChange>> {
+    let record = world.btech.maps().get(&map).context("Map not found")?;
+    let tile = record.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    if damage == 0 || !tile.is_woods() || tile.is_burning() {
+        return Ok(None);
+    }
+    let index = record.tile_index(coordinate)?;
+    let total = record
+        .terrain_damage
+        .get(&index)
+        .copied()
+        .unwrap_or(0)
+        .saturating_add(damage.saturating_mul(2));
+    if super::reduce_woodland(tile, total).is_none() {
+        let record = world.btech.maps.get_mut(&map).unwrap();
+        std::sync::Arc::make_mut(&mut record.terrain_damage).insert(index, total);
+        return Ok(None);
+    }
+    apply_woodland_clearing(world, map, coordinate, tile, total).map(Some)
+}

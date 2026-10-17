@@ -6722,12 +6722,17 @@ async fn artillery_character_arrival_is_atomic() {
     );
 }
 
-/// In its own hex a shell's damage climbs and sinks ten points a level (Tactical Operations
-/// p. 183): a Long Tom's 25 still reaches two levels away and nothing three levels away.
+/// In its own hex a shell's damage climbs ten points a level over dry ground (Tactical
+/// Operations: Advanced Rules p. 150): a Long Tom's 25 still reaches two levels up with five
+/// points and nothing ten levels up. Landing in water it follows the area-effect rules for
+/// buildings with the surface as the struck level (p. 152; Total Warfare pp. 113, 173): the
+/// second level below the surface takes half, thirteen points, and the third nothing.
 #[tokio::test]
 async fn artillery_blast_height_limits() {
-    for (terrain, depth, first, second) in [(Terrain::Water, 4, -2, -3), (Terrain::Clear, 0, 2, 10)]
-    {
+    for (terrain, depth, first, second, packets) in [
+        (Terrain::Water, 4, -2, -3, 3),
+        (Terrain::Clear, 0, 2, 10, 1),
+    ] {
         let (_dir, config, mut world, map, units) = fixture_field(terrain, depth, 3).await;
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
         encoded["constructed"][units[0].0.to_string()]["ground_elevation"] = first.into();
@@ -6757,11 +6762,50 @@ async fn artillery_blast_height_limits() {
             report.hits.iter().map(|hit| hit.unit).collect::<Vec<_>>(),
             [units[0]]
         );
-        // Two levels from the burst: five points left of the twenty-five.
-        assert_eq!(report.hits[0].impacts.len(), 1);
+        assert_eq!(report.hits[0].impacts.len(), packets, "{terrain:?}");
         assert_eq!(world.btech.constructed_units()[&units[1]], untouched);
         world.validate(&config).unwrap();
     }
+}
+
+/// Area-effect weapons always damage the woods in a hex they strike, at double their Damage
+/// Value (Total Warfare p. 112): a Long Tom's 25 in the impact hex is 50 against heavy woods'
+/// 90, leaving light woods with 10 damage carried, and its 15-point ring is 30 against each
+/// neighbour, which stays heavy woods with the damage recorded.
+#[tokio::test]
+async fn artillery_thins_the_woods_it_strikes() {
+    let (_dir, config, mut world, map, _units) = fixture_field(Terrain::HeavyWoods, 0, 3).await;
+    let center = HexCoordinate { x: 1, y: 1 };
+    let mut flight = ArtilleryFlight::new(
+        center,
+        center,
+        Weapon::LongTom,
+        ArtilleryMode::Standard,
+        ArtilleryOutcome::Hit,
+    )
+    .unwrap();
+    let report = loop {
+        if let Some(report) =
+            advance_artillery_flight(&mut world, map, &mut flight, rules()).unwrap()
+        {
+            break report;
+        }
+    };
+    let record = &world.btech.maps()[&map];
+    assert_eq!(
+        report
+            .woods
+            .iter()
+            .map(|change| change.coordinate)
+            .collect::<Vec<_>>(),
+        [center]
+    );
+    assert_eq!(record.base_hex(1, 1).unwrap().woods_density(), 1);
+    assert_eq!(record.terrain_damage_at(center).unwrap(), 10);
+    let beside = HexCoordinate { x: 1, y: 0 };
+    assert_eq!(record.base_hex(1, 0).unwrap().woods_density(), 2);
+    assert_eq!(record.terrain_damage_at(beside).unwrap(), 30);
+    world.validate(&config).unwrap();
 }
 
 /// Occupants across the cluster area receive 5-point groups; failed character admission restores
