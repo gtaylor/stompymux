@@ -3485,7 +3485,6 @@ async fn brief_modes_are_unit_owned_and_control_buildings_and_notices() {
         );
     }
     let event = ContactEvent {
-        revealed: None,
         identified: true,
         observer: source,
         target,
@@ -3683,7 +3682,7 @@ async fn contact_status_columns_share_precedence_with_native_and_lua() {
             "   Sn",
         ),
         (
-            serde_json::json!({"beacons":{"CenterTorso":["homing"]},"signature":{"team":99,"hidden":false,"illuminated":false}}),
+            serde_json::json!({"beacons":{"CenterTorso":["homing"]},"signature":{"team":99,"illuminated":false}}),
             "   SN",
         ),
         (
@@ -3917,7 +3916,6 @@ async fn automatic_contact_modes_control_detail_color_and_escaping() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let event = ContactEvent {
-        revealed: None,
         identified: true,
         observer: source,
         target,
@@ -4143,7 +4141,6 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let event = ContactEvent {
-        revealed: None,
         identified: true,
         observer: source,
         target,

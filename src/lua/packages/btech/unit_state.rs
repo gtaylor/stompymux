@@ -130,7 +130,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("ammunition", detached(lua, vehicle.ammunition())?)?;
             state.set("fire_modes", detached(lua, vehicle.fire_modes())?)?;
             state.set("signature", detached(lua, &vehicle.signature())?)?;
-            state.set("hide_elapsed", vehicle.hide_elapsed())?;
             state.set("scanner_perception", vehicle.scanner_perception())?;
             state.set("sensor_sweep", vehicle.sensor_sweep())?;
             state.set("sensor_ranges", detached(lua, &vehicle.sensor_ranges())?)?;
@@ -338,7 +337,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("heat_cutoff", detached(lua, &unit.heat_cutoff())?)?;
         state.set("heat_shutdown", unit.heat_shutdown())?;
         state.set("restart_denied", unit.restart_denied())?;
-        state.set("hide_elapsed", unit.hide_elapsed())?;
         state.set("overheat_clock", detached(lua, &unit.overheat_clock())?)?;
         state.set("weapon_recycle", detached(lua, unit.weapon_recycle())?)?;
         state.set(

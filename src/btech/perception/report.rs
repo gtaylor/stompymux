@@ -100,8 +100,8 @@ fn sensors_line(profile: &PerceptionProfile) -> String {
     format!("Sensors: {systems} hexes; {sweep}{jammed}")
 }
 
-/// Name the probe, the brackets it sweeps with and how far it finds hidden units, or the
-/// reason it cannot.
+/// Name the probe, the brackets it sweeps with and how far it lets attacks see into woods
+/// (Tactical Operations: Advanced Rules p. 97), or the reason it cannot.
 fn probe_line(profile: &PerceptionProfile) -> String {
     let Some(probe) = profile.probe else {
         return "Probe:   none".into();
@@ -119,7 +119,7 @@ fn probe_line(profile: &PerceptionProfile) -> String {
         })
         .unwrap_or_default();
     format!(
-        "Probe:   {}, {sweeps}reveals hidden units within {} hexes{}",
+        "Probe:   {}, {sweeps}sees into woods within {} hexes{}",
         probe.kind.installed_name(probe.clan),
         probe.range,
         status_suffix(probe.status)
@@ -205,7 +205,7 @@ mod tests {
         );
         assert_eq!(
             probe_line(&profile),
-            "Probe:   Beagle Active Probe, sweeps 12/24/36 hexes and reveals hidden units within 4 hexes"
+            "Probe:   Beagle Active Probe, sweeps 12/24/36 hexes and sees into woods within 4 hexes"
         );
         let day = PerceptionProfile {
             light: Light::Day,
@@ -233,7 +233,7 @@ mod tests {
         );
         assert_eq!(
             probe_line(&day),
-            "Probe:   Beagle Active Probe, reveals hidden units within 4 hexes (destroyed)"
+            "Probe:   Beagle Active Probe, sees into woods within 4 hexes (destroyed)"
         );
         let pending = PerceptionProfile {
             sensor: SensorProfile {
@@ -262,7 +262,7 @@ mod tests {
         };
         assert_eq!(
             probe_line(&interfered),
-            "Probe:   Beagle Active Probe, reveals hidden units within 4 hexes (useless under electromagnetic interference)"
+            "Probe:   Beagle Active Probe, sees into woods within 4 hexes (useless under electromagnetic interference)"
         );
         let silent = PerceptionProfile {
             sensor: SensorProfile {

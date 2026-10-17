@@ -77,7 +77,7 @@ The gameplay modules are organized around focused rules and state transitions:
 | Units and equipment | `unit.rs`, `vehicle.rs`, `mass.rs`, `ammunition_mode.rs`, `fire_mode.rs`; templates, loadouts and the equipment catalogue live in `crates/unit-construction` |
 | Movement and time | `motion.rs`, `jump.rs`, `power.rs`, `heat.rs`, `simulation_pending.rs` |
 | Combat | `shot.rs`, `damage.rs`, `critical.rs`, `artillery.rs`, weapon and ammunition modules |
-| Perception | `perception/` (sight, sensor sweeps, probes), `contacts.rs`, `scanner.rs`, `hiding.rs`, LOS and electronics modules |
+| Perception | `perception/` (sight, sensor sweeps, probes), `contacts.rs`, `scanner.rs`, LOS and electronics modules |
 | Commands and output | `special_dispatch.rs`, `special_commands.rs`, command and report modules |
 
 These are source areas, not independent subsystems with separate world owners.
@@ -152,8 +152,8 @@ settings and contacts), which changes rarely, and `live` holds frequently
 changing state such as motion, heat and dice, with fields at their default
 value left out. The `saved_parts!` lists in `unit.rs` and `vehicle.rs` decide
 which part each field belongs to. The values that count once per second in
-either part, such as weapon recycle, stun, startup, hiding and the overheat and
-stagger clocks, are declared in `src/btech/timers.rs`, `unit_timers.rs` and
+either part, such as weapon recycle, stun, startup and the overheat and stagger
+clocks, are declared in `src/btech/timers.rs`, `unit_timers.rs` and
 `vehicle_timers.rs` together with how each moves at the moment of saving:
 counting down, counting up, wrapping around a thirty-second cycle, or held
 still, for example weapon recycle on a shut-down unit. They read as zero in the

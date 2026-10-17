@@ -190,7 +190,6 @@ fn build_battlefield(
             id,
             stompymux_rs::UnitSignature {
                 team: if index % 2 == 0 { 1 } else { 2 },
-                hidden: false,
                 illuminated: false,
             },
         )?;

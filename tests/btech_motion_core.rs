@@ -1517,7 +1517,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let target = world.create(&config, "Hidden scanner target".into(), Kind::Thing);
+    let target = world.create(&config, "Scanner target".into(), Kind::Thing);
     create_battle_unit(
         &mut world,
         target,
@@ -1552,20 +1552,17 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
         target,
         UnitSignature {
             team: 2,
-            hidden: true,
-            illuminated: false,
+            ..Default::default()
         },
     )
     .unwrap();
     let observers = battle_contact_observers(&world);
     assert_eq!(observers, vec![id]);
-    // A running unit's first refresh rolls its sensor sweep; the hidden hostile six hexes
-    // away is still not recorded.
-    assert!(
-        refresh_battle_contacts(&mut world, &observers)
-            .unwrap()
-            .is_empty()
-    );
+    // A running unit's first refresh rolls its sensor sweep and acquires the hostile six
+    // hexes away.
+    let events = refresh_battle_contacts(&mut world, &observers).unwrap();
+    assert_eq!(events.len(), 1);
+    assert!(events[0].acquired && events[0].target == target);
     assert!(
         world.btech.constructed_units()[&id]
             .sensor_sweep()
@@ -1577,25 +1574,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
             .unwrap()
             .is_empty()
     );
-    assert_eq!(world.btech, before); // A hidden hostile stays unseen until something reveals it.
-    // Next to the observer the hidden unit is discovered (Total Warfare p. 259), then acquired.
-    place_battle_unit(&mut world, target, map, 5, 6).unwrap();
-    let events = refresh_battle_contacts(&mut world, &[id, id]).unwrap();
-    assert_eq!(events.len(), 2);
-    assert_eq!(events[0].observer, target);
-    assert!(
-        events[0]
-            .revealed
-            .as_deref()
-            .is_some_and(|text| text.contains("blundered"))
-    );
-    assert!(!world.btech.constructed_units()[&target].signature().hidden);
-    assert!(events[1].acquired && events[1].target == target);
-    assert!(
-        refresh_battle_contacts(&mut world, &observers)
-            .unwrap()
-            .is_empty()
-    );
+    assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
@@ -2040,7 +2019,6 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
         target,
         stompymux_rs::UnitSignature {
             team: 0,
-            hidden: false,
             illuminated: true,
         },
     )

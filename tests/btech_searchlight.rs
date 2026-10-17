@@ -286,7 +286,6 @@ async fn searchlights_extend_night_sight_to_lit_targets() {
         target,
         UnitSignature {
             team: 0,
-            hidden: false,
             illuminated: true,
         },
     )
@@ -305,7 +304,6 @@ async fn searchlights_extend_night_sight_to_lit_targets() {
         target,
         UnitSignature {
             team: 0,
-            hidden: false,
             illuminated: false,
         },
     )

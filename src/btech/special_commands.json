@@ -1016,13 +1016,6 @@
       "category": false
     },
     {
-      "class_mask": 0,
-      "syntax": "HIDE",
-      "description": "Attempts to hide your team ; doesn't work if any hostiles have their eyeballs on you",
-      "restricted": false,
-      "category": false
-    },
-    {
       "class_mask": 64,
       "syntax": "SWARM [<TARGET-ID> | -]",
       "description": "Swarms the target / drop off target (-)",

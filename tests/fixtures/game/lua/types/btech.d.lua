@@ -358,7 +358,7 @@ function btech_unit.inspect(dbref) end
 ---@field physical_assault_time integer|nil Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
 ---@field section_fire table<string, integer> Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 ---@field tag TagState
----@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
+---@field signature {team: integer, illuminated: boolean} Team and scenario lighting.
 ---@field scanner_perception integer Perception captured at startup completion.
 ---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
 ---@field facing {torso: "left"|"center"|"right"|"both", arms_flipped: boolean}
@@ -366,7 +366,6 @@ function btech_unit.inspect(dbref) end
 ---@field pilot_injuries integer Tactical injury count; six means scenario pilot loss.
 ---@field self_destruct {remaining: integer}|nil Admitted ammunition self-destruct countdown.
 ---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
----@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 ---@field crew_recovery_remaining integer Empty-crew consciousness countdown; random state stays private.
 ---@field character_pilot {injuries: integer, killed: boolean}? Saved character-mode injury status; character health determines death.
 ---@field heat_cutoff {requested: integer, shut_off: integer} Heat sinks shut off this turn and the count requested for the next.
@@ -461,11 +460,10 @@ function btech_unit.inspect(dbref) end
 ---@field crew_stunned boolean Effective crew stun, independent of its timer.
 ---@field self_destruct {remaining: integer}|nil Admitted self-destruct countdown.
 ---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
----@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 ---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
 ---@field gunnery_damage integer Cumulative firing penalty from sensor and commander damage.
 ---@field lost_stabilizers string[] Sections with destroyed weapon stabilizers.
----@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
+---@field signature {team: integer, illuminated: boolean} Team and scenario lighting.
 ---@field scanner_perception integer Perception captured at startup completion.
 ---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
 ---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Current display and scan reach in hexes after script overrides.
@@ -1224,7 +1222,7 @@ function btech_unit.perception(dbref) end
 ---@field sight_range integer How far the unit sees under the light and weather, stretched to 30 by its own searchlight at night.
 ---@field lit_sight_range integer How far it sees a target lit by another source at night.
 ---@field sensor {systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil, probe_clan: boolean} Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep; probe_clan marks a probe that is Clan technology by its own slots.
----@field probe {kind: ProbeKind, clan: boolean, range: integer, status: PerceptionStatus}|nil Best installed active probe, whether it is Clan technology by its own slots (a Clan-built Beagle is the Clan active probe), and how far it reveals hidden units.
+---@field probe {kind: ProbeKind, clan: boolean, range: integer, status: PerceptionStatus}|nil Best installed active probe, whether it is Clan technology by its own slots (a Clan-built Beagle is the Clan active probe), and how far it lets attacks see into woods.
 ---@field running boolean Stopped units perceive nothing.
 ---@field text string The report printed by the sensor command.
 
@@ -1821,13 +1819,6 @@ function btech_unit.stand(dbref, pilot, mode) end
 ---@param pilot integer
 ---@return table report Contains optional check/fall, flooding, stepping mines and ordered notices.
 function btech_unit.prone(dbref, pilot) end
-
----Begin hiding in forest, mountains or rough terrain; requires camouflage equipment or a wizard pilot.
----Hostile acquired contacts or leaving the ground stop preparation. Hex crossings and firing cancel it.
----@param dbref integer Supported unit dbref.
----@param pilot integer Assigned pilot.
----@return boolean accepted Timer and cockpit feedback commit with the callback.
-function btech_unit.hide(dbref, pilot) end
 
 ---Push the standing Mech directly ahead with both arms. A hit displaces it one hex onward, the
 ---attacker follows into the hex it left, and the target must keep its footing; no damage is dealt.

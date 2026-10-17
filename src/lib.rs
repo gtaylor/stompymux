@@ -950,8 +950,6 @@ pub use btech::{advance_battle_wrecks_action, wrecks_pending};
 
 pub use btech::{ProneReport, prone_action};
 
-pub use btech::{advance_battle_hiding, begin_battle_hiding, hiding_pending};
-
 /// Shared operator firing restriction and trusted scenario mutation.
 pub use btech::{set_battle_weapons_hold, weapons_hold};
 

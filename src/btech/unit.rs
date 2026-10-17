@@ -59,9 +59,6 @@ pub struct Mech {
     pub(super) self_destruct_safe: bool,
     #[serde(default)]
     pub(super) self_destruct: Option<super::SelfDestruct>,
-    /// Elapsed one-second camouflage preparation checks.
-    #[serde(default)]
-    pub(super) hide_elapsed: Option<u16>,
     /// Scenario permission to tow this unit outside in-character gameplay.
     #[serde(default)]
     pub(super) towable: bool,
@@ -471,7 +468,6 @@ super::saved_parts::saved_parts!(Mech {
         free_fall,
         charge,
         jump_stabilization,
-        hide_elapsed,
         ground_elevation,
         hex_sync_pending,
         masc,
@@ -1019,7 +1015,6 @@ impl Mech {
             heat_shutdown: false,
             restart_denied: false,
             reconstructed_cooling: None,
-            hide_elapsed: None,
             self_destruct: None,
             self_destruct_safe: false,
             overheat_clock: Default::default(),
@@ -1239,10 +1234,6 @@ impl Mech {
         ensure!(
             self.power == super::Power::Off || !(self.heat_shutdown || self.restart_denied),
             "Heat shutdown state on a powered unit"
-        );
-        ensure!(
-            self.hide_elapsed.is_none_or(|elapsed| elapsed <= 100),
-            "Invalid hiding timer"
         );
         if let Some(timer) = self.self_destruct {
             timer.validate()?;

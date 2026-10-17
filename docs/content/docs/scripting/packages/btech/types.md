@@ -338,7 +338,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `physical_assault_time`: `integer|nil` — Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
 - `section_fire`: `table<string, integer>` — Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 - `tag`: `TagState`
-- `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
+- `signature`: `{team: integer, illuminated: boolean}` — Team and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
 - `sensor_sweep`: `integer|nil` — This turn's 2d6 sensor sweep, once rolled.
 - `facing`: `{torso: "left"|"center"|"right"|"both", arms_flipped: boolean}`
@@ -346,7 +346,6 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `pilot_injuries`: `integer` — Tactical injury count; six means scenario pilot loss.
 - `self_destruct`: `{remaining: integer}|nil` — Admitted ammunition self-destruct countdown.
 - `self_destruct_safe`: `boolean` — Scenario protection from new self-destruct requests.
-- `hide_elapsed`: `integer|nil` — Elapsed camouflage checks; nil when no hide event is pending.
 - `crew_recovery_remaining`: `integer` — Empty-crew consciousness countdown; random state stays private.
 - `character_pilot`: `{injuries: integer, killed: boolean}?` — Saved character-mode injury status; character health determines death.
 - `heat_cutoff`: `{requested: integer, shut_off: integer}` — Heat sinks shut off this turn and the count requested for the next.
@@ -443,11 +442,10 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `crew_stunned`: `boolean` — Effective crew stun, independent of its timer.
 - `self_destruct`: `{remaining: integer}|nil` — Admitted self-destruct countdown.
 - `self_destruct_safe`: `boolean` — Scenario protection from new self-destruct requests.
-- `hide_elapsed`: `integer|nil` — Elapsed camouflage checks; nil when no hide event is pending.
 - `crew_recovery_remaining`: `integer` — Empty-crew consciousness countdown, separate from crew stun.
 - `gunnery_damage`: `integer` — Cumulative firing penalty from sensor and commander damage.
 - `lost_stabilizers`: `string[]` — Sections with destroyed weapon stabilizers.
-- `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
+- `signature`: `{team: integer, illuminated: boolean}` — Team and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
 - `sensor_sweep`: `integer|nil` — This turn's 2d6 sensor sweep, once rolled.
 - `sensor_ranges`: `{tactical: integer, long_range: integer, scan: integer}` — Current display and scan reach in hexes after script overrides.
@@ -754,7 +752,7 @@ Alias: `{x: integer, y: integer, z?: integer}`
 - `sight_range`: `integer` — How far the unit sees under the light and weather, stretched to 30 by its own searchlight at night.
 - `lit_sight_range`: `integer` — How far it sees a target lit by another source at night.
 - `sensor`: `{systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil, probe_clan: boolean}` — Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep; probe_clan marks a probe that is Clan technology by its own slots.
-- `probe`: `{kind: ProbeKind, clan: boolean, range: integer, status: PerceptionStatus}|nil` — Best installed active probe, whether it is Clan technology by its own slots (a Clan-built Beagle is the Clan active probe), and how far it reveals hidden units.
+- `probe`: `{kind: ProbeKind, clan: boolean, range: integer, status: PerceptionStatus}|nil` — Best installed active probe, whether it is Clan technology by its own slots (a Clan-built Beagle is the Clan active probe), and how far it lets attacks see into woods.
 - `running`: `boolean` — Stopped units perceive nothing.
 - `text`: `string` — The report printed by the sensor command.
 

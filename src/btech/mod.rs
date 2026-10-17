@@ -1172,11 +1172,6 @@ pub use wreck_cleanup::{advance_battle_wrecks_action, wrecks_pending};
 pub(crate) mod prone;
 pub use prone::{ProneReport, prone_action};
 
-pub(crate) mod hiding;
-pub use hiding::{
-    HIDE_SECONDS, VTOL_HIDE_SECONDS, advance_battle_hiding, begin_battle_hiding, hiding_pending,
-};
-
 mod weapons_hold;
 pub use weapons_hold::{set_battle_weapons_hold, weapons_hold};
 

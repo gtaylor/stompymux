@@ -238,7 +238,7 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
                     .constructed
                     .get_mut(&target)
                     .unwrap()
-                    .hide_elapsed = Some(u16::from(mutation as u8) * 10)
+                    .radio_experience_remaining = mutation as u8 * 2
             }
             1 => {
                 changed
@@ -246,7 +246,7 @@ fn validation_reuse_matches_full_checks_after_mutations_and_scope_exit() {
                     .constructed
                     .get_mut(&shooter)
                     .unwrap()
-                    .hide_elapsed = Some(101)
+                    .radio_experience_remaining = 62
             }
             2 => changed.objects.get_mut(&target).unwrap().location = None,
             3 => {

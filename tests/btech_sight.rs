@@ -19,7 +19,7 @@ fn scripts(config: &Config, world: &World) -> Scripts {
     Scripts::new(config, Rc::new(RefCell::new(world.clone()))).unwrap()
 }
 
-/// Every target form preserves cover, hold, supply and recycle; restart resumes only the consumed dice.
+/// Every target form preserves hold, supply and recycle; restart resumes only the consumed dice.
 #[tokio::test]
 async fn sight_all_chassis_targets_preserve_state_and_replay() {
     for source in templates() {
@@ -27,7 +27,7 @@ async fn sight_all_chassis_targets_preserve_state_and_replay() {
         let lua = scripts(&config, &base);
         let native = scripts(&config, &base);
         let pristine_db = support::snapshot_database(&config);
-        for condition in ["normal", "recycle", "empty", "hidden", "hiding", "hold"] {
+        for condition in ["normal", "recycle", "empty", "hold"] {
             let mut world = base.clone();
             edit(&mut world, shooter, |state| match condition {
                 "recycle" => state["weapon_recycle"][index.to_string()] = 1.into(),
@@ -36,8 +36,6 @@ async fn sight_all_chassis_targets_preserve_state_and_replay() {
                         *count = 0.into();
                     }
                 }
-                "hidden" => state["signature"]["hidden"] = true.into(),
-                "hiding" => state["hide_elapsed"] = 0.into(),
                 "hold" => state["weapons_hold"] = true.into(),
                 _ => (),
             });

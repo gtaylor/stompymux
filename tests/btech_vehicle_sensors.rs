@@ -96,9 +96,11 @@ async fn vehicle_probe_profile_follows_critical_and_section_loss() {
         .unwrap();
         assert_eq!(probe(&world, id), expected, "slot {slot}");
     }
-    assert!(battle_perception_report(&world, id).unwrap().text.contains(
-        "Probe:   Bloodhound Active Probe, reveals hidden units within 8 hexes (destroyed)"
-    ));
+    assert!(
+        battle_perception_report(&world, id).unwrap().text.contains(
+            "Probe:   Bloodhound Active Probe, sees into woods within 8 hexes (destroyed)"
+        )
+    );
     persistence::save(&config.database(), &world).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(
@@ -232,7 +234,7 @@ async fn vehicle_probes_are_useless_under_electromagnetic_interference() {
     );
     assert!(
         battle_perception_report(&world, id).unwrap().text.ends_with(
-            "Probe:   Bloodhound Active Probe, reveals hidden units within 8 hexes (useless under electromagnetic interference)"
+            "Probe:   Bloodhound Active Probe, sees into woods within 8 hexes (useless under electromagnetic interference)"
         )
     );
     persistence::save(&config.database(), &world).await.unwrap();

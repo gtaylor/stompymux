@@ -33,11 +33,6 @@ impl ActiveProbe {
         }
     }
 
-    /// Only the Bloodhound sees through stealth armor and null signature systems.
-    pub fn sees_concealed(self) -> bool {
-        self == Self::Bloodhound
-    }
-
     /// Player-facing equipment name.
     pub fn name(self) -> &'static str {
         match self {
@@ -176,19 +171,14 @@ impl Vehicle {
 mod tests {
     use super::*;
 
-    /// Reach ordering drives profile selection; only the Bloodhound sees concealed units. The
-    /// Watchdog's light probe reaches three hexes (TO:AUE equipment table, —/—/—/3) and the
-    /// Clan active probe five.
+    /// Reach ordering drives profile selection. The Watchdog's light probe reaches three hexes
+    /// (TO:AUE equipment table, —/—/—/3) and the Clan active probe five.
     #[test]
-    fn families_order_by_reach_and_concealment() {
+    fn families_order_by_reach() {
         let ranges = |clan| ActiveProbe::BY_REACH.map(|probe| probe.range(clan));
         assert_eq!(ranges(false), [8, 4, 3, 3]);
         assert_eq!(ranges(true), [8, 5, 3, 3]);
         assert_eq!(ActiveProbe::Watchdog.range(true), 3);
-        assert_eq!(
-            ActiveProbe::BY_REACH.map(ActiveProbe::sees_concealed),
-            [true, false, false, false]
-        );
         assert_eq!(
             serde_json::to_value(ActiveProbe::Bloodhound).unwrap(),
             "bloodhound"

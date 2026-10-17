@@ -196,12 +196,7 @@ pub(super) fn advance_in_candidate(
     let mut outcome = unit.advance_environment_with(&lookup)?;
     if let VtolEnvironment::CrashRequired { path, levels } = outcome {
         unit.place_contact(path)?;
-        // Crossing exposes the aircraft before armor damage can ruin its cover.
-        let mut notices = if candidate.btech.vehicles()[&id].position() != Some(position) {
-            super::hiding::movement(&mut candidate, id)
-        } else {
-            Vec::new()
-        };
+        let mut notices = Vec::new();
         let mut fall =
             super::vtol_crash::resolve_in_candidate(&mut candidate, id, levels, rules, character)?;
         let private = std::mem::take(&mut fall.feedback.pilot_notices);

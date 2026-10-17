@@ -372,9 +372,6 @@ pub(super) fn advance(
                 },
                 entry_under,
             );
-            if world.btech.vehicles()[&id].position() != Some(previous_position) {
-                report.notices.extend(super::hiding::movement(world, id));
-            }
             let tile =
                 world.btech.maps()[&position.map].base_hex(i64::from(hex.x), i64::from(hex.y))?;
             let vehicle = world.btech.vehicles.get_mut(&id).unwrap();

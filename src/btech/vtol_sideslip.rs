@@ -85,7 +85,6 @@ pub(super) fn check(
             unit: id,
             text: format!("You sideslip into {},{}.", hex.x, hex.y),
         });
-        report.notices.extend(super::hiding::movement(world, id));
         let Some(contact) = contact else {
             continue;
         };

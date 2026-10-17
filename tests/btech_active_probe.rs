@@ -1,14 +1,6 @@
-//! Active probes: the hidden units each family reveals within its reach and clear line, and the
-//! woods a probe lets its carrier aim through.
+//! Active probes: the woods a probe lets its carrier aim through within its reach.
 use crate::support;
 use stompymux_rs::*;
-
-/// Every probe family in order of increasing reach, with its template equipment name.
-const FAMILIES: [(ActiveProbe, &str); 3] = [
-    (ActiveProbe::Light, "Light_BAP"),
-    (ActiveProbe::Beagle, "BeagleProbe"),
-    (ActiveProbe::Bloodhound, "BloodhoundProbe"),
-];
 
 /// A one-hex-wide lane built from per-hex rows, listed north to south.
 async fn lane(rows: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId) {
@@ -23,13 +15,6 @@ async fn lane(rows: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId) {
     .unwrap();
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map)
-}
-
-/// A lane whose second hex is a hill that blocks every sightline from the first hex.
-async fn hill_lane(length: usize) -> (tempfile::TempDir, Config, World, ObjectId) {
-    let mut rows = vec![".0"; length];
-    rows[1] = ".9";
-    lane(&rows).await
 }
 
 /// Start a unit without the startup countdown by editing its saved power state.
@@ -143,74 +128,6 @@ fn shot_rules() -> ShotRules {
         extended_piloting: false,
         target_toughness: false,
     }
-}
-
-/// Every probe family reveals a hidden enemy exactly as far as Total Warfare lets it (Light 3,
-/// Beagle 4, Bloodhound 8 hexes), never one hex farther or through a hill.
-#[tokio::test]
-async fn probes_reveal_hidden_units_within_their_reach_and_line_of_sight() {
-    for (family, equipment) in FAMILIES {
-        let reach = i64::from(family.range(false));
-        let (_dir, config, mut world, map) = lane(&[".0"; 12]).await;
-        let carrier = probe_vehicle(&mut world, &config, map, Some(equipment), false, 0);
-        seat(&mut world, carrier, ObjectId(1));
-        let hidden = target(&mut world, &config, map, reach + 1);
-        let conceal_unit = |world: &mut World| {
-            set_battle_unit_signature(
-                world,
-                hidden,
-                UnitSignature {
-                    team: 2,
-                    hidden: true,
-                    illuminated: false,
-                },
-            )
-            .unwrap();
-        };
-        conceal_unit(&mut world);
-        let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
-        assert!(
-            events.iter().all(|event| event.revealed.is_none()),
-            "{family:?} one hex past its reach"
-        );
-        assert!(battle_perceive(&world, carrier, hidden).unwrap().is_none());
-        relocate(&mut world, hidden, map, reach);
-        conceal_unit(&mut world);
-        let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
-        assert!(
-            events.iter().any(|event| event.revealed.is_some()),
-            "{family:?} at its reach"
-        );
-        assert!(
-            !world.btech.constructed_units()[&hidden].signature().hidden,
-            "{family:?} revealed the unit"
-        );
-        assert_eq!(
-            battle_perceive(&world, carrier, hidden)
-                .unwrap()
-                .map(|perception| perception.channel),
-            Some(DetectionChannel::Sight)
-        );
-        world.validate(&config).unwrap();
-    }
-    // A hill between the carrier and its target breaks the probe's line.
-    let (_dir, config, mut world, map) = hill_lane(12).await;
-    let carrier = probe_vehicle(&mut world, &config, map, Some("BloodhoundProbe"), false, 0);
-    seat(&mut world, carrier, ObjectId(1));
-    let hidden = target(&mut world, &config, map, 3);
-    set_battle_unit_signature(
-        &mut world,
-        hidden,
-        UnitSignature {
-            team: 2,
-            hidden: true,
-            illuminated: false,
-        },
-    )
-    .unwrap();
-    let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
-    assert!(events.iter().all(|event| event.revealed.is_none()));
-    assert!(world.btech.constructed_units()[&hidden].signature().hidden);
 }
 
 /// A working probe within its reach lets the carrier shoot through one point of woods.

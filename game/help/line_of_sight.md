@@ -1,7 +1,7 @@
 +++
 title = "Line of Sight"
 description = "How BattleTech units see and detect each other"
-keywords = ["line of sight", "los", "terrain", "ice", "sensors", "perception", "visibility", "darkness", "light levels", "night", "dawn", "dusk", "weather", "fog", "probe", "infrared", "magscan", "seismic", "radar", "ecm", "hidden", "spotting"]
+keywords = ["line of sight", "los", "terrain", "ice", "sensors", "perception", "visibility", "darkness", "light levels", "night", "dawn", "dusk", "weather", "fog", "probe", "infrared", "magscan", "seismic", "radar", "ecm", "spotting"]
 article_tags = ["battletech"]
 +++
 
@@ -124,15 +124,6 @@ to missiles, heavy hail +1 to ballistic and +2 to missile fire, and blowing
 sand +1 to energy and missile fire. Fog costs ground units one movement point
 per hex (two in heavy fog), and heavy rain, heavy snow, gusting rain, downpours
 and heavy hail add to piloting and driving rolls.
-
-## Hidden units
-
-A unit may `hide` where Total Warfare allows it: not on pavement, a road or a
-bridge, Mechs not in clear terrain, and in water only when fully submerged. Hidden
-units are not perceived by the enemy at any range until something reveals them:
-an enemy unit moving adjacent, an enemy active probe in range (Beagle four hexes,
-Clan probe five, Light and Watchdog three, Bloodhound eight) with a clear line,
-or the hidden unit moving, firing or being hit.
 
 ## Spotting for your side
 

@@ -706,10 +706,6 @@ fn movement_action(
     scripts.atomic(|before| {
         let mut report = advance(&mut scripts.world.borrow_mut(), rules)?;
         let arrivals = super::building_actions::dispatch_boundary_exits(scripts, &mut report)?;
-        report.notices.extend(super::hiding::movement_changes(
-            &mut scripts.world.borrow_mut(),
-            before,
-        ));
         publish_movement_consequences(scripts, config, &report)?;
         if orbital {
             super::orbital_drop_movement::advance_in_action(scripts, config, rules)?;
@@ -1329,10 +1325,6 @@ pub(super) fn attempt_configured_firing_action(
     scripts.atomic(|before| {
         let operator = super::combat_operator::admit(&scripts.world.borrow(), shooter, pilot)?;
         let shooter = operator.source.unit;
-        let notices = super::hiding::firing(&mut scripts.world.borrow_mut(), shooter);
-        for notice in notices {
-            super::notify_unit(scripts, notice)?;
-        }
         let action = scripts.atomic(|_| {
             super::firing::resolve_in_action(
                 &mut scripts.world.borrow_mut(),

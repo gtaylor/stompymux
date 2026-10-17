@@ -10,7 +10,6 @@
 //!   sweep finds targets in. Sensors do not need a clear line, though hills stop infrared and
 //!   radar, buildings stop radar and magscan, and nothing but magscan crosses the water's
 //!   surface. A sensor contact is a blip: a position and height, not an identity.
-//! * A **hidden** unit is perceived by no enemy until something reveals it.
 //!
 //! Darkness and weather cost to hit through the map's conditions, not here; cover along the
 //! line and in the target's hex is reported as the perception's aim modifier.
@@ -134,7 +133,7 @@ pub struct SensorSystem {
     pub bands: SensorBands,
 }
 
-/// The best installed active probe and its standard-rules reach for finding hidden units.
+/// The best installed active probe and its standard-rules reach.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ProbeProfile {
     pub kind: ActiveProbe,
@@ -142,8 +141,9 @@ pub struct ProbeProfile {
     /// Beagle slot is the Clan active probe, with its reach, Sensor Range Table brackets and
     /// ECM/Stealth Modifier Table row (Tactical Operations: Advanced Rules pp. 190-191).
     pub clan: bool,
-    /// Hexes within which the probe reveals a hidden unit it has line of sight to (Total
-    /// Warfare p. 129).
+    /// The probe's standard-rules range in hexes (Total Warfare p. 129): a target this close
+    /// with line of sight takes one off the woods modifier of an attack on it (Tactical
+    /// Operations: Advanced Rules p. 97).
     pub range: u16,
     pub status: PerceptionStatus,
 }
@@ -178,7 +178,7 @@ pub struct PerceptionProfile {
 }
 
 impl PerceptionProfile {
-    /// The probe that can currently reveal hidden units, if any.
+    /// The probe that currently works, if any.
     pub(super) fn ready_probe(&self) -> Option<ProbeProfile> {
         self.probe
             .filter(|probe| probe.status == PerceptionStatus::Ready)
@@ -303,8 +303,8 @@ fn sensor_profile(
 }
 
 /// Pick the working probe with the longest reach, or else the best installed one as damaged.
-/// Under electromagnetic `interference` the working probe is useless: it neither sweeps,
-/// reveals hidden units nor sees through woods (Tactical Operations: Advanced Rules p. 53).
+/// Under electromagnetic `interference` the working probe is useless: it neither sweeps nor
+/// sees through woods (Tactical Operations: Advanced Rules p. 53).
 fn probe_profile(
     world: &World,
     observer: ObjectId,
@@ -405,11 +405,6 @@ pub(crate) fn perceive_prepared(
     let other =
         crate::btech::scanner::scanner_unit(world, target).context("Target is not constructed")?;
     if other.visibility.invisible {
-        return Ok(None);
-    }
-    // A hidden unit stays unseen by the enemy until something reveals it (Total Warfare
-    // p. 259); its own side always knows where it is.
-    if other.signature.hidden && other.signature.team != profile.team {
         return Ok(None);
     }
     let (terrain, range) = match geometry {

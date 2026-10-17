@@ -1321,30 +1321,6 @@ async fn building_host_honors_configured_hot_myomer_load_assistance() {
     }
 }
 
-/// Install cover and a pending hide without advancing its independent one-second event.
-fn cover(world: &mut World, ids: &[ObjectId]) {
-    let mut saved = serde_json::to_value(&world.btech).unwrap();
-    for id in ids {
-        let key = if world.btech.vehicles().contains_key(id) {
-            "vehicles"
-        } else {
-            "constructed"
-        };
-        saved[key][id.0.to_string()]["signature"]["hidden"] = true.into();
-        saved[key][id.0.to_string()]["hide_elapsed"] = 7.into();
-    }
-    world.btech = serde_json::from_value(saved).unwrap();
-}
-
-/// Observe the same cover facts for either chassis store.
-fn cover_state(world: &World, id: ObjectId) -> (bool, Option<u16>) {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        return (unit.signature().hidden, unit.hide_elapsed());
-    }
-    let unit = &world.btech.constructed_units()[&id];
-    (unit.signature().hidden, unit.hide_elapsed())
-}
-
 /// A saved motion point moved along `heading` to `gap` hex heights short of where a straight
 /// course leaves its hex. One movement point covers a hex a minute, so a unit only crosses a
 /// hex edge in its next second when it starts this close to it.
@@ -1381,9 +1357,10 @@ fn with_specials(source: &str, flags: &str) -> String {
     format!("specials = [{flags}]\n{source}")
 }
 
-/// Explicit entry preserves cover; edge movement reveals only the carrier, including after restart.
+/// A towed unit follows its carrier through an explicit entry and out across the building's
+/// edge, the exit rolls back with a failing callback, and it replays after restart.
 #[tokio::test]
-async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
+async fn towed_units_follow_their_carrier_through_entry_and_edge_exit() {
     let tracked = include_str!("../game/units/Demolisher.toml");
     let chassis = [
         include_str!("../game/units/JR7-D.toml").to_owned(),
@@ -1414,7 +1391,6 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
             )
             .unwrap();
             let target = attach(&mut world, &config, carrier, target_source);
-            cover(&mut world, &[carrier, target]);
             let scripts = host(&config, world);
             begin_battle_building_entry_action(&scripts, carrier, ObjectId(1), Some(b'n')).unwrap();
             for _ in 0..18 {
@@ -1422,7 +1398,6 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
             }
             for id in [carrier, target] {
                 assert_eq!(scripts.world().objects[&id].location, Some(interior));
-                assert_eq!(cover_state(&scripts.world(), id), (true, Some(7)));
             }
             let mut saved = serde_json::to_value(&scripts.world().btech).unwrap();
             let key = if scripts.world().btech.vehicles().contains_key(&carrier) {
@@ -1454,7 +1429,7 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
             scripts.world_mut().btech = serde_json::from_value(saved).unwrap();
             scripts.drain_outbox();
             let before = scripts.world().clone();
-            scripts.inspect_lua().load("_parents['default_thing.lua'].events={on_move=function() error('cover rollback') end}").exec().unwrap();
+            scripts.inspect_lua().load("_parents['default_thing.lua'].events={on_move=function() error('exit rollback') end}").exec().unwrap();
             let attempted =
                 advance_battle_motion_action(&scripts, &config, MovementRules::STANDARD);
             assert!(
@@ -1485,24 +1460,9 @@ async fn cover_distinguishes_entry_and_tow_mirroring_from_edge_movement() {
                         .len(),
                     1
                 );
-                assert_eq!(cover_state(&run.world(), carrier), (false, None));
-                assert_eq!(cover_state(&run.world(), target), (true, Some(7)));
                 for id in [carrier, target] {
                     assert_eq!(run.world().objects[&id].location, Some(exterior));
                 }
-                let notices = run.drain_outbox();
-                assert_eq!(
-                    notices
-                        .iter()
-                        .filter(|(who, text)| *who == ObjectId(1)
-                            && text.source().contains("break your cover"))
-                        .count(),
-                    1
-                );
-                assert!(
-                    !notices.iter().any(|(who, text)| *who == ObjectId(2)
-                        && text.source().contains("break your cover"))
-                );
                 run.world().validate(&config).unwrap();
             }
             assert_eq!(scripts.world().btech, restart.world().btech);

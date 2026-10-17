@@ -187,7 +187,6 @@ pub(super) fn finish_shutdown(unit: &mut super::Vehicle) {
     unit.power = Power::Off;
     unit.tag.stop();
     unit.searchlight.shutdown();
-    unit.hide_elapsed = None;
     unit.lose_vtol_lift();
     unit.reconcile_electronics();
     unit.halt();

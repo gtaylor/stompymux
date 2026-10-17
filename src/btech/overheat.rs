@@ -499,7 +499,6 @@ fn resolve_shutdown(
     let dropped = unit.carried_club.take().is_some();
     unit.power = Power::Off;
     unit.heat_shutdown = true;
-    unit.hide_elapsed = None;
     unit.masc.shutdown();
     unit.supercharger.shutdown();
     unit.reconcile_electronics();

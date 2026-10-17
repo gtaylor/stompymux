@@ -44,9 +44,6 @@ impl SavedTimers for Vehicle {
             list.add(T::BuildingEntry, 0, entry.remaining, Down);
         }
         list.add(T::Searchlight, 0, self.searchlight.remaining, Down);
-        if let Some(elapsed) = self.hide_elapsed {
-            list.add(T::Hide, 0, elapsed, Up);
-        }
         // Flight burns one unit of fuel a second at ordinary speeds while the engine runs.
         if let Some(fuel) = self.vtol_fuel {
             let burning = running && self.vtol_flight.is_some() && fuel.remaining() > 0;

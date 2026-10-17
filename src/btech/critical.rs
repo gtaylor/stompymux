@@ -481,7 +481,6 @@ impl Mech {
             self.stagger = Default::default();
             self.overheat_clock = Default::default();
             self.power = Power::Off;
-            self.hide_elapsed = None;
             self.masc.shutdown();
             self.supercharger.shutdown();
             self.reconcile_electronics();

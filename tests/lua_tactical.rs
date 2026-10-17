@@ -147,7 +147,6 @@ async fn shared_sightings_admit_attacks_but_do_not_leak_hidden_changes() {
             units[2],
             UnitSignature {
                 team: 1,
-                hidden: false,
                 illuminated: false,
             },
         )

@@ -104,8 +104,6 @@ pub(crate) enum Timer {
     Charge = 14,
     /// `jump_stabilization`.
     JumpStabilization = 15,
-    /// `hide_elapsed`.
-    Hide = 16,
     /// `dumping.phase`.
     Dump = 19,
     /// `unjam.remaining`.
@@ -142,7 +140,7 @@ pub(crate) enum Timer {
 
 impl Timer {
     /// Every timer, in code order.
-    pub(crate) const ALL: [Self; 29] = [
+    pub(crate) const ALL: [Self; 28] = [
         Self::Startup,
         Self::OverheatElapsed,
         Self::OverheatPhase,
@@ -155,7 +153,6 @@ impl Timer {
         Self::FreeFall,
         Self::Charge,
         Self::JumpStabilization,
-        Self::Hide,
         Self::Dump,
         Self::Unjam,
         Self::HullDown,
@@ -225,7 +222,6 @@ impl Timer {
             Self::FreeFall => fixed("/free_fall/remaining"),
             Self::Charge => fixed("/charge/elapsed"),
             Self::JumpStabilization => fixed("/jump_stabilization"),
-            Self::Hide => fixed("/hide_elapsed"),
             Self::Dump => fixed("/dumping/phase"),
             Self::Unjam => fixed("/unjam/remaining"),
             Self::HullDown => fixed("/hull_down/remaining"),
@@ -346,7 +342,7 @@ mod tests {
     fn zero_countdowns_are_held() {
         let mut list = TimerList::new();
         list.add(Timer::Stun, 0, 0u8, TimerMotion::Down);
-        list.add(Timer::Hide, 0, 0u16, TimerMotion::Up);
+        list.add(Timer::Charge, 0, 0u16, TimerMotion::Up);
         let timers = list.finish();
         assert_eq!(timers[0].motion, TimerMotion::Held);
         assert_eq!(timers[1].motion, TimerMotion::Up);

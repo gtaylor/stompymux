@@ -887,9 +887,6 @@ fn advance_jumps_inner(
         unit.flight = Some(flight);
         let identity = unit.identity();
         candidate.btech.units.insert(id, identity);
-        if crossed_hex {
-            notices.extend(super::hiding::movement(&mut candidate, id));
-        }
         if step.outcome == JumpOutcome::Airborne {
             if crossed_hex {
                 notices.extend(flood_after_jump(

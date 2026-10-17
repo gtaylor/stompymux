@@ -45,7 +45,6 @@ async fn native_team_control_matches_lua_and_restart() {
             unit,
             UnitSignature {
                 team: 9,
-                hidden: true,
                 illuminated: true,
             },
         )
@@ -83,7 +82,6 @@ async fn native_team_control_matches_lua_and_restart() {
                 signature,
                 UnitSignature {
                     team: team.max(0),
-                    hidden: true,
                     illuminated: true
                 }
             );

@@ -364,8 +364,6 @@ impl CommandRegistry {
                 crate::btech::ammunition_preference::command,
             )
             .policy(SwitchPolicy::Reject("usebin takes no switches."), false),
-            CommandDefinition::native("hide", P::EVERYONE, crate::btech::hiding::command)
-                .policy(SwitchPolicy::Reject("hide takes no switches."), false),
             CommandDefinition::native(
                 "heatcutoff",
                 P::EVERYONE,

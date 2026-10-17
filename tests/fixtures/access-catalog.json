@@ -1156,7 +1156,6 @@
     "CA_ADMIN": "Equivalent to Wizard in this fork",
     "session_requirements": "Preserved separately from configurable bits",
     "omitted_commands": "Only currently implemented command/switch registrations are compared; Rust gameplay additions are recorded separately",
-    "hide": "BattleTech cockpit command; EVERYONE entry with running pilot and camouflage or wizard checks in the handler.",
     "manifest": "Native cockpit cargo command; shared domain checks enforce configured access and operation-specific unit admission.",
     "stores": "Native cockpit cargo command; shared domain checks enforce configured access and operation-specific unit admission.",
     "loadcargo": "Native cockpit cargo command; shared domain checks enforce configured access and operation-specific unit admission.",

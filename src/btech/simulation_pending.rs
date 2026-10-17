@@ -31,7 +31,6 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
                         || !unit.weapon_recycle().is_empty())
         })
         || crate::automatic_turrets_pending(world)
-        || crate::hiding_pending(world)
         || crate::self_destructs_pending(world)
         || crate::wrecks_pending(world)
         || has_scanner_observers

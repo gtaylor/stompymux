@@ -40,8 +40,6 @@ pub struct Vehicle {
     #[serde(default)]
     pub(super) self_destruct_safe: bool,
     pub(super) self_destruct: Option<super::SelfDestruct>,
-    /// Elapsed one-second camouflage preparation checks.
-    pub(super) hide_elapsed: Option<u16>,
     /// Scenario permission shared with Mechs for out-of-character pickup targets.
     pub(super) towable: bool,
     /// Scenario emplacement; movement and towing share the fortification gate.
@@ -268,8 +266,6 @@ struct VehicleRecord {
     self_destruct_safe: bool,
     #[serde(default)]
     self_destruct: Option<super::SelfDestruct>,
-    #[serde(default)]
-    hide_elapsed: Option<u16>,
     #[serde(default)]
     towable: bool,
     #[serde(default)]
@@ -546,7 +542,6 @@ super::saved_parts::saved_parts!(Vehicle {
         free_fall,
         orbital_drop,
         ground_elevation,
-        hide_elapsed,
         bogged_down,
         slick,
         turn_movement,
@@ -1001,7 +996,6 @@ impl Vehicle {
             vtol_fuel,
             vtol_flight,
             crew_killed: false,
-            hide_elapsed: None,
             self_destruct: None,
             self_destruct_safe: false,
             crew_recovery: super::Recovery::fresh(),
@@ -1149,7 +1143,6 @@ impl Vehicle {
     /// Cancel active controls once when a vehicle becomes a wreck, preserving material state.
     pub(super) fn finish_destruction(&mut self) {
         self.self_destruct = None;
-        self.hide_elapsed = None;
         self.lose_vtol_lift();
         self.pilot = None;
         self.crew_recovery.clear();
@@ -1707,7 +1700,6 @@ impl Vehicle {
             hardware: record.hardware,
             self_destruct_safe: record.self_destruct_safe,
             self_destruct: record.self_destruct,
-            hide_elapsed: record.hide_elapsed,
             towable: record.towable,
             fortified: record.fortified,
             observer: record.observer,
@@ -1883,10 +1875,6 @@ impl Vehicle {
         if let Some(timer) = self.self_destruct {
             timer.validate()?;
         }
-        ensure!(
-            self.hide_elapsed.is_none_or(|elapsed| elapsed <= 100),
-            "Invalid hiding timer"
-        );
         ensure!(
             (!self.crew_killed
                 && !self.pilot_killed

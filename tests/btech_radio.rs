@@ -1506,7 +1506,6 @@ async fn observer_contact_notice_policy_preserves_lock_warning_only() {
     let (_dir, _config, mut world, unit) = fixture().await;
     for acquired in [false, true] {
         let event = ContactEvent {
-            revealed: None,
             identified: true,
             observer: unit,
             target: ObjectId(99),
@@ -1531,7 +1530,6 @@ async fn observer_contact_notice_policy_preserves_lock_warning_only() {
     }
     assert!(
         ContactEvent {
-            revealed: None,
             identified: true,
             observer: ObjectId(-1),
             target: unit,

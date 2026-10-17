@@ -554,21 +554,6 @@ impl Server {
             self.scripts.effects.rollback();
             return false;
         }
-        match crate::advance_battle_hiding(&mut self.scripts.world.borrow_mut()) {
-            Ok(updates) => notices.extend(updates),
-            Err(error) => {
-                tracing::error!(system = "hide", error = %format_args!("{error:#}"), "BattleTech update failed");
-                *self.scripts.world.borrow_mut() = before;
-                self.scripts
-                    .world
-                    .borrow_mut()
-                    .btech
-                    .autopilot_plans
-                    .clear();
-                self.scripts.effects.rollback();
-                return false;
-            }
-        }
         let autopilot_result = match metrics.as_deref_mut() {
             Some(metrics) => crate::btech::autopilot::runtime::advance_combat_with_metrics(
                 &mut self.scripts.world.borrow_mut(),
