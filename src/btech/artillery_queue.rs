@@ -152,8 +152,13 @@ pub fn advance_artillery_action(
             .collect();
         let mut reports = Vec::new();
         for (map, ordinal, source, mut flight) in shots {
-            let mut report =
-                advance_artillery_flight_action(scripts, config, map, &mut flight, rules)?;
+            let mut report = advance_artillery_flight_action(
+                scripts,
+                config,
+                map,
+                (&mut flight, source.unit),
+                rules,
+            )?;
             if let Some(report) = &mut report {
                 let notices = super::artillery_adjustment::observe_miss(
                     &mut scripts.world.borrow_mut(),
@@ -167,7 +172,10 @@ pub fn advance_artillery_action(
                 report.notices.extend(notices);
                 // A piece that strikes its target hex hits it automatically from then on
                 // (Tactical Operations: Advanced Rules p. 150); artillery cannons do not.
-                if !report.pattern.missed && flight.weapon().is_indirect_artillery() {
+                if !report.pattern.missed
+                    && flight.weapon().is_indirect_artillery()
+                    && flight.mode() != ArtilleryMode::Homing
+                {
                     super::artillery_registration::register(
                         &mut scripts.world.borrow_mut(),
                         source.unit,

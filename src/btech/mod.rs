@@ -41,7 +41,7 @@ mod artillery_impact;
 mod artillery_queue;
 pub use artillery::{
     ArtilleryCell, ArtilleryEffect, ArtilleryFlight, ArtilleryImpactPattern, ArtilleryMode,
-    ArtilleryOutcome,
+    ArtilleryOutcome, HOMING_DAMAGE, HOMING_SPLASH_DAMAGE,
 };
 pub use artillery_impact::{
     ArtilleryHit, ArtilleryImpactReport, ArtilleryStructureHit, advance_artillery_flight,
@@ -411,7 +411,7 @@ mod section_exposure;
 pub use section_exposure::{SectionExposure, SectionExposureReport};
 
 pub(crate) mod ammunition_mode;
-pub use ammunition_mode::{toggle_artemis, toggle_cluster, toggle_lbx};
+pub use ammunition_mode::{toggle_artemis, toggle_cluster, toggle_homing, toggle_lbx};
 
 pub(crate) mod ultra;
 pub use ultra::toggle_ultra;

@@ -71,6 +71,7 @@ pub(super) fn arrival_notices(
                 format!("A rain of small bomblets hits {location}'s surroundings!")
             }
             ArtilleryMode::Mine => format!("A rain of small bomblets hits {location}!"),
+            ArtilleryMode::Homing => format!("A {name} homing missile streaks down on {location}!"),
             ArtilleryMode::Smoke => format!(
                 "A {name} {} hits {location}, and smoke starts to billow!",
                 projectile(weapon)

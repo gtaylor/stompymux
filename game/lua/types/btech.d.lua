@@ -87,7 +87,7 @@
 ---@field section MechSectionName
 ---@field slot integer Zero-based critical slot.
 
----@alias AmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"
+---@alias AmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"|"homing"
 
 ---@alias FireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|"rotary5"|"rotary6"|"gatling"
 
@@ -3110,6 +3110,15 @@ function btech_unit.firesmoke(dbref, pilot, weapon) end
 ---@param weapon integer
 ---@return AmmunitionMode
 function btech_unit.firemine(dbref, pilot, weapon) end
+
+---Toggle an Arrow IV launcher between normal rounds and homing missiles, which home on a unit a
+---friendly TAG designates within eight hexes of the aim point, rejecting a different selected
+---artillery payload.
+---@param dbref integer
+---@param pilot integer
+---@param weapon integer
+---@return AmmunitionMode
+function btech_unit.firehoming(dbref, pilot, weapon) end
 
 ---Check map membership and world invariants without changing placements or unit state.
 ---@param actor integer Wizard performing the check.

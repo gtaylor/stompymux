@@ -179,7 +179,7 @@ CREATE TABLE btech_building_repair (
 -- Admitted rounds and remaining committed seconds, owned by their battlefield.
 -- One row per shot. The shooter is historical and deliberately not a
 -- foreign key: losing it never cancels a shell in flight. `mode` is 0 (standard),
--- 1 (cluster), 2 (smoke) or 3 (mine). `scatter` is 0 for a round that strikes its
+-- 1 (cluster), 2 (smoke), 3 (mine) or 4 (homing). `scatter` is 0 for a round that strikes its
 -- aim point, the hexes a missed round scatters, or -1 for a direct-fire miss whose
 -- distance is rolled on arrival. `arrives_at` is the simulation second the shell
 -- lands, so the row stays unchanged while the flight counts down.
@@ -192,7 +192,7 @@ CREATE TABLE btech_artillery (
     target_x INTEGER NOT NULL CHECK (target_x BETWEEN 0 AND 999),
     target_y INTEGER NOT NULL CHECK (target_y BETWEEN 0 AND 999),
     weapon_part_id INTEGER NOT NULL,
-    mode INTEGER NOT NULL CHECK (mode BETWEEN 0 AND 3),
+    mode INTEGER NOT NULL CHECK (mode BETWEEN 0 AND 4),
     scatter INTEGER NOT NULL CHECK (scatter BETWEEN -1 AND 2000),
     arrives_at INTEGER NOT NULL CHECK (arrives_at > 0),
     PRIMARY KEY (map_dbref, shot_id)

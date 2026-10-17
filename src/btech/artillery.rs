@@ -11,6 +11,8 @@ pub enum ArtilleryMode {
     Cluster,
     Smoke,
     Mine,
+    /// An Arrow IV homing missile (Tactical Operations: Advanced Units & Equipment p. 166).
+    Homing,
 }
 
 impl ArtilleryMode {
@@ -21,6 +23,7 @@ impl ArtilleryMode {
             AmmunitionMode::Cluster => Self::Cluster,
             AmmunitionMode::Smoke => Self::Smoke,
             AmmunitionMode::Mine => Self::Mine,
+            AmmunitionMode::Homing => Self::Homing,
             _ => anyhow::bail!("Ammunition is not an artillery payload"),
         })
     }
@@ -32,9 +35,19 @@ impl ArtilleryMode {
             Self::Cluster => AmmunitionMode::Cluster,
             Self::Smoke => AmmunitionMode::Smoke,
             Self::Mine => AmmunitionMode::Mine,
+            Self::Homing => AmmunitionMode::Homing,
         }
     }
 }
+
+/// Damage an Arrow IV homing missile deals the unit it homes on, in 5-point groups (Tactical
+/// Operations: Advanced Rules p. 152).
+pub const HOMING_DAMAGE: u16 = 20;
+
+/// Area-effect damage a homing missile deals every other unit in its target's hex, and every
+/// unit in a hex it strikes without homing (Tactical Operations: Advanced Units & Equipment
+/// p. 166).
+pub const HOMING_SPLASH_DAMAGE: u16 = 5;
 
 /// Where a launched round is headed: its aim point, or a scatter from it. A miss scatters in a
 /// direction rolled on the Scatter Diagram when the round lands (Tactical Operations: Advanced
@@ -247,6 +260,30 @@ impl ArtilleryFlight {
         self.remaining
     }
 
+    /// Land a homing missile on the unit it homes on in its arrival second, without drawing
+    /// the unguided impact plan. Its pattern strikes the target's hex.
+    pub(super) fn home(&mut self, target: HexCoordinate) -> Result<ArtilleryImpactPattern> {
+        ensure!(
+            self.mode == ArtilleryMode::Homing && self.remaining == 1,
+            "Only an arriving homing missile can home"
+        );
+        self.remaining = 0;
+        Ok(ArtilleryImpactPattern {
+            target: self.target,
+            impact: target,
+            missed: false,
+            cells: vec![ArtilleryCell {
+                position: target,
+                direct: true,
+                effect: ArtilleryEffect::Damage {
+                    total: HOMING_SPLASH_DAMAGE,
+                    packet_size: 5,
+                    table: HitTable::Weapon,
+                },
+            }],
+        })
+    }
+
     /// Advance one second using the impact map's current bounds.
     /// Failed validation leaves the countdown and random stream unchanged; completed flights cannot repeat.
     pub fn advance(
@@ -298,6 +335,8 @@ impl ArtilleryFlight {
             // Operations: Advanced Rules p. 152); FASCAM lays only in the target hex.
             ArtilleryMode::Smoke => vec![0, 0],
             ArtilleryMode::Mine => vec![fascam_density(self.weapon)],
+            // A homing missile that has no designated target falls on its hex unguided.
+            ArtilleryMode::Homing => vec![HOMING_SPLASH_DAMAGE],
         };
         let mut positions = vec![(impact, true, rings[0])];
         for (radius, &damage) in rings.iter().enumerate().skip(1) {
@@ -311,11 +350,13 @@ impl ArtilleryFlight {
             let effect = match self.mode {
                 ArtilleryMode::Smoke => ArtilleryEffect::Smoke,
                 ArtilleryMode::Mine => ArtilleryEffect::Mine { strength: total },
-                ArtilleryMode::Standard | ArtilleryMode::Cluster => ArtilleryEffect::Damage {
-                    total,
-                    packet_size: 5,
-                    table: HitTable::Weapon,
-                },
+                ArtilleryMode::Standard | ArtilleryMode::Cluster | ArtilleryMode::Homing => {
+                    ArtilleryEffect::Damage {
+                        total,
+                        packet_size: 5,
+                        table: HitTable::Weapon,
+                    }
+                }
             };
             cells.push(ArtilleryCell {
                 position,

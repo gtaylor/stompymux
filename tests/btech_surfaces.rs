@@ -6688,9 +6688,10 @@ async fn artillery_character_arrival_is_atomic() {
     assert_eq!(world.btech, before);
     assert_eq!(flight, cursor);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    let report = advance_artillery_flight_action(&scripts, &config, map, &mut flight, rules())
-        .unwrap()
-        .unwrap();
+    let report =
+        advance_artillery_flight_action(&scripts, &config, map, (&mut flight, units[0]), rules())
+            .unwrap()
+            .unwrap();
     assert_eq!(report.hits.len(), 2);
     assert_eq!(flight.remaining(), 0);
     assert!(

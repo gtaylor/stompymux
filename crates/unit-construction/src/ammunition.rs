@@ -46,6 +46,9 @@ pub enum AmmunitionMode {
     ThunderVibrabomb,
     /// Thunder rounds whose mines also catch hovering and low-flying units.
     ThunderActive,
+    /// Arrow IV homing missiles, which home on a unit friendly TAG designates (Tactical
+    /// Operations: Advanced Units & Equipment p. 166).
+    Homing,
 }
 
 impl AmmunitionMode {
@@ -111,6 +114,9 @@ impl AmmunitionMode {
             Self::Precision | Self::Flechette | Self::ArmorPiercing | Self::Caseless => {
                 weapon.supports_rapid_fire()
             }
+            // Only Arrow IV launchers carry homing missiles (Tactical Operations: Advanced
+            // Units & Equipment p. 166).
+            Self::Homing => matches!(weapon, Weapon::ArrowIv | Weapon::ClanArrowIv),
         }
     }
 
@@ -141,6 +147,7 @@ impl AmmunitionMode {
             "ThunderAug" => Some(Self::ThunderAugmented),
             "ThunderVibra" => Some(Self::ThunderVibrabomb),
             "ThunderActive" => Some(Self::ThunderActive),
+            "Homing" => Some(Self::Homing),
             _ => None,
         }
     }
@@ -172,6 +179,7 @@ impl AmmunitionMode {
             "ThunderAug",
             "ThunderVibra",
             "ThunderActive",
+            "Homing",
         ]
         .into_iter()
         .filter(|flag| !weapon.is_mml() || *flag != "MML_LRM")

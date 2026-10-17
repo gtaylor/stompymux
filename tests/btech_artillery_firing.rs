@@ -222,6 +222,8 @@ async fn artillery_live_payloads_hit_without_glancing() {
         (vec!["Cluster"], ArtilleryMode::Cluster),
         (vec!["Smoke"], ArtilleryMode::Smoke),
         (vec!["Mine"], ArtilleryMode::Mine),
+        // With no designated unit near its hex, a homing missile falls on the hex unguided.
+        (vec!["Homing"], ArtilleryMode::Homing),
     ] {
         let (_dir, config, mut world, map, shooter, index) = fixture(&flags).await;
         world
@@ -284,6 +286,9 @@ async fn artillery_live_payloads_hit_without_glancing() {
             }
             ArtilleryMode::Mine => "A rain of small bomblets hits [fg=yellow bold]1,0[reset]!",
             ArtilleryMode::Smoke => "A ArrowIVSystem missile hits 1,0, and smoke starts to billow!",
+            ArtilleryMode::Homing => {
+                "A ArrowIVSystem homing missile streaks down on [fg=yellow bold]1,0[reset]!"
+            }
         };
         assert_eq!(
             report
@@ -324,6 +329,20 @@ async fn artillery_live_payloads_hit_without_glancing() {
                 report.pattern.cells[0].effect,
                 ArtilleryEffect::Mine { strength: 30 }
             )),
+            // Five points to the units in the hex it strikes (Tactical Operations: Advanced
+            // Units & Equipment p. 166).
+            ArtilleryMode::Homing => assert_eq!(
+                report.pattern.cells,
+                [ArtilleryCell {
+                    position: HexCoordinate { x: 1, y: 0 },
+                    direct: true,
+                    effect: ArtilleryEffect::Damage {
+                        total: 5,
+                        packet_size: 5,
+                        table: HitTable::Weapon,
+                    },
+                }]
+            ),
         }
         assert!(
             scripts.world().btech.maps()[&map]
@@ -1199,4 +1218,147 @@ async fn artillery_hits_a_struck_hex_automatically_until_it_moves() {
             .is_empty()
     );
     world.validate(&config).unwrap();
+}
+
+/// A friendly Beowulf with TAG two hexes from an enemy Jenner, both near the launcher's aim
+/// point (1, 0); returns the designator and the target.
+fn designate_target(world: &mut World, config: &Config, map: ObjectId) -> (ObjectId, ObjectId) {
+    let observer = world.objects[&ObjectId(2)].location.unwrap();
+    stop_battle_unit(world, observer, ObjectId(2)).unwrap();
+    let designator = world.create(config, "Designator".into(), Kind::Thing);
+    world.objects.get_mut(&designator).unwrap().home = Some(ObjectId(config.home()));
+    create_battle_unit(
+        world,
+        designator,
+        MechTemplate::parse("BEO-12", include_str!("../game/units/BEO-12.toml")).unwrap(),
+    )
+    .unwrap();
+    place_battle_unit(world, designator, map, 1, 6).unwrap();
+    world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(designator);
+    assign_battle_pilot(world, designator, ObjectId(2)).unwrap();
+    start_battle_unit(world, designator, ObjectId(2), true).unwrap();
+    for _ in 0..5 {
+        advance_battle_units(world, 0, true);
+    }
+    let target = world.create(config, "Enemy".into(), Kind::Thing);
+    world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
+    create_battle_unit(
+        world,
+        target,
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
+    )
+    .unwrap();
+    place_battle_unit(world, target, map, 1, 2).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(target, |record| record["signature"]["team"] = 2.into())
+        .unwrap();
+    support::seed_world_dice(world, support::FIXTURE_DICE_SEED);
+    world
+        .btech
+        .set_unit_dice(designator, Dice::seeded([support::roll_twelve_seed(); 32]))
+        .unwrap();
+    refresh_battle_contacts(world, &[designator]).unwrap();
+    select_battle_tag(
+        world,
+        designator,
+        ObjectId(2),
+        Some(target),
+        TagRules {
+            aim: AimRules::STANDARD,
+            extended_gunnery: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(battle_tagged_by(world, target), Some(designator));
+    (designator, target)
+}
+
+/// An Arrow IV homing missile attacks a unit a friendly TAG designates within eight hexes of
+/// its aim point: on 4+ on 2D6 it strikes that unit for twenty points; on 3 or less it strikes
+/// the unit's hex for five (Tactical Operations: Advanced Units & Equipment p. 166).
+#[tokio::test]
+async fn homing_missiles_strike_tag_designated_units() {
+    for strikes in [true, false] {
+        let (_dir, config, mut world, map, shooter, index) = fixture(&["Homing"]).await;
+        let (_, target) = designate_target(&mut world, &config, map);
+        let seed = (0..=255u8)
+            .find(|seed| (Dice::seeded([*seed; 32]).two_d6() >= 4) == strikes)
+            .unwrap();
+        let mut encoded = serde_json::to_value(&world.btech).unwrap();
+        encoded["maps"][map.0.to_string()]["fire_dice"] =
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+        world.btech = serde_json::from_value(encoded).unwrap();
+        let scripts =
+            Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+        let launched: bool = scripts
+            .eval_callback(&format!(
+                "return btech.unit.fire({},1,{index}).launched",
+                shooter.0
+            ))
+            .unwrap();
+        assert!(launched);
+        let arrival = loop {
+            if let Some(report) = advance_artillery_action(&scripts, &config, rules())
+                .unwrap()
+                .pop()
+            {
+                break report;
+            }
+        };
+        assert_eq!(arrival.pattern.target, HexCoordinate { x: 1, y: 0 });
+        assert_eq!(arrival.pattern.impact, HexCoordinate { x: 1, y: 2 });
+        assert!(!arrival.pattern.missed);
+        let damage: Vec<_> = arrival
+            .hits
+            .iter()
+            .filter(|hit| hit.unit == target)
+            .map(|hit| hit.damage)
+            .collect();
+        assert_eq!(
+            damage,
+            [if strikes {
+                HOMING_DAMAGE
+            } else {
+                HOMING_SPLASH_DAMAGE
+            }]
+        );
+        // A homing missile never registers its hex for automatic hits.
+        assert!(
+            scripts.world().btech.constructed_units()[&shooter]
+                .artillery_registration()
+                .hexes()
+                .is_empty()
+        );
+        scripts.world().validate(&config).unwrap();
+    }
+}
+
+/// Homing missiles load only in Arrow IV launchers, and `firehoming` toggles them.
+#[tokio::test]
+async fn homing_missiles_belong_to_arrow_iv_launchers() {
+    for weapon in Weapon::ALL.iter().copied() {
+        assert_eq!(
+            AmmunitionMode::Homing.supports(weapon),
+            matches!(weapon, Weapon::ArrowIv | Weapon::ClanArrowIv),
+            "{weapon:?}"
+        );
+    }
+    let (_dir, config, world, _map, shooter, index) = fixture(&[]).await;
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let text = support::run_text(
+        &scripts,
+        &config,
+        ObjectId(1),
+        1,
+        &format!("firehoming {index}"),
+    );
+    assert!(text.contains("fire homing missiles"), "{text}");
+    let mode: String = scripts
+        .eval_callback(&format!(
+            "return btech.unit.firehoming({},1,{index})",
+            shooter.0
+        ))
+        .unwrap();
+    assert_eq!(mode, "normal");
 }

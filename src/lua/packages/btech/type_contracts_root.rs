@@ -113,7 +113,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00013
-//|---@alias AmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"
+//|---@alias AmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"|"homing"
 // lua-types-end
 
 // lua-types-begin btech 00014

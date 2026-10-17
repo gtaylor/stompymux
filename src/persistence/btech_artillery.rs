@@ -32,6 +32,7 @@ fn mode_code(mode: ArtilleryMode) -> i64 {
         ArtilleryMode::Cluster => 1,
         ArtilleryMode::Smoke => 2,
         ArtilleryMode::Mine => 3,
+        ArtilleryMode::Homing => 4,
     }
 }
 
@@ -42,6 +43,7 @@ fn mode_from_code(code: i64) -> Result<ArtilleryMode> {
         1 => ArtilleryMode::Cluster,
         2 => ArtilleryMode::Smoke,
         3 => ArtilleryMode::Mine,
+        4 => ArtilleryMode::Homing,
         other => bail!("Unknown artillery mode {other}"),
     })
 }

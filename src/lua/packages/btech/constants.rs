@@ -828,6 +828,10 @@ pub(super) static AMMUNITION_MODES: Catalog = Catalog {
             name: "THUNDER_ACTIVE",
             value: 33554432,
         },
+        Entry {
+            name: "HOMING",
+            value: 67108864,
+        },
     ],
 };
 

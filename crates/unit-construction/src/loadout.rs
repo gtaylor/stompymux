@@ -382,6 +382,7 @@ fn is_contract_ammunition_mode(mode: &str) -> bool {
             | "ThunderAug"
             | "ThunderVibra"
             | "ThunderActive"
+            | "Homing"
     )
 }
 

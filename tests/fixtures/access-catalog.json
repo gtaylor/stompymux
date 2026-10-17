@@ -1134,6 +1134,7 @@
     "firevibrabomb": "Everyone; conscious assigned pilot, running unit and intact recycled LRM launcher required",
     "fireactive": "Everyone; conscious assigned pilot, running unit and intact recycled LRM launcher required",
     "firecluster": "Everyone; conscious assigned pilot, running unit and intact recycled artillery required",
+    "firehoming": "Everyone; conscious assigned pilot, running unit and intact recycled Arrow IV launcher required",
     "lbx": "Everyone; conscious assigned pilot, running unit and intact recycled LB-X autocannon required",
     "flamerheat": "Everyone; conscious assigned pilot, running unit and intact recycled flamer required",
     "fliparms": "Everyone; running unit and assigned pilot required",

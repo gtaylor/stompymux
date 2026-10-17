@@ -42,21 +42,23 @@ pub struct ArtilleryImpactReport {
 }
 
 /// Advance an admitted flight and atomically apply its arrival to an out-of-character battlefield.
-/// The caller owns launch authorization and durable storage of the supplied cursor.
+/// The caller owns launch authorization and durable storage of the supplied cursor. With no
+/// firer known, a homing missile has no friendly TAG to follow and falls unguided.
 pub fn advance_artillery_flight(
     world: &mut World,
     map: ObjectId,
     flight: &mut ArtilleryFlight,
     rules: FallRules,
 ) -> Result<Option<ArtilleryImpactReport>> {
-    advance(world, map, flight, rules, false)
+    advance(world, map, (flight, None), rules, false)
 }
 
-/// Character-capable arrival for a host action that also publishes casualty effects.
+/// Character-capable arrival for a host action that also publishes casualty effects. The
+/// firer, if still present, steers a homing missile onto a unit its side's TAG designates.
 pub(super) fn advance(
     world: &mut World,
     map: ObjectId,
-    flight: &mut ArtilleryFlight,
+    (flight, shooter): (&mut ArtilleryFlight, Option<ObjectId>),
     rules: FallRules,
     character: bool,
 ) -> Result<Option<ArtilleryImpactReport>> {
@@ -72,6 +74,22 @@ pub(super) fn advance(
     ensure!(record.terrain_ready(), "Map terrain is unavailable");
     let mut candidate = world.clone();
     let mut cursor = flight.clone();
+    // The book has the firer declare whether a homing missile homes on a designated unit or
+    // strikes its hex unguided (Tactical Operations: Advanced Units & Equipment p. 166). In
+    // realtime nobody can know at launch whether a designation will hold when it lands, so
+    // the missile decides on arrival: it homes when a friendly TAG designates a unit within
+    // reach, and otherwise falls on its hex as the unguided attack.
+    if cursor.mode() == ArtilleryMode::Homing
+        && cursor.remaining() == 1
+        && let Some(target) =
+            shooter.and_then(|shooter| homing_target(&candidate, map, shooter, cursor.target()))
+    {
+        let report = home(&mut candidate, map, &mut cursor, target, rules, character)?;
+        candidate.btech.validate_action(&candidate)?;
+        *world = candidate;
+        *flight = cursor;
+        return Ok(Some(report));
+    }
     let record = candidate.btech.maps.get_mut(&map).unwrap();
     let dimensions = (u16::try_from(record.width)?, u16::try_from(record.height)?);
     let dice = record
@@ -106,8 +124,10 @@ pub(super) fn advance(
     };
     let smoke = super::decorations::smoke_seconds(&candidate);
     // Units inside a building are safe from cluster bomblets (Tactical Operations: Advanced
-    // Units & Equipment p. 166).
+    // Units & Equipment p. 166). A homing missile falling unguided harms only the units in
+    // its hex.
     let sheltered = cursor.mode() == ArtilleryMode::Cluster;
+    let structures = cursor.mode() != ArtilleryMode::Homing;
     for cell in report.pattern.cells.clone() {
         match cell.effect {
             ArtilleryEffect::Smoke => {
@@ -128,8 +148,14 @@ pub(super) fn advance(
                     &mut report,
                     &cell,
                     origin,
-                    (total, packet_size, table),
-                    sheltered,
+                    CellBlast {
+                        damage: total,
+                        packet_size,
+                        table,
+                        sheltered,
+                        spared: None,
+                        structures,
+                    },
                     rules,
                     character,
                 )?;
@@ -228,17 +254,23 @@ fn building_damage(tile: Hex, level: i32, damage: u16, direct: bool) -> Option<u
 /// sinks, losing ten points a level, while the outer rings reach only units standing on the
 /// ground. Units inside a building take [`building_damage`] instead, before the structure
 /// itself takes its share.
-#[allow(clippy::too_many_arguments)]
 fn hit_cell(
     world: &mut World,
     report: &mut ArtilleryImpactReport,
     cell: &ArtilleryCell,
     origin: HexCoordinate,
-    (damage, packet_size, table): (u16, u8, HitTable),
-    sheltered: bool,
+    blast: CellBlast,
     rules: FallRules,
     character: bool,
 ) -> Result<()> {
+    let CellBlast {
+        damage,
+        packet_size,
+        table,
+        sheltered,
+        spared,
+        structures,
+    } = blast;
     let coordinate = cell.position;
     let tile = world.btech.maps()[&report.map]
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
@@ -262,6 +294,9 @@ fn hit_cell(
         upper,
     };
     for id in super::map_slots::all_unit_order(world, report.map)? {
+        if spared == Some(id) {
+            continue;
+        }
         let Some(target) = blast.target(world, id, rules)? else {
             continue;
         };
@@ -337,7 +372,192 @@ fn hit_cell(
         report.notices.extend(effects.notices);
         report.hits.push(hit);
     }
+    if !structures {
+        return Ok(());
+    }
     strike_structure(world, report, cell, damage, rules, character)
+}
+
+/// How one cell's blast treats what stands in it.
+#[derive(Debug, Clone, Copy)]
+struct CellBlast {
+    damage: u16,
+    packet_size: u8,
+    table: HitTable,
+    /// Units inside a building take nothing, as from cluster bomblets.
+    sheltered: bool,
+    /// A unit the blast leaves alone: the one a homing missile struck, which takes its own hit.
+    spared: Option<ObjectId>,
+    /// The structure in the hex takes its share.
+    structures: bool,
+}
+
+/// How far from its aim point an Arrow IV homing missile can find a designated unit (Tactical
+/// Operations: Advanced Units & Equipment p. 166).
+const HOMING_REACH: u64 = 8;
+
+/// The unit an arriving homing missile attacks: one a TAG friendly to `shooter` designates,
+/// within eight hexes of the aim point (Tactical Operations: Advanced Units & Equipment
+/// p. 166). The firer would choose among several; in realtime it cannot, so the missile takes
+/// the firer's own target lock when that is designated, otherwise the designated unit nearest
+/// its aim point.
+fn homing_target(
+    world: &World,
+    map: ObjectId,
+    shooter: ObjectId,
+    aim: HexCoordinate,
+) -> Option<ObjectId> {
+    let team = super::scanner::scanner_unit(world, shooter)?.signature.team;
+    let mut candidates: Vec<(u64, ObjectId)> = super::map_slots::all_unit_order(world, map)
+        .ok()?
+        .into_iter()
+        .filter_map(|id| {
+            let unit = super::scanner::scanner_unit(world, id)?;
+            let position = unit.position.filter(|position| position.map == map)?;
+            if unit.destroyed {
+                return None;
+            }
+            let tagger = super::tagged_by(world, id)?;
+            let friendly = super::scanner::scanner_unit(world, tagger)
+                .is_some_and(|tagger| tagger.signature.team == team);
+            let distance = aim.distance(HexCoordinate {
+                x: i32::from(position.x),
+                y: i32::from(position.y),
+            });
+            (friendly && distance <= HOMING_REACH).then_some((distance, id))
+        })
+        .collect();
+    let locked = match super::targeting::selection(world, shooter) {
+        Some(TargetSelection::Unit(lock)) => Some(lock.target),
+        _ => None,
+    };
+    if let Some(locked) = locked.filter(|locked| candidates.iter().any(|(_, id)| id == locked)) {
+        return Some(locked);
+    }
+    candidates.sort_by_key(|(distance, _)| *distance);
+    candidates.first().map(|(_, id)| *id)
+}
+
+/// Resolve a homing missile arriving on a designated unit (Tactical Operations: Advanced Units
+/// & Equipment p. 166): on 4+ on 2D6 it strikes that unit for twenty points in 5-point groups,
+/// a direct-fire ballistic hit from the firer's direction, and five points of area-effect
+/// damage strike every other unit in its hex; on 3 or less it strikes the hex instead, five
+/// points to every unit there, the target included.
+fn home(
+    world: &mut World,
+    map: ObjectId,
+    flight: &mut ArtilleryFlight,
+    target: ObjectId,
+    rules: FallRules,
+    character: bool,
+) -> Result<ArtilleryImpactReport> {
+    let position = super::scanner::scanner_unit(world, target)
+        .and_then(|unit| unit.position)
+        .context("Homing target is not placed")?;
+    let coordinate = HexCoordinate {
+        x: i32::from(position.x),
+        y: i32::from(position.y),
+    };
+    let roll = world
+        .btech
+        .maps
+        .get_mut(&map)
+        .unwrap()
+        .fire_dice
+        .as_mut()
+        .context("Map random stream is unavailable")?
+        .two_d6();
+    let pattern = flight.home(coordinate)?;
+    let notices = super::artillery_feedback::arrival_notices(
+        world,
+        map,
+        flight.weapon(),
+        flight.mode(),
+        coordinate,
+    )?;
+    let origin = flight.origin();
+    let mut report = ArtilleryImpactReport {
+        map,
+        pattern,
+        hits: Vec::new(),
+        structures: Vec::new(),
+        mines: Vec::new(),
+        notices,
+        pilot_notices: Vec::new(),
+    };
+    let struck = roll >= 4;
+    if struck {
+        let tile =
+            world.btech.maps()[&map].base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+        let blast = super::blast_damage::BlastCell {
+            coordinate,
+            origin: origin.center(),
+            tile,
+            lower: i32::MIN,
+            upper: i32::MAX,
+        };
+        if let Some(admitted) = blast.target(world, target, rules)? {
+            ensure!(
+                character || !admitted.character,
+                "Artillery impact requires character consequence publication"
+            );
+            report.notices.extend(super::broadcast::observer_notices(
+                world,
+                target,
+                "is struck by a homing missile!",
+            ));
+            report.notices.push(Notice {
+                unit: target,
+                text: "A homing missile slams into you!".into(),
+            });
+            let effects = super::blast_damage::resolve(
+                world,
+                target,
+                super::blast_damage::BlastDamage {
+                    damage: HOMING_DAMAGE,
+                    packet_size: 5,
+                    table: HitTable::Weapon,
+                    arc: admitted.arc,
+                    heat: 0,
+                    character: admitted.character,
+                    class: DamageClass::Ordinary,
+                },
+                admitted.rules,
+            )?;
+            super::piloting::append_feedback(
+                &mut report.pilot_notices,
+                effects.pilot_notices,
+                report.notices.len(),
+            );
+            report.notices.extend(effects.notices);
+            report.hits.push(ArtilleryHit {
+                unit: target,
+                coordinate,
+                damage: HOMING_DAMAGE,
+                arc: admitted.arc,
+                impacts: effects.impacts,
+                vehicle_heat: effects.vehicle_heat,
+            });
+        }
+    }
+    let cell = report.pattern.cells[0].clone();
+    hit_cell(
+        world,
+        &mut report,
+        &cell,
+        origin,
+        CellBlast {
+            damage: HOMING_SPLASH_DAMAGE,
+            packet_size: 5,
+            table: HitTable::Weapon,
+            sheltered: false,
+            spared: struck.then_some(target),
+            structures: false,
+        },
+        rules,
+        character,
+    )?;
+    Ok(report)
 }
 
 /// Construction factor a blast takes off a structure, as for any area-effect weapon that

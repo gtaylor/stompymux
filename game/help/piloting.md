@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firehoming", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
 article_tags = ["show_in_index"]
 +++
 
@@ -476,6 +476,8 @@ p. 139).
 
 
 `firecluster <selection>` (also `cluster`) toggles artillery between normal and cluster rounds.
+`firehoming <selection>` toggles an Arrow IV launcher between normal rounds and homing
+missiles, which need a matching ammunition bin.
 It requires an intact, recycled launcher and preserves an existing smoke or mine
 selection by rejecting the change. Matching ammunition is required to fire.
 
@@ -1014,6 +1016,18 @@ An indirect miss scatters one hex for each point it missed by. A miss scatters i
 a direction rolled on one die, clockwise from north; a round that scatters off the
 map lands harmlessly. Once one of your rounds strikes its target hex, every later
 shot you fire at that hex hits it automatically, until you move, turn or jump.
+
+Arrow IV homing missiles (Tactical Operations: AUE p. 166) are fired at a hex like any
+artillery round. When one arrives it attacks a unit that a TAG on your side designates
+within eight hexes of that hex: the one you have locked if it is designated, otherwise the
+designated unit nearest the hex. On 4 or more on 2D6 it strikes that unit for 20 points in
+5-point groups from your direction, and 5 points strike every other unit in its hex; on 3
+or less it strikes the hex for 5 points to every unit there. With no designated unit in
+reach when it arrives, it falls on the hex it was fired at as an unguided round, 5 points to
+every unit there, scattering on a miss like any other round. In the book the firer chooses
+between these two attacks when firing; in realtime the missile chooses on arrival, since
+nobody can know at launch whether a designation will hold. A homing missile never makes its
+hex an automatic hit.
 
 An artillery round that strikes a building hex damages every unit inside a light,
 medium or heavy building in full, whatever floor it stands on, and every unit on its

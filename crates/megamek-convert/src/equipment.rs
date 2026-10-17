@@ -299,6 +299,7 @@ const MUNITIONS: &[(&str, &str, AmmunitionMode)] = &[
     ("caseless", "Caseless", AmmunitionMode::Caseless),
     ("semi-guided", "Sguided", AmmunitionMode::SemiGuided),
     ("smoke", "Smoke", AmmunitionMode::Smoke),
+    ("homing", "Homing", AmmunitionMode::Homing),
 ];
 
 /// MegaMek munitions stompymux has no equivalent for, checked before [`MUNITIONS`] so that
@@ -319,7 +320,6 @@ const UNSUPPORTED_MUNITIONS: &[&str] = &[
     "acid",
     "coolant",
     "flak",
-    "homing",
     "copperhead",
     "davy crockett",
     "anti-radiation",
@@ -871,6 +871,15 @@ mod tests {
         assert_eq!(
             ammo("Clan Ammo LRM-15 (Clan) Artemis V-capable"),
             ("Ammo_CL.LRM-15".into(), vec!["Artemis/Mine"], 8)
+        );
+        // Arrow IV homing missiles (Tactical Operations: Advanced Units & Equipment p. 166).
+        assert_eq!(
+            ammo("ISArrowIVHomingAmmo"),
+            ("Ammo_IS.ArrowIVSystem".into(), vec!["Homing"], 5)
+        );
+        assert_eq!(
+            ammo("ISArrowIVAmmo"),
+            ("Ammo_IS.ArrowIVSystem".into(), vec![], 5)
         );
     }
 
