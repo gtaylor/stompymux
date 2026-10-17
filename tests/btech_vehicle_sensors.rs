@@ -58,12 +58,14 @@ async fn vehicle_probe_profile_follows_critical_and_section_loss() {
     let ready = |kind: ActiveProbe| {
         Some(ProbeProfile {
             kind,
+            clan: false,
             range: u16::from(kind.range(false)),
             status: PerceptionStatus::Ready,
         })
     };
     let destroyed = Some(ProbeProfile {
         kind: ActiveProbe::Bloodhound,
+        clan: false,
         range: 8,
         status: PerceptionStatus::Damaged,
     });

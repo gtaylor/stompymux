@@ -28,7 +28,7 @@ pub use sensors::{
 };
 
 use crate::btech::{
-    Ground, HexCoordinate, Light, Power, Range, System, TerrainLos, VehicleMovement, Weather,
+    Ground, HexCoordinate, Light, Power, Range, TerrainLos, VehicleMovement, Weather,
 };
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -122,8 +122,9 @@ pub struct SensorProfile {
     pub band: Option<SensorBand>,
     /// The installed probe the probe sweep uses.
     pub probe: Option<ActiveProbe>,
-    /// Clan sensors: the brackets and ECM row of a Beagle slot are the Clan active probe's.
-    pub clan: bool,
+    /// That probe is Clan technology by its own slots (see [`ProbeProfile::clan`]); the
+    /// built-in sensors' brackets and rows do not depend on technology base.
+    pub probe_clan: bool,
 }
 
 /// One sensor system of a unit's suite and the brackets it detects in.
@@ -137,6 +138,10 @@ pub struct SensorSystem {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ProbeProfile {
     pub kind: ActiveProbe,
+    /// The probe is Clan technology by its own slots, whatever the chassis: a Clan-built
+    /// Beagle slot is the Clan active probe, with its reach, Sensor Range Table brackets and
+    /// ECM/Stealth Modifier Table row (Tactical Operations: Advanced Rules pp. 190-191).
+    pub clan: bool,
     /// Hexes within which the probe reveals a hidden unit it has line of sight to (Total
     /// Warfare p. 129).
     pub range: u16,
@@ -250,28 +255,25 @@ fn sensor_profile(
     probe: Option<ProbeProfile>,
     jammed: bool,
 ) -> Result<SensorProfile> {
-    let (clan, failed) = match world.btech.constructed_units().get(&observer) {
-        Some(mech) => (mech.definition().has_special("Clan"), mech.sensors_failed()),
-        None => (
-            world.btech.vehicles()[&observer]
-                .definition()
-                .has_special("Clan"),
-            false,
-        ),
-    };
+    let failed = world
+        .btech
+        .constructed_units()
+        .get(&observer)
+        .is_some_and(|mech| mech.sensors_failed());
     let status = if failed {
         PerceptionStatus::Damaged
     } else {
         PerceptionStatus::Ready
     };
     let probe_kind = probe.map(|probe| probe.kind);
+    let probe_clan = probe.is_some_and(|probe| probe.clan);
     let mut systems = Vec::new();
     // A working probe sweeps first, with its own brackets, so a target it finds shows as a
     // probe contact; the built-in sensors follow.
     if probe.is_some_and(|probe| probe.status == PerceptionStatus::Ready) {
         systems.push(SensorSystem {
             mode: SensorMode::Probe,
-            bands: SensorBands::of(SensorMode::Probe, unit.vehicle, probe_kind, clan),
+            bands: SensorBands::of(SensorMode::Probe, unit.vehicle, probe_kind, probe_clan),
         });
     }
     if status == PerceptionStatus::Ready {
@@ -283,7 +285,7 @@ fn sensor_profile(
         ] {
             systems.push(SensorSystem {
                 mode,
-                bands: SensorBands::of(mode, unit.vehicle, None, clan),
+                bands: SensorBands::of(mode, unit.vehicle, None, false),
             });
         }
     }
@@ -296,7 +298,7 @@ fn sensor_profile(
             .sensor_sweep
             .and_then(|roll| SensorBand::of_result(i16::from(roll))),
         probe: probe_kind,
-        clan,
+        probe_clan,
     })
 }
 
@@ -308,14 +310,12 @@ fn probe_profile(
     observer: ObjectId,
     interference: bool,
 ) -> Result<Option<ProbeProfile>> {
-    // Build the equipment projection once and check every family against it.
-    let (clan, fittings) = match world.btech.vehicles().get(&observer) {
+    // Build the equipment projection once and check every family against it. Each fitted
+    // probe reaches by its own technology base, not the chassis's.
+    let fittings = match world.btech.vehicles().get(&observer) {
         Some(vehicle) => {
             let loadout = vehicle.loadout()?;
-            (
-                vehicle.definition().has_special("Clan"),
-                ActiveProbe::BY_REACH.map(|kind| (kind, vehicle.probe_fitting(&loadout, kind))),
-            )
+            ActiveProbe::BY_REACH.map(|kind| (kind, vehicle.probe_fitting(&loadout, kind)))
         }
         None => {
             let unit = world
@@ -324,11 +324,7 @@ fn probe_profile(
                 .get(&observer)
                 .context("Observer is not constructed")?;
             let loadout = unit.loadout()?;
-            (
-                // The Beagle and Clan active probes reach by the probe's own technology base.
-                unit.definition().installation_is_clan(System::BeagleProbe),
-                ActiveProbe::BY_REACH.map(|kind| (kind, unit.probe_fitting(&loadout, kind))),
-            )
+            ActiveProbe::BY_REACH.map(|kind| (kind, unit.probe_fitting(&loadout, kind)))
         }
     };
     let mut damaged = None;
@@ -336,10 +332,11 @@ fn probe_profile(
         if !fitting.installed {
             continue;
         }
-        let range = u16::from(kind.range(clan));
+        let range = u16::from(kind.range(fitting.clan));
         if !fitting.available {
             damaged.get_or_insert(ProbeProfile {
                 kind,
+                clan: fitting.clan,
                 range,
                 status: PerceptionStatus::Damaged,
             });
@@ -347,6 +344,7 @@ fn probe_profile(
         }
         return Ok(Some(ProbeProfile {
             kind,
+            clan: fitting.clan,
             range,
             status: if interference {
                 PerceptionStatus::Interference
@@ -559,7 +557,7 @@ fn sweep_suite(
             (system.mode == SensorMode::Probe)
                 .then_some(profile.sensor.probe)
                 .flatten(),
-            profile.sensor.clan,
+            profile.sensor.probe_clan,
             roll,
             sweep_target,
         );

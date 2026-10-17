@@ -87,9 +87,12 @@ The surface of water stops every sensor but magscan. Guardian ECM, Angel ECM,
 stealth armor and null signature systems add to the sweep roll of radars and
 probes, often beyond the band that would have found the target; infrared, magscan
 and seismic sensors ignore them. Stealth and null signature systems are found only
-by the Bloodhound probe. Damaged sensors leave you with sight alone. Electromagnetic
-interference renders active probes useless but leaves the built-in sensors working
-(Tactical Operations: Advanced Rules p. 53).
+by the Bloodhound probe. A Beagle slot is the Clan probe when the probe itself is
+Clan-built: its slot says `CL.`, or it says neither `IS.` nor `CL.` on a Clan design. The
+probe's own technology, not the chassis's, sets its brackets, reveal range and ECM
+penalties. Damaged sensors leave you with sight alone. Electromagnetic interference
+renders active probes useless but leaves the built-in sensors working (Tactical
+Operations: Advanced Rules p. 53).
 
 ## Light
 
