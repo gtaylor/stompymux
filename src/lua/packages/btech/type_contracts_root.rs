@@ -510,8 +510,9 @@
 //|---@field turret_jammed boolean Recoverable turret rotation damage.
 //|---@field turret_repairs integer[] Pending 60-second repair attempts.
 //|---@field turret_locked boolean Turret damage prevents rotation.
-//|---@field maximum_speed number Current maximum kph after motive damage.
-//|---@field motive_speed_loss number Maximum speed lost to motive damage in kph.
+//|---@field maximum_speed number Current flanking kph after motive damage, temperature, load and gravity.
+//|---@field cruising_speed number Current cruising kph: the template cruising MP after the same modifiers; flank is cruising MP x 1.5 rounded up.
+//|---@field motive_mp_loss integer Cruising MP lost to motive damage, rotor hits and an engine hit.
 //|---@field immobilized boolean Motive-system destruction prevents ground motion.
 //|---@field under_bridge boolean Hovercraft beneath a bridge span.
 //|---@field elevation integer|nil Ground support height; hovercraft float at water level.

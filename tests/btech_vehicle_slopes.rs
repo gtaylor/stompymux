@@ -32,7 +32,8 @@ async fn fixture(
     if movement == VehicleMovement::Hover {
         template.set_cruising_mp(4);
     }
-    let maximum = template.max_speed;
+    // Forward at flank, or backward at the cruising speed no vehicle may exceed in reverse.
+    let envelope = SpeedEnvelope::from_walking_mp(f64::from(template.walk_mp));
     create_battle_vehicle(&mut world, id, template).unwrap();
     place_battle_unit(&mut world, id, map, if reverse { 8 } else { 2 }, 1).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
@@ -51,9 +52,9 @@ async fn fixture(
         id,
         ObjectId(1),
         if reverse {
-            -maximum * 2.0 / 3.0
+            -envelope.walking
         } else {
-            maximum
+            envelope.running
         },
     )
     .unwrap();

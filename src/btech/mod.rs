@@ -206,6 +206,7 @@ pub use vehicle_motion::VehicleMotionRules;
 pub use vehicle_motion::VehicleTemplateMotion;
 mod vehicle_placement;
 mod vehicle_power;
+mod vehicle_speed;
 pub use vehicle::{Vehicle, create_vehicle, damage_vehicle_motive, damage_vehicle_phase};
 mod engine_sink_capacity;
 mod mode_feedback;

@@ -131,7 +131,7 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
     assert!(report.damage.is_none());
     assert!(report.notices.is_empty());
     assert_eq!(world.btech.vehicles()[&id].sections(), &sections);
-    assert_eq!(world.btech.vehicles()[&id].motive_speed_loss(), 0.0);
+    assert_eq!(world.btech.vehicles()[&id].motive_mp_loss(), 0);
     let mut dice = Dice::seeded(stream);
     dice.two_d6();
     dice.two_d6();

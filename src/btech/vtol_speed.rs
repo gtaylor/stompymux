@@ -2,7 +2,7 @@
 //! restrictions. Total Warfare p. 54 charges a VTOL 1 MP per hex entered and 1 MP per level
 //! climbed or descended from the same pool, so horizontal and vertical speed add up to the
 //! VTOL's maximum rather than combining as a vector.
-use super::Vehicle;
+use super::{SpeedEnvelope, Vehicle};
 use anyhow::{Result, ensure};
 
 /// Speed left for the other axis after `component` is spent: the two share one additive
@@ -13,6 +13,19 @@ pub(super) fn remaining_speed(maximum: f64, component: f64) -> Result<f64> {
         "Invalid flight speed"
     );
     Ok((maximum - component.abs()).max(0.0))
+}
+
+/// The horizontal envelope a climb or descent at `vertical_speed` leaves: the VTOL cruises
+/// while hexes and levels together stay within its cruising MP, and flanks up to its flank
+/// MP (TW pp. 53, 54), so both budgets lose what the vertical axis spends.
+pub(super) fn horizontal_envelope(
+    envelope: SpeedEnvelope,
+    vertical_speed: f64,
+) -> Result<SpeedEnvelope> {
+    Ok(SpeedEnvelope {
+        walking: remaining_speed(envelope.walking, vertical_speed)?,
+        running: remaining_speed(envelope.running, vertical_speed)?,
+    })
 }
 
 impl Vehicle {
@@ -68,23 +81,26 @@ impl Vehicle {
     /// Clamp a horizontal request to forward/reverse limits, then enforce tail-rotor cruise safety.
     /// Authority, startup, fuel and takeoff admission belong to the enclosing flight control action.
     pub fn vtol_throttle(&self, requested: f64, vertical_speed: f64) -> Result<f64> {
-        self.vtol_throttle_at(requested, vertical_speed, self.maximum_speed())
+        self.vtol_throttle_at(requested, vertical_speed, self.speed_envelope())
     }
 
-    /// Share tail-rotor and movement-budget checks with world-owned towing loads.
+    /// Share tail-rotor and movement-budget checks with world-owned towing loads. Climbing
+    /// or descending spends the same MP as hexes (TW p. 54), so the VTOL cruises while the
+    /// two together stay within its cruising MP: forward travel may use what is left of the
+    /// flank budget, reverse and a destroyed tail rotor only what is left of the cruising one
+    /// (TW pp. 53, 197).
     pub(super) fn vtol_throttle_at(
         &self,
         requested: f64,
         vertical_speed: f64,
-        maximum: f64,
+        envelope: SpeedEnvelope,
     ) -> Result<f64> {
         ensure!(requested.is_finite(), "Invalid flight throttle");
         ensure!(self.definition().is_vtol(), "Flight speed requires a VTOL");
-        let maximum = remaining_speed(maximum, vertical_speed)?;
-        let cruise = maximum * 2.0 / 3.0;
-        let requested = requested.clamp(-cruise, maximum);
+        let horizontal = horizontal_envelope(envelope, vertical_speed)?;
+        let requested = horizontal.clamp(requested);
         ensure!(
-            !self.tail_rotor_destroyed() || requested <= cruise + 0.1,
+            !self.tail_rotor_destroyed() || !horizontal.is_running(requested),
             "A destroyed tail rotor prevents travel faster than cruise speed"
         );
         Ok(requested)
@@ -93,20 +109,21 @@ impl Vehicle {
     /// Reduce an existing forward command after tail-rotor damage, preserving actual momentum.
     /// The flight action supplies current vertical speed and owns the surrounding damage checkpoint.
     pub fn constrain_vtol_cruise(&mut self, vertical_speed: f64) -> Result<()> {
-        self.constrain_vtol_cruise_at(vertical_speed, self.maximum_speed())
+        self.constrain_vtol_cruise_at(vertical_speed, self.speed_envelope())
     }
 
-    /// Apply first-hit cruise restriction using the world-owned load, mode and gravity ceiling.
+    /// Apply first-hit cruise restriction using the world-owned load, mode and gravity
+    /// envelope: the forward command is cut to the cruising budget the climb leaves.
     pub(super) fn constrain_vtol_cruise_at(
         &mut self,
         vertical_speed: f64,
-        maximum: f64,
+        envelope: SpeedEnvelope,
     ) -> Result<()> {
-        let cruise = remaining_speed(maximum, vertical_speed)? * 2.0 / 3.0;
+        let cruise = horizontal_envelope(envelope, vertical_speed)?.walking;
         if let Some(motion) = &mut self.motion
             && motion.desired_speed > cruise
         {
-            motion.desired_speed = (cruise - 0.1).max(0.0);
+            motion.desired_speed = cruise;
         }
         Ok(())
     }

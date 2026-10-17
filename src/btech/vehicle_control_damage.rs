@@ -59,11 +59,15 @@ impl Vehicle {
     fn stun_crew(&mut self) {
         self.crew_stun_remaining = CREW_STUN_SECONDS;
         self.crew_stun_condition = None;
-        let cruise = self.maximum_speed() * 2.0 / 3.0;
+        // A VTOL's climb spends the same cruising budget as its horizontal travel (TW p. 54).
+        let vertical = self
+            .vtol_flight
+            .map_or(0.0, |flight| flight.vertical_speed.abs());
+        let cruise = (self.cruising_speed() - vertical).max(0.0);
         if let Some(motion) = self.motion.as_mut()
             && motion.desired_speed > cruise
         {
-            motion.desired_speed = cruise - 0.1;
+            motion.desired_speed = cruise;
         }
     }
 

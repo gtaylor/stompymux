@@ -2412,12 +2412,12 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
         } else {
             let mut unit = loaded.btech.vehicles()[&id].clone();
             unit.apply_motive_hit(VehicleMotiveHit::SpeedLoss { movement_points: 1 });
-            // One Cruising MP off the construction refigures its flank (Total Warfare p. 193):
+            // One Cruising MP off the template's refigures its flank (Total Warfare pp. 53, 193):
             // a 3/5 Demolisher drops to 2/3. The edited live maximum drops by the same amount.
-            let flank = unit.definition().max_speed / 10.75;
-            let refigured = (((flank / 1.5).round() - 1.0) * 1.5).ceil();
-            let lost = unit.motive_speed_loss();
-            assert_eq!(lost, (flank - refigured) * 10.75);
+            assert_eq!(unit.motive_mp_loss(), 1);
+            let cruising = unit.definition().walk_mp;
+            let flank = |mp: u32| SpeedEnvelope::from_walking_mp(f64::from(mp)).running;
+            let lost = flank(cruising) - flank(cruising - 1);
             let value = serde_json::to_value(unit).unwrap();
             firing::edit(&mut loaded, id, |unit| *unit = value);
             40.0 - lost

@@ -22,11 +22,12 @@ fn rotorcraft_velocity_budget_is_symmetric_and_tracks_material_damage() {
             (unit.vtol_vertical_limit(sign * horizontal).unwrap() - maximum * 0.6).abs() < 1e-10
         );
     }
+    // The 12/18 Kestrel flanks forward but reverses no faster than its template's 12
+    // cruising MP (Total Warfare p. 53).
+    assert_eq!((unit.cruising_speed(), maximum), (129.0, 193.5));
     assert_eq!(unit.vtol_throttle(f64::MAX, 0.0).unwrap(), maximum);
-    assert_eq!(
-        unit.vtol_throttle(-f64::MAX, 0.0).unwrap(),
-        -maximum * 2.0 / 3.0
-    );
+    assert_eq!(unit.vtol_throttle(-f64::MAX, 0.0).unwrap(), -129.0);
+    assert_eq!(unit.vtol_throttle(-f64::MAX, 43.0).unwrap(), -86.0);
     assert_eq!(unit.vtol_horizontal_limit(maximum).unwrap(), 0.0);
     assert_eq!(unit.vtol_vertical_limit(maximum * 2.0).unwrap(), 0.0);
     let damage = unit.apply_rotor_hit(RotorHit::Damage, false).unwrap();
@@ -51,13 +52,16 @@ fn tail_rotor_limits_commands_without_erasing_momentum_or_reverse_motion() {
     let _ = unit
         .apply_rotor_hit(RotorHit::FlightStabilizer, false)
         .unwrap();
+    // Climbing spends the cruising budget too (TW p. 54): at 60% of its 193.5 km/h flank, the
+    // 12/18 Kestrel has 12.9 km/h of its 129 km/h cruise left for horizontal travel.
     let vertical = unit.maximum_speed() * 0.6;
-    let cruise = unit.vtol_horizontal_limit(vertical).unwrap() * 2.0 / 3.0;
+    let cruise = unit.cruising_speed() - vertical;
+    assert!((cruise - 12.9).abs() < 1e-9);
     assert!(unit.vtol_throttle(cruise + 0.2, vertical).is_err());
     assert_eq!(unit.vtol_throttle(cruise, vertical).unwrap(), cruise);
     unit.constrain_vtol_cruise(vertical).unwrap();
     assert_eq!(unit.motion().unwrap().speed, 150.0);
-    assert!((unit.motion().unwrap().desired_speed - (cruise - 0.1)).abs() < 1e-10);
+    assert_eq!(unit.motion().unwrap().desired_speed, cruise);
     let before = unit.clone();
     unit.constrain_vtol_cruise(vertical).unwrap();
     assert_eq!(unit, before);

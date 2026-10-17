@@ -98,7 +98,7 @@ fn takeoff_guards_are_atomic_and_rechecked_before_liftoff() {
         match change {
             "fuel" => saved["vtol_fuel"]["remaining"] = 0.into(),
             "power" => saved["power"] = serde_json::to_value(Power::Off).unwrap(),
-            _ => saved["motive_speed_loss"] = 182.75.into(),
+            _ => saved["propulsion"]["maximum"] = 10.75.into(),
         }
         let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         let before = unit.clone();

@@ -631,17 +631,23 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
         } else {
             maximum
         };
-        // The towed Jenner keeps its 7/11 walking share of the loaded ceiling; vehicles cruise
-        // at two thirds of flank.
-        let walking_share = if index == 0 { 7.0 / 11.0 } else { 2.0 / 3.0 };
+        // Walking and cruising MP are the templates' own figures (TW p. 53): the towed Jenner
+        // keeps its 7/11 walking share of the loaded ceiling and the Demolisher its 3/5
+        // cruising share, while the Kestrel's climb comes out of its 12/18 cruising budget
+        // as well as its flank one (TW p. 54).
+        let walking = match index {
+            0 => maximum * 7.0 / 11.0,
+            1 => maximum * 3.0 / 5.0,
+            _ => maximum * 12.0 / 18.0 - maximum * 0.6,
+        };
         for (argument, expected) in [
             ("run", horizontal),
             ("flank", horizontal),
-            ("walk", (maximum * walking_share).min(horizontal)),
-            ("cruise", (maximum * walking_share).min(horizontal)),
-            ("back", -horizontal * walking_share),
+            ("walk", walking),
+            ("cruise", walking),
+            ("back", -walking),
             ("99999", horizontal),
-            ("-99999", -horizontal * walking_share),
+            ("-99999", -walking),
         ] {
             let native = Scripts::new(
                 &config,

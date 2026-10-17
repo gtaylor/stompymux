@@ -106,16 +106,15 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("turret_jammed", vehicle.turret_jammed())?;
             state.set("automatic_turret", vehicle.automatic_turret())?;
             state.set("turret_repairs", detached(lua, vehicle.turret_repairs())?)?;
-            state.set(
-                "maximum_speed",
-                crate::btech::motion_controls::throttle_configured(
-                    &world,
-                    ObjectId(id),
-                    crate::btech::SpeedPolicy::configured(&crate::lua::configuration(lua)),
-                )
-                .map_err(mlua::Error::external)?,
-            )?;
-            state.set("motive_speed_loss", vehicle.motive_speed_loss())?;
+            let envelope = crate::btech::motion_controls::throttle_envelope(
+                &world,
+                ObjectId(id),
+                crate::btech::SpeedPolicy::configured(&crate::lua::configuration(lua)),
+            )
+            .map_err(mlua::Error::external)?;
+            state.set("maximum_speed", envelope.running)?;
+            state.set("cruising_speed", envelope.walking)?;
+            state.set("motive_mp_loss", vehicle.motive_mp_loss())?;
             state.set("immobilized", vehicle.immobilized())?;
             state.set(
                 "elevation",

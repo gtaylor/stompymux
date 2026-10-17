@@ -100,13 +100,16 @@ impl Motion {
         }
     }
 
-    /// Reconcile a changed vehicle load while retaining paved-surface headroom where applicable.
-    pub(super) fn limit_load(&mut self, maximum: f64, actual_maximum: f64) {
-        self.desired_speed = self.desired_speed.clamp(-maximum * 2.0 / 3.0, maximum);
-        self.speed = self
-            .speed
-            .clamp(-actual_maximum * 2.0 / 3.0, actual_maximum);
-        if maximum == 0.0 {
+    /// Reconcile a changed vehicle load: the throttle stays inside `envelope`, and actual speed
+    /// inside `actual`, which keeps the extra point a ground vehicle gains on pavement.
+    pub(super) fn limit_load(
+        &mut self,
+        envelope: super::SpeedEnvelope,
+        actual: super::SpeedEnvelope,
+    ) {
+        self.desired_speed = envelope.clamp(self.desired_speed);
+        self.speed = actual.clamp(self.speed);
+        if envelope.is_stopped() {
             self.desired_heading = self.heading;
         }
     }
@@ -121,8 +124,9 @@ impl Motion {
         Ok(Self { speed: 0.0, ..self })
     }
 
-    /// Validate persistent Mech motion against the widest envelope it may have retained:
-    /// backward no faster than walking, forward no faster than running.
+    /// Validate persistent Mech or vehicle motion against the widest envelope it may have
+    /// retained: backward no faster than walking or cruising, forward no faster than running
+    /// or flanking, since no unit moves backward at running or flank speed (TW p. 53).
     pub(crate) fn validate_within(self, envelope: super::SpeedEnvelope) -> Result<()> {
         self.point.range(self.point)?;
         ensure!(
@@ -137,26 +141,6 @@ impl Motion {
                 .all(|value| value.is_finite()
                     && *value >= -envelope.walking - 1e-6
                     && *value <= envelope.running + 1e-6),
-            "Invalid unit speed"
-        );
-        Ok(())
-    }
-
-    /// Validate persistent vehicle motion before it can enter the simulation.
-    pub(crate) fn validate(self, maximum: f64) -> Result<()> {
-        self.point.range(self.point)?;
-        ensure!(
-            [self.heading, self.desired_heading]
-                .iter()
-                .all(|value| value.is_finite() && (0.0..360.0).contains(value)),
-            "Invalid unit heading"
-        );
-        ensure!(
-            [self.speed, self.desired_speed]
-                .iter()
-                .all(|value| value.is_finite()
-                    && *value >= -maximum * 2.0 / 3.0
-                    && *value <= maximum),
             "Invalid unit speed"
         );
         Ok(())
@@ -523,27 +507,14 @@ fn advance_fall_headings(world: &mut World, rules: MovementRules) -> Result<Vec<
                 continue;
             }
         }
-        let (maximum, walking) = if world.btech.constructed_units().contains_key(&id) {
-            let envelope = super::motion_controls::throttle_envelope(
-                world,
-                id,
-                super::SpeedPolicy {
-                    tsm_tow_bonus: rules.tsm_tow_bonus,
-                },
-            )?;
-            (envelope.running, envelope.walking)
-        } else {
-            let vehicle = &world.btech.vehicles()[&id];
-            let maximum = super::load::movement_maximum(
-                world,
-                id,
-                vehicle.maximum_speed(),
-                rules.tsm_tow_bonus,
-            )?;
-            let maximum = super::speed_bonus::vehicle_on_map(world, vehicle.position(), maximum)?;
-            (maximum, maximum * 2.0 / 3.0)
-        };
-        motion.turn_toward(maximum, walking);
+        let envelope = super::motion_controls::throttle_envelope(
+            world,
+            id,
+            super::SpeedPolicy {
+                tsm_tow_bonus: rules.tsm_tow_bonus,
+            },
+        )?;
+        motion.turn_toward(envelope.running, envelope.walking);
         crate::btech::with_unit_mut!(world.btech.unit_mut(id).unwrap(), |unit| {
             unit.motion = Some(motion);
         })

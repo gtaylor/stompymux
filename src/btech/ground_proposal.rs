@@ -127,21 +127,25 @@ pub fn propose_vehicle_ground_motion(
     let advantage = vehicle
         .pilot()
         .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Speed_Demon"));
-    let maximum =
-        super::load::movement_maximum(world, id, vehicle.maximum_speed(), rules.tsm_tow_bonus)?;
-    let maximum = super::speed_bonus::vehicle_on_map(world, Some(position), maximum)?;
+    let envelope = super::motion_controls::throttle_envelope(
+        world,
+        id,
+        super::SpeedPolicy {
+            tsm_tow_bonus: rules.tsm_tow_bonus,
+        },
+    )?;
     let mut loaded = old;
     if super::load::carries_load(world, id) {
         loaded.limit_load(
-            maximum,
-            if maximum > 0.0 && (current.is_road() || current.has_bridge()) {
-                maximum + 10.75
+            envelope,
+            if !envelope.is_stopped() && (current.is_road() || current.has_bridge()) {
+                super::vehicle_speed::paved_headroom(envelope)
             } else {
-                maximum
+                envelope
             },
         );
     }
-    let mut next = vehicle.definition().motion_at_maximum(
+    let mut next = vehicle.definition().motion_within(
         loaded,
         if vehicle.definition().is_vtol() {
             super::Hex::at_level(0)
@@ -157,7 +161,7 @@ pub fn propose_vehicle_ground_motion(
                     vehicle.elevation_level(current),
                 ),
         },
-        maximum,
+        envelope,
     )?;
     let distance = old.point.range(next.point)?;
     let limit = (map.width as f64).hypot(map.height as f64) + 2.0;

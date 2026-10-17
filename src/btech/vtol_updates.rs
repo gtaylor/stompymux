@@ -96,11 +96,15 @@ pub(super) fn advance_all(
             continue;
         }
         let mut motion = unit.motion().context("Aircraft motion is unavailable")?;
-        let maximum =
-            super::load::movement_maximum(world, id, unit.maximum_speed(), rules.tsm_tow_bonus)?;
-        let maximum = super::speed_bonus::vehicle_on_map(world, Some(position), maximum)?;
+        let envelope = super::motion_controls::throttle_envelope(
+            world,
+            id,
+            super::SpeedPolicy {
+                tsm_tow_bonus: rules.tsm_tow_bonus,
+            },
+        )?;
         if super::load::carries_load(world, id) {
-            motion.limit_load(maximum, maximum);
+            motion.limit_load(envelope, envelope);
         }
         if !motion.active() && flight.vertical_speed == 0.0 {
             world.btech.vehicles.get_mut(&id).unwrap().motion = Some(motion);
@@ -139,11 +143,11 @@ pub(super) fn advance_all(
             }
             continue;
         }
-        let mut controlled = unit.definition().control_at_maximum(
+        let mut controlled = unit.definition().control_within(
             motion,
             super::Hex::at_level(0),
             movement,
-            maximum,
+            envelope,
         )?;
         if grounded {
             controlled.speed = 0.0;
@@ -155,7 +159,7 @@ pub(super) fn advance_all(
         let held = unit.slick.heading;
         let leaving = unit.vtol_motion_step()?.motion.point.containing_hex()? != current_hex;
         let cruise =
-            super::vtol_speed::remaining_speed(maximum, flight.vertical_speed)? * 2.0 / 3.0;
+            super::vtol_speed::horizontal_envelope(envelope, flight.vertical_speed)?.walking;
         if leaving && unit.slick.turned && controlled.speed.abs() > cruise + 0.1 {
             unit.slick.reset();
             let slip = super::vtol_sideslip::check(

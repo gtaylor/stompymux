@@ -1379,7 +1379,8 @@ async fn hovercraft_sideslips_after_a_flank_speed_turn_on_clear_ground() {
     for (roll, flank) in [(2, true), (12, true), (12, false)] {
         let (_dir, config, mut world, id, _map) = fixture_movement(VehicleMovement::Hover).await;
         let maximum = world.btech.vehicles()[&id].maximum_speed();
-        let speed = if flank { maximum } else { maximum * 2.0 / 3.0 };
+        let cruise = world.btech.vehicles()[&id].cruising_speed();
+        let speed = if flank { maximum } else { cruise };
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
             .unwrap();
@@ -1434,6 +1435,83 @@ async fn hovercraft_sideslips_after_a_flank_speed_turn_on_clear_ground() {
         assert_eq!(checked, flank, "roll {roll} flank {flank}");
         world.validate(&config).unwrap();
     }
+}
+
+/// Drive the 5/8 Flatbed Truck south across open pavement at a throttle of `speed`, bear off
+/// by a small turn once it is moving, and report whether any hex it left after turning asked
+/// for a skid roll.
+async fn turns_into_vehicle_skid_check(speed: f64) -> bool {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Pavement".into(), Kind::Room);
+    let cells = format!("10 40\n{}", format!("{}\n", "_0".repeat(10)).repeat(40));
+    create_battle_map(
+        &mut world,
+        map,
+        "pavement",
+        MapAsset::from_cells(&cells).unwrap(),
+    )
+    .unwrap();
+    let id = world.create(&config, "Truck".into(), Kind::Thing);
+    world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+    create_battle_vehicle(
+        &mut world,
+        id,
+        VehicleTemplate::parse(
+            "Flatbed_Truck",
+            include_str!("../game/units/Flatbed_Truck.toml"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    place_battle_unit(&mut world, id, map, 5, 2).unwrap();
+    world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
+    assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
+    start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
+    for _ in 0..5 {
+        advance_battle_units(&mut world, 0, true);
+    }
+    assert_eq!(world.btech.vehicles()[&id].cruising_speed(), 53.75);
+    set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
+    for _ in 0..30 {
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+    }
+    set_battle_speed(&mut world, id, ObjectId(1), speed).unwrap();
+    for _ in 0..30 {
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+    }
+    // Pavement adds its point of movement in proportion to the 86 km/h flank (TW p. 61).
+    let actual = world.btech.vehicles()[&id].motion().unwrap().speed;
+    assert!((actual - speed * 96.75 / 86.0).abs() < 1e-9, "{actual}");
+    set_battle_heading(&mut world, id, ObjectId(1), 170.0).unwrap();
+    let start = world.btech.vehicles()[&id].position().unwrap();
+    for _ in 0..60 {
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        if notices
+            .iter()
+            .any(|notice| notice.text.contains("Your wheels slip"))
+        {
+            return true;
+        }
+    }
+    let end = world.btech.vehicles()[&id].position().unwrap();
+    assert!(
+        end.y >= start.y + 2,
+        "the truck crossed hexes after turning"
+    );
+    false
+}
+
+/// A vehicle turning on pavement at or below its cruising speed keeps its line without a
+/// roll; above cruising speed it is flanking and must roll before it moves on (Total Warfare
+/// pp. 53, 62). Cruising is the template's 5 MP, 53.75 km/h, with the paved bonus a cruising
+/// vehicle keeps (p. 61), so 57 km/h is flank although it is under two thirds of 86 km/h.
+#[tokio::test]
+async fn pavement_skid_checks_start_above_the_template_cruising_speed() {
+    assert!(!turns_into_vehicle_skid_check(43.0).await);
+    assert!(!turns_into_vehicle_skid_check(53.75).await);
+    assert!(turns_into_vehicle_skid_check(57.0).await);
+    assert!(turns_into_vehicle_skid_check(86.0).await);
 }
 
 /// A wheeled vehicle that skids on pavement charges any unit in its path (Total Warfare

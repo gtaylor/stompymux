@@ -1,5 +1,5 @@
 //! Ground-vehicle motion proposals share turning and acceleration with the Mech motion engine.
-use super::{GroundMovement, Hex, Motion, VehicleMovement, VehicleTemplate};
+use super::{GroundMovement, Hex, Motion, SpeedEnvelope, VehicleMovement, VehicleTemplate};
 use anyhow::{Result, ensure};
 
 /// Inputs independent of vehicle construction, supplied by world configuration and pilot state.
@@ -33,23 +33,40 @@ pub trait VehicleTemplateMotion {
         rules: VehicleMotionRules,
     ) -> Result<Motion>;
 
-    /// Share motion arithmetic between intact proposals and damaged live vehicles.
-    fn motion_at_maximum(
+    /// Share motion arithmetic between intact proposals and damaged live vehicles, inside
+    /// a cruising and flanking `envelope`.
+    fn motion_within(
         &self,
         motion: Motion,
         hex: Hex,
         rules: VehicleMotionRules,
-        maximum: f64,
+        envelope: SpeedEnvelope,
     ) -> Result<Motion>;
 
     /// Shared heading and acceleration, before either ground or flight path projection.
-    fn control_at_maximum(
+    fn control_within(
         &self,
         motion: Motion,
         hex: Hex,
         rules: VehicleMotionRules,
-        maximum: f64,
+        envelope: SpeedEnvelope,
     ) -> Result<Motion>;
+}
+
+/// The widest envelope saved controls may retain for a vehicle built as `template` and now
+/// moving inside `envelope`: the larger of either under the lightest gravity the rules allow.
+fn retained(template: &VehicleTemplate, envelope: SpeedEnvelope) -> SpeedEnvelope {
+    let construction = construction_envelope(template);
+    SpeedEnvelope {
+        walking: super::speed_bonus::saved_limit(construction.walking.max(envelope.walking)),
+        running: super::speed_bonus::saved_limit(construction.running.max(envelope.running)),
+    }
+}
+
+/// The intact envelope of a template: its cruising MP and the flank speed derived from it
+/// (Total Warfare p. 53).
+fn construction_envelope(template: &VehicleTemplate) -> SpeedEnvelope {
+    SpeedEnvelope::from_walking_mp(f64::from(template.walk_mp))
 }
 
 impl VehicleTemplateMotion for VehicleTemplate {
@@ -59,38 +76,38 @@ impl VehicleTemplateMotion for VehicleTemplate {
         hex: Hex,
         rules: VehicleMotionRules,
     ) -> Result<Motion> {
-        self.motion_at_maximum(motion, hex, rules, self.max_speed)
+        self.motion_within(motion, hex, rules, construction_envelope(self))
     }
 
-    fn motion_at_maximum(
+    fn motion_within(
         &self,
         mut motion: Motion,
         hex: Hex,
         rules: VehicleMotionRules,
-        maximum: f64,
+        envelope: SpeedEnvelope,
     ) -> Result<Motion> {
-        motion = self.control_at_maximum(motion, hex, rules, maximum)?;
+        motion = self.control_within(motion, hex, rules, envelope)?;
         motion.point = motion.project_step()?;
-        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
+        motion.validate_within(super::vehicle_speed::paved_headroom(retained(
+            self, envelope,
+        )))?;
         Ok(motion)
     }
 
-    fn control_at_maximum(
+    fn control_within(
         &self,
         mut motion: Motion,
         hex: Hex,
         rules: VehicleMotionRules,
-        maximum: f64,
+        envelope: SpeedEnvelope,
     ) -> Result<Motion> {
-        ensure!(
-            maximum.is_finite() && maximum >= 0.0,
-            "Invalid vehicle maximum speed"
-        );
+        envelope.validate()?;
+        let maximum = envelope.running;
         // Roads increase actual speed, while commands retain the chassis throttle envelope.
-        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
-        let retained = super::speed_bonus::saved_limit(self.max_speed.max(maximum));
+        let retained = retained(self, envelope);
+        motion.validate_within(super::vehicle_speed::paved_headroom(retained))?;
         ensure!(
-            motion.desired_speed >= -retained * 2.0 / 3.0 && motion.desired_speed <= retained,
+            motion.desired_speed >= -retained.walking && motion.desired_speed <= retained.running,
             "Speed exceeds vehicle limits"
         );
         if self.movement == VehicleMovement::Stationary || maximum == 0.0 {
@@ -110,7 +127,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
             };
             motion.heading = (motion.heading + difference.clamp(-turn, turn)).rem_euclid(360.0);
         } else {
-            motion.turn_toward(maximum, maximum * 2.0 / 3.0);
+            motion.turn_toward(maximum, envelope.walking);
         }
         let mut target = motion.desired_speed.abs()
             / (terrain_divisor(hex, self.movement, self.has_special("Waterproof_Tech"))
@@ -118,7 +135,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
         // Ground vehicles on pavement, a road or a bridge deck gain a point of movement
         // (Total Warfare p. 61).
         if hex.is_paved() && self.movement != VehicleMovement::Vtol {
-            target *= (maximum + 10.75) / maximum;
+            target *= super::vehicle_speed::paved_bonus(envelope);
         }
         if motion.heading != old_heading {
             let remaining =
@@ -128,7 +145,7 @@ impl VehicleTemplateMotion for VehicleTemplate {
         target *= motion.desired_speed.signum();
         let acceleration = maximum / 20.0 * if rules.speed_demon { 1.25 } else { 1.0 };
         motion.accelerate(target, acceleration, maximum);
-        motion.validate(super::speed_bonus::saved_limit(self.max_speed.max(maximum)) + 10.75)?;
+        motion.validate_within(super::vehicle_speed::paved_headroom(retained))?;
         Ok(motion)
     }
 }
@@ -142,7 +159,7 @@ impl super::Vehicle {
         rules: VehicleMotionRules,
     ) -> Result<Motion> {
         self.definition()
-            .motion_at_maximum(motion, hex, rules, self.maximum_speed())
+            .motion_within(motion, hex, rules, self.speed_envelope())
     }
 }
 

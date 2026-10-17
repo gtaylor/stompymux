@@ -1329,8 +1329,11 @@ angle marked + for above or - for below. Vector retains terrain elevations even
 on dark maps.
 
 Use `heading` or `speed` without a value to read your current motion.
-`speed cruise` equals `speed walk`; `speed flank` equals `speed run`. Numeric
-speed requests are limited to your current forward/reverse throttle range.
+`speed cruise` equals `speed walk`; `speed flank` equals `speed run`. Walking or
+cruising speed is your template's walking or cruising MP after damage, and running or
+flanking speed is that figure x 1.5, rounded up; you may not back up faster than walking
+or cruising speed. Numeric speed requests are limited to your current forward/reverse
+throttle range.
 Movement restrictions such as water and weapon unjamming still apply.
 
 Use `dump all`, `dump <weapon number>`, `dump <section>`, or

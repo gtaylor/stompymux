@@ -100,7 +100,9 @@ pub(super) fn render(unit: &Mech, weapons: bool) -> Result<String> {
 /// Vehicle anatomy supplies rows to the same export grouping and formatting rules.
 pub(super) fn render_vehicle(unit: &super::Vehicle, weapons: bool) -> Result<String> {
     let definition = unit.definition();
-    let running = (unit.maximum_speed() / 10.75) as u16;
+    let envelope = unit.speed_envelope();
+    let cruising = envelope.walking_mp() as u16;
+    let flanking = (envelope.running / super::MP_KPH) as u16;
     let loadout = unit.loadout()?;
     let sinks = unit.cooling_capacity()?;
     let record = format!(
@@ -108,8 +110,8 @@ pub(super) fn render_vehicle(unit: &super::Vehicle, weapons: bool) -> Result<Str
         crate::text::escape(&definition.reference),
         crate::text::escape(&definition.name),
         definition.tons,
-        running * 2 / 3,
-        running,
+        cruising,
+        flanking,
         sinks
     );
     if !weapons {

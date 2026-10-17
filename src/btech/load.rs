@@ -224,7 +224,13 @@ pub(super) fn movement_maximum(
 
 /// Reconcile a changed external load immediately without advancing position, time or dice.
 pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Result<()> {
-    let maximum = super::throttle_maximum(world, id, tsm_bonus)?;
+    let envelope = super::motion_controls::throttle_envelope(
+        world,
+        id,
+        super::SpeedPolicy {
+            tsm_tow_bonus: tsm_bonus,
+        },
+    )?;
     let road = super::scanner::scanner_unit(world, id)
         .and_then(|unit| unit.position)
         .and_then(|position| {
@@ -238,11 +244,11 @@ pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Res
     if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         if let Some(mut motion) = unit.motion() {
             motion.limit_load(
-                maximum,
-                if road && maximum > 0.0 && !unit.definition().is_vtol() {
-                    maximum + 10.75
+                envelope,
+                if road && !envelope.is_stopped() && !unit.definition().is_vtol() {
+                    super::vehicle_speed::paved_headroom(envelope)
                 } else {
-                    maximum
+                    envelope
                 },
             );
             unit.motion = Some(motion);
@@ -255,7 +261,7 @@ pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Res
         .get_mut(&id)
         .context("Unit is unavailable")?;
     if let Some(mut motion) = unit.motion() {
-        motion.limit_load(maximum, maximum);
+        motion.limit_to(envelope);
         unit.motion = Some(motion);
     }
     Ok(())

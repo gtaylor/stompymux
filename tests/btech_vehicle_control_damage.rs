@@ -190,16 +190,17 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
         fixture(include_str!("../game/units/Demolisher.toml")).await;
     let pilot = ObjectId(1);
     let maximum = world.btech.vehicles()[&id].maximum_speed();
+    // The 3/5 Demolisher cruises at its template's 3 MP, which a stunned crew may not exceed
+    // (Total Warfare pp. 53, 194).
+    let cruise = world.btech.vehicles()[&id].cruising_speed();
+    assert_eq!((cruise, maximum), (32.25, 53.75));
     set_battle_speed(&mut world, id, pilot, maximum).unwrap();
     damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::Commander).unwrap();
     let vehicle = &world.btech.vehicles()[&id];
     assert_eq!(vehicle.crew_stun_remaining(), 30);
     assert_eq!(vehicle.piloting_damage(), 1);
     assert_eq!(vehicle.gunnery_damage(), 1);
-    assert_eq!(
-        vehicle.motion().unwrap().desired_speed,
-        maximum * 2.0 / 3.0 - 0.1
-    );
+    assert_eq!(vehicle.motion().unwrap().desired_speed, cruise);
     assert_eq!(vehicle.motion().unwrap().speed, 0.0);
     assert!(!vehicle.weapon_readiness(0).unwrap().ready);
     let checkpoint = world.btech.clone();
@@ -210,10 +211,11 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
             .contains("stunned")
     );
     assert!(set_battle_speed(&mut world, id, pilot, maximum).is_err());
+    assert!(set_battle_speed(&mut world, id, pilot, cruise + 1.0).is_err());
     assert_eq!(world.btech, checkpoint);
     set_battle_heading(&mut world, id, pilot, 90.0).unwrap();
     set_battle_turret(&mut world, id, pilot, 90.0).unwrap();
-    set_battle_speed(&mut world, id, pilot, -maximum * 2.0 / 3.0).unwrap();
+    set_battle_speed(&mut world, id, pilot, -cruise).unwrap();
     for _ in 0..29 {
         advance_battle_units(&mut world, 0, true);
     }
@@ -221,7 +223,7 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
     damage_battle_vehicle_controls(&mut world, id, VehicleControlHit::CrewStun).unwrap();
     assert_eq!(
         world.btech.vehicles()[&id].motion().unwrap().desired_speed,
-        -maximum * 2.0 / 3.0
+        -cruise
     );
     stop_battle_unit(&mut world, id, pilot, MovementRules::STANDARD.fall).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();

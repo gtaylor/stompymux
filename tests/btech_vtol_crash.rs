@@ -740,10 +740,14 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
         world.btech.vehicles()[&id].motion().unwrap().desired_speed,
         maximum
     );
+    // Reverse is held to the cruising budget the 60 km/h climb leaves of the Kestrel's
+    // 129 km/h template cruise (TW pp. 53, 54).
+    let cruise = world.btech.vehicles()[&id].cruising_speed() - 60.0;
+    assert_eq!(cruise, 69.0);
     let _ = set_battle_speed(&mut world, id, ObjectId(2), -10000.0).unwrap();
     assert_eq!(
         world.btech.vehicles()[&id].motion().unwrap().desired_speed,
-        -maximum * 2.0 / 3.0
+        -cruise
     );
     world
         .btech

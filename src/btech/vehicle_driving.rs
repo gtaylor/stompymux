@@ -78,7 +78,8 @@ pub(crate) fn set_control_by_actor(
         speed.is_none() || (vehicle.free_fall().is_none() && vehicle.orbital_drop().is_none()),
         "Wait until the vehicle lands"
     );
-    let maximum = super::motion_controls::throttle_configured(world, id, policy)?;
+    let envelope = super::motion_controls::throttle_envelope(world, id, policy)?;
+    let maximum = envelope.running;
     if let Some(flight) = vehicle.vtol_flight() {
         // Grounded pilots may select throttle and heading without enabling taxi travel.
         // Heading remains available without fuel; only throttle spends the flight budget.
@@ -96,8 +97,16 @@ pub(crate) fn set_control_by_actor(
         "Vehicle cannot move"
     );
     let text = if let Some(speed) = speed {
-        let speed = if let Some(flight) = vehicle.vtol_flight() {
-            vehicle.vtol_throttle_at(speed, flight.vertical_speed, maximum)?
+        // A VTOL's climb spends the same budget as its horizontal travel (TW p. 54).
+        let vertical = vehicle
+            .vtol_flight()
+            .map_or(0.0, |flight| flight.vertical_speed);
+        let speed = if vehicle.vtol_flight().is_some() {
+            vehicle.vtol_throttle_at(speed, vertical, envelope)?
+        } else if matches!(actor, super::combat_operator::ControlActor::Autopilot) {
+            // An autopilot steers in fractions of the flanking ceiling; its reverse requests
+            // are held to the cruising ceiling rather than refused.
+            envelope.clamp(speed)
         } else {
             speed
         };
@@ -105,13 +114,16 @@ pub(crate) fn set_control_by_actor(
             vehicle.pod_removal().is_none(),
             "You are too busy removing iNARC pods!"
         );
+        // No unit moves backward at flank speed (Total Warfare p. 53).
         ensure!(
-            speed.is_finite() && speed >= -maximum * 2.0 / 3.0 && speed <= maximum,
+            speed.is_finite() && speed >= -envelope.walking && speed <= envelope.running,
             "Speed exceeds unit limits"
         );
         super::motion_controls::require_reverse_allowed(world, id, speed)?;
+        // A stunned crew may move no faster than cruising speed (Total Warfare p. 194).
+        let horizontal = super::vtol_speed::horizontal_envelope(envelope, vertical)?;
         ensure!(
-            !vehicle.crew_stunned() || speed <= maximum * 2.0 / 3.0 + 0.1,
+            !vehicle.crew_stunned() || !horizontal.is_running(speed),
             "You cannot move faster than cruise speed while stunned!"
         );
         motion.desired_speed = speed;
@@ -188,9 +200,17 @@ pub(super) fn advance(
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             });
-        // Vehicles still take cruising speed as two-thirds of their flank ceiling.
-        let cruise_ceiling = vehicle.maximum_speed() * 2.0 / 3.0;
+        // Pavement skids, and a hovercraft sideslips, only above cruising speed (TW pp. 62, 67):
+        // the live cruising ceiling, with the paved movement bonus a cruising vehicle keeps.
         let movement = vehicle.definition().movement;
+        let envelope = super::motion_controls::throttle_envelope(
+            world,
+            id,
+            super::SpeedPolicy {
+                tsm_tow_bonus: rules.tsm_tow_bonus,
+            },
+        )?;
+        let cruise_ceiling = super::vehicle_speed::cruising_ceiling(current, movement, envelope);
         let hover = movement == VehicleMovement::Hover;
         let ground = super::vehicle_motion::ground_movement(movement);
         let waterproof = vehicle.definition().has_special("Waterproof_Tech");

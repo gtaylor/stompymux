@@ -475,8 +475,9 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `turret_jammed`: `boolean` — Recoverable turret rotation damage.
 - `turret_repairs`: `integer[]` — Pending 60-second repair attempts.
 - `turret_locked`: `boolean` — Turret damage prevents rotation.
-- `maximum_speed`: `number` — Current maximum kph after motive damage.
-- `motive_speed_loss`: `number` — Maximum speed lost to motive damage in kph.
+- `maximum_speed`: `number` — Current flanking kph after motive damage, temperature, load and gravity.
+- `cruising_speed`: `number` — Current cruising kph: the template cruising MP after the same modifiers; flank is cruising MP x 1.5 rounded up.
+- `motive_mp_loss`: `integer` — Cruising MP lost to motive damage, rotor hits and an engine hit.
 - `immobilized`: `boolean` — Motive-system destruction prevents ground motion.
 - `under_bridge`: `boolean` — Hovercraft beneath a bridge span.
 - `elevation`: `integer|nil` — Ground support height; hovercraft float at water level.

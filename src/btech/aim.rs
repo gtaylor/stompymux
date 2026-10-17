@@ -287,7 +287,7 @@ impl super::Vehicle {
     /// Cruising is judged against the current cruising speed, so motive damage that lowers it
     /// turns a formerly cruising speed into flank fire (Total Warfare pp. 106 and 193).
     pub fn attacker_movement_modifier(&self) -> u8 {
-        ground_attacker_movement(self.motion(), self.maximum_speed() * 2.0 / 3.0)
+        ground_attacker_movement(self.motion(), self.cruising_speed())
     }
 }
 
