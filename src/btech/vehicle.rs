@@ -64,6 +64,10 @@ pub struct Vehicle {
     /// Heading held on the pavement or ice the vehicle is crossing, for the skid rule.
     #[serde(default)]
     pub(super) slick: super::SlickTrack,
+    /// Movement since the last turn-clock boundary, for the gravity strain roll (Tactical
+    /// Operations: Advanced Rules p. 53).
+    #[serde(default)]
+    pub(super) turn_movement: super::TurnMovement,
     /// Levels climbed or descended into the current hex, charged while crossing it.
     #[serde(default)]
     pub(super) level_entry: Option<super::LevelEntry>,
@@ -273,6 +277,8 @@ struct VehicleRecord {
     bogged_down: bool,
     #[serde(default)]
     slick: super::SlickTrack,
+    #[serde(default)]
+    turn_movement: super::TurnMovement,
     #[serde(default)]
     level_entry: Option<super::LevelEntry>,
     definition: VehicleTemplate,
@@ -526,6 +532,7 @@ super::saved_parts::saved_parts!(Vehicle {
         hide_elapsed,
         bogged_down,
         slick,
+        turn_movement,
         level_entry,
         inferno_remaining,
         unjam,
@@ -996,6 +1003,7 @@ impl Vehicle {
             visibility: super::Visibility::default(),
             bogged_down: false,
             slick: Default::default(),
+            turn_movement: Default::default(),
             level_entry: None,
             experience: Default::default(),
             friendly_fire_safety: false,
@@ -1679,6 +1687,7 @@ impl Vehicle {
             visibility: record.visibility,
             bogged_down: record.bogged_down,
             slick: record.slick,
+            turn_movement: record.turn_movement,
             level_entry: record.level_entry,
             definition: record.definition,
             sections: record.sections,
@@ -2145,6 +2154,7 @@ impl Vehicle {
             "Invalid attack timestamp"
         );
         self.charge.validate()?;
+        self.turn_movement.validate()?;
         self.tag.validate()?;
         ensure!(
             self.c3_network != Some(0) && self.c3i_network != Some(0),

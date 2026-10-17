@@ -216,7 +216,15 @@ pub(super) fn advance(
         let hover = movement == VehicleMovement::Hover;
         let ground = super::vehicle_motion::ground_movement(movement);
         let waterproof = vehicle.definition().has_special("Waterproof_Tech");
+        // Flank speed at standard gravity, with the point pavement adds, against which low
+        // gravity's strain is judged (Tactical Operations: Advanced Rules p. 53).
+        let normal_flank =
+            super::vehicle_speed::actual_speed_bounds(current, movement, vehicle.speed_envelope())
+                .running;
         let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
+        vehicle
+            .turn_movement
+            .observe(next.speed, cruise_ceiling, normal_flank);
         vehicle
             .slick
             .observe(current.is_slick() || hover, next.speed != 0.0, next.heading);

@@ -659,9 +659,12 @@ pub(super) fn resolve_vehicle(
     let ground = super::vehicle_motion::ground_movement(movement);
     let per_hex = if hover { 0 } else { tons.div_ceil(20) };
     let mut flooded = false;
+    // Hexes left to skid: terrain shortens a skid but not a sideslip, which never touches the
+    // ground (Total Warfare pp. 62, 67).
+    let mut left = i32::from(hexes);
     for (hex, _) in path(point, heading, hexes)? {
         let vehicle = &world.btech.vehicles()[&id];
-        if vehicle.is_destroyed() {
+        if vehicle.is_destroyed() || left <= 0 {
             break;
         }
         let Ok(next) =
@@ -784,13 +787,16 @@ pub(super) fn resolve_vehicle(
             });
             break;
         }
+        // A drop deeper than the one level a vehicle may change is a fall; a hovercraft
+        // sideslipping off it falls too (Total Warfare pp. 62-63, 67).
         let drop = height - resting_height(next, surface_rider);
-        if !hover && drop > 1 {
+        if drop > 1 {
             report.notices.push(Notice {
                 unit: id,
                 text: "You skid over the edge and tumble down!".into(),
             });
-            let levels = u8::try_from(drop).unwrap_or(u8::MAX);
+            // The fall multiplier is the levels fallen plus one (Total Warfare p. 68).
+            let levels = u8::try_from(drop + 1).unwrap_or(u8::MAX);
             let fall =
                 super::vehicle_fall::resolve_in_candidate(world, id, levels, rules, character)?;
             super::piloting::append_feedback(
@@ -802,6 +808,11 @@ pub(super) fn resolve_vehicle(
             report.vehicle_falls.push(fall);
             break;
         }
+        left -= if hover {
+            1
+        } else {
+            i32::from(skid_cost(next, ground))
+        };
     }
     if !hover && !flooded && !world.btech.vehicles()[&id].is_destroyed() {
         // A skidding vehicle also rolls once for motive system damage.

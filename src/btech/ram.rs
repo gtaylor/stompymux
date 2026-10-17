@@ -398,14 +398,16 @@ fn groups(
     Ok(impacts)
 }
 
-/// Roll once on the Motive System Damage Table for a vehicle in a successful ram (Total
-/// Warfare p. 148).
-fn motive_roll(world: &mut World, id: ObjectId, notices: &mut Vec<Notice>) -> Result<()> {
+/// Roll once on the Motive System Damage Table for a vehicle, as a successful ram demands
+/// (Total Warfare p. 148), returning what the roll did. Anything but a live vehicle is left
+/// alone.
+pub(super) fn motive_roll(world: &mut World, id: ObjectId) -> Result<Vec<Notice>> {
+    let mut notices = Vec::new();
     let Some(vehicle) = world.btech.vehicles().get(&id) else {
-        return Ok(());
+        return Ok(notices);
     };
     if vehicle.is_destroyed() {
-        return Ok(());
+        return Ok(notices);
     }
     let movement = vehicle.definition().movement;
     let roll = super::dice::unit_dice_mut(world, id)?.two_d6();
@@ -424,7 +426,7 @@ fn motive_roll(world: &mut World, id: ObjectId, notices: &mut Vec<Notice>) -> Re
             &broadcast.text,
         ));
     }
-    Ok(())
+    Ok(notices)
 }
 
 /// Shared ram roll, damage, motive rolls and balance check.
@@ -515,11 +517,10 @@ fn resolve_inner(
                 character,
                 &mut report,
             )?;
-            let mut notices = Vec::new();
             for id in [attacker, target] {
-                motive_roll(world, id, &mut notices)?;
+                let notices = motive_roll(world, id)?;
+                report.notices.extend(notices);
             }
-            report.notices.extend(notices);
             // A rammed 'Mech rolls at +2 to stay standing (Total Warfare p. 149).
             if let Some(mech) = world.btech.constructed_units().get(&target)
                 && !mech.is_destroyed()
