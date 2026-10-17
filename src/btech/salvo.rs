@@ -335,8 +335,10 @@ impl WeaponSalvo for Weapon {
             - ams_penalty
             - interference_penalty)
             .clamp(2, 12) as u8;
+        // A target at the minimum range is within it, as the to-hit modifier counts it (Total
+        // Warfare p. 107; Tactical Operations: Advanced Units & Equipment pp. 139, 159).
         let inside_minimum = distance.is_some_and(|distance| {
-            distance < f64::from(self.profile_for_ammunition(mode).minimum_range)
+            distance <= f64::from(self.profile_for_ammunition(mode).minimum_range)
         });
         let mut hits = if self.is_streak() {
             // An engaged AMS treats a locked Streak launcher as a roll of 11 before its -4, and
@@ -1222,8 +1224,9 @@ mod tests {
                     let damage = u16::from(weapon.profile().damage);
                     for (distance, expected) in [
                         (0.0, damage / 2),
-                        (4.999, damage / 2),
-                        (5.0, damage),
+                        (4.0, damage / 2),
+                        (5.0, damage / 2),
+                        (6.0, damage),
                         (12.0, damage),
                     ] {
                         assert_eq!(
@@ -1245,8 +1248,8 @@ mod tests {
         }
     }
 
-    /// Inside ten hexes an extended LRM rolls on the Cluster Hits column for half its rack,
-    /// rounded up (Tactical Operations: AUE p. 139).
+    /// Within its ten-hex minimum range an extended LRM rolls on the Cluster Hits column for
+    /// half its rack, rounded up (Tactical Operations: AUE p. 139).
     #[test]
     fn extended_lrms_use_half_the_rack_inside_minimum_range() {
         for (weapon, column) in [
@@ -1258,13 +1261,13 @@ mod tests {
             assert_eq!(weapon.profile().minimum_range, 10);
             for roll in 2..=12 {
                 let close: u16 = weapon
-                    .damage_groups_for_hit(Some(roll), false, Some(9.999))
+                    .damage_groups_for_hit(Some(roll), false, Some(10.0))
                     .unwrap()
                     .iter()
                     .sum();
                 assert_eq!(close, u16::from(cluster_hits(column, roll).unwrap()));
                 let far: u16 = weapon
-                    .damage_groups_for_hit(Some(roll), false, Some(10.0))
+                    .damage_groups_for_hit(Some(roll), false, Some(11.0))
                     .unwrap()
                     .iter()
                     .sum();
