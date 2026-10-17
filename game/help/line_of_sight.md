@@ -112,7 +112,11 @@ At night, a target lit by a searchlight or scenario lighting, or one with its ow
 searchlight on, takes the "lit target" weapon modifier and no physical modifier.
 A target lit by fire takes two less than the darkness modifier. Searchlights do
 not help at dawn or dusk. Hot Mechs stand out: a weapon attack gets -1 for every
-full heat step of heat the target carries.
+full heat step of heat the target carries. A Mech with laser heat sinks glows when
+it makes heat: in a turn it moves, jumps or fires, weapon attacks against it take
+one less darkness modifier, and with any heat on its scale no darkness modifier
+applies to any attack on it (Tactical Operations: Advanced Units & Equipment
+p. 129). The glow does not light it for sight.
 
 ## Weather
 

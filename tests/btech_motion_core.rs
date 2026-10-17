@@ -2039,6 +2039,61 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
     assert!(aim(&world).subtotal().is_none());
 }
 
+/// Laser heat sinks give a 'Mech away only when it makes heat (Tactical Operations: Advanced
+/// Units & Equipment p. 129): a turn in which it fires takes one off the night modifier for
+/// shots against it, and any heat on its scale cancels the modifier. They never light the
+/// 'Mech, so they neither stretch sight nor count as fire.
+#[tokio::test]
+async fn laser_heat_sinks_ease_darkness_only_when_the_mech_makes_heat() {
+    use stompymux_rs::{Light, Weather, battle_aim_modifiers, set_battle_map_conditions};
+    let (_dir, config, mut world, id, _) = lock_fixture().await;
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    let source = include_str!("../game/units/NightGyr-A.toml").replace(
+        "armor = \"ferro_fibrous\"\n",
+        "armor = \"ferro_fibrous\"\nheat_sinks = \"laser\"\n",
+    );
+    assert!(source.contains("heat_sinks = \"laser\"\n"));
+    let glowing = world.create(&config, "Glowing Nightgyr".into(), Kind::Thing);
+    create_battle_unit(
+        &mut world,
+        glowing,
+        MechTemplate::parse("NightGyr-A", &source).unwrap(),
+    )
+    .unwrap();
+    support::seed_object_dice(&mut world, glowing, support::FIXTURE_DICE_SEED);
+    place_battle_unit(&mut world, glowing, map, 5, 8).unwrap();
+    world.btech.set_unit_power(glowing, Power::Running).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
+    let light = |world: &stompymux_rs::World| {
+        battle_aim_modifiers(world, id, glowing, 0, 4, optical_aim_rules())
+            .unwrap()
+            .light
+    };
+    // Running, idle and cool, the sinks shed no light.
+    assert_eq!(light(&world), 3);
+    assert!(!stompymux_rs::battle_unit_illuminated(&world, glowing));
+    // A weapon fired within the turn takes one off.
+    let now = world.btech.simulation_time();
+    world
+        .btech
+        .rewrite_unit_record(glowing, |record| {
+            record["section_fire"] = serde_json::json!({"RightArm": now});
+        })
+        .unwrap();
+    assert_eq!(light(&world), 2);
+    assert!(!stompymux_rs::battle_unit_illuminated(&world, glowing));
+    // Heat on the scale cancels the modifier entirely.
+    world
+        .btech
+        .rewrite_unit_record(glowing, |record| {
+            record["heat"]["excess"] = serde_json::json!(1.0);
+        })
+        .unwrap();
+    assert_eq!(light(&world), 0);
+    world.validate(&config).unwrap();
+}
+
 /// Perception aim includes woods in the target hex and partial cover from shallow water.
 #[tokio::test]
 async fn perception_aim_includes_target_woods_and_shallow_water_cover() {

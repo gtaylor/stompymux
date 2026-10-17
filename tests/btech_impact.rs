@@ -572,39 +572,3 @@ async fn technology_flags_change_mech_mass() {
         );
     }
 }
-
-/// Running laser heat sinks glow; removing the choice stops the glow.
-#[tokio::test]
-async fn laser_heat_sinks_glow_while_running() {
-    let original = include_str!("../game/units/NightGyr-A.toml").replace(
-        "armor = \"ferro_fibrous\"\n",
-        "armor = \"ferro_fibrous\"\nheat_sinks = \"laser\"\n",
-    );
-    assert!(original.contains("heat_sinks = \"laser\"\n"));
-    for (source, glows) in [
-        (original.clone(), true),
-        (original.replace("heat_sinks = \"laser\"\n", ""), false),
-    ] {
-        let (_dir, config, mut world) = support::isolated_world().await;
-        let id = world.create(&config, "Glowing Nightgyr".into(), Kind::Thing);
-        let object = world.objects.get_mut(&id).unwrap();
-        object.location = Some(ObjectId(config.start()));
-        object.home = Some(ObjectId(config.home()));
-        create_battle_unit(
-            &mut world,
-            id,
-            MechTemplate::parse("NightGyr-A", &source).unwrap(),
-        )
-        .unwrap();
-        assert!(
-            world.btech.constructed_units()[&id]
-                .definition()
-                .has_double_heat_sinks()
-        );
-        assert!(!stompymux_rs::battle_unit_illuminated(&world, id));
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["constructed"][id.0.to_string()]["power"] = serde_json::json!({"state": "running"});
-        world.btech = serde_json::from_value(state).unwrap();
-        assert_eq!(stompymux_rs::battle_unit_illuminated(&world, id), glows);
-    }
-}
