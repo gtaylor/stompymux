@@ -5,6 +5,8 @@ tons = 25
 walk_mp = 6
 radio = 5
 radio_type = 126
+cargo_tons = 0.5
+specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,7 +21,7 @@ armor = 19
 [sections.front_side]
 armor = 16
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
+    { at = 1, item = "Communications_Equipment", tons = 7 },
 ]
 
 [sections.aft_side]
@@ -27,3 +29,6 @@ armor = 16
 
 [sections.turret]
 armor = 10
+slots = [
+    { at = 1, item = "IS.MediumLaser" },
+]
