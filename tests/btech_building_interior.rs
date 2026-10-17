@@ -320,3 +320,104 @@ async fn interiors_give_partial_cover_and_block_outside_physical_attacks() {
         "{result:?}"
     );
 }
+
+/// Make the building hex at `x`, `y` one of `class` with construction factor `cf`.
+fn rebuild(
+    world: &mut World,
+    map: ObjectId,
+    (x, y): (i64, i64),
+    class: ConstructionClass,
+    cf: u16,
+) {
+    let tile = world.btech.maps()[&map].base_hex(x, y).unwrap();
+    let structure = tile.structure().unwrap();
+    let mut encoded = serde_json::to_value(&world.btech).unwrap();
+    let width = world.btech.maps()[&map].width;
+    encoded["maps"][map.0.to_string()]["terrain"][(y * width + x) as usize] =
+        serde_json::to_value(tile.with_structure(Some(Structure {
+            class,
+            cf,
+            ..structure
+        })))
+        .unwrap();
+    world.btech = serde_json::from_value(encoded).unwrap();
+}
+
+/// Land a Thumper round from the north on (1, 1) and return its report.
+fn shell(world: &mut World, map: ObjectId) -> ArtilleryImpactReport {
+    let mut flight = ArtilleryFlight::new(
+        HexCoordinate { x: 1, y: 0 },
+        HexCoordinate { x: 1, y: 1 },
+        Weapon::Thumper,
+        ArtilleryMode::Standard,
+        ArtilleryOutcome::Hit,
+    )
+    .unwrap();
+    loop {
+        if let Some(report) = advance_artillery_flight(world, map, &mut flight, rules()).unwrap() {
+            return report;
+        }
+    }
+}
+
+/// The blast damage the report dealt `id`, or zero when it was spared.
+fn blast(report: &ArtilleryImpactReport, id: ObjectId) -> u16 {
+    report
+        .hits
+        .iter()
+        .filter(|hit| hit.unit == id)
+        .map(|hit| hit.damage)
+        .sum()
+}
+
+/// Artillery striking a building hex damages every unit inside a light, medium or heavy
+/// building in full, whatever its floor, and then the building itself as an area-effect
+/// weapon striking a hex and its neighbours: three times the Damage Value, twice for the
+/// level below the roof and once for the next (Tactical Operations: Advanced Rules p. 152;
+/// Total Warfare p. 174).
+#[tokio::test]
+async fn artillery_reaches_every_floor_and_damages_the_building() {
+    let (_dir, _config, mut world, map, [inside, roof]) =
+        field(&[".0.0.0", "@3@3@3", ".0.0.0"]).await;
+    rebuild(&mut world, map, (1, 1), ConstructionClass::Heavy, 90);
+    step_inside(&mut world, inside, 0);
+    let report = shell(&mut world, map);
+    // A Thumper round is fifteen points in the struck hex (p. 152), on the ground floor of a
+    // three-level building as on its roof.
+    assert_eq!(blast(&report, inside), 15);
+    assert_eq!(blast(&report, roof), 15);
+    assert_eq!(
+        report.structures[0].coordinate,
+        HexCoordinate { x: 1, y: 1 }
+    );
+    // Three times fifteen, twice for the level below the roof and once for the next: ninety,
+    // which brings the heavy building down.
+    assert_eq!(report.structures[0].damage, 90);
+    assert_eq!(report.structures[0].cf, 0);
+    assert!(report.structures[0].collapse.is_some());
+    // The medium building hexes beside it take twice the five-point ring, and once more for
+    // their level below the roof.
+    let beside = report
+        .structures
+        .iter()
+        .find(|hit| hit.coordinate == HexCoordinate { x: 0, y: 1 })
+        .unwrap();
+    assert_eq!(beside.damage, 15);
+    assert_eq!(cf(&world, map, 0, 1), 40 - 15);
+}
+
+/// Inside a hardened building the round bursts on the roof: the roof and the level below take
+/// the full Damage Value, the next level half, and the floors below nothing (Total Warfare
+/// p. 173).
+#[tokio::test]
+async fn hardened_buildings_shelter_their_lower_floors() {
+    for (level, expected) in [(0, 0), (1, 8), (2, 15)] {
+        let (_dir, _config, mut world, map, [inside, _]) =
+            field(&[".0.0.0", "@3@3@3", ".0.0.0"]).await;
+        rebuild(&mut world, map, (1, 1), ConstructionClass::Hardened, 150);
+        step_inside(&mut world, inside, level);
+        let report = shell(&mut world, map);
+        assert_eq!(blast(&report, inside), expected, "{level}");
+        assert_eq!(cf(&world, map, 1, 1), 150 - 90);
+    }
+}

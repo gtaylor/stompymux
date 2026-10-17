@@ -260,6 +260,7 @@ fn munition_mode(bit: i32) -> AmmunitionMode {
         8388608 => AmmunitionMode::ThunderAugmented,
         16777216 => AmmunitionMode::ThunderVibrabomb,
         33554432 => AmmunitionMode::ThunderActive,
+        67108864 => AmmunitionMode::Homing,
         _ => AmmunitionMode::Normal,
     }
 }
@@ -291,6 +292,7 @@ fn mode_names(bits: &[i32]) -> Vec<String> {
                 8388608 => Some("ThunderAug"),
                 16777216 => Some("ThunderVibra"),
                 33554432 => Some("ThunderActive"),
+                67108864 => Some("Homing"),
                 _ => None,
             }
             .map(str::to_owned)

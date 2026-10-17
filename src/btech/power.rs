@@ -293,6 +293,7 @@ pub(super) fn finish_shutdown(
 /// atomically. `extended_piloting` selects the piloting skill rolls made by posture changes.
 pub fn advance_units(world: &mut World, now: i64, extended_piloting: bool) -> Vec<Notice> {
     super::radio_experience::advance(world);
+    super::artillery_registration::advance(world);
     let mut notices = super::scenario_map::advance_detached(world);
     notices.extend(super::vehicle_power::advance(world, now));
     notices.extend(super::hull_down::advance(world, extended_piloting));

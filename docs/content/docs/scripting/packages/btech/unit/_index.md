@@ -78,6 +78,7 @@ no_list: true
 - [`fireactive`](fireactive/)
 - [`fireaugmented`](fireaugmented/)
 - [`firecluster`](firecluster/)
+- [`firehoming`](firehoming/)
 - [`firemine`](firemine/)
 - [`firesmoke`](firesmoke/)
 - [`fireswarm`](fireswarm/)

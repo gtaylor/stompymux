@@ -46,6 +46,9 @@ pub enum AmmunitionMode {
     ThunderVibrabomb,
     /// Thunder rounds whose mines also catch hovering and low-flying units.
     ThunderActive,
+    /// Arrow IV homing missiles, which home on a unit friendly TAG designates (Tactical
+    /// Operations: Advanced Units & Equipment p. 166).
+    Homing,
 }
 
 impl AmmunitionMode {
@@ -57,6 +60,14 @@ impl AmmunitionMode {
     /// the special rounds, while Streak, MRM, rocket, ATM, Thunderbolt, Extended LRM and Narc
     /// launchers fire only their ordinary rounds (ATMs also choose between their own
     /// three missile types). An MML takes a round only in the family that round belongs to.
+    /// Semi-guided and Swarm-I missiles, the Thunder-Active, -Augmented and -Vibrabomb rounds
+    /// and Narc explosive pods are Inner Sphere technology (Total Warfare pp. 141-142;
+    /// Advanced Units & Equipment pp. 183, 185), so Clan launchers do not take them.
+    ///
+    /// Artillery munitions are fired by the Arrow IV and the tube artillery pieces only;
+    /// artillery cannons fire none of them (Advanced Units & Equipment pp. 97, 165): Cluster
+    /// and Smoke rounds by all of them, FASCAM by the Arrow IV, Long Tom and Sniper (the
+    /// Artillery Ordnance Table, Advanced Rules p. 152, gives the Inner Sphere Thumper none).
     pub fn supports(self, weapon: Weapon) -> bool {
         // Torpedo launchers carry ordinary or Artemis-guided torpedoes only.
         if weapon.is_torpedo() {
@@ -73,29 +84,39 @@ impl AmmunitionMode {
             Self::ExtendedRange | Self::HighExplosive => weapon.is_atm(),
             // Inferno rounds are an SRM munition (Total Warfare p. 141).
             Self::Inferno => weapon.is_standard_srm() || weapon.is_mml(),
-            Self::SemiGuided | Self::Swarm | Self::Swarm1 => weapon.supports_semiguided(),
+            Self::Swarm => weapon.is_standard_lrm(),
+            Self::SemiGuided | Self::Swarm1 => weapon.supports_semiguided(),
             Self::INarcExplosive | Self::INarcHaywire | Self::INarcEcm | Self::INarcNemesis => {
                 weapon == Weapon::INarcBeacon
             }
-            Self::Cluster => weapon.is_lbx() || weapon.is_artillery(),
+            Self::Cluster => weapon.is_lbx() || weapon.is_indirect_artillery(),
             // Smoke SRMs and LRMs load in standard SRM, LRM and MML launchers.
             Self::Smoke => {
-                weapon.is_artillery()
+                weapon.is_indirect_artillery()
                     || weapon.is_standard_srm()
                     || weapon.is_standard_lrm()
                     || weapon.is_mml()
             }
-            // Plain mine rounds are the original Thunder munition: LRM launchers only.
-            Self::Mine => weapon.is_artillery() || weapon.supports_thunder(),
+            // Plain mine rounds are the original Thunder munition, and FASCAM for artillery.
+            Self::Mine => {
+                matches!(
+                    weapon,
+                    Weapon::ArrowIv | Weapon::ClanArrowIv | Weapon::LongTom | Weapon::Sniper
+                ) || weapon.is_standard_lrm()
+            }
             Self::ThunderAugmented | Self::ThunderVibrabomb | Self::ThunderActive => {
                 weapon.supports_thunder()
             }
             Self::Artemis => weapon.accepts_artemis(),
-            // On a Narc launcher this flag selects explosive pods (Total Warfare p. 141).
-            Self::Narc => weapon.accepts_narc_rounds() || weapon.is_narc(),
+            // On a Narc launcher this flag selects explosive pods (Total Warfare p. 141), which
+            // only the Inner Sphere builds.
+            Self::Narc => weapon.accepts_narc_rounds() || weapon == Weapon::NarcBeacon,
             Self::Precision | Self::Flechette | Self::ArmorPiercing | Self::Caseless => {
                 weapon.supports_rapid_fire()
             }
+            // Only Arrow IV launchers carry homing missiles (Tactical Operations: Advanced
+            // Units & Equipment p. 166).
+            Self::Homing => matches!(weapon, Weapon::ArrowIv | Weapon::ClanArrowIv),
         }
     }
 
@@ -126,6 +147,7 @@ impl AmmunitionMode {
             "ThunderAug" => Some(Self::ThunderAugmented),
             "ThunderVibra" => Some(Self::ThunderVibrabomb),
             "ThunderActive" => Some(Self::ThunderActive),
+            "Homing" => Some(Self::Homing),
             _ => None,
         }
     }
@@ -157,6 +179,7 @@ impl AmmunitionMode {
             "ThunderAug",
             "ThunderVibra",
             "ThunderActive",
+            "Homing",
         ]
         .into_iter()
         .filter(|flag| !weapon.is_mml() || *flag != "MML_LRM")
@@ -274,6 +297,12 @@ impl AmmunitionMode {
     pub fn is_swarm(self) -> bool {
         matches!(self.munition(), Self::Swarm | Self::Swarm1)
     }
+
+    /// Missile rounds that may only target hexes and damage no unit: Smoke and Thunder
+    /// (Tactical Operations: Advanced Units & Equipment pp. 183, 185).
+    pub fn targets_hexes_only(self) -> bool {
+        self.munition() == Self::Smoke || self.is_thunder()
+    }
 }
 
 #[cfg(test)]
@@ -317,21 +346,42 @@ mod tests {
             assert!(M::Normal.supports(weapon));
         }
         for weapon in [W::Lrm20, W::ClanLrm5, W::Nlrm10] {
+            for mode in [M::Artemis, M::Narc, M::Smoke, M::Mine, M::Swarm] {
+                assert!(mode.supports(weapon), "{weapon:?} {mode:?}");
+            }
+            // The Inner Sphere-only rounds (Total Warfare p. 142; Tactical Operations:
+            // Advanced Units & Equipment pp. 183, 185).
             for mode in [
-                M::Artemis,
-                M::Narc,
-                M::Smoke,
-                M::Mine,
                 M::SemiGuided,
-                M::Swarm,
                 M::Swarm1,
                 M::ThunderAugmented,
                 M::ThunderActive,
                 M::ThunderVibrabomb,
             ] {
-                assert!(mode.supports(weapon), "{weapon:?} {mode:?}");
+                assert_eq!(
+                    mode.supports(weapon),
+                    !weapon.is_clan(),
+                    "{weapon:?} {mode:?}"
+                );
             }
             assert!(!M::Inferno.supports(weapon), "{weapon:?}");
+        }
+        // Artillery munitions: cannons fire none, the Inner Sphere Thumper no FASCAM
+        // (Tactical Operations: Advanced Units & Equipment pp. 97, 165; Advanced Rules p. 152).
+        for weapon in [W::LongTomCannon, W::SniperCannon, W::ThumperCannon] {
+            for mode in [M::Cluster, M::Smoke, M::Mine] {
+                assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
+            }
+        }
+        for weapon in [
+            W::ArrowIv,
+            W::ClanArrowIv,
+            W::LongTom,
+            W::Sniper,
+            W::Thumper,
+        ] {
+            assert!(M::Cluster.supports(weapon) && M::Smoke.supports(weapon));
+            assert_eq!(M::Mine.supports(weapon), weapon != W::Thumper, "{weapon:?}");
         }
         for weapon in [W::Srm6, W::ClanSrm2] {
             for mode in [M::Artemis, M::Narc, M::Inferno, M::Smoke] {
@@ -353,10 +403,12 @@ mod tests {
                 assert!(!mode.supports(weapon), "{weapon:?} {mode:?}");
             }
         }
-        // Narc launchers fire beacons or explosive pods, selected through the Narc flag; iNarc
-        // launchers select their pods through the dedicated iNarc modes instead.
+        // Narc launchers fire beacons or explosive pods, selected through the Narc flag, though
+        // only the Inner Sphere builds explosive pods (Total Warfare p. 141); iNarc launchers
+        // select their pods through the dedicated iNarc modes instead.
+        assert!(M::Narc.supports(W::NarcBeacon));
+        assert!(!M::Narc.supports(W::ClanNarcBeacon));
         for weapon in [W::NarcBeacon, W::ClanNarcBeacon] {
-            assert!(M::Narc.supports(weapon));
             for mode in [
                 M::Artemis,
                 M::Inferno,

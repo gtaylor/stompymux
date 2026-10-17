@@ -136,6 +136,8 @@ impl<'a> UnitRef<'a> {
         pub fn artemis_operational(&self, index: usize) -> Result<bool>;
         /// Accumulated trajectory correction for the currently selected target.
         pub fn artillery_adjustment(&self) -> u8;
+        /// Hexes this unit's artillery has struck since it last moved.
+        pub fn artillery_registration(&self) -> &'a ArtilleryRegistration;
         /// Jumping and stabilization precede ground speed and the template's walking threshold.
         pub fn attacker_movement_modifier(&self) -> u8;
         /// Whether the pilot has opted to fall off cliffs without an avoidance check.

@@ -47,6 +47,9 @@ pub(super) struct WeaponGroups {
     pub missiles_intercepted: Option<u8>,
     /// Every packet lands in the first packet's location, as a machine gun array's hits do.
     pub single_location: bool,
+    /// A missile flight's cluster roll after the glancing and interference shifts but before
+    /// any anti-missile engagement, which a Swarm flight reads on its own columns.
+    flight_roll: Option<u8>,
 }
 
 /// Consume candidate dice and size packets without assigning hit locations or applying damage.
@@ -226,6 +229,16 @@ pub(super) fn roll_weapon_groups(
     };
     let missiles_intercepted =
         (missile && ams_engaged).then(|| missiles_before_defense.unwrap_or(0) - count(&damage));
+    let flight_roll = table_roll.filter(|_| missile).map(|roll| {
+        (i16::from(roll)
+            - if glancing { 4 } else { 0 }
+            - if interference {
+                i16::from(super::planetary_conditions::INTERFERENCE_CLUSTER_PENALTY)
+            } else {
+                0
+            })
+        .clamp(2, 12) as u8
+    });
     Ok(WeaponGroups {
         missile_damage,
         cluster_roll,
@@ -233,34 +246,40 @@ pub(super) fn roll_weapon_groups(
         missiles_before_defense,
         missiles_intercepted,
         single_location: array.is_some(),
+        flight_roll,
     })
 }
 
 impl WeaponGroups {
-    /// A glancing unit hit halves shell damage, rounding down, as well as the already-adjusted
-    /// burst count.
-    pub(super) fn finish_burst_glancing(&mut self, mode: FireMode, glancing: bool) {
-        if !glancing || mode.rounds_per_cycle() <= 1 {
-            return;
-        }
-        for damage in &mut self.damage {
-            *damage /= 2;
-        }
-        self.damage.retain(|damage| *damage > 0);
-    }
-
-    /// A retargeted cluster cannot contain more missiles than remain in the flight.
-    pub(super) fn limit_missiles(&mut self, incoming: Option<u8>) {
-        let Some(incoming) = incoming else {
-            return;
+    /// Resolve this attack as one in a Swarm flight with `incoming` missiles still flying
+    /// (Tactical Operations: Advanced Units & Equipment p. 183): the Cluster Hits Table's
+    /// column for those missiles says how many attack this target, the rest flying on. An
+    /// engaged anti-missile system takes no -4 from a Swarm flight; instead the missiles
+    /// attacking its unit land as an 8 rolled on their own column. Hits group in fives.
+    pub(super) fn swarm_flight(&mut self, incoming: u8, ams_engaged: bool) -> Result<()> {
+        let roll = self
+            .flight_roll
+            .ok_or_else(|| anyhow::anyhow!("A Swarm flight needs a cluster roll"))?;
+        let attacking = if incoming > 1 {
+            super::salvo::cluster_hits(incoming, roll)?
+        } else {
+            incoming
         };
-        let mut remaining = u16::from(incoming) * u16::from(self.missile_damage);
-        for damage in &mut self.damage {
-            *damage = (*damage).min(remaining);
-            remaining -= *damage;
+        let hits = if ams_engaged && attacking > 1 {
+            super::salvo::cluster_hits(attacking, 8)?
+        } else {
+            attacking
+        };
+        self.missiles_before_defense = Some(attacking);
+        self.missiles_intercepted = ams_engaged.then(|| attacking - hits);
+        let mut remaining = u16::from(hits) * u16::from(self.missile_damage);
+        self.damage.clear();
+        while remaining > 0 {
+            let group = remaining.min(5);
+            self.damage.push(group);
+            remaining -= group;
         }
-        self.damage.retain(|damage| *damage > 0);
-        self.missiles_before_defense = self.missiles_before_defense.map(|hits| hits.min(incoming));
+        Ok(())
     }
 
     /// Missiles represented by the current packets, after any defense and flight cap.
@@ -654,6 +673,54 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod glancing_burst_tests {
+    use super::*;
+
+    /// A glancing Ultra or rotary burst takes -4 on its Cluster Hits roll and nothing more: its
+    /// shells keep their full damage (Tactical Operations: Advanced Rules p. 78).
+    #[test]
+    fn glancing_bursts_only_shift_the_cluster_roll() {
+        let seed = (0..=255)
+            .find(|seed| Dice::seeded([*seed; 32]).generic_roll() == 12)
+            .unwrap();
+        for (weapon, mode, shells) in [
+            (Weapon::UltraAc20, FireMode::Ultra, 2),
+            (Weapon::RotaryAc5, FireMode::Rotary6, 6),
+        ] {
+            let groups = roll_weapon_groups(
+                WeaponGroupRequest {
+                    weapon,
+                    ammunition: AmmunitionMode::Normal,
+                    fire_mode: mode,
+                    gatling_damage: None,
+                    distance: Some(3.0),
+                    glancing: true,
+                    guidance_blocked: false,
+                    angel_blocked: false,
+                    target_beacon: false,
+                    artemis_v: false,
+                    ams_engaged: false,
+                    indirect: false,
+                    apollo: false,
+                    array: None,
+                    unit_without_heat: false,
+                    interference: false,
+                },
+                &mut Dice::seeded([seed; 32]),
+            )
+            .unwrap();
+            // A 12 shifted to 8 still lands both Ultra shells, and four of six rotary rounds.
+            let hits = if shells == 2 { 2 } else { 4 };
+            assert_eq!(
+                groups.damage,
+                vec![u16::from(weapon.profile().damage); hits],
+                "{weapon:?}"
+            );
         }
     }
 }

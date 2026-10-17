@@ -100,8 +100,32 @@ impl AmmunitionBin {
             ammunition_flags,
             weapon.name()
         );
-        // The native administrator stores an unrestricted ammunition bit mask. The combat
-        // projection uses its normal precedence while the critical retains every bit.
+        // The native administrator stores an ammunition bit mask, but every munition it names
+        // must still be one the weapon fires, and the half-ton and hot-load limits hold as
+        // they do for strict bins (TechManual p. 48; Tactical Operations: Advanced Rules
+        // p. 101).
+        ensure!(
+            ammunition_flags.iter().all(|flag| {
+                super::AmmunitionMode::from_flag(weapon, flag).is_some_and(|mode| {
+                    mode.supports(weapon)
+                        || (weapon.is_mml()
+                            && (flag == "MML_LRM" || mode.with_mml_family(true).is_some()))
+                })
+            }),
+            "Unsupported ammunition mode {:?} for {}",
+            ammunition_flags,
+            weapon.name()
+        );
+        ensure!(
+            !half_ton || weapon.allows_half_ton_bins(),
+            "Half-ton ammunition bins are limited to machine guns"
+        );
+        ensure!(
+            !flags.iter().any(|mode| mode == "Hotload") || weapon.supports_hotload(),
+            "{} ammunition cannot be hot-loaded (Tactical Operations: Advanced Rules p. 101)",
+            weapon.name()
+        );
+        // The combat projection uses the normal precedence while the critical retains every bit.
         let mode = super::AmmunitionMode::initial_selection(weapon, &ammunition_flags);
         let full_capacity = weapon.profile_for_ammunition(mode).ammunition_per_ton;
         Ok((bin_capacity(full_capacity, half_ton, mode), half_ton, mode))
@@ -358,6 +382,7 @@ fn is_contract_ammunition_mode(mode: &str) -> bool {
             | "ThunderAug"
             | "ThunderVibra"
             | "ThunderActive"
+            | "Homing"
     )
 }
 
@@ -880,6 +905,32 @@ fn split_criticals(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The relaxed contract path still refuses a munition the weapon does not fire and the
+    /// half-ton and hot-load limits (TechManual p. 48; Tactical Operations: Advanced Rules
+    /// p. 101).
+    #[test]
+    fn contract_bins_check_munitions_and_lot_limits() {
+        let flags = |list: &[&str]| {
+            list.iter()
+                .map(|flag| (*flag).to_string())
+                .collect::<Vec<_>>()
+        };
+        assert!(AmmunitionBin::configuration_contract(Weapon::Lrm20, &flags(&["Swarm"])).is_ok());
+        assert!(AmmunitionBin::configuration_contract(Weapon::Lrm20, &flags(&["AP"])).is_err());
+        assert!(
+            AmmunitionBin::configuration_contract(Weapon::ClanLrm20, &flags(&["Sguided"])).is_err()
+        );
+        assert!(AmmunitionBin::configuration_contract(Weapon::Srm4, &flags(&["Halfton"])).is_err());
+        assert!(
+            AmmunitionBin::configuration_contract(Weapon::MachineGun, &flags(&["Halfton"])).is_ok()
+        );
+        assert!(AmmunitionBin::configuration_contract(Weapon::Ac10, &flags(&["Hotload"])).is_err());
+        assert!(
+            AmmunitionBin::configuration_contract(Weapon::Mml5, &flags(&["MML_LRM", "Swarm"]))
+                .is_ok()
+        );
+    }
 
     /// Only launchers that fire hot-loaded missiles take hot-loaded ammunition (Tactical
     /// Operations: Advanced Rules p. 101): a machine gun or SRM bin refuses the flag, and the

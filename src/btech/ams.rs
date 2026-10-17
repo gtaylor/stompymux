@@ -1,7 +1,7 @@
 //! Anti-missile systems (Total Warfare pp. 129-130), with expenditure owned by the enclosing shot.
 //!
-//! An AMS whose firing arc covers the incoming attack may engage one missile attack per turn
-//! (the mount's recycle). Engaging applies -4 to the attack's Cluster Hits roll, never below 2;
+//! An AMS whose firing arc covers the incoming attack may engage one missile attack per turn,
+//! thirty seconds, each AMS on its own. Engaging applies -4 to the attack's Cluster Hits roll, never below 2;
 //! a Streak launcher is treated as a roll of 11 before the -4; a single-missile attack is
 //! destroyed on a 1d6 roll of 1-3. Each engagement spends one round of ammunition (laser AMS
 //! none) and the system's heat. The `ams` switch is the defender's standing choice to engage.
@@ -37,6 +37,20 @@ impl Mech {
     /// Pilot-selected automatic defense state, initially disabled.
     pub fn ams_enabled(&self) -> bool {
         self.ams_enabled
+    }
+
+    /// Whether any installed AMS still has every slot intact. Each AMS works on its own (Total
+    /// Warfare p. 129), so the defense stays on until the last one is lost.
+    pub(super) fn ams_intact(&self) -> bool {
+        self.loadout().is_ok_and(|loadout| {
+            loadout.weapons.iter().any(|mount| {
+                mount.weapon.is_ams()
+                    && mount
+                        .criticals
+                        .iter()
+                        .all(|location| !self.critical_unavailable(*location))
+            })
+        })
     }
 }
 

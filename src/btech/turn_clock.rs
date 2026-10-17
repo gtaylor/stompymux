@@ -28,6 +28,11 @@ impl TurnClock {
     pub(super) fn starts_turn(self) -> bool {
         self.0 == 0
     }
+
+    /// Seconds left before this turn's End Phase, the next turn boundary.
+    pub(super) fn seconds_to_end(self) -> u8 {
+        30 - self.0
+    }
 }
 
 #[cfg(test)]

@@ -29,13 +29,23 @@ async fn fixture(
     target: &str,
     artillery: bool,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
+    fixture_rows(observer, target, artillery, 5).await
+}
+
+/// The fixture on a field `rows` hexes long, with the observer on the second-last row.
+async fn fixture_rows(
+    observer: &str,
+    target: &str,
+    artillery: bool,
+    rows: u16,
+) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Visibility field".into(), Kind::Room);
     create_battle_map(
         &mut world,
         map,
         "visibility",
-        MapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
+        MapAsset::from_cells(&format!("1 {rows}\n{}", ".0\n".repeat(usize::from(rows)))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -51,7 +61,14 @@ async fn fixture(
         .create(&mut world, id)
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
-        place_battle_unit(&mut world, id, map, 0, if index == 0 { 3 } else { 0 }).unwrap();
+        place_battle_unit(
+            &mut world,
+            id,
+            map,
+            0,
+            if index == 0 { i64::from(rows) - 2 } else { 0 },
+        )
+        .unwrap();
         edit(&mut world, id, |state| {
             state["power"] = serde_json::to_value(Power::Running).unwrap();
             state["dice"] = serde_json::to_value(Dice::seeded([19; 32])).unwrap();
@@ -183,7 +200,10 @@ async fn special_round_controls_share_chassis_transactions_and_restart() {
 #[tokio::test]
 async fn artillery_cluster_controls_feed_real_launches() {
     for source in templates() {
-        let (_dir, config, world, shooter, _) = fixture(&source, &templates()[0], true).await;
+        // Far enough that the shot at the second row is indirect (Tactical Operations:
+        // Advanced Rules p. 147).
+        let (_dir, config, world, shooter, _) =
+            fixture_rows(&source, &templates()[0], true, 22).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let call = format!("btech.unit.firecluster({},1,0)", shooter.0);
         assert_eq!(
@@ -269,69 +289,75 @@ fn acquire(world: &mut World, shooter: ObjectId, target: ObjectId) {
     panic!("Fixture contact was not acquired");
 }
 
-/// Missile Smoke/Mine supplies retain ordinary impact damage and neither exempts the shot from AMS.
+/// Missile Smoke and Mine (Thunder) rounds may only target hexes and damage no unit (Tactical
+/// Operations: Advanced Units & Equipment pp. 183, 185): a unit target is refused, and fire at
+/// the unit's hex fills it with smoke or mines while the unit standing there takes nothing.
 #[tokio::test]
-async fn missile_special_rounds_use_shared_launch_damage_and_ams_policy() {
+async fn missile_smoke_and_thunder_rounds_only_target_hexes() {
     for source in templates() {
-        for target_source in [
-            include_str!("../game/units/Daishi-A.toml"),
-            include_str!("../game/units/Goblin-58.toml"),
-        ] {
-            let (_dir, config, mut initial, shooter, target) =
-                fixture(&source, target_source, false).await;
-            edit(&mut initial, target, |unit| {
-                unit["ams_enabled"] = true.into();
-                // Face the shooter so the forward defense covers the attack direction.
-                unit["motion"]["heading"] = 180.0.into();
-                unit["motion"]["desired_heading"] = 180.0.into();
-            });
-            acquire(&mut initial, shooter, target);
-            for mode in [AmmunitionMode::Smoke, AmmunitionMode::Mine] {
-                let mut world = initial.clone();
-                toggle_battle_missile_rounds(&mut world, shooter, ObjectId(1), 0, mode).unwrap();
-                dice(&mut world, shooter, 12);
-                dice(&mut world, target, 2);
-                let before = world.clone();
-                let report = fire_battle_unit_shot(
-                    &mut world,
-                    shooter,
-                    ObjectId(1),
-                    target,
-                    0,
-                    VehicleShotRules {
-                        shot: shot_rules(),
-                        shooter_criticals: VehicleImpactRules::STANDARD.criticals,
-                    },
-                )
+        let (_dir, config, mut initial, shooter, target) =
+            fixture(&source, &templates()[0], false).await;
+        acquire(&mut initial, shooter, target);
+        let map = initial.btech.constructed_units()[&target]
+            .position()
+            .unwrap()
+            .map;
+        for mode in [AmmunitionMode::Smoke, AmmunitionMode::Mine] {
+            let mut world = initial.clone();
+            toggle_battle_missile_rounds(&mut world, shooter, ObjectId(1), 0, mode).unwrap();
+            dice(&mut world, shooter, 12);
+            dice(&mut world, target, 12);
+            let before = world.clone();
+            let refused = fire_battle_unit_shot(
+                &mut world,
+                shooter,
+                ObjectId(1),
+                target,
+                0,
+                VehicleShotRules {
+                    shot: shot_rules(),
+                    shooter_criticals: VehicleImpactRules::STANDARD.criticals,
+                },
+            )
+            .unwrap_err();
+            assert!(
+                refused.to_string().contains("only target hexes"),
+                "{refused}"
+            );
+            assert_eq!(world.btech, before.btech);
+            let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+            let hit: bool = scripts
+                .eval_callback(&format!(
+                    "return btech.unit.fire({},1,0,{{x=0,y=0}}).hit",
+                    shooter.0
+                ))
                 .unwrap();
-                let (defense, salvo) = stompymux_rs::by_chassis!(report, |report| {
-                    assert_eq!(report.expenditure.ammunition_mode, mode);
-                    (report.ams, report.salvo)
-                });
-                // Neither smoke nor mine rounds are exempt from AMS (Tactical Operations: AUE
-                // pp. 181-182).
-                assert!(defense.is_some());
-                assert!(salvo.is_some());
-                if mode == AmmunitionMode::Mine {
-                    let hits = match salvo.unwrap() {
-                        TargetSalvo::Mech(report) => report.missiles_before_defense,
-                        TargetSalvo::Vehicle(report) => report.missiles_before_defense,
-                        TargetSalvo::Swarm(_) => panic!("Mine ammunition does not retarget"),
-                    };
-                    assert_eq!(hits, Some(6));
-                }
-                world.validate(&config).unwrap();
-                persistence::save(&config.database(), &before)
-                    .await
+            assert!(hit);
+            let world = scripts.world().clone();
+            assert_eq!(
+                world.btech.constructed_units()[&target].sections(),
+                before.btech.constructed_units()[&target].sections()
+            );
+            let origin = HexCoordinate { x: 0, y: 0 };
+            if mode == AmmunitionMode::Smoke {
+                let smoke = world.btech.maps()[&map]
+                    .decoration(origin)
+                    .unwrap()
                     .unwrap();
-                let replay = persistence::load(&config.database()).await.unwrap();
-                assert_eq!(replay.btech, before.btech);
-                assert_eq!(
-                    world.btech.maps(),
-                    before.btech.maps(),
-                    "Missile supplies do not deploy artillery terrain payloads"
-                );
+                assert!(matches!(
+                    smoke.kind,
+                    DecorationKind::Smoke | DecorationKind::HeavySmoke
+                ));
+            } else {
+                let fields: Vec<_> = world.btech.maps()[&map]
+                    .minefields()
+                    .values()
+                    .copied()
+                    .collect();
+                assert_eq!(fields.len(), 1);
+                assert_eq!((fields[0].coordinate, fields[0].strength), (origin, 20));
             }
+            world.validate(&config).unwrap();
         }
     }
 }

@@ -3,6 +3,7 @@ class = "vehicle"
 movement = "wheel"
 tons = 80
 walk_mp = 3
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -20,15 +21,20 @@ armor = 34
 armor = 46
 slots = [
     { at = "1-2", item = "IS.ArrowIVSystem" },
-    { at = "3-10", item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = 3, item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = 4, item = "Ammo_IS.ArrowIVSystem", rounds = 5, modes = ["Homing"] },
+    { at = 5, item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = 6, item = "Ammo_IS.ArrowIVSystem", rounds = 5, modes = ["Homing"] },
+    { at = 7, item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = 8, item = "Ammo_IS.ArrowIVSystem", rounds = 5, modes = ["Homing"] },
+    { at = 9, item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = 10, item = "Ammo_IS.ArrowIVSystem", rounds = 5, modes = ["Homing"] },
+    { at = 11, item = "C3Master" },
+    { at = 12, item = "IS.Ecm" },
 ]
 
 [sections.aft_side]
 armor = 25
-slots = [
-    { at = 1, item = "C3Master" },
-    { at = 2, item = "Ecm" },
-]
 
 [sections.turret]
 armor = 40

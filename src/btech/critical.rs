@@ -393,7 +393,7 @@ impl Mech {
         if let CriticalLoss::Weapon { index, .. } = loss
             && loadout.weapons[index].weapon.is_ams()
         {
-            self.ams_enabled = false;
+            self.ams_enabled &= self.ams_intact();
         }
         if let CriticalLoss::Weapon {
             index,

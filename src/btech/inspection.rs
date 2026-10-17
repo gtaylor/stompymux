@@ -337,6 +337,7 @@ fn live_munition_bit(mode: super::AmmunitionMode, weapon: super::Weapon) -> Opti
         super::AmmunitionMode::ThunderAugmented => 8388608,
         super::AmmunitionMode::ThunderVibrabomb => 16777216,
         super::AmmunitionMode::ThunderActive => 33554432,
+        super::AmmunitionMode::Homing => 67108864,
     })
 }
 

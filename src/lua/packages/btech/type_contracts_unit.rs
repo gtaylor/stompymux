@@ -1637,8 +1637,20 @@
 //|function btech_unit.firecluster(dbref, pilot, weapon) end
 // lua-types-end
 
+// lua-types-begin btech 00410
+//|---Toggle an Arrow IV launcher between normal rounds and homing missiles, which home on a unit a
+//|---friendly TAG designates within eight hexes of the aim point, rejecting a different selected
+//|---artillery payload.
+//|---@param dbref integer
+//|---@param pilot integer
+//|---@param weapon integer
+//|---@return AmmunitionMode
+//|function btech_unit.firehoming(dbref, pilot, weapon) end
+// lua-types-end
+
 // lua-types-begin btech 00408
-//|---Select missile Smoke rounds. This cockpit control does not select artillery payloads.
+//|---Select missile Smoke rounds, which may only target hexes and fill a hit hex with smoke.
+//|---This cockpit control does not select artillery payloads.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param weapon integer
@@ -1647,8 +1659,8 @@
 // lua-types-end
 
 // lua-types-begin btech 00409
-//|---Select missile Mine (Thunder) rounds. They bypass AMS and retain ordinary missile damage
-//|---against units; a hit on a hex lays a minefield there.
+//|---Select missile Mine (Thunder) rounds, which may only target hexes: a hit lays a minefield
+//|---as dense as the launcher is large, and a miss scatters and lays five points less.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param weapon integer

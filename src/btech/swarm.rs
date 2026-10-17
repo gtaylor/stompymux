@@ -1,4 +1,15 @@
-//! One missile-flight resolver shared by Mech and vehicle launchers and targets.
+//! Swarm and Swarm-I LRM flights (Tactical Operations: Advanced Units & Equipment p. 183): one
+//! resolver shared by Mech and vehicle launchers and targets.
+//!
+//! Missiles that do not attack a target fly on to the nearest unit, friend or foe, in its hex
+//! or an adjacent one, starting with its own hex and choosing at random among equals; no line
+//! of sight is needed and no unit is attacked twice by one flight. A missed attack sends every
+//! missile on. Each later attack keeps the first attack's modifiers except that its own
+//! target's movement and terrain replace the first target's, and rolls its own Cluster Hits
+//! on the column for the missiles still flying. Swarm-I takes +2 against friendly units unless
+//! they stand in hostile ECM or have lost sensors. In hostile ECM a Swarm-I flight acts as
+//! Swarm, and a Swarm flight attacking a target in hostile ECM acts as an ordinary LRM flight:
+//! its missiles that miss that target fly no farther.
 use super::*;
 use crate::{ObjectId, World};
 use anyhow::{Context, Result};
@@ -9,6 +20,8 @@ use serde::Serialize;
 pub struct SwarmHop {
     pub target: ObjectId,
     pub incoming: u8,
+    /// The attack's target number; later attacks take their own target's modifiers.
+    pub target_number: i32,
     pub roll: u8,
     pub remaining: u8,
     pub salvo: Option<TargetSalvo>,
@@ -19,8 +32,6 @@ pub struct SwarmHop {
 pub struct SwarmReport {
     pub launched: u8,
     pub remaining: u8,
-    /// Hexes flown from target to target, counted like any weapon range.
-    pub traveled: f64,
     pub hops: Vec<SwarmHop>,
     pub notices: Vec<Notice>,
     /// Private damage checks ordered across every target in the flight.
@@ -28,7 +39,7 @@ pub struct SwarmReport {
     pub broadcasts: Vec<Notice>,
 }
 
-/// Immutable launch facts; secondary attacks retain the original threshold and glancing state.
+/// Immutable launch facts. The first attack was rolled with the launch; later ones roll here.
 pub(super) struct SwarmRequest<'a> {
     pub shooter: ObjectId,
     pub target: ObjectId,
@@ -36,12 +47,60 @@ pub(super) struct SwarmRequest<'a> {
     pub rules: ShotRules,
     pub first_hit: bool,
     pub first_roll: u8,
+    pub first_glancing: bool,
+    /// The first attack's target number.
     pub target_number: i32,
-    pub glancing: bool,
+    /// The first attack's target number less its target's movement and terrain modifiers,
+    /// which each later attack replaces with its own target's.
+    pub base_target_number: i32,
     pub character: bool,
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
-    /// An anti-missile system engaged the initial attack; secondary hops are not engaged.
+    /// An anti-missile system engaged the first attack.
     pub ams_engaged: bool,
+}
+
+/// A unit's target movement and terrain modifiers against `shooter`'s Swarm flight, read
+/// without requiring line of sight (Tactical Operations: Advanced Units & Equipment p. 183).
+fn target_terms(
+    world: &World,
+    shooter: ObjectId,
+    target: ObjectId,
+    weapon: Weapon,
+    ammunition: AmmunitionMode,
+) -> Result<i32> {
+    let distance = unit_range(world, shooter, target)?.hexes();
+    let terms = super::aim::target_modifiers(world, shooter, target, weapon, ammunition, distance)?;
+    let (terrain, range) = super::los::unit_terrain_geometry(world, shooter, target)?;
+    let profile = super::perception_profile(world, shooter)?;
+    let cover = super::perception::cover_aim(world, &profile, target, terrain, range);
+    Ok(i32::from(terms.movement) + i32::from(terms.bogged_down) + i32::from(cover))
+}
+
+/// The first attack's modifiers without its target's movement and terrain terms.
+pub(super) fn base_target_number(aim: &AimModifiers, target_number: i32) -> i32 {
+    target_number
+        - i32::from(aim.target_movement)
+        - i32::from(aim.bogged_down)
+        - aim
+            .perception
+            .map_or(0, |perception| i32::from(perception.modifier))
+}
+
+/// Whether `target` stands in ECM hostile to `shooter`'s side.
+fn in_hostile_ecm(world: &World, target: ObjectId) -> Result<bool> {
+    Ok(super::electronic_field(world, target)?.blocks_incoming_guidance())
+}
+
+/// Whether a unit has lost a sensor to a critical hit.
+fn sensors_damaged(world: &World, id: ObjectId) -> bool {
+    if let Some(unit) = world.btech.vehicles().get(&id) {
+        return unit.sensor_hits() > 0;
+    }
+    world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .is_some_and(|unit| unit.system_hits(System::Sensors) > 0)
 }
 
 /// Retargeting uses retained acquisition and clear terrain, without acquiring new contacts.
@@ -57,6 +116,45 @@ fn sees(world: &World, observer: ObjectId, target: ObjectId) -> bool {
             && super::visibility::unit_unblocked(world, observer, target).unwrap_or(false))
 }
 
+/// The next unit the flight turns on: the nearest unvisited unit in `from`'s hex or an
+/// adjacent one, at random among equals.
+fn next_target(
+    world: &mut World,
+    shooter: ObjectId,
+    map: ObjectId,
+    from: ObjectId,
+    visited: &[ObjectId],
+) -> Result<Option<ObjectId>> {
+    let mut nearest: Vec<(u64, ObjectId)> = Vec::new();
+    for candidate in super::map_slots::all_unit_order(world, map)? {
+        if visited.contains(&candidate) || combat_safe(world, candidate)? {
+            continue;
+        }
+        let Some(unit) = super::scanner::scanner_unit(world, candidate) else {
+            continue;
+        };
+        if unit.destroyed || unit.position.is_none() {
+            continue;
+        }
+        let distance = unit_range(world, from, candidate)?.hex_distance;
+        if distance <= 1 {
+            nearest.push((distance, candidate));
+        }
+    }
+    let Some(closest) = nearest.iter().map(|(distance, _)| *distance).min() else {
+        return Ok(None);
+    };
+    nearest.retain(|(distance, _)| *distance == closest);
+    let pick = if nearest.len() > 1 {
+        usize::from(
+            super::dice::unit_dice_mut(world, shooter)?.die(u16::try_from(nearest.len())?)? - 1,
+        )
+    } else {
+        0
+    };
+    Ok(Some(nearest[pick].1))
+}
+
 /// Resolve an admitted flight inside its launcher's existing world/effect transaction.
 pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<SwarmReport> {
     let shooter = request.shooter;
@@ -64,35 +162,47 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
     let map = source.position.context("Launcher is not placed")?.map;
     let team = source.signature.team;
     let weapon = request.weapon.weapon;
+    let ammunition = request.weapon.ammunition_mode;
     let mut report = SwarmReport {
         launched: weapon.profile().missiles,
         remaining: weapon.profile().missiles,
-        traveled: 0.0,
         hops: Vec::new(),
         notices: Vec::new(),
         pilot_notices: Vec::new(),
         broadcasts: Vec::new(),
     };
-    let mut previous = shooter;
     let mut target = request.target;
-    while report.remaining > 0 {
-        report.traveled += unit_range(world, previous, target)?.hexes();
-        if weapon.range_modifier(report.traveled)?.is_none() {
-            report.notices.push(Notice {
-                unit: target,
-                text: "Luckily, the missiles fall short of you!".into(),
-            });
-            break;
-        }
-        let roll = if report.hops.is_empty() {
-            request.first_roll
+    loop {
+        let first = report.hops.is_empty();
+        let hostile_ecm = in_hostile_ecm(world, target)?;
+        let (target_number, roll) = if first {
+            (request.target_number, request.first_roll)
         } else {
-            super::dice::unit_dice_mut(world, shooter)?.generic_roll()
+            let friendly = super::scanner::scanner_unit(world, target)
+                .is_some_and(|unit| unit.signature.team == team);
+            // Swarm-I missiles avoid friends unless hostile ECM or lost sensors confuse them.
+            let identify_friend = ammunition.munition() == AmmunitionMode::Swarm1
+                && friendly
+                && !hostile_ecm
+                && !super::electronic_field(world, target)?.blocks_outgoing_guidance()
+                && !sensors_damaged(world, target);
+            let number = request.base_target_number
+                + target_terms(world, shooter, target, weapon, ammunition)?
+                + if identify_friend { 2 } else { 0 };
+            (
+                number,
+                super::dice::unit_dice_mut(world, shooter)?.generic_roll(),
+            )
         };
-        let hit = if report.hops.is_empty() {
+        let hit = if first {
             request.first_hit
         } else {
-            i32::from(roll) >= request.target_number
+            i32::from(roll) >= target_number
+        };
+        let glancing = if first {
+            request.first_glancing
+        } else {
+            hit && i32::from(roll) == target_number
         };
         let incoming = report.remaining;
         let salvo = if hit {
@@ -100,6 +210,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
             if let Some(context) = &mut experience {
                 context.request.target = target;
             }
+            let ams_engaged = request.ams_engaged && first;
             let salvo = if world.btech.vehicles().contains_key(&target) {
                 let distance = unit_range(world, shooter, target)?.hexes();
                 super::target_salvo::resolve_vehicle_target(
@@ -108,14 +219,14 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                     target,
                     VehicleSalvoRequest {
                         weapon,
-                        ammunition: request.weapon.ammunition_mode,
+                        ammunition,
                         fire_mode: request.weapon.fire_mode,
                         gatling_damage: request.weapon.gatling_damage,
                         distance,
-                        glancing: request.glancing,
+                        glancing,
                         guidance_blocked: false,
                         angel_blocked: false,
-                        ams_engaged: request.ams_engaged && report.hops.is_empty(),
+                        ams_engaged,
                         indirect: false,
                         apollo: false,
                         array: None,
@@ -142,9 +253,9 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                             extended_piloting: request.rules.extended_piloting,
                             toughness: request.rules.target_toughness,
                         },
-                        glancing: request.glancing,
+                        glancing,
                         character: request.character,
-                        ams_engaged: request.ams_engaged && report.hops.is_empty(),
+                        ams_engaged,
                         indirect: false,
                         apollo: false,
                         array: None,
@@ -160,11 +271,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                     unit: shooter,
                     text: format!(
                         "[fg=green]{} with {hits} missile{}![reset]",
-                        if report.hops.is_empty() {
-                            "You hit"
-                        } else {
-                            "The swarm hits"
-                        },
+                        if first { "You hit" } else { "The swarm hits" },
                         if hits > 1 { "s" } else { "" }
                     ),
                 });
@@ -185,39 +292,19 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
         report.hops.push(SwarmHop {
             target,
             incoming,
+            target_number,
             roll,
             remaining: report.remaining,
             salvo,
         });
-        // The reference stops after the attack following ten previously visited targets.
-        if report.remaining == 0 || report.hops.len() == 11 {
+        // A Swarm flight attacking a target in hostile ECM is an ordinary LRM flight; a
+        // Swarm-I flight there only loses its friend-or-foe recognition.
+        if report.remaining == 0 || (hostile_ecm && ammunition.munition() == AmmunitionMode::Swarm)
+        {
             break;
         }
-        let mut next = None;
-        for candidate in super::map_slots::all_unit_order(world, map)? {
-            if report.hops.iter().any(|hop| hop.target == candidate)
-                || combat_safe(world, candidate)?
-            {
-                continue;
-            }
-            let Some(unit) = super::scanner::scanner_unit(world, candidate) else {
-                continue;
-            };
-            if request.weapon.ammunition_mode.munition() == AmmunitionMode::Swarm1
-                && unit.signature.team == team
-            {
-                continue;
-            }
-            // Secondary targets stand in the target's hex or an adjacent one (Tactical
-            // Operations: Advanced Units & Equipment p. 183).
-            if unit_range(world, target, candidate)?.hex_distance <= 1
-                && sees(world, target, candidate)
-            {
-                next = Some(candidate);
-                break;
-            }
-        }
-        let Some(next) = next else {
+        let visited: Vec<_> = report.hops.iter().map(|hop| hop.target).collect();
+        let Some(next) = next_target(world, shooter, map, target, &visited)? else {
             break;
         };
         if next != shooter {
@@ -247,7 +334,6 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
         report
             .notices
             .extend(super::broadcast::swarm_notices(world, shooter, next));
-        previous = target;
         target = next;
     }
     Ok(report)

@@ -773,10 +773,8 @@ async fn vehicle_ams_shares_interception_dice_supply_limits_and_restart_replay()
             } else {
                 assert_eq!(ams.ammunition_spent, 0);
             }
-            assert_eq!(
-                world.btech.vehicles()[&target].weapon_recycle()[&0],
-                u16::from(weapon.profile().recycle_seconds)
-            );
+            // One engagement a turn (Total Warfare p. 129).
+            assert_eq!(world.btech.vehicles()[&target].weapon_recycle()[&0], 30);
             let Some(TargetSalvo::Vehicle(salvo)) = &report.salvo else {
                 panic!("vehicle salvo missing")
             };
@@ -890,7 +888,12 @@ async fn vehicle_ams_selection_obeys_switch_supply_recycle_and_critical_loss() {
         let report =
             fire_battle_vehicle_shot(&mut world, shooter, ObjectId(1), target, 0, fire_rules())
                 .unwrap();
-        if matches!(condition, "first_busy" | "first_failed" | "first_bin_lost") {
+        // Each AMS works on its own (Total Warfare p. 129): a destroyed first mount leaves
+        // the second to engage.
+        if matches!(
+            condition,
+            "critical" | "first_busy" | "first_failed" | "first_bin_lost"
+        ) {
             assert_eq!(report.ams.as_ref().unwrap().roll, None);
             assert_eq!(
                 report.ams.as_ref().unwrap().weapon_index,

@@ -13,6 +13,9 @@ pub trait AmmunitionFeedback {
     /// Artillery cluster feedback retains its distinct normal-round wording.
     fn cluster_message(self, index: usize) -> String;
 
+    /// Arrow IV homing missile feedback, shared by native commands and Lua.
+    fn homing_message(self, index: usize) -> String;
+
     /// Cockpit wording for the selected ATM ammunition.
     fn atm_message(self, index: usize) -> String;
 
@@ -72,6 +75,13 @@ impl AmmunitionFeedback for AmmunitionMode {
     fn cluster_message(self, index: usize) -> String {
         if self == Self::Cluster {
             return format!("Weapon {index} has been set to fire cluster rounds.");
+        }
+        format!("Weapon {index} has been set to fire normal rounds")
+    }
+
+    fn homing_message(self, index: usize) -> String {
+        if self == Self::Homing {
+            return format!("Weapon {index} has been set to fire homing missiles.");
         }
         format!("Weapon {index} has been set to fire normal rounds")
     }

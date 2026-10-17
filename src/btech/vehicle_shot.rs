@@ -110,6 +110,7 @@ pub(super) fn check_with_dice(
         "Units must share a battlefield"
     );
     super::fire_target::check_target_safety_for_source(world, operator.source, target)?;
+    super::fire_target::check_unit_munition(world, shooter, weapon_index)?;
     ensure!(
         attacker.weapon_readiness(weapon_index)?.ready,
         "Weapon is not ready"

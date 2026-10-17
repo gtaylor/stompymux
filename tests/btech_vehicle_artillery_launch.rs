@@ -3,7 +3,11 @@ use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
-/// A running Sniper platform faces a nearby empty coordinate.
+/// Where the platform stands, facing north: twenty hexes from both map edges, so fire at either
+/// end row is indirect even though it is in sight (Tactical Operations: Advanced Rules p. 147).
+const POST: HexCoordinate = HexCoordinate { x: 1, y: 20 };
+
+/// A running Sniper platform faces an empty coordinate beyond direct-fire range.
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     fixture_template(
         flags,
@@ -23,7 +27,7 @@ async fn fixture_template(
         &mut world,
         map,
         "test",
-        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells(&format!("3 41\n{}", ".0.0.0\n".repeat(41))).unwrap(),
     )
     .unwrap();
     let shooter = world.create(&config, "Marksman".into(), Kind::Thing);
@@ -36,7 +40,7 @@ async fn fixture_template(
         }
     }
     create_battle_vehicle(&mut world, shooter, template).unwrap();
-    place_battle_unit(&mut world, shooter, map, 1, 1).unwrap();
+    place_battle_unit(&mut world, shooter, map, POST.x.into(), POST.y.into()).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
@@ -126,7 +130,7 @@ async fn vehicle_artillery_rejections_and_failed_callback_are_atomic() {
         &mut rear,
         shooter,
         ObjectId(1),
-        HexCoordinate { x: 1, y: 2 },
+        HexCoordinate { x: 1, y: 40 },
         HexTargetMode::Hex,
     )
     .unwrap();
@@ -230,7 +234,7 @@ async fn vehicle_artillery_correction_uses_mixed_observers_and_replays_aim() {
                 .unwrap();
                 support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
             }
-            place_battle_unit(&mut world, observer, map, 2, 1).unwrap();
+            place_battle_unit(&mut world, observer, map, 2, POST.y.into()).unwrap();
             if running {
                 world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
                 assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
@@ -340,7 +344,7 @@ async fn vehicle_artillery_explicit_mixed_spotters_share_targets_and_correction_
             .unwrap();
             support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
         }
-        place_battle_unit(&mut world, observer, map, 2, 1).unwrap();
+        place_battle_unit(&mut world, observer, map, 2, POST.y.into()).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);

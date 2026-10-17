@@ -123,6 +123,26 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         "unit_cluster",
         error::wrap(lua, cluster, "btech.operation.failed")?,
     )?;
+    let homing = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
+        crate::lua::transactions::require(lua)?;
+        let scripts = crate::Scripts::services(lua)?;
+        crate::lua::transactions::run(lua, &scripts.world, || {
+            let mode = crate::toggle_battle_homing(
+                &mut scripts.world.borrow_mut(),
+                ObjectId(unit),
+                ObjectId(pilot),
+                index,
+            )
+            .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
+            crate::btech::notify_unit_text(&scripts, ObjectId(unit), &mode.homing_message(index))
+                .map_err(|e| error::failure("btech.operation.failed", e))?;
+            detached(lua, &mode)
+        })
+    })?;
+    native.set(
+        "unit_firehoming",
+        error::wrap(lua, homing, "btech.operation.failed")?,
+    )?;
     let artemis = lua.create_function(move |lua, (unit, pilot, index): (i64, i64, usize)| {
         crate::lua::transactions::require(lua)?;
         let scripts = crate::Scripts::services(lua)?;

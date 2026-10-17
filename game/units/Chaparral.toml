@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 50
 walk_mp = 4
-heat_sinks = 10
 
 [construction]
 tech_base = "inner_sphere"
@@ -25,12 +24,14 @@ slots = [
 armor = 16
 slots = [
     { at = 1, item = "IS.ArrowIVSystem" },
-    { at = "2-4", item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = 2, item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = 3, item = "Ammo_IS.ArrowIVSystem", rounds = 5, modes = ["Homing"] },
+    { at = 4, item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
 ]
 
 [sections.aft_side]
 armor = 36
 slots = [
-    { at = 4, item = "IS.SRM-6" },
-    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 1, item = "IS.SRM-6" },
+    { at = 2, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]

@@ -60,6 +60,16 @@ pub(super) fn resolve_in_action(
         distance,
         aim,
     } = prepare(world, config, shooter, pilot, index, requested)?;
+    match aim.range {
+        ArtilleryRange::InRange => {}
+        ArtilleryRange::OutOfRange => anyhow::bail!("Target is out of range!"),
+        ArtilleryRange::Underwater => {
+            anyhow::bail!("You cannot fire artillery from underwater!")
+        }
+        ArtilleryRange::InsideMinimum => anyhow::bail!(
+            "That hex is too close to fire at directly, and artillery cannot fire indirectly at a hex it can see!"
+        ),
+    }
     let rules = ShotRules::configured(&config.battletech, false);
     let mode = ArtilleryMode::from_ammunition(ammunition)?;
     let character_shooter = world.objects[&shooter].flags.contains(Flag::InCharacter);
@@ -102,7 +112,7 @@ pub(super) fn resolve_in_action(
             pilot,
             weapon_index: index,
             distance,
-            target_number: Some(aim.target_number),
+            target_number: Some(aim.roll_target()),
             streak_confused: false,
             fall,
             character_shooter,
@@ -114,7 +124,19 @@ pub(super) fn resolve_in_action(
             &mut candidate,
             map,
             shooter,
-            ArtilleryFlight::new(origin, coordinate, weapon, mode, hit)?,
+            ArtilleryFlight::new(
+                origin,
+                coordinate,
+                weapon,
+                mode,
+                ArtilleryOutcome::of_launch(
+                    aim.fire,
+                    hit,
+                    aim.roll_target(),
+                    roll,
+                    origin.distance(coordinate),
+                ),
+            )?,
         )?)
     } else {
         None
@@ -147,10 +169,17 @@ pub(super) fn resolve_in_action(
         let name = weapon.name().split_once('.').unwrap().1;
         let mut messages = vec![(
             shooter,
-            format!(
-                "You fire {name} at ({},{}) - BTH: {} Roll: {}.",
-                coordinate.x, coordinate.y, aim.target_number, report.roll
-            ),
+            if aim.automatic {
+                format!(
+                    "You fire {name} at ({},{}) - BTH: automatic.",
+                    coordinate.x, coordinate.y
+                )
+            } else {
+                format!(
+                    "You fire {name} at ({},{}) - BTH: {} Roll: {}.",
+                    coordinate.x, coordinate.y, aim.target_number, report.roll
+                )
+            },
         )];
         messages.extend(observer_messages(
             world,
@@ -238,6 +267,7 @@ pub(super) fn prepare(
             unit.artillery_adjustment(),
         )
     };
+    let (attacker_movement, attacker_condition) = attacker_terms(world, shooter, index)?;
     let (target_lock, hex_lock) = match operator.source.selection(world) {
         Some(TargetSelection::Unit(lock)) => (Some(lock), None),
         Some(TargetSelection::Hex(lock)) => (None, Some(lock)),
@@ -290,9 +320,10 @@ pub(super) fn prepare(
     let source_tile = record.base_hex(i64::from(position.x), i64::from(position.y))?;
     // Artillery reach counts hexes, like every weapon range (Total Warfare p. 109).
     let distance = super::geometry::unit_hex_range(world, shooter, coordinate)?;
-    // Observed artillery uses indirect aim even when the shooter can see the hex.
-    let visible =
-        observer.is_none() && super::visibility::hex_unblocked(world, shooter, coordinate)?;
+    // A piece that sees a hex within seventeen hexes fires at it directly, whoever spots for
+    // it (Tactical Operations: Advanced Rules p. 147).
+    let (terrain, _) = super::los::unit_hex_los(world, shooter, coordinate)?;
+    let visible = super::visibility::hex_unblocked(world, shooter, coordinate)?;
     ensure!(
         explicit_hex.is_some()
             || observer.is_some()
@@ -320,6 +351,7 @@ pub(super) fn prepare(
             },
         "Target is outside weapon arc"
     );
+    let spotter_attacked = observer.is_some_and(|id| super::spotter::attacked_this_turn(world, id));
     let observer = if let Some(id) = observer {
         ArtilleryObserver::Spotting(super::skills::unit_spotting_target(world, id)?)
     } else {
@@ -346,6 +378,11 @@ pub(super) fn prepare(
         observer,
         adjustment,
         interference: super::planetary_conditions::under_interference(world, shooter),
+        attacker_movement,
+        attacker_condition,
+        intervening: terrain.intervening_modifier(),
+        registered: super::artillery_registration::registered(world, shooter, coordinate),
+        spotter_attacked,
     })?;
     Ok(PreparedArtillery {
         map,
@@ -359,4 +396,33 @@ pub(super) fn prepare(
             y: i32::from(position.y),
         },
     })
+}
+
+/// The attacker movement modifier and the firing unit's own condition: heat, sensor and
+/// actuator damage for a Mech, crew and sensor damage for a vehicle (Total Warfare pp. 106,
+/// 113, 127, 193). Direct-fire artillery takes them as any weapon does (Tactical Operations:
+/// Advanced Rules p. 153).
+fn attacker_terms(world: &World, shooter: ObjectId, index: usize) -> Result<(u8, i16)> {
+    if let Some(unit) = world.btech.vehicles().get(&shooter) {
+        let condition = i16::from(unit.gunnery_damage())
+            + i16::from(unit.has_beacon(super::BeaconKind::Haywire));
+        return Ok((unit.weapon_movement_modifier(index)?, condition));
+    }
+    let unit = world
+        .btech
+        .constructed_units()
+        .get(&shooter)
+        .context("Shooter is not constructed")?;
+    let section = unit
+        .loadout()?
+        .weapons
+        .get(index)
+        .context("Weapon index out of bounds")?
+        .criticals[0]
+        .section;
+    let condition = i16::from(unit.heat().to_hit_modifier())
+        + i16::from(unit.sensor_aim_modifier())
+        + i16::from(unit.mounting_modifier(section))
+        + i16::from(unit.has_beacon(super::BeaconKind::Haywire));
+    Ok((unit.attacker_movement_modifier(), condition))
 }

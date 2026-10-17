@@ -8,13 +8,26 @@ async fn fixture(
     source: &str,
     mode: HexTargetMode,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
+    fixture_rows(source, mode, 5).await
+}
+
+/// The fixture on a field `rows` hexes long, with the shooter on the last row.
+async fn fixture_rows(
+    source: &str,
+    mode: HexTargetMode,
+    rows: u16,
+) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Target field".into(), Kind::Room);
     create_battle_map(
         &mut world,
         map,
         "targets",
-        MapAsset::from_cells("3 5\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells(&format!(
+            "3 {rows}\n{}",
+            ".0.0.0\n".repeat(usize::from(rows))
+        ))
+        .unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -34,7 +47,7 @@ async fn fixture(
     )
     .unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
-    place_battle_unit(&mut world, shooter, map, 1, 4).unwrap();
+    place_battle_unit(&mut world, shooter, map, 1, i64::from(rows) - 1).unwrap();
     place_battle_unit(&mut world, target, map, 1, 1).unwrap();
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(shooter);
     assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
@@ -206,7 +219,10 @@ async fn artillery_coordinates_preserve_locks_and_queue_once() {
         include_str!("../game/units/Naga-Prime.toml"),
         include_str!("../game/units/Marksman.toml"),
     ] {
-        let (_dir, config, base, shooter, target) = fixture(source, HexTargetMode::Hex).await;
+        // Far enough that artillery fire at the first rows is indirect (Tactical Operations:
+        // Advanced Rules p. 147).
+        let (_dir, config, base, shooter, target) =
+            fixture_rows(source, HexTargetMode::Hex, 25).await;
         for selection in 0..3 {
             let mut world = base.clone();
             if selection < 2 {

@@ -87,7 +87,7 @@
 ---@field section MechSectionName
 ---@field slot integer Zero-based critical slot.
 
----@alias AmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"
+---@alias AmmunitionMode "smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"|"homing"
 
 ---@alias FireMode "normal"|"heat"|"hotload"|"ultra"|"rapid"|"rotary2"|"rotary3"|"rotary4"|"rotary5"|"rotary6"|"gatling"
 
@@ -1630,9 +1630,11 @@ function btech_unit.autoturret(dbref, pilot) end
 
 ---Complete artillery aim result. Range failure is distinct from launch admission or expenditure.
 ---@class ArtilleryAim
----@field target_number integer Out-of-range and underwater aims keep the reference's impossible target numbers.
+---@field target_number integer Out-of-range, underwater and too-close aims keep impossible target numbers.
 ---@field maximum_range integer
----@field range "in_range"|"out_of_range"|"underwater"
+---@field range "in_range"|"out_of_range"|"underwater"|"inside_minimum" Only an in-range shot may be fired.
+---@field fire "direct"|"indirect"|"cannon" A direct-fire miss scatters 1D6 hexes, an indirect one its margin of failure, a cannon's half of it.
+---@field automatic boolean The hex is registered, so the shot hits without a roll.
 ---An internal explosion's ordered rolls, critical consequences and final protection change.
 ---@class VehicleInternalDamage
 ---@field section VehicleSectionName
@@ -1689,6 +1691,8 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field surfaces table[] Structural rolls, optional fracture/falls, and notices.
 ---@field buildings table[] Building identity, actual damage, remaining integrity and notices.
 ---@field recoil RecoilReport|nil
+---@field thunder {fields: table[]} Minefields a Thunder salvo laid or thickened.
+---@field smoke {coordinate: HexCoordinate, heavy: boolean, seconds: integer}|nil Smoke a Smoke missile salvo laid.
 
 ---Fire under configured tactical rules and stage cockpit notices in the current callback transaction.
 ---Requires the conscious assigned pilot; the calling script owns authority to act as that pilot.
@@ -3082,15 +3086,15 @@ function btech_unit.fireswarm1(dbref, pilot, weapon) end
 ---@class SwarmHop
 ---@field target integer
 ---@field incoming integer
+---@field target_number integer Each later attack takes its own target's movement and terrain modifiers.
 ---@field roll integer
 ---@field remaining integer
----@field salvo {kind: 'mech'|'vehicle', report: table}|nil Absent for a secondary miss.
+---@field salvo {kind: 'mech'|'vehicle', report: table}|nil Absent for a miss.
 
 ---@class SwarmReport
 ---@field launched integer
 ---@field remaining integer
----@field traveled number Cumulative hexes flown, including a terminal leg that falls short.
----@field hops SwarmHop[] Ordered attacks, at most eleven.
+---@field hops SwarmHop[] Ordered attacks, each on a different unit.
 ---@field notices Notice[]
 ---@field broadcasts Notice[]
 
@@ -3101,20 +3105,30 @@ function btech_unit.fireswarm1(dbref, pilot, weapon) end
 ---@return AmmunitionMode
 function btech_unit.firecluster(dbref, pilot, weapon) end
 
----Select missile Smoke rounds. This cockpit control does not select artillery payloads.
+---Select missile Smoke rounds, which may only target hexes and fill a hit hex with smoke.
+---This cockpit control does not select artillery payloads.
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer
 ---@return AmmunitionMode
 function btech_unit.firesmoke(dbref, pilot, weapon) end
 
----Select missile Mine (Thunder) rounds. They bypass AMS and retain ordinary missile damage
----against units; a hit on a hex lays a minefield there.
+---Select missile Mine (Thunder) rounds, which may only target hexes: a hit lays a minefield
+---as dense as the launcher is large, and a miss scatters and lays five points less.
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer
 ---@return AmmunitionMode
 function btech_unit.firemine(dbref, pilot, weapon) end
+
+---Toggle an Arrow IV launcher between normal rounds and homing missiles, which home on a unit a
+---friendly TAG designates within eight hexes of the aim point, rejecting a different selected
+---artillery payload.
+---@param dbref integer
+---@param pilot integer
+---@param weapon integer
+---@return AmmunitionMode
+function btech_unit.firehoming(dbref, pilot, weapon) end
 
 ---Check map membership and world invariants without changing placements or unit state.
 ---@param actor integer Wizard performing the check.
