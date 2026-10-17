@@ -357,7 +357,7 @@ fn vehicle_packets(
                 arc: HitArc::Front,
                 character,
                 attacker: Some(attacker),
-                class: DamageClass::Ordinary,
+                class: DamageClass::Impact,
             },
             false,
             rules,

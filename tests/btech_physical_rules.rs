@@ -801,3 +801,61 @@ async fn vehicles_ram_mechs_and_vehicles() {
         .unwrap_err();
     assert!(format!("{error:#}").contains("cannot charge a vehicle"));
 }
+
+/// Armor points a vehicle has left over all its locations.
+fn vehicle_armor(world: &World, id: ObjectId) -> u32 {
+    world.btech.vehicles()[&id]
+        .sections()
+        .values()
+        .map(|section| u32::from(section.armor))
+        .sum()
+}
+
+/// Laser-reflective armor takes physical attacks doubled (Tactical Operations: Advanced Units
+/// & Equipment p. 93): a death from above landing on a vehicle and a ram strip twice the armor
+/// they strip from standard armor under the same dice.
+#[tokio::test]
+async fn reflective_armor_takes_vehicle_landings_and_rams_doubled() {
+    let plain = include_str!("../game/units/Demolisher.toml");
+    let reflective = support::templates::with_flags(plain, &["LaserRefArmor_Tech"]);
+    let mut landings = Vec::new();
+    let mut rams = Vec::new();
+    for source in [plain, reflective.as_str()] {
+        let (_dir, config, mut world, id, _) = kick_fixture().await;
+        dfa_piloting(&mut world);
+        let vehicle = add_vehicle(&mut world, &config, id, source, (5, 5));
+        launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
+        shot_seed(&mut world, id, roll_seed(12));
+        let before = vehicle_armor(&world, vehicle);
+        let report = resolve_battle_dfa(&mut world, id, vehicle, kick_rules()).unwrap();
+        assert!(report.hit && !report.glancing);
+        landings.push(before - vehicle_armor(&world, vehicle));
+
+        let (_dir, _config, mut world, tank, target, _) =
+            firing::fixture_with_target(plain, None, source).await;
+        let map = world.btech.unit(tank).unwrap().position().unwrap().map;
+        world.btech.set_unit_power(target, Power::Off).unwrap();
+        place_battle_unit(&mut world, target, map, 0, 11).unwrap();
+        world.btech.set_unit_power(target, Power::Running).unwrap();
+        refresh_battle_contacts(&mut world, &[tank]).unwrap();
+        world
+            .btech
+            .edit_unit_motion(tank, |motion| {
+                motion.speed = 21.5;
+                motion.desired_speed = 21.5;
+            })
+            .unwrap();
+        let rules = ChargeRules {
+            distance: 1.0,
+            physical: kick_rules(),
+        };
+        shot_seed(&mut world, tank, roll_seed(12));
+        let before = vehicle_armor(&world, target);
+        let report = resolve_battle_ram(&mut world, tank, target, rules).unwrap();
+        assert!(report.hit && !report.glancing);
+        rams.push(before - vehicle_armor(&world, target));
+    }
+    assert!(landings[0] > 0 && rams[0] > 0);
+    assert_eq!(landings[1], 2 * landings[0], "{landings:?}");
+    assert_eq!(rams[1], 2 * rams[0], "{rams:?}");
+}

@@ -386,7 +386,7 @@ fn groups(
                 arc,
                 character,
                 attacker,
-                class: DamageClass::Ordinary,
+                class: DamageClass::Impact,
             },
             arc == HitArc::Rear,
             rules,
