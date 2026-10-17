@@ -1005,9 +1005,14 @@ suite, ahead of the built-in sensors, using its longer brackets (Beagle 12/24/36
 Clan 15/30/45, Light and Watchdog 9/18/27, Bloodhound 16/32/48); nothing blocks
 a probe sweep but the surface of water, and a target it finds shows as a probe
 contact. Guardian and Angel ECM, stealth armor and null signature systems add to
-the sweep roll against them. A damaged probe stops working; `sensor` shows its
-condition. Electromagnetic interference renders every probe useless: it neither
-sweeps nor sees through woods while the condition lasts.
+the sweep roll against them. Hostile ECM jams a probe: inside an enemy ECM bubble,
+or with your own stealth armor engaged, it no longer sees into woods, and no probe
+sees into woods inside the enemy's own ECM bubble. A Bloodhound ignores Guardian,
+Clan and Watchdog ECM but not an Angel suite, and cannot be used at all while your
+stealth armor is engaged. A jammed probe still sweeps, taking the ECM penalty. A
+damaged probe stops working; `sensor` shows its condition. Electromagnetic
+interference renders every probe useless: it neither sweeps nor sees through
+woods while the condition lasts.
 
 ### Radar
 

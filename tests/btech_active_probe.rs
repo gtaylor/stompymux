@@ -174,3 +174,133 @@ async fn probes_let_the_carrier_aim_through_a_point_of_woods() {
         "five hexes is past the Beagle's reach"
     );
 }
+
+/// Put a running tower of `team` at row `y` whose only item is `equipment`, an ECM suite
+/// switched to ECM mode.
+fn ecm_tower(
+    world: &mut World,
+    config: &Config,
+    map: ObjectId,
+    equipment: &str,
+    team: i32,
+    y: i64,
+) -> ObjectId {
+    let id = probe_vehicle(world, config, map, Some(equipment), true, y);
+    set_battle_unit_signature(
+        world,
+        id,
+        UnitSignature {
+            team,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let suite = if equipment == "AngelEcm" {
+        "angel"
+    } else {
+        "guardian"
+    };
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["electronics"][suite] = serde_json::to_value(ElectronicMode::Ecm).unwrap();
+        })
+        .unwrap();
+    id
+}
+
+/// The woods modifier a Beagle and a Bloodhound carrier at the lane's head each take against
+/// the hostile Jenner three hexes off, through two light woods, with an ECM tower of `team`
+/// at row `y`.
+async fn probe_aim_near_ecm(
+    equipment: &str,
+    team: i32,
+    y: i64,
+) -> (World, [ObjectId; 2], [i16; 2]) {
+    let mut rows = vec![".0"; 10];
+    rows[1] = "`0";
+    rows[2] = "`0";
+    let (_dir, config, mut world, map) = lane(&rows).await;
+    let beagle = probe_vehicle(&mut world, &config, map, Some("BeagleProbe"), false, 0);
+    let bloodhound = probe_vehicle(&mut world, &config, map, Some("BloodhoundProbe"), false, 0);
+    let enemy = target(&mut world, &config, map, 3);
+    ecm_tower(&mut world, &config, map, equipment, team, y);
+    seat(&mut world, beagle, ObjectId(1));
+    seat(&mut world, bloodhound, ObjectId(2));
+    refresh_battle_electronic_fields(&mut world).unwrap();
+    refresh_battle_contacts(&mut world, &[beagle, bloodhound]).unwrap();
+    let aim = |shooter| {
+        battle_aim_modifiers(&world, shooter, enemy, 0, 4, shot_rules().aim)
+            .unwrap()
+            .perception
+            .unwrap()
+            .modifier
+    };
+    let modifiers = [aim(beagle), aim(bloodhound)];
+    (world, [beagle, bloodhound], modifiers)
+}
+
+/// A probe on a unit inside a hostile ECM bubble cannot penetrate it, so it no longer sees
+/// into woods (Total Warfare p. 134). A Bloodhound ignores Guardian ECM but not an Angel suite
+/// (Tactical Operations: Advanced Units & Equipment, Bloodhound Active Probe and Angel ECM
+/// Suite). A third side's tower five hexes off covers both carriers and the Jenner without
+/// protecting the Jenner. The jammed probe still sweeps, as the double-blind rules charge the
+/// jamming to its roll (Tactical Operations: Advanced Rules p. 191).
+#[tokio::test]
+async fn hostile_ecm_on_the_carrier_jams_its_probe() {
+    for (equipment, expected, statuses) in [
+        (
+            "IS.Ecm",
+            [2, 1],
+            [PerceptionStatus::Jammed, PerceptionStatus::Ready],
+        ),
+        (
+            "AngelEcm",
+            [2, 2],
+            [PerceptionStatus::Jammed, PerceptionStatus::Jammed],
+        ),
+    ] {
+        let (world, carriers, modifiers) = probe_aim_near_ecm(equipment, 3, 5).await;
+        assert_eq!(modifiers, expected, "{equipment}");
+        for (carrier, status) in carriers.into_iter().zip(statuses) {
+            let report = battle_perception_report(&world, carrier).unwrap();
+            let probe = report.profile.probe.unwrap();
+            assert_eq!(probe.status, status, "{equipment} {:?}", probe.kind);
+            assert!(
+                report
+                    .profile
+                    .sensor
+                    .systems
+                    .iter()
+                    .any(|system| system.mode == SensorMode::Probe),
+                "a jammed probe still sweeps"
+            );
+            if status == PerceptionStatus::Jammed {
+                assert!(report.text.contains("(jammed by ECM)"), "{}", report.text);
+            }
+        }
+    }
+}
+
+/// The target's own side's ECM tower eight hexes from the carriers covers the Jenner but not
+/// them: no Beagle gets through the bubble, a Bloodhound gets through Guardian ECM but not
+/// an Angel suite (Total Warfare p. 134; Tactical Operations: Advanced Units & Equipment,
+/// Bloodhound Active Probe and Angel ECM Suite).
+#[tokio::test]
+async fn ecm_around_the_target_shuts_out_probes_but_a_bloodhound_beats_guardian() {
+    for (equipment, expected) in [("IS.Ecm", [2, 1]), ("AngelEcm", [2, 2])] {
+        let (world, carriers, modifiers) = probe_aim_near_ecm(equipment, 2, 8).await;
+        assert_eq!(modifiers, expected, "{equipment}");
+        for carrier in carriers {
+            assert_eq!(
+                battle_perception_report(&world, carrier)
+                    .unwrap()
+                    .profile
+                    .probe
+                    .unwrap()
+                    .status,
+                PerceptionStatus::Ready
+            );
+        }
+    }
+}

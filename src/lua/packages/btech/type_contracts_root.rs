@@ -245,7 +245,7 @@
 
 // lua-types-begin btech 00043
 //|---@alias DetectionChannel "sight"|"sensors"|"probe" Values from btech.unit.detection_channels.
-//|---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"interference"|"absent"
+//|---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"interference"|"stealth"|"absent"
 //|---@alias SensorMode "infrared"|"magscan"|"radar"|"seismic"|"probe" A sensor system of a unit's suite.
 //|---@alias SensorBand "short"|"medium"|"long"
 // lua-types-end

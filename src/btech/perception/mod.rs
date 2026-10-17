@@ -93,13 +93,19 @@ pub struct Perception {
 pub enum PerceptionStatus {
     /// Working.
     Ready,
-    /// Working while hostile ECM adds to its sweeps.
+    /// Shut out by hostile ECM: an active probe on a unit inside a hostile ECM bubble, or on a
+    /// unit with stealth armor engaged, cannot penetrate it (Total Warfare pp. 134, 142). It
+    /// still sweeps in the double-blind rules, which charge the jamming to the sweep roll
+    /// instead (Tactical Operations: Advanced Rules p. 191).
     Jammed,
     /// Destroyed or otherwise failed equipment.
     Damaged,
     /// Rendered useless by electromagnetic interference over the battlefield, as every active
     /// probe is (Tactical Operations: Advanced Rules p. 53).
     Interference,
+    /// Unusable while the carrier's own stealth armor is engaged, as a Bloodhound active probe
+    /// is (Tactical Operations: Advanced Units & Equipment, Bloodhound Active Probe).
+    Stealth,
     /// The unit carries no such equipment.
     Absent,
 }
@@ -146,6 +152,54 @@ pub struct ProbeProfile {
     /// Operations: Advanced Rules p. 97).
     pub range: u16,
     pub status: PerceptionStatus,
+}
+
+impl ProbeProfile {
+    /// Whether the probe sweeps with the sensor suite: when working, and when jammed, since
+    /// the double-blind rules charge the jamming to the sweep roll (Tactical Operations:
+    /// Advanced Rules p. 191).
+    pub fn sweeps(self) -> bool {
+        matches!(
+            self.status,
+            PerceptionStatus::Ready | PerceptionStatus::Jammed
+        )
+    }
+
+    /// Whether the probe sees through hostile ECM around a target: a Bloodhound ignores
+    /// Guardian, Clan and Watchdog ECM, but nothing gets through an Angel suite (Total Warfare
+    /// p. 134; Tactical Operations: Advanced Units & Equipment, Bloodhound Active Probe and
+    /// Angel ECM Suite).
+    fn penetrates(self, guardian: bool, angel: bool) -> bool {
+        !angel && (!guardian || self.kind == ActiveProbe::Bloodhound)
+    }
+}
+
+/// The hostile electronic warfare on a probe's carrier that can shut the probe out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ProbeJamming {
+    /// A hostile Guardian, Clan or Watchdog ECM suite, or an iNarc ECM pod, covers the carrier.
+    guardian: bool,
+    /// A hostile Angel ECM suite covers the carrier.
+    angel: bool,
+    /// The carrier's stealth armor is engaged, which leaves it as if inside hostile ECM
+    /// (Total Warfare p. 142).
+    stealth: bool,
+}
+
+impl ProbeJamming {
+    /// The status a working probe of `kind` takes under this jamming. Engaged stealth armor
+    /// jams every probe and leaves a Bloodhound unusable; an Angel suite jams every probe; any
+    /// other ECM jams all but the Bloodhound (Total Warfare pp. 134, 142; Tactical Operations:
+    /// Advanced Units & Equipment, Bloodhound Active Probe and Angel ECM Suite).
+    fn status(self, kind: ActiveProbe) -> PerceptionStatus {
+        if self.stealth && kind == ActiveProbe::Bloodhound {
+            return PerceptionStatus::Stealth;
+        }
+        if self.stealth || self.angel || (self.guardian && kind != ActiveProbe::Bloodhound) {
+            return PerceptionStatus::Jammed;
+        }
+        PerceptionStatus::Ready
+    }
 }
 
 /// Everything an observer can currently perceive with, computed once per observation.
@@ -227,7 +281,16 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         sight_range
     };
     let field = crate::btech::electronic_field(world, observer)?;
-    let probe = probe_profile(world, observer, map.electromagnetic_interference())?;
+    let jamming = ProbeJamming {
+        guardian: field.disturbed,
+        angel: field.angel_disturbed,
+        stealth: world
+            .btech
+            .constructed_units()
+            .get(&observer)
+            .is_some_and(|mech| mech.stealth().enabled),
+    };
+    let probe = probe_profile(world, observer, map.electromagnetic_interference(), jamming)?;
     let sensor = sensor_profile(world, observer, &unit, probe, field.disturbed)?;
     let point = crate::btech::los::unit_sight_point(world, observer)?;
     Ok(PerceptionProfile {
@@ -268,9 +331,9 @@ fn sensor_profile(
     let probe_kind = probe.map(|probe| probe.kind);
     let probe_clan = probe.is_some_and(|probe| probe.clan);
     let mut systems = Vec::new();
-    // A working probe sweeps first, with its own brackets, so a target it finds shows as a
-    // probe contact; the built-in sensors follow.
-    if probe.is_some_and(|probe| probe.status == PerceptionStatus::Ready) {
+    // A working or jammed probe sweeps first, with its own brackets, so a target it finds
+    // shows as a probe contact; the built-in sensors follow.
+    if probe.is_some_and(ProbeProfile::sweeps) {
         systems.push(SensorSystem {
             mode: SensorMode::Probe,
             bands: SensorBands::of(SensorMode::Probe, unit.vehicle, probe_kind, probe_clan),
@@ -304,11 +367,13 @@ fn sensor_profile(
 
 /// Pick the working probe with the longest reach, or else the best installed one as damaged.
 /// Under electromagnetic `interference` the working probe is useless: it neither sweeps nor
-/// sees through woods (Tactical Operations: Advanced Rules p. 53).
+/// sees through woods (Tactical Operations: Advanced Rules p. 53). Hostile `jamming` on the
+/// carrier shuts it out as [`ProbeJamming::status`] says.
 fn probe_profile(
     world: &World,
     observer: ObjectId,
     interference: bool,
+    jamming: ProbeJamming,
 ) -> Result<Option<ProbeProfile>> {
     // Build the equipment projection once and check every family against it. Each fitted
     // probe reaches by its own technology base, not the chassis's.
@@ -349,7 +414,7 @@ fn probe_profile(
             status: if interference {
                 PerceptionStatus::Interference
             } else {
-                PerceptionStatus::Ready
+                jamming.status(kind)
             },
         }));
     }
@@ -365,7 +430,8 @@ pub fn perceive(world: &World, observer: ObjectId, target: ObjectId) -> Result<O
 /// Cover an attack on `target` must clear, from the terrain already traced between the
 /// units: woods, smoke and crops along the line and in the target's hex, partial cover and
 /// hull-down posture behind it, less the woods a probe within reach lets the shooter see
-/// through (Tactical Operations p. 97).
+/// through (Tactical Operations p. 97). The probe must work and get through any ECM bubble
+/// the target's side has around it (Total Warfare p. 134).
 pub(crate) fn cover_aim(
     world: &World,
     profile: &PerceptionProfile,
@@ -376,14 +442,37 @@ pub(crate) fn cover_aim(
     let hull_down = crate::btech::hull_down::cover_modifier(world, target, terrain.partial_cover);
     let cover = sight::cover(terrain, hull_down);
     let woods = i16::from(terrain.woods) + i16::from(terrain.target_woods);
-    let probe_helps = profile
+    if woods == 0 {
+        return cover;
+    }
+    let Some(probe) = profile
         .ready_probe()
-        .is_some_and(|probe| !terrain.blocked && range.hex_distance <= u64::from(probe.range));
-    if probe_helps && woods > 0 {
+        .filter(|probe| !terrain.blocked && range.hex_distance <= u64::from(probe.range))
+    else {
+        return cover;
+    };
+    if probe_reaches(world, profile, probe, target) {
         cover - 1
     } else {
         cover
     }
+}
+
+/// Whether `probe` gets through the ECM around `target`: the target's own side's working ECM
+/// is hostile to an observer on another team (Total Warfare p. 134).
+fn probe_reaches(
+    world: &World,
+    profile: &PerceptionProfile,
+    probe: ProbeProfile,
+    target: ObjectId,
+) -> bool {
+    let hostile = crate::btech::scanner::scanner_unit(world, target)
+        .is_some_and(|unit| unit.signature.team != profile.team);
+    if !hostile {
+        return true;
+    }
+    crate::btech::electronic_field(world, target)
+        .is_ok_and(|field| probe.penetrates(field.protected, field.angel_protected))
 }
 
 /// Perceive one target, reusing an observation's profile, pair geometry and lighting cache.
@@ -694,5 +783,53 @@ mod tests {
         let mut sorted = DetectionChannel::ALL;
         sorted.sort();
         assert_eq!(sorted, DetectionChannel::ALL);
+    }
+
+    /// Hostile ECM on the carrier jams every probe but the Bloodhound, an Angel suite jams
+    /// them all, and engaged stealth armor jams them all and leaves a Bloodhound unusable
+    /// (Total Warfare pp. 134, 142; TO:AUE Bloodhound Active Probe, Angel ECM Suite). Jammed
+    /// probes still sweep; a stealth carrier's Bloodhound does not.
+    #[test]
+    fn carrier_jamming_decides_probe_status() {
+        use ActiveProbe::{Beagle, Bloodhound, Light, Watchdog};
+        use PerceptionStatus::{Jammed, Ready, Stealth};
+        let jamming = |guardian, angel, stealth| ProbeJamming {
+            guardian,
+            angel,
+            stealth,
+        };
+        let statuses = |jamming: ProbeJamming| {
+            [Beagle, Light, Watchdog, Bloodhound].map(|kind| jamming.status(kind))
+        };
+        assert_eq!(
+            statuses(jamming(false, false, false)),
+            [Ready, Ready, Ready, Ready]
+        );
+        assert_eq!(
+            statuses(jamming(true, false, false)),
+            [Jammed, Jammed, Jammed, Ready]
+        );
+        assert_eq!(
+            statuses(jamming(false, true, false)),
+            [Jammed, Jammed, Jammed, Jammed]
+        );
+        assert_eq!(
+            statuses(jamming(false, false, true)),
+            [Jammed, Jammed, Jammed, Stealth]
+        );
+        let profile = |kind, status| ProbeProfile {
+            kind,
+            clan: false,
+            range: 4,
+            status,
+        };
+        assert!(profile(Beagle, Jammed).sweeps());
+        assert!(!profile(Bloodhound, Stealth).sweeps());
+        assert!(!profile(Beagle, PerceptionStatus::Interference).sweeps());
+        // Around the target: a Bloodhound gets through Guardian ECM, nothing through Angel.
+        assert!(profile(Beagle, Ready).penetrates(false, false));
+        assert!(!profile(Beagle, Ready).penetrates(true, false));
+        assert!(profile(Bloodhound, Ready).penetrates(true, false));
+        assert!(!profile(Bloodhound, Ready).penetrates(false, true));
     }
 }

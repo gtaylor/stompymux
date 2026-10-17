@@ -215,7 +215,7 @@ Alias: `"sight"|"sensors"|"probe" Values from btech.unit.detection_channels.`
 
 ## PerceptionStatus
 
-Alias: `"ready"|"jammed"|"damaged"|"interference"|"absent"`
+Alias: `"ready"|"jammed"|"damaged"|"interference"|"stealth"|"absent"`
 
 ## SensorMode
 

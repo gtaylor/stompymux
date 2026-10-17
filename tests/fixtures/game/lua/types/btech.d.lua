@@ -252,7 +252,7 @@ function btech_unit.inspect(dbref) end
 ---@field piloting_modifier integer Damage modifier for subsequent piloting checks.
 
 ---@alias DetectionChannel "sight"|"sensors"|"probe" Values from btech.unit.detection_channels.
----@alias PerceptionStatus "ready"|"jammed"|"damaged"|"interference"|"absent"
+---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"interference"|"stealth"|"absent"
 ---@alias SensorMode "infrared"|"magscan"|"radar"|"seismic"|"probe" A sensor system of a unit's suite.
 ---@alias SensorBand "short"|"medium"|"long"
 

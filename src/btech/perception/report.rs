@@ -70,7 +70,10 @@ fn sensors_line(profile: &PerceptionProfile) -> String {
         PerceptionStatus::Absent => return "Sensors: none".into(),
         PerceptionStatus::Damaged => return "Sensors: destroyed".into(),
         // Electromagnetic interference silences only active probes, never the built-in sensors.
-        PerceptionStatus::Ready | PerceptionStatus::Jammed | PerceptionStatus::Interference => {}
+        PerceptionStatus::Ready
+        | PerceptionStatus::Jammed
+        | PerceptionStatus::Interference
+        | PerceptionStatus::Stealth => {}
     }
     let systems = sensor
         .systems
@@ -133,6 +136,7 @@ fn status_suffix(status: PerceptionStatus) -> &'static str {
         PerceptionStatus::Jammed => " (jammed by ECM)",
         PerceptionStatus::Damaged => " (destroyed)",
         PerceptionStatus::Interference => " (useless under electromagnetic interference)",
+        PerceptionStatus::Stealth => " (unusable with stealth armor engaged)",
     }
 }
 
