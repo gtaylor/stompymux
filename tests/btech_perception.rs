@@ -582,3 +582,50 @@ async fn probe_sweeps_with_the_probes_brackets() {
     );
     lane.world.validate(&lane.config).unwrap();
 }
+
+/// Visual range counts hexes (Tactical Operations: Advanced Rules p. 189): a VTOL flying
+/// thirty levels, six hexes, up sees a Jenner directly below it and three hexes off in pitch
+/// black, although the spatial distance to either is over six hexes; four hexes off is
+/// beyond its three-hex reach.
+#[tokio::test]
+async fn a_high_vtol_sees_a_target_below_it_within_its_visual_range_in_hexes() {
+    let kestrel = include_str!("../game/units/Kestrel.toml");
+    let jenner = include_str!("../game/units/JR7-D.toml");
+    for (range, seen) in [(0, true), (3, true), (4, false)] {
+        let (_dir, config, world) = support::isolated_world().await;
+        let (mut world, observer, target, _) = support::btech_firing::lane_fixture_on(
+            world,
+            &config,
+            (kestrel, None, false, None),
+            jenner,
+            range,
+        );
+        support::btech_firing::edit(&mut world, observer, |state| {
+            state["vtol_flight"]["phase"] = serde_json::json!({"kind": "airborne"});
+            state["vtol_flight"]["altitude"] = serde_json::json!(30.0);
+        });
+        let map = world.btech.units()[&observer].map.unwrap();
+        set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
+        let measured = battle_unit_range(&world, observer, target).unwrap();
+        assert_eq!(measured.hex_distance, u64::from(range));
+        assert!(measured.spatial >= 6.0, "{range}: {}", measured.spatial);
+        assert_eq!(
+            battle_perceive(&world, observer, target)
+                .unwrap()
+                .map(|perception| (perception.channel, perception.identified)),
+            seen.then_some((Sight, true)),
+            "{range} hexes"
+        );
+        let position = world.btech.unit(target).unwrap().position().unwrap();
+        let hex = HexCoordinate {
+            x: i32::from(position.x),
+            y: i32::from(position.y),
+        };
+        assert_eq!(
+            battle_hex_visible(&world, observer, hex).unwrap(),
+            seen,
+            "{range} hexes"
+        );
+        world.validate(&config).unwrap();
+    }
+}

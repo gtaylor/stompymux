@@ -435,7 +435,7 @@ pub(crate) fn perceive_prepared(
     };
     let facts = SightFacts {
         terrain,
-        distance: range.spatial,
+        distance: range.hexes(),
         target_underwater,
         crosses_clouds: crate::btech::clouds::crosses(
             profile.cloud_base,
@@ -604,7 +604,9 @@ pub(crate) fn hex_perception_prepared(
     let unit = crate::btech::scanner::scanner_unit(world, observer)
         .context("Observer is not constructed")?;
     let position = unit.position.context("Observer is not placed")?;
-    let (terrain, distance) = crate::btech::los::unit_hex_los(world, observer, target)?;
+    let (terrain, _) = crate::btech::los::unit_hex_los(world, observer, target)?;
+    // The Visual Range Table counts hexes (Tactical Operations: Advanced Rules p. 189).
+    let distance = crate::btech::geometry::unit_hex_range(world, observer, target)?;
     if require_running && unit.power != Power::Running {
         return Ok(None);
     }

@@ -49,7 +49,8 @@ grouping fired at a unit inside it. See `help piloting` for entering buildings.
 ## Sight
 
 Sight is automatic. A target with a clear line is seen when it is within the
-visual range the light and the weather allow, whichever is shorter:
+visual range the light and the weather allow, whichever is shorter. Visual range
+counts hexes on the map, so height above or below the target never adds to it:
 
 | Light | Range | Weather | Range |
 | --- | --- | --- | --- |

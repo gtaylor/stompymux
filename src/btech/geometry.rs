@@ -11,7 +11,7 @@ pub struct Range {
     /// Euclidean distance between the two continuous map positions, in hex heights.
     pub horizontal: f64,
     /// Euclidean distance including the height difference, five levels to a hex. Line of
-    /// sight and sight ranges use it; weapon range does not.
+    /// sight and its cutoff use it; weapon and visual ranges do not.
     pub spatial: f64,
     pub bearing: Option<f64>,
     /// Hexes from the first unit's hex to the second's, counting the second's hex.
