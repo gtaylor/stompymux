@@ -681,6 +681,13 @@ targeting and towing. The header includes power and condition banners.
 
 ### Physical attacks and the turn
 
+Punches, kicks, trips, clubs and physical weapons reach a target in your own hex or
+any of the six adjacent hexes, counted in hexes as weapon range is (Total Warfare
+p. 144). Height does not count against that reach; instead the level rules decide:
+a standing Mech one level up can be punched, clubbed or struck with a weapon but not
+kicked, one a level down can be kicked, clubbed or struck with a weapon but not
+punched, and nothing reaches a target two or more levels away (Total Warfare p. 150).
+
 A Mech makes one physical attack in a thirty-second turn (Total Warfare p. 144).
 Punching with both arms, or striking with both claws, in one command is a single
 attack; a second physical weapon is not. After a punch, kick, trip, club or weapon

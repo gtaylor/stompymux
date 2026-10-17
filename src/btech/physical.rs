@@ -838,8 +838,11 @@ fn attack_profile_inner(
             "Friendly Fire? I don't think so..."
         );
     }
+    // A physical attack reaches the attacker's own hex and the six around it, counted in
+    // hexes as weapon range is (Total Warfare p. 144). Height never adds to the reach: the
+    // level rules below decide which attacks a level difference allows (Total Warfare p. 150).
     let range = unit_range(world, attacker, target)?;
-    ensure!(range.spatial < 1.0, "Target out of range!");
+    ensure!(range.hexes() <= 1.0, "Target out of range!");
     ensure!(
         super::visibility::unit_unblocked(world, attacker, target)?,
         "Target is not in line of sight!"

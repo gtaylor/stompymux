@@ -9527,3 +9527,60 @@ async fn dfa_excludes_weapon_fire_and_physical_attacks_for_one_turn() {
     }
     world.validate(&config).unwrap();
 }
+
+/// Physical attacks reach the attacker's own hex and the six around it, counted in hexes as
+/// weapon range is (Total Warfare p. 144): the adjacent hex is in reach though its centre is a
+/// full hex away, and the next one out is not. A level difference never adds to the reach;
+/// the book's level rules decide instead, so a target one level up an adjacent hill can be
+/// punched but not kicked, and one two levels up cannot be attacked at all (Total Warfare
+/// p. 150).
+#[tokio::test]
+async fn physical_reach_counts_hexes_and_leaves_levels_to_the_level_rules() {
+    use stompymux_rs::*;
+    let (_dir, _config, base, id, target) = kick_fixture().await;
+    let map = base.btech.constructed_units()[&id].position().unwrap().map;
+    let width = base.btech.maps()[&map].width as usize;
+    let attempt = |level: u8, y: u16| {
+        let mut world = base.clone();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                support::set_hex_elevation(
+                    &mut record["terrain"][usize::from(y) * width + 5],
+                    level,
+                );
+            })
+            .unwrap();
+        place_battle_unit(&mut world, target, map, 5, i64::from(y)).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
+        let range = battle_unit_range(&world, id, target).unwrap();
+        let punch = battle_punch_profile(&world, id, ObjectId(1), target, Arm::Right, kick_rules())
+            .map_err(|error| format!("{error:#}"));
+        let kick = battle_kick_profile(&world, id, ObjectId(1), target, Leg::Right, kick_rules())
+            .map_err(|error| format!("{error:#}"));
+        (range, punch, kick)
+    };
+    let (range, punch, kick) = attempt(0, 4);
+    assert_eq!(range.hexes(), 1.0);
+    assert!(range.spatial >= 1.0, "{range:?}");
+    punch.unwrap();
+    kick.unwrap();
+    let (range, punch, kick) = attempt(0, 3);
+    assert_eq!(range.hexes(), 2.0);
+    assert_eq!(punch.unwrap_err(), "Target out of range!");
+    assert_eq!(kick.unwrap_err(), "Target out of range!");
+    let (range, punch, kick) = attempt(1, 4);
+    assert!(range.spatial > 1.0, "{range:?}");
+    punch.unwrap();
+    assert!(kick.unwrap_err().contains("too high in elevation"));
+    let (_, punch, kick) = attempt(2, 4);
+    assert!(
+        punch
+            .unwrap_err()
+            .contains("elevation difference is too large")
+    );
+    assert!(
+        kick.unwrap_err()
+            .contains("elevation difference is too large")
+    );
+}
