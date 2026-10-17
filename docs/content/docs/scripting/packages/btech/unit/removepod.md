@@ -5,7 +5,7 @@ linkTitle: "removepod"
 manualLinkTitle: "removepod"
 ---
 
-Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM.
+Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM, Z Nemesis.
 
 ## Signature
 

@@ -3205,7 +3205,7 @@ async fn gatling_matrix(weapons: &[stompymux_rs::Weapon]) {
     let mut probed_restart = false;
     let mut probed_fire = false;
     for weapon in weapons.iter().copied() {
-        for supply in [0_u16, 1, 2, 3, 5, 6, 17, 18] {
+        for supply in [0_u16, 1, 2, 3, 5, 6, 17, 18, 21] {
             for skill in [0, 30] {
                 restore_database(&config, &pristine_db);
                 let mut base = pristine.clone();
@@ -3351,7 +3351,14 @@ async fn gatling_matrix(weapons: &[stompymux_rs::Weapon]) {
                     );
                     assert_eq!(restored.btech, expected.btech);
                 }
-                let damage = (supply / 3).clamp(1, 6) as u8;
+                // A six rolls 5 for a light machine gun and 7 for a heavy one (Tactical
+                // Operations p. 100), three rounds a point.
+                let rolled: u16 = match weapon {
+                    Weapon::LightMachineGun | Weapon::ClanLightMachineGun => 5,
+                    Weapon::HeavyMachineGun | Weapon::ClanHeavyMachineGun => 7,
+                    _ => 6,
+                };
+                let damage = rolled.min((supply / 3).max(1)) as u8;
                 let spent = supply.min(u16::from(damage) * 3);
                 assert_eq!(report.roll, 6);
                 assert!(report.launched && !report.jammed && !report.loader_destroyed);

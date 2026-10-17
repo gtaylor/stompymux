@@ -93,8 +93,9 @@ pub(super) async fn load(
             .collect::<Result<Vec<_>>>()?;
         map.terrain = Some(std::sync::Arc::new(tiles));
         let mut damage = BTreeMap::new();
+        let mut ultra = BTreeSet::new();
         for entry in
-            sqlx::query("SELECT tile,damage FROM btech_map_terrain_damage WHERE map_dbref=?")
+            sqlx::query("SELECT tile,damage,ultra FROM btech_map_terrain_damage WHERE map_dbref=?")
                 .bind(id.0)
                 .fetch_all(&mut *c)
                 .await?
@@ -106,36 +107,62 @@ pub(super) async fn load(
                 "Out-of-bounds terrain damage for map #{}",
                 id.0
             );
-            damage.insert(
-                u32::try_from(tile)?,
-                u16::try_from(points).context("Invalid terrain damage")?,
-            );
+            let tile = u32::try_from(tile)?;
+            if points > 0 {
+                damage.insert(
+                    tile,
+                    u16::try_from(points).context("Invalid terrain damage")?,
+                );
+            }
+            if entry.try_get::<i64, _>("ultra")? != 0 {
+                ultra.insert(tile);
+            }
         }
         map.terrain_damage = std::sync::Arc::new(damage);
+        map.ultra_woodland = std::sync::Arc::new(ultra);
         map.validate()?;
     }
     Ok(())
 }
 
-/// Write the terrain factor damage of a map's hexes, touching only the tiles that changed.
+/// Write the terrain factor damage of a map's hexes and the ultra-heavy origin of their
+/// thinned growth, touching only the tiles that changed.
 pub(super) async fn save_damage(
     c: &mut SqliteConnection,
     id: ObjectId,
     map: &StoredMap,
 ) -> Result<()> {
     let mut previous = BTreeMap::new();
-    for entry in sqlx::query("SELECT tile,damage FROM btech_map_terrain_damage WHERE map_dbref=?")
-        .bind(id.0)
-        .fetch_all(&mut *c)
-        .await?
+    for entry in
+        sqlx::query("SELECT tile,damage,ultra FROM btech_map_terrain_damage WHERE map_dbref=?")
+            .bind(id.0)
+            .fetch_all(&mut *c)
+            .await?
     {
         let tile: i64 = entry.try_get("tile")?;
-        previous.insert(tile, entry.try_get::<i64, _>("damage")?);
+        previous.insert(
+            tile,
+            (
+                entry.try_get::<i64, _>("damage")?,
+                entry.try_get::<i64, _>("ultra")?,
+            ),
+        );
     }
-    for (&tile, &damage) in map.terrain_damage.iter() {
-        let old = previous
-            .remove(&i64::from(tile))
-            .map(|damage| Fields::from([("damage", Cell::Integer(damage))]));
+    let tiles: BTreeSet<u32> = map
+        .terrain_damage
+        .keys()
+        .chain(map.ultra_woodland.iter())
+        .copied()
+        .collect();
+    for tile in tiles {
+        let damage = i64::from(map.terrain_damage.get(&tile).copied().unwrap_or(0));
+        let ultra = i64::from(map.ultra_woodland.contains(&tile));
+        let old = previous.remove(&i64::from(tile)).map(|(damage, ultra)| {
+            Fields::from([
+                ("damage", Cell::Integer(damage)),
+                ("ultra", Cell::Integer(ultra)),
+            ])
+        });
         row(
             c,
             "btech_map_terrain_damage",
@@ -144,7 +171,10 @@ pub(super) async fn save_damage(
                 ("tile", Cell::Integer(i64::from(tile))),
             ]),
             old.as_ref(),
-            &Fields::from([("damage", Cell::Integer(i64::from(damage)))]),
+            &Fields::from([
+                ("damage", Cell::Integer(damage)),
+                ("ultra", Cell::Integer(ultra)),
+            ]),
         )
         .await?;
     }

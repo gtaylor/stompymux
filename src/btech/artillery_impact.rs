@@ -35,6 +35,8 @@ pub struct ArtilleryImpactReport {
     pub hits: Vec<ArtilleryHit>,
     /// Buildings, walls and bridges the blast struck, in cell order.
     pub structures: Vec<ArtilleryStructureHit>,
+    /// Woods and jungle the blast thinned or felled, in cell order (Total Warfare p. 112).
+    pub woods: Vec<super::WoodlandChange>,
     pub mines: Vec<u32>,
     pub notices: Vec<Notice>,
     /// Pilot-only packet feedback indexed into the arrival notice stream.
@@ -81,9 +83,10 @@ pub(super) fn advance(
     // reach, and otherwise falls on its hex as the unguided attack.
     if cursor.mode() == ArtilleryMode::Homing
         && cursor.remaining() == 1
-        && let Some(target) =
-            shooter.and_then(|shooter| homing_target(&candidate, map, shooter, cursor.target()))
+        && let Some(shooter) = shooter
+        && let Some(target) = homing_target(&candidate, map, shooter, cursor.target())
     {
+        let target = nemesis_lure(&mut candidate, map, shooter, target)?;
         let report = home(&mut candidate, map, &mut cursor, target, rules, character)?;
         candidate.btech.validate_action(&candidate)?;
         *world = candidate;
@@ -118,6 +121,7 @@ pub(super) fn advance(
         pattern,
         hits: Vec::new(),
         structures: Vec::new(),
+        woods: Vec::new(),
         mines: Vec::new(),
         notices,
         pilot_notices: Vec::new(),
@@ -222,8 +226,8 @@ fn deposit_mine(
     Ok(Some(ordinal))
 }
 
-/// Damage lost for every level above or below the shell's burst in its own hex (Tactical
-/// Operations: Advanced Rules p. 150).
+/// Damage lost for every level above the shell's burst in its own hex over dry ground
+/// (Tactical Operations: Advanced Rules p. 150).
 const VERTICAL_FALLOFF: u16 = 10;
 
 /// How a blast reaches a unit at `level` in a building hex: the whole Damage Value inside a
@@ -248,12 +252,96 @@ fn building_damage(tile: Hex, level: i32, damage: u16, direct: bool) -> Option<u
     })
 }
 
+/// What the blast in one cell does to one unit: the damage it takes, and the table a 'Mech
+/// takes it on in place of the cell's own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Reach {
+    damage: u16,
+    /// The Punch Hit Location Table for a 'Mech wading in water next to a dry impact hex.
+    punch: bool,
+    /// The Special 'Mech Hit Location Table, with whether the blast is above the 'Mech.
+    special: Option<bool>,
+}
+
+/// Where a unit stands in a blast cell, as far as the blast cares.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Occupant {
+    level: i32,
+    mech: bool,
+    /// Entirely under the water (see [`super::los::unit_underwater`]).
+    underwater: bool,
+}
+
+/// The blast's reach into one cell (Tactical Operations: Advanced Rules pp. 150, 152; Total
+/// Warfare pp. 113, 172-173). A building hex follows [`building_damage`]. Water follows the
+/// area-effect rules for buildings when the round lands in water, with the surface as the
+/// struck level: in the impact hex the levels just above and below it take the whole Damage
+/// Value and the next ones half, and around it the levels just above and below take half;
+/// next to a dry impact hex a unit entirely under the water takes nothing and a 'Mech wading
+/// there takes the blast on the Punch table. On dry ground the impact hex's damage climbs,
+/// losing ten points a level, and the hexes around it reach only units on the ground. A 'Mech
+/// on a level above or below the struck level of a building or water hex takes its hits on
+/// the Special 'Mech Hit Location Table. `multi_hex` says whether the round also damages the
+/// hexes around its impact; a single-hex round reaches the levels next to the struck one at
+/// half.
+fn reach(
+    tile: Hex,
+    occupant: Occupant,
+    damage: u16,
+    (direct, multi_hex, water_impact): (bool, bool, bool),
+) -> Reach {
+    let special = |struck: i32| {
+        (occupant.mech && occupant.level != struck).then_some(occupant.level < struck)
+    };
+    let plain = |damage| Reach {
+        damage,
+        punch: false,
+        special: None,
+    };
+    if let Some(damage) = building_damage(tile, occupant.level, damage, direct) {
+        return Reach {
+            damage,
+            punch: false,
+            special: special(i32::from(tile.surface_height())),
+        };
+    }
+    let ground = i32::from(tile.top_height());
+    if tile.is_open_water() {
+        if !water_impact {
+            if occupant.underwater || occupant.level > ground {
+                return plain(0);
+            }
+            return Reach {
+                damage,
+                punch: occupant.mech && occupant.level < ground,
+                special: None,
+            };
+        }
+        let whole = if direct && multi_hex { 1 } else { 0 };
+        let damage = match (occupant.level - ground).unsigned_abs() {
+            levels if levels <= whole => damage,
+            levels if levels == whole + 1 => damage.div_ceil(2),
+            _ => 0,
+        };
+        return Reach {
+            damage,
+            punch: false,
+            special: special(ground),
+        };
+    }
+    if !direct {
+        return plain(if occupant.level == ground { damage } else { 0 });
+    }
+    let Ok(levels) = u16::try_from(occupant.level - ground) else {
+        return plain(0);
+    };
+    plain(damage.saturating_sub(levels.saturating_mul(VERTICAL_FALLOFF)))
+}
+
 /// Freeze each occupant's blast arc before ordered packets. The shell bursts on the ground of
-/// its hex, or the roof of a structure, and strikes from the direction of the gun (Tactical
-/// Operations: Advanced Rules p. 150); in the impact hex alone the blast also climbs and
-/// sinks, losing ten points a level, while the outer rings reach only units standing on the
-/// ground. Units inside a building take [`building_damage`] instead, before the structure
-/// itself takes its share.
+/// its hex, the roof of a structure or the surface of water, and strikes from the direction of
+/// the gun (Tactical Operations: Advanced Rules p. 150); [`reach`] gives what it does to each
+/// unit, before the structure itself takes its share and any woods take theirs.
 fn hit_cell(
     world: &mut World,
     report: &mut ArtilleryImpactReport,
@@ -272,26 +360,21 @@ fn hit_cell(
         structures,
     } = blast;
     let coordinate = cell.position;
-    let tile = world.btech.maps()[&report.map]
-        .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let ground = i32::from(tile.top_height());
-    // The outer rings reach units on the ground or just above it, as a mine blast does.
-    let (mut lower, upper) = if cell.direct {
-        let reach = i32::from(damage.div_ceil(VERTICAL_FALLOFF));
-        (ground - reach, ground + reach)
-    } else {
-        (ground - 2, ground + 2)
-    };
-    // Every level inside a building is within the blast's reach.
-    if tile.has_building() {
-        lower = lower.min(i32::from(tile.level()) - 1);
-    }
+    let record = &world.btech.maps()[&report.map];
+    let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    let water_impact = record
+        .base_hex(
+            i64::from(report.pattern.impact.x),
+            i64::from(report.pattern.impact.y),
+        )
+        .is_ok_and(Hex::is_open_water);
+    let multi_hex = report.pattern.cells.len() > 1;
     let blast = super::blast_damage::BlastCell {
         coordinate,
         origin: origin.center(),
         tile,
-        lower,
-        upper,
+        lower: i32::MIN,
+        upper: i32::MAX,
     };
     for id in super::map_slots::all_unit_order(world, report.map)? {
         if spared == Some(id) {
@@ -306,16 +389,20 @@ fn hit_cell(
             "Artillery impact requires character consequence publication"
         );
         let inside = super::building_interior::inside(tile, target.elevation);
+        let reached = reach(
+            tile,
+            Occupant {
+                level: target.elevation,
+                mech: world.btech.constructed_units().contains_key(&id),
+                underwater: super::los::unit_underwater(world, id)?,
+            },
+            damage,
+            (cell.direct, multi_hex, water_impact),
+        );
         let damage = if sheltered && inside {
             0
-        } else if let Some(damage) = building_damage(tile, target.elevation, damage, cell.direct) {
-            damage
-        } else if cell.direct {
-            let levels =
-                u16::try_from((target.elevation - ground).unsigned_abs()).unwrap_or(u16::MAX);
-            damage.saturating_sub(levels.saturating_mul(VERTICAL_FALLOFF))
         } else {
-            damage
+            reached.damage
         };
         if damage == 0 {
             continue;
@@ -354,11 +441,16 @@ fn hit_cell(
             super::blast_damage::BlastDamage {
                 damage,
                 packet_size,
-                table,
+                table: if reached.punch {
+                    HitTable::Punch
+                } else {
+                    table
+                },
                 arc,
                 heat: 0,
                 character: is_character,
                 class: DamageClass::AreaEffect,
+                special: reached.special,
             },
             rules,
         )?;
@@ -374,6 +466,11 @@ fn hit_cell(
     }
     if !structures {
         return Ok(());
+    }
+    if let Some(change) =
+        super::woodland_map::area_effect_woodland(world, report.map, coordinate, damage)?
+    {
+        report.woods.push(change);
     }
     strike_structure(world, report, cell, damage, rules, character)
 }
@@ -407,7 +504,7 @@ fn homing_target(
     shooter: ObjectId,
     aim: HexCoordinate,
 ) -> Option<ObjectId> {
-    let team = super::scanner::scanner_unit(world, shooter)?.signature.team;
+    super::scanner::scanner_unit(world, shooter)?;
     let mut candidates: Vec<(u64, ObjectId)> = super::map_slots::all_unit_order(world, map)
         .ok()?
         .into_iter()
@@ -417,14 +514,12 @@ fn homing_target(
             if unit.destroyed {
                 return None;
             }
-            let tagger = super::tagged_by(world, id)?;
-            let friendly = super::scanner::scanner_unit(world, tagger)
-                .is_some_and(|tagger| tagger.signature.team == team);
+            super::tag::friendly_tagger(world, shooter, id)?;
             let distance = aim.distance(HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             });
-            (friendly && distance <= HOMING_REACH).then_some((distance, id))
+            (distance <= HOMING_REACH).then_some((distance, id))
         })
         .collect();
     let locked = match super::targeting::selection(world, shooter) {
@@ -436,6 +531,70 @@ fn homing_target(
     }
     candidates.sort_by_key(|(distance, _)| *distance);
     candidates.first().map(|(_, id)| *id)
+}
+
+/// The unit an arriving homing missile strikes once Nemesis pods have had their say (Tactical
+/// Operations: Advanced Units & Equipment p. 166): when 'Mechs on the firer's side carrying
+/// Nemesis pods stand next to the designated target, 1D6 from the map's stream decides, and on
+/// 1-3 the missile strikes one of them, each as likely as the others; on 4-6 it keeps to its
+/// target.
+fn nemesis_lure(
+    world: &mut World,
+    map: ObjectId,
+    shooter: ObjectId,
+    target: ObjectId,
+) -> Result<ObjectId> {
+    let Some(team) = super::scanner::scanner_unit(world, shooter).map(|unit| unit.signature.team)
+    else {
+        return Ok(target);
+    };
+    let Some(aim) = super::scanner::scanner_unit(world, target).and_then(|unit| unit.position)
+    else {
+        return Ok(target);
+    };
+    let aim = HexCoordinate {
+        x: i32::from(aim.x),
+        y: i32::from(aim.y),
+    };
+    let lures: Vec<ObjectId> = super::map_slots::all_unit_order(world, map)?
+        .into_iter()
+        .filter(|&id| {
+            id != target
+                && world.btech.constructed_units().contains_key(&id)
+                && super::narc::has_beacon(world, id, super::BeaconKind::Nemesis)
+                && super::scanner::scanner_unit(world, id).is_some_and(|unit| {
+                    !unit.destroyed
+                        && unit.signature.team == team
+                        && unit.position.is_some_and(|position| {
+                            position.map == map
+                                && aim.distance(HexCoordinate {
+                                    x: i32::from(position.x),
+                                    y: i32::from(position.y),
+                                }) == 1
+                        })
+                })
+        })
+        .collect();
+    if lures.is_empty() {
+        return Ok(target);
+    }
+    let dice = world
+        .btech
+        .maps
+        .get_mut(&map)
+        .unwrap()
+        .fire_dice
+        .as_mut()
+        .context("Map random stream is unavailable")?;
+    if dice.d6() > 3 {
+        return Ok(target);
+    }
+    let pick = if lures.len() == 1 {
+        0
+    } else {
+        usize::from(dice.die(u16::try_from(lures.len())?)? - 1)
+    };
+    Ok(lures[pick])
 }
 
 /// Resolve a homing missile arriving on a designated unit (Tactical Operations: Advanced Units
@@ -481,6 +640,7 @@ fn home(
         pattern,
         hits: Vec::new(),
         structures: Vec::new(),
+        woods: Vec::new(),
         mines: Vec::new(),
         notices,
         pilot_notices: Vec::new(),
@@ -521,6 +681,7 @@ fn home(
                     heat: 0,
                     character: admitted.character,
                     class: DamageClass::Ordinary,
+                    special: None,
                 },
                 admitted.rules,
             )?;
@@ -708,5 +869,106 @@ mod tests {
             building_damage(Hex::new(Terrain::Clear, 0), 0, 20, true),
             None
         );
+    }
+
+    /// A unit at `level`, a 'Mech when `mech`, entirely under the water when `underwater`.
+    fn at(level: i32, mech: bool, underwater: bool) -> Occupant {
+        Occupant {
+            level,
+            mech,
+            underwater,
+        }
+    }
+
+    /// Over dry ground the impact hex's damage climbs ten points a level and never sinks, and
+    /// the hexes around it reach only the ground (Tactical Operations: Advanced Rules p. 150).
+    #[test]
+    fn dry_blasts_climb_in_the_impact_hex_only() {
+        let clear = Hex::new(Terrain::Clear, 2);
+        let damage =
+            |level, direct| reach(clear, at(level, false, false), 25, (direct, true, false));
+        assert_eq!(damage(2, true).damage, 25);
+        assert_eq!(damage(3, true).damage, 15);
+        assert_eq!(damage(4, true).damage, 5);
+        assert_eq!(damage(5, true).damage, 0);
+        assert_eq!(damage(2, false).damage, 25);
+        assert_eq!(
+            damage(3, false).damage,
+            0,
+            "no vertical damage around the impact"
+        );
+        assert_eq!(damage(2, true).special, None);
+    }
+
+    /// A round landing in water treats the surface as the struck level of a building: the
+    /// levels just above and below take it whole and the next ones half in the impact hex, the
+    /// levels next to the surface half around it, and half beside a single-hex round; a 'Mech
+    /// off the surface level takes the Special 'Mech Hit Location Table (Total Warfare pp. 113,
+    /// 173; Tactical Operations: Advanced Rules p. 152).
+    #[test]
+    fn water_blasts_follow_the_building_rules() {
+        let lake = Hex::new(Terrain::Water, 3);
+        let hit = |level, mech, flags| reach(lake, at(level, mech, level < -1), 20, flags);
+        let impact = (true, true, true);
+        assert_eq!(hit(0, false, impact).damage, 20);
+        assert_eq!(
+            hit(-1, true, impact),
+            Reach {
+                damage: 20,
+                punch: false,
+                special: Some(true)
+            }
+        );
+        assert_eq!(hit(-2, true, impact).damage, 10);
+        assert_eq!(hit(-3, true, impact).damage, 0);
+        assert_eq!(hit(1, false, impact).damage, 20);
+        assert_eq!(hit(2, false, impact).damage, 10);
+        let ring = (false, true, true);
+        assert_eq!(hit(0, false, ring).damage, 20);
+        assert_eq!(hit(-1, true, ring).damage, 10);
+        assert_eq!(hit(-2, true, ring).damage, 0);
+        let single = (true, false, true);
+        assert_eq!(hit(-1, true, single).damage, 10);
+    }
+
+    /// Next to a dry impact hex, water shelters a unit entirely under it, a 'Mech wading in it
+    /// takes the blast on the Punch table, and nothing above the surface is reached (Tactical
+    /// Operations: Advanced Rules p. 152).
+    #[test]
+    fn water_beside_a_dry_impact_shelters_and_punches() {
+        let ford = Hex::new(Terrain::Water, 1);
+        let ring = (false, true, false);
+        assert_eq!(
+            reach(ford, at(-1, true, false), 10, ring),
+            Reach {
+                damage: 10,
+                punch: true,
+                special: None
+            }
+        );
+        assert_eq!(reach(ford, at(-1, true, true), 10, ring).damage, 0);
+        assert_eq!(reach(ford, at(0, false, false), 10, ring).damage, 10);
+        assert_eq!(reach(ford, at(1, false, false), 10, ring).damage, 0);
+    }
+
+    /// 'Mechs inside a building below the roof the round bursts on take their hits from above
+    /// on the Special 'Mech Hit Location Table; those on the roof take the ordinary table
+    /// (Total Warfare p. 173).
+    #[test]
+    fn mechs_below_a_roof_burst_take_the_special_table() {
+        let medium = building(3, ConstructionClass::Medium);
+        let impact = (true, true, false);
+        assert_eq!(reach(medium, at(3, true, false), 15, impact).special, None);
+        for level in 0..3 {
+            assert_eq!(
+                reach(medium, at(level, true, false), 15, impact),
+                Reach {
+                    damage: 15,
+                    punch: false,
+                    special: Some(true)
+                }
+            );
+        }
+        assert_eq!(reach(medium, at(1, false, false), 15, impact).special, None);
     }
 }

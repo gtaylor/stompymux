@@ -1398,7 +1398,7 @@ function btech_unit.usebin(dbref, pilot, weapon, section) end
 function btech_unit.autoturret(dbref, pilot) end
 
 ---@class AimModifiers
----@field indirect {spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
+---@field indirect {spotter: integer|nil, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. The spotter is a declared spotter or a friendly TAG designator, and absent for Narc-guided fire at a Narc-podded target. Perception then describes the spotter's view.
 ---@field gunnery integer
 ---@field distance number Weapon range in hexes from the shooter's hex to the target's; elevation does not add to it.
 ---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range in hexes; physical limits and firing visibility remain separate.
@@ -1417,7 +1417,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field mounting_section integer
 ---@field targeting_computer integer Eligible computer fire: -1 normally, +3 for a selected section on a mobile target.
 ---@field aimed_section integer Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
----@field beacon_accuracy integer Haywire interference and iNarc homing assistance.
+---@field beacon_accuracy integer Haywire interference, iNarc homing assistance and Artemis V guidance.
 ---@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -1, -3 against an airborne target (flak).
 ---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 ---@field target_lock integer
@@ -1536,7 +1536,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field ammunition_spent integer One round per engagement; zero for laser AMS.
 ---@field shot_down integer Missiles the engagement kept off the target: the single missile when destroyed, otherwise the hits the -4 removed.
 
----@alias BeaconKind "narc"|"homing"|"haywire"|"ecm"
+---@alias BeaconKind "narc"|"homing"|"haywire"|"ecm"|"nemesis"
 ---@class NarcReport
 ---@field kind BeaconKind
 ---@field notices Notice[] Cockpit effects from the hit-location roll.
@@ -2209,11 +2209,10 @@ function btech_unit.weapon_diagnostics(dbref) end
 ---@field short_range integer
 ---@field medium_range integer
 ---@field long_range integer Effective range in hexes, including artillery map-sheet conversion.
----@field extended_range integer? Present when extended range is configured.
 ---@field recycle_seconds integer Effective runtime value for new activations.
 
 ---Inspect distinct installed weapon types in first-installation order, including destroyed mounts.
----Requires a trusted callback transaction. Range columns follow the server's extended-range setting.
+---Requires a trusted callback transaction. Range columns are the minimum, short, medium and long brackets.
 ---@param dbref integer
 ---@return WeaponSpecification[]
 function btech_unit.weapon_specifications(dbref) end
@@ -2437,7 +2436,7 @@ function btech_unit.inarc(dbref, pilot, weapon, selector) end
 ---@return PodRow[]
 function btech_unit.pods(dbref, pilot) end
 
----Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM.
+---Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM, Z Nemesis.
 ---@param dbref integer
 ---@param pilot integer
 ---@param section string

@@ -311,7 +311,12 @@ fn resolve_shot_inner(
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
 
     let target = observed.map_or(target, |link| link.target);
-    let coordinate = if indirect.is_some() {
+    // Indirect through a declared spotter's link, or without one at a TAG-designated or
+    // Narc-podded lock (Total Warfare pp. 111, 139, 142).
+    let indirect_fire = indirect.is_some()
+        || super::spotter::unspotted_indirect(world, operator.source, target, weapon_index)?
+            .is_some();
+    let coordinate = if indirect_fire {
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
             .context("Target is not placed")?;
@@ -321,6 +326,15 @@ fn resolve_shot_inner(
         })
     } else {
         effects.coordinate
+    };
+    // A Nemesis pod on a friendly unit in the line draws guided missiles onto it instead
+    // (Total Warfare p. 142); the safeties and the aim still start from the intended target.
+    let intended = target;
+    let target = if indirect_fire {
+        target
+    } else {
+        let ammunition = world.btech.constructed_units()[&shooter].ammunition_mode(weapon_index)?;
+        super::narc::nemesis_decoy(world, shooter, target, ammunition)?.unwrap_or(target)
     };
     let vehicle_target = world.btech.vehicles().contains_key(&target);
     ensure!(shooter != target, "A unit cannot fire on itself");
@@ -340,14 +354,16 @@ fn resolve_shot_inner(
         }
     }
     let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
-    super::weapon_geometry::check_water(selected_weapon, submerged)?;
+    super::weapon_geometry::check_water(world, shooter, selected_weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, selected_weapon)?;
-    super::torpedo::check_target(world, selected_weapon, target, submerged)?;
-    if indirect.is_some() {
+    super::torpedo::check_target(world, selected_weapon, shooter, target, submerged)?;
+    if indirect_fire {
         super::spotter::check_indirect_water(world, shooter, target)?;
+    } else {
+        super::weapon_geometry::check_leg_cover_unit(world, shooter, weapon_index, target)?;
     }
     let attacker = &world.btech.constructed_units()[&shooter];
-    super::fire_target::check_target_safety_for_source(world, operator.source, target)?;
+    super::fire_target::check_target_safety_for_source(world, operator.source, intended)?;
     super::fire_target::check_unit_munition(world, shooter, weapon_index)?;
     let loadout = attacker.loadout()?;
     ensure!(
@@ -358,7 +374,7 @@ fn resolve_shot_inner(
     );
     let mount = &loadout.weapons[weapon_index];
     ensure!(
-        indirect.is_some()
+        indirect_fire
             || rules.aim.override_weapon_arcs
             || super::weapon_bears_on(world, shooter, target, weapon_index)?,
         "Target is outside weapon arc"
@@ -369,7 +385,7 @@ fn resolve_shot_inner(
     let aim = super::aim::aim_modifiers_for_source(
         world,
         operator.source,
-        target,
+        intended,
         weapon_index,
         gunnery,
         rules.aim,
@@ -451,6 +467,8 @@ fn resolve_shot_inner(
             weapon,
             fire_mode: expenditure.fire_mode,
             ammunition: expenditure.ammunition_mode,
+            indirect: aim.indirect.is_some(),
+            volley: volley.is_some(),
             launched,
             hit,
             in_range: aim.range.is_some(),
@@ -590,6 +608,7 @@ fn resolve_shot_inner(
                     indirect: indirect_fire,
                     apollo,
                     array,
+                    submerged,
                     experience,
                 },
             )?,

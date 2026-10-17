@@ -249,6 +249,18 @@ pub fn tagged_by(world: &World, target: ObjectId) -> Option<ObjectId> {
     })
 }
 
+/// A unit on `side`'s team whose TAG currently designates `target`, if any: TAG guidance and
+/// TAG spotting serve only the designator's own side (Total Warfare p. 142).
+pub(super) fn friendly_tagger(world: &World, side: ObjectId, target: ObjectId) -> Option<ObjectId> {
+    let team = super::scanner::scanner_unit(world, side)?.signature.team;
+    super::scanner::scanner_ids(world).into_iter().find(|&id| {
+        state(world, id).is_some_and(|tag| tag.target == Some(target))
+            && super::scanner::scanner_unit(world, id)
+                .is_some_and(|unit| unit.signature.team == team)
+            && link_valid(world, id, target)
+    })
+}
+
 /// Make a TAG attack at `target`, or stop designating with `None`; all admission checks
 /// precede mutation. The attack rolls 2d6 from the unit's dice against the standard to-hit
 /// number with TAG's 5/9/15 ranges (TW p. 142). A miss designates nothing and starts the

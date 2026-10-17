@@ -523,15 +523,9 @@ impl ParsedTemplate {
         occupy(layout, first, last, &proxy)
     }
 
-    /// Record flippable arms exactly when neither biped arm has a lower or hand actuator.
+    /// Record flippable arms exactly when [`arms_flip`] allows them; a quad has no arms.
     fn derive_flip_arms(&mut self) {
-        let (Some(left), Some(right)) = (
-            self.sections.get("left_arm"),
-            self.sections.get("right_arm"),
-        ) else {
-            return;
-        };
-        if !arms_flip([left, right]) {
+        if !arms_flip(|section| self.sections.get(&section.name().to_ascii_lowercase())) {
             return;
         }
         let specials = self.fields.entry("specials".into()).or_default();

@@ -70,7 +70,7 @@ pub(super) fn apply(
     Ok(())
 }
 
-/// C3 brackets use shared distance, ignore a peer's minimum range, and disable extended range.
+/// C3 brackets use shared distance and ignore a peer's minimum range.
 /// Out of water they follow the loaded ammunition's range profile (Total Warfare p. 131).
 fn bracket(
     (weapon, ammunition): (Weapon, AmmunitionMode),

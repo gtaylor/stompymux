@@ -300,6 +300,8 @@ async fn interiors_give_partial_cover_and_block_outside_physical_attacks() {
     step_inside(&mut world, target, 0);
     let terrain = battle_unit_terrain_los(&world, attacker, target).unwrap();
     assert!(terrain.partial_cover && !terrain.blocked);
+    // A leg hit strikes the building the target stands in (Total Warfare p. 171).
+    assert_eq!(terrain.cover_building, Some(HexCoordinate { x: 1, y: 2 }));
     let physical = PhysicalRules { fall: rules() };
     relocate(&mut world, attacker, _map, 1, 1);
     step_inside(&mut world, target, 0);
@@ -319,6 +321,73 @@ async fn interiors_give_partial_cover_and_block_outside_physical_attacks() {
             .is_none_or(|error| !error.to_string().contains("inside a building")),
         "{result:?}"
     );
+}
+
+/// A leg hit on a 'Mech that the building it stands in covers strikes that building instead,
+/// damaging it as normal (Total Warfare p. 171): the building pays its tenth of the
+/// construction factor and the rest of the shot too, and the legs are untouched.
+#[tokio::test]
+async fn covered_leg_hits_strike_the_building_the_target_stands_in() {
+    let (_dir, _config, base, map, [attacker, target]) =
+        field(&[".3.3.3", ".0.0.0", "@1@1@1", ".0.0.0"]).await;
+    let mut base = base;
+    relocate(&mut base, attacker, map, 1, 0);
+    relocate(&mut base, target, map, 1, 2);
+    step_inside(&mut base, target, 0);
+    refresh_battle_contacts(&mut base, &[attacker]).unwrap();
+    let rules = ShotRules {
+        tsm_tow_bonus: true,
+        vehicle_impact: VehicleImpactRules::STANDARD,
+        aim: AimRules {
+            override_weapon_arcs: true,
+        },
+        extended_gunnery: false,
+        extended_piloting: false,
+        target_toughness: false,
+    };
+    let laser = base.btech.constructed_units()[&attacker]
+        .loadout()
+        .unwrap()
+        .weapons
+        .iter()
+        .position(|mount| mount.weapon == Weapon::MediumLaser)
+        .unwrap();
+    let hit = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
+        .unwrap();
+    base.btech
+        .set_unit_dice(attacker, Dice::seeded([hit; 32]))
+        .unwrap();
+    let before = cf(&base, map, 1, 2);
+    let legs = |world: &World| {
+        let unit = &world.btech.constructed_units()[&target];
+        [MechSection::LeftLeg, MechSection::RightLeg].map(|leg| unit.sections()[&leg].clone())
+    };
+    let covered = (0..=255).find_map(|seed| {
+        let mut world = base.clone();
+        world
+            .btech
+            .set_unit_dice(target, Dice::seeded([seed; 32]))
+            .unwrap();
+        let shot =
+            resolve_battle_shot(&mut world, attacker, ObjectId(1), target, laser, rules).unwrap();
+        let Some(TargetSalvo::Mech(salvo)) = &shot.salvo else {
+            return None;
+        };
+        let group = salvo.groups.first()?;
+        let leg = matches!(
+            group.hit.section,
+            MechSection::LeftLeg | MechSection::RightLeg
+        );
+        leg.then_some((world, group.damage))
+    });
+    let (world, damage) = covered.expect("some seed hits a leg");
+    assert_eq!(
+        damage, 1,
+        "the building absorbs four of the laser's five points"
+    );
+    assert_eq!(cf(&world, map, 1, 2), before - 5);
+    assert_eq!(legs(&world), legs(&base));
 }
 
 /// A shot from another level of the same building hex hits a 'Mech on the Special 'Mech Hit
@@ -470,6 +539,80 @@ async fn artillery_reaches_every_floor_and_damages_the_building() {
         .unwrap();
     assert_eq!(beside.damage, 15);
     assert_eq!(cf(&world, map, 0, 1), 40 - 15);
+}
+
+/// A 'Mech on a level below the one an artillery round bursts on takes its hits on the Special
+/// 'Mech Hit Location Table, from above, so never on its legs (Total Warfare p. 173).
+#[tokio::test]
+async fn artillery_bursting_overhead_never_finds_the_legs() {
+    for seed in 0..6u8 {
+        let (_dir, _config, mut world, map, [inside, _]) =
+            field(&[".0.0.0", "@3@3@3", ".0.0.0"]).await;
+        rebuild(&mut world, map, (1, 1), ConstructionClass::Hardened, 150);
+        step_inside(&mut world, inside, 2);
+        world
+            .btech
+            .set_unit_dice(inside, Dice::seeded([seed; 32]))
+            .unwrap();
+        let before = world.btech.constructed_units()[&inside].sections().clone();
+        let report = shell(&mut world, map);
+        assert_eq!(blast(&report, inside), 15);
+        let after = world.btech.constructed_units()[&inside].sections();
+        assert_ne!(after, &before);
+        for leg in [MechSection::LeftLeg, MechSection::RightLeg] {
+            assert_eq!(after[&leg], before[&leg], "seed {seed}");
+        }
+    }
+}
+
+/// A minefield in a building hex lies on the building's ground floor unless a weapon laid it,
+/// in which case it lies on the roof (Tactical Operations p. 175): only a unit on that level
+/// sets it off, and its blast follows the area-effect rules for buildings, whole on the
+/// field's level and half on the levels just above and below it (Total Warfare p. 172).
+#[tokio::test]
+async fn building_minefields_lie_on_their_own_level() {
+    for (owner, trigger_inside, roof_damage, top_floor_damage, ground_damage) in [
+        (ObjectId(1), true, 0, 0, 20),
+        (ObjectId(0), false, 20, 10, 0),
+    ] {
+        let (_dir, config, mut world, map, [inside, roof]) =
+            field(&[".0.0.0", "@3@3@3", ".0.0.0"]).await;
+        step_inside(&mut world, inside, 0);
+        let ordinal = insert_minefield(
+            &mut world,
+            map,
+            Minefield {
+                coordinate: HexCoordinate { x: 1, y: 1 },
+                kind: MineKind::Standard,
+                strength: 20,
+                extra: 0,
+                owner,
+            },
+        )
+        .unwrap();
+        let triggers = |world: &World, id| {
+            !mine_activations(world, id, MineTriggerReason::Step)
+                .unwrap()
+                .is_empty()
+        };
+        assert_eq!(triggers(&world, inside), trigger_inside, "{owner:?}");
+        assert_eq!(triggers(&world, roof), !trigger_inside, "{owner:?}");
+        let damage = |report: &MineBlastReport, id| {
+            report
+                .hits
+                .iter()
+                .filter(|hit| hit.unit == id)
+                .map(|hit| hit.damage)
+                .sum::<u16>()
+        };
+        let report = resolve_mine_blast(&mut world.clone(), map, ordinal, rules()).unwrap();
+        assert_eq!(damage(&report, inside), ground_damage, "{owner:?}");
+        assert_eq!(damage(&report, roof), roof_damage, "{owner:?}");
+        step_inside(&mut world, inside, 2);
+        let report = resolve_mine_blast(&mut world, map, ordinal, rules()).unwrap();
+        assert_eq!(damage(&report, inside), top_floor_damage, "{owner:?}");
+        world.validate(&config).unwrap();
+    }
 }
 
 /// Inside a hardened building the round bursts on the roof: the roof and the level below take

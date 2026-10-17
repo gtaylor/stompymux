@@ -487,8 +487,9 @@ async fn barrage(asset: MapAsset, target_row: i64) -> (tempfile::TempDir, World,
     (dir, world, [shooter, spotter, target])
 }
 
-/// Indirect fire from dry land is refused at a target standing in the water and allowed at one
-/// ashore, with the same aim and shot whether the lake lies at level 0 or higher.
+/// Indirect fire from dry land reaches a 'Mech standing in Depth 1 water, whose upper body is
+/// above the surface (Total Warfare p. 108), as well as one ashore, with the same aim and shot
+/// whether the lake lies at level 0 or higher.
 #[tokio::test]
 async fn lifting_a_map_keeps_indirect_fire_into_water_unchanged() {
     // A wall between the spotter and the shooter keeps the shooter from seeing the target:
@@ -537,6 +538,5 @@ async fn lifting_a_map_keeps_indirect_fire_into_water_unchanged() {
         assert!(differing.is_empty(), "row {target_row}: {differing:#?}");
         outcomes.push(low_shot.err());
     }
-    let refused = Some("You can't fire into water with that weapon from here.".to_string());
-    assert_eq!(outcomes, [refused, None]);
+    assert_eq!(outcomes, [None, None]);
 }

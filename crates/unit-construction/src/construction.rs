@@ -708,14 +708,43 @@ pub fn is_fixed_item(equipment: &str) -> bool {
     FIXED_ITEMS.contains(&equipment)
 }
 
-/// Biped arms flip when neither arm carries a lower or hand actuator.
-pub fn arms_flip(arms: [&SectionDefinition; 2]) -> bool {
-    arms.iter().all(|arm| {
-        !arm.criticals.values().any(|critical| {
+/// Whether a biped's arms flip over to fire backward (Total Warfare p. 106): neither arm
+/// carries a lower or hand actuator, and no weapon is split between a torso and an arm (see
+/// [`arm_torso_split`]). `section` reads a section's slots; a missing arm never flips.
+pub fn arms_flip<'a>(section: impl Fn(MechSection) -> Option<&'a SectionDefinition>) -> bool {
+    let (Some(left), Some(right)) = (
+        section(MechSection::LeftArm),
+        section(MechSection::RightArm),
+    ) else {
+        return false;
+    };
+    let actuated = [left, right].iter().any(|arm| {
+        arm.criticals.values().any(|critical| {
             critical.equipment.eq_ignore_ascii_case(LOWER_ACTUATOR)
                 || critical.equipment.eq_ignore_ascii_case(HAND_OR_FOOT)
         })
-    })
+    });
+    !actuated && !arm_torso_split(section)
+}
+
+/// Whether any weapon is split between a torso and an arm. A split mount's extension slots
+/// name the section holding its first slot, so such a weapon shows as an extension slot in
+/// an arm, or as one in a side torso linked to an arm. `section` reads a section's slots.
+pub fn arm_torso_split<'a>(section: impl Fn(MechSection) -> Option<&'a SectionDefinition>) -> bool {
+    use MechSection::{LeftArm, LeftTorso, RightArm, RightTorso};
+    let proxies = |sections: [MechSection; 2]| {
+        sections
+            .into_iter()
+            .filter_map(&section)
+            .flat_map(|layout| layout.criticals.values())
+            .filter(|critical| super::document::is_split_proxy(&critical.equipment))
+            .collect::<Vec<_>>()
+    };
+    !proxies([LeftArm, RightArm]).is_empty()
+        || proxies([LeftTorso, RightTorso]).iter().any(|critical| {
+            super::document::parse_split_link(&critical.data)
+                .is_ok_and(|(parent, _)| matches!(parent, LeftArm | RightArm))
+        })
 }
 
 /// Expected mech internal structure from the reference tonnage chart.
@@ -870,6 +899,58 @@ mod tests {
         assert!(table("engine_tech = \"periphery\"").is_err());
         assert!(table("engine = \"warp\"").is_err());
         assert!(table("colour = \"red\"").is_err());
+    }
+
+    /// Arms without lower and hand actuators flip, unless a weapon runs from a torso into an
+    /// arm, whichever section holds its first slot (Total Warfare p. 106).
+    #[test]
+    fn split_arm_weapons_keep_the_arms_from_flipping() {
+        let critical = |equipment: &str, data: &str| super::super::CriticalDefinition {
+            equipment: equipment.into(),
+            data: data.into(),
+            modes: Vec::new(),
+        };
+        let section = |criticals: Vec<(u8, super::super::CriticalDefinition)>| SectionDefinition {
+            armor: 1,
+            internal: 1,
+            rear: 0,
+            criticals: criticals.into_iter().collect(),
+            configuration: None,
+        };
+        let bare_arm = || section(vec![(0, critical("Shoulder", "-"))]);
+        let torso = || section(vec![(0, critical("IS.LargeLaser", "-"))]);
+        let flips = |left: SectionDefinition, torso: SectionDefinition| {
+            let right = bare_arm();
+            let other = section(Vec::new());
+            arms_flip(|wanted| match wanted {
+                MechSection::LeftArm => Some(&left),
+                MechSection::RightArm => Some(&right),
+                MechSection::LeftTorso => Some(&torso),
+                MechSection::RightTorso => Some(&other),
+                _ => None,
+            })
+        };
+        assert!(flips(bare_arm(), torso()));
+        let actuated = section(vec![(2, critical(LOWER_ACTUATOR, "-"))]);
+        assert!(!flips(actuated, torso()));
+        // The torso holds the first slots and the arm the extension.
+        let extended = section(vec![(
+            4,
+            critical(super::super::document::SPLIT_LEFT, "Left_Torso:0"),
+        )]);
+        assert!(!flips(extended, torso()));
+        // The arm holds the first slots and the torso the extension.
+        let linked = section(vec![(
+            0,
+            critical(super::super::document::SPLIT_LEFT, "Left_Arm:4"),
+        )]);
+        assert!(!flips(bare_arm(), linked));
+        // A center-to-side torso split leaves the arms free.
+        let torso_split = section(vec![(
+            0,
+            critical(super::super::document::SPLIT_LEFT, "Center_Torso:4"),
+        )]);
+        assert!(flips(bare_arm(), torso_split));
     }
 
     #[test]

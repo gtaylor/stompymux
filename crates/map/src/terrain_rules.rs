@@ -139,19 +139,15 @@ impl Hex {
 
     /// Movement points a ground unit spends to enter this hex, before any change of level:
     /// one, plus what the terrain and its weather condition add. Water costs by its depth and
-    /// current. Structures are crossed on their roofs or decks like roads. Fire makes any hex
-    /// cost at least two.
+    /// current. Structures are crossed on their roofs or decks like roads. Fire costs nothing
+    /// to move through (Tactical Operations p. 41); its dangers are heat and damage.
     pub fn movement_cost(self, movement: GroundMovement) -> u8 {
         let terrain = match (self.structure(), self.water()) {
             (Some(_), _) => 0,
             (None, Some(water)) => self.water_cost(water, movement),
             (None, None) => self.terrain_cost(movement),
         };
-        let cost = 1 + terrain + self.condition_cost(movement);
-        if self.is_burning() {
-            return cost.max(2);
-        }
-        cost
+        1 + terrain + self.condition_cost(movement)
     }
 
     /// Divisor this hex applies to a ground unit's desired speed: its movement cost.
@@ -335,10 +331,12 @@ impl Hex {
     }
 
     /// Modifier for the piloting or driving roll a ground unit makes against getting stuck as
-    /// it enters this hex, or `None` when the ground cannot bog it down. Swamp, mud, deep snow,
-    /// tundra and sand can all trap a unit (Tactical Operations p. 60); tundra, deep snow and
-    /// mud make the roll one easier. Hovercraft never bog down, and a road, a structure or
-    /// water keeps a unit off the soft ground.
+    /// it enters this hex, or `None` when the ground cannot bog it down. Swamp, deep snow and
+    /// tundra can trap any ground unit, and mud any but a 'Mech, which takes mud's other
+    /// penalties but never sticks in it (Tactical Operations pp. 37, 48, 60); tundra, deep
+    /// snow and mud make the roll one easier. Sand traps only Large Vehicles (p. 37), which the
+    /// game does not have. Hovercraft never bog down, and a road, a structure or water keeps a
+    /// unit off the soft ground.
     pub fn bog_down_modifier(self, movement: GroundMovement) -> Option<i16> {
         if movement == GroundMovement::Hover
             || self.is_road()
@@ -348,12 +346,13 @@ impl Hex {
             return None;
         }
         match self.condition() {
-            Some(Condition::DeepSnow | Condition::Mud) => return Some(-1),
+            Some(Condition::DeepSnow) => return Some(-1),
+            Some(Condition::Mud) if movement != GroundMovement::Legged => return Some(-1),
+            Some(Condition::Mud) | None => {}
             Some(_) => return None,
-            None => {}
         }
         match self.ground() {
-            Ground::Swamp | Ground::Sand => Some(0),
+            Ground::Swamp => Some(0),
             Ground::Tundra => Some(-1),
             _ => None,
         }
@@ -488,19 +487,25 @@ mod tests {
         assert_eq!(Hex::new(Terrain::Bridge, 2).movement_cost(Wheeled), 1);
     }
 
-    /// Fire slows a unit picking its way through the flames; smoke does not.
+    /// Fire and smoke cost nothing to move through (Tactical Operations pp. 41, 45): a burning
+    /// or smoky hex costs what the hex under it does.
     #[test]
-    fn fire_costs_at_least_two_and_smoke_costs_nothing() {
+    fn fire_and_smoke_cost_no_movement() {
         let burning = |terrain| Hex::new(terrain, 1).with_overlay(Some(DecorationKind::Fire));
         for movement in [Legged, Wheeled] {
-            assert_eq!(burning(Terrain::Clear).ground_speed_divisor(movement), 2.0);
-            assert_eq!(burning(Terrain::Road).ground_speed_divisor(movement), 2.0);
-            assert_eq!(burning(Terrain::Water).ground_speed_divisor(movement), 2.0);
-            assert_eq!(burning(Terrain::Bridge).ground_speed_divisor(movement), 2.0);
-            assert_eq!(
-                burning(Terrain::HeavyWoods).ground_speed_divisor(movement),
-                3.0
-            );
+            for terrain in [
+                Terrain::Clear,
+                Terrain::Road,
+                Terrain::Water,
+                Terrain::Bridge,
+                Terrain::HeavyWoods,
+            ] {
+                assert_eq!(
+                    burning(terrain).ground_speed_divisor(movement),
+                    Hex::new(terrain, 1).ground_speed_divisor(movement),
+                    "{terrain:?}"
+                );
+            }
             for kind in [DecorationKind::Smoke, DecorationKind::HeavySmoke] {
                 let smoky = Hex::new(Terrain::Clear, 1).with_overlay(Some(kind));
                 assert_eq!(smoky.ground_speed_divisor(movement), 1.0);
@@ -698,24 +703,35 @@ mod tests {
         );
     }
 
-    /// Soft ground bogs units down; hovercraft, roads and structures are exempt.
+    /// Swamp, tundra and deep snow bog any ground unit down and mud any but a 'Mech; sand
+    /// traps only Large Vehicles, which the game lacks (Tactical Operations pp. 37, 48, 60);
+    /// hovercraft, roads and structures are exempt.
     #[test]
-    fn soft_ground_bogs_down_everything_but_hovercraft() {
+    fn soft_ground_bogs_down_the_units_the_book_lists() {
         for terrain in Terrain::ALL {
             let expected = match terrain {
-                Terrain::Swamp | Terrain::Sand => Some(0),
+                Terrain::Swamp => Some(0),
                 Terrain::Tundra | Terrain::DeepSnow | Terrain::Mud => Some(-1),
                 _ => None,
             };
+            let mech = if terrain == Terrain::Mud {
+                None
+            } else {
+                expected
+            };
             let hex = Hex::new(terrain, 0);
-            assert_eq!(hex.bog_down_modifier(Legged), expected, "{terrain:?}");
+            assert_eq!(hex.bog_down_modifier(Legged), mech, "{terrain:?}");
             assert_eq!(hex.bog_down_modifier(Tracked), expected, "{terrain:?}");
+            assert_eq!(hex.bog_down_modifier(Wheeled), expected, "{terrain:?}");
             assert_eq!(hex.bog_down_modifier(Hover), None, "{terrain:?}");
-            assert_eq!(hex.can_bog_down(Legged, 0), expected.is_some());
-            assert!(!hex.can_bog_down(Legged, 1), "{terrain:?}");
+            assert_eq!(hex.can_bog_down(Tracked, 0), expected.is_some());
+            assert!(!hex.can_bog_down(Tracked, 1), "{terrain:?}");
         }
         let snowy_swamp = Hex::new(Terrain::Swamp, 0).with_condition(Some(Condition::DeepSnow));
         assert_eq!(snowy_swamp.bog_down_modifier(Wheeled), Some(-1));
+        let muddy_swamp = Hex::new(Terrain::Swamp, 0).with_condition(Some(Condition::Mud));
+        assert_eq!(muddy_swamp.bog_down_modifier(Legged), Some(0));
+        assert_eq!(muddy_swamp.bog_down_modifier(Tracked), Some(-1));
         let road = Hex::new(Terrain::Swamp, 0).with_route(Some(Route::GravelRoad));
         assert_eq!(road.bog_down_modifier(Legged), None);
     }

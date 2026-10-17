@@ -1,7 +1,9 @@
-//! Bogging down in soft ground (Tactical Operations p. 60): swamp, mud, deep snow, tundra and
-//! sand can trap a 'Mech or ground vehicle as it enters. A stuck unit cannot move or turn,
-//! attackers find it two easier to hit, and at the start of every turn its crew rolls to pull
-//! free. Jumping out always works, and a 'Mech that falls in such a hex is stuck at once.
+//! Bogging down in soft ground (Tactical Operations p. 60): swamp, deep snow and tundra can trap
+//! a 'Mech or ground vehicle as it enters, and mud a vehicle (a 'Mech never sticks in mud,
+//! p. 48; sand traps only Large Vehicles, p. 37). A stuck unit cannot move or turn, attackers
+//! find it two easier to hit, and at the start of every turn its crew rolls to pull free.
+//! Jumping out always works, a 'Mech that falls in such a hex is stuck at once, and one that
+//! jumps into a swamp is stuck on landing (p. 49).
 use super::{GroundMovement, Notice, PilotNotice};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::{Result, ensure};

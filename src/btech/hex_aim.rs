@@ -102,6 +102,8 @@ pub(super) fn modifiers_for_source(
                 super::aim::weapon_modifiers(unit, weapon_index, mount, distance, gunnery)?,
             )
         };
+    // A unit that skidded this turn fires at +1 (Total Warfare p. 62).
+    modifiers.attacker_movement += super::recent_fire::skid_modifiers(world, shooter).0;
     let indirect = super::spotter::indirect_hex_for_source(world, source, weapon_index)?;
     if let Some((observer, coordinate)) = indirect {
         ensure!(
@@ -128,6 +130,8 @@ pub(super) fn modifiers_for_source(
     )?;
     modifiers.environment = super::planetary_conditions::aim_modifier(world, shooter, weapon);
     modifiers.interference = super::planetary_conditions::interference_aim_modifier(world, shooter);
+    modifiers.beacon_accuracy +=
+        super::aim::artemis_v_modifier(world, shooter, weapon_index, None, indirect.is_some())?;
     // Indirect fire takes its terrain modifiers from the spotter's line of sight (Total
     // Warfare p. 111).
     let viewer = indirect.map_or(shooter, |(observer, _)| observer);

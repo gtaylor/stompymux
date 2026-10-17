@@ -644,6 +644,19 @@ mod tests {
         }
     }
 
+    /// Every pulse laser in the catalogue, and nothing else, is a pulse weapon (Total Warfare
+    /// p. 143 bars them from targeting-computer aimed shots).
+    #[test]
+    fn pulse_weapons_are_the_pulse_lasers() {
+        for &weapon in Weapon::ALL {
+            assert_eq!(
+                weapon.is_pulse(),
+                weapon.name().contains("PulseLaser"),
+                "{weapon:?}"
+            );
+        }
+    }
+
     /// Recycle feedback follows each canonical equipment label with no namespace leakage.
     #[test]
     fn catalogue_recycle_feedback_matches_weapon_labels() {

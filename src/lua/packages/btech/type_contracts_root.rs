@@ -829,7 +829,7 @@
 
 // lua-types-begin btech 00179
 //|---@class AimModifiers
-//|---@field indirect {spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
+//|---@field indirect {spotter: integer|nil, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. The spotter is a declared spotter or a friendly TAG designator, and absent for Narc-guided fire at a Narc-podded target. Perception then describes the spotter's view.
 //|---@field gunnery integer
 //|---@field distance number Weapon range in hexes from the shooter's hex to the target's; elevation does not add to it.
 //|---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range in hexes; physical limits and firing visibility remain separate.
@@ -848,7 +848,7 @@
 //|---@field mounting_section integer
 //|---@field targeting_computer integer Eligible computer fire: -1 normally, +3 for a selected section on a mobile target.
 //|---@field aimed_section integer Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
-//|---@field beacon_accuracy integer Haywire interference and iNarc homing assistance.
+//|---@field beacon_accuracy integer Haywire interference, iNarc homing assistance and Artemis V guidance.
 //|---@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -1, -3 against an airborne target (flak).
 //|---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 //|---@field target_lock integer
@@ -997,7 +997,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00194
-//|---@alias BeaconKind "narc"|"homing"|"haywire"|"ecm"
+//|---@alias BeaconKind "narc"|"homing"|"haywire"|"ecm"|"nemesis"
 //|---@class NarcReport
 //|---@field kind BeaconKind
 //|---@field notices Notice[] Cockpit effects from the hit-location roll.
@@ -1320,7 +1320,6 @@
 //|---@field short_range integer
 //|---@field medium_range integer
 //|---@field long_range integer Effective range in hexes, including artillery map-sheet conversion.
-//|---@field extended_range integer? Present when extended range is configured.
 //|---@field recycle_seconds integer Effective runtime value for new activations.
 // lua-types-end
 

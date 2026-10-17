@@ -820,7 +820,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 ## AimModifiers
 
-- `indirect`: `{spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil` — Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
+- `indirect`: `{spotter: integer|nil, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil` — Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. The spotter is a declared spotter or a friendly TAG designator, and absent for Narc-guided fire at a Narc-podded target. Perception then describes the spotter's view.
 - `gunnery`: `integer`
 - `distance`: `number` — Weapon range in hexes from the shooter's hex to the target's; elevation does not add to it.
 - `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}|nil` — Active command-network range in hexes; physical limits and firing visibility remain separate.
@@ -839,7 +839,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `mounting_section`: `integer`
 - `targeting_computer`: `integer` — Eligible computer fire: -1 normally, +3 for a selected section on a mobile target.
 - `aimed_section`: `integer` — Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
-- `beacon_accuracy`: `integer` — Haywire interference and iNarc homing assistance.
+- `beacon_accuracy`: `integer` — Haywire interference, iNarc homing assistance and Artemis V guidance.
 - `ammunition_accuracy`: `integer` — Selected ammunition adjustment; LB-X cluster is -1, -3 against an airborne target (flak).
 - `weapon_accuracy`: `integer` — Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 - `target_lock`: `integer`
@@ -977,7 +977,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 ## BeaconKind
 
-Alias: `"narc"|"homing"|"haywire"|"ecm"`
+Alias: `"narc"|"homing"|"haywire"|"ecm"|"nemesis"`
 
 ## NarcReport
 
@@ -1259,7 +1259,6 @@ Alias: `'empty'|'operational'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'
 - `short_range`: `integer`
 - `medium_range`: `integer`
 - `long_range`: `integer` — Effective range in hexes, including artillery map-sheet conversion.
-- `extended_range`: `integer?` — Present when extended range is configured.
 - `recycle_seconds`: `integer` — Effective runtime value for new activations.
 
 ## CriticalInspection

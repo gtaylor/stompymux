@@ -1812,7 +1812,7 @@ async fn inarc_outcomes_supply_and_restart() {
         (AmmunitionMode::INarcExplosive, None),
         (AmmunitionMode::INarcHaywire, Some(BeaconKind::Haywire)),
         (AmmunitionMode::INarcEcm, Some(BeaconKind::Ecm)),
-        (AmmunitionMode::INarcNemesis, Some(BeaconKind::Homing)),
+        (AmmunitionMode::INarcNemesis, Some(BeaconKind::Nemesis)),
     ] {
         for case in ["hit", "miss", "intercepted", "empty"] {
             let (_dir, config, mut world, id, target) = shot_fixture().await;
@@ -4021,7 +4021,7 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     assert_eq!(
         indirect,
         IndirectAim {
-            spotter: observer,
+            spotter: Some(observer),
             movement: 0,
             spotter_attacked: false,
             tag_guided: false,
@@ -4053,7 +4053,7 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     assert_eq!(
         attacked_aim.indirect.unwrap(),
         IndirectAim {
-            spotter: observer,
+            spotter: Some(observer),
             movement: 1,
             spotter_attacked: true,
             tag_guided: false,
@@ -6693,7 +6693,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
     world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, target, template).unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
-    place_battle_unit(&mut world, target, map, 5, 5).unwrap();
+    place_battle_unit(&mut world, target, map, 5, 6).unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
     for _ in 0..40 {
         advance_battle_motion(&mut world, RULES).unwrap();
@@ -6896,7 +6896,7 @@ async fn apod_live_fire_and_restart() {
         )
         .unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
-        place_battle_unit(&mut world, target, map, 5, 5).unwrap();
+        place_battle_unit(&mut world, target, map, 5, 6).unwrap();
         set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
         for _ in 0..40 {
             advance_battle_motion(&mut world, RULES).unwrap();

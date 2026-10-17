@@ -341,11 +341,13 @@ pub(crate) fn section(world: &World, id: ObjectId, value: &str) -> Result<MechSe
         .parse_location(value)
 }
 
-/// Only haywire and ECM need explicit selectors; the default is a homing pod.
+/// Haywire, ECM and Nemesis pods need explicit selectors, the same letters as their iNarc
+/// rounds; the default is a homing pod.
 pub(crate) fn kind(value: &str) -> BeaconKind {
     match value.chars().next().map(|c| c.to_ascii_uppercase()) {
         Some('Y') => BeaconKind::Haywire,
         Some('E') => BeaconKind::Ecm,
+        Some('Z') => BeaconKind::Nemesis,
         _ => BeaconKind::Homing,
     }
 }
@@ -366,6 +368,7 @@ pub fn pod_status(world: &World, id: ObjectId, pilot: ObjectId) -> Result<String
             BeaconKind::Homing,
             BeaconKind::Haywire,
             BeaconKind::Ecm,
+            BeaconKind::Nemesis,
         ]
         .map(|kind| {
             if row.destroyed {
@@ -389,7 +392,7 @@ pub fn pod_status(world: &World, id: ObjectId, pilot: ObjectId) -> Result<String
             marks[1],
             marks[2],
             marks[3],
-            if row.destroyed { '*' } else { '.' }
+            marks[4],
         ));
     }
     Ok(lines.join("\n"))

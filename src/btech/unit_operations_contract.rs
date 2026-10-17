@@ -227,7 +227,7 @@ fn edit_vehicle(
 }
 
 /// Snapshot the reference finalize's geometry-derived technology bits into the
-/// loaded definition: flippable arms follow the arm actuator layout, and a
+/// loaded definition: flippable arms follow the arm actuator layout and split weapons, and a
 /// compact engine is any center-torso installation below four criticals.
 fn finalize_load_specials(mech: &mut MechTemplate) {
     use MechSection::{LeftArm, RightArm};
@@ -242,10 +242,13 @@ fn finalize_load_specials(mech: &mut MechTemplate) {
                         .eq_ignore_ascii_case("HandOrFootActuator")
             })
     };
+    // A weapon split between a torso and an arm keeps the arms from flipping (Total Warfare
+    // p. 106).
     let flippable = !actuator(LeftArm, 2)
         && !actuator(RightArm, 2)
         && !actuator(LeftArm, 3)
-        && !actuator(RightArm, 3);
+        && !actuator(RightArm, 3)
+        && !crate::btech::arm_torso_split(|section| mech.sections.get(&section));
     let compact = mech
         .sections
         .get(&MechSection::CenterTorso)

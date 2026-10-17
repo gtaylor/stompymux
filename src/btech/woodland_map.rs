@@ -45,11 +45,22 @@ pub fn apply_woodland_clearing(
     ensure!(!before.is_burning(), "Invalid woodland reduction");
     let reduction = super::reduce_woodland(before.with_overlay(None), total)
         .context("Invalid woodland reduction")?;
-    let after = reduction.hex;
+    // Woods or jungle that started as ultra-heavy fall to ultra-rough ground however many
+    // steps they thinned through (Tactical Operations p. 63).
+    let index = record.tile_index(coordinate)?;
+    let ultra = record.ultra_woodland.contains(&index)
+        || before.foliage().and_then(super::Foliage::density) == Some(super::Density::UltraHeavy);
+    let after = if ultra && reduction.clearing == super::WoodlandClearing::CutToRough {
+        reduction.hex.with_ground(super::Ground::UltraRough)
+    } else {
+        reduction.hex
+    };
     world.attempt(|world| {
         let record = world.btech.maps.get_mut(&map).unwrap();
         record.write_hex(i64::from(coordinate.x), i64::from(coordinate.y), after)?;
-        let index = record.tile_index(coordinate)?;
+        if ultra && after.is_woods() {
+            std::sync::Arc::make_mut(&mut record.ultra_woodland).insert(index);
+        }
         let damage = std::sync::Arc::make_mut(&mut record.terrain_damage);
         if reduction.carried == 0 {
             damage.remove(&index);
@@ -64,4 +75,34 @@ pub fn apply_woodland_clearing(
             after,
         })
     })
+}
+
+/// Area-effect damage against the growth in a hex (Total Warfare p. 112): an area-effect weapon
+/// always strikes the woods or jungle in a hex it damages, at double its Damage Value against
+/// the growth's terrain factor, thinning or felling it as other damage does. A burning hex is
+/// left to its fire. Returns the change when the growth changed type.
+pub(super) fn area_effect_woodland(
+    world: &mut World,
+    map: ObjectId,
+    coordinate: HexCoordinate,
+    damage: u16,
+) -> Result<Option<WoodlandChange>> {
+    let record = world.btech.maps().get(&map).context("Map not found")?;
+    let tile = record.hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    if damage == 0 || !tile.is_woods() || tile.is_burning() {
+        return Ok(None);
+    }
+    let index = record.tile_index(coordinate)?;
+    let total = record
+        .terrain_damage
+        .get(&index)
+        .copied()
+        .unwrap_or(0)
+        .saturating_add(damage.saturating_mul(2));
+    if super::reduce_woodland(tile, total).is_none() {
+        let record = world.btech.maps.get_mut(&map).unwrap();
+        std::sync::Arc::make_mut(&mut record.terrain_damage).insert(index, total);
+        return Ok(None);
+    }
+    apply_woodland_clearing(world, map, coordinate, tile, total).map(Some)
 }

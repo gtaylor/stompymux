@@ -140,7 +140,7 @@ pub(super) fn resolve_with_context_in_candidate(
     };
     ensure!(
         match (request.fire_mode, request.gatling_damage) {
-            (FireMode::Gatling, Some(damage)) => (1..=6).contains(&damage),
+            (FireMode::Gatling, Some(damage)) => (1..=7).contains(&damage),
             (FireMode::Gatling, None) => false,
             (_, None) => true,
             _ => false,

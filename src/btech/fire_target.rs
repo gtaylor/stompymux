@@ -184,7 +184,6 @@ pub(super) fn resolve_conventional_for_source(
     Ok(ResolvedFireTarget::Unit { unit, coordinate })
 }
 
-/// Stealth lock admission and team safeties for the shooting unit.
 /// Refusal for a unit target of a hex-only munition.
 const HEX_ONLY: &str = "Smoke and Thunder missiles can only target hexes!";
 
@@ -209,6 +208,8 @@ pub(super) fn check_unit_munition(world: &World, shooter: ObjectId, index: usize
     Ok(())
 }
 
+/// Target admission every weapon attack on a unit shares: no target in the shooter's own hex,
+/// a stable lock on a stealthy target, and the team safeties.
 pub(super) fn check_target_safety_for_source(
     world: &World,
     targeting: TargetSource,
@@ -217,6 +218,7 @@ pub(super) fn check_target_safety_for_source(
     let shooter = targeting.unit;
     let source = super::scanner::scanner_unit(world, shooter).context("Shooter is unavailable")?;
     let recipient = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
+    check_separate_hex(world, shooter, target)?;
     let safety = crate::btech::with_unit!(world.btech.unit(shooter).unwrap(), |unit| {
         unit.friendly_fire_safety()
     });
@@ -241,6 +243,27 @@ pub(super) fn check_target_safety_for_source(
     ensure!(
         !world.btech.maps()[&map].blocks_friendly_fire(),
         "Friendly Fire? I don't think so..."
+    );
+    Ok(())
+}
+
+/// A unit cannot make a weapon attack against another unit in its own hex (Total Warfare
+/// p. 106), whatever their elevations; a VTOL cannot either (p. 197). The exception is two
+/// units inside the same building hex, which may fire on each other on any of its levels
+/// (p. 175).
+fn check_separate_hex(world: &World, shooter: ObjectId, target: ObjectId) -> Result<()> {
+    let position = |id| {
+        super::scanner::scanner_unit(world, id)
+            .and_then(|unit| unit.position)
+            .map(|position| (position.map, position.x, position.y))
+    };
+    if position(shooter) != position(target) || position(shooter).is_none() {
+        return Ok(());
+    }
+    let inside = |id| super::building_interior::unit_inside(world, id);
+    ensure!(
+        inside(shooter)?.is_some() && inside(target)?.is_some(),
+        "You cannot fire on a unit in your own hex!"
     );
     Ok(())
 }

@@ -138,11 +138,10 @@ impl MountArcs for WeaponMount {
             heading.is_finite() && bearing.is_finite(),
             "Invalid firing direction"
         );
-        let section = self
-            .criticals
-            .first()
-            .context("Weapon mount has no criticals")?
-            .section;
+        ensure!(!self.criticals.is_empty(), "Weapon mount has no criticals");
+        // A weapon split between a torso and an arm fires into the torso's arc (Total Warfare
+        // p. 105).
+        let section = self.firing_section();
         let leg = chassis.is_leg(section);
         let twist = if leg { 0.0 } else { facing.torso.offset() };
         let angle =
@@ -449,6 +448,46 @@ mod tests {
                     .bears_on(MechChassis::Quad, 0.0, 180.0, twisted)
                     .unwrap()
             );
+        }
+    }
+
+    /// A weapon split between an arm and a torso fires into the torso's forward arc only,
+    /// whichever section holds its first slot, and stays forward when the arms are reversed
+    /// (Total Warfare p. 105).
+    #[test]
+    fn split_arm_weapons_use_the_torso_arc() {
+        let split = WeaponMount {
+            criticals: vec![
+                CriticalLocation {
+                    section: MechSection::LeftArm,
+                    slot: 4,
+                },
+                CriticalLocation {
+                    section: MechSection::LeftTorso,
+                    slot: 0,
+                },
+            ],
+            ..mount(MechSection::LeftArm, false)
+        };
+        assert_eq!(split.firing_section(), MechSection::LeftTorso);
+        assert_eq!(
+            mount(MechSection::LeftArm, false).firing_section(),
+            MechSection::LeftArm
+        );
+        for (bearing, bears) in [(0.0, true), (270.0, false), (180.0, false)] {
+            for arms_flipped in [false, true] {
+                let facing = Facing {
+                    torso: Torso::Center,
+                    arms_flipped,
+                };
+                assert_eq!(
+                    split
+                        .bears_on(MechChassis::Biped, 0.0, bearing, facing)
+                        .unwrap(),
+                    bears,
+                    "{bearing} {arms_flipped}"
+                );
+            }
         }
     }
 }

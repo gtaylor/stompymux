@@ -161,7 +161,7 @@ impl Mech {
                 .carried_club()
                 .is_some_and(|arm| arm.section() == section),
             posture_failure: self
-                .prone_support_failure(loadout, section)
+                .prone_support_failure(loadout, mount.firing_section())
                 .or_else(|| self.hull_down_failure(section)),
         })
     }
@@ -268,7 +268,8 @@ pub(super) fn use_weapon(
         "Invalid gatling firing cycle"
     );
     let rounds = if let Some(damage) = gatling_damage {
-        ensure!((1..=6).contains(&damage), "Invalid gatling damage");
+        // A heavy machine gun's rapid fire rolls 1D6+1 (Tactical Operations p. 100).
+        ensure!((1..=7).contains(&damage), "Invalid gatling damage");
         u16::from(damage) * 3
     } else {
         fire_mode.rounds_per_cycle()

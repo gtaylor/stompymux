@@ -11,6 +11,10 @@ pub(super) struct AimedLaunch {
     pub weapon: Weapon,
     pub fire_mode: FireMode,
     pub ammunition: AmmunitionMode,
+    /// The shot was fired indirectly through a spotter.
+    pub indirect: bool,
+    /// The shot is a machine gun array's volley.
+    pub volley: bool,
     pub launched: bool,
     pub hit: bool,
     pub in_range: bool,
@@ -24,7 +28,10 @@ pub(super) struct AimedShot {
     computer: bool,
 }
 
-/// Missiles consume immobile-target preparation even on misses, but do not direct their hit locations.
+/// Prepare a launch's aimed shot. The 6-8 roll against an immobile target is made for every
+/// hit, and for missiles on a miss too, but only an attack that may be aimed (Total Warfare
+/// p. 110) directs its hit location; a targeting computer's aimed shot at an active target
+/// excludes pulse weapons as well (p. 143).
 pub(super) fn prepare(world: &mut World, request: AimedLaunch) -> Result<Option<AimedShot>> {
     let missile = request.weapon.gunnery_skill(true) == "Gunnery-Missile";
     if !request.launched
@@ -37,21 +44,24 @@ pub(super) fn prepare(world: &mut World, request: AimedLaunch) -> Result<Option<
     let Some(selection) = super::aimed_target::aimed_section(world, request.shooter)? else {
         return Ok(None);
     };
+    let attack = super::aimed_target::AimedAttack {
+        weapon: request.weapon,
+        fire_mode: request.fire_mode,
+        ammunition: request.ammunition,
+        indirect: request.indirect,
+        volley: request.volley,
+    };
     let immobile_hit = if super::aimed_target::immobile(world, request.target)? {
         aimed_location_struck(super::dice::unit_dice_mut(world, request.target)?)
     } else {
         false
     };
-    let computer = !missile
-        && request.ammunition != AmmunitionMode::Cluster
+    let computer = attack.computer_allowed()
         && selection.matches(world, request.target)
         && computer_assists(world, request.shooter, request.index, request.ammunition)?;
     Ok(Some(AimedShot {
         selection,
-        immobile_hit: immobile_hit
-            && !missile
-            && request.fire_mode.rounds_per_cycle() == 1
-            && request.ammunition != AmmunitionMode::Cluster,
+        immobile_hit: immobile_hit && attack.immobile_allowed(),
         computer,
     }))
 }

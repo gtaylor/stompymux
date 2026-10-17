@@ -33,39 +33,62 @@ pub(super) fn modifiers(
         .get(weapon_index)
         .context("Weapon index out of bounds")?;
     let indirect = super::spotter::indirect_aim(world, source, target, weapon_index)?;
+    let (target, decoy) =
+        super::aim::nemesis_target(world, shooter, target, weapon_index, indirect)?;
     let distance = super::unit_range(world, shooter, target)?.hexes();
     let ammunition = attacker.ammunition_mode(weapon_index)?;
     let target_terms =
         super::aim::target_modifiers(world, shooter, target, mount.weapon, ammunition, distance)?;
     let mut aim = weapon_modifiers(attacker, weapon_index, distance, gunnery)?;
-    super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut aim)?;
+    aim.attacker_movement += super::recent_fire::skid_modifiers(world, shooter).0;
     let indirect = indirect.map(|aim| super::IndirectAim {
         tag_guided: target_terms.tag_guided,
         ..aim
     });
     aim.indirect = indirect;
+    super::aimed_target::apply_aim(
+        world,
+        shooter,
+        target,
+        super::aimed_target::AimedAttack {
+            weapon: mount.weapon,
+            fire_mode: attacker.fire_mode(weapon_index)?,
+            ammunition,
+            indirect: indirect.is_some(),
+            volley: attacker.array_volley(weapon_index)?.is_some(),
+        },
+        &mut aim,
+    )?;
     aim.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     aim.ammunition_accuracy += target_terms.ammunition_accuracy;
+    // A hyper-assault Gauss rifle's flak attack gets no targeting computer help (Total
+    // Warfare p. 136).
+    if target_terms.flak && mount.weapon.is_hag() {
+        aim.targeting_computer = 0;
+    }
     aim.target_movement = target_terms.movement;
     aim.bogged_down = target_terms.bogged_down;
     aim.orbital_drop = target_terms.orbital_drop;
     aim.light = target_terms.light;
     aim.environment = super::planetary_conditions::aim_modifier(world, shooter, mount.weapon);
     aim.interference = super::planetary_conditions::interference_aim_modifier(world, shooter);
-    aim.beacon_accuracy += target_terms.beacon_accuracy;
-    aim.target_lock = if indirect.is_some() {
+    aim.beacon_accuracy += target_terms.beacon_accuracy
+        + super::aim::artemis_v_modifier(
+            world,
+            shooter,
+            weapon_index,
+            Some(target),
+            indirect.is_some(),
+        )?;
+    aim.target_lock = if indirect.is_some() || decoy {
         0
     } else {
         super::aim::lock_modifier(world, source, target, rules.override_weapon_arcs)?
     };
-    aim.perception = super::aim::perception_aim(
-        world,
-        indirect.map_or(shooter, |aim| aim.spotter),
-        target,
-        // The spotter's terrain modifiers apply however it designated the target (Total
-        // Warfare p. 111); only a TAG-guided shot drops them.
-        indirect.is_some_and(|aim| aim.tag_guided),
-    )?;
+    if decoy {
+        aim.beacon_accuracy += super::narc::NEMESIS_DIVERSION;
+    }
+    aim.perception = super::aim::indirect_perception(world, shooter, target, indirect)?;
     let submerged = super::weapon_geometry::apply_water_range(
         world,
         shooter,

@@ -226,6 +226,24 @@ impl<L> SystemCritical<L> {
     }
 }
 
+impl WeaponMount {
+    /// The section whose firing arc and arm actuators govern the weapon: the torso for a
+    /// weapon split between a torso and an arm (Total Warfare p. 105), otherwise the section
+    /// holding its first slot.
+    pub fn firing_section(&self) -> MechSection {
+        let primary = self.criticals[0].section;
+        let arm = |section| matches!(section, MechSection::LeftArm | MechSection::RightArm);
+        if !arm(primary) {
+            return primary;
+        }
+        self.criticals
+            .iter()
+            .map(|location| location.section)
+            .find(|section| !arm(*section))
+            .unwrap_or(primary)
+    }
+}
+
 impl<L> WeaponMount<L> {
     /// Whether a targeting computer assists this weapon: one must be installed with every slot
     /// available, and only the direct-fire energy, ballistic and pulse weapons that size it

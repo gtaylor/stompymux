@@ -301,12 +301,14 @@ fn check_bearing(
         submerged,
         bears,
     } = super::weapon_geometry::geometry(world, shooter, index, hex.center())?;
-    super::weapon_geometry::check_water(weapon, submerged)?;
+    super::weapon_geometry::check_water(world, shooter, weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, weapon)?;
+    let indirect = super::spotter::indirect_hex_for_source(world, targeting, index)?.is_some();
+    if !indirect {
+        super::weapon_geometry::check_leg_cover_hex(world, shooter, index, hex)?;
+    }
     ensure!(
-        rules.override_weapon_arcs
-            || super::spotter::indirect_hex_for_source(world, targeting, index)?.is_some()
-            || bears,
+        rules.override_weapon_arcs || indirect || bears,
         "Target is outside weapon arc"
     );
     Ok(())
@@ -330,12 +332,15 @@ fn check_unit_target(
     super::torpedo::check_target(
         world,
         weapon,
+        shooter,
         target,
         super::weapon_geometry::submerged(world, shooter, index)?,
     )?;
-    let indirect = super::spotter::indirect_target_for_source(world, targeting, index)?;
-    if indirect.is_some() {
+    let indirect = super::spotter::fires_indirectly(world, targeting, target, index)?;
+    if indirect {
         super::spotter::check_indirect_water(world, shooter, target)?;
+    } else {
+        super::weapon_geometry::check_leg_cover_unit(world, shooter, index, target)?;
     }
     let position = recipient.position.context("Target is not placed")?;
     ensure!(
@@ -348,10 +353,10 @@ fn check_unit_target(
         index,
         recipient.point.context("Target is not placed")?,
     )?;
-    super::weapon_geometry::check_water(geometry.weapon, geometry.submerged)?;
+    super::weapon_geometry::check_water(world, shooter, geometry.weapon, geometry.submerged)?;
     super::planetary_conditions::check_wind(world, shooter, geometry.weapon)?;
     ensure!(
-        indirect.is_some() || rules.override_weapon_arcs || geometry.bears,
+        indirect || rules.override_weapon_arcs || geometry.bears,
         "Target is outside weapon arc"
     );
     Ok(())

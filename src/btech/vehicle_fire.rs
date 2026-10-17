@@ -118,7 +118,10 @@ fn fire_shot(
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
     let requested = target;
     let target = observed.map_or(requested.unit, |link| link.target);
-    let coordinate = if indirect.is_some() {
+    let coordinate = if indirect.is_some()
+        || super::spotter::unspotted_indirect(world, operator.source, target, weapon_index)?
+            .is_some()
+    {
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
             .context("Target is not placed")?;
@@ -145,6 +148,13 @@ fn fire_shot(
     let attacker = &world.btech.vehicles()[&shooter];
     let weapon = attacker.weapon_readiness(weapon_index)?.weapon;
     let ammunition = attacker.ammunition_mode(weapon_index)?;
+    // A Nemesis pod on a friendly unit in the line draws guided missiles onto it instead
+    // (Total Warfare p. 142); admission and aim started from the intended target.
+    let target = if aim.indirect.is_some() {
+        target
+    } else {
+        super::narc::nemesis_decoy(world, shooter, target, ammunition)?.unwrap_or(target)
+    };
 
     let source_field = electronic_field(world, shooter)?;
     let target_field = electronic_field(world, target)?;
@@ -155,6 +165,7 @@ fn fire_shot(
     // Firing a gun its machine gun array links fires every ready linked gun as one attack
     // (Total Warfare p. 137).
     let volley = attacker.array_volley(weapon_index)?;
+    let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
     drop(loadouts);
     drop(admission);
     let mut candidate = super::shot_transaction::ShotCandidate::new(world);
@@ -197,6 +208,8 @@ fn fire_shot(
             weapon,
             fire_mode: launch.expenditure.fire_mode,
             ammunition,
+            indirect: aim.indirect.is_some(),
+            volley: volley.is_some(),
             launched: launch.expenditure.launched,
             hit: launch.hit,
             in_range: aim.range.is_some(),
@@ -339,6 +352,7 @@ fn fire_shot(
                 indirect: indirect_fire,
                 apollo,
                 array,
+                submerged,
                 experience,
             },
         )?))

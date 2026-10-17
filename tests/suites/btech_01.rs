@@ -23,6 +23,9 @@ mod btech_fire_layers;
 #[path = "../btech_gauss.rs"]
 mod btech_gauss;
 
+#[path = "../btech_indirect_spotting.rs"]
+mod btech_indirect_spotting;
+
 #[path = "../btech_map_field_report.rs"]
 mod btech_map_field_report;
 

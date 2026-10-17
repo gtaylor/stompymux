@@ -839,7 +839,7 @@ async fn hex_locked_spotters_keep_the_targets_terrain_modifiers() {
             override_weapon_arcs: false,
         };
         let unit_lock = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();
-        assert_eq!(unit_lock.indirect.unwrap().spotter, observer);
+        assert_eq!(unit_lock.indirect.unwrap().spotter, Some(observer));
         let woods = unit_lock.perception.unwrap().modifier;
         assert!(woods > 0, "light woods must cost the indirect shot");
         select_battle_hex_target(
@@ -851,7 +851,7 @@ async fn hex_locked_spotters_keep_the_targets_terrain_modifiers() {
         )
         .unwrap();
         let hex_lock = battle_aim_modifiers(&world, shooter, target, index, 4, rules).unwrap();
-        assert_eq!(hex_lock.indirect.unwrap().spotter, observer);
+        assert_eq!(hex_lock.indirect.unwrap().spotter, Some(observer));
         assert_eq!(hex_lock.perception.unwrap().modifier, woods);
     }
 }

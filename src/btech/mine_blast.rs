@@ -28,6 +28,8 @@ pub struct MineBlastReport {
     pub mine: Minefield,
     pub hits: Vec<MineBlastHit>,
     pub ignited: Vec<HexCoordinate>,
+    /// Woods and jungle the blast thinned or felled (Total Warfare p. 112).
+    pub woods: Vec<WoodlandChange>,
     pub removed: Vec<u32>,
     /// The conventional field's depletion roll, when it had density to lose.
     pub depletion_roll: Option<u8>,
@@ -118,6 +120,7 @@ fn resolve(
             mine,
             hits: Vec::new(),
             ignited: Vec::new(),
+            woods: Vec::new(),
             removed: Vec::new(),
             depletion_roll: None,
             remaining_strength: None,
@@ -126,6 +129,13 @@ fn resolve(
         };
         for (coordinate, damage) in cells {
             hit_hex(world, &mut report, coordinate, damage, rules, character)?;
+            // A minefield attack is an area-effect weapon (Tactical Operations p. 175), so it
+            // always strikes the woods in its hexes.
+            if let Some(change) =
+                super::woodland_map::area_effect_woodland(world, map, coordinate, damage)?
+            {
+                report.woods.push(change);
+            }
         }
         // Tactical Operations p. 177: an inferno mine sets its hex on fire; other mines
         // start no fires.
@@ -196,6 +206,16 @@ fn deplete(world: &mut World, report: &mut MineBlastReport, ordinal: u32) -> Res
     Ok(())
 }
 
+/// The level a field lies at in `tile`: a field a weapon laid in a building hex lies on the
+/// roof, and any other field there on the building's ground floor (Tactical Operations
+/// p. 175); elsewhere the surface units stand on.
+pub(super) fn field_level(world: &World, mine: &Minefield, tile: Hex) -> i32 {
+    if tile.has_building() && !super::minefield::weapon_delivered(world, mine) {
+        return i32::from(tile.level());
+    }
+    i32::from(tile.surface_height())
+}
+
 /// Resolve a blast cell in map-slot order, freezing each occupant's arc before its packets.
 fn hit_hex(
     world: &mut World,
@@ -207,14 +227,18 @@ fn hit_hex(
 ) -> Result<()> {
     let tile = world.btech.maps()[&report.map]
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    let ground = i32::from(tile.surface_height());
+    let ground = field_level(world, &report.mine, tile);
+    let building = tile.has_building();
     let neighbor = coordinate != report.mine.coordinate;
     let inferno = report.mine.kind == MineKind::Inferno;
+    // In a building the blast follows the area-effect rules for buildings and reaches the
+    // levels just above and below the field's (Total Warfare p. 172); elsewhere it reaches the
+    // ground and a unit just above it.
     let blast = super::blast_damage::BlastCell {
         coordinate,
         origin: report.mine.coordinate.center(),
         tile,
-        lower: ground - 1,
+        lower: ground - if building { 2 } else { 1 },
         upper: ground + 2,
     };
     // Mines strike from below: every unit takes the blast on its front (Tactical Operations
@@ -230,6 +254,16 @@ fn hit_hex(
             "Mine blast requires character consequence publication"
         );
         let rules = target.rules;
+        // The levels next to a building field's take half, a 'Mech there on the Special
+        // 'Mech Hit Location Table (Total Warfare pp. 172-173).
+        let off_level = building && target.elevation != ground;
+        let damage = if off_level {
+            damage.div_ceil(2)
+        } else {
+            damage
+        };
+        let special = (off_level && world.btech.constructed_units().contains_key(&id))
+            .then_some(target.elevation < ground);
         report.notices.extend(super::broadcast::observer_notices(
             world,
             id,
@@ -285,6 +319,7 @@ fn hit_hex(
                 arc,
                 heat,
                 character: is_character,
+                special,
             },
             rules,
         )?;

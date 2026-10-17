@@ -720,7 +720,7 @@ async fn shared_range_gives_indirect_fire_no_benefit() {
     select_battle_spotter(&mut world, first, pilot, Some(peer)).unwrap();
     let lrm = weapon_index(&world, first, Weapon::Lrm20);
     let aim = battle_aim_modifiers(&world, first, target, lrm, 4, aim_rules()).unwrap();
-    assert_eq!(aim.indirect.unwrap().spotter, peer);
+    assert_eq!(aim.indirect.unwrap().spotter, Some(peer));
     assert!(aim.network_range.is_none());
     assert!((aim.distance - 16.0).abs() < 1e-8);
     assert_eq!(aim.range.unwrap().bracket, RangeBracket::Long);

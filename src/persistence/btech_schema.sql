@@ -69,11 +69,14 @@ CREATE TABLE btech_map_terrain_codes (
     PRIMARY KEY (map_dbref, code),
     UNIQUE (map_dbref, hex)
 ) WITHOUT ROWID;
--- Terrain factor damage a hex's woods, jungle or crops have taken, by row-major tile.
+-- Terrain factor damage a hex's woods, jungle or crops have taken, by row-major tile, and
+-- whether its thinned woods or jungle grew ultra-heavy (felled, they leave ultra-rough).
 CREATE TABLE btech_map_terrain_damage (
     map_dbref INTEGER NOT NULL REFERENCES btech_map_terrain(map_dbref) ON DELETE CASCADE,
     tile INTEGER NOT NULL CHECK (tile >= 0 AND tile < 1000000),
-    damage INTEGER NOT NULL CHECK (damage BETWEEN 1 AND 65535),
+    damage INTEGER NOT NULL CHECK (damage BETWEEN 0 AND 65535),
+    ultra INTEGER NOT NULL DEFAULT 0 CHECK (ultra IN (0, 1)),
+    CHECK (damage > 0 OR ultra = 1),
     PRIMARY KEY (map_dbref, tile)
 ) WITHOUT ROWID;
 
