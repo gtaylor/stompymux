@@ -32,7 +32,7 @@ fn fractional_minimum_and_bracket_boundaries_follow_separate_rounding_rules() {
 }
 
 #[test]
-fn physical_maximum_is_strict_and_extended_range_uses_twice_medium_range() {
+fn physical_maximum_is_strict() {
     for weapon in [
         Weapon::MediumLaser,
         Weapon::Srm4,

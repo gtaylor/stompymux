@@ -2209,11 +2209,10 @@ function btech_unit.weapon_diagnostics(dbref) end
 ---@field short_range integer
 ---@field medium_range integer
 ---@field long_range integer Effective range in hexes, including artillery map-sheet conversion.
----@field extended_range integer? Present when extended range is configured.
 ---@field recycle_seconds integer Effective runtime value for new activations.
 
 ---Inspect distinct installed weapon types in first-installation order, including destroyed mounts.
----Requires a trusted callback transaction. Range columns follow the server's extended-range setting.
+---Requires a trusted callback transaction. Range columns are the minimum, short, medium and long brackets.
 ---@param dbref integer
 ---@return WeaponSpecification[]
 function btech_unit.weapon_specifications(dbref) end

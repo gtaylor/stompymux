@@ -837,7 +837,7 @@
 
 // lua-types-begin btech 00281
 //|---Inspect distinct installed weapon types in first-installation order, including destroyed mounts.
-//|---Requires a trusted callback transaction. Range columns follow the server's extended-range setting.
+//|---Requires a trusted callback transaction. Range columns are the minimum, short, medium and long brackets.
 //|---@param dbref integer
 //|---@return WeaponSpecification[]
 //|function btech_unit.weapon_specifications(dbref) end

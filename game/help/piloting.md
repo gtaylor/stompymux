@@ -1759,8 +1759,7 @@ including while shut down. Empty ammunition and recycling belong to the
 
 `weaponspecs` lists one row per installed weapon type: heat, damage, range bands
 and recycle time. It includes destroyed installations and works before the unit
-is placed on a map. The extreme-range column appears when the server enables
-extended ranges; artillery maximum ranges are shown in hexes.
+is placed on a map. Artillery maximum ranges are shown in hexes.
 
 `critstatus <section>` shows every equipment slot in the selected section, including
 empty slots. Use a section abbreviation such as `la`, `ct` or `h`; quads use

@@ -44,9 +44,6 @@ Construction and configuration switches are:
 @mech/setmaxspeed <mp>
 @mech/setheatsinks <count>
 @mech/setjumpspeed <mp>
-@mech/setlrsrange <hexes>
-@mech/settacrange <hexes>
-@mech/setscanrange <hexes>
 @mech/setradio <level>
 @mech/setradiorange <hexes>
 @mech/setcargospace <space> <maximum-tons>

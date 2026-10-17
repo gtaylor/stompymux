@@ -1259,7 +1259,6 @@ Alias: `'empty'|'operational'|'disabled'|'broken'|'destroyed'|'jammed'|'shorted'
 - `short_range`: `integer`
 - `medium_range`: `integer`
 - `long_range`: `integer` — Effective range in hexes, including artillery map-sheet conversion.
-- `extended_range`: `integer?` — Present when extended range is configured.
 - `recycle_seconds`: `integer` — Effective runtime value for new activations.
 
 ## CriticalInspection

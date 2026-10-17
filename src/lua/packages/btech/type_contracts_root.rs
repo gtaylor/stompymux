@@ -1320,7 +1320,6 @@
 //|---@field short_range integer
 //|---@field medium_range integer
 //|---@field long_range integer Effective range in hexes, including artillery map-sheet conversion.
-//|---@field extended_range integer? Present when extended range is configured.
 //|---@field recycle_seconds integer Effective runtime value for new activations.
 // lua-types-end
 
