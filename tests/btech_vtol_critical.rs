@@ -238,10 +238,8 @@ async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
     let id = world.create(&config, "Protected rotor".into(), Kind::Thing);
     for suppression in ["safe", "proof"] {
         let source = if suppression == "proof" {
-            include_str!("../game/units/Kestrel.toml").replace(
-                "walk_mp = 12\n",
-                "walk_mp = 12\nspecials = [\"CritProof_Tech\"]\n",
-            )
+            include_str!("../game/units/Kestrel.toml")
+                .replace("\"CargoTech\"", "\"CargoTech\", \"CritProof_Tech\"")
         } else {
             include_str!("../game/units/Kestrel.toml").into()
         };

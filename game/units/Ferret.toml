@@ -3,6 +3,7 @@ class = "vtol"
 movement = "vtol"
 tons = 5
 walk_mp = 15
+specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"

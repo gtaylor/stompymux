@@ -3,6 +3,7 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 10
+specials = ["CargoTech"]
 
 [construction]
 tech_base = "clan"

@@ -7,10 +7,10 @@ use stompymux_rs::*;
 fn aircraft(cargo_tech: bool) -> VehicleTemplate {
     let mut template =
         VehicleTemplate::parse("Kestrel", include_str!("../game/units/Kestrel.toml")).unwrap();
-    if cargo_tech {
+    if !cargo_tech {
         template
             .attributes
-            .insert("specials".into(), "CargoTech".into());
+            .insert("specials".into(), "ICEEngine_Tech".into());
     }
     for slot in [0, 1] {
         template

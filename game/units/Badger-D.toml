@@ -4,7 +4,7 @@ movement = "track"
 tons = 30
 walk_mp = 6
 heat_sinks = 11
-specials = ["OmniMech_Tech"]
+specials = ["OmniMech_Tech", "CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"

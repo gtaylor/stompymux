@@ -5,6 +5,7 @@ tons = 30
 walk_mp = 8
 heat_sinks = 13
 radio = 5
+specials = ["CargoTech"]
 
 [construction]
 tech_base = "clan"
