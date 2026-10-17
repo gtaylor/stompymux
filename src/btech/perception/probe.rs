@@ -1,6 +1,6 @@
 //! Active probe families, their installed-equipment checks, and the technology base each
 //! fitted probe is built from.
-use crate::btech::{Mech, MechLoadout, System, SystemCritical, TechBase, Vehicle, VehicleLoadout};
+use crate::btech::{Mech, MechLoadout, System, Vehicle, VehicleLoadout};
 use anyhow::Result;
 use serde::Serialize;
 
@@ -73,18 +73,10 @@ impl ActiveProbe {
 pub(crate) struct ProbeFitting {
     pub installed: bool,
     pub available: bool,
-    /// The fitted probe is Clan technology, by its own slots (see [`probe_is_clan`]).
+    /// The fitted probe is Clan technology by its own slots (see
+    /// [`SystemCritical::is_clan`](crate::btech::SystemCritical::is_clan)):
+    /// the Beagle and the Clan active probe share one slot name, so this tells them apart.
     pub clan: bool,
-}
-
-/// Whether a probe slot is Clan technology: the one base that builds the system, when only
-/// one does (the light probe is Clan, the Bloodhound Inner Sphere), else the base the slot's
-/// `IS.` or `CL.` prefix states, else the chassis's own (TechManual p. 46). The
-/// Beagle and the Clan active probe share one slot name, so this is what tells them apart.
-pub(crate) fn probe_is_clan<L>(part: &SystemCritical<L>, clan_chassis: bool) -> bool {
-    part.system
-        .technology_base()
-        .map_or_else(|| part.is_clan(clan_chassis), |base| base == TechBase::Clan)
 }
 
 impl Mech {
@@ -130,7 +122,7 @@ impl Mech {
         ProbeFitting {
             installed: true,
             available,
-            clan: parts().any(|part| probe_is_clan(part, clan_chassis)),
+            clan: parts().any(|part| part.is_clan(clan_chassis)),
         }
     }
 }
@@ -175,7 +167,7 @@ impl Vehicle {
         ProbeFitting {
             installed,
             available,
-            clan: installed && parts().any(|part| probe_is_clan(part, clan_chassis)),
+            clan: installed && parts().any(|part| part.is_clan(clan_chassis)),
         }
     }
 }
@@ -203,27 +195,9 @@ mod tests {
         );
     }
 
-    /// A probe slot is Clan technology by its own prefix, else by the one base that builds its
-    /// system, else by the chassis; only a Clan-built Beagle is the Clan active probe.
+    /// Only a Clan-built Beagle is the Clan active probe.
     #[test]
-    fn probe_slots_carry_their_own_technology_base() {
-        let slot = |system, tech_base| SystemCritical {
-            location: (),
-            system,
-            tech_base,
-            links: Vec::new(),
-        };
-        for clan_chassis in [false, true] {
-            let beagle = |base| probe_is_clan(&slot(System::BeagleProbe, base), clan_chassis);
-            assert!(beagle(Some(TechBase::Clan)));
-            assert!(!beagle(Some(TechBase::InnerSphere)));
-            assert_eq!(beagle(None), clan_chassis);
-            assert!(probe_is_clan(&slot(System::LightProbe, None), clan_chassis));
-            assert!(!probe_is_clan(
-                &slot(System::BloodhoundProbe, None),
-                clan_chassis
-            ));
-        }
+    fn only_a_clan_built_beagle_is_named_the_clan_active_probe() {
         assert_eq!(
             ActiveProbe::Beagle.installed_name(true),
             "Clan Active Probe"
