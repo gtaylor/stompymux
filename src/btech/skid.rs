@@ -414,6 +414,9 @@ pub(super) fn resolve_mech(
         left -= i32::from(skid_cost(next, GroundMovement::Legged));
     }
     report.falls.insert(0, fall);
+    // The skid's combat modifiers start once it ends, so its own unintentional charges never
+    // pay the skidding attacker's +1 (Total Warfare p. 62).
+    super::recent_fire::record_skid(world, id);
     if let Some(motion) = world
         .btech
         .constructed
@@ -835,6 +838,11 @@ pub(super) fn resolve_vehicle(
                 .notices
                 .extend(super::broadcast::observer_notices(world, id, &text.text));
         }
+    }
+    // A hovercraft's sideslip is not a skid and carries no combat modifier (Total Warfare
+    // p. 62).
+    if !hover {
+        super::recent_fire::record_skid(world, id);
     }
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
     vehicle.halt();

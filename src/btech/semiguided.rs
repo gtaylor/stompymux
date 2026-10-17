@@ -56,8 +56,8 @@ pub(crate) fn command(
 mod tests {
     use super::*;
 
-    /// TAG assistance is specific to this ammunition and never removes an immobile or prone
-    /// adjustment.
+    /// TAG assistance is specific to this ammunition and never removes an immobile, prone or
+    /// skidding adjustment.
     #[test]
     fn semiguided_tag_movement_preserves_immobile_and_prone_terms() {
         for motion in [0, 1, 3, 7] {
@@ -66,6 +66,7 @@ mod tests {
                     motion,
                     immobile,
                     prone,
+                    skidding: 2,
                 };
                 assert_eq!(
                     AmmunitionMode::SemiGuided.tag_movement_modifier(movement, true),
@@ -73,6 +74,7 @@ mod tests {
                         motion: 0,
                         immobile,
                         prone,
+                        skidding: 2,
                     }
                 );
                 assert_eq!(

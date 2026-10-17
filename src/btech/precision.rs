@@ -65,6 +65,7 @@ mod tests {
                     motion,
                     immobile,
                     prone,
+                    skidding: 2,
                 };
                 assert_eq!(
                     AmmunitionMode::Precision.precision_movement(movement),
@@ -72,6 +73,7 @@ mod tests {
                         motion: expected,
                         immobile,
                         prone,
+                        skidding: 2,
                     }
                 );
                 assert_eq!(

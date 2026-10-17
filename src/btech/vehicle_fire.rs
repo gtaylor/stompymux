@@ -198,6 +198,8 @@ fn fire_shot(
             weapon,
             fire_mode: launch.expenditure.fire_mode,
             ammunition,
+            indirect: aim.indirect.is_some(),
+            volley: volley.is_some(),
             launched: launch.expenditure.launched,
             hit: launch.hit,
             in_range: aim.range.is_some(),

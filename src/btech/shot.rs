@@ -345,6 +345,8 @@ fn resolve_shot_inner(
     super::torpedo::check_target(world, selected_weapon, shooter, target, submerged)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;
+    } else {
+        super::weapon_geometry::check_leg_cover_unit(world, shooter, weapon_index, target)?;
     }
     let attacker = &world.btech.constructed_units()[&shooter];
     super::fire_target::check_target_safety_for_source(world, operator.source, target)?;
@@ -451,6 +453,8 @@ fn resolve_shot_inner(
             weapon,
             fire_mode: expenditure.fire_mode,
             ammunition: expenditure.ammunition_mode,
+            indirect: aim.indirect.is_some(),
+            volley: volley.is_some(),
             launched,
             hit,
             in_range: aim.range.is_some(),

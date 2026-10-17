@@ -150,6 +150,10 @@ pub struct Mech {
     /// a unit may be the target of only one of them a turn (Total Warfare pp. 148-149).
     #[serde(default)]
     pub(super) assaulted_at: Option<i64>,
+    /// Simulation time the unit last finished a skid; it fires at +1 and is hit at +2 for the
+    /// rest of that turn (Total Warfare p. 62).
+    #[serde(default)]
+    pub(super) skidded_at: Option<i64>,
     /// Simulation time a weapon in each section last launched; that limb may not make a
     /// physical attack for the rest of the turn (Total Warfare pp. 145-147).
     #[serde(default)]
@@ -482,6 +486,7 @@ super::saved_parts::saved_parts!(Mech {
         last_weapon_fire,
         physical_assault_time,
         assaulted_at,
+        skidded_at,
         section_fire,
     ],
     // The stagger phase wraps every second on a running unit and is stored as a timer; the
@@ -990,6 +995,7 @@ impl Mech {
             last_weapon_fire: None,
             physical_assault_time: None,
             assaulted_at: None,
+            skidded_at: None,
             section_fire: Default::default(),
             artillery_adjustment: 0,
             artillery_registration: Default::default(),
@@ -1273,6 +1279,7 @@ impl Mech {
             self.last_weapon_fire.is_none_or(|time| time >= 0)
                 && self.physical_assault_time.is_none_or(|time| time >= 0)
                 && self.assaulted_at.is_none_or(|time| time >= 0)
+                && self.skidded_at.is_none_or(|time| time >= 0)
                 && self.section_fire.values().all(|&time| time >= 0),
             "Invalid attack timestamp"
         );

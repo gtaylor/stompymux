@@ -126,7 +126,10 @@ pub fn set_aimed_section(
     Ok(Notice { unit: id, text })
 }
 
-/// Mech immobility is distinct from standing still, falling or losing a leg.
+/// Mech immobility is distinct from standing still, falling or losing a leg: a shut-down
+/// Mech or one whose MechWarrior is unconscious is immobile (Total Warfare p. 110), and so is a
+/// biped that has lost both legs and both arms, or a four-legged Mech that has lost all four
+/// legs (p. 123).
 pub(super) fn mech_immobile(world: &World, unit: &Mech) -> bool {
     unit.fortified
         || unit.crew_recovery().remaining > 0
@@ -134,6 +137,22 @@ pub(super) fn mech_immobile(world: &World, unit: &Mech) -> bool {
         || unit
             .pilot()
             .is_some_and(|pilot| world.btech.unconscious(pilot))
+        || limbless(unit)
+}
+
+/// Whether a Mech has lost the limbs it needs to move at all: both legs and both arms of a
+/// biped, or all four legs of a quad (Total Warfare p. 123).
+fn limbless(unit: &Mech) -> bool {
+    let chassis = unit.chassis();
+    if unit.unavailable_legs() < chassis.legs().len() {
+        return false;
+    }
+    if chassis == MechChassis::Quad {
+        return true;
+    }
+    [MechSection::LeftArm, MechSection::RightArm]
+        .into_iter()
+        .all(|arm| unit.sections()[&arm].internal == 0 || unit.section_disabled(arm))
 }
 
 /// Shared immobile-target predicate for movement bonuses, aimed fire and targeting-computer policy.
@@ -158,25 +177,71 @@ pub(super) fn immobile(world: &World, target: ObjectId) -> Result<bool> {
     ))
 }
 
-/// Head selection overrides computer assistance; mobile directed computer fire costs three instead of granting one.
+/// What an aimed shot would be made with: the weapon, how it is firing and whether the shot
+/// is indirect or one gun of a machine gun array's volley.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct AimedAttack {
+    pub weapon: Weapon,
+    pub fire_mode: FireMode,
+    pub ammunition: AmmunitionMode,
+    pub indirect: bool,
+    pub volley: bool,
+}
+
+impl AimedAttack {
+    /// Whether the attack may be aimed at an immobile target (Total Warfare p. 110): not with
+    /// missile launchers, area-effect weapons, cluster or flak attacks (LB-X cluster rounds and
+    /// machine gun array volleys among them), hyper-assault Gauss rifles, indirect fire, or a
+    /// rapid-fire weapon firing more than one shot.
+    pub(super) fn immobile_allowed(self) -> bool {
+        self.weapon.gunnery_skill(true) != "Gunnery-Missile"
+            && !self.weapon.is_artillery()
+            && !self.weapon.is_hag()
+            && self.ammunition.munition() != AmmunitionMode::Cluster
+            && self.fire_mode.rounds_per_cycle() == 1
+            && !self.indirect
+            && !self.volley
+    }
+
+    /// Whether a targeting computer may make this an aimed shot at an active target (Total
+    /// Warfare p. 143): every attack an immobile target admits, except pulse weapons. The
+    /// computer itself must also assist the weapon.
+    pub(super) fn computer_allowed(self) -> bool {
+        self.immobile_allowed() && !self.weapon.is_pulse()
+    }
+}
+
+/// Apply a saved aim to the to-hit number. An aim at an immobile Mech's head costs +3 in
+/// place of the immobile -4 (Total Warfare p. 110) and can be made only without the targeting
+/// computer; a head aim at a mobile Mech is impossible. A targeting computer's aimed shot at an
+/// active target of the saved class costs +3 instead of the computer's -1 (p. 143). An attack
+/// that may not be aimed is an ordinary shot.
 pub(super) fn apply_aim(
     world: &World,
     shooter: ObjectId,
     target: ObjectId,
-    weapon: Weapon,
+    attack: AimedAttack,
     aim: &mut AimModifiers,
 ) -> Result<()> {
     let Some(selection) = aimed_section(world, shooter)? else {
         return Ok(());
     };
+    if !attack.immobile_allowed() {
+        return Ok(());
+    }
     let immobile = immobile(world, target)?;
-    if selection.slot() == 7
+    if selection == AimSelection::Mech(MechSection::Head)
         && world.btech.constructed_units().contains_key(&target)
-        && weapon.gunnery_skill(true) != "Gunnery-Missile"
     {
         aim.aimed_section = if immobile { 7 } else { 25 };
         aim.targeting_computer = 0;
-    } else if aim.targeting_computer == -1 && !immobile {
+        return Ok(());
+    }
+    if aim.targeting_computer == -1
+        && !immobile
+        && attack.computer_allowed()
+        && selection.matches(world, target)
+    {
         aim.targeting_computer = 3;
     }
     Ok(())
@@ -254,4 +319,56 @@ pub(super) fn suffix(
         AimSelection::GroundVehicle(section) | AimSelection::Vtol(section) => section.name(),
     };
     Ok(format!("'s {}", name.replace('_', " ")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// An attack with the given weapon, firing mode and ammunition, fired directly and alone.
+    fn attack(weapon: Weapon, fire_mode: FireMode, ammunition: AmmunitionMode) -> AimedAttack {
+        AimedAttack {
+            weapon,
+            fire_mode,
+            ammunition,
+            indirect: false,
+            volley: false,
+        }
+    }
+
+    /// Missile launchers, cluster rounds, hyper-assault Gauss rifles, indirect fire, machine gun
+    /// array volleys and multi-shot rapid fire may not be aimed (Total Warfare p. 110); a
+    /// targeting computer's aimed shot excludes pulse weapons as well (p. 143).
+    #[test]
+    fn aimed_shots_exclude_the_attacks_the_book_lists() {
+        use AmmunitionMode as Ammo;
+        use FireMode as Mode;
+        let laser = attack(Weapon::MediumLaser, Mode::Normal, Ammo::Normal);
+        assert!(laser.immobile_allowed() && laser.computer_allowed());
+        let pulse = attack(Weapon::MediumPulseLaser, Mode::Normal, Ammo::Normal);
+        assert!(pulse.immobile_allowed() && !pulse.computer_allowed());
+        let single_ultra = attack(Weapon::UltraAc5, Mode::Normal, Ammo::Normal);
+        assert!(single_ultra.immobile_allowed() && single_ultra.computer_allowed());
+        for excluded in [
+            attack(Weapon::Lrm10, Mode::Normal, Ammo::Normal),
+            attack(Weapon::Lbx10, Mode::Normal, Ammo::Cluster),
+            attack(Weapon::ClanHag20, Mode::Normal, Ammo::Normal),
+            attack(Weapon::UltraAc5, Mode::Ultra, Ammo::Normal),
+            attack(Weapon::RotaryAc5, Mode::Rotary4, Ammo::Normal),
+            attack(Weapon::LongTom, Mode::Normal, Ammo::Normal),
+            AimedAttack {
+                volley: true,
+                ..attack(Weapon::MachineGun, Mode::Normal, Ammo::Normal)
+            },
+            AimedAttack {
+                indirect: true,
+                ..laser
+            },
+        ] {
+            assert!(!excluded.immobile_allowed(), "{excluded:?}");
+            assert!(!excluded.computer_allowed(), "{excluded:?}");
+        }
+        let gun = attack(Weapon::MachineGun, Mode::Normal, Ammo::Normal);
+        assert!(gun.immobile_allowed());
+    }
 }

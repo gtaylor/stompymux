@@ -1,5 +1,6 @@
-//! Mech skid checks on pavement: only a running 'Mech that turned rolls before it moves on.
-use crate::btech_motion_common::{RULES, fixture_assets};
+//! Mech skid checks on pavement: only a running 'Mech that turned rolls before it moves on, and
+//! a skid's combat modifiers for the rest of the turn.
+use crate::btech_motion_common::{RULES, fixture_assets, optical_aim_rules, pass_seconds};
 use stompymux_rs::*;
 
 /// Drive the 6/9 Phoenix Hawk south across open pavement at `speed`, bear off by a small turn
@@ -115,4 +116,59 @@ async fn terrain_shortens_a_skid() {
     let pavement = skid_hexes(false).await;
     assert!(pavement >= 2, "{pavement}");
     assert_eq!(skid_hexes(true).await, pavement.div_ceil(2));
+}
+
+/// For the turn it skids, a skidding 'Mech fires at +1 and is hit at +2 (Total Warfare p. 62);
+/// a turn later both are gone.
+#[tokio::test]
+async fn a_skid_costs_one_to_fire_and_gives_two_to_be_hit_for_a_turn() {
+    let source = format!("30 30\n{}", format!("{}\n", "_0".repeat(30)).repeat(30));
+    let template =
+        MechTemplate::parse("PXH-1", include_str!("fixtures/btech/units/PXH-1.toml")).unwrap();
+    let (_dir, config, mut world, id) = fixture_assets(&source, template.clone()).await;
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    let watcher = world.create(&config, "Watcher".into(), Kind::Thing);
+    world.objects.get_mut(&watcher).unwrap().home = Some(ObjectId(config.home()));
+    create_battle_unit(&mut world, watcher, template).unwrap();
+    place_battle_unit(&mut world, watcher, map, 8, 5).unwrap();
+    set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
+    for _ in 0..60 {
+        advance_battle_motion(&mut world, RULES).unwrap();
+    }
+    set_battle_speed(&mut world, id, ObjectId(1), 96.75).unwrap();
+    for _ in 0..30 {
+        advance_battle_motion(&mut world, RULES).unwrap();
+    }
+    let seed = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+        .unwrap();
+    world
+        .btech
+        .set_unit_dice(id, Dice::seeded([seed; 32]))
+        .unwrap();
+    set_battle_heading(&mut world, id, ObjectId(1), 170.0).unwrap();
+    let skidded = (0..40).any(|_| {
+        advance_battle_motion(&mut world, RULES)
+            .unwrap()
+            .iter()
+            .any(|notice| notice.text.contains("lose your footing and skid"))
+    });
+    assert!(skidded, "the 'Mech never skidded");
+    let skidding = |world: &World| {
+        battle_unit_target_movement(world, id, 3.0)
+            .unwrap()
+            .skidding
+    };
+    let movement = |world: &World| {
+        battle_aim_modifiers(world, id, watcher, 0, 4, optical_aim_rules())
+            .unwrap()
+            .attacker_movement
+    };
+    assert_eq!(skidding(&world), 2);
+    let skidded_movement = movement(&world);
+    pass_seconds(&mut world, 29);
+    assert_eq!(skidding(&world), 2);
+    pass_seconds(&mut world, 1);
+    assert_eq!(skidding(&world), 0);
+    assert_eq!(movement(&world) + 1, skidded_movement);
 }

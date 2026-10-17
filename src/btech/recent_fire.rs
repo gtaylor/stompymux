@@ -54,6 +54,11 @@ impl Mech {
         self.last_jump_launch
             .is_some_and(|time| within_turn(time, now))
     }
+
+    /// Whether the unit skidded within the current turn (Total Warfare p. 62).
+    pub fn skidded_this_turn(&self, now: i64) -> bool {
+        self.skidded_at.is_some_and(|time| within_turn(time, now))
+    }
 }
 
 /// Whether an event at simulation time `time` happened in the turn ending at `now`.
@@ -80,6 +85,33 @@ impl Vehicle {
     /// Simulation time of this vehicle's last ram; it may not spot for the rest of that turn.
     pub fn physical_assault_time(&self) -> Option<i64> {
         self.physical_assault_time
+    }
+
+    /// Whether the vehicle skidded within the current turn (Total Warfare p. 62).
+    pub fn skidded_this_turn(&self, now: i64) -> bool {
+        self.skidded_at.is_some_and(|time| within_turn(time, now))
+    }
+}
+
+/// Skidding in combat (Total Warfare p. 62): a unit that skidded this turn takes +1 on its own
+/// weapon attacks, and attacks against it take +2. The skid's own unintentional charge is
+/// resolved before the skid ends and so never pays the +1.
+pub(super) fn skid_modifiers(world: &World, id: ObjectId) -> (u8, i8) {
+    let now = world.btech.simulation_time();
+    let skidded = world
+        .btech
+        .unit(id)
+        .is_some_and(|unit| crate::btech::with_unit!(unit, |unit| unit.skidded_this_turn(now)));
+    if skidded { (1, 2) } else { (0, 0) }
+}
+
+/// Record that a unit has just finished a skid.
+pub(super) fn record_skid(world: &mut World, id: ObjectId) {
+    let now = world.btech.simulation_time();
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        unit.skidded_at = Some(now);
+    } else if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
+        vehicle.skidded_at = Some(now);
     }
 }
 

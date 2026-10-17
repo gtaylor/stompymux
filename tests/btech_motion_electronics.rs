@@ -6693,7 +6693,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
     world.objects.get_mut(&target).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(&mut world, target, template).unwrap();
     support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
-    place_battle_unit(&mut world, target, map, 5, 5).unwrap();
+    place_battle_unit(&mut world, target, map, 5, 6).unwrap();
     set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
     for _ in 0..40 {
         advance_battle_motion(&mut world, RULES).unwrap();
@@ -6896,7 +6896,7 @@ async fn apod_live_fire_and_restart() {
         )
         .unwrap();
         support::seed_object_dice(&mut world, target, support::FIXTURE_DICE_SEED);
-        place_battle_unit(&mut world, target, map, 5, 5).unwrap();
+        place_battle_unit(&mut world, target, map, 5, 6).unwrap();
         set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
         for _ in 0..40 {
             advance_battle_motion(&mut world, RULES).unwrap();

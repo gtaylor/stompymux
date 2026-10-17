@@ -165,6 +165,9 @@ fn resolve_hex_shot_inner(
     ensure!(ready, "Weapon is not ready");
     super::weapon_geometry::check_water(world, shooter, weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, weapon)?;
+    if indirect.is_none() {
+        super::weapon_geometry::check_leg_cover_hex(world, shooter, weapon_index, coordinate)?;
+    }
     ensure!(
         !weapon.is_torpedo()
             || record

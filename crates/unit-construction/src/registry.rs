@@ -159,7 +159,7 @@ pub fn read_resolved_raw_template(root: &Path, path: &Path) -> Result<RawTemplat
 
 /// Snapshot the native load finalize's geometry-derived technology bits into a
 /// freshly read raw template: flippable biped arms follow the arm actuator
-/// layout, and a compact engine is any center-torso installation below four
+/// layout and split weapons, and a compact engine is any center-torso installation below four
 /// engine criticals. The bits stay stored until a mutating operation clears
 /// them; the inspection listing only re-derives the compact-engine bit.
 pub fn finalize_raw_load_specials(template: &mut RawTemplate) {
@@ -174,10 +174,23 @@ pub fn finalize_raw_load_specials(template: &mut RawTemplate) {
             .and_then(|section| section.criticals.get(&slot))
             .is_some_and(|critical| critical.equipment.eq_ignore_ascii_case(equipment))
     };
+    // A weapon split between a torso and an arm keeps the arms from flipping (Total Warfare
+    // p. 106).
+    let split = super::arm_torso_split(|section| {
+        let code = match section {
+            super::MechSection::LeftArm => LeftArm,
+            super::MechSection::RightArm => RightArm,
+            super::MechSection::LeftTorso => super::RawSectionCode::LeftTorso,
+            super::MechSection::RightTorso => super::RawSectionCode::RightTorso,
+            _ => return None,
+        };
+        template.sections.get(&code)
+    });
     let flippable = !occupies(LeftArm, 2, "LowerActuator")
         && !occupies(RightArm, 2, "LowerActuator")
         && !occupies(LeftArm, 3, "HandOrFootActuator")
-        && !occupies(RightArm, 3, "HandOrFootActuator");
+        && !occupies(RightArm, 3, "HandOrFootActuator")
+        && !split;
     let compact = template.sections.get(&CenterTorso).is_none_or(|section| {
         section
             .criticals

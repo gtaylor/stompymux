@@ -69,7 +69,7 @@ pub use administrative::{
 };
 pub use ammunition::AmmunitionMode;
 pub use chassis::MechChassis;
-pub use construction::mixed_technology_flag;
+pub use construction::{arm_torso_split, arms_flip, mixed_technology_flag};
 pub use cost::{
     PartPrices, part_price, raw_template_base_cost, template_base_cost, vehicle_template_base_cost,
 };

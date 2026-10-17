@@ -303,10 +303,12 @@ fn check_bearing(
     } = super::weapon_geometry::geometry(world, shooter, index, hex.center())?;
     super::weapon_geometry::check_water(world, shooter, weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, weapon)?;
+    let indirect = super::spotter::indirect_hex_for_source(world, targeting, index)?.is_some();
+    if !indirect {
+        super::weapon_geometry::check_leg_cover_hex(world, shooter, index, hex)?;
+    }
     ensure!(
-        rules.override_weapon_arcs
-            || super::spotter::indirect_hex_for_source(world, targeting, index)?.is_some()
-            || bears,
+        rules.override_weapon_arcs || indirect || bears,
         "Target is outside weapon arc"
     );
     Ok(())
@@ -337,6 +339,8 @@ fn check_unit_target(
     let indirect = super::spotter::indirect_target_for_source(world, targeting, index)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;
+    } else {
+        super::weapon_geometry::check_leg_cover_unit(world, shooter, index, target)?;
     }
     let position = recipient.position.context("Target is not placed")?;
     ensure!(

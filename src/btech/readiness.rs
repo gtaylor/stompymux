@@ -161,7 +161,7 @@ impl Mech {
                 .carried_club()
                 .is_some_and(|arm| arm.section() == section),
             posture_failure: self
-                .prone_support_failure(loadout, section)
+                .prone_support_failure(loadout, mount.firing_section())
                 .or_else(|| self.hull_down_failure(section)),
         })
     }

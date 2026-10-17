@@ -508,6 +508,56 @@ pub(super) fn unit_terrain_geometry(
     Ok((report, range))
 }
 
+/// Whether the hex beside a standing 'Mech gives it partial cover from `target`, the way the
+/// ridge rule of Total Warfare p. 102 would cover it from fire coming the other way. Its
+/// leg-mounted weapons cannot fire through that hex (p. 105).
+pub(super) fn unit_firer_ridge_cover(
+    world: &World,
+    shooter: ObjectId,
+    target: ObjectId,
+) -> Result<bool> {
+    Ok(unit_terrain_geometry(world, target, shooter)?
+        .0
+        .cover_hex
+        .is_some())
+}
+
+/// [`unit_firer_ridge_cover`] for a shot at a hex, traced from just above the hex's surface.
+pub(super) fn hex_firer_ridge_cover(
+    world: &World,
+    shooter: ObjectId,
+    target: HexCoordinate,
+) -> Result<bool> {
+    let unit = unit_sight_point(world, shooter)?;
+    let map = &world.btech.maps()[&unit.position.map];
+    let source = HexCoordinate {
+        x: i32::from(unit.position.x),
+        y: i32::from(unit.position.y),
+    };
+    let tile = map.base_hex(i64::from(target.x), i64::from(target.y))?;
+    let source_tile = map.base_hex(i64::from(source.x), i64::from(source.y))?;
+    let target_height = f64::from(if tile.is_open_water() {
+        tile.water_line()
+    } else {
+        tile.standing_height()
+    });
+    let height = unit
+        .height
+        .filter(|height| *height != f64::from(source_tile.standing_height()));
+    let report = terrain_los_at_heights(
+        map,
+        target,
+        source,
+        (0.1, unit.eye),
+        (Some(target_height), height),
+        TraceOptions {
+            kneeling: (false, unit.kneeling),
+            hex_target: false,
+        },
+    )?;
+    Ok(report.cover_hex.is_some())
+}
+
 /// Trace a terrain hex from either supported unit class and report spatial range.
 pub(super) fn unit_hex_los(
     world: &World,

@@ -102,6 +102,8 @@ pub(super) fn modifiers_for_source(
                 super::aim::weapon_modifiers(unit, weapon_index, mount, distance, gunnery)?,
             )
         };
+    // A unit that skidded this turn fires at +1 (Total Warfare p. 62).
+    modifiers.attacker_movement += super::recent_fire::skid_modifiers(world, shooter).0;
     let indirect = super::spotter::indirect_hex_for_source(world, source, weapon_index)?;
     if let Some((observer, coordinate)) = indirect {
         ensure!(

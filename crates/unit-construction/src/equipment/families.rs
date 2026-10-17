@@ -196,6 +196,27 @@ impl Weapon {
         matches!(self, Self::ClanHag20 | Self::ClanHag30 | Self::ClanHag40)
     }
 
+    /// Pulse lasers of every size and tech base, which may not make a targeting computer's
+    /// aimed shot (Total Warfare p. 143).
+    pub fn is_pulse(self) -> bool {
+        matches!(
+            self,
+            Self::ClanLargePulseLaser
+                | Self::ClanMediumPulseLaser
+                | Self::ClanSmallPulseLaser
+                | Self::ClanMicroPulseLaser
+                | Self::ClanErLargePulseLaser
+                | Self::ClanErMediumPulseLaser
+                | Self::ClanErSmallPulseLaser
+                | Self::SmallPulseLaser
+                | Self::MediumPulseLaser
+                | Self::LargePulseLaser
+                | Self::XSmallPulseLaser
+                | Self::XMediumPulseLaser
+                | Self::XLargePulseLaser
+        )
+    }
+
     /// Conventional IS and Clan Narc launchers, with normal beacons or explosive rounds.
     pub fn is_narc(self) -> bool {
         matches!(self, Self::NarcBeacon | Self::ClanNarcBeacon)

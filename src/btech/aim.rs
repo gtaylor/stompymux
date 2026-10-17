@@ -301,12 +301,14 @@ pub struct TargetMovement {
     pub immobile: i8,
     /// -2 against a prone Mech from an adjacent hex, +1 from any other.
     pub prone: i8,
+    /// +2 against a unit that skidded this turn (Total Warfare p. 62).
+    pub skidding: i8,
 }
 
 impl TargetMovement {
     /// The complete target movement modifier.
     pub fn total(self) -> i8 {
-        self.motion + self.immobile + self.prone
+        self.motion + self.immobile + self.prone + self.skidding
     }
 }
 
@@ -317,8 +319,8 @@ pub fn unit_target_movement_modifier(world: &World, target: ObjectId, distance: 
 }
 
 /// The target movement modifier in its parts (TW p. 117, p. 197): the movement band, +1
-/// for a jumping Mech or an airborne VTOL (hovering included), -4 for an immobile target
-/// and the prone adjustments.
+/// for a jumping Mech or an airborne VTOL (hovering included), -4 for an immobile target,
+/// the prone adjustments and +2 for a target that skidded this turn (p. 62).
 pub fn unit_target_movement(
     world: &World,
     target: ObjectId,
@@ -335,6 +337,7 @@ pub fn unit_target_movement(
             .is_some_and(|object| !object.flags.contains(Flag::Going)),
         "Unit is unavailable"
     );
+    let (_, skidding) = super::recent_fire::skid_modifiers(world, target);
     if let Some(vehicle) = world.btech.vehicles().get(&target) {
         let immobile = super::aimed_target::immobile(world, target)?;
         return Ok(TargetMovement {
@@ -342,6 +345,7 @@ pub fn unit_target_movement(
                 + i8::from(vtol_airborne(vehicle)),
             immobile: if immobile { -4 } else { 0 },
             prone: 0,
+            skidding,
         });
     }
     let defender = world
@@ -371,6 +375,7 @@ pub fn unit_target_movement(
         } else {
             0
         },
+        skidding,
     })
 }
 
@@ -552,6 +557,7 @@ pub(super) fn aim_modifiers_for_source(
         distance,
     )?;
     let mut modifiers = weapon_modifiers(attacker, weapon_index, mount, distance, gunnery)?;
+    modifiers.attacker_movement += super::recent_fire::skid_modifiers(world, shooter).0;
     let indirect = indirect.map(|aim| IndirectAim {
         tag_guided: target_terms.tag_guided,
         ..aim
@@ -572,12 +578,29 @@ pub(super) fn aim_modifiers_for_source(
         submerged,
         &mut modifiers,
     )?;
-    super::aimed_target::apply_aim(world, shooter, target, mount.weapon, &mut modifiers)?;
+    super::aimed_target::apply_aim(
+        world,
+        shooter,
+        target,
+        super::aimed_target::AimedAttack {
+            weapon: mount.weapon,
+            fire_mode: attacker.fire_mode(weapon_index)?,
+            ammunition: attacker.ammunition_mode(weapon_index)?,
+            indirect: indirect.is_some(),
+            volley: attacker.array_volley(weapon_index)?.is_some(),
+        },
+        &mut modifiers,
+    )?;
     modifiers.spotting = u8::from(super::spotter::spotting_for_others(world, shooter));
     modifiers.range = modifiers
         .range
         .map(|range| range.against_stealth(target_terms.concealed));
     modifiers.ammunition_accuracy += target_terms.ammunition_accuracy;
+    // A hyper-assault Gauss rifle's flak attack gets no targeting computer help (Total
+    // Warfare p. 136).
+    if target_terms.flak && mount.weapon.is_hag() {
+        modifiers.targeting_computer = 0;
+    }
     modifiers.target_movement = target_terms.movement;
     modifiers.bogged_down = target_terms.bogged_down;
     modifiers.orbital_drop = target_terms.orbital_drop;
@@ -620,7 +643,9 @@ pub(super) fn weapon_modifiers(
     aim.attacker_movement = attacker.attacker_movement_modifier();
     aim.heat = attacker.heat().to_hit_modifier();
     aim.sensors = attacker.sensor_aim_modifier();
-    aim.mounting_section = attacker.mounting_modifier(mount.criticals[0].section);
+    // A weapon split between a torso and an arm is a torso weapon, so the arm's actuators do
+    // not touch it (Total Warfare p. 105).
+    aim.mounting_section = attacker.mounting_modifier(mount.firing_section());
     aim.beacon_accuracy = i8::from(attacker.has_beacon(super::BeaconKind::Haywire));
     // A surviving MRM Apollo system negates the MRM's +1 to hit (Tactical Operations: Advanced
     // Units & Equipment p. 143).
@@ -699,6 +724,11 @@ pub fn pilot_aim_modifiers(
 /// Eligibility rejects airborne targets before this calculation; immobility stacks with posture.
 pub(super) fn ground_physical_target_modifier(world: &World, target: &Mech) -> i8 {
     let immobile = super::aimed_target::mech_immobile(world, target);
+    let skidding = if target.skidded_this_turn(world.btech.simulation_time()) {
+        2
+    } else {
+        0
+    };
     target_motion(target.motion().map_or(0.0, |motion| motion.speed))
         - if immobile { 4 } else { 0 }
         - if target.posture() == super::Posture::Prone {
@@ -706,6 +736,7 @@ pub(super) fn ground_physical_target_modifier(world: &World, target: &Mech) -> i
         } else {
             0
         }
+        + skidding
 }
 
 /// Target-owned aim contributions, independent of the firing unit's construction.
@@ -723,6 +754,9 @@ pub(super) struct TargetAimModifiers {
     pub concealed: bool,
     /// Semi-guided missiles at a target a friendly TAG designates (TW p. 142).
     pub tag_guided: bool,
+    /// The attack is a flak attack (TW p. 114), which a targeting computer cannot assist when
+    /// a hyper-assault Gauss rifle makes it (p. 136).
+    pub flak: bool,
 }
 
 /// Apply target movement, friendly TAG assistance, concealment and homing pods identically for every shooter.
@@ -749,11 +783,9 @@ pub(super) fn target_modifiers(
             super::scanner::scanner_unit(world, tagger)
                 .is_some_and(|unit| unit.signature.team == attacker.signature.team)
         });
+    let airborne = target_airborne(world, target);
     Ok(TargetAimModifiers {
-        ammunition_accuracy: airborne_ammunition_adjustment(
-            ammunition,
-            target_airborne(world, target),
-        ),
+        ammunition_accuracy: airborne_ammunition_adjustment(weapon, ammunition, airborne),
         bogged_down: super::bog_down::target_modifier(world, target),
         orbital_drop: super::orbital_drop_state::current(world, target)
             .map_or(0, super::OrbitalDrop::target_modifier),
@@ -769,16 +801,28 @@ pub(super) fn target_modifiers(
         ) - i8::from(artemis_v_guided),
         concealed: defender.concealed,
         tag_guided,
+        flak: airborne && flak_capable(weapon, ammunition),
     })
 }
 
-/// Flak (TW p. 114, p. 141): LB-X cluster rounds take -2 against any target in the air, an
-/// airborne VTOL, a jumping Mech or a dropping unit, and nothing against a parked VTOL.
-fn airborne_ammunition_adjustment(ammunition: super::AmmunitionMode, airborne: bool) -> i8 {
-    match ammunition.munition() {
-        super::AmmunitionMode::Cluster if airborne => -2,
-        _ => 0,
+/// Whether an attack has the flak effect (TW p. 114): LB-X cluster rounds (p. 141) and
+/// hyper-assault Gauss rifles (p. 136).
+fn flak_capable(weapon: Weapon, ammunition: super::AmmunitionMode) -> bool {
+    weapon.is_hag() || ammunition.munition() == super::AmmunitionMode::Cluster
+}
+
+/// Flak (TW p. 114): against any target in the air, an airborne VTOL, a jumping Mech or a
+/// dropping unit, LB-X cluster rounds take -2 (p. 141) and a hyper-assault Gauss rifle -1 more,
+/// -3 in all (p. 136). A parked VTOL is no flak target.
+fn airborne_ammunition_adjustment(
+    weapon: Weapon,
+    ammunition: super::AmmunitionMode,
+    airborne: bool,
+) -> i8 {
+    if !airborne || !flak_capable(weapon, ammunition) {
+        return 0;
     }
+    if weapon.is_hag() { -3 } else { -2 }
 }
 
 /// Whether the target is in the air: an airborne Mech, a flying or falling VTOL, or a unit on
@@ -800,18 +844,26 @@ pub(super) fn target_airborne(world: &World, target: ObjectId) -> bool {
 mod tests {
     use super::*;
 
-    /// Flak applies to every airborne target and to nothing else; other rounds get nothing.
+    /// Flak applies to every airborne target and to nothing else: LB-X cluster rounds -2 and
+    /// hyper-assault Gauss rifles -3 (TW pp. 114, 136, 141); other attacks get nothing.
     #[test]
-    fn flak_applies_only_to_cluster_rounds_against_airborne_targets() {
+    fn flak_applies_only_to_cluster_rounds_and_hags_against_airborne_targets() {
         use super::super::AmmunitionMode as Mode;
-        for (airborne, cluster) in [(false, 0), (true, -2)] {
+        for (airborne, cluster, hag) in [(false, 0, 0), (true, -2, -3)] {
             assert_eq!(
-                airborne_ammunition_adjustment(Mode::Cluster, airborne),
+                airborne_ammunition_adjustment(Weapon::Lbx10, Mode::Cluster, airborne),
                 cluster
             );
-            assert_eq!(airborne_ammunition_adjustment(Mode::Normal, airborne), 0);
             assert_eq!(
-                airborne_ammunition_adjustment(Mode::MmlLrmSwarm, airborne),
+                airborne_ammunition_adjustment(Weapon::ClanHag30, Mode::Normal, airborne),
+                hag
+            );
+            assert_eq!(
+                airborne_ammunition_adjustment(Weapon::Lbx10, Mode::Normal, airborne),
+                0
+            );
+            assert_eq!(
+                airborne_ammunition_adjustment(Weapon::Lrm10, Mode::MmlLrmSwarm, airborne),
                 0
             );
         }
@@ -864,8 +916,9 @@ mod tests {
             motion: 3,
             immobile: -4,
             prone: 1,
+            skidding: 2,
         };
-        assert_eq!(movement.total(), 0);
+        assert_eq!(movement.total(), 2);
         assert_eq!(TargetMovement::default().total(), 0);
     }
 

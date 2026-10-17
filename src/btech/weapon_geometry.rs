@@ -137,3 +137,53 @@ pub(super) fn check_water(
     );
     Ok(())
 }
+
+/// Leg-mounted weapons may not fire through a hex that gives the firing 'Mech partial cover
+/// (Total Warfare p. 105); `covered` says whether the hex beside it does, toward this target.
+fn check_leg_cover(
+    world: &World,
+    shooter: ObjectId,
+    index: usize,
+    covered: impl FnOnce() -> Result<bool>,
+) -> Result<()> {
+    let Some(unit) = world.btech.constructed_units().get(&shooter) else {
+        return Ok(());
+    };
+    let loadout = unit.loadout()?;
+    let mount = loadout
+        .weapons
+        .get(index)
+        .context("Weapon index out of bounds")?;
+    if !unit.chassis().is_leg(mount.firing_section()) {
+        return Ok(());
+    }
+    ensure!(
+        !covered()?,
+        "Your leg-mounted weapons cannot fire through the cover in front of you."
+    );
+    Ok(())
+}
+
+/// [`check_leg_cover`] for a shot at a unit.
+pub(super) fn check_leg_cover_unit(
+    world: &World,
+    shooter: ObjectId,
+    index: usize,
+    target: ObjectId,
+) -> Result<()> {
+    check_leg_cover(world, shooter, index, || {
+        super::los::unit_firer_ridge_cover(world, shooter, target)
+    })
+}
+
+/// [`check_leg_cover`] for a shot at a hex.
+pub(super) fn check_leg_cover_hex(
+    world: &World,
+    shooter: ObjectId,
+    index: usize,
+    target: HexCoordinate,
+) -> Result<()> {
+    check_leg_cover(world, shooter, index, || {
+        super::los::hex_firer_ridge_cover(world, shooter, target)
+    })
+}
