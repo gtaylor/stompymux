@@ -630,6 +630,8 @@ impl CommandRegistry {
                 .policy(SwitchPolicy::Reject("trip takes no switches."), false),
             CommandDefinition::native("push", P::EVERYONE, crate::btech::push::command)
                 .policy(SwitchPolicy::Reject("push takes no switches."), false),
+            CommandDefinition::native("backhoe", P::EVERYONE, crate::btech::backhoe::command)
+                .policy(SwitchPolicy::Reject("backhoe takes no switches."), false),
             CommandDefinition::native("kick", P::EVERYONE, crate::btech::physical::command)
                 .policy(SwitchPolicy::Reject("kick takes no switches."), false),
             CommandDefinition::native("prone", P::EVERYONE, crate::btech::prone::command)

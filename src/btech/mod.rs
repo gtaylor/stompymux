@@ -499,6 +499,8 @@ mod ram;
 pub use ram::{RamProfile, RamReport, ram_profile, resolve_ram};
 pub(crate) mod push;
 pub use push::{PushBalance, PushProfile, PushReport, push_profile, resolve_push};
+pub(crate) mod backhoe;
+pub use backhoe::{BACKHOE_DAMAGE, BackhoeReport, resolve_backhoe};
 
 pub use jumping::launch_dfa;
 

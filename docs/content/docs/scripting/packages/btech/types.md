@@ -465,7 +465,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `spotter`: `integer|nil` — Self declares spotting; another unit selects a forward observer.
 - `last_weapon_fire`: `integer|nil` — Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
 - `physical_assault_time`: `integer|nil` — Simulation time of the last ram; the vehicle may not spot for the rest of that turn.
-- `last_physical_attack`: `integer|nil` — Simulation time of the last ram, hit or miss; an artillery spotter that attacked within the turn makes the artillery attack it spots harder.
+- `last_physical_attack`: `integer|nil` — Simulation time of the last ram, hit or miss, or backhoe attack on a building; an artillery spotter that attacked within the turn makes the artillery attack it spots harder.
 - `tag`: `TagState` — Shared TAG selection and lock/recycle countdown.
 - `character_pilot`: `{injuries: integer, killed: boolean}?` — Saved RPG pilot status, independent of tactical injury count.
 - `friendly_fire_safety`: `boolean` — Pilot-selected teammate protection.

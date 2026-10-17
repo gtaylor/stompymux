@@ -291,6 +291,7 @@ fn c_catalog_defaults() {
                 | "punch"
                 | "trip"
                 | "push"
+                | "backhoe"
                 | "kick"
                 | "stand"
                 | "lock"

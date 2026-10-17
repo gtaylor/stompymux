@@ -784,6 +784,17 @@ the Motive System Damage Table and a rammed Mech rolls at +2 to stay standing. A
 vehicle cannot ram in a turn it fired, and its weapons are held for thirty seconds
 afterwards (Total Warfare p. 148). Its anti-missile systems stay ready to defend.
 
+`backhoe [<x> <y>]` digs a ground vehicle's backhoe into the building in the adjacent
+hex you name, or in your locked hex. A vehicle's backhoe never attacks a unit. The
+blow always lands, for six points plus 1D6 off the building's construction factor,
+and a building left with none collapses (Total Warfare pp. 130, 171). The backhoe
+must face the building: a front or rear backhoe through its side of the hull, a
+turret backhoe through the turret's arc. Your level must be within one of the
+building's, and a hovercraft must stop first (TechManual p. 241). A vehicle makes one
+physical attack in a thirty-second turn, a ram included; digging does not tie up
+its weapons. Lua uses `btech.unit.backhoe(unit, pilot, x, y)`. A Mech's backhoe is a
+physical weapon it swings at units with `melee`.
+
 
 Use `jump #unit` for a death-from-above attack, or `jump` with no arguments to
 use your current target. You jump toward the hex occupied by the target when
@@ -1791,18 +1802,21 @@ swing. Use `punch` for bare fists.
 | Mace | `Mace` | tons / 4, rounded up | +1 | yes |
 | Dual saw | `Dual_Saw` | 7 | 0 | no |
 | Claw | `Claw` | tons / 7, rounded up | +1 | no |
-| Retractable blade | `Retractable_Blade` | tons / 10, rounded up | -2 | yes |
+| Retractable blade | `Retractable_Blade` | tons / 10, rounded up | -2 | no |
 | Lance | `Lance` | tons / 5, rounded up | +1 | no |
 | Flail | `Flail` | 9 | 0 | no |
 | Wrecking ball | `Wrecking_Ball` | 8 | +1 | no |
 | Chain whip | `Chain_Whip` | 3 | -2 | yes |
 | Small / medium / large vibroblade | `Small_Vibroblade`, `Medium_Vibroblade`, `Large_Vibroblade` | 7 / 10 / 14 | -2 | yes |
+| Backhoe | `Backhoe` | 6 | +1 | no |
 
-Triple-strength myomer doubles axe, sword, mace, claw, retractable blade and
-lance damage only. A missed mace swing forces a piloting check at +2. A roll of
-2 with a flail or wrecking ball swings it back into your own front for 5 or 4
-damage, followed by a piloting check. A wrecking ball reaches only your forward
-arc; every other weapon also reaches its arm's side arc (Total Warfare p. 146).
+Triple-strength myomer doubles axe, sword, mace, claw, retractable blade, lance
+and backhoe damage only, and each damaged arm actuator halves the backhoe's six as
+it halves those weapons' damage. A missed mace swing forces a piloting check at
++2. A roll of 2 with a flail or wrecking ball swings it back into your own front
+for 5 or 4 damage, followed by a piloting check. A wrecking ball reaches only your
+forward arc; every other weapon also reaches its arm's side arc (Total Warfare
+p. 146).
 Claws strike as punches, so a damaged shoulder stops them. Each vibroblade swing
 adds 3, 5 or 7 heat.
 

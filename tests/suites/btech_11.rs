@@ -5,6 +5,9 @@ use stompymux_test_support as support;
 #[path = "../btech_active_probe.rs"]
 mod btech_active_probe;
 
+#[path = "../btech_backhoe.rs"]
+mod btech_backhoe;
+
 #[path = "../btech_building_entry_action.rs"]
 mod btech_building_entry_action;
 

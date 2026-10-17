@@ -6,7 +6,7 @@ manualLinkTitle: "melee"
 ---
 
 Swing the physical weapon installed in each selected arm (axe, sword, mace, dual saw, claw,
-retractable blade, lance, flail, wrecking ball, chain whip or vibroblade). Both arms by
+retractable blade, lance, flail, wrecking ball, chain whip, vibroblade or backhoe). Both arms by
 default, skipping arms without a weapon; only claws let the second arm follow a completed swing.
 
 ## Signature

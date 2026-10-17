@@ -88,7 +88,7 @@ impl Vehicle {
         self.physical_assault_time
     }
 
-    /// Simulation time of this vehicle's last ram, hit or miss.
+    /// Simulation time of this vehicle's last ram, hit or miss, or backhoe attack on a building.
     pub fn last_physical_attack(&self) -> Option<i64> {
         self.last_physical_attack
     }

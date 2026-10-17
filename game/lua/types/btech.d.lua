@@ -483,7 +483,7 @@ function btech_unit.inspect(dbref) end
 ---@field spotter integer|nil Self declares spotting; another unit selects a forward observer.
 ---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
 ---@field physical_assault_time integer|nil Simulation time of the last ram; the vehicle may not spot for the rest of that turn.
----@field last_physical_attack integer|nil Simulation time of the last ram, hit or miss; an artillery spotter that attacked within the turn makes the artillery attack it spots harder.
+---@field last_physical_attack integer|nil Simulation time of the last ram, hit or miss, or backhoe attack on a building; an artillery spotter that attacked within the turn makes the artillery attack it spots harder.
 ---@field tag TagState Shared TAG selection and lock/recycle countdown.
 ---@field character_pilot {injuries: integer, killed: boolean}? Saved RPG pilot status, independent of tactical injury count.
 ---@field friendly_fire_safety boolean Pilot-selected teammate protection.
@@ -1839,6 +1839,16 @@ function btech_unit.hide(dbref, pilot) end
 ---@return table report Push profile, roll, hit, displacement, balance checks and notices.
 function btech_unit.push(dbref, pilot, target) end
 
+---Dig a vehicle's backhoe into the adjacent building hex at `x`, `y`, or the hex its coordinate
+---lock names. The blow always lands, for six points plus 1D6 against the building's construction
+---factor, and may bring it down; a vehicle's backhoe never attacks a unit.
+---@param dbref integer
+---@param pilot integer
+---@param x? integer Both coordinates or neither.
+---@param y? integer
+---@return table report Roll, damage, construction factor left, any collapse and notices.
+function btech_unit.backhoe(dbref, pilot, x, y) end
+
 ---@class InventoryEntry
 ---@field part_id integer Stable game-directory part identifier.
 ---@field quantity integer Positive stock quantity, at most 2147483647.
@@ -2315,7 +2325,7 @@ function btech_unit.saw(dbref, pilot, arms, target) end
 function btech_unit.claw(dbref, pilot, arms, target) end
 
 ---Swing the physical weapon installed in each selected arm (axe, sword, mace, dual saw, claw,
----retractable blade, lance, flail, wrecking ball, chain whip or vibroblade). Both arms by
+---retractable blade, lance, flail, wrecking ball, chain whip, vibroblade or backhoe). Both arms by
 ---default, skipping arms without a weapon; only claws let the second arm follow a completed swing.
 ---@param dbref integer
 ---@param pilot integer

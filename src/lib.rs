@@ -267,6 +267,7 @@ pub use btech::{
 };
 
 pub use btech::launch_dfa as launch_battle_dfa;
+pub use btech::{BACKHOE_DAMAGE, BackhoeReport, resolve_backhoe as resolve_battle_backhoe};
 pub use btech::{
     PushBalance, PushProfile, PushReport, push_profile as battle_push_profile,
     resolve_push as resolve_battle_push,

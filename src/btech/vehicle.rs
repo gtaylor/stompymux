@@ -198,9 +198,10 @@ pub struct Vehicle {
     /// Simulation time of this vehicle's last ram; it may not spot for the rest of that turn
     /// (Total Warfare p. 112).
     pub(super) physical_assault_time: Option<i64>,
-    /// Simulation time of this vehicle's last ram, hit or miss; an artillery spotter that
-    /// attacked within the turn makes the artillery attack it spots harder (Tactical
-    /// Operations: Advanced Rules p. 149).
+    /// Simulation time of this vehicle's last ram, hit or miss, or backhoe attack on a
+    /// building; it makes one physical attack a turn, and an artillery spotter that attacked
+    /// within the turn makes the artillery attack it spots harder (Tactical Operations:
+    /// Advanced Rules p. 149).
     pub(super) last_physical_attack: Option<i64>,
     /// Ram selection and the travel that sets its damage (Total Warfare p. 148).
     pub(super) charge: super::ChargeState,

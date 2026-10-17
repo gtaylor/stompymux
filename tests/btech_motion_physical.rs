@@ -264,6 +264,7 @@ fn handweapon_template_name(kind: stompymux_rs::ArmAttack) -> &'static str {
         W::SmallVibroblade => "Small_Vibroblade",
         W::MediumVibroblade => "Medium_Vibroblade",
         W::LargeVibroblade => "Large_Vibroblade",
+        W::Backhoe => "Backhoe",
         W::Punch => panic!("fixture needs installed equipment"),
     }
 }
@@ -278,6 +279,7 @@ fn handweapon_slots(kind: stompymux_rs::ArmAttack) -> u8 {
         W::Lance | W::ChainWhip | W::MediumVibroblade => 2,
         W::WreckingBall => 5,
         W::SmallVibroblade => 1,
+        W::Backhoe => 6,
         W::Saw => 7,
         W::Punch => panic!("fixture needs installed equipment"),
     }
@@ -286,13 +288,17 @@ fn handweapon_slots(kind: stompymux_rs::ArmAttack) -> u8 {
 /// Lay out an arm holding `count` slots of `kind` behind its lower arm actuator: claws and
 /// flails replace the hand actuator, every other weapon keeps it.
 /// Weapons that take the place of their arm's hand actuator: claws and flails (Tactical
-/// Operations: Advanced Units & Equipment pp. 101-102), the dual saw and the wrecking ball
-/// (TechManual pp. 243, 249).
+/// Operations: Advanced Units & Equipment pp. 101-102), the backhoe, the dual saw and the
+/// wrecking ball (TechManual pp. 241, 243, 249).
 fn replaces_hand(kind: stompymux_rs::ArmAttack) -> bool {
     use stompymux_rs::ArmAttack;
     matches!(
         kind,
-        ArmAttack::Claw | ArmAttack::Flail | ArmAttack::Saw | ArmAttack::WreckingBall
+        ArmAttack::Claw
+            | ArmAttack::Flail
+            | ArmAttack::Backhoe
+            | ArmAttack::Saw
+            | ArmAttack::WreckingBall
     )
 }
 

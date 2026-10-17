@@ -23,30 +23,42 @@ impl VehicleMountArcs for WeaponMount<VehicleCriticalLocation> {
             .first()
             .context("Weapon mount has no criticals")?
             .section;
-        let facing = if section == VehicleSection::Turret {
-            let Some(turret) = turret_heading else {
-                return Ok(false);
-            };
-            turret
-        } else {
-            heading
-        };
-        if section == VehicleSection::Turret {
-            return Ok(turret_arc(facing, bearing));
-        }
-        let angle = (bearing.rem_euclid(360.0).round() - facing.rem_euclid(360.0).trunc())
-            .rem_euclid(360.0);
-        Ok(match section {
-            VehicleSection::Rotor => {
-                anyhow::bail!("Rotor-mounted weapons require flight firing geometry")
-            }
-            VehicleSection::Front => angle <= 60.0 || angle >= 300.0,
-            VehicleSection::Rear => angle > 120.0 && angle < 240.0,
-            VehicleSection::Left => (240.0..300.0).contains(&angle),
-            VehicleSection::Right => angle > 60.0 && angle <= 120.0,
-            VehicleSection::Turret => unreachable!("turret handled above"),
-        })
+        section_bears_on(section, heading, bearing, turret_heading)
     }
+}
+
+/// Whether equipment in `section` faces `bearing`: a hull face's own 60-degree side arc or the
+/// 120-degree front or rear arc, or the turret's forward arc about its own facing (Total
+/// Warfare p. 105). A turret with no saved facing faces nothing. Weapons and a backhoe share
+/// this geometry.
+pub(super) fn section_bears_on(
+    section: VehicleSection,
+    heading: f64,
+    bearing: f64,
+    turret_heading: Option<f64>,
+) -> Result<bool> {
+    ensure!(
+        heading.is_finite() && bearing.is_finite() && turret_heading.is_none_or(f64::is_finite),
+        "Invalid firing direction"
+    );
+    if section == VehicleSection::Turret {
+        let Some(turret) = turret_heading else {
+            return Ok(false);
+        };
+        return Ok(turret_arc(turret, bearing));
+    }
+    let angle =
+        (bearing.rem_euclid(360.0).round() - heading.rem_euclid(360.0).trunc()).rem_euclid(360.0);
+    Ok(match section {
+        VehicleSection::Rotor => {
+            anyhow::bail!("Rotor-mounted weapons require flight firing geometry")
+        }
+        VehicleSection::Front => angle <= 60.0 || angle >= 300.0,
+        VehicleSection::Rear => angle > 120.0 && angle < 240.0,
+        VehicleSection::Left => (240.0..300.0).contains(&angle),
+        VehicleSection::Right => angle > 60.0 && angle <= 120.0,
+        VehicleSection::Turret => unreachable!("turret handled above"),
+    })
 }
 
 impl Vehicle {

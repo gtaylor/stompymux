@@ -1045,3 +1045,69 @@ async fn artillery_spotters_take_one_more_on_their_physical_attacks() {
     );
     world.validate(&config).unwrap();
 }
+
+/// A 'Mech's backhoe is a physical weapon: Piloting +1 for six points on the standard Hit
+/// Location Table, in the forward arc or its arm's side arc, with triple strength myomer
+/// doubling the damage and each damaged arm actuator adding +2 and halving it (Total Warfare
+/// p. 146). It replaces the hand, so the missing hand costs nothing.
+#[tokio::test]
+async fn backhoes_swing_at_plus_one_for_six() {
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    let punch =
+        battle_punch_profile(&base, id, ObjectId(1), target, Arm::Right, kick_rules()).unwrap();
+    install_test_handweapons(&mut base, id, ArmAttack::Backhoe);
+    let swing = |world: &World| {
+        battle_arm_attack_profile(
+            world,
+            id,
+            ObjectId(1),
+            target,
+            Arm::Right,
+            ArmAttack::Backhoe,
+            kick_rules(),
+        )
+        .unwrap()
+    };
+    let profile = swing(&base);
+    assert_eq!(profile.base, punch.base);
+    assert_eq!(profile.weapon_modifier, 1);
+    assert_eq!(profile.actuators, 0);
+    // The fixture's Jenner punches without its lower arm and hand actuators; the backhoe arm
+    // keeps the lower actuator and needs no hand.
+    assert_eq!(
+        profile.target_number,
+        punch.target_number - i32::from(punch.actuators) + 1
+    );
+    assert_eq!(profile.damage, 6);
+    assert_eq!(profile.hit_table, HitTable::Weapon);
+    let mut damaged = base.clone();
+    destroy_battle_critical(
+        &mut damaged,
+        id,
+        CriticalLocation {
+            section: MechSection::RightArm,
+            slot: 2,
+        },
+    )
+    .unwrap();
+    let hurt = swing(&damaged);
+    assert_eq!(hurt.actuators, 2);
+    assert_eq!(hurt.damage, 3);
+
+    let mut world = base.clone();
+    shot_seed(&mut world, id, roll_seed(12));
+    let report = resolve_battle_arm_attack(
+        &mut world,
+        id,
+        ObjectId(1),
+        target,
+        ArmSelection::Right,
+        ArmAttack::Backhoe,
+        kick_rules(),
+    )
+    .unwrap();
+    let attack = &report.attacks[0];
+    assert!(attack.hit);
+    assert_eq!(dealt(attack.impact.as_slice()), 6);
+    world.validate(&config).unwrap();
+}
