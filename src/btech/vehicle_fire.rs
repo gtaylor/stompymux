@@ -148,6 +148,13 @@ fn fire_shot(
     let attacker = &world.btech.vehicles()[&shooter];
     let weapon = attacker.weapon_readiness(weapon_index)?.weapon;
     let ammunition = attacker.ammunition_mode(weapon_index)?;
+    // A Nemesis pod on a friendly unit in the line draws guided missiles onto it instead
+    // (Total Warfare p. 142); admission and aim started from the intended target.
+    let target = if aim.indirect.is_some() {
+        target
+    } else {
+        super::narc::nemesis_decoy(world, shooter, target, ammunition)?.unwrap_or(target)
+    };
 
     let source_field = electronic_field(world, shooter)?;
     let target_field = electronic_field(world, target)?;

@@ -81,9 +81,10 @@ pub(super) fn advance(
     // reach, and otherwise falls on its hex as the unguided attack.
     if cursor.mode() == ArtilleryMode::Homing
         && cursor.remaining() == 1
-        && let Some(target) =
-            shooter.and_then(|shooter| homing_target(&candidate, map, shooter, cursor.target()))
+        && let Some(shooter) = shooter
+        && let Some(target) = homing_target(&candidate, map, shooter, cursor.target())
     {
+        let target = nemesis_lure(&mut candidate, map, shooter, target)?;
         let report = home(&mut candidate, map, &mut cursor, target, rules, character)?;
         candidate.btech.validate_action(&candidate)?;
         *world = candidate;
@@ -407,7 +408,7 @@ fn homing_target(
     shooter: ObjectId,
     aim: HexCoordinate,
 ) -> Option<ObjectId> {
-    let team = super::scanner::scanner_unit(world, shooter)?.signature.team;
+    super::scanner::scanner_unit(world, shooter)?;
     let mut candidates: Vec<(u64, ObjectId)> = super::map_slots::all_unit_order(world, map)
         .ok()?
         .into_iter()
@@ -417,14 +418,12 @@ fn homing_target(
             if unit.destroyed {
                 return None;
             }
-            let tagger = super::tagged_by(world, id)?;
-            let friendly = super::scanner::scanner_unit(world, tagger)
-                .is_some_and(|tagger| tagger.signature.team == team);
+            super::tag::friendly_tagger(world, shooter, id)?;
             let distance = aim.distance(HexCoordinate {
                 x: i32::from(position.x),
                 y: i32::from(position.y),
             });
-            (friendly && distance <= HOMING_REACH).then_some((distance, id))
+            (distance <= HOMING_REACH).then_some((distance, id))
         })
         .collect();
     let locked = match super::targeting::selection(world, shooter) {
@@ -436,6 +435,70 @@ fn homing_target(
     }
     candidates.sort_by_key(|(distance, _)| *distance);
     candidates.first().map(|(_, id)| *id)
+}
+
+/// The unit an arriving homing missile strikes once Nemesis pods have had their say (Tactical
+/// Operations: Advanced Units & Equipment p. 166): when 'Mechs on the firer's side carrying
+/// Nemesis pods stand next to the designated target, 1D6 from the map's stream decides, and on
+/// 1-3 the missile strikes one of them, each as likely as the others; on 4-6 it keeps to its
+/// target.
+fn nemesis_lure(
+    world: &mut World,
+    map: ObjectId,
+    shooter: ObjectId,
+    target: ObjectId,
+) -> Result<ObjectId> {
+    let Some(team) = super::scanner::scanner_unit(world, shooter).map(|unit| unit.signature.team)
+    else {
+        return Ok(target);
+    };
+    let Some(aim) = super::scanner::scanner_unit(world, target).and_then(|unit| unit.position)
+    else {
+        return Ok(target);
+    };
+    let aim = HexCoordinate {
+        x: i32::from(aim.x),
+        y: i32::from(aim.y),
+    };
+    let lures: Vec<ObjectId> = super::map_slots::all_unit_order(world, map)?
+        .into_iter()
+        .filter(|&id| {
+            id != target
+                && world.btech.constructed_units().contains_key(&id)
+                && super::narc::has_beacon(world, id, super::BeaconKind::Nemesis)
+                && super::scanner::scanner_unit(world, id).is_some_and(|unit| {
+                    !unit.destroyed
+                        && unit.signature.team == team
+                        && unit.position.is_some_and(|position| {
+                            position.map == map
+                                && aim.distance(HexCoordinate {
+                                    x: i32::from(position.x),
+                                    y: i32::from(position.y),
+                                }) == 1
+                        })
+                })
+        })
+        .collect();
+    if lures.is_empty() {
+        return Ok(target);
+    }
+    let dice = world
+        .btech
+        .maps
+        .get_mut(&map)
+        .unwrap()
+        .fire_dice
+        .as_mut()
+        .context("Map random stream is unavailable")?;
+    if dice.d6() > 3 {
+        return Ok(target);
+    }
+    let pick = if lures.len() == 1 {
+        0
+    } else {
+        usize::from(dice.die(u16::try_from(lures.len())?)? - 1)
+    };
+    Ok(lures[pick])
 }
 
 /// Resolve a homing missile arriving on a designated unit (Tactical Operations: Advanced Units

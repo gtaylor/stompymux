@@ -33,6 +33,8 @@ pub(super) fn modifiers(
         .get(weapon_index)
         .context("Weapon index out of bounds")?;
     let indirect = super::spotter::indirect_aim(world, source, target, weapon_index)?;
+    let (target, decoy) =
+        super::aim::nemesis_target(world, shooter, target, weapon_index, indirect)?;
     let distance = super::unit_range(world, shooter, target)?.hexes();
     let ammunition = attacker.ammunition_mode(weapon_index)?;
     let target_terms =
@@ -70,12 +72,22 @@ pub(super) fn modifiers(
     aim.light = target_terms.light;
     aim.environment = super::planetary_conditions::aim_modifier(world, shooter, mount.weapon);
     aim.interference = super::planetary_conditions::interference_aim_modifier(world, shooter);
-    aim.beacon_accuracy += target_terms.beacon_accuracy;
-    aim.target_lock = if indirect.is_some() {
+    aim.beacon_accuracy += target_terms.beacon_accuracy
+        + super::aim::artemis_v_modifier(
+            world,
+            shooter,
+            weapon_index,
+            Some(target),
+            indirect.is_some(),
+        )?;
+    aim.target_lock = if indirect.is_some() || decoy {
         0
     } else {
         super::aim::lock_modifier(world, source, target, rules.override_weapon_arcs)?
     };
+    if decoy {
+        aim.beacon_accuracy += super::narc::NEMESIS_DIVERSION;
+    }
     aim.perception = super::aim::indirect_perception(world, shooter, target, indirect)?;
     let submerged = super::weapon_geometry::apply_water_range(
         world,

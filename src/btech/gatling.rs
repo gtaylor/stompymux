@@ -1,5 +1,5 @@
 //! Player controls for gatling firing of machine guns.
-use super::{FireMode, FireModeFeedback};
+use super::{FireMode, FireModeFeedback, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Result, ensure};
 
@@ -57,28 +57,41 @@ pub(super) fn prepare(
         .btech
         .unit(shooter)
         .ok_or_else(|| anyhow::anyhow!("Shooter is unavailable"))?;
-    let (mode, rounds) = super::with_unit!(unit, |unit| {
+    let (mode, weapon, rounds) = super::with_unit!(unit, |unit| {
         let mode = unit.fire_mode(index)?;
+        let weapon = unit.weapon_readiness(index)?.weapon;
         let rounds = if mode == FireMode::Gatling {
-            unit.ammunition_feed(index, 18)?
+            unit.ammunition_feed(index, MAXIMUM_ROUNDS)?
                 .iter()
                 .map(|draw| draw.rounds)
                 .sum()
         } else {
             0
         };
-        (mode, rounds)
+        (mode, weapon, rounds)
     });
     let damage = if mode == FireMode::Gatling {
-        Some(roll_damage(rounds, dice)?)
+        Some(roll_damage(weapon, rounds, dice)?)
     } else {
         None
     };
     Ok(GatlingPreparation { damage })
 }
 
-/// Roll supply-limited gatling damage before the attack roll for either unit class.
-pub(super) fn roll_damage(rounds: u16, dice: &mut super::Dice) -> Result<u8> {
+/// The most rounds a rapid-fire burst can use: three for each point of a heavy machine gun's
+/// best roll of 7.
+const MAXIMUM_ROUNDS: u16 = 21;
+
+/// Roll supply-limited rapid-fire machine gun damage before the attack roll for either unit
+/// class (Tactical Operations p. 100): 1D6, 1D6-1 (at least 1) for a light machine gun and
+/// 1D6+1 for a heavy one. The burst uses three rounds per point, so a short supply caps it.
+pub(super) fn roll_damage(weapon: Weapon, rounds: u16, dice: &mut super::Dice) -> Result<u8> {
     ensure!(rounds > 0, "No usable ammunition");
-    Ok(dice.d6().min((rounds.min(18) / 3).max(1) as u8))
+    let roll = dice.d6();
+    let damage = match weapon {
+        Weapon::LightMachineGun | Weapon::ClanLightMachineGun => roll.saturating_sub(1).max(1),
+        Weapon::HeavyMachineGun | Weapon::ClanHeavyMachineGun => roll + 1,
+        _ => roll,
+    };
+    Ok(damage.min((rounds.min(MAXIMUM_ROUNDS) / 3).max(1) as u8))
 }

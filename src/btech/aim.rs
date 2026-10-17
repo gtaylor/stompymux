@@ -107,7 +107,7 @@ pub struct AimModifiers {
     pub weapon_accuracy: i8,
     /// Signed accuracy adjustment from selected ammunition.
     pub ammunition_accuracy: i8,
-    /// Haywire interference and iNarc homing assistance.
+    /// Haywire interference, iNarc homing assistance and Artemis V guidance.
     pub beacon_accuracy: i8,
     /// Accuracy assistance from an installed, functional targeting computer.
     pub targeting_computer: i8,
@@ -474,6 +474,34 @@ pub(super) fn perception_aim(
     }))
 }
 
+/// The unit a direct shot at `target` actually strikes, and whether a Nemesis pod diverted it
+/// there (Total Warfare p. 142). The diverted attack takes +1 in place of any multiple-targets
+/// term, since it replaces the attack on the intended target.
+pub(super) fn nemesis_target(
+    world: &World,
+    shooter: ObjectId,
+    target: ObjectId,
+    weapon_index: usize,
+    indirect: Option<IndirectAim>,
+) -> Result<(ObjectId, bool)> {
+    if indirect.is_some() {
+        return Ok((target, false));
+    }
+    let ammunition = super::with_unit!(
+        world
+            .btech
+            .unit(shooter)
+            .context("Shooter is unavailable")?,
+        |unit| unit.ammunition_mode(weapon_index)?
+    );
+    Ok(
+        match super::narc::nemesis_decoy(world, shooter, target, ammunition)? {
+            Some(decoy) => (decoy, true),
+            None => (target, false),
+        },
+    )
+}
+
 /// The perception term of a shot, from the spotter's view for indirect fire. The spotter's
 /// terrain modifiers apply however it designated the target (Total Warfare p. 111); a
 /// TAG-guided shot drops them (p. 142), and Narc-guided fire with no spotter has no spotter's
@@ -577,6 +605,7 @@ pub(super) fn aim_modifiers_for_source(
         .get(weapon_index)
         .context("Weapon index out of bounds")?;
     let indirect = super::spotter::indirect_aim(world, source, target, weapon_index)?;
+    let (target, decoy) = nemesis_target(world, shooter, target, weapon_index, indirect)?;
     let distance = super::unit_range(world, shooter, target)?.hexes();
     let target_terms = target_modifiers(
         world,
@@ -637,12 +666,22 @@ pub(super) fn aim_modifiers_for_source(
     modifiers.light = target_terms.light;
     modifiers.environment = super::planetary_conditions::aim_modifier(world, shooter, mount.weapon);
     modifiers.interference = super::planetary_conditions::interference_aim_modifier(world, shooter);
-    modifiers.beacon_accuracy += target_terms.beacon_accuracy;
-    modifiers.target_lock = if indirect.is_some() {
+    modifiers.beacon_accuracy += target_terms.beacon_accuracy
+        + artemis_v_modifier(
+            world,
+            shooter,
+            weapon_index,
+            Some(target),
+            indirect.is_some(),
+        )?;
+    modifiers.target_lock = if indirect.is_some() || decoy {
         0
     } else {
         lock_modifier(world, source, target, rules.override_weapon_arcs)?
     };
+    if decoy {
+        modifiers.beacon_accuracy += super::narc::NEMESIS_DIVERSION;
+    }
     modifiers.perception = indirect_perception(world, shooter, target, indirect)?;
     Ok(modifiers)
 }
@@ -795,10 +834,6 @@ pub(super) fn target_modifiers(
     let defender = super::scanner::scanner_unit(world, target)
         .context("Target construction is unavailable")?;
     let movement = unit_target_movement(world, target, distance)?;
-    let artemis_v_guided = ammunition.munition() == super::AmmunitionMode::Artemis
-        && super::artemis::artemis_v(world, shooter)
-        && !super::electronic_field(world, shooter)?.blocks_outgoing_guidance()
-        && !super::electronic_field(world, target)?.blocks_incoming_guidance();
     // The shooter's own TAG designates as well as any other friendly unit's (TW p. 142).
     let tag_guided = ammunition.munition() == super::AmmunitionMode::SemiGuided
         && super::tag::friendly_tagger(world, shooter, target).is_some();
@@ -812,16 +847,50 @@ pub(super) fn target_modifiers(
         movement: ammunition
             .tag_movement_modifier(ammunition.precision_movement(movement), tag_guided)
             .total(),
-        // Homing beacons and Artemis V guidance each make the shot one easier.
+        // A homing beacon makes the shot one easier.
         beacon_accuracy: -i8::from(
             super::narc::has_beacon(world, target, super::BeaconKind::Homing)
                 && ammunition.munition() == super::AmmunitionMode::Narc
                 && !weapon.is_narc(),
-        ) - i8::from(artemis_v_guided),
+        ),
         concealed: defender.concealed,
         tag_guided,
         flak: airborne && flak_capable(weapon, ammunition),
     })
+}
+
+/// Artemis V guidance takes one off the to-hit number of a launcher its own working system
+/// guides, firing Artemis rounds directly (Tactical Operations: Advanced Units & Equipment
+/// p. 95). Like Artemis IV it does nothing for indirect fire (Total Warfare p. 130), and hostile
+/// ECM over the shooter or friendly ECM over the target defeats it (p. 134). `target` is `None`
+/// for a shot at a hex.
+pub(super) fn artemis_v_modifier(
+    world: &World,
+    shooter: ObjectId,
+    index: usize,
+    target: Option<ObjectId>,
+    indirect: bool,
+) -> Result<i8> {
+    let ammunition = super::with_unit!(
+        world
+            .btech
+            .unit(shooter)
+            .context("Shooter is unavailable")?,
+        |unit| unit.ammunition_mode(index)?
+    );
+    if indirect
+        || ammunition.munition() != super::AmmunitionMode::Artemis
+        || !super::artemis::artemis_v_guides(world, shooter, index)?
+        || super::electronic_field(world, shooter)?.blocks_outgoing_guidance()
+    {
+        return Ok(0);
+    }
+    if let Some(target) = target
+        && super::electronic_field(world, target)?.blocks_incoming_guidance()
+    {
+        return Ok(0);
+    }
+    Ok(-1)
 }
 
 /// Whether an attack has the flak effect (TW p. 114): LB-X cluster rounds (p. 141) and

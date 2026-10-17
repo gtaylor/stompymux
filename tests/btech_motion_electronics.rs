@@ -1812,7 +1812,7 @@ async fn inarc_outcomes_supply_and_restart() {
         (AmmunitionMode::INarcExplosive, None),
         (AmmunitionMode::INarcHaywire, Some(BeaconKind::Haywire)),
         (AmmunitionMode::INarcEcm, Some(BeaconKind::Ecm)),
-        (AmmunitionMode::INarcNemesis, Some(BeaconKind::Homing)),
+        (AmmunitionMode::INarcNemesis, Some(BeaconKind::Nemesis)),
     ] {
         for case in ["hit", "miss", "intercepted", "empty"] {
             let (_dir, config, mut world, id, target) = shot_fixture().await;

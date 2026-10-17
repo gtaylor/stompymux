@@ -839,7 +839,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 - `mounting_section`: `integer`
 - `targeting_computer`: `integer` — Eligible computer fire: -1 normally, +3 for a selected section on a mobile target.
 - `aimed_section`: `integer` — Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
-- `beacon_accuracy`: `integer` — Haywire interference and iNarc homing assistance.
+- `beacon_accuracy`: `integer` — Haywire interference, iNarc homing assistance and Artemis V guidance.
 - `ammunition_accuracy`: `integer` — Selected ammunition adjustment; LB-X cluster is -1, -3 against an airborne target (flak).
 - `weapon_accuracy`: `integer` — Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 - `target_lock`: `integer`
@@ -977,7 +977,7 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 ## BeaconKind
 
-Alias: `"narc"|"homing"|"haywire"|"ecm"`
+Alias: `"narc"|"homing"|"haywire"|"ecm"|"nemesis"`
 
 ## NarcReport
 

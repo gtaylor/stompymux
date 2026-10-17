@@ -1083,7 +1083,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00309
-//|---Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM.
+//|---Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM, Z Nemesis.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param section string

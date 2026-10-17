@@ -1334,6 +1334,70 @@ async fn homing_missiles_strike_tag_designated_units() {
     }
 }
 
+/// A 'Mech on the firer's side carrying an iNarc Nemesis pod next to the designated target
+/// lures an arriving homing missile onto itself on 1-3 on 1D6; on 4-6 the missile keeps to its
+/// target (Tactical Operations: Advanced Units & Equipment p. 166).
+#[tokio::test]
+async fn nemesis_pods_lure_homing_missiles() {
+    for lured in [true, false] {
+        let (_dir, config, mut world, map, shooter, index) = fixture(&["Homing"]).await;
+        let (_, target) = designate_target(&mut world, &config, map);
+        let lure = world.create(&config, "Lure".into(), Kind::Thing);
+        world.objects.get_mut(&lure).unwrap().home = Some(ObjectId(config.home()));
+        create_battle_unit(
+            &mut world,
+            lure,
+            MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
+        )
+        .unwrap();
+        place_battle_unit(&mut world, lure, map, 1, 3).unwrap();
+        world
+            .btech
+            .rewrite_unit_record(lure, |record| {
+                record["beacons"] = serde_json::json!({ "CenterTorso": ["nemesis"] });
+            })
+            .unwrap();
+        // The lure die, then a strike on the homing roll.
+        let seed = (0..=255u8)
+            .find(|seed| {
+                let mut dice = Dice::seeded([*seed; 32]);
+                (dice.d6() <= 3) == lured && dice.two_d6() >= 4
+            })
+            .unwrap();
+        let mut encoded = serde_json::to_value(&world.btech).unwrap();
+        encoded["maps"][map.0.to_string()]["fire_dice"] =
+            serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+        world.btech = serde_json::from_value(encoded).unwrap();
+        let scripts =
+            Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+        let launched: bool = scripts
+            .eval_callback(&format!(
+                "return btech.unit.fire({},1,{index}).launched",
+                shooter.0
+            ))
+            .unwrap();
+        assert!(launched);
+        let arrival = loop {
+            if let Some(report) = advance_artillery_action(&scripts, &config, rules())
+                .unwrap()
+                .pop()
+            {
+                break report;
+            }
+        };
+        let struck = if lured { lure } else { target };
+        assert!(
+            arrival
+                .hits
+                .iter()
+                .any(|hit| hit.unit == struck && hit.damage == HOMING_DAMAGE),
+            "{:?}",
+            arrival.hits
+        );
+        scripts.world().validate(&config).unwrap();
+    }
+}
+
 /// Homing missiles load only in Arrow IV launchers, and `firehoming` toggles them.
 #[tokio::test]
 async fn homing_missiles_belong_to_arrow_iv_launchers() {

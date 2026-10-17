@@ -40,6 +40,45 @@ pub(super) fn artemis_v(world: &crate::World, id: crate::ObjectId) -> bool {
         .unwrap_or(false)
 }
 
+/// Whether the launcher at `index` is guided by its own working Artemis V system: Artemis V
+/// takes one off the to-hit number of the launcher it is linked to (Tactical Operations:
+/// Advanced Units & Equipment p. 95), so a destroyed system, or one serving another launcher,
+/// does nothing for it.
+pub(super) fn artemis_v_guides(
+    world: &crate::World,
+    id: crate::ObjectId,
+    index: usize,
+) -> Result<bool> {
+    fn guides<L: PartialEq + Copy>(
+        controllers: &[ArtemisController<L>],
+        systems: &[SystemCritical<L>],
+        index: usize,
+    ) -> bool {
+        controllers.iter().any(|controller| {
+            controller.operational
+                && controller.weapon_indices.contains(&index)
+                && systems.iter().any(|part| {
+                    part.location == controller.location && part.system == System::ArtemisV
+                })
+        })
+    }
+    if let Some(unit) = world.btech.constructed_units().get(&id) {
+        return Ok(guides(
+            &unit.artemis_controllers()?,
+            &unit.loadout()?.systems,
+            index,
+        ));
+    }
+    if let Some(vehicle) = world.btech.vehicles().get(&id) {
+        return Ok(guides(
+            &vehicle.artemis_controllers()?,
+            &vehicle.loadout()?.systems,
+            index,
+        ));
+    }
+    Ok(false)
+}
+
 /// Match authored links once; callers supply only section relationships and equipment availability.
 fn controllers<L: Copy>(
     kind: FireControl,

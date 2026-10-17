@@ -1,6 +1,7 @@
 //! Who spots for LRM indirect fire (Total Warfare pp. 111, 139, 142): a declared spotter with
 //! its own line of sight, a friendly TAG designation, or a Narc pod for Narc-equipped missiles;
-//! and direct fire needing a clear line of sight even at a contact held on sensors.
+//! direct fire needing a clear line of sight even at a contact held on sensors; and guided
+//! missiles drawn onto a friendly unit carrying a Nemesis pod.
 use crate::support;
 use stompymux_rs::*;
 
@@ -117,6 +118,30 @@ fn atlas(narc: bool) -> MechTemplate {
         source.into()
     };
     MechTemplate::parse("AS7-D", &source).unwrap()
+}
+
+/// The Atlas with an Artemis V system guiding its LRM-20, which fires Artemis rounds, and its
+/// SRM-6 removed, since fire control must guide every launcher or none.
+fn artemis_v_atlas() -> MechTemplate {
+    let source = include_str!("fixtures/btech/units/AS7-D.toml")
+        .replace(
+            "    { at = 6, item = \"Ammo_IS.SRM-6\", rounds = 15 },\n",
+            "",
+        )
+        .replace("    { at = \"9-10\", item = \"IS.SRM-6\" },\n", "")
+        .replace(
+            "{ at = \"1-5\", item = \"IS.LRM-20\" }",
+            "{ at = \"1-5\", item = \"IS.LRM-20\", modes = [\"Artemis/Mine\"] }",
+        )
+        .replace(
+            "{ at = \"7-8\", item = \"Ammo_IS.LRM-20\", rounds = 6 }",
+            "{ at = \"7-8\", item = \"Ammo_IS.LRM-20\", rounds = 6, modes = [\"Artemis/Mine\"] }",
+        )
+        .replace(
+            "    { at = 11, item = \"HeatSink\" },\n]\n\n[sections.right_torso]",
+            "    { at = \"11-12\", item = \"ArtemisV\", link = 1 },\n]\n\n[sections.right_torso]",
+        );
+    crate::support::templates::legal(MechTemplate::parse("AS7-D", &source).unwrap())
 }
 
 /// A Jenner with TAG in its left torso, lightened to stay within its tonnage.
@@ -350,5 +375,65 @@ async fn direct_fire_needs_a_clear_line_through_the_woods() {
         let aim = battle_aim_modifiers(&world, shooter, target, 0, 4, AimRules::STANDARD).unwrap();
         let perception = aim.perception.expect("the target is a contact");
         assert_eq!(perception.direct_fire, clear, "{rows}");
+    }
+}
+
+/// Artemis V takes one off the to-hit number of the launcher it guides (Tactical Operations:
+/// Advanced Units & Equipment p. 95), but like Artemis IV does nothing for indirect fire (Total
+/// Warfare p. 130).
+#[tokio::test]
+async fn artemis_v_does_not_help_indirect_fire() {
+    let open = "1 10\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n";
+    for (rows, accuracy) in [(open, -1), (WALLED, 0)] {
+        let (_dir, _config, mut world, [boat, scout, target]) =
+            strip(rows, artemis_v_atlas(), jenner()).await;
+        let lrm = lrm(&world, boat);
+        assert_eq!(
+            world.btech.constructed_units()[&boat]
+                .ammunition_mode(lrm)
+                .unwrap(),
+            AmmunitionMode::Artemis
+        );
+        select_battle_target(&mut world, scout, ObjectId(2), Some(target)).unwrap();
+        select_battle_spotter(&mut world, scout, ObjectId(2), Some(scout)).unwrap();
+        select_battle_spotter(&mut world, boat, ObjectId(1), Some(scout)).unwrap();
+        let aim = battle_aim_modifiers(&world, boat, target, lrm, 4, AimRules::STANDARD).unwrap();
+        assert_eq!(aim.indirect.is_some(), rows == WALLED);
+        assert_eq!(aim.beacon_accuracy, accuracy, "{rows}");
+    }
+}
+
+/// A friendly 'Mech carrying a Nemesis pod in the line between an attacker and its target draws
+/// the attacker's Narc-equipped missiles onto itself, at +1 and with no multiple-targets term
+/// (Total Warfare p. 142); ordinary missiles fly on to the target, and so do guided ones once
+/// the pod is gone.
+#[tokio::test]
+async fn a_nemesis_pod_draws_friendly_guided_missiles() {
+    let open = "1 10\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n.0\n";
+    for (narc, nemesis) in [(true, true), (false, true), (true, false)] {
+        let (_dir, _config, mut world, [boat, scout, target]) =
+            strip(open, atlas(narc), jenner()).await;
+        if nemesis {
+            world
+                .btech
+                .rewrite_unit_record(scout, |record| {
+                    record["beacons"] = serde_json::json!({ "CenterTorso": ["nemesis"] });
+                })
+                .unwrap();
+        }
+        refresh_battle_contacts(&mut world, &[boat]).unwrap();
+        select_battle_target(&mut world, boat, ObjectId(1), Some(target)).unwrap();
+        let lrm = lrm(&world, boat);
+        let diverted = narc && nemesis;
+        let aim = battle_aim_modifiers(&world, boat, target, lrm, 4, AimRules::STANDARD).unwrap();
+        assert_eq!(aim.beacon_accuracy, i8::from(diverted), "{narc} {nemesis}");
+        assert_eq!(aim.target_lock, 0);
+        let shot =
+            resolve_battle_shot(&mut world, boat, ObjectId(1), target, lrm, shot_rules()).unwrap();
+        assert_eq!(
+            shot.target,
+            if diverted { scout } else { target },
+            "{narc} {nemesis}"
+        );
     }
 }

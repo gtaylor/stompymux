@@ -327,6 +327,15 @@ fn resolve_shot_inner(
     } else {
         effects.coordinate
     };
+    // A Nemesis pod on a friendly unit in the line draws guided missiles onto it instead
+    // (Total Warfare p. 142); the safeties and the aim still start from the intended target.
+    let intended = target;
+    let target = if indirect_fire {
+        target
+    } else {
+        let ammunition = world.btech.constructed_units()[&shooter].ammunition_mode(weapon_index)?;
+        super::narc::nemesis_decoy(world, shooter, target, ammunition)?.unwrap_or(target)
+    };
     let vehicle_target = world.btech.vehicles().contains_key(&target);
     ensure!(shooter != target, "A unit cannot fire on itself");
     for id in [shooter, target] {
@@ -354,7 +363,7 @@ fn resolve_shot_inner(
         super::weapon_geometry::check_leg_cover_unit(world, shooter, weapon_index, target)?;
     }
     let attacker = &world.btech.constructed_units()[&shooter];
-    super::fire_target::check_target_safety_for_source(world, operator.source, target)?;
+    super::fire_target::check_target_safety_for_source(world, operator.source, intended)?;
     super::fire_target::check_unit_munition(world, shooter, weapon_index)?;
     let loadout = attacker.loadout()?;
     ensure!(
@@ -376,7 +385,7 @@ fn resolve_shot_inner(
     let aim = super::aim::aim_modifiers_for_source(
         world,
         operator.source,
-        target,
+        intended,
         weapon_index,
         gunnery,
         rules.aim,

@@ -1417,7 +1417,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field mounting_section integer
 ---@field targeting_computer integer Eligible computer fire: -1 normally, +3 for a selected section on a mobile target.
 ---@field aimed_section integer Head aim penalty: 7 against immobile Mechs, 25 against mobile Mechs; overrides computer assistance.
----@field beacon_accuracy integer Haywire interference and iNarc homing assistance.
+---@field beacon_accuracy integer Haywire interference, iNarc homing assistance and Artemis V guidance.
 ---@field ammunition_accuracy integer Selected ammunition adjustment; LB-X cluster is -1, -3 against an airborne target (flak).
 ---@field weapon_accuracy integer Intrinsic accuracy adjustment; pulse lasers contribute -2, MRMs +1.
 ---@field target_lock integer
@@ -1536,7 +1536,7 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field ammunition_spent integer One round per engagement; zero for laser AMS.
 ---@field shot_down integer Missiles the engagement kept off the target: the single missile when destroyed, otherwise the hits the -4 removed.
 
----@alias BeaconKind "narc"|"homing"|"haywire"|"ecm"
+---@alias BeaconKind "narc"|"homing"|"haywire"|"ecm"|"nemesis"
 ---@class NarcReport
 ---@field kind BeaconKind
 ---@field notices Notice[] Cockpit effects from the hit-location roll.
@@ -2437,7 +2437,7 @@ function btech_unit.inarc(dbref, pilot, weapon, selector) end
 ---@return PodRow[]
 function btech_unit.pods(dbref, pilot) end
 
----Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM.
+---Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM, Z Nemesis.
 ---@param dbref integer
 ---@param pilot integer
 ---@param section string
