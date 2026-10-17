@@ -455,30 +455,35 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
                     .is_some_and(|object| !object.flags.contains(Flag::Going)),
                 "Invalid Target!"
             );
-            let victim = world
-                .btech
-                .constructed_units()
-                .get(&target)
-                .context("Invalid Target!")?;
-            let other = victim.position().context("Target is not placed")?;
-            ensure!(
-                !victim.is_destroyed() && other.map == position.map,
-                "Invalid Target!"
-            );
+            // A 'Mech, a ground vehicle or a VTOL may be landed on (Total Warfare pp. 150, 198).
+            let victim = world.btech.unit(target).context("Invalid Target!")?;
+            let (other, destroyed) = super::with_unit!(victim, |unit| (
+                unit.position().context("Target is not placed")?,
+                unit.is_destroyed()
+            ));
+            ensure!(!destroyed && other.map == position.map, "Invalid Target!");
             ensure!(
                 super::visible_contact(world, id, target)?.is_some()
                     && !super::unit_terrain_los(world, id, target)?.blocked,
                 "Target is not in line of sight!"
             );
             // The jump must clear the target: the level of its hex, plus two over a standing
-            // 'Mech, which is always two levels high (Total Warfare p. 149).
+            // 'Mech, which is always two levels high (Total Warfare p. 149); a VTOL's
+            // elevation (p. 198).
             let target_tile = map.base_hex(i64::from(other.x), i64::from(other.y))?;
-            let standing = if victim.posture() == Posture::Prone {
-                0
-            } else {
-                2
-            };
-            let clearance = victim.elevation_level(target_tile) + standing - i32::from(elevation);
+            let standing = world
+                .btech
+                .constructed_units()
+                .get(&target)
+                .map_or(0, |mech| {
+                    if mech.posture() == Posture::Prone {
+                        0
+                    } else {
+                        2
+                    }
+                });
+            let level = super::with_unit!(victim, |unit| unit.elevation_level(target_tile));
+            let clearance = level + standing - i32::from(elevation);
             ensure!(
                 clearance <= i32::from(capacity.movement_points),
                 "You need {clearance} jumping MP to clear your target."

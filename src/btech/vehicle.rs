@@ -182,6 +182,11 @@ pub struct Vehicle {
     /// Simulation time of the last weapon this vehicle launched; a spotter that attacked
     /// within the turn makes the indirect fire it spots harder (Total Warfare p. 111).
     pub(super) last_weapon_fire: Option<i64>,
+    /// Simulation time this vehicle was last the target of a charge or death from above; a
+    /// unit may be the target of only one a turn (Total Warfare pp. 148-149).
+    pub(super) assaulted_at: Option<i64>,
+    /// Ram selection and the travel that sets its damage (Total Warfare p. 148).
+    pub(super) charge: super::ChargeState,
     pub(super) tag: super::TagState,
     pub(super) contacts: BTreeMap<crate::ObjectId, super::Contact>,
     pub(super) fire_modes: BTreeMap<usize, super::FireMode>,
@@ -382,6 +387,10 @@ struct VehicleRecord {
     #[serde(default)]
     last_weapon_fire: Option<i64>,
     #[serde(default)]
+    assaulted_at: Option<i64>,
+    #[serde(default)]
+    charge: super::ChargeState,
+    #[serde(default)]
     tag: super::TagState,
     contacts: BTreeMap<crate::ObjectId, super::Contact>,
     fire_modes: BTreeMap<usize, super::FireMode>,
@@ -522,6 +531,8 @@ super::saved_parts::saved_parts!(Vehicle {
         unjam,
         pod_removal,
         last_weapon_fire,
+        assaulted_at,
+        charge,
     ],
     live_always: [
         motion,
@@ -1003,6 +1014,8 @@ impl Vehicle {
             electronics: Default::default(),
             spotter: None,
             last_weapon_fire: None,
+            assaulted_at: None,
+            charge: Default::default(),
             tag: Default::default(),
             contacts: Default::default(),
             fire_modes,
@@ -1740,6 +1753,8 @@ impl Vehicle {
             electronics: record.electronics,
             spotter: record.spotter,
             last_weapon_fire: record.last_weapon_fire,
+            assaulted_at: record.assaulted_at,
+            charge: record.charge,
             tag: record.tag,
             contacts: record.contacts,
             fire_modes: record.fire_modes,
@@ -2125,9 +2140,11 @@ impl Vehicle {
             "Invalid spotter identity"
         );
         ensure!(
-            self.last_weapon_fire.is_none_or(|time| time >= 0),
+            self.last_weapon_fire.is_none_or(|time| time >= 0)
+                && self.assaulted_at.is_none_or(|time| time >= 0),
             "Invalid attack timestamp"
         );
+        self.charge.validate()?;
         self.tag.validate()?;
         ensure!(
             self.c3_network != Some(0) && self.c3i_network != Some(0),

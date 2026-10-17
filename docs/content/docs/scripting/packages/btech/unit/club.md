@@ -5,7 +5,7 @@ linkTitle: "club"
 manualLinkTitle: "club"
 ---
 
-Swing a club using both arms; a carried tree shatters on a hit. Forest terrain supplies an immediate tree.
+Swing a carried club using both arms; a carried tree shatters on a hit. Pick a club up with grabclub first.
 
 ## Signature
 

@@ -2076,7 +2076,12 @@ async fn charge_collision_hit_miss_and_saved_recovery() {
             assert!(report.target_impacts.is_empty());
             assert!(report.attacker_impacts.is_empty());
             assert!(report.balance.is_empty());
-            assert_eq!(world.btech.constructed_units()[&target], before);
+            // A miss leaves the target untouched but for having been charged this turn
+            // (Total Warfare p. 148).
+            assert_eq!(
+                unassaulted(&world, target),
+                serde_json::to_value(&before).unwrap()
+            );
             assert_eq!(
                 world.btech.constructed_units()[&id].motion().unwrap().speed,
                 21.5
@@ -2845,6 +2850,15 @@ async fn charge_immobility_includes_unconscious_pilots() {
     world.validate(&config).unwrap();
 }
 
+/// A unit's saved state with the mark of having been charged, pushed or landed on this turn
+/// checked and cleared: a missed attack changes nothing else about its target.
+fn unassaulted(world: &stompymux_rs::World, id: ObjectId) -> serde_json::Value {
+    let mut state = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
+    assert_eq!(state["assaulted_at"], world.btech.simulation_time());
+    state["assaulted_at"] = serde_json::Value::Null;
+    state
+}
+
 /// Piloting five aims a DFA at five against an immobile target: a two misses and a twelve hits.
 pub(crate) fn dfa_piloting(world: &mut stompymux_rs::World) {
     stompymux_rs::set_battle_character_value(
@@ -2956,7 +2970,10 @@ async fn dfa_damage_hit_miss_and_saved_recovery() {
             // A miss is a two-level fall onto the back: three times tonnage over ten.
             assert!(report.target_impacts.is_empty());
             assert!(report.attacker_impacts.is_empty());
-            assert_eq!(world.btech.constructed_units()[&target], before);
+            assert_eq!(
+                unassaulted(&world, target),
+                serde_json::to_value(&before).unwrap()
+            );
             assert_eq!(
                 world.btech.constructed_units()[&id].posture(),
                 Posture::Prone

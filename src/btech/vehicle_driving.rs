@@ -177,6 +177,8 @@ pub(super) fn advance(
         }
         let position = vehicle.position().context("Vehicle is not placed")?;
         let old = vehicle.motion().context("Vehicle lacks motion")?;
+        report.notices.extend(super::ram::begin_update(world, id));
+        let vehicle = &world.btech.vehicles()[&id];
         let map = world
             .btech
             .maps()
@@ -248,6 +250,7 @@ pub(super) fn advance(
                 continue;
             }
         }
+        super::ram::record_distance(world, id, old.point, next.point);
         let vehicle = &world.btech.vehicles()[&id];
         let map = world
             .btech
@@ -673,6 +676,10 @@ pub(super) fn advance(
         let (notice, experience) = super::building_step::entered(world, id, position)?;
         report.notices.extend(notice);
         report.experience_messages.extend(experience);
+        let vehicle = &world.btech.vehicles()[&id];
+        if !vehicle.is_destroyed() && vehicle.motion().is_some_and(|motion| motion.speed != 0.0) {
+            super::ram::finish_update(world, id, rules, character, &mut report)?;
+        }
     }
     Ok(report)
 }

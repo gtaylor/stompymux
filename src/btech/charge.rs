@@ -159,6 +159,7 @@ fn charge_profile_for(
         !source.fired_this_turn(world.btech.simulation_time()),
         "You fired weapons this turn and cannot also charge."
     );
+    super::recent_fire::require_unassaulted(world, target)?;
     // A unit that jumped this turn may not charge (Total Warfare p. 148).
     ensure!(
         !source.jumped_this_turn(world.btech.simulation_time()),
@@ -438,6 +439,7 @@ fn resolve_charge_inner(
             target_table: HitTable::Weapon,
         },
     )?;
+    super::recent_fire::mark_assaulted(&mut candidate, target);
     *world = candidate;
     Ok(report)
 }
@@ -914,6 +916,7 @@ fn resolve_mutual_charge_inner(
         .restored_after_forward_arc()
         .merge(other_torso);
     let accepted = profiles.iter().any(Result::is_ok);
+    let charged = [profiles[1].is_ok(), profiles[0].is_ok()];
     for (index, profile) in profiles.iter().enumerate() {
         if let Err(error) = profile {
             let reason = format!("{error:#}");
@@ -983,6 +986,11 @@ fn resolve_mutual_charge_inner(
         }
         start_recovery(&mut candidate, first);
         start_recovery(&mut candidate, second);
+        for (unit, charged) in [first, second].into_iter().zip(charged) {
+            if charged {
+                super::recent_fire::mark_assaulted(&mut candidate, unit);
+            }
+        }
     }
     candidate.btech.validate_action(&candidate)?;
     *world = candidate;

@@ -231,6 +231,8 @@ impl<'a> UnitRef<'a> {
         pub fn spotter(&self) -> Option<ObjectId>;
         /// Simulation time of the last weapon this unit launched, if it ever has.
         pub fn last_weapon_fire(&self) -> Option<i64>;
+        /// Simulation time this unit was last the target of a charge, death from above or push.
+        pub fn assaulted_at(&self) -> Option<i64>;
         /// Saved TAG selection and countdown; current geometry is checked separately.
         pub fn tag(&self) -> TagState;
         /// Standalone TAG and integrated C3 master equipment share their live damage gate.

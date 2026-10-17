@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "push", "ram", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
 article_tags = ["show_in_index"]
 +++
 
@@ -694,6 +694,23 @@ hex's level: level with you anything but a punch, one or two levels up anything 
 kick, three levels up only a club or physical weapon, and nothing else. Any physical
 blow that lands destroys a VTOL's rotor (Total Warfare pp. 147, 150 and 198).
 
+`punch both #first #second` punches two targets, the left arm at the first and the
+right at the second, each rolled on its own (Total Warfare p. 145). A prone Mech can punch only a ground
+vehicle in its own hex, propping itself up on the other arm, and both arms are then
+tied up (Total Warfare p. 151).
+
+`push [#unit]` shoves the standing Mech in the hex directly ahead of your feet
+with both arms, at Piloting -1 and +2 for each damaged shoulder. No arm may have
+fired this turn, and the target must be on your level and not charging. A hit does
+no damage: the target is driven one hex onward and you step into the hex it left,
+and it must make a piloting roll or fall. If it cannot be driven there (the map
+edge, terrain it cannot enter, or more than two levels up) neither of you moves,
+but it still rolls. Pushed off a drop of more than two levels it falls; a Mech
+already in the hex beyond is shoved out of its far side and rolls too, or is
+struck by a Mech falling two or more levels onto it (Total Warfare pp. 147,
+151-153). A unit can be the target of only one charge, death from above or push
+in a turn (Total Warfare pp. 148-149).
+
 A four-legged Mech can kick into its rear arc at +1 with the rear leg on the chosen
 side; that leg's actuators count (Total Warfare p. 147). Only two-legged Mechs trip,
 and only two-legged Mechs can be tripped; a trip takes Piloting -1 (Tactical
@@ -727,14 +744,24 @@ charge attempt clears the selection without attacking. The charging unit takes
 one point of damage per ten tons of its target, as in Total Warfare. You cannot
 charge within thirty seconds of launching a jump, at a target more than one level
 above or below you, or while your pilot is unconscious or stunned (Total Warfare
-pp. 148 and 150).
+pp. 148 and 150). A Mech cannot charge a vehicle.
+
+Ground vehicles charge (ram) with the same `charge` command; VTOLs cannot. A ram
+can strike a Mech, standing or prone, or another vehicle: tonnage over ten per hex
+travelled to the target, on the Kick Location Table against a standing Mech, and the
+target's tonnage over ten to the vehicle. After a hit each vehicle involved rolls on
+the Motive System Damage Table and a rammed Mech rolls at +2 to stay standing. A
+vehicle cannot ram in a turn it fired, and its weapons are held for thirty seconds
+afterwards (Total Warfare p. 148).
 
 
 Use `jump #unit` for a death-from-above attack, or `jump` with no arguments to
 use your current target. You jump toward the hex occupied by the target when
 you launch. If it moves out of that hex, you land normally. Status shows the
 selected DFA target during flight. Your Jumping MP must clear the target: the
-level of its hex above yours, plus two over a standing Mech (Total Warfare p. 149).
+level of its hex above yours, plus two over a standing Mech, or a VTOL's elevation
+(Total Warfare p. 149). A vehicle takes the landing on the Front column of its hit
+location table, and a VTOL loses its rotor (Total Warfare pp. 150 and 198).
 After a hit you roll at +4 and the target at +2 to stay standing; each roll stands
 alone, so a target still rolls when your landing damage has already knocked you
 down (Total Warfare p. 150).

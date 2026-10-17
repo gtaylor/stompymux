@@ -290,6 +290,7 @@ fn c_catalog_defaults() {
                 | "melee"
                 | "punch"
                 | "trip"
+                | "push"
                 | "kick"
                 | "stand"
                 | "lock"

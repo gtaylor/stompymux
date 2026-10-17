@@ -96,6 +96,7 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("unit", "unit_visibility", "visibility"),
         ("unit", "unit_kick", "kick"),
         ("unit", "unit_trip", "trip"),
+        ("unit", "unit_push", "push"),
         ("unit", "unit_punch", "punch"),
         ("unit", "unit_axe", "axe"),
         ("unit", "unit_sword", "sword"),

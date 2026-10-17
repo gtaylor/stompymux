@@ -185,6 +185,30 @@ pub(super) fn breach(
     rules: FallRules,
     character: bool,
 ) -> Result<Option<WallBreach>> {
+    breach_with(world, id, reverse, rules, character, false)
+}
+
+/// Resolve `id` having just been displaced into a building hex below its roof: the building
+/// and the unit are damaged as if it had moved in and failed its roll, so no roll is made
+/// (Total Warfare pp. 151 and 167).
+pub(super) fn breach_displaced(
+    world: &mut World,
+    id: ObjectId,
+    rules: FallRules,
+    character: bool,
+) -> Result<Option<WallBreach>> {
+    breach_with(world, id, false, rules, character, true)
+}
+
+/// Shared wall breach, with the entry roll either made or automatically failed.
+fn breach_with(
+    world: &mut World,
+    id: ObjectId,
+    reverse: bool,
+    rules: FallRules,
+    character: bool,
+    automatic_failure: bool,
+) -> Result<Option<WallBreach>> {
     let Some(interior) = unit_inside(world, id)? else {
         return Ok(None);
     };
@@ -194,22 +218,32 @@ pub(super) fn breach(
     breach.notices.push(Notice {
         unit: id,
         text: format!(
-            "You push through the walls of the {} building.",
+            "You {} the walls of the {} building.",
+            if automatic_failure {
+                "are thrown through"
+            } else {
+                "push through"
+            },
             class.label().to_ascii_lowercase()
         ),
     });
-    let control = super::terrain_control::check(
-        world,
-        id,
-        entry_modifier(class),
-        rules.extended_piloting,
-        character,
-    )?;
-    control.capture_feedback(id, &mut breach.notices, &mut breach.pilot_notices);
-    breach
-        .experience_messages
-        .extend(control.experience_messages);
-    if !control.success && cf > 0 {
+    let success = if automatic_failure {
+        false
+    } else {
+        let control = super::terrain_control::check(
+            world,
+            id,
+            entry_modifier(class),
+            rules.extended_piloting,
+            character,
+        )?;
+        control.capture_feedback(id, &mut breach.notices, &mut breach.pilot_notices);
+        breach
+            .experience_messages
+            .extend(control.experience_messages);
+        control.success
+    };
+    if !success && cf > 0 {
         let damage = absorption(cf);
         breach.notices.push(Notice {
             unit: id,

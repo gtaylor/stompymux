@@ -866,12 +866,14 @@
 //|---Attempt one or both arms in left-to-right order. Default selection is both.
 //|---Unavailable arms are reported separately when another arm attacks; an entirely rejected action raises an error.
 //|---Impact failures and callback aborts roll back the complete action and staged messages.
+//|---A second target splits a two-armed punch: the left arm punches target and the right arm second_target.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param arms? 'left'|'right'|'both'
 //|---@param target? integer Defaults to the selected target; explicit targets require acquisition.
+//|---@param second_target? integer The right arm's target; requires both arms and an explicit first target.
 //|---@return table report Ordered attacks, per-arm rejections and notices. Each attack includes its profile and optional impact.
-//|function btech_unit.punch(dbref, pilot, arms, target) end
+//|function btech_unit.punch(dbref, pilot, arms, target, second_target) end
 // lua-types-end
 
 // lua-types-begin btech 00287
@@ -957,12 +959,22 @@
 // lua-types-end
 
 // lua-types-begin btech 00295
-//|---Swing a club using both arms; a carried tree shatters on a hit. Forest terrain supplies an immediate tree.
+//|---Swing a carried club using both arms; a carried tree shatters on a hit. Pick a club up with grabclub first.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param target? integer
 //|---@return table report Physical attack, damage, recovery and notices.
 //|function btech_unit.club(dbref, pilot, target) end
+// lua-types-end
+
+// lua-types-begin btech 00221
+//|---Push the standing Mech directly ahead with both arms. A hit displaces it one hex onward, the
+//|---attacker follows into the hex it left, and the target must keep its footing; no damage is dealt.
+//|---@param dbref integer
+//|---@param pilot integer
+//|---@param target? integer Defaults to the selected target; explicit targets require acquisition.
+//|---@return table report Push profile, roll, hit, displacement, balance checks and notices.
+//|function btech_unit.push(dbref, pilot, target) end
 // lua-types-end
 
 // lua-types-begin btech 00296

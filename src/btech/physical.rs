@@ -552,6 +552,8 @@ pub struct PhysicalProfile {
     pub hit_arc: HitArc,
     /// The limb that delivers the blow, whose spikes or talons take part.
     pub limb: MechSection,
+    /// Every limb the attack ties up for the turn.
+    pub limbs: Vec<MechSection>,
 }
 
 /// Completed attack with already-applied damage, balance and fall consequences.
@@ -697,29 +699,29 @@ fn attack_profile(
 
 /// What a physical attack reads from its target before the geometry checks, whichever chassis
 /// the target is. Vehicles never lie prone, rise or twist.
-struct TargetFacts {
-    vehicle: bool,
+pub(super) struct TargetFacts {
+    pub(super) vehicle: bool,
     /// A VTOL, whose rotor any successful physical attack by a 'Mech destroys (Total Warfare
     /// p. 198).
-    vtol: bool,
+    pub(super) vtol: bool,
     /// A VTOL in flight, which the level-difference table for VTOLs governs (Total Warfare
     /// p. 198). A landed VTOL is attacked as any ground vehicle.
-    flying: bool,
+    pub(super) flying: bool,
     /// A four-legged 'Mech, which cannot be tripped (Tactical Operations: Advanced Rules p. 89).
-    quad: bool,
-    position: Position,
-    heading: f64,
-    team: i32,
+    pub(super) quad: bool,
+    pub(super) position: Position,
+    pub(super) heading: f64,
+    pub(super) team: i32,
     /// In the air beyond any physical attack's reach: a jumping or falling 'Mech, or a falling
     /// or dropping vehicle.
-    airborne: bool,
-    prone: bool,
-    rising: bool,
-    movement: i8,
+    pub(super) airborne: bool,
+    pub(super) prone: bool,
+    pub(super) rising: bool,
+    pub(super) movement: i8,
 }
 
 /// Sample the target's live facts; vehicles use the shared immobility test and their speed.
-fn target_facts(world: &World, target: ObjectId) -> Result<TargetFacts> {
+pub(super) fn target_facts(world: &World, target: ObjectId) -> Result<TargetFacts> {
     if let Some(vehicle) = world.btech.vehicles().get(&target) {
         vehicle.validate()?;
         ensure!(!vehicle.is_destroyed(), "Unit is destroyed");
@@ -741,7 +743,9 @@ fn target_facts(world: &World, target: ObjectId) -> Result<TargetFacts> {
                 || phase == Some(VtolFlightPhase::Falling),
             prone: false,
             rising: false,
+            // A VTOL in the air is one harder to hit (Total Warfare p. 117).
             movement: super::aim::target_motion(motion.map_or(0.0, |motion| motion.speed))
+                + i8::from(phase == Some(VtolFlightPhase::Airborne))
                 - if immobile { 4 } else { 0 },
         });
     }
@@ -856,10 +860,25 @@ fn attack_profile_inner(
                 .contains_key(&attack.section(source.chassis())),
         "Your limbs are still recovering from another attack"
     );
-    ensure!(
-        source.posture() != Posture::Prone,
-        "You cannot attack a mech from a prone position."
-    );
+    // A prone 'Mech may only punch a ground vehicle in its own hex, propping itself up on the
+    // other arm (Total Warfare p. 151); every other physical attack needs it standing.
+    let prone_punch = source.posture() == Posture::Prone;
+    if prone_punch {
+        ensure!(
+            matches!(attack, PhysicalAttack::Punch { .. }) && victim.vehicle && !victim.flying,
+            "You cannot attack a mech from a prone position."
+        );
+        ensure!(
+            [MechSection::LeftArm, MechSection::RightArm]
+                .iter()
+                .all(|arm| source.sections()[arm].internal > 0),
+            "You need both arms to punch from the ground."
+        );
+        ensure!(
+            completed_arm.is_none(),
+            "You need your other arm to prop yourself up."
+        );
+    }
     ensure!(
         source.stun_remaining() == 0,
         "You are still recovering from your stunning experience!"
@@ -932,6 +951,10 @@ fn attack_profile_inner(
         position.map == target_position.map,
         "Target is on another battlefield"
     );
+    ensure!(
+        !prone_punch || (position.x, position.y) == (target_position.x, target_position.y),
+        "From the ground you can only punch a vehicle in your own hex."
+    );
     let map = &world.btech.maps()[&position.map];
     if source.signature().team == victim.team {
         ensure!(
@@ -981,7 +1004,9 @@ fn attack_profile_inner(
         "You cannot reach a target under the water from where you stand."
     );
     if victim.vehicle {
-        vehicle_reach(attack, target_elevation - elevation, victim.flying)?;
+        // Lying down puts the 'Mech a level lower than it stands (Total Warfare p. 150).
+        let reach = elevation - i32::from(prone_punch);
+        vehicle_reach(attack, target_elevation - reach, victim.flying)?;
     } else if attack.uses_leg() {
         ensure!(
             elevation >= target_elevation,
@@ -1025,7 +1050,12 @@ fn attack_profile_inner(
     // A limb that fired this turn cannot also attack physically, however short its weapons'
     // recycle (Total Warfare pp. 145-147).
     let now = world.btech.simulation_time();
-    let limbs = attack.limbs(source.chassis(), rear_kick);
+    // A prone punch ties up the propping arm as well as the punching one.
+    let limbs = if prone_punch {
+        vec![MechSection::LeftArm, MechSection::RightArm]
+    } else {
+        attack.limbs(source.chassis(), rear_kick)
+    };
     for &section in &limbs {
         ensure!(
             !source.section_fired_this_turn(section, now),
@@ -1162,6 +1192,7 @@ fn attack_profile_inner(
         vtol_target: victim.vtol,
         hit_arc,
         limb,
+        limbs,
     })
 }
 
@@ -1306,7 +1337,7 @@ fn resolve_attack_inner(
     world.attempt(|world| {
         let unit = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = unit.dice.generic_roll();
-        for section in attack.limbs(unit.chassis(), profile.rear_kick > 0) {
+        for &section in &profile.limbs {
             unit.limb_recycle.insert(section, PHYSICAL_RECOVERY_SECONDS);
         }
         let weapon = attack.hand_weapon();
@@ -1870,10 +1901,33 @@ pub fn resolve_arm_attack(
         world,
         attacker,
         pilot,
-        target,
+        [target; 2],
         ArmAttackChoice {
             arms,
             kind: kind.into(),
+        },
+        rules,
+        false,
+    )
+}
+
+/// Punch two different targets, the left arm at `left` and the right at `right`; each punch is
+/// rolled on its own (Total Warfare p. 145).
+pub fn resolve_split_punch(
+    world: &mut World,
+    attacker: ObjectId,
+    pilot: ObjectId,
+    [left, right]: [ObjectId; 2],
+    rules: PhysicalRules,
+) -> Result<ArmAttackReport> {
+    resolve_arm_attack_inner(
+        world,
+        attacker,
+        pilot,
+        [left, right],
+        ArmAttackChoice {
+            arms: ArmSelection::Both,
+            kind: ArmAttack::Punch.into(),
         },
         rules,
         false,
@@ -1889,15 +1943,31 @@ pub(super) fn resolve_arm_attack_in_action(
     choice: ArmAttackChoice,
     rules: PhysicalRules,
 ) -> Result<ArmAttackReport> {
-    resolve_arm_attack_inner(world, attacker, pilot, target, choice, rules, true)
+    resolve_arm_attack_inner(world, attacker, pilot, [target; 2], choice, rules, true)
+}
+
+/// Punch two different targets inside a host checkpoint that publishes character casualties.
+pub(super) fn resolve_split_punch_in_action(
+    world: &mut World,
+    attacker: ObjectId,
+    pilot: ObjectId,
+    targets: [ObjectId; 2],
+    rules: PhysicalRules,
+) -> Result<ArmAttackReport> {
+    let choice = ArmAttackChoice {
+        arms: ArmSelection::Both,
+        kind: ArmAttack::Punch.into(),
+    };
+    resolve_arm_attack_inner(world, attacker, pilot, targets, choice, rules, true)
 }
 
 /// Shared availability, rejection and ordered hit processing for both publication modes.
+/// `targets` holds the left arm's target, then the right arm's.
 fn resolve_arm_attack_inner(
     world: &mut World,
     attacker: ObjectId,
     pilot: ObjectId,
-    target: ObjectId,
+    targets: [ObjectId; 2],
     choice: ArmAttackChoice,
     rules: PhysicalRules,
     character: bool,
@@ -1925,6 +1995,10 @@ fn resolve_arm_attack_inner(
         };
         let mut completed_arm = None;
         for &arm in arms {
+            let target = match arm {
+                Arm::Left => targets[0],
+                Arm::Right => targets[1],
+            };
             let unit = &world.btech.constructed_units()[&attacker];
             let kind = match kind {
                 ArmWeapon::Fixed(kind) => kind,
@@ -2029,6 +2103,9 @@ fn selected_arms(value: Option<&str>) -> Result<ArmSelection> {
 }
 
 /// Shared native/Lua arm-attack selection with acquired-contact checks for an explicit target.
+/// A `second` target splits a two-armed punch: the left arm punches `target` and the right arm
+/// `second` (Total Warfare p. 145).
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn configured_arm_attack(
     scripts: &crate::Scripts,
     config: &crate::Config,
@@ -2036,8 +2113,36 @@ pub(crate) fn configured_arm_attack(
     pilot: ObjectId,
     arms: Option<&str>,
     target: Option<ObjectId>,
+    second: Option<ObjectId>,
     kind: ArmWeapon,
 ) -> Result<ArmAttackReport> {
+    if let Some(second) = second {
+        let targets = {
+            let world = scripts.world.borrow();
+            super::power::controlled_unit(&world, id, pilot)?;
+            ensure!(
+                kind == ArmWeapon::Fixed(ArmAttack::Punch),
+                "Only punches can strike two targets."
+            );
+            ensure!(
+                selected_arms(arms)? == ArmSelection::Both,
+                "Punching two targets takes both arms."
+            );
+            let first = target.context("Name the left arm's target first.")?;
+            [
+                selected_target(&world, id, Some(first))?,
+                selected_target(&world, id, Some(second))?,
+            ]
+        };
+        return super::split_punch_action(
+            scripts,
+            config,
+            id,
+            pilot,
+            targets,
+            configured_rules(config),
+        );
+    }
     let (chosen, arms) = {
         let world = scripts.world.borrow();
         super::power::controlled_unit(&world, id, pilot)?;
@@ -2057,7 +2162,11 @@ pub(crate) fn configured_arm_attack(
 }
 
 /// Resolve the selected contact without acquiring one or advancing a lock timer.
-fn selected_target(world: &World, id: ObjectId, target: Option<ObjectId>) -> Result<ObjectId> {
+pub(super) fn selected_target(
+    world: &World,
+    id: ObjectId,
+    target: Option<ObjectId>,
+) -> Result<ObjectId> {
     let chosen = target
         .or_else(|| {
             world.btech.constructed_units()[&id]
@@ -2202,7 +2311,7 @@ fn command_for(
     let usage = match kind {
         PhysicalCommand::Kick => "Usage: kick [left|right] [#unit]",
         PhysicalCommand::Trip => "Usage: trip [left|right] [#unit]",
-        PhysicalCommand::Punch => "Usage: punch [left|right|both] [#unit]",
+        PhysicalCommand::Punch => "Usage: punch [left|right|both] [#unit [#unit]]",
         PhysicalCommand::Melee => "Usage: melee [left|right|both] [#unit]",
         PhysicalCommand::Club => "Usage: club [#unit]",
         PhysicalCommand::GrabClub => "Usage: grabclub [left|right|-]",
@@ -2215,17 +2324,21 @@ fn command_for(
         } else {
             None
         };
-        let target = args
-            .next()
-            .map(|arg| -> Result<ObjectId> {
-                Ok(ObjectId(
-                    arg.strip_prefix('#')
-                        .context(usage)?
-                        .parse()
-                        .context("Invalid target number")?,
-                ))
-            })
-            .transpose()?;
+        let parse_target = |arg: &str| -> Result<ObjectId> {
+            Ok(ObjectId(
+                arg.strip_prefix('#')
+                    .context(usage)?
+                    .parse()
+                    .context("Invalid target number")?,
+            ))
+        };
+        let target = args.next().map(parse_target).transpose()?;
+        // A punch may name a second target for the right arm (Total Warfare p. 145).
+        let second = if matches!(kind, PhysicalCommand::Punch) {
+            args.next().map(parse_target).transpose()?
+        } else {
+            None
+        };
         ensure!(args.next().is_none(), "{usage}");
         let id = ctx
             .scripts
@@ -2279,6 +2392,7 @@ fn command_for(
                     ctx.player,
                     leg,
                     target,
+                    second,
                     attack,
                 )?;
                 Vec::new()

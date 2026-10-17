@@ -22,6 +22,11 @@ pub struct DfaProfile {
     pub received_damage: u16,
     pub target_arc: HitArc,
     pub initial_hit_table: HitTable,
+    /// The target is a vehicle, which takes the landing on the Front column of its Hit
+    /// Location Table and makes no roll to stay standing (Total Warfare p. 150).
+    pub vehicle_target: bool,
+    /// The target is a VTOL, whose rotor a successful landing destroys (Total Warfare p. 198).
+    pub vtol_target: bool,
 }
 
 /// A missed landing is a two-level fall: damage multiplier three (Total Warfare p. 150).
@@ -70,19 +75,19 @@ fn dfa_profile_inner(
                 && (character || !object.flags.contains(Flag::InCharacter)),
             "DFA requires live tactical units"
         );
-        let unit = world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .context("Unit construction state is unavailable")?;
-        unit.validate()?;
-        ensure!(!unit.is_destroyed(), "Unit is destroyed");
     }
+    let source = world
+        .btech
+        .constructed_units()
+        .get(&attacker)
+        .context("Unit construction state is unavailable")?;
+    source.validate()?;
+    ensure!(!source.is_destroyed(), "Unit is destroyed");
+    // The target may be a 'Mech, a ground vehicle or a VTOL (Total Warfare pp. 150, 198).
+    let victim = super::physical::target_facts(world, target)?;
     super::building_interior::check_physical(world, attacker, target)?;
-    let source = &world.btech.constructed_units()[&attacker];
-    let victim = &world.btech.constructed_units()[&target];
     let position = source.position().context("Unit is not placed")?;
-    let other = victim.position().context("Target is not placed")?;
+    let other = victim.position;
     ensure!(position.map == other.map, "Your target is no longer valid.");
     ensure!(
         position.x == other.x && position.y == other.y,
@@ -98,13 +103,14 @@ fn dfa_profile_inner(
         source.limb_recycle().is_empty(),
         "Your limbs are still recovering from your last attack."
     );
+    super::recent_fire::require_unassaulted(world, target)?;
     ensure!(
-        !victim.airborne() && victim.free_fall().is_none(),
+        !victim.airborne,
         "Your target is airborne, you cannot land on it."
     );
     ensure!(
         !world.btech.maps()[&position.map].blocks_friendly_fire()
-            || source.signature().team != victim.signature().team,
+            || source.signature().team != victim.team,
         "Friendly DFA? I don't think so...."
     );
     let specialist = source
@@ -122,10 +128,10 @@ fn dfa_profile_inner(
     } else {
         movement
     };
-    let target_movement = i32::from(super::aim::ground_physical_target_modifier(world, victim));
+    let target_movement = i32::from(victim.movement);
     let light = i32::from(super::light_aim::modifier(world, target, true)?);
-    // The better pilot has the edge: the difference in Piloting Skill Ratings modifies the
-    // attack, and terrain never does (Total Warfare p. 144).
+    // The better pilot has the edge: the difference in Piloting (or Driving) Skill Ratings
+    // modifies the attack, and terrain never does (Total Warfare p. 144).
     let skill = base
         - i32::from(unit_piloting_target(
             world,
@@ -155,15 +161,20 @@ fn dfa_profile_inner(
         sensors,
         inflicted_damage,
         received_damage,
-        target_arc: HitArc::from_bearing(
-            reverse.bearing.unwrap_or(180.0),
-            victim.motion().unwrap().heading,
-        )?,
-        initial_hit_table: if victim.posture() == Posture::Prone {
+        target_arc: if victim.vehicle {
+            // A vehicle takes the landing on the Front column of its Hit Location Table
+            // (Total Warfare p. 150).
+            HitArc::Front
+        } else {
+            HitArc::from_bearing(reverse.bearing.unwrap_or(180.0), victim.heading)?
+        },
+        initial_hit_table: if victim.prone || victim.vehicle {
             HitTable::Weapon
         } else {
             HitTable::Punch
         },
+        vehicle_target: victim.vehicle,
+        vtol_target: victim.vtol,
     })
 }
 
@@ -187,6 +198,10 @@ pub struct DfaReport {
     /// find a critical (Tactical Operations: Advanced Rules p. 78).
     pub glancing: bool,
     pub target_impacts: Vec<TacticalImpact>,
+    /// Damage groups a vehicle target took.
+    pub vehicle_impacts: Vec<VehicleImpact>,
+    /// The rotor a successful landing destroyed on a VTOL (Total Warfare p. 198).
+    pub rotor: Option<RotorDamage>,
     pub attacker_impacts: Vec<TacticalImpact>,
     pub balance: Vec<DfaBalance>,
     /// The attacker's crash after a miss: a two-level fall onto its back (Total Warfare p. 150).
@@ -305,6 +320,76 @@ fn packets(
     })
 }
 
+/// Land on a vehicle: five-point groups on the Front column of its Hit Location Table (Total
+/// Warfare p. 150), and a VTOL's rotor torn off by the blow (p. 198).
+fn vehicle_packets(
+    world: &mut World,
+    target: ObjectId,
+    mut damage: u16,
+    rules: FallRules,
+    (attacker, character): (ObjectId, bool),
+    report: &mut DfaReport,
+) -> Result<()> {
+    while damage > 0 && !world.btech.vehicles()[&target].is_destroyed() {
+        let group = damage.min(5);
+        damage -= group;
+        if character
+            && let Some(pilot) = world.btech.constructed_units()[&attacker].pilot()
+            && let Some(award) = super::physical_experience::award(
+                world,
+                attacker,
+                pilot,
+                target,
+                group,
+                crate::clock::wall_time(),
+                rules.extended_piloting,
+            )?
+        {
+            report.experience.push(award.award);
+            report.experience_messages.extend(award.message);
+        }
+        let (impact, notices) = super::blast_damage::resolve_packet(
+            world,
+            target,
+            super::blast_damage::MaterialPacket {
+                amount: group,
+                table: HitTable::Weapon,
+                arc: HitArc::Front,
+                character,
+                attacker: Some(attacker),
+                class: DamageClass::Ordinary,
+            },
+            false,
+            rules,
+        )?;
+        impact.append_feedback(&mut report.pilot_notices, report.notices.len());
+        report.notices.extend(notices);
+        if let super::blast_damage::BlastImpact::Vehicle(impact) = impact {
+            report.vehicle_impacts.push(impact);
+        }
+    }
+    let vehicle = &world.btech.vehicles()[&target];
+    if report.profile.vtol_target && !vehicle.is_destroyed() && !vehicle.rotor_destroyed() {
+        let damage = super::rotor_damage::apply_in_world(
+            world,
+            target,
+            RotorHit::Destroy,
+            rules.extended_piloting,
+        )?;
+        report.notices.push(Notice {
+            unit: target,
+            text: damage.message().into(),
+        });
+        report.notices.extend(super::broadcast::observer_notices(
+            world,
+            target,
+            "'s rotor is torn apart!",
+        ));
+        report.rotor = Some(damage);
+    }
+    Ok(())
+}
+
 /// Resolve a landing attack before normal landing cleanup; errors publish neither dice nor damage.
 /// Jump selection and destination scheduling are owned by the movement caller.
 pub fn resolve_dfa(
@@ -356,6 +441,8 @@ fn resolve_dfa_inner(
             }],
             profile,
             target_impacts: vec![],
+            vehicle_impacts: vec![],
+            rotor: None,
             attacker_impacts: vec![],
             balance: vec![],
             miss_fall: None,
@@ -372,7 +459,7 @@ fn resolve_dfa_inner(
                 unit: attacker,
                 text: "You land on your target legs first!".into(),
             });
-            if world.btech.constructed_units()[&target].power() == Power::Running {
+            if super::physical::unit_running(world, target) {
                 report.notices.push(Notice {
                     unit: target,
                     text: format!(
@@ -403,21 +490,34 @@ fn resolve_dfa_inner(
             } else {
                 (report.profile.inflicted_damage, 0)
             };
-            let target_packets = packets(
-                world,
-                target,
-                inflicted,
-                report.profile.target_arc,
-                DamagePhase::Target,
-                target_rules,
-                (attacker, character),
-                penalty,
-            )?;
-            report.target_impacts = target_packets.impacts;
-            report.experience = target_packets.experience;
-            report.experience_messages = target_packets.experience_messages;
+            let spiked = if report.profile.vehicle_target {
+                vehicle_packets(
+                    world,
+                    target,
+                    inflicted,
+                    target_rules,
+                    (attacker, character),
+                    &mut report,
+                )?;
+                false
+            } else {
+                let target_packets = packets(
+                    world,
+                    target,
+                    inflicted,
+                    report.profile.target_arc,
+                    DamagePhase::Target,
+                    target_rules,
+                    (attacker, character),
+                    penalty,
+                )?;
+                report.target_impacts = target_packets.impacts;
+                report.experience = target_packets.experience;
+                report.experience_messages = target_packets.experience_messages;
+                target_packets.spiked
+            };
             // The target's spikes wound both of the attacker's legs, a point each.
-            let backlash = if target_packets.spiked {
+            let backlash = if spiked {
                 let legs = [MechSection::LeftLeg, MechSection::RightLeg];
                 super::spikes::backlash(
                     world,
@@ -468,7 +568,10 @@ fn resolve_dfa_inner(
             for (id, modifier, fall_rules) in
                 [(attacker, 4, attacker_rules), (target, 2, target_rules)]
             {
-                let unit = &world.btech.constructed_units()[&id];
+                // Vehicles never fall.
+                let Some(unit) = world.btech.constructed_units().get(&id) else {
+                    continue;
+                };
                 if unit.is_destroyed() || unit.posture() == Posture::Prone {
                     continue;
                 }
@@ -544,6 +647,7 @@ fn resolve_dfa_inner(
             .get_mut(&attacker)
             .unwrap()
             .tie_up_every_section();
+        super::recent_fire::mark_assaulted(world, target);
         world.btech.validate_action(world)?;
         Ok(report)
     })

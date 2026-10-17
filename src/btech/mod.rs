@@ -465,7 +465,7 @@ pub(crate) mod physical;
 pub use physical::{
     Arm, ArmAttackReport, ArmRejection, ArmSelection, LancePenetration, Leg, PhysicalAttack,
     PhysicalProfile, PhysicalReport, PhysicalRules, kick_profile, punch_profile, resolve_kick,
-    resolve_punch, resolve_trip, trip_profile,
+    resolve_punch, resolve_split_punch, resolve_trip, trip_profile,
 };
 
 mod myomer;
@@ -488,6 +488,12 @@ pub use charge_tracking::{ChargeSelection, ChargeState, select_charge};
 
 mod dfa;
 pub use dfa::{DfaBalance, DfaProfile, DfaReport, dfa_profile, resolve_dfa};
+
+mod displacement;
+mod ram;
+pub use ram::{RamProfile, RamReport, ram_profile, resolve_ram};
+pub(crate) mod push;
+pub use push::{PushBalance, PushProfile, PushReport, push_profile, resolve_push};
 
 pub use jumping::launch_dfa;
 
@@ -539,7 +545,7 @@ pub use evacuation::advance_motion_action;
 /// Physical attack host action with character casualty publication.
 pub use evacuation::physical_attack_action;
 
-pub use evacuation::arm_attack_action;
+pub use evacuation::{arm_attack_action, split_punch_action};
 /// Typed arm sequence and its atomic character-aware host action.
 pub use physical::{ArmAttackChoice, ArmWeapon};
 

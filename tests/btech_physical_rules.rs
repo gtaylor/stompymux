@@ -460,3 +460,339 @@ async fn dfa_needs_jumping_mp_to_clear_the_target() {
         world.validate(&config).unwrap();
     }
 }
+
+/// Add a shut-down enemy Jenner at `(x, y)` on the attacker's map, and let the attacker see it.
+fn add_mech(
+    world: &mut World,
+    config: &Config,
+    attacker: ObjectId,
+    (x, y): (i64, i64),
+) -> ObjectId {
+    let map = world.btech.constructed_units()[&attacker]
+        .position()
+        .unwrap()
+        .map;
+    let id = world.create(config, "Second target".into(), Kind::Thing);
+    create_battle_unit(
+        world,
+        id,
+        MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
+    )
+    .unwrap();
+    support::seed_object_dice(world, id, support::FIXTURE_DICE_SEED);
+    place_battle_unit(world, id, map, x, y).unwrap();
+    set_battle_unit_signature(
+        world,
+        id,
+        UnitSignature {
+            team: 1,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    refresh_battle_contacts(world, &[attacker]).unwrap();
+    id
+}
+
+/// The `(x, y)` hex a unit stands in.
+fn hex(world: &World, id: ObjectId) -> (u16, u16) {
+    let position = world.btech.unit(id).unwrap().position().unwrap();
+    (position.x, position.y)
+}
+
+/// A push needs the target in the hex directly ahead, takes Piloting -1, and on a hit drives
+/// the target one hex onward while the attacker steps into the hex it left; the target then
+/// rolls to stay standing. A push ties up both arms for the turn, and the target cannot be
+/// pushed, charged or landed on again that turn (Total Warfare pp. 147-148).
+#[tokio::test]
+async fn pushes_displace_the_target_and_the_attacker_follows() {
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    let map = base.btech.constructed_units()[&id].position().unwrap().map;
+    let push = |world: &World| battle_push_profile(world, id, ObjectId(1), target, kick_rules());
+    // Not in the hex ahead: the fixture target shares the attacker's hex.
+    assert!(refusal(push(&base)).contains("directly ahead"));
+    place_battle_unit(&mut base, target, map, 5, 4).unwrap();
+    refresh_battle_contacts(&mut base, &[id]).unwrap();
+    let kick = battle_kick_profile(&base, id, ObjectId(1), target, Leg::Right, kick_rules());
+    let profile = push(&base).unwrap();
+    assert_eq!(profile.base, kick.unwrap().base + 1);
+    assert_eq!(profile.direction, 0);
+    assert_eq!(profile.shoulders, 0);
+
+    let mut world = base.clone();
+    shot_seed(&mut world, id, roll_seed(12));
+    let report = resolve_battle_push(&mut world, id, ObjectId(1), target, kick_rules()).unwrap();
+    assert!(report.hit && report.displaced);
+    assert_eq!(hex(&world, target), (5, 3));
+    assert_eq!(hex(&world, id), (5, 4));
+    assert_eq!(
+        report
+            .balance
+            .iter()
+            .map(|balance| balance.unit)
+            .collect::<Vec<_>>(),
+        vec![target]
+    );
+    assert_eq!(
+        world.btech.constructed_units()[&id].limb_recycle(),
+        &std::collections::BTreeMap::from([
+            (MechSection::LeftArm, 30),
+            (MechSection::RightArm, 30)
+        ])
+    );
+    world.validate(&config).unwrap();
+
+    // Once pushed, the target cannot be pushed again this turn.
+    let mut again = base.clone();
+    let now = again.btech.simulation_time();
+    again
+        .btech
+        .rewrite_unit_record(target, |record| record["assaulted_at"] = now.into())
+        .unwrap();
+    assert!(refusal(push(&again)).contains("already been charged, pushed or landed on"));
+    pass_seconds(&mut again, 30);
+    push(&again).unwrap();
+
+    // A slope too steep to climb stops the displacement, but the target still rolls.
+    let mut blocked = base.clone();
+    raise_hex(&mut blocked, id, (5, 3), 3);
+    shot_seed(&mut blocked, id, roll_seed(12));
+    let report = resolve_battle_push(&mut blocked, id, ObjectId(1), target, kick_rules()).unwrap();
+    assert!(report.hit && !report.displaced);
+    assert!(report.blocked.is_some());
+    assert_eq!(hex(&blocked, target), (5, 4));
+    assert_eq!(hex(&blocked, id), (5, 5));
+    assert_eq!(report.balance.len(), 1);
+    blocked.validate(&config).unwrap();
+
+    // A 'Mech in the hex beyond is shoved out of its far side, and rolls too.
+    let mut domino = base.clone();
+    let third = add_mech(&mut domino, &config, id, (5, 3));
+    shot_seed(&mut domino, id, roll_seed(12));
+    let report = resolve_battle_push(&mut domino, id, ObjectId(1), target, kick_rules()).unwrap();
+    assert!(report.displaced);
+    assert_eq!(hex(&domino, third), (5, 2));
+    assert_eq!(hex(&domino, target), (5, 3));
+    assert_eq!(
+        report
+            .balance
+            .iter()
+            .map(|balance| balance.unit)
+            .collect::<Vec<_>>(),
+        vec![target, third]
+    );
+    domino.validate(&config).unwrap();
+}
+
+/// Pushed off a drop of more than two levels, a 'Mech falls rather than rolling (Total
+/// Warfare p. 147).
+#[tokio::test]
+async fn pushes_over_a_cliff_are_falls() {
+    let (_dir, config, mut world, id, target) = kick_fixture().await;
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    for y in [4, 5] {
+        raise_hex(&mut world, id, (5, y), 3);
+    }
+    for unit in [id, target] {
+        world
+            .btech
+            .rewrite_unit_record(unit, |record| record["ground_elevation"] = 3.into())
+            .unwrap();
+    }
+    place_battle_unit(&mut world, target, map, 5, 4).unwrap();
+    refresh_battle_contacts(&mut world, &[id]).unwrap();
+    shot_seed(&mut world, id, roll_seed(12));
+    let report = resolve_battle_push(&mut world, id, ObjectId(1), target, kick_rules()).unwrap();
+    assert!(report.displaced);
+    assert!(report.balance.is_empty());
+    assert_eq!(report.falls.len(), 1);
+    assert_eq!(
+        world.btech.constructed_units()[&target].posture(),
+        Posture::Prone
+    );
+    world.validate(&config).unwrap();
+}
+
+/// A prone 'Mech may punch a ground vehicle in its own hex, propping itself on the other arm,
+/// and no other physical attack (Total Warfare p. 151).
+#[tokio::test]
+async fn prone_mechs_punch_vehicles_in_their_own_hex() {
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    base.btech
+        .rewrite_unit_record(id, |record| {
+            record["posture"] = serde_json::to_value(Posture::Prone).unwrap();
+        })
+        .unwrap();
+    let tank = add_vehicle(
+        &mut base,
+        &config,
+        id,
+        include_str!("../game/units/Demolisher.toml"),
+        (5, 5),
+    );
+    let profile =
+        battle_punch_profile(&base, id, ObjectId(1), tank, Arm::Left, kick_rules()).unwrap();
+    assert!(profile.vehicle_target);
+    assert_eq!(profile.limbs, [MechSection::LeftArm, MechSection::RightArm]);
+    let kick = battle_kick_profile(&base, id, ObjectId(1), tank, Leg::Right, kick_rules());
+    assert!(refusal(kick).contains("prone position"));
+    let mech = battle_punch_profile(&base, id, ObjectId(1), target, Arm::Left, kick_rules());
+    assert!(refusal(mech).contains("prone position"));
+    let mut world = base.clone();
+    let report = resolve_battle_punch(
+        &mut world,
+        id,
+        ObjectId(1),
+        tank,
+        ArmSelection::Both,
+        kick_rules(),
+    )
+    .unwrap();
+    assert_eq!(report.attacks.len(), 1);
+    assert_eq!(report.rejections.len(), 1);
+    world.validate(&config).unwrap();
+    // A vehicle in the next hex is out of a prone 'Mech's reach.
+    let mut away = base.clone();
+    let map = away.btech.constructed_units()[&id].position().unwrap().map;
+    away.btech.set_unit_power(tank, Power::Off).unwrap();
+    place_battle_unit(&mut away, tank, map, 5, 4).unwrap();
+    away.btech.set_unit_power(tank, Power::Running).unwrap();
+    refresh_battle_contacts(&mut away, &[id]).unwrap();
+    let error = refusal(battle_punch_profile(
+        &away,
+        id,
+        ObjectId(1),
+        tank,
+        Arm::Left,
+        kick_rules(),
+    ));
+    assert!(error.contains("in your own hex"), "{error}");
+}
+
+/// Two arms may punch two different targets, each rolled on its own (Total Warfare p. 145).
+#[tokio::test]
+async fn split_punches_strike_two_targets() {
+    let (_dir, config, mut world, id, target) = kick_fixture().await;
+    let second = add_mech(&mut world, &config, id, (5, 4));
+    let report =
+        resolve_battle_split_punch(&mut world, id, ObjectId(1), [target, second], kick_rules())
+            .unwrap();
+    assert_eq!(
+        report
+            .attacks
+            .iter()
+            .map(|attack| (attack.profile.attack, attack.target))
+            .collect::<Vec<_>>(),
+        vec![
+            (PhysicalAttack::Punch { arm: Arm::Left }, target),
+            (PhysicalAttack::Punch { arm: Arm::Right }, second)
+        ]
+    );
+    world.validate(&config).unwrap();
+}
+
+/// A death from above may land on a vehicle, on the Front column of its Hit Location Table,
+/// and a VTOL loses its rotor; vehicles make no roll to stay standing (Total Warfare pp. 150,
+/// 198).
+#[tokio::test]
+async fn dfa_lands_on_vehicles_and_vtols() {
+    for (source, vtol) in [
+        (include_str!("../game/units/Demolisher.toml"), false),
+        (include_str!("../game/units/Kestrel.toml"), true),
+    ] {
+        let (_dir, config, mut world, id, _) = kick_fixture().await;
+        dfa_piloting(&mut world);
+        let vehicle = add_vehicle(&mut world, &config, id, source, (5, 5));
+        launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
+        let profile = battle_dfa_profile(&world, id, vehicle, kick_rules()).unwrap();
+        assert!(profile.vehicle_target);
+        assert_eq!(profile.target_arc, HitArc::Front);
+        // A landing whose damage spares the rotor still tears it off a VTOL.
+        shot_seed(&mut world, id, roll_seed(12));
+        let (world, report) = (0..=255)
+            .find_map(|seed| {
+                let mut probe = world.clone();
+                shot_seed(&mut probe, vehicle, seed);
+                let report = resolve_battle_dfa(&mut probe, id, vehicle, kick_rules()).unwrap();
+                (!vtol || report.rotor.is_some()).then_some((probe, report))
+            })
+            .unwrap();
+        assert!(report.hit && !report.glancing);
+        assert!(!report.vehicle_impacts.is_empty());
+        assert!(report.balance.iter().all(|balance| balance.unit == id));
+        assert_eq!(report.rotor.is_some(), vtol);
+        world.validate(&config).unwrap();
+    }
+}
+
+/// A vehicle may charge (ram) a 'Mech or another vehicle: tonnage over ten per hex to the
+/// target, the target's tonnage over ten to the rammer, a +2 roll for a rammed 'Mech, and the
+/// rammer's weapons held for the turn. A 'Mech may not charge a vehicle (Total Warfare p. 148).
+#[tokio::test]
+async fn vehicles_ram_mechs_and_vehicles() {
+    for target_source in [
+        include_str!("../game/units/JR7-D.toml"),
+        include_str!("../game/units/Demolisher.toml"),
+    ] {
+        let (_dir, config, mut world, tank, target, _) = firing::fixture_with_target(
+            include_str!("../game/units/Demolisher.toml"),
+            None,
+            target_source,
+        )
+        .await;
+        let map = world.btech.unit(tank).unwrap().position().unwrap().map;
+        world.btech.set_unit_power(target, Power::Off).unwrap();
+        place_battle_unit(&mut world, target, map, 0, 11).unwrap();
+        world.btech.set_unit_power(target, Power::Running).unwrap();
+        refresh_battle_contacts(&mut world, &[tank]).unwrap();
+        select_battle_charge(
+            &mut world,
+            tank,
+            ObjectId(1),
+            ChargeSelection::Target(target),
+        )
+        .unwrap();
+        world
+            .btech
+            .edit_unit_motion(tank, |motion| {
+                motion.speed = 21.5;
+                motion.desired_speed = 21.5;
+            })
+            .unwrap();
+        let rules = ChargeRules {
+            distance: 1.0,
+            physical: kick_rules(),
+        };
+        let profile = battle_ram_profile(&world, tank, target, rules).unwrap();
+        let tons = world.btech.vehicles()[&tank].definition().tons;
+        assert_eq!(profile.inflicted_damage, tons.div_ceil(10));
+        let mech_target = world.btech.constructed_units().contains_key(&target);
+        assert_eq!(profile.vehicle_target, !mech_target);
+        shot_seed(&mut world, tank, roll_seed(12));
+        let report = resolve_battle_ram(&mut world, tank, target, rules).unwrap();
+        assert!(report.hit);
+        assert_eq!(report.balance.is_some(), mech_target);
+        assert!(!report.target_impacts.is_empty() && !report.attacker_impacts.is_empty());
+        let vehicle = &world.btech.vehicles()[&tank];
+        assert!(
+            vehicle
+                .weapon_recycle()
+                .values()
+                .all(|&seconds| seconds >= 30)
+        );
+        assert!(!vehicle.weapon_recycle().is_empty());
+        world.validate(&config).unwrap();
+    }
+    // A 'Mech may not charge a vehicle.
+    let (_dir, config, mut world, id, _) = kick_fixture().await;
+    let tank = add_vehicle(
+        &mut world,
+        &config,
+        id,
+        include_str!("../game/units/Demolisher.toml"),
+        (5, 4),
+    );
+    let error = select_battle_charge(&mut world, id, ObjectId(1), ChargeSelection::Target(tank))
+        .unwrap_err();
+    assert!(format!("{error:#}").contains("cannot charge a vehicle"));
+}

@@ -2,7 +2,7 @@
 //! and the durable times of each unit's last launch, of each Mech section's last launch and
 //! of its last jump, read against the 30-second turn.
 use super::{Mech, MechSection, Vehicle};
-use crate::{Flag, World};
+use crate::{Flag, ObjectId, World};
 
 impl Mech {
     /// A completed launch marks this unit until the next committed heartbeat, including launches that miss.
@@ -43,6 +43,11 @@ impl Mech {
             .any(|&time| within_turn(time, now))
     }
 
+    /// Simulation time this unit was last the target of a charge, death from above or push.
+    pub fn assaulted_at(&self) -> Option<i64> {
+        self.assaulted_at
+    }
+
     /// Whether the unit launched a jump within the current turn. A Mech that jumped may not
     /// charge that turn (Total Warfare p. 148).
     pub fn jumped_this_turn(&self, now: i64) -> bool {
@@ -65,6 +70,37 @@ impl Vehicle {
     /// Simulation time of the last weapon this vehicle launched, if it ever has.
     pub fn last_weapon_fire(&self) -> Option<i64> {
         self.last_weapon_fire
+    }
+
+    /// Simulation time this vehicle was last the target of a charge or death from above.
+    pub fn assaulted_at(&self) -> Option<i64> {
+        self.assaulted_at
+    }
+}
+
+/// Refuse a charge, death from above or push at a unit that was already the target of one
+/// this turn: a unit may be the target of only one of them a turn (Total Warfare pp. 148-149).
+pub(super) fn require_unassaulted(world: &World, target: ObjectId) -> anyhow::Result<()> {
+    let now = world.btech.simulation_time();
+    let assaulted = world.btech.unit(target).is_some_and(|unit| {
+        super::with_unit!(unit, |unit| unit
+            .assaulted_at()
+            .is_some_and(|time| within_turn(time, now)))
+    });
+    anyhow::ensure!(
+        !assaulted,
+        "Your target has already been charged, pushed or landed on this turn."
+    );
+    Ok(())
+}
+
+/// Record that `target` has just been the target of a charge, death from above or push.
+pub(super) fn mark_assaulted(world: &mut World, target: ObjectId) {
+    let now = world.btech.simulation_time();
+    if let Some(unit) = world.btech.constructed.get_mut(&target) {
+        unit.assaulted_at = Some(now);
+    } else if let Some(vehicle) = world.btech.vehicles.get_mut(&target) {
+        vehicle.assaulted_at = Some(now);
     }
 }
 

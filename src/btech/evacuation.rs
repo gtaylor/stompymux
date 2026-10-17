@@ -856,6 +856,34 @@ pub fn arm_attack_action(
     })
 }
 
+/// Punch two targets, the left arm at the first and the right at the second, and publish the
+/// sequence atomically (Total Warfare p. 145).
+pub fn split_punch_action(
+    scripts: &Scripts,
+    config: &Config,
+    attacker: ObjectId,
+    pilot: ObjectId,
+    targets: [ObjectId; 2],
+    rules: super::PhysicalRules,
+) -> Result<super::ArmAttackReport> {
+    scripts.atomic(|before| {
+        let report = super::physical::resolve_split_punch_in_action(
+            &mut scripts.world.borrow_mut(),
+            attacker,
+            pilot,
+            targets,
+            rules,
+        )?;
+        super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
+        for attack in &report.attacks {
+            publish_physical_consequences(scripts, config, attack)?;
+        }
+        publish_new_casualties(scripts, config, before)?;
+        scripts.world.borrow().validate_action(config)?;
+        Ok(report)
+    })
+}
+
 /// Resolve a one-way charge and publish every packet, balance fall and crew casualty atomically.
 /// The movement adapter owns collision triggering; this action validates the charge envelope.
 pub fn charge_action(

@@ -1824,6 +1824,14 @@ function btech_unit.prone(dbref, pilot) end
 ---@return boolean accepted Timer and cockpit feedback commit with the callback.
 function btech_unit.hide(dbref, pilot) end
 
+---Push the standing Mech directly ahead with both arms. A hit displaces it one hex onward, the
+---attacker follows into the hex it left, and the target must keep its footing; no damage is dealt.
+---@param dbref integer
+---@param pilot integer
+---@param target? integer Defaults to the selected target; explicit targets require acquisition.
+---@return table report Push profile, roll, hit, displacement, balance checks and notices.
+function btech_unit.push(dbref, pilot, target) end
+
 ---@class InventoryEntry
 ---@field part_id integer Stable game-directory part identifier.
 ---@field quantity integer Positive stock quantity, at most 2147483647.
@@ -2241,12 +2249,14 @@ function btech_unit.kick(dbref, pilot, leg, target) end
 ---Attempt one or both arms in left-to-right order. Default selection is both.
 ---Unavailable arms are reported separately when another arm attacks; an entirely rejected action raises an error.
 ---Impact failures and callback aborts roll back the complete action and staged messages.
+---A second target splits a two-armed punch: the left arm punches target and the right arm second_target.
 ---@param dbref integer
 ---@param pilot integer
 ---@param arms? 'left'|'right'|'both'
 ---@param target? integer Defaults to the selected target; explicit targets require acquisition.
+---@param second_target? integer The right arm's target; requires both arms and an explicit first target.
 ---@return table report Ordered attacks, per-arm rejections and notices. Each attack includes its profile and optional impact.
-function btech_unit.punch(dbref, pilot, arms, target) end
+function btech_unit.punch(dbref, pilot, arms, target, second_target) end
 
 ---Attempt a leg trip. A hit forces target balance; a miss has no balance check. No direct impact damage.
 ---Both legs and hips must be usable; the target must be standing and not rising.
@@ -2314,7 +2324,7 @@ function btech_unit.melee(dbref, pilot, arms, target) end
 ---@return table notices
 function btech_unit.grabclub(dbref, pilot, arm) end
 
----Swing a club using both arms; a carried tree shatters on a hit. Forest terrain supplies an immediate tree.
+---Swing a carried club using both arms; a carried tree shatters on a hit. Pick a club up with grabclub first.
 ---@param dbref integer
 ---@param pilot integer
 ---@param target? integer
