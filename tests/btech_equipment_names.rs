@@ -27,11 +27,13 @@ fn weapon_names_fold_ascii_case_without_accepting_unknown_identities() {
 #[tokio::test]
 async fn mixed_case_equipment_shares_construction_mass_and_saved_identity() {
     let (_dir, config, mut world) = support::isolated_world().await;
-    for source in [
-        include_str!("../game/units/JR7-D.toml"),
-        include_str!("../game/units/AS7-D.toml"),
-        include_str!("../game/units/SCP-1N.toml"),
-        include_str!("../game/units/BJ-3.toml"),
+    // Each template, and whether it carries triple-strength myomer; the CN9-D3 does.
+    for (source, triple_myomer) in [
+        (include_str!("../game/units/JR7-D.toml"), false),
+        (include_str!("../game/units/AS7-D.toml"), false),
+        (include_str!("../game/units/SCP-1N.toml"), false),
+        (include_str!("../game/units/BJ-3.toml"), false),
+        (include_str!("../game/units/CN9-D3.toml"), true),
     ] {
         // Exercise source decoding as well as typed construction.
         let source = source.replace("Ammo_IS.SRM-4 25 -", "Ammo_IS.SRM-4 12 Hotload Halfton -");
@@ -54,10 +56,8 @@ async fn mixed_case_equipment_shares_construction_mass_and_saved_identity() {
         assert_eq!(actual.definition(), &mixed);
         assert_eq!(actual.loadout().unwrap(), expected.loadout().unwrap());
         assert_eq!(actual.mass().unwrap(), expected.mass().unwrap());
-        assert_eq!(
-            actual.definition().has_triple_myomer(),
-            expected.definition().has_triple_myomer()
-        );
+        assert_eq!(expected.definition().has_triple_myomer(), triple_myomer);
+        assert_eq!(actual.definition().has_triple_myomer(), triple_myomer);
     }
     for source in [
         include_str!("../game/units/Demolisher.toml"),
