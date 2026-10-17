@@ -43,7 +43,9 @@ pub use artillery::{
     ArtilleryCell, ArtilleryEffect, ArtilleryFlight, ArtilleryImpactPattern, ArtilleryMode,
     ArtilleryOutcome,
 };
-pub use artillery_impact::{ArtilleryHit, ArtilleryImpactReport, advance_artillery_flight};
+pub use artillery_impact::{
+    ArtilleryHit, ArtilleryImpactReport, ArtilleryStructureHit, advance_artillery_flight,
+};
 pub use artillery_queue::{
     ArtilleryShot, advance_artillery_action, artillery_pending, enqueue_artillery,
 };

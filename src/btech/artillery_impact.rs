@@ -9,9 +9,21 @@ use serde::Serialize;
 pub struct ArtilleryHit {
     pub unit: ObjectId,
     pub coordinate: HexCoordinate,
+    /// The blast's damage to this occupant, before its 5-point groups strike.
+    pub damage: u16,
     pub arc: HitArc,
     pub impacts: Vec<BlastImpact>,
     pub vehicle_heat: Option<VehicleHeatExposure>,
+}
+
+/// Construction factor a struck structure lost to the blast, after its occupants took theirs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ArtilleryStructureHit {
+    pub coordinate: HexCoordinate,
+    pub damage: u16,
+    /// Construction factor left; zero once the structure collapses.
+    pub cf: u16,
+    pub collapse: Option<SurfaceBreak>,
 }
 
 /// Applied arrival effects; the enclosing host action publishes notices and character consequences.
@@ -21,6 +33,8 @@ pub struct ArtilleryImpactReport {
     pub map: ObjectId,
     pub pattern: ArtilleryImpactPattern,
     pub hits: Vec<ArtilleryHit>,
+    /// Buildings, walls and bridges the blast struck, in cell order.
+    pub structures: Vec<ArtilleryStructureHit>,
     pub mines: Vec<u32>,
     pub notices: Vec<Notice>,
     /// Pilot-only packet feedback indexed into the arrival notice stream.
@@ -85,6 +99,7 @@ pub(super) fn advance(
         map,
         pattern,
         hits: Vec::new(),
+        structures: Vec::new(),
         mines: Vec::new(),
         notices,
         pilot_notices: Vec::new(),
@@ -160,10 +175,34 @@ fn deposit_mine(
 /// Operations: Advanced Rules p. 150).
 const VERTICAL_FALLOFF: u16 = 10;
 
+/// How a blast reaches a unit at `level` in a building hex: the whole Damage Value inside a
+/// light, medium or heavy building or on its roof (Tactical Operations: Advanced Rules p. 152),
+/// and inside a hardened one the area-effect rules (Total Warfare p. 173), with the round
+/// bursting on the roof: in the struck hex the roof and the level below take it whole and the
+/// next level half; in the hexes around it the roof takes it whole and the level below half.
+/// `None` for a unit above the roof, whom the ordinary vertical rule reaches.
+fn building_damage(tile: Hex, level: i32, damage: u16, direct: bool) -> Option<u16> {
+    let roof = i32::from(tile.surface_height());
+    if !tile.has_building() || !(level == roof || super::building_interior::inside(tile, level)) {
+        return None;
+    }
+    if tile.construction_class() != Some(ConstructionClass::Hardened) {
+        return Some(damage);
+    }
+    let whole = if direct { 1 } else { 0 };
+    Some(match roof - level {
+        depth if depth <= whole => damage,
+        depth if depth == whole + 1 => damage.div_ceil(2),
+        _ => 0,
+    })
+}
+
 /// Freeze each occupant's blast arc before ordered packets. The shell bursts on the ground of
-/// its hex and strikes from the direction of the gun (Tactical Operations: Advanced Rules
-/// p. 150); in the impact hex alone the blast also climbs and sinks, losing ten points a level,
-/// while the outer rings reach only units standing on the ground.
+/// its hex, or the roof of a structure, and strikes from the direction of the gun (Tactical
+/// Operations: Advanced Rules p. 150); in the impact hex alone the blast also climbs and
+/// sinks, losing ten points a level, while the outer rings reach only units standing on the
+/// ground. Units inside a building take [`building_damage`] instead, before the structure
+/// itself takes its share.
 #[allow(clippy::too_many_arguments)]
 fn hit_cell(
     world: &mut World,
@@ -179,12 +218,16 @@ fn hit_cell(
         .base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     let ground = i32::from(tile.top_height());
     // The outer rings reach units on the ground or just above it, as a mine blast does.
-    let (lower, upper) = if cell.direct {
+    let (mut lower, upper) = if cell.direct {
         let reach = i32::from(damage.div_ceil(VERTICAL_FALLOFF));
         (ground - reach, ground + reach)
     } else {
         (ground - 2, ground + 2)
     };
+    // Every level inside a building is within the blast's reach.
+    if tile.has_building() {
+        lower = lower.min(i32::from(tile.level()) - 1);
+    }
     let blast = super::blast_damage::BlastCell {
         coordinate,
         origin: origin.center(),
@@ -201,13 +244,16 @@ fn hit_cell(
             character || !is_character,
             "Artillery impact requires character consequence publication"
         );
-        let damage = if cell.direct {
-            let levels =
-                u16::try_from((target.elevation - ground).unsigned_abs()).unwrap_or(u16::MAX);
-            damage.saturating_sub(levels.saturating_mul(VERTICAL_FALLOFF))
-        } else {
-            damage
-        };
+        let damage =
+            if let Some(damage) = building_damage(tile, target.elevation, damage, cell.direct) {
+                damage
+            } else if cell.direct {
+                let levels =
+                    u16::try_from((target.elevation - ground).unsigned_abs()).unwrap_or(u16::MAX);
+                damage.saturating_sub(levels.saturating_mul(VERTICAL_FALLOFF))
+            } else {
+                damage
+            };
         if damage == 0 {
             continue;
         }
@@ -234,6 +280,7 @@ fn hit_cell(
         let mut hit = ArtilleryHit {
             unit: id,
             coordinate,
+            damage,
             arc,
             impacts: Vec::new(),
             vehicle_heat: None,
@@ -262,5 +309,156 @@ fn hit_cell(
         report.notices.extend(effects.notices);
         report.hits.push(hit);
     }
+    strike_structure(world, report, cell, damage, rules, character)
+}
+
+/// Construction factor a blast takes off a structure, as for any area-effect weapon that
+/// strikes a hex and the six around it (Total Warfare p. 174): three times the Damage Value in
+/// the struck hex, twice it for the level below the roof and once for the level below that;
+/// twice the outer rings' Damage Value, and once more for the level below their roofs. Walls
+/// and bridges have no levels below their tops.
+fn structure_damage(tile: Hex, damage: u16, direct: bool) -> u16 {
+    let levels = if tile.has_building() {
+        tile.structure()
+            .map_or(0, |structure| u16::from(structure.height))
+    } else {
+        0
+    };
+    let multiplier = if direct {
+        3 + 2 * u16::from(levels >= 1) + u16::from(levels >= 2)
+    } else {
+        2 + u16::from(levels >= 1)
+    };
+    damage.saturating_mul(multiplier)
+}
+
+/// Damage the building, wall or bridge in a struck hex once its occupants have taken their
+/// damage (Tactical Operations: Advanced Rules p. 152; Total Warfare p. 173), collapsing it
+/// when the blast exhausts its construction factor.
+fn strike_structure(
+    world: &mut World,
+    report: &mut ArtilleryImpactReport,
+    cell: &ArtilleryCell,
+    damage: u16,
+    rules: FallRules,
+    character: bool,
+) -> Result<()> {
+    let map = report.map;
+    let coordinate = cell.position;
+    let record = &world.btech.maps()[&map];
+    let tile = record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
+    let Some(structure) = tile.structure() else {
+        return Ok(());
+    };
+    if damage == 0 || record.has_flag(MapFlag::IndestructibleStructures) {
+        return Ok(());
+    }
+    let damage = structure_damage(tile, damage, cell.direct).min(structure.cf);
+    let cf = structure.cf - damage;
+    let name = match structure.kind {
+        StructureKind::Bridge => "bridge",
+        StructureKind::Wall => "wall",
+        _ => "building",
+    };
+    let text = if cf == 0 {
+        format!("The {name} at {},{} collapses!", coordinate.x, coordinate.y)
+    } else {
+        format!(
+            "The {name} at {},{} shudders from the blast!",
+            coordinate.x, coordinate.y
+        )
+    };
+    for id in super::map_slots::all_unit_order(world, map)? {
+        if hex_visible(world, id, coordinate).unwrap_or(false) {
+            report.notices.push(Notice {
+                unit: id,
+                text: text.clone(),
+            });
+        }
+    }
+    let collapse = if cf > 0 {
+        world.btech.maps.get_mut(&map).unwrap().write_hex(
+            i64::from(coordinate.x),
+            i64::from(coordinate.y),
+            tile.with_structure_damage(damage),
+        )?;
+        None
+    } else {
+        let surface = Surface::struck(tile).unwrap_or(Surface::Roof);
+        let collapse = if character {
+            super::surface_break::break_surface_in_action(world, map, coordinate, surface, rules)?
+        } else if surface == Surface::Bridge {
+            break_bridge(world, map, coordinate, rules)?
+        } else {
+            collapse_structure(world, map, coordinate, rules)?
+        };
+        super::piloting::append_feedback(
+            &mut report.pilot_notices,
+            collapse.pilot_notices.iter().cloned(),
+            report.notices.len(),
+        );
+        report.notices.extend(collapse.notices.clone());
+        Some(collapse)
+    };
+    report.structures.push(ArtilleryStructureHit {
+        coordinate,
+        damage,
+        cf,
+        collapse,
+    });
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A building of `levels` levels of `class`.
+    fn building(levels: u8, class: ConstructionClass) -> Hex {
+        Hex::new(Terrain::Building, 0).with_structure(Some(Structure {
+            class,
+            ..Structure::building(levels)
+        }))
+    }
+
+    /// Area-effect damage to a structure: three times the Damage Value in the struck hex plus
+    /// twice and once for the two levels below the roof, twice in the ring plus once for its
+    /// level below (Total Warfare p. 174).
+    #[test]
+    fn structures_take_area_effect_multiples() {
+        let tall = building(3, ConstructionClass::Medium);
+        let low = building(1, ConstructionClass::Medium);
+        assert_eq!(structure_damage(tall, 20, true), 120);
+        assert_eq!(structure_damage(low, 20, true), 100);
+        assert_eq!(structure_damage(tall, 10, false), 30);
+        let wall = Hex::new(Terrain::Wall, 0).with_structure(Some(Structure::wall(2)));
+        assert_eq!(structure_damage(wall, 20, true), 60);
+        assert_eq!(structure_damage(wall, 10, false), 20);
+    }
+
+    /// Occupants of ordinary buildings take the whole blast on every floor; a hardened
+    /// building shelters the floors more than a level below its roof (Tactical Operations:
+    /// Advanced Rules p. 152; Total Warfare p. 173). Units above the roof are left to the
+    /// vertical rule.
+    #[test]
+    fn building_occupants_follow_the_building_rules() {
+        let medium = building(3, ConstructionClass::Medium);
+        for level in 0..=3 {
+            assert_eq!(building_damage(medium, level, 20, true), Some(20));
+        }
+        assert_eq!(building_damage(medium, 4, 20, true), None);
+        let hardened = building(3, ConstructionClass::Hardened);
+        let direct: Vec<_> = (0..=3)
+            .map(|level| building_damage(hardened, level, 15, true))
+            .collect();
+        assert_eq!(direct, [Some(0), Some(8), Some(15), Some(15)]);
+        let ring: Vec<_> = (0..=3)
+            .map(|level| building_damage(hardened, level, 15, false))
+            .collect();
+        assert_eq!(ring, [Some(0), Some(0), Some(8), Some(15)]);
+        assert_eq!(
+            building_damage(Hex::new(Terrain::Clear, 0), 0, 20, true),
+            None
+        );
+    }
 }

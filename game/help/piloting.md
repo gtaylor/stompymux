@@ -1014,6 +1014,15 @@ a direction rolled on one die, clockwise from north; a round that scatters off t
 map lands harmlessly. Once one of your rounds strikes its target hex, every later
 shot you fire at that hex hits it automatically, until you move, turn or jump.
 
+An artillery round that strikes a building hex damages every unit inside a light,
+medium or heavy building in full, whatever floor it stands on, and every unit on its
+roof (Tactical Operations p. 152). In a hardened building the round bursts on the
+roof: the roof and the level below take its full damage, the next level half and
+the floors below nothing. The building then loses three times the round's damage,
+plus twice it for the level below the roof and once for the level below that; a
+building, wall or bridge in the ring around the struck hex loses twice the ring's
+damage, plus once for the level below its roof (Total Warfare p. 174).
+
 Artillery cannons are ballistic weapons that deal artillery damage (Tactical
 Operations: Advanced Units & Equipment p. 97): one that sees its hex aims with its
 own range brackets and minimum range and no hex bonus, and a miss scatters half the
