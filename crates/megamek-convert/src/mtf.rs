@@ -798,6 +798,34 @@ mod tests {
         assert_eq!(draft.specials, ["OmniMech_Tech", "SearchLight"]);
     }
 
+    /// Either spelling of an OmniMech's `Config:` line marks the template with the Omni
+    /// technology that multiplies its cost by 1.25 (TechManual p. 285).
+    #[test]
+    fn omnimech_templates_carry_omni_technology() {
+        let (_, standard) = template(ATLAS).unwrap();
+        assert!(!standard.contains("specials"), "{standard}");
+        let cost = |source: &str| {
+            let mech = stompymux_unit_construction::MechTemplate::parse("test", source).unwrap();
+            stompymux_unit_construction::template_base_cost(
+                &stompymux_unit_construction::PartPrices::new(),
+                &mech,
+            )
+            .unwrap() as f64
+        };
+        for config in ["Biped OmniMek", "Biped Omnimech", "biped OMNIMECH"] {
+            let source = ATLAS.replace("Config:Biped", &format!("Config:{config}"));
+            let (_, omni) = template(&source).unwrap();
+            assert!(
+                omni.contains("specials = [\"OmniMech_Tech\"]\n"),
+                "{config}: {omni}"
+            );
+            let ratio = cost(&omni) / cost(&standard);
+            assert!((ratio - 1.25).abs() < 0.001, "{config}: {ratio}");
+        }
+        let error = template_error(&ATLAS.replace("Config:Biped", "Config:Biped FrankenMek"));
+        assert!(error.contains("unsupported unit type"), "{error}");
+    }
+
     /// The TechBase line becomes `tech_base`; a mixed design keeps its chassis base and
     /// declares mixed technology.
     #[test]

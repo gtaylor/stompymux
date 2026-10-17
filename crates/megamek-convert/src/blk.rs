@@ -230,6 +230,11 @@ pub fn convert(source: &str) -> Result<Converted> {
         );
     }
     let mut specials = Vec::new();
+    // An OmniVehicle carries the Omni technology its conversion cost multiplies by
+    // (TechManual p. 285).
+    if omni(&file)? {
+        push_special(&mut specials, "OmniMech_Tech");
+    }
     let mut located: BTreeMap<&str, Vec<Critical>> = BTreeMap::new();
     for (tag, heading) in LOCATIONS {
         let lines = file.lines(tag);
@@ -476,6 +481,19 @@ fn tech_from_rules(rules: &str) -> Result<TechBase> {
     bail!("unsupported technology base {rules}")
 }
 
+/// Whether the `<omni>` block marks an OmniVehicle: `1` or `true` does, an absent block, `0`
+/// or `false` does not, and anything else is refused.
+fn omni(file: &BlockFile) -> Result<bool> {
+    let Some(value) = file.value("omni") else {
+        return Ok(false);
+    };
+    Ok(match value.to_ascii_lowercase().as_str() {
+        "1" | "true" => true,
+        "0" | "false" => false,
+        _ => bail!("<omni> {value} is neither 1 nor 0"),
+    })
+}
+
 /// Record a chassis special once.
 fn push_special(specials: &mut Vec<&'static str>, special: &'static str) {
     if !specials.contains(&special) {
@@ -536,6 +554,43 @@ mod tests {
             template.contains("[construction]\ntech_base = \"inner_sphere\"\nengine_rating = 10\n"),
             "{template}"
         );
+    }
+
+    /// An `<omni>` block marks an OmniVehicle, whose template carries the Omni technology that
+    /// multiplies its cost by 1.25 (TechManual p. 285).
+    #[test]
+    fn omnivehicles_carry_omni_technology() {
+        let with = |value: &str| {
+            BULLDOG.replacen(
+                "<armor>",
+                &format!("<omni>\n{value}\n</omni>\n\n<armor>"),
+                1,
+            )
+        };
+        let (_, omni) = template(&with("1")).unwrap();
+        assert!(
+            omni.contains("walk_mp = 4\nheat_sinks = 8\nspecials = [\"OmniMech_Tech\"]\n"),
+            "{omni}"
+        );
+        let (_, standard) = template(BULLDOG).unwrap();
+        assert!(!standard.contains("specials"), "{standard}");
+        let cost = |source: &str| {
+            let vehicle =
+                stompymux_unit_construction::VehicleTemplate::parse("test", source).unwrap();
+            stompymux_unit_construction::vehicle_template_base_cost(
+                &stompymux_unit_construction::PartPrices::new(),
+                &vehicle,
+            )
+            .unwrap() as f64
+        };
+        let ratio = cost(&omni) / cost(&standard);
+        assert!((ratio - 1.25).abs() < 0.001, "{ratio}");
+        for value in ["0", "false"] {
+            assert!(convert(&with(value)).unwrap().draft.specials.is_empty());
+        }
+        assert!(convert(&with("TRUE")).unwrap().draft.specials == ["OmniMech_Tech"]);
+        let error = format!("{:#}", convert(&with("2")).err().unwrap());
+        assert!(error.contains("<omni> 2 is neither 1 nor 0"), "{error}");
     }
 
     /// The rules line names the chassis technology base, and a mixed design declares mixed
