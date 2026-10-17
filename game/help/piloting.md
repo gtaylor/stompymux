@@ -18,7 +18,10 @@ releases it. Pilot assignments survive a server restart.
 After taking the cockpit on a battlefield, use `startup`. The startup cycle
 runs for 30 simulation seconds and reports six stages. Wizards can use
 `startup override` for a five-second cycle. `shutdown` stops the engine or aborts
-startup, and releases the cockpit. Use `pilot` again before restarting.
+startup, and releases the cockpit. Use `pilot` again before restarting. A Mech shuts
+down only once it has come to a stop on the ground: `shutdown` is refused while it has
+any forward or reverse speed or is in the air, so stop or land first. Shutting down
+takes no piloting roll (Total Warfare p. 160).
 A reactor cannot restart at 30 or more heat, the operator override included.
 From 14 to 29 heat, `startup` rolls 2d6 against the highest current shutdown
 avoid number (4 at 14, 6 at 18, 8 at 22, 10 at 26); a failed roll keeps the
@@ -35,9 +38,7 @@ MP, and MASC doubles the walking figure that is left, running refigured each tim
 hip or gyro makes one piloting roll at the turn's end (TW p. 53), and one that
 exceeds its normal running MP under light gravity rolls once a turn against a point
 of leg damage per MP over (Tactical Operations p. 53). Turns and speed changes are
-gradual. Shutting down above 10.75 kph forward
-causes a fall, which can land you on another unit. Reverse or slower motion stops
-without that shutdown fall. Each hex costs movement for its ground, foliage, route, water and any ice,
+gradual. Each hex costs movement for its ground, foliage, route, water and any ice,
 snow or mud, and your speed is divided by that cost, following the Total Warfare and
 Tactical Operations movement cost tables. A road or rail line replaces the
 ground and foliage it crosses. Rough ground, rubble, light woods and rail cost one
@@ -198,10 +199,12 @@ Use `land` to attempt an early landing at your current location. A failed
 control check causes a fall; a successful abort still requires any damaged-leg
 or gyro landing check. Ground speed changes are unavailable in flight. Use `heading <degrees>` to turn
 while jumping; facing changes do not steer the jump away from its landing hex.
-Voluntary `shutdown` stops your horizontal travel and starts free fall. You drop
-every three seconds, accelerating until impact. Restarting the engine does not
-arrest this fall. After restarting, you can attempt `land`, but the pending fall
-event still causes an impact when due.
+You cannot `shutdown` during a jump; land first. A Mech that loses power in the air
+some other way, such as a carrier releasing it aloft or an administrative shutdown,
+stops its horizontal travel and starts free fall. It drops every three seconds,
+accelerating until impact. Restarting the engine does not arrest this fall. After
+restarting, you can attempt `land`, but the pending fall event still causes an
+impact when due.
 You can fire during a jump: jumping adds three to your firing difficulty, and
 a jumping target adds one plus its current jump-speed movement modifier.
 Losing both legs or hips leaves you unable to stand while your jets finish the

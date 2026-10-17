@@ -2413,9 +2413,11 @@ async fn submerged_hex_entry_floods_breached_legs_without_canceling_thrust() {
     world.validate(&config).unwrap();
 }
 
-/// Shutdown changes flight mode atomically; every countdown and impact survives a restart.
+/// The pilot cannot shut down in the air through the command or Lua (Total Warfare p. 160).
+/// Losing power administratively changes flight mode atomically, and every countdown and
+/// impact of the descent survives a restart.
 #[tokio::test]
-async fn airborne_shutdown_native_lua_and_saved_descent_agree() {
+async fn airborne_shutdown_refusal_and_saved_descent_agree() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 4.0).unwrap();
@@ -2436,19 +2438,24 @@ async fn airborne_shutdown_native_lua_and_saved_descent_agree() {
     )
     .unwrap();
     let lua = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    assert!(
-        lua.eval_callback::<bool>(&format!("btech.unit.stop({},1); error('abort')", id.0))
-            .is_err()
-    );
+    let error = lua
+        .eval_callback::<bool>(&format!("return btech.unit.stop({},1)", id.0))
+        .unwrap_err();
+    assert!(format!("{error:#}").contains("land before"), "{error:#}");
     assert_eq!(lua.world().btech, before);
     let text = support::run_text(&native, &config, ObjectId(1), 1, "shutdown");
-    assert!(text.contains("You start free-fall"), "{text}");
     assert!(
-        lua.eval_callback::<bool>(&format!("return btech.unit.stop({},1)", id.0))
-            .unwrap()
+        text.contains("You must land before you can shut down."),
+        "{text}"
     );
-    assert_eq!(native.world().btech, lua.world().btech);
+    assert_eq!(native.world().btech, before);
     let mut world = native.world().clone();
+    let notices = power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text.contains("You start free-fall"))
+    );
     let unit = &world.btech.constructed_units()[&id];
     assert_eq!(unit.power(), Power::Off);
     assert!(unit.pilot().is_none());
@@ -2501,7 +2508,7 @@ async fn free_fall_impact_failure_is_atomic_and_removal_cancels_descent() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-    stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
+    power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
     for _ in 0..2 {
         assert!(
             advance_battle_jumps(
@@ -2583,7 +2590,7 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
     ] {
         let (_dir, config, mut base, id) = runtime_fixture().await;
         launch_battle_jump(&mut base, id, ObjectId(1), 0, 1.0).unwrap();
-        stop_battle_unit(&mut base, id, ObjectId(1), jump_rules()).unwrap();
+        power_down_battle_unit(&mut base, id, jump_rules()).unwrap();
         let map = base.btech.constructed_units()[&id].position().unwrap().map;
         let mut world = base;
         let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2648,7 +2655,7 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
     for roll in [2, 11] {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-        stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
+        power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
         world
             .btech
             .rewrite_unit_record(id, |record| {
@@ -2777,7 +2784,7 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
         .set_unit_dice(id, Dice::seeded([1; 32]))
         .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-    stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
+    power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
     for _ in 0..3 {
         advance_battle_jumps(
             &mut world,
@@ -2853,9 +2860,10 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
     );
 }
 
-/// The live server commits shutdown and delayed impact before publishing their notices.
+/// The live server refuses a pilot's shutdown in the air without saving anything, and a descent
+/// started by losing power commits its delayed impact before publishing it, across a restart.
 #[tokio::test]
-async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
+async fn tcp_airborne_shutdown_refusal_and_free_fall_impact_save_across_restart() {
     use sqlx::Connection;
     use stompymux_rs::*;
     tokio::task::LocalSet::new().run_until(async {
@@ -2865,23 +2873,23 @@ async fn tcp_free_fall_retries_shutdown_and_impact_saves_across_restart() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::query("UPDATE player_state SET password_hash=? WHERE object_dbref=1").bind(accounts::hash("secret", &config).unwrap()).execute(&mut sql).await.unwrap();
-        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_shutdown BEFORE UPDATE ON btech_units WHEN NEW.dbref={} BEGIN SELECT RAISE(ABORT,'shutdown failure'); END",id.0))).execute(&mut sql).await.unwrap();
         let (address, shutdown, task, _lua, _heartbeats) = support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
         let mut client = jump_client(address).await;
         let before = persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id].clone();
         client.send("shutdown").await;
-        let mut output = client.until("Unable to save your changes.").await;
+        let mut output = client.until("You must land before you can shut down.").await;
         client.send("say shutdown-fence").await;
         output.push_str(&client.until("You say \"shutdown-fence\"").await);
         assert!(!output.contains("You start free-fall"), "{output}");
         assert!(!output.contains("All systems shut down"), "{output}");
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech.constructed_units()[&id], before);
-        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_impact BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(OLD.live,'$.free_fall') IS NOT NULL AND json_extract(NEW.live,'$.free_fall') IS NULL BEGIN SELECT RAISE(ABORT,'impact failure'); END",id.0))).execute(&mut sql).await.unwrap();
-        sqlx::query("DROP TRIGGER reject_shutdown").execute(&mut sql).await.unwrap();
-        client.send("shutdown").await;
-        client.until("You start free-fall").await;
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
+        // The jump loses power offline instead, starting the descent the server resumes.
+        let mut saved = persistence::load(&config.database()).await.unwrap();
+        power_down_battle_unit(&mut saved, id, jump_rules()).unwrap();
+        persistence::save(&config.database(), &saved).await.unwrap();
+        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_impact BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(OLD.live,'$.free_fall') IS NOT NULL AND json_extract(NEW.live,'$.free_fall') IS NULL BEGIN SELECT RAISE(ABORT,'impact failure'); END",id.0))).execute(&mut sql).await.unwrap();
         let saved = persistence::load(&config.database()).await.unwrap();
         let cursor = saved.btech.constructed_units()[&id].free_fall().unwrap();
         assert_eq!(saved.btech.constructed_units()[&id].power(), Power::Off);
@@ -3767,7 +3775,11 @@ async fn dfa_launch_rejection_and_shutdown() {
     let before = world.btech.clone();
     assert!(launch_battle_dfa(&mut world, id, ObjectId(1), Some(target)).is_err());
     assert_eq!(world.btech, before);
-    stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
+    // The pilot cannot shut down in the air (Total Warfare p. 160); losing power ends the
+    // attack with the flight.
+    assert!(stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).is_err());
+    assert_eq!(world.btech, before);
+    power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
     assert!(world.btech.constructed_units()[&id].flight().is_none());
     world.validate(&config).unwrap();
 }
@@ -4089,7 +4101,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
     for fatal in [false, true] {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-        stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).unwrap();
+        power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
         let movement = MovementRules {
             fall: jump_rules(),
             ..MovementRules::STANDARD

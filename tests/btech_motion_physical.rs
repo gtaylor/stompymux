@@ -2458,6 +2458,10 @@ async fn charge_tracking_timeout_and_distance() {
     let state = world.btech.constructed_units()[&id].charge();
     assert!(state.distance > 1.9 && state.distance < 2.1, "{state:?}");
     let mut stopped = world.clone();
+    stopped
+        .btech
+        .edit_unit_motion(id, |motion| motion.speed = 0.0)
+        .unwrap();
     stop_battle_unit(&mut stopped, id, ObjectId(1), fall_rules()).unwrap();
     assert_eq!(
         stopped.btech.constructed_units()[&id].charge(),

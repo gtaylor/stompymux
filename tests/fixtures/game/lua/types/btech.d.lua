@@ -683,7 +683,7 @@ function btech_unit.release(dbref, player) end
 ---@return boolean
 function btech_unit.start(dbref, player, fast) end
 
----Abort startup or shut down the assigned pilot's unit, releasing the cockpit.
+---Abort startup or shut down the assigned pilot's unit, releasing the cockpit. A Mech must be stopped on the ground; it is refused while moving or in the air.
 ---@param dbref integer
 ---@param player integer
 ---@return boolean

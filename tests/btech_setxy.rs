@@ -178,13 +178,7 @@ async fn setxy_preserves_jump_progress_and_forced_descent_clock() {
     advance_battle_jumps(&mut original, MovementRules::STANDARD).unwrap();
     advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap();
     assert_eq!(original.btech, restored.btech);
-    stop_battle_unit(
-        &mut restored,
-        unit,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    power_down_battle_unit(&mut restored, unit, MovementRules::STANDARD.fall).unwrap();
     let before = restored.btech.constructed_units()[&unit]
         .free_fall()
         .unwrap();

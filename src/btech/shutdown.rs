@@ -1,4 +1,5 @@
-//! Shutdown host transactions publish fall, collision and crew effects through shared combat resolvers.
+//! Shutdown host transactions publish vehicle tumble and crew effects through shared combat
+//! resolvers. A Mech shuts down only once stopped on the ground, so it never falls.
 use crate::{Config, ObjectId, Scripts};
 use anyhow::Result;
 
@@ -6,20 +7,15 @@ use anyhow::Result;
 #[derive(Default)]
 pub(super) struct ShutdownEffects {
     pub pilot_notices: Vec<super::PilotNotice>,
-    pub falls: Vec<super::MechFallReport>,
     pub vehicle_falls: Vec<super::VehicleFallReport>,
-    pub stacking: super::stacking::StackingEffects,
 }
 
 /// Publish nested shutdown effects once, before newly lethal crew are evacuated.
 pub(super) fn publish(scripts: &Scripts, config: &Config, effects: &ShutdownEffects) -> Result<()> {
-    for fall in &effects.falls {
-        super::evacuation::publish_fall_consequences(scripts, config, fall)?;
-    }
     for fall in &effects.vehicle_falls {
         super::evacuation::publish_vehicle_fall_consequences(scripts, config, fall)?;
     }
-    super::evacuation::publish_stacking_consequences(scripts, config, &effects.stacking)
+    Ok(())
 }
 
 /// Shut down a piloted unit with transactional damage, notices, personal injury and evacuation.

@@ -257,7 +257,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00082
-//|---Abort startup or shut down the assigned pilot's unit, releasing the cockpit.
+//|---Abort startup or shut down the assigned pilot's unit, releasing the cockpit. A Mech must be stopped on the ground; it is refused while moving or in the air.
 //|---@param dbref integer
 //|---@param player integer
 //|---@return boolean

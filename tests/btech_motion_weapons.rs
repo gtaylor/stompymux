@@ -4722,7 +4722,7 @@ async fn firing_observers_hide_unseen_participants_and_replay_transactionally() 
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn power_observers_receive_completion_and_moving_shutdown_only() {
+async fn power_observers_receive_completion_and_never_a_shutdown_fall() {
     use stompymux_rs::*;
     let (_dir, config, mut base, subject, observer) = lock_fixture().await;
     let witness = base.create(&config, "Power witness".into(), Kind::Player);
@@ -4797,9 +4797,16 @@ async fn power_observers_receive_completion_and_moving_shutdown_only() {
         assert_eq!(lua.world().btech, world.btech);
         assert!(lua.drain_outbox().is_empty());
         commands::run(&native, &config, ObjectId(1), 1, "shutdown").unwrap();
-        lua.eval_callback::<()>(&format!("btech.unit.stop({},1)", subject.0))
-            .unwrap();
+        // A moving Mech refuses to shut down (Total Warfare p. 160), so it never falls.
+        assert_eq!(
+            lua.eval_callback::<()>(&format!("btech.unit.stop({},1)", subject.0))
+                .is_ok(),
+            speed == 0.0
+        );
         assert_eq!(native.world().btech, lua.world().btech);
+        if speed != 0.0 {
+            assert_eq!(native.world().btech, world.btech);
+        }
         let observed = |scripts: &Scripts| {
             scripts
                 .drain_outbox()
@@ -4810,12 +4817,9 @@ async fn power_observers_receive_completion_and_moving_shutdown_only() {
         };
         let messages = observed(&native);
         assert_eq!(messages, observed(&lua));
-        assert_eq!(
-            messages
-                .iter()
-                .filter(|text| text.ends_with("stops in mid-motion, and falls!"))
-                .count(),
-            usize::from(speed > 10.75)
+        assert!(
+            !messages.iter().any(|text| text.contains("mid-motion")),
+            "{messages:?}"
         );
     }
 }
@@ -7362,7 +7366,7 @@ async fn cockpit_status_reports_airborne_and_pending_state_without_advancing() {
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(battle_unit_status(&loaded, id, "info").unwrap(), status);
-    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+    power_down_battle_unit(&mut world, id, fall_rules()).unwrap();
     assert!(world.btech.constructed_units()[&id].free_fall().is_some());
     assert!(
         battle_unit_status(&world, id, "info")

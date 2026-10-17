@@ -218,7 +218,7 @@ pub use unit::{Mech, Position, SectionState};
 pub(crate) use crew::player_moved;
 pub use crew::{assign_pilot, release_pilot};
 
-pub use power::{Notice, Power, advance_units, start_unit, stop_unit};
+pub use power::{Notice, Power, advance_units, power_down_unit, start_unit, stop_unit};
 
 /// Render a domain notice through ordinary container notification, staging it until commit.
 pub(crate) fn notify_unit(scripts: &crate::Scripts, notice: Notice) -> anyhow::Result<()> {

@@ -244,7 +244,7 @@ pub(super) fn prepare_target(
     if power == Power::Off {
         return Ok(Vec::new());
     }
-    super::power::stop_admitted(world, target, rules)
+    super::power::power_down_unit(world, target, rules)
 }
 
 /// Admit and prepare a pickup target atomically, without attaching tow cables.

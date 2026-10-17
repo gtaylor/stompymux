@@ -781,19 +781,14 @@ async fn airborne_critical_falls_apply_collisions_inside_the_impact() {
     }
 }
 
+/// A Mech refuses to shut down at any forward or reverse speed, through the command and Lua
+/// alike, and changes nothing; once stopped it shuts down where it stands with no roll, its
+/// torso centered and its arms left as they were (Total Warfare p. 160).
 #[tokio::test]
 async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
     for speed in [-53.75, 0.0, 10.75, 10.76, 21.5] {
         let (_dir, config, mut world, ids) = fixture(&[0, 0, 0]).await;
         let id = ids[0];
-        let chosen = (0..=255)
-            .find(|value| {
-                let mut dice = Dice::seeded([*value; 32]);
-                let protected = dice.two_d6() >= 7;
-                dice.d6();
-                protected && dice.two_d6() == 7 && dice.die(2).unwrap() == 1
-            })
-            .unwrap();
         world
             .btech
             .rewrite_unit_record(id, |record| {
@@ -805,7 +800,6 @@ async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
                     arms_flipped: true,
                 })
                 .unwrap();
-                unit["dice"] = serde_json::to_value(Dice::seeded([chosen; 32])).unwrap();
             })
             .unwrap();
         world.validate(&config).unwrap();
@@ -821,95 +815,41 @@ async fn ground_shutdown_speed_boundary_and_facing_match_native_lua() {
         .unwrap();
         assert!(
             lua.eval_callback::<()>(&format!(
-                "btech.unit.stop({},1); error('abort moving shutdown')",
+                "btech.unit.stop({},1); error('abort shutdown')",
                 id.0
             ))
             .is_err()
         );
         assert_eq!(lua.world().btech, world.btech);
         let text = support::run_text(&native, &config, ObjectId(1), 1, "shutdown");
-        lua.eval_callback::<()>(&format!("btech.unit.stop({},1)", id.0))
-            .unwrap();
+        let stopped = lua
+            .eval_callback::<()>(&format!("btech.unit.stop({},1)", id.0))
+            .is_ok();
+        assert_eq!(stopped, speed == 0.0);
         assert_eq!(native.world().btech, lua.world().btech);
+        if !stopped {
+            assert!(text.contains("You must come to a stop"), "{text}");
+            assert_eq!(native.world().btech, world.btech);
+            continue;
+        }
         assert!(text.contains("All systems shut down"), "{text}");
         let saved = native.world().clone();
         let unit = &saved.btech.constructed_units()[&id];
         assert_eq!(unit.power(), Power::Off);
-        assert_eq!(
-            unit.posture(),
-            if speed > 10.75 {
-                Posture::Prone
-            } else {
-                Posture::Standing
-            }
-        );
+        assert_eq!(unit.posture(), Posture::Standing);
         assert_eq!(unit.facing().torso, Torso::Center);
-        assert_eq!(unit.facing().arms_flipped, speed <= 10.75);
+        assert!(unit.facing().arms_flipped);
         assert!(unit.pilot().is_none());
-        assert_eq!(unit.motion().unwrap().speed, 0.0);
-        if speed <= 10.75 {
-            assert_eq!(
-                serde_json::to_value(unit).unwrap()["dice"],
-                serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"]
-            );
-        }
+        assert_eq!(
+            serde_json::to_value(unit).unwrap()["dice"],
+            serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"]
+        );
         persistence::save(&config.database(), &saved).await.unwrap();
         assert_eq!(
             persistence::load(&config.database()).await.unwrap().btech,
             saved.btech
         );
     }
-}
-
-#[tokio::test]
-async fn moving_shutdown_neighbor_failure_rolls_back_power_fall_and_facing() {
-    let (_dir, config, mut world, ids) = fixture(&[0, 0, 0]).await;
-    let id = ids[0];
-    world
-        .btech
-        .rewrite_unit_record(id, |record| {
-            record["motion"]["speed"] = 21.5.into();
-            record["motion"]["desired_speed"] = 21.5.into();
-            record["facing"]["torso"] = "right".into();
-            let chosen = (0..=255)
-                .find(|value| {
-                    let mut dice = Dice::seeded([*value; 32]);
-                    let protected = dice.two_d6() >= 7;
-                    dice.d6();
-                    protected && dice.two_d6() == 7
-                })
-                .unwrap();
-            record["dice"] = serde_json::to_value(Dice::seeded([chosen; 32])).unwrap();
-        })
-        .unwrap();
-    for target in &ids[1..] {
-        world
-            .objects
-            .get_mut(target)
-            .unwrap()
-            .flags
-            .insert(Flag::InCharacter);
-    }
-    let before = world.btech.clone();
-    assert!(stop_battle_unit(&mut world, id, ObjectId(1), fall()).is_err());
-    assert_eq!(world.btech, before);
-    // Without character neighbors the same moving shutdown falls and collides in one commit.
-    for target in &ids[1..] {
-        world
-            .objects
-            .get_mut(target)
-            .unwrap()
-            .flags
-            .remove(Flag::InCharacter);
-    }
-    stop_battle_unit(&mut world, id, ObjectId(1), fall()).unwrap();
-    let unit = &world.btech.constructed_units()[&id];
-    assert_eq!(unit.power(), Power::Off);
-    assert_eq!(unit.posture(), Posture::Prone);
-    assert!(ids[1..].iter().any(
-        |target| world.btech.constructed_units()[target] != before.constructed_units()[target]
-    ));
-    world.validate(&config).unwrap();
 }
 
 /// Collision observers independently identify participants and replay damage feedback.

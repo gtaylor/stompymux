@@ -50,12 +50,10 @@ async fn acceleration_crosses_hexes_and_restart_preserves_fractional_motion() {
             .abs()
             < 1e-10
     );
+    // A moving Mech cannot shut down (Total Warfare p. 160), so it cannot fall that way.
     let mut moving_shutdown = world.clone();
-    stop_battle_unit(&mut moving_shutdown, id, ObjectId(1), RULES.fall).unwrap();
-    assert_eq!(
-        moving_shutdown.btech.constructed_units()[&id].posture(),
-        stompymux_rs::Posture::Prone
-    );
+    assert!(stop_battle_unit(&mut moving_shutdown, id, ObjectId(1), RULES.fall).is_err());
+    assert_eq!(moving_shutdown.btech, world.btech);
     set_battle_speed(&mut world, id, ObjectId(1), 0.0).unwrap();
     for _ in 0..21 {
         advance_battle_motion(&mut world, RULES).unwrap();
