@@ -84,21 +84,27 @@ fn artillery_flight_timing_and_saved_cursor_validation() {
     assert!(serde_json::from_value::<ArtilleryFlight>(corrupt).is_err());
 }
 
-/// Ordinary blasts cover the center and six neighbors; smoke draws one duration per cell and mines stay local.
+/// High-explosive, cluster and smoke rounds cover the center and its six neighbors, cluster
+/// rounds with their own Damage Values in 5-point groups, and FASCAM stays in the target hex
+/// (Tactical Operations: Advanced Rules p. 152; Advanced Units & Equipment pp. 166-169). No
+/// dice are drawn for a round that hits.
 #[test]
-fn artillery_standard_smoke_and_mine_patterns() {
+fn artillery_payload_patterns_follow_the_ordnance_table() {
     let center = HexCoordinate { x: 5, y: 5 };
-    for mode in [
-        ArtilleryMode::Standard,
-        ArtilleryMode::Smoke,
-        ArtilleryMode::Mine,
+    for (weapon, mode, damage) in [
+        (Weapon::Thumper, ArtilleryMode::Standard, Some((15, 5))),
+        (Weapon::Thumper, ArtilleryMode::Cluster, Some((10, 1))),
+        (Weapon::Sniper, ArtilleryMode::Cluster, Some((15, 5))),
+        (Weapon::LongTom, ArtilleryMode::Cluster, Some((20, 10))),
+        (Weapon::LongTom, ArtilleryMode::Smoke, None),
+        (Weapon::Sniper, ArtilleryMode::Mine, None),
     ] {
         let mut flight =
-            ArtilleryFlight::new(center, center, Weapon::Thumper, mode, ArtilleryOutcome::Hit)
-                .unwrap();
+            ArtilleryFlight::new(center, center, weapon, mode, ArtilleryOutcome::Hit).unwrap();
         let mut dice = Dice::seeded([7; 32]);
-        let mut expected_dice = dice.clone();
+        let untouched = dice.clone();
         let pattern = arrive(&mut flight, (12, 12), &mut dice);
+        assert_eq!(dice, untouched);
         assert_eq!(pattern.impact, center);
         assert!(!pattern.missed);
         assert!(pattern.cells[0].direct);
@@ -107,99 +113,40 @@ fn artillery_standard_smoke_and_mine_patterns() {
             assert_eq!(pattern.cells.len(), 1);
             assert_eq!(
                 pattern.cells[0].effect,
-                ArtilleryEffect::Mine { strength: 15 }
+                ArtilleryEffect::Mine { strength: 20 }
             );
-        } else {
-            assert_eq!(pattern.cells.len(), 7);
-            assert_eq!(
-                pattern.cells[1..]
-                    .iter()
-                    .map(|cell| cell.position)
-                    .collect::<Vec<_>>(),
-                center.neighbors().unwrap()
-            );
-            for (index, cell) in pattern.cells.iter().enumerate() {
-                assert_eq!(cell.direct, index == 0);
-                if mode == ArtilleryMode::Smoke {
-                    assert_eq!(
-                        cell.effect,
-                        ArtilleryEffect::Smoke {
-                            seconds: 89 + expected_dice.die(61).unwrap()
-                        }
-                    );
-                } else {
-                    assert_eq!(
-                        cell.effect,
-                        // A Thumper's high-explosive round: fifteen in the target hex, five
-                        // in the ring around it (Tactical Operations p. 183).
-                        ArtilleryEffect::Damage {
-                            total: if index == 0 { 15 } else { 5 },
-                            packet_size: 5,
-                            table: HitTable::Weapon
-                        }
-                    );
-                }
-            }
+            continue;
         }
-        assert_eq!(dice, expected_dice);
+        // Smoke reaches only one ring, even from a Long Tom.
+        assert_eq!(pattern.cells.len(), 7, "{weapon:?} {mode:?}");
+        assert_eq!(
+            pattern.cells[1..]
+                .iter()
+                .map(|cell| cell.position)
+                .collect::<Vec<_>>(),
+            center.neighbors().unwrap()
+        );
+        for (index, cell) in pattern.cells.iter().enumerate() {
+            assert_eq!(cell.direct, index == 0);
+            let expected = match damage {
+                Some((center, ring)) => ArtilleryEffect::Damage {
+                    total: if index == 0 { center } else { ring },
+                    packet_size: 5,
+                    table: HitTable::Weapon,
+                },
+                None => ArtilleryEffect::Smoke,
+            };
+            assert_eq!(cell.effect, expected, "{weapon:?} {mode:?}");
+        }
     }
-}
-
-/// Cluster rounds retain every two-point bomblet on the map, including one-cell and edge maps.
-#[test]
-fn artillery_cluster_conservation_bounds_and_replay() {
-    for dimensions in [(1, 1), (2, 3), (20, 20)] {
-        for center in [
-            HexCoordinate { x: 0, y: 0 },
-            HexCoordinate {
-                x: i32::from(dimensions.0) - 1,
-                y: i32::from(dimensions.1) - 1,
-            },
-        ] {
-            for seed in 0..32 {
-                let mut flight = ArtilleryFlight::new(
-                    center,
-                    center,
-                    Weapon::LongTom,
-                    ArtilleryMode::Cluster,
-                    ArtilleryOutcome::Hit,
-                )
-                .unwrap();
-                let mut dice = Dice::seeded([seed; 32]);
-                for _ in 0..5 {
-                    assert!(flight.advance(dimensions, &mut dice).unwrap().is_none());
-                }
-                let mut restored =
-                    serde_json::from_value(serde_json::to_value(&flight).unwrap()).unwrap();
-                let mut restored_dice =
-                    serde_json::from_value(serde_json::to_value(&dice).unwrap()).unwrap();
-                let pattern = arrive(&mut flight, dimensions, &mut dice);
-                assert_eq!(
-                    arrive(&mut restored, dimensions, &mut restored_dice),
-                    pattern
-                );
-                assert_eq!(restored_dice, dice);
-                assert!(pattern.cells.len() <= 20);
-                let mut total_damage = 0;
-                for cell in pattern.cells {
-                    assert!((0..i32::from(dimensions.0)).contains(&cell.position.x));
-                    assert!((0..i32::from(dimensions.1)).contains(&cell.position.y));
-                    assert!((cell.position.x - center.x).abs() <= 2);
-                    assert!((cell.position.y - center.y).abs() <= 2);
-                    let ArtilleryEffect::Damage {
-                        total,
-                        packet_size: 2,
-                        table: HitTable::Punch,
-                    } = cell.effect
-                    else {
-                        panic!("Unexpected cluster effect")
-                    };
-                    assert!(total.is_multiple_of(2));
-                    total_damage += total;
-                }
-                assert_eq!(total_damage, 40);
-            }
-        }
+    // Artillery cannons fire no special rounds, and the Inner Sphere Thumper no FASCAM
+    // (Advanced Units & Equipment pp. 97, 165; Advanced Rules p. 152).
+    for (weapon, mode) in [
+        (Weapon::LongTomCannon, ArtilleryMode::Smoke),
+        (Weapon::SniperCannon, ArtilleryMode::Cluster),
+        (Weapon::Thumper, ArtilleryMode::Mine),
+    ] {
+        assert!(ArtilleryFlight::new(center, center, weapon, mode, ArtilleryOutcome::Hit).is_err());
     }
 }
 

@@ -104,15 +104,14 @@ pub(super) fn advance(
         notices,
         pilot_notices: Vec::new(),
     };
+    let smoke = super::decorations::smoke_seconds(&candidate);
+    // Units inside a building are safe from cluster bomblets (Tactical Operations: Advanced
+    // Units & Equipment p. 166).
+    let sheltered = cursor.mode() == ArtilleryMode::Cluster;
     for cell in report.pattern.cells.clone() {
         match cell.effect {
-            ArtilleryEffect::Smoke { seconds } => {
-                super::decorations::raise_smoke(
-                    &mut candidate,
-                    map,
-                    cell.position,
-                    i64::from(seconds),
-                )?;
+            ArtilleryEffect::Smoke => {
+                super::decorations::raise_smoke(&mut candidate, map, cell.position, smoke, true)?;
             }
             ArtilleryEffect::Mine { strength } => {
                 if let Some(ordinal) = deposit_mine(&mut candidate, map, cell.position, strength)? {
@@ -130,6 +129,7 @@ pub(super) fn advance(
                     &cell,
                     origin,
                     (total, packet_size, table),
+                    sheltered,
                     rules,
                     character,
                 )?;
@@ -142,7 +142,13 @@ pub(super) fn advance(
     Ok(Some(report))
 }
 
-/// Artillery does not stack a second field on a coordinate that already holds one.
+/// Densest field a weapon-delivered minefield may make of a pre-designated one (Tactical
+/// Operations: Advanced Units & Equipment pp. 169, 185).
+pub(super) const PREDESIGNATED_MAXIMUM_DENSITY: i16 = 30;
+
+/// Lay a FASCAM field. It never combines with another weapon-delivered field; landing on a
+/// pre-designated conventional field it thickens that field to at most thirty points
+/// (Tactical Operations: Advanced Units & Equipment p. 169).
 fn deposit_mine(
     world: &mut World,
     map: ObjectId,
@@ -150,12 +156,31 @@ fn deposit_mine(
     strength: u16,
 ) -> Result<Option<u32>> {
     world.btech.maps()[&map].base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
-    if world.btech.maps()[&map]
-        .minefields()
-        .values()
-        .any(|field| field.coordinate == coordinate)
+    let fields: Vec<_> = world.btech.maps()[&map]
+        .ordered_minefields()
+        .filter(|(_, field)| field.coordinate == coordinate)
+        .map(|(ordinal, field)| (*ordinal, *field))
+        .collect();
+    if fields
+        .iter()
+        .any(|(_, field)| super::minefield::weapon_delivered(world, field))
     {
         return Ok(None);
+    }
+    let strength = i16::try_from(strength)?;
+    if let Some((ordinal, field)) = fields
+        .iter()
+        .find(|(_, field)| field.kind == MineKind::Standard)
+    {
+        let field = Minefield {
+            strength: field
+                .strength
+                .saturating_add(strength)
+                .min(PREDESIGNATED_MAXIMUM_DENSITY.max(field.strength)),
+            ..*field
+        };
+        super::set_minefield(world, map, *ordinal, Some(field))?;
+        return Ok(Some(*ordinal));
     }
     let ordinal = super::insert_minefield(
         world,
@@ -163,7 +188,7 @@ fn deposit_mine(
         Minefield {
             coordinate,
             kind: MineKind::Standard,
-            strength: i16::try_from(strength)?,
+            strength,
             extra: 0,
             owner: ObjectId(0),
         },
@@ -210,6 +235,7 @@ fn hit_cell(
     cell: &ArtilleryCell,
     origin: HexCoordinate,
     (damage, packet_size, table): (u16, u8, HitTable),
+    sheltered: bool,
     rules: FallRules,
     character: bool,
 ) -> Result<()> {
@@ -244,16 +270,18 @@ fn hit_cell(
             character || !is_character,
             "Artillery impact requires character consequence publication"
         );
-        let damage =
-            if let Some(damage) = building_damage(tile, target.elevation, damage, cell.direct) {
-                damage
-            } else if cell.direct {
-                let levels =
-                    u16::try_from((target.elevation - ground).unsigned_abs()).unwrap_or(u16::MAX);
-                damage.saturating_sub(levels.saturating_mul(VERTICAL_FALLOFF))
-            } else {
-                damage
-            };
+        let inside = super::building_interior::inside(tile, target.elevation);
+        let damage = if sheltered && inside {
+            0
+        } else if let Some(damage) = building_damage(tile, target.elevation, damage, cell.direct) {
+            damage
+        } else if cell.direct {
+            let levels =
+                u16::try_from((target.elevation - ground).unsigned_abs()).unwrap_or(u16::MAX);
+            damage.saturating_sub(levels.saturating_mul(VERTICAL_FALLOFF))
+        } else {
+            damage
+        };
         if damage == 0 {
             continue;
         }

@@ -742,4 +742,24 @@ mod tests {
             assert!(!weapon.is_energy(), "{weapon:?}");
         }
     }
+
+    /// iNarc pods explode for 3 points a shot, explosive iNarc pods for 6 (Total Warfare
+    /// pp. 138, 141); other ammunition releases its rounds' damage.
+    #[test]
+    fn inarc_ammunition_explodes_by_pod_type() {
+        use crate::AmmunitionMode as M;
+        assert_eq!(
+            W::INarcBeacon.ammunition_explosion_damage_for_mode(4, M::Normal),
+            12
+        );
+        assert_eq!(
+            W::INarcBeacon.ammunition_explosion_damage_for_mode(4, M::INarcHaywire),
+            12
+        );
+        assert_eq!(
+            W::INarcBeacon.ammunition_explosion_damage_for_mode(4, M::INarcExplosive),
+            24
+        );
+        assert_eq!(W::Lrm20.ammunition_explosion_damage(2), 40);
+    }
 }

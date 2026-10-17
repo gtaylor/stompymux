@@ -1166,6 +1166,8 @@
 //|---@field surfaces table[] Structural rolls, optional fracture/falls, and notices.
 //|---@field buildings table[] Building identity, actual damage, remaining integrity and notices.
 //|---@field recoil RecoilReport|nil
+//|---@field thunder {fields: table[]} Minefields a Thunder salvo laid or thickened.
+//|---@field smoke {coordinate: HexCoordinate, heavy: boolean, seconds: integer}|nil Smoke a Smoke missile salvo laid.
 // lua-types-end
 
 // lua-types-begin btech 00203
@@ -1626,17 +1628,17 @@
 //|---@class SwarmHop
 //|---@field target integer
 //|---@field incoming integer
+//|---@field target_number integer Each later attack takes its own target's movement and terrain modifiers.
 //|---@field roll integer
 //|---@field remaining integer
-//|---@field salvo {kind: 'mech'|'vehicle', report: table}|nil Absent for a secondary miss.
+//|---@field salvo {kind: 'mech'|'vehicle', report: table}|nil Absent for a miss.
 // lua-types-end
 
 // lua-types-begin btech 00406
 //|---@class SwarmReport
 //|---@field launched integer
 //|---@field remaining integer
-//|---@field traveled number Cumulative hexes flown, including a terminal leg that falls short.
-//|---@field hops SwarmHop[] Ordered attacks, at most eleven.
+//|---@field hops SwarmHop[] Ordered attacks, each on a different unit.
 //|---@field notices Notice[]
 //|---@field broadcasts Notice[]
 // lua-types-end

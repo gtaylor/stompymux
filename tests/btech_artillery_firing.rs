@@ -304,29 +304,25 @@ async fn artillery_live_payloads_hit_without_glancing() {
                     ..
                 }
             )),
-            ArtilleryMode::Cluster => {
-                let total: u16 = report
-                    .pattern
-                    .cells
-                    .iter()
-                    .map(|cell| match cell.effect {
-                        ArtilleryEffect::Damage {
-                            total,
-                            packet_size: 2,
-                            ..
-                        } => total,
-                        _ => panic!("Wrong cluster effect"),
-                    })
-                    .sum();
-                assert_eq!(total, 40);
-            }
+            // A cluster missile is twenty points in the struck hex and ten around it, in
+            // 5-point groups (Tactical Operations: Advanced Rules p. 152).
+            ArtilleryMode::Cluster => assert!(matches!(
+                report.pattern.cells[0].effect,
+                ArtilleryEffect::Damage {
+                    total: 20,
+                    packet_size: 5,
+                    ..
+                }
+            )),
             ArtilleryMode::Smoke => assert!(matches!(
                 report.pattern.cells[0].effect,
-                ArtilleryEffect::Smoke { .. }
+                ArtilleryEffect::Smoke
             )),
+            // The Clan Arrow IV lays a thirty-point FASCAM field (Tactical Operations: Advanced
+            // Rules p. 152).
             ArtilleryMode::Mine => assert!(matches!(
                 report.pattern.cells[0].effect,
-                ArtilleryEffect::Mine { strength: 20 }
+                ArtilleryEffect::Mine { strength: 30 }
             )),
         }
         assert!(
@@ -427,7 +423,7 @@ async fn artillery_cluster_controls_and_live_launch() {
             .pattern
             .cells
             .iter()
-            .all(|cell| matches!(cell.effect, ArtilleryEffect::Damage { packet_size: 2, .. }))
+            .all(|cell| matches!(cell.effect, ArtilleryEffect::Damage { packet_size: 5, .. }))
     );
 }
 
@@ -474,7 +470,7 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
         ArtilleryFlight::new(
             center,
             center,
-            Weapon::ThumperCannon,
+            Weapon::Thumper,
             ArtilleryMode::Smoke,
             ArtilleryOutcome::Hit,
         )
@@ -502,7 +498,7 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
         restored.btech.maps()[&map].artillery_shots()[&0]
             .flight
             .weapon(),
-        Weapon::ThumperCannon
+        Weapon::Thumper
     );
     let replay = Scripts::new(
         &config,
@@ -517,7 +513,7 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
     assert_eq!(report[0].notices.len(), 1);
     assert_eq!(
         report[0].notices[0].text,
-        "A ThumperCannon round hits your hex, and smoke starts to billow!"
+        "A Thumper round hits your hex, and smoke starts to billow!"
     );
     assert_ne!(report[0].notices[0].unit, shooter);
     assert_eq!(scripts.drain_outbox(), replay.drain_outbox());

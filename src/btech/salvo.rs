@@ -4,7 +4,8 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 
-/// Total Warfare cluster hits table, rows indexed by rack size and columns by the 2d6 roll.
+/// The Total Warfare Cluster Hits Table, rows indexed by the number of missiles or shots
+/// and columns by the 2d6 roll: every column from 2 to 30, and 40.
 const CLUSTER_HITS: &[(u8, [u8; 11])] = &[
     (2, [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),
     (3, [1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3]),
@@ -15,9 +16,25 @@ const CLUSTER_HITS: &[(u8, [u8; 11])] = &[
     (8, [3, 3, 4, 4, 5, 5, 5, 6, 6, 8, 8]),
     (9, [3, 3, 4, 5, 5, 5, 5, 7, 7, 9, 9]),
     (10, [3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10]),
+    (11, [4, 4, 5, 7, 7, 7, 7, 9, 9, 11, 11]),
     (12, [4, 4, 5, 8, 8, 8, 8, 10, 10, 12, 12]),
+    (13, [4, 4, 5, 8, 8, 8, 8, 11, 11, 13, 13]),
+    (14, [5, 5, 6, 9, 9, 9, 9, 11, 11, 14, 14]),
     (15, [5, 5, 6, 9, 9, 9, 9, 12, 12, 15, 15]),
+    (16, [5, 5, 7, 10, 10, 10, 10, 13, 13, 16, 16]),
+    (17, [5, 5, 7, 10, 10, 10, 10, 14, 14, 17, 17]),
+    (18, [6, 6, 8, 11, 11, 11, 11, 14, 14, 18, 18]),
+    (19, [6, 6, 8, 11, 11, 11, 11, 15, 15, 19, 19]),
     (20, [6, 6, 9, 12, 12, 12, 12, 16, 16, 20, 20]),
+    (21, [7, 7, 9, 13, 13, 13, 13, 17, 17, 21, 21]),
+    (22, [7, 7, 9, 14, 14, 14, 14, 18, 18, 22, 22]),
+    (23, [7, 7, 10, 15, 15, 15, 15, 19, 19, 23, 23]),
+    (24, [8, 8, 10, 16, 16, 16, 16, 20, 20, 24, 24]),
+    (25, [8, 8, 10, 16, 16, 16, 16, 21, 21, 25, 25]),
+    (26, [9, 9, 11, 17, 17, 17, 17, 21, 21, 26, 26]),
+    (27, [9, 9, 11, 17, 17, 17, 17, 22, 22, 27, 27]),
+    (28, [9, 9, 11, 17, 17, 17, 17, 23, 23, 28, 28]),
+    (29, [10, 10, 12, 18, 18, 18, 18, 23, 23, 29, 29]),
     (30, [10, 10, 12, 18, 18, 18, 18, 24, 24, 30, 30]),
     (40, [12, 12, 18, 24, 24, 24, 24, 32, 32, 40, 40]),
 ];
@@ -788,6 +805,18 @@ fn resolve_salvo_with_effects(
             experience_messages: Vec::new(),
         });
     }
+    // Missiles still flying in a Swarm flight, and whether an anti-missile system engaged it.
+    let swarm = match geometry {
+        HitGeometry::Direct { incoming, .. } => incoming,
+        HitGeometry::Fixed(_) => None,
+    };
+    let ams_engaged = matches!(
+        geometry,
+        HitGeometry::Direct {
+            ams_engaged: true,
+            ..
+        }
+    );
     let unit = world.btech.constructed.get_mut(&target).unwrap();
     let fire_mode = match geometry {
         HitGeometry::Direct { fire_mode, .. } => fire_mode,
@@ -810,13 +839,8 @@ fn resolve_salvo_with_effects(
             target_beacon: unit.has_beacon(super::BeaconKind::Narc)
                 || unit.has_beacon(super::BeaconKind::Homing),
             artemis_v,
-            ams_engaged: matches!(
-                geometry,
-                HitGeometry::Direct {
-                    ams_engaged: true,
-                    ..
-                }
-            ),
+            // A Swarm flight meets an anti-missile system on its own terms below.
+            ams_engaged: swarm.is_none() && ams_engaged,
             indirect: matches!(geometry, HitGeometry::Direct { indirect: true, .. }),
             apollo: matches!(geometry, HitGeometry::Direct { apollo: true, .. }),
             array: match geometry {
@@ -828,11 +852,9 @@ fn resolve_salvo_with_effects(
         },
         &mut unit.dice,
     )?;
-    packets.finish_burst_glancing(fire_mode, glancing);
-    packets.limit_missiles(match geometry {
-        HitGeometry::Direct { incoming, .. } => incoming,
-        HitGeometry::Fixed(_) => None,
-    });
+    if let Some(incoming) = swarm {
+        packets.swarm_flight(incoming, ams_engaged)?;
+    }
     let mut report = MechSalvoReport {
         building: None,
         collapse: None,
@@ -1215,7 +1237,11 @@ mod tests {
         assert_eq!(cluster_hits(8, 2).unwrap(), 3);
         assert_eq!(cluster_hits(8, 7).unwrap(), 5);
         assert_eq!(cluster_hits(8, 12).unwrap(), 8);
-        assert!(cluster_hits(11, 7).is_err());
+        // The table has every column from 2 to 30, and 40.
+        assert_eq!(cluster_hits(11, 7).unwrap(), 7);
+        assert_eq!(cluster_hits(16, 9).unwrap(), 13);
+        assert!(cluster_hits(31, 7).is_err());
+        assert!(cluster_hits(1, 7).is_err());
     }
 
     /// An engaged AMS shifts the cluster roll down four, never below 2, and treats a locked

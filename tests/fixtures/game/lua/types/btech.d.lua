@@ -1691,6 +1691,8 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@field surfaces table[] Structural rolls, optional fracture/falls, and notices.
 ---@field buildings table[] Building identity, actual damage, remaining integrity and notices.
 ---@field recoil RecoilReport|nil
+---@field thunder {fields: table[]} Minefields a Thunder salvo laid or thickened.
+---@field smoke {coordinate: HexCoordinate, heavy: boolean, seconds: integer}|nil Smoke a Smoke missile salvo laid.
 
 ---Fire under configured tactical rules and stage cockpit notices in the current callback transaction.
 ---Requires the conscious assigned pilot; the calling script owns authority to act as that pilot.
@@ -3074,15 +3076,15 @@ function btech_unit.fireswarm1(dbref, pilot, weapon) end
 ---@class SwarmHop
 ---@field target integer
 ---@field incoming integer
+---@field target_number integer Each later attack takes its own target's movement and terrain modifiers.
 ---@field roll integer
 ---@field remaining integer
----@field salvo {kind: 'mech'|'vehicle', report: table}|nil Absent for a secondary miss.
+---@field salvo {kind: 'mech'|'vehicle', report: table}|nil Absent for a miss.
 
 ---@class SwarmReport
 ---@field launched integer
 ---@field remaining integer
----@field traveled number Cumulative hexes flown, including a terminal leg that falls short.
----@field hops SwarmHop[] Ordered attacks, at most eleven.
+---@field hops SwarmHop[] Ordered attacks, each on a different unit.
 ---@field notices Notice[]
 ---@field broadcasts Notice[]
 
@@ -3093,15 +3095,16 @@ function btech_unit.fireswarm1(dbref, pilot, weapon) end
 ---@return AmmunitionMode
 function btech_unit.firecluster(dbref, pilot, weapon) end
 
----Select missile Smoke rounds. This cockpit control does not select artillery payloads.
+---Select missile Smoke rounds, which may only target hexes and fill a hit hex with smoke.
+---This cockpit control does not select artillery payloads.
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer
 ---@return AmmunitionMode
 function btech_unit.firesmoke(dbref, pilot, weapon) end
 
----Select missile Mine (Thunder) rounds. They bypass AMS and retain ordinary missile damage
----against units; a hit on a hex lays a minefield there.
+---Select missile Mine (Thunder) rounds, which may only target hexes: a hit lays a minefield
+---as dense as the launcher is large, and a miss scatters and lays five points less.
 ---@param dbref integer
 ---@param pilot integer
 ---@param weapon integer

@@ -734,21 +734,22 @@ A running unit with defense enabled automatically engages an incoming missile
 attack that reaches its base target number with one ready mount whose firing arc
 covers the attack direction (Total Warfare pp. 129-130). Missed attacks and
 attacks from outside every mount's arc preserve defensive ammunition, heat and
-recycle time. Defensive weapons cannot be fired manually.
+readiness. Defensive weapons cannot be fired manually.
 
 An engagement applies -4 to the attack's cluster roll, never below 2; a locked
 Streak launcher counts as a roll of 11 before the -4. Electromagnetic interference
 takes two more from either. A single-missile attack
 (Narc and iNarc pods, Thunderbolts) instead rolls one die and is destroyed on a
 1-3. Each engagement spends one round of ammunition and the system's heat, and
-the mount's recycle time is the once-per-turn limit. Inner Sphere and Clan
-systems follow the same rules. An empty bin prevents activation. Critical
-destruction disables AMS until its capability is restored. Lua can toggle with
+each AMS engages at most one attack a turn: thirty seconds pass before that mount
+can engage again. Inner Sphere and Clan systems follow the same rules. Each AMS
+works on its own: one with an empty bin, or one destroyed by a critical hit,
+leaves the attack to the next ready mount covering it. Lua can toggle with
 `btech.unit.ams(unit, pilot)` or set an explicit state with a third boolean
 argument.
 
-Laser AMS uses the same switch but needs no ammunition. Its recycle time is 25
-seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
+Laser AMS uses the same switch but needs no ammunition. IS laser AMS generates
+7 heat per engagement and Clan laser AMS 5.
 
 ### Machine gun arrays
 
@@ -1581,14 +1582,18 @@ usual weapon selections and work on Mechs, ground vehicles and VTOLs. A matching
 ammunition bin is required to fire. Swarm rounds are LRM munitions: only standard
 LRM launchers and MMLs loaded with long-range rounds can use these modes.
 
-After an initial hit, unused missiles can attack nearby units in map order.
-Ordinary Swarm can hit friends and return to its launcher. Swarm-1 excludes
-friendly secondary targets. Retargeting requires the previous target to see the
-next unit in its own hex or an adjacent one. Combat-safe units are skipped as secondary targets.
-The flight stops when its missiles are spent, its cumulative range runs out, or
-it has attacked eleven distinct targets. AMS engages the initial attack like
-any other LRM flight (Tactical Operations: AUE p. 181).
-An initial miss ends the flight; secondary misses retain the unused missiles.
+Missiles that do not strike a target fly on to the nearest unit, friend or foe,
+in its hex or an adjacent one, nearest first and at random among equals; no line
+of sight is needed, and a miss sends every missile on (Tactical Operations: AUE
+p. 183). Swarm can hit friends and return to its launcher. Each later attack keeps
+the first attack's modifiers but takes its own target's movement and terrain
+modifiers, and its Cluster Hits roll uses the column for the missiles still
+flying. Swarm-1 takes +2 against friendly units, unless they stand in hostile ECM
+or have lost sensors. No unit is attacked twice, and combat-safe units are
+skipped. In hostile ECM, Swarm-1 acts as Swarm, and a Swarm flight attacking a
+target in hostile ECM acts as an ordinary LRM flight and flies no farther. An AMS
+takes no -4 from a Swarm flight: the missiles that attack its unit land as though
+an 8 were rolled on their own column, and the rest fly on.
 Empty-coordinate fire does not retarget.
 
 Lua provides `btech.unit.fireswarm(unit, pilot, weapon)` and
@@ -1600,13 +1605,22 @@ Lua provides `btech.unit.fireswarm(unit, pilot, weapon)` and
 
 `firesmoke <selection>` and `firemine <selection>` select Smoke or Mine ammunition
 on missile launchers. Smoke rounds load in standard SRM, LRM and MML launchers;
-Mine (Thunder) rounds load in standard LRM launchers only. Repeat the selected
-command to return to normal ammunition. Matching supplies are required to fire.
-Both controls work on Mechs and vehicles; other launchers, one-shot launchers and
-artillery are rejected.
+Mine (Thunder) rounds load in standard LRM launchers only, and the Thunder-Active,
+-Augmented and -Vibrabomb rounds (`fireactive`, `fireaugmented`, `firevibrabomb`)
+in Inner Sphere ones. Repeat the selected command to return to normal ammunition.
+Matching supplies are required to fire. Both controls work on Mechs and vehicles;
+other launchers, one-shot launchers and artillery are rejected.
 
-These missile modes retain ordinary missile damage, and AMS engages both. They
-do not create smoke clouds or minefields.
+Smoke and Thunder missiles may only target hexes and damage no unit (Tactical
+Operations: AUE pp. 183, 185): fire them at a coordinate or a hex lock, whoever
+stands there. A Smoke hit fills the hex with smoke until the End Phase three turns
+later: light smoke when the salvo delivers 5 points of damage or less, heavy
+otherwise. A Thunder hit lays a minefield as dense as the launcher is large (20
+for an LRM-20); Augmented rounds lay half that, rounded up, in the hex and every
+hex around it. A Thunder miss scatters as artillery does, 1D6 hexes from direct
+fire or the margin of failure from indirect fire, and lays five points less.
+Weapon-delivered fields in one hex total at most 20 points, except that a field
+placed before play may be thickened to 30.
 Artillery templates can separately carry Smoke and Mine payloads, which create
 their environmental effects on arrival. These cockpit controls follow the
 reference's missile eligibility rather than selecting those artillery payloads.

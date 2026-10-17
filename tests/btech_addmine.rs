@@ -237,7 +237,9 @@ async fn rejected_or_aborted_placement_does_not_change_order_or_publish_output()
     assert!(scripts.drain_outbox().is_empty());
 }
 
-/// Artillery prepends its deposit once; later shells on the same hex do not stack fields.
+/// Artillery prepends its deposit once; later shells on the same hex do not stack fields, since
+/// FASCAM never combines with another weapon-delivered field (Tactical Operations: Advanced
+/// Units & Equipment p. 169).
 #[tokio::test]
 async fn artillery_mines_precede_existing_records_without_replacing_them() {
     let (_dir, config, mut world) = support::isolated_world().await;
@@ -280,7 +282,7 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         let mut flight = ArtilleryFlight::new(
             coordinate,
             coordinate,
-            Weapon::Thumper,
+            Weapon::Sniper,
             ArtilleryMode::Mine,
             ArtilleryOutcome::Hit,
         )
@@ -300,5 +302,62 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
         assert_eq!(world.btech.maps()[&map].minefields()[&9].owner, ObjectId(1));
         persistence::save(&config.database(), &world).await.unwrap();
         world = persistence::load(&config.database()).await.unwrap();
+    }
+}
+
+/// FASCAM landing on a pre-designated conventional field thickens it to at most thirty points
+/// instead of laying another field (Tactical Operations: Advanced Units & Equipment p. 169).
+#[tokio::test]
+async fn artillery_mines_thicken_a_predesignated_field_to_thirty() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Mines".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        map,
+        "mine",
+        MapAsset::from_cells("2 2\n.0.0\n.0.0\n").unwrap(),
+    )
+    .unwrap();
+    support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
+    let coordinate = HexCoordinate { x: 0, y: 0 };
+    set_minefield(
+        &mut world,
+        map,
+        0,
+        Some(Minefield {
+            coordinate,
+            kind: MineKind::Standard,
+            strength: 15,
+            extra: 0,
+            owner: ObjectId(1),
+        }),
+    )
+    .unwrap();
+    let rules = FallRules {
+        vehicle_impact: VehicleImpactRules::STANDARD,
+        extended_piloting: true,
+        toughness: false,
+    };
+    for expected in [30, 30] {
+        let mut flight = ArtilleryFlight::new(
+            coordinate,
+            coordinate,
+            Weapon::LongTom,
+            ArtilleryMode::Mine,
+            ArtilleryOutcome::Hit,
+        )
+        .unwrap();
+        let mut arrival = None;
+        while arrival.is_none() {
+            arrival = advance_artillery_flight(&mut world, map, &mut flight, rules).unwrap();
+        }
+        assert_eq!(arrival.unwrap().mines, [0]);
+        let fields: Vec<_> = world.btech.maps()[&map]
+            .minefields()
+            .values()
+            .copied()
+            .collect();
+        assert_eq!(fields.len(), 1);
+        assert_eq!(fields[0].strength, expected);
     }
 }

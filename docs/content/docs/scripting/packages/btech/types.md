@@ -1143,6 +1143,8 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `surfaces`: `table[]` — Structural rolls, optional fracture/falls, and notices.
 - `buildings`: `table[]` — Building identity, actual damage, remaining integrity and notices.
 - `recoil`: `RecoilReport|nil`
+- `thunder`: `{fields: table[]}` — Minefields a Thunder salvo laid or thickened.
+- `smoke`: `{coordinate: HexCoordinate, heavy: boolean, seconds: integer}|nil` — Smoke a Smoke missile salvo laid.
 
 ## AimSelection
 
@@ -1539,16 +1541,16 @@ Alias: `"follow_brief" | "include" | "exclude"`
 
 - `target`: `integer`
 - `incoming`: `integer`
+- `target_number`: `integer` — Each later attack takes its own target's movement and terrain modifiers.
 - `roll`: `integer`
 - `remaining`: `integer`
-- `salvo`: `{kind: 'mech'|'vehicle', report: table}|nil` — Absent for a secondary miss.
+- `salvo`: `{kind: 'mech'|'vehicle', report: table}|nil` — Absent for a miss.
 
 ## SwarmReport
 
 - `launched`: `integer`
 - `remaining`: `integer`
-- `traveled`: `number` — Cumulative hexes flown, including a terminal leg that falls short.
-- `hops`: `SwarmHop[]` — Ordered attacks, at most eleven.
+- `hops`: `SwarmHop[]` — Ordered attacks, each on a different unit.
 - `notices`: `Notice[]`
 - `broadcasts`: `Notice[]`
 

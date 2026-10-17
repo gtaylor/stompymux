@@ -137,8 +137,14 @@ async fn critical_weapon_ammunition_modes_and_special_edits_are_strict() {
         assert(select('#',btech.unit.set_weapon_modes(unit,0,{fire_modes=fire,ammunition_modes=ammo}))==0)
         local first=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)[1]
         assert(#first.fire_modes==22 and #first.ammunition_modes==21 and not first.operational)
-        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1,half_ton=true,ammunition_modes={btech.unit.ammunition_modes.INFERNO}}))==0)
+        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=1,ammunition_modes={btech.unit.ammunition_modes.INFERNO}}))==0)
         assert(select('#',btech.unit.restock_ammunition(unit,btech.unit.sections.RIGHT_TORSO,1))==0)
+        -- Only machine guns take half-ton lots, and a bin holds only rounds its weapon fires.
+        ok,err=mux.error.pcall(btech.unit.configure_ammunition,unit,{weapon='IS.SRM-4',section=btech.unit.sections.RIGHT_TORSO,slot=2,half_ton=true})
+        assert(not ok and err.message:find("Half-ton",1,true))
+        ok,err=mux.error.pcall(btech.unit.configure_ammunition,unit,{weapon='IS.LRM-5',section=btech.unit.sections.RIGHT_TORSO,slot=2,ammunition_modes={btech.unit.ammunition_modes.ARMOR_PIERCING}})
+        assert(not ok and err.message:find("Unsupported ammunition mode",1,true))
+        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.MachineGun',section=btech.unit.sections.RIGHT_TORSO,slot=2,half_ton=true}))==0)
         assert(select('#',btech.unit.install_special(unit,{section=btech.unit.sections.HEAD,slot=4}))==0)
         first=btech.unit.critical_slots(unit,btech.unit.sections.LEFT_TORSO)[1]
         assert(#first.fire_modes==22 and #first.ammunition_modes==21)
@@ -290,7 +296,7 @@ async fn vehicle_operations_cover_live_damage_falls_templates_and_equipment() {
         assert(select('#',btech.unit.install_weapon(unit,{part='IS.MediumLaser',section=btech.unit.sections.FRONT_SIDE,slots={1}}))==0)
         assert(#btech.unit.weapons(unit)==1)
         assert(select('#',btech.unit.set_weapon_modes(unit,0,{fire_modes={btech.unit.fire_modes.HEAT}}))==0)
-        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.SRM-4',section=btech.unit.sections.AFT_SIDE,slot=1,half_ton=true}))==0)
+        assert(select('#',btech.unit.configure_ammunition(unit,{weapon='IS.MachineGun',section=btech.unit.sections.AFT_SIDE,slot=1,half_ton=true}))==0)
         assert(select('#',btech.unit.restock_ammunition(unit,btech.unit.sections.AFT_SIDE,1))==0)
         assert(select('#',btech.unit.install_special(unit,{section=btech.unit.sections.RIGHT_SIDE,slot=1}))==0)
     "#,

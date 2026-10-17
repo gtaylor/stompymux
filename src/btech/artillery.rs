@@ -2,7 +2,6 @@
 use super::{AmmunitionMode, ArtilleryFire, Dice, HexCoordinate, HitTable, Weapon};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 /// Mutually exclusive artillery payloads; launcher controls resolve ammunition into this value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -24,6 +23,16 @@ impl ArtilleryMode {
             AmmunitionMode::Mine => Self::Mine,
             _ => anyhow::bail!("Ammunition is not an artillery payload"),
         })
+    }
+
+    /// The ammunition that carries this payload.
+    pub fn ammunition(self) -> AmmunitionMode {
+        match self {
+            Self::Standard => AmmunitionMode::Normal,
+            Self::Cluster => AmmunitionMode::Cluster,
+            Self::Smoke => AmmunitionMode::Smoke,
+            Self::Mine => AmmunitionMode::Mine,
+        }
     }
 }
 
@@ -123,9 +132,9 @@ pub enum ArtilleryEffect {
         packet_size: u8,
         table: HitTable,
     },
-    Smoke {
-        seconds: u16,
-    },
+    /// Heavy smoke two levels high, lasting until the End Phase three turns after it is laid
+    /// (Tactical Operations: Advanced Units & Equipment p. 168).
+    Smoke,
     Mine {
         strength: u16,
     },
@@ -173,6 +182,11 @@ impl ArtilleryFlight {
         validate_coordinate(origin)?;
         validate_coordinate(target)?;
         ensure!(weapon.is_artillery(), "Invalid artillery weapon");
+        ensure!(
+            mode.ammunition().supports(weapon),
+            "{} cannot fire that payload",
+            weapon.name()
+        );
         ensure!(
             !matches!(outcome, ArtilleryOutcome::Scatter { hexes } if hexes > MAXIMUM_SCATTER),
             "Invalid artillery scatter"
@@ -277,55 +291,37 @@ impl ArtilleryFlight {
             });
         }
         let mut cells = Vec::new();
-        if self.mode == ArtilleryMode::Cluster {
-            let mut totals = BTreeMap::<(i32, i32), u16>::new();
-            // Two-point bomblets, as many as the cluster round's own damage value.
-            for _ in 0..cluster_bomblets(self.weapon) {
-                let x = cluster_axis(impact.x, dimensions.0, dice)?;
-                let y = cluster_axis(impact.y, dimensions.1, dice)?;
-                *totals.entry((x, y)).or_default() += 2;
-            }
-            for ((x, y), total) in totals {
-                cells.push(ArtilleryCell {
-                    position: HexCoordinate { x, y },
-                    direct: true,
-                    effect: ArtilleryEffect::Damage {
-                        total,
-                        packet_size: 2,
-                        table: HitTable::Punch,
-                    },
-                });
-            }
-        } else {
-            let rings = blast_rings(self.weapon);
-            let mut positions = vec![(impact, true, rings[0])];
-            if self.mode != ArtilleryMode::Mine {
-                for (radius, &damage) in rings.iter().enumerate().skip(1) {
-                    positions.extend(
-                        ring(impact, radius as u64, dimensions)
-                            .into_iter()
-                            .map(|cell| (cell, false, damage)),
-                    );
-                }
-            }
-            for (position, direct, total) in positions {
-                let effect = match self.mode {
-                    ArtilleryMode::Smoke => ArtilleryEffect::Smoke {
-                        seconds: 89 + dice.die(61)?,
-                    },
-                    ArtilleryMode::Mine => ArtilleryEffect::Mine { strength: total },
-                    _ => ArtilleryEffect::Damage {
-                        total,
-                        packet_size: 5,
-                        table: HitTable::Weapon,
-                    },
-                };
-                cells.push(ArtilleryCell {
-                    position,
-                    direct,
-                    effect,
-                });
-            }
+        let rings = match self.mode {
+            ArtilleryMode::Standard => blast_rings(self.weapon),
+            ArtilleryMode::Cluster => cluster_rings(self.weapon),
+            // Smoke fills the target hex and its neighbours for every piece (Tactical
+            // Operations: Advanced Rules p. 152); FASCAM lays only in the target hex.
+            ArtilleryMode::Smoke => vec![0, 0],
+            ArtilleryMode::Mine => vec![fascam_density(self.weapon)],
+        };
+        let mut positions = vec![(impact, true, rings[0])];
+        for (radius, &damage) in rings.iter().enumerate().skip(1) {
+            positions.extend(
+                ring(impact, radius as u64, dimensions)
+                    .into_iter()
+                    .map(|cell| (cell, false, damage)),
+            );
+        }
+        for (position, direct, total) in positions {
+            let effect = match self.mode {
+                ArtilleryMode::Smoke => ArtilleryEffect::Smoke,
+                ArtilleryMode::Mine => ArtilleryEffect::Mine { strength: total },
+                ArtilleryMode::Standard | ArtilleryMode::Cluster => ArtilleryEffect::Damage {
+                    total,
+                    packet_size: 5,
+                    table: HitTable::Weapon,
+                },
+            };
+            cells.push(ArtilleryCell {
+                position,
+                direct,
+                effect,
+            });
         }
         Ok(ArtilleryImpactPattern {
             target: self.target,
@@ -376,14 +372,25 @@ pub fn blast_rings(weapon: Weapon) -> Vec<u16> {
     }
 }
 
-/// Two-point bomblets a cluster round scatters: its damage value on the Artillery Ordnance
-/// Table (Tactical Operations p. 183), one bomblet per two points.
-pub fn cluster_bomblets(weapon: Weapon) -> u16 {
+/// Damage by distance from the impact hex for a cluster round, which works as a standard round
+/// with its own Damage Values (Tactical Operations: Advanced Rules p. 152; Advanced Units &
+/// Equipment p. 166). Only the Arrow IV and the tube artillery fire cluster rounds.
+pub fn cluster_rings(weapon: Weapon) -> Vec<u16> {
     match weapon {
-        Weapon::LongTom | Weapon::ArrowIv | Weapon::ClanArrowIv => 20,
-        Weapon::Sniper => 15,
-        Weapon::Thumper => 10,
-        other => u16::from(other.profile().damage),
+        Weapon::LongTom | Weapon::ArrowIv | Weapon::ClanArrowIv => vec![20, 10],
+        Weapon::Sniper => vec![15, 5],
+        _ => vec![10, 1],
+    }
+}
+
+/// Density of the conventional minefield a FASCAM round lays in its target hex (Tactical
+/// Operations: Advanced Rules p. 152): Long Tom 25, Clan Arrow IV 30, Sniper and Inner Sphere
+/// Arrow IV 20. The Inner Sphere Thumper has no FASCAM round.
+pub fn fascam_density(weapon: Weapon) -> u16 {
+    match weapon {
+        Weapon::LongTom => 25,
+        Weapon::ClanArrowIv => 30,
+        _ => 20,
     }
 }
 
@@ -415,26 +422,6 @@ fn contains((width, height): (u16, u16), position: HexCoordinate) -> bool {
     (0..i32::from(width)).contains(&position.x) && (0..i32::from(height)).contains(&position.y)
 }
 
-/// Sample the reference triangular scatter conditioned on map bounds, without an unbounded retry loop.
-fn cluster_axis(center: i32, size: u16, dice: &mut Dice) -> Result<i32> {
-    let candidates: Vec<_> = (-2_i32..=2)
-        .filter_map(|offset| {
-            let value = center + offset;
-            (0..i32::from(size))
-                .contains(&value)
-                .then_some((value, (3 - offset.abs()) as u16))
-        })
-        .collect();
-    let mut roll = dice.die(candidates.iter().map(|(_, weight)| weight).sum())?;
-    for (value, weight) in candidates {
-        if roll <= weight {
-            return Ok(value);
-        }
-        roll -= weight;
-    }
-    unreachable!("Weighted cluster roll must select an in-bounds coordinate")
-}
-
 /// Shared timing for queued shells and moving-target prediction, including sub-hex positions.
 pub(super) fn flight_seconds(origin: super::Point, target: super::Point) -> Result<u16> {
     let range = origin.range(target)? as f32;
@@ -456,9 +443,14 @@ mod tests {
         assert_eq!(blast_rings(Weapon::LongTomCannon), [20, 10]);
         assert_eq!(blast_rings(Weapon::SniperCannon), [10]);
         assert_eq!(blast_rings(Weapon::ThumperCannon), [5]);
-        assert_eq!(cluster_bomblets(Weapon::LongTom), 20);
-        assert_eq!(cluster_bomblets(Weapon::Sniper), 15);
-        assert_eq!(cluster_bomblets(Weapon::Thumper), 10);
+        assert_eq!(cluster_rings(Weapon::LongTom), [20, 10]);
+        assert_eq!(cluster_rings(Weapon::Sniper), [15, 5]);
+        assert_eq!(cluster_rings(Weapon::Thumper), [10, 1]);
+        assert_eq!(cluster_rings(Weapon::ClanArrowIv), [20, 10]);
+        assert_eq!(fascam_density(Weapon::LongTom), 25);
+        assert_eq!(fascam_density(Weapon::Sniper), 20);
+        assert_eq!(fascam_density(Weapon::ArrowIv), 20);
+        assert_eq!(fascam_density(Weapon::ClanArrowIv), 30);
     }
 
     /// The second ring holds the twelve cells two hexes out, clipped to the map.
@@ -470,26 +462,5 @@ mod tests {
         assert_eq!(outer.len(), 12);
         assert!(outer.iter().all(|cell| cell.distance(center) == 2));
         assert!(ring(HexCoordinate { x: 0, y: 0 }, 2, (2, 2)).is_empty());
-    }
-
-    /// Interior and clipped-edge samples preserve triangular rather than uniform placement weights.
-    #[test]
-    fn cluster_axis_weighting_survives_edge_conditioning() {
-        for (center, size, expected) in [(2, 5, vec![1, 2, 3, 2, 1]), (0, 3, vec![3, 2, 1])] {
-            let mut dice = Dice::seeded([42; 32]);
-            let mut counts = vec![0_u32; usize::from(size)];
-            let trials = 30_000;
-            for _ in 0..trials {
-                counts[cluster_axis(center, size, &mut dice).unwrap() as usize] += 1;
-            }
-            let total_weight: u32 = expected.iter().sum();
-            for (observed, weight) in counts.into_iter().zip(expected) {
-                let expected = trials * weight / total_weight;
-                assert!(
-                    observed.abs_diff(expected) < expected / 10,
-                    "{observed} versus {expected}"
-                );
-            }
-        }
     }
 }

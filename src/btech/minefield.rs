@@ -144,3 +144,10 @@ pub fn insert_minefield(world: &mut World, map: ObjectId, mine: Minefield) -> Re
     order.insert(0, ordinal);
     Ok(ordinal)
 }
+
+/// Whether a weapon laid this field: Thunder LRMs record the firing unit as its owner and
+/// artillery FASCAM records no one, while map and wizard fields are pre-designated (Tactical
+/// Operations: Advanced Rules p. 175).
+pub(super) fn weapon_delivered(world: &World, field: &Minefield) -> bool {
+    field.owner == ObjectId(0) || world.btech.unit(field.owner).is_some()
+}
