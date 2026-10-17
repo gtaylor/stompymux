@@ -1670,7 +1670,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         critical_penalty,
     } = packet;
     // Only a hit rolls for a hull breach, never an explosion or other internal damage.
-    let hit = direct_hit;
+    let rolls_hull = direct_hit;
     let damage_class =
         weapon_effect.map_or(super::DamageClass::Ordinary, WeaponEffect::damage_class);
     let mut initial_packet = true;
@@ -1861,7 +1861,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 context.kill_crew(had_pilot, CrewDeath::AreaEffect)?;
             }
         }
-        if hit && original && context.unit().sections()[&section].internal > 0 {
+        if rolls_hull && original && context.unit().sections()[&section].internal > 0 {
             context.check_hull_breach(section)?;
         }
         original = false;

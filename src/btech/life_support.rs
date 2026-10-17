@@ -94,6 +94,12 @@ fn advance(world: &mut World) -> Result<Vec<AirlessInjury>> {
 /// Apply the end-of-turn damage to MechWarriors submerged without life support, publishing
 /// notices, character injuries and casualties in one action.
 pub fn advance_life_support_action(scripts: &Scripts, config: &Config) -> Result<()> {
+    {
+        let world = scripts.world();
+        if !world.btech.turn_clock.starts_turn() || !pending(&world) {
+            return Ok(());
+        }
+    }
     scripts.atomic(|before| {
         let injuries = advance(&mut scripts.world_mut())?;
         for injury in &injuries {
