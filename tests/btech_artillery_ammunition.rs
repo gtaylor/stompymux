@@ -186,3 +186,46 @@ fn artillery_mount_payload_resolution_and_conflicts() {
         assert!(format!("{error:#}").contains("Conflicting artillery ammunition flags"));
     }
 }
+
+/// The shipped Arrow IV designs whose MegaMek records carry homing missiles construct as live
+/// units, with their homing bins (Tactical Operations: Advanced Units & Equipment p. 166).
+#[test]
+fn shipped_arrow_iv_designs_carry_homing_missiles() {
+    for (name, source) in [
+        ("CPLT-C5", include_str!("../game/units/CPLT-C5.toml")),
+        ("Chaparral", include_str!("../game/units/Chaparral.toml")),
+        (
+            "Demolisher-Arrow",
+            include_str!("../game/units/Demolisher-Arrow.toml"),
+        ),
+        ("Padilla", include_str!("../game/units/Padilla.toml")),
+        (
+            "Pilum-Arrow",
+            include_str!("../game/units/Pilum-Arrow.toml"),
+        ),
+        ("Schiltron", include_str!("../game/units/Schiltron.toml")),
+    ] {
+        let modes: Vec<_> = match UnitTemplate::parse(name, source).unwrap() {
+            UnitTemplate::Mech(template) => Mech::from_template(template)
+                .unwrap()
+                .loadout()
+                .unwrap()
+                .ammunition
+                .iter()
+                .filter(|bin| bin.weapon == Weapon::ArrowIv)
+                .map(|bin| bin.mode)
+                .collect(),
+            UnitTemplate::Vehicle(template) => Vehicle::new(template)
+                .unwrap()
+                .loadout()
+                .unwrap()
+                .ammunition
+                .iter()
+                .filter(|bin| bin.weapon == Weapon::ArrowIv)
+                .map(|bin| bin.mode)
+                .collect(),
+        };
+        assert!(modes.contains(&AmmunitionMode::Homing), "{name}");
+        assert!(modes.contains(&AmmunitionMode::Normal), "{name}");
+    }
+}
