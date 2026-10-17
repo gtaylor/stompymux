@@ -582,12 +582,13 @@ fn resolve_inner(
 }
 
 /// The rammer may not fire for the rest of the turn: every working weapon is held for one
-/// turn (Total Warfare p. 148).
+/// turn (Total Warfare p. 148). An anti-missile system engaging an incoming salvo makes no
+/// weapon attack (TW p. 129), so it stays ready to defend.
 fn tie_up_weapons(vehicle: &mut Vehicle) -> Result<()> {
     let loadout = vehicle.loadout()?;
     let seconds = super::physical::PHYSICAL_RECOVERY_SECONDS;
     for (index, mount) in loadout.weapons.iter().enumerate() {
-        if vehicle.critical_unavailable(mount.criticals[0]) {
+        if mount.weapon.is_ams() || vehicle.critical_unavailable(mount.criticals[0]) {
             continue;
         }
         let remaining = vehicle.weapon_recycle.entry(index).or_insert(0);
@@ -609,6 +610,29 @@ mod tests {
         ] {
             let vehicle = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
             assert_eq!(can_ram(&vehicle), rams);
+        }
+    }
+
+    /// A ram holds the rammer's weapons for the turn but leaves its anti-missile system free.
+    #[test]
+    fn rams_hold_weapons_but_not_anti_missile_systems() {
+        let source = include_str!("../../game/units/Goblin-58.toml");
+        let mut vehicle = Vehicle::new(VehicleTemplate::parse("test", source).unwrap()).unwrap();
+        tie_up_weapons(&mut vehicle).unwrap();
+        let loadout = vehicle.loadout().unwrap();
+        assert!(loadout.weapons.iter().any(|mount| mount.weapon.is_ams()));
+        for (index, mount) in loadout.weapons.iter().enumerate() {
+            let held = vehicle.weapon_recycle.get(&index).copied();
+            if mount.weapon.is_ams() {
+                assert_eq!(held, None, "{:?}", mount.weapon);
+            } else {
+                assert_eq!(
+                    held,
+                    Some(super::super::physical::PHYSICAL_RECOVERY_SECONDS),
+                    "{:?}",
+                    mount.weapon
+                );
+            }
         }
     }
 }

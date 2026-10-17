@@ -769,7 +769,7 @@ travelled to the target, on the Kick Location Table against a standing Mech, and
 target's tonnage over ten to the vehicle. After a hit each vehicle involved rolls on
 the Motive System Damage Table and a rammed Mech rolls at +2 to stay standing. A
 vehicle cannot ram in a turn it fired, and its weapons are held for thirty seconds
-afterwards (Total Warfare p. 148).
+afterwards (Total Warfare p. 148). Its anti-missile systems stay ready to defend.
 
 
 Use `jump #unit` for a death-from-above attack, or `jump` with no arguments to
