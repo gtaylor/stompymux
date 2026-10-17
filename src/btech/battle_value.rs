@@ -88,6 +88,26 @@ fn whole_mp(kph: f64) -> u32 {
     (kph / super::MP_KPH + 1e-6).floor().max(0.0) as u32
 }
 
+/// A 'Mech's Movement Heat: the heat of running or of jumping `jumping` MP, whichever is
+/// greater (TechManual p. 303). Running makes 2 heat; jumping makes 1 per MP with a minimum of
+/// 3, and improved jump jets 1 per 2 MP or part thereof, still at least 3 (Total Warfare
+/// p. 53). An XXL engine runs at 6 heat and doubles the heat per hex jumped, with a minimum of
+/// 6 a jump, while improved jets and the XXL engine cancel each other's per-hex modifiers
+/// (Tactical Operations: Advanced Units & Equipment p. 121); the XXL minimum of 6 still
+/// applies to that jump.
+fn movement_heat(jumping: u32, improved_jets: bool, xxl: bool) -> u32 {
+    let running = if xxl { 6 } else { 2 };
+    if jumping == 0 {
+        return running;
+    }
+    let per_hex = match (improved_jets, xxl) {
+        (true, true) | (false, false) => jumping,
+        (true, false) => jumping.div_ceil(2),
+        (false, true) => jumping * 2,
+    };
+    running.max(per_hex.max(if xxl { 6 } else { 3 }))
+}
+
 /// One offensive weapon after its BV modifiers, ready for the heat-efficiency ordering.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct ValuedWeapon {
@@ -597,7 +617,12 @@ impl Mech {
             envelope = envelope.with_walking_mp_delta(1.0);
         }
         let boosters = u8::from(self.masc_installed()?) + u8::from(self.supercharger_installed());
-        let running = whole_mp(envelope.with_boosters(boosters).running);
+        // Hardened armor costs a 'Mech one running MP, which the Defensive and Speed Factors
+        // count (Tactical Operations: Advanced Units & Equipment pp. 93, 193).
+        let hardened = u32::from(definition.has_technology(Technology::HardenedArmor));
+        let running = whole_mp(envelope.with_boosters(boosters).running)
+            .saturating_sub(hardened)
+            .max(whole_mp(envelope.walking));
         let jumping = whole_mp(definition.jump_speed);
         let stealth = self.has_stealth_armor()?;
         let ground = target_movement_modifier(running);
@@ -614,10 +639,14 @@ impl Mech {
         };
         let target_modifier = ground.max(jump) + concealment;
 
-        // Heat efficiency: 6 + heat dissipation - movement heat. Running makes 2 heat and
-        // jumping 1 per MP with a minimum of 3 (Total Warfare p. 159); stealth armor adds 10.
-        let jump_heat = if jumping > 0 { jumping.max(3) } else { 0 };
-        let movement_heat = f64::from(jump_heat.max(2)) + if stealth { 10.0 } else { 0.0 };
+        // Heat efficiency: 6 + heat dissipation - movement heat, the heat of running or of
+        // jumping at full capacity, whichever is greater (TechManual p. 303); stealth armor
+        // adds 10.
+        let movement_heat = f64::from(movement_heat(
+            jumping,
+            definition.has_special("ImprovedJJ_Tech"),
+            engine == Engine::Xxl,
+        )) + if stealth { 10.0 } else { 0.0 };
         let heat_efficiency = 6.0 + f64::from(definition.heat_dissipation()) - movement_heat;
 
         let offense = Offense::gather(
@@ -632,13 +661,18 @@ impl Mech {
                 _ => Arc::Forward,
             },
         );
+        // A biped's physical weapons sit in its arms; a quad's only one, the dual saw, in its
+        // side torsos (TechManual p. 243).
         let mut physical = 0.0;
-        if !quad {
-            for arm in [MechSection::LeftArm, MechSection::RightArm] {
-                for attack in ArmAttack::HAND_WEAPONS {
-                    if attack.system().is_some_and(|system| has(system, arm)) {
-                        physical += physical_weapon_value(attack, tons, triple_myomer);
-                    }
+        let mounts = if quad {
+            [MechSection::LeftTorso, MechSection::RightTorso]
+        } else {
+            [MechSection::LeftArm, MechSection::RightArm]
+        };
+        for mount in mounts {
+            for attack in ArmAttack::HAND_WEAPONS {
+                if attack.system().is_some_and(|system| has(system, mount)) {
+                    physical += physical_weapon_value(attack, tons, triple_myomer);
                 }
             }
         }
@@ -876,6 +910,24 @@ mod tests {
 
     fn weapon(value: f64, heat: f64) -> ValuedWeapon {
         ValuedWeapon { value, heat }
+    }
+
+    /// Movement Heat takes the hotter of running and jumping: improved jets halve the jump
+    /// heat, rounding up, at a minimum of 3 (Total Warfare p. 53); an XXL engine runs at 6 and
+    /// doubles the jump heat with a minimum of 6, and improved jets cancel the doubling
+    /// (Tactical Operations: Advanced Units & Equipment p. 121).
+    #[test]
+    fn movement_heat_follows_jets_and_engines() {
+        assert_eq!(movement_heat(0, false, false), 2);
+        assert_eq!(movement_heat(2, false, false), 3);
+        assert_eq!(movement_heat(8, false, false), 8);
+        assert_eq!(movement_heat(8, true, false), 4);
+        assert_eq!(movement_heat(5, true, false), 3);
+        assert_eq!(movement_heat(0, false, true), 6);
+        assert_eq!(movement_heat(2, false, true), 6);
+        assert_eq!(movement_heat(5, false, true), 10);
+        assert_eq!(movement_heat(8, true, true), 8);
+        assert_eq!(movement_heat(4, true, true), 6);
     }
 
     /// Every row of the TechManual p. 315 Speed Factor Table.

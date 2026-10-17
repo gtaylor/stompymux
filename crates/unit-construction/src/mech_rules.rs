@@ -39,8 +39,9 @@ fn contiguous(slots: &[super::CriticalLocation]) -> bool {
         .all(|pair| pair[0].section == pair[1].section && pair[0].slot + 1 == pair[1].slot)
 }
 
-/// Physical weapons: critical slots one item fills and the actuators its arm needs
-/// (TM pp. 220, 237; Tactical Operations: Advanced Units & Equipment melee weapons).
+/// Physical weapons: critical slots one item fills, the actuators its arm needs and whether a
+/// quad mounts it in a side torso (TM pp. 220, 237, 243, 249; Tactical Operations: Advanced
+/// Units & Equipment melee weapons).
 struct PhysicalWeapon {
     slots: usize,
     /// The arm needs shoulder, upper and lower arm actuators.
@@ -49,6 +50,8 @@ struct PhysicalWeapon {
     hand: bool,
     /// The weapon replaces the hand actuator, which the arm may not keep.
     replaces_hand: bool,
+    /// A quad mounts it in a side torso, one per location; otherwise quads mount none.
+    quad_side_torso: bool,
 }
 
 /// Construction facts of a physical weapon system, or `None` for other systems.
@@ -73,10 +76,13 @@ fn physical_weapon(system: System, tons: u16) -> Option<PhysicalWeapon> {
         System::Flail => (4, true, false, true),
         // Chain whip: two slots in an arm.
         System::ChainWhip => (2, false, false, false),
-        // Retractable blade: one slot plus one per twenty tons.
-        System::RetractableBlade => (per(20) + 1, false, false, false),
-        System::DualSaw => (7, false, false, false),
-        System::WreckingBall => (5, false, false, false),
+        // Retractable blade: one slot plus one per twenty tons, in an arm with shoulder, upper
+        // and lower arm actuators; it needs no hand actuator (TM p. 237).
+        System::RetractableBlade => (per(20) + 1, true, false, false),
+        // Dual saw: seven slots in an arm whose hand actuator it replaces (TM p. 243).
+        System::DualSaw => (7, false, false, true),
+        // Wrecking ball: five slots in an arm whose hand actuator it replaces (TM p. 249).
+        System::WreckingBall => (5, false, false, true),
         _ => return None,
     };
     Some(PhysicalWeapon {
@@ -84,6 +90,8 @@ fn physical_weapon(system: System, tons: u16) -> Option<PhysicalWeapon> {
         full_arm,
         hand,
         replaces_hand,
+        // A quad mounts a dual saw in a side torso (TM p. 243).
+        quad_side_torso: system == System::DualSaw,
     })
 }
 
@@ -306,6 +314,7 @@ impl MechTemplate {
         self.validate_physical_weapons(loadout, chassis)?;
         validate_talons_and_spikes(loadout, chassis)?;
         validate_machine_gun_arrays(loadout, chassis)?;
+        self.validate_installations(loadout, chassis)?;
         self.validate_cargo_bay(loadout)?;
         self.validate_weapon_mounting(loadout, chassis)?;
         self.validate_technology_base(loadout)?;
@@ -623,7 +632,8 @@ impl MechTemplate {
     }
 
     /// Physical weapons sit in biped arms with the actuators they need, one per location,
-    /// each filling its tonnage-dependent slot count (TM pp. 220, 237; Tactical Operations:
+    /// each filling its tonnage-dependent slot count; a quad mounts a dual saw in a side
+    /// torso and no other physical weapon (TM pp. 220, 237, 243, 249; Tactical Operations:
     /// Advanced Units & Equipment melee weapons).
     fn validate_physical_weapons(&self, loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
         let mut by_section: BTreeMap<MechSection, Vec<(System, usize)>> = BTreeMap::new();
@@ -639,21 +649,31 @@ impl MechTemplate {
         }
         for (section, items) in by_section {
             let name = chassis.section_name(section);
-            ensure!(
-                chassis == MechChassis::Biped
-                    && matches!(section, MechSection::LeftArm | MechSection::RightArm),
-                "Physical weapons may only be mounted in a biped's arms, not {name}"
-            );
             let [(system, slots)] = items.as_slice() else {
                 bail!("{name} mounts more than one physical weapon");
             };
             let weapon = physical_weapon(*system, self.tons).expect("filtered physical weapon");
+            if chassis == MechChassis::Quad {
+                ensure!(
+                    weapon.quad_side_torso
+                        && matches!(section, MechSection::LeftTorso | MechSection::RightTorso),
+                    "A quad mounts a dual saw in a side torso and no other physical weapon; {system:?} in {name} is refused (TM pp. 243, 249)"
+                );
+            } else {
+                ensure!(
+                    matches!(section, MechSection::LeftArm | MechSection::RightArm),
+                    "Physical weapons may only be mounted in a biped's arms, not {name}"
+                );
+            }
             ensure!(
                 *slots == weapon.slots,
                 "{system:?} on a {}-ton Mech fills {} critical slots; found {slots}",
                 self.tons,
                 weapon.slots
             );
+            if chassis == MechChassis::Quad {
+                continue;
+            }
             let actuator = |system| {
                 loadout
                     .systems
@@ -675,6 +695,86 @@ impl MechTemplate {
                 !weapon.replaces_hand || !actuator(System::HandOrFootActuator),
                 "{system:?} replaces the hand actuator in {name}"
             );
+        }
+        Ok(())
+    }
+
+    /// Multi-slot electronics fill their whole slot count as one item, in contiguous slots of
+    /// one location (TM p. 45): the Guardian ECM suite and Beagle probe two slots (their Clan
+    /// counterparts one, the Watchdog suite two), the C3 master five, C3i two, Bloodhound
+    /// three (TM pp. 341-343) and the Angel ECM suite two (Tactical Operations: Advanced Units &
+    /// Equipment p. 217). The null-signature system fills one slot in every location but the
+    /// head (ibid. p. 148).
+    fn validate_installations(&self, loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
+        let clan = self.has_special("Clan");
+        let context = super::SystemContext {
+            clan,
+            watchdog: self.has_technology(super::Technology::Watchdog),
+            tons: self.tons,
+            engine_rating: 0,
+            legs: if chassis == MechChassis::Quad { 4 } else { 2 },
+        };
+        // Slots of each electronic system by location and technology base.
+        let mut runs: BTreeMap<(MechSection, System, bool), Vec<u8>> = BTreeMap::new();
+        for part in &loadout.systems {
+            if !matches!(
+                part.system,
+                System::BeagleProbe
+                    | System::Ecm
+                    | System::AngelEcm
+                    | System::C3Master
+                    | System::C3i
+                    | System::BloodhoundProbe
+            ) {
+                continue;
+            }
+            runs.entry((part.location.section, part.system, part.is_clan(clan)))
+                .or_default()
+                .push(part.location.slot);
+        }
+        for ((section, system, clan), mut slots) in runs {
+            let size = system
+                .installation_slots(super::SystemContext { clan, ..context })
+                .unwrap_or(1);
+            slots.sort_unstable();
+            // Contiguous runs, each a whole number of installations.
+            let mut run = 1;
+            for (index, slot) in slots.iter().enumerate() {
+                let ends = slots.get(index + 1).is_none_or(|next| *next != slot + 1);
+                if !ends {
+                    run += 1;
+                    continue;
+                }
+                ensure!(
+                    run % size == 0,
+                    "{system:?} fills {size} contiguous critical slots per installation; {} holds a run of {run} (TM p. 45)",
+                    chassis.section_name(section)
+                );
+                run = 1;
+            }
+        }
+        let null_signature = |section| {
+            loadout
+                .systems
+                .iter()
+                .filter(|part| {
+                    part.system == System::NullSignature && part.location.section == section
+                })
+                .count()
+        };
+        if MechSection::ALL
+            .into_iter()
+            .any(|section| null_signature(section) > 0)
+        {
+            for section in MechSection::ALL {
+                let expected = usize::from(section != MechSection::Head);
+                ensure!(
+                    null_signature(section) == expected,
+                    "The null-signature system fills one critical slot in every location but the head; {} has {} (Tactical Operations: Advanced Units & Equipment p. 148)",
+                    chassis.section_name(section),
+                    null_signature(section)
+                );
+            }
         }
         Ok(())
     }
@@ -1116,6 +1216,136 @@ mod tests {
                 1,
             ),
             "Inner Sphere CASE may only be mounted in torso locations",
+        );
+    }
+
+    /// A Jenner with `entry` added to its left torso.
+    fn with_left_torso(entry: &str) -> String {
+        JENNER.replace(
+            "    { at = \"1-2\", item = \"JumpJet\" },\n]",
+            &format!("    {{ at = \"1-2\", item = \"JumpJet\" }},\n{entry}]"),
+        )
+    }
+
+    /// Multi-slot electronics fill their whole slot count as one item in contiguous slots of
+    /// one location (TM pp. 45, 341-343), and the null-signature system one slot in every
+    /// location but the head (Tactical Operations: Advanced Units & Equipment p. 148).
+    #[test]
+    fn multi_slot_electronics_are_complete_installations() {
+        let entry = |at: &str, item: &str| format!("    {{ at = {at}, item = \"{item}\" }},\n");
+        refused(
+            &with_left_torso(&entry("3", "BeagleProbe")),
+            "BeagleProbe fills 2 contiguous critical slots per installation; Left_Torso holds a run of 1",
+        );
+        refused(
+            &with_left_torso(&format!(
+                "{}{}",
+                entry("3", "BeagleProbe"),
+                entry("5", "BeagleProbe")
+            )),
+            "a run of 1",
+        );
+        refused(
+            &with_left_torso(&entry("\"3-6\"", "C3Master")),
+            "C3Master fills 5 contiguous critical slots per installation; Left_Torso holds a run of 4",
+        );
+        refused(
+            &with_left_torso(&entry("\"3-4\"", "BloodhoundProbe")),
+            "BloodhoundProbe fills 3 contiguous critical slots",
+        );
+        // Complete installations pass this rule and stop at the mass.
+        for (at, item) in [
+            ("\"3-4\"", "BeagleProbe"),
+            ("\"3-6\"", "Ecm"),
+            ("\"3-5\"", "BloodhoundProbe"),
+        ] {
+            let rejection = rejection(&with_left_torso(&entry(at, item))).unwrap_or_default();
+            assert!(
+                !rejection.contains("per installation"),
+                "{item}: {rejection}"
+            );
+            assert!(
+                rejection.contains("over the 35-ton chassis"),
+                "{item}: {rejection}"
+            );
+        }
+        // The Clan active probe is a one-slot item.
+        let mixed = with_left_torso(&entry("3", "CL.BeagleProbe")).replacen(
+            "[construction]\n",
+            "[construction]\nmixed_tech = true\n",
+            1,
+        );
+        let rejection = rejection(&mixed).unwrap_or_default();
+        assert!(!rejection.contains("per installation"), "{rejection}");
+        refused(
+            &with_left_torso(&entry("3", "NullSig_Device")),
+            "The null-signature system fills one critical slot in every location but the head; Left_Arm has 0",
+        );
+    }
+
+    /// The Jenner's right arm with `omit` and `slots` in place of its own.
+    fn right_arm(omit: &str, slots: &str) -> String {
+        JENNER.replace(
+            "[sections.right_arm]\narmor = 4\nomit = [\"lower_actuator\", \"hand_actuator\"]\nslots = [\n    { at = \"3-4\", item = \"IS.MediumLaser\" },\n]",
+            &format!("[sections.right_arm]\narmor = 4\n{omit}slots = [\n{slots}]"),
+        )
+    }
+
+    /// A retractable blade needs shoulder, upper and lower arm actuators but no hand (TM
+    /// p. 237); a dual saw and a wrecking ball replace the hand actuator of the arm they sit
+    /// in (TM pp. 243, 249).
+    #[test]
+    fn melee_weapons_need_their_arm_actuators() {
+        let blade = "    { at = \"5-7\", item = \"Retractable_Blade\" },\n";
+        refused(
+            &right_arm("omit = [\"lower_actuator\", \"hand_actuator\"]\n", blade),
+            "RetractableBlade needs shoulder, upper and lower arm actuators in Right_Arm",
+        );
+        let bladed =
+            rejection(&right_arm("omit = [\"hand_actuator\"]\n", blade)).unwrap_or_default();
+        assert!(!bladed.contains("actuator"), "{bladed}");
+        for (item, system, at) in [
+            ("Dual_Saw", "DualSaw", "\"5-11\""),
+            ("Wrecking_Ball", "WreckingBall", "\"5-9\""),
+        ] {
+            let entry = format!("    {{ at = {at}, item = \"{item}\" }},\n");
+            refused(
+                &right_arm("", &entry),
+                &format!("{system} replaces the hand actuator in Right_Arm"),
+            );
+            let handless =
+                rejection(&right_arm("omit = [\"hand_actuator\"]\n", &entry)).unwrap_or_default();
+            assert!(!handless.contains("actuator"), "{item}: {handless}");
+        }
+    }
+
+    /// A quad mounts a dual saw in a side torso and no other physical weapon (TM pp. 243,
+    /// 249).
+    #[test]
+    fn quads_mount_dual_saws_in_their_side_torsos() {
+        let quad = JENNER
+            .replace("movement = \"biped\"", "movement = \"quad\"")
+            .replace("[sections.left_arm]", "[sections.front_left_leg]")
+            .replace("[sections.right_arm]", "[sections.front_right_leg]")
+            .replace("[sections.left_leg]", "[sections.rear_left_leg]")
+            .replace("[sections.right_leg]", "[sections.rear_right_leg]")
+            .replace("omit = [\"lower_actuator\", \"hand_actuator\"]\n", "")
+            .replace(
+                "{ at = \"3-4\", item = \"IS.MediumLaser\" }",
+                "{ at = \"5-6\", item = \"IS.MediumLaser\" }",
+            );
+        let saw = |item: &str, at: &str| {
+            quad.replace(
+                "    { at = \"1-2\", item = \"JumpJet\" },\n]",
+                &format!("    {{ at = \"1-2\", item = \"JumpJet\" }},\n    {{ at = {at}, item = \"{item}\" }},\n]"),
+            )
+        };
+        let rejection = rejection(&saw("Dual_Saw", "\"3-9\"")).unwrap_or_default();
+        assert!(!rejection.contains("physical weapon"), "{rejection}");
+        assert!(rejection.contains("over the 35-ton chassis"), "{rejection}");
+        refused(
+            &saw("Wrecking_Ball", "\"3-7\""),
+            "A quad mounts a dual saw in a side torso and no other physical weapon",
         );
     }
 

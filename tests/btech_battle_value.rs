@@ -104,6 +104,32 @@ fn clan_battle_value() {
     assert!((value.defensive - 962.975).abs() < 0.005, "{value:?}");
 }
 
+/// Hardened armor costs a 'Mech one running MP, which its Defensive and Speed Factors count
+/// (Tactical Operations: Advanced Units & Equipment pp. 93, 193): the Jenner runs at 10 rather
+/// than 11, so its Speed Factor falls from 2.16 (11 MP plus half its 5 jumping MP) to 2.02.
+/// Its weapons and heat are unchanged.
+#[test]
+fn hardened_armor_costs_a_running_mp() {
+    let plain = unit(JENNER).battle_value().unwrap();
+    let hardened = MechTemplate::parse(
+        "JR7-D",
+        &JENNER.replacen(
+            "[construction]\n",
+            "[construction]\narmor = \"hardened\"\n",
+            1,
+        ),
+    )
+    .unwrap();
+    let hardened = Mech::from_template(crate::support::templates::legal(hardened))
+        .unwrap()
+        .battle_value()
+        .unwrap();
+    assert!(
+        (hardened.offensive - plain.offensive / 2.16 * 2.02).abs() < 0.01,
+        "{plain:?} {hardened:?}"
+    );
+}
+
 /// CASE comes with Clan internal structure (TechManual p. 210), so a mixed-technology Jenner
 /// built on Clan structure loses its side-torso ammunition penalty: fifteen points times the
 /// Defensive Factor of 1.4.

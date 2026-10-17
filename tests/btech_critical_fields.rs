@@ -205,8 +205,13 @@ async fn secondary_status_projects_matrix(index: usize, source: &str) {
     let mut fields = Fields::new(&config, world.clone());
     fields.verify(world.clone(), id, "status2", "-").await;
     let section = if index < 2 { "LeftTorso" } else { "front" };
+    // A Mech's Guardian ECM suite fills two slots, a vehicle's one item (TechManual p. 342).
+    let guardian: &[u8] = if index < 2 { &[10, 11] } else { &[10] };
     firing::edit(&mut world, id, |unit| {
-        for (slot, part) in [(6, "AngelEcm"), (7, "AngelEcm"), (10, "Ecm")] {
+        for (slot, part) in [(6, "AngelEcm"), (7, "AngelEcm")]
+            .into_iter()
+            .chain(guardian.iter().map(|&slot| (slot, "Ecm")))
+        {
             unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
                 serde_json::json!({"equipment":part,"data":"-","modes":[]});
         }
@@ -264,43 +269,66 @@ async fn secondary_status_projects_matrix(index: usize, source: &str) {
     ] {
         let mut candidate = world.clone();
         firing::edit(&mut candidate, id, |unit| {
-            // Make room in the quad's full center torso without losing ammunition.
-            if index == 1 && state == "null_signature" {
-                let bin = unit["definition"]["sections"]["CenterTorso"]["criticals"]
-                    .as_object_mut()
-                    .unwrap()
-                    .remove("11")
-                    .unwrap();
-                unit["definition"]["sections"]["RightTorso"]["criticals"]["10"] = bin;
-            }
-            for section in [
-                "LeftArm",
-                "RightArm",
-                "LeftTorso",
-                "RightTorso",
-                "LeftLeg",
-                "RightLeg",
-                "CenterTorso",
-            ] {
-                if state == "stealth" && section == "CenterTorso" {
-                    continue;
-                }
-                let first = if section.ends_with("Leg") || (index == 1 && section.ends_with("Arm"))
-                {
-                    4
-                } else if state == "stealth" {
-                    8
-                } else {
-                    11
-                };
-                for slot in first..first + if state == "stealth" { 2 } else { 1 } {
-                    unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
-                        serde_json::json!({"equipment":equipment,"data":"-","modes":[]});
+            if state == "null_signature" {
+                install_null_signature(unit, index, 5);
+            } else {
+                for section in [
+                    "LeftArm",
+                    "RightArm",
+                    "LeftTorso",
+                    "RightTorso",
+                    "LeftLeg",
+                    "RightLeg",
+                ] {
+                    let first =
+                        if section.ends_with("Leg") || (index == 1 && section.ends_with("Arm")) {
+                            4
+                        } else {
+                            8
+                        };
+                    for slot in first..first + 2 {
+                        unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
+                            serde_json::json!({"equipment":equipment,"data":"-","modes":[]});
+                    }
                 }
             }
             unit[state]["enabled"] = true.into();
         });
         fields.verify(candidate, id, "status2", expected).await;
+    }
+}
+
+/// Install a Mech's null-signature system, one slot in every location but the head (Tactical
+/// Operations: Advanced Units & Equipment p. 148), the left torso's at `left_torso`. `index`
+/// is the chassis shard: the quad's arms are legs, and its full center torso moves a bin into
+/// the right torso to make room.
+fn install_null_signature(unit: &mut serde_json::Value, index: usize, left_torso: u8) {
+    if index == 1 {
+        let bin = unit["definition"]["sections"]["CenterTorso"]["criticals"]
+            .as_object_mut()
+            .unwrap()
+            .remove("11")
+            .unwrap();
+        unit["definition"]["sections"]["RightTorso"]["criticals"]["10"] = bin;
+    }
+    for section in [
+        "LeftArm",
+        "RightArm",
+        "LeftTorso",
+        "RightTorso",
+        "LeftLeg",
+        "RightLeg",
+        "CenterTorso",
+    ] {
+        let slot = if section.ends_with("Leg") || (index == 1 && section.ends_with("Arm")) {
+            4
+        } else if section == "LeftTorso" {
+            left_torso
+        } else {
+            11
+        };
+        unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
+            serde_json::json!({"equipment":"NullSig_Device","data":"-","modes":[]});
     }
 }
 
@@ -468,6 +496,10 @@ async fn primary_critical_fields_share_equipment_matrix(index: usize, source: &s
     let mut fields = Fields::new(&config, world.clone());
     fields.verify(world.clone(), id, "critstatus", "-").await;
     let section = if index < 2 { "LeftTorso" } else { "front" };
+    // A Mech's Guardian ECM suite and Beagle probe fill two slots, a vehicle's one item
+    // (TechManual pp. 341-343).
+    let mech = index < 2;
+    let pair = if mech { 2 } else { 1 };
     for (equipment, slots, expected) in [
         ("TAG", 1, "c"),
         ("AngelEcm", 2, "h"),
@@ -475,12 +507,16 @@ async fn primary_critical_fields_share_equipment_matrix(index: usize, source: &s
         ("NullSig_Device", 1, "j"),
         ("TargetingComputer", 1, "s"),
         ("C3Slave", 1, "t"),
-        ("Ecm", 1, "u"),
-        ("BeagleProbe", 1, "v"),
+        ("Ecm", pair, "u"),
+        ("BeagleProbe", pair, "v"),
         ("BloodhoundProbe", 3, "D"),
     ] {
         let mut candidate = world.clone();
         firing::edit(&mut candidate, id, |unit| {
+            if mech && equipment == "NullSig_Device" {
+                install_null_signature(unit, index, 8);
+                return;
+            }
             for slot in 8..8 + slots {
                 unit["definition"]["sections"][section]["criticals"][slot.to_string()] =
                     serde_json::json!({"equipment":equipment,"data":"-","modes":[]});

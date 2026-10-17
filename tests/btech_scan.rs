@@ -4059,13 +4059,16 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     for _ in 0..5 {
         let _ = advance_battle_units(&mut world, 0, true);
     }
-    // Fit a Beagle probe and give the suite a short-band sweep, which a ridge does not stop
-    // for the probe (Tactical Operations double-blind rules).
+    // Fit a Beagle probe, two slots (TechManual p. 342), and give the suite a short-band
+    // sweep, which a ridge does not stop for the probe (Tactical Operations double-blind
+    // rules).
     world
         .btech
         .rewrite_unit_record(source, |record| {
-            record["definition"]["sections"]["LeftTorso"]["criticals"]["8"] =
-                serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
+            for slot in ["8", "9"] {
+                record["definition"]["sections"]["LeftTorso"]["criticals"][slot] =
+                    serde_json::json!({"equipment":"BeagleProbe","data":"-","modes":[]});
+            }
             record["sensor_sweep"] = serde_json::json!(7);
             crate::support::templates::book_legal_record(record);
         })

@@ -91,35 +91,41 @@ async fn field_with_equipment(
                     );
             }
         }
+        // The Beagle probe and the Guardian ECM suite each fill two slots (TechManual
+        // pp. 341-343).
         if probes.contains(&i) {
-            template
-                .sections
-                .get_mut(&MechSection::RightArm)
-                .unwrap()
-                .criticals
-                .insert(
-                    8,
-                    CriticalDefinition {
-                        equipment: "BeagleProbe".into(),
-                        data: "-".into(),
-                        modes: vec![],
-                    },
-                );
+            for slot in [8, 9] {
+                template
+                    .sections
+                    .get_mut(&MechSection::RightArm)
+                    .unwrap()
+                    .criticals
+                    .insert(
+                        slot,
+                        CriticalDefinition {
+                            equipment: "BeagleProbe".into(),
+                            data: "-".into(),
+                            modes: vec![],
+                        },
+                    );
+            }
         }
         if i == 6 {
-            template
-                .sections
-                .get_mut(&MechSection::LeftArm)
-                .unwrap()
-                .criticals
-                .insert(
-                    10,
-                    CriticalDefinition {
-                        equipment: "Ecm".into(),
-                        data: "-".into(),
-                        modes: vec![],
-                    },
-                );
+            for slot in [10, 11] {
+                template
+                    .sections
+                    .get_mut(&MechSection::LeftArm)
+                    .unwrap()
+                    .criticals
+                    .insert(
+                        slot,
+                        CriticalDefinition {
+                            equipment: "Ecm".into(),
+                            data: "-".into(),
+                            modes: vec![],
+                        },
+                    );
+            }
         }
         let id = world.create(&config, format!("Network unit {i}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));

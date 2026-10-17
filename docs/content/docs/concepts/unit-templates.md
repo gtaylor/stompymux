@@ -165,7 +165,16 @@ checks:
 - Hatchets, swords, maces, claws, lances and the other melee weapons sit in biped
   arms with the actuators they need, one per arm, at their tonnage-dependent slot
   counts (TechManual pp. 220, 237; Tactical Operations: Advanced Units &
-  Equipment).
+  Equipment). A retractable blade needs shoulder, upper and lower arm actuators;
+  a dual saw or wrecking ball replaces the arm's hand actuator; a quad mounts a
+  dual saw in a side torso and no other melee weapon (TechManual pp. 237, 243,
+  249).
+- Multi-slot electronics fill their whole slot count in contiguous slots of one
+  location: the Guardian ECM suite and Beagle probe two (their Clan counterparts
+  one, the Watchdog suite two), the Angel ECM suite and C3i two, the Bloodhound
+  probe three and the C3 master five. The null-signature system fills one slot in
+  every location but the head (TechManual pp. 45, 341-343; TacOps AUE pp. 148,
+  217).
 - Artemis IV serves every standard LRM, SRM and MML launcher from its location or
   none, each controller linked to its own launcher (see [Slots](#slots)), and a
   unit carries Artemis IV or Artemis V, never both (TacOps AUE p. 94); Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
