@@ -996,12 +996,29 @@ fire. Without that lock, your observer supplies the target even when you give
 `fire` an explicit target ID.
 
 For artillery, your observer must select a visible hex. The observer must remain
-running, friendly, conscious and on your battlefield. Artillery uses the observer's
-hex and indirect aim, even if you can also see that hex. Clear any unit target lock
-before firing artillery. Retargeting the observer resets accumulated correction.
-Artillery reach follows Tactical Operations (p. 149): Arrow IV 8 mapsheets (Clan 9),
-Thumper 21, Sniper 18 and Long Tom 30, at seventeen hexes per mapsheet. Artillery
-cannons are direct-fire weapons with ordinary hex ranges.
+running, friendly, conscious and on your battlefield. Artillery fires at the
+observer's hex. Clear any unit target lock before firing artillery. Retargeting the
+observer resets accumulated correction. Artillery reach follows Tactical Operations
+(p. 149): Arrow IV 8 mapsheets (Clan 9), Thumper 21, Sniper 18 and Long Tom 30, at
+seventeen hexes per mapsheet; a hex beyond it cannot be fired at.
+
+Artillery you fire at a hex you can see within seventeen hexes is direct fire
+(Tactical Operations p. 153): your artillery gunnery +4, plus your movement, heat,
+sensor and actuator damage and the woods or smoke you fire through, with no range
+or target modifiers. Direct fire cannot be made at a hex within six hexes. A
+direct-fire miss scatters 1D6 hexes. Every other artillery shot is indirect
+(pp. 148-150): gunnery +7, plus your observer's spotting modifier, less one for
+each corrected miss, plus your movement when the hex lies within seventeen hexes.
+An indirect miss scatters one hex for each point it missed by. A miss scatters in
+a direction rolled on one die, clockwise from north; a round that scatters off the
+map lands harmlessly. Once one of your rounds strikes its target hex, every later
+shot you fire at that hex hits it automatically, until you move, turn or jump.
+
+Artillery cannons are ballistic weapons that deal artillery damage (Tactical
+Operations: Advanced Units & Equipment p. 97): one that sees its hex aims with its
+own range brackets and minimum range and no hex bonus, and a miss scatters half the
+margin it missed by, rounded up, never farther than the target lay. A cannon's
+round deals its damage in the target hex and ten less in each ring around it.
 
 Use `lock x y` to select coordinates, or append H (hex), B (building), I (ignite),
 or C (clear). Coordinate locks take effect at once, even outside visibility.
@@ -1015,9 +1032,10 @@ smoke add nothing, since a hex does not stand in itself. Artillery always fires
 at the selected hex and arrives after a flight delay, applying its ammunition
 payload to the area.
 Without a spotter, artillery may still fire at a hex you cannot see (Tactical
-Operations p. 148), but that fire cannot be adjusted: a miss earns trajectory
-correction only while a friendly unit can see the target hex. Underground,
-artillery fired at your locked hex needs an observer or your own sight of it.
+Operations p. 148), with no extra modifier, but that fire cannot be adjusted: a
+miss earns trajectory correction only while a friendly unit can see the target hex.
+Underground, artillery fired at your locked hex needs an observer or your own sight
+of it.
 
 
 Crossing into a mined hex, landing or falling can trigger its mines. Conventional

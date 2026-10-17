@@ -153,6 +153,9 @@ pub struct Mech {
     /// Saved correction for the current artillery target.
     #[serde(default)]
     pub(super) artillery_adjustment: u8,
+    /// Hexes this unit's artillery has struck since it last moved.
+    #[serde(default)]
+    pub(super) artillery_registration: super::ArtilleryRegistration,
     /// Owned TAG selection and lock/recycle countdown.
     #[serde(default)]
     pub(super) tag: super::TagState,
@@ -383,6 +386,7 @@ super::saved_parts::saved_parts!(Mech {
         visibility,
         spotter,
         artillery_adjustment,
+        artillery_registration,
         tag,
         null_signature,
         stealth,
@@ -964,6 +968,7 @@ impl Mech {
             physical_assault_time: None,
             section_fire: Default::default(),
             artillery_adjustment: 0,
+            artillery_registration: Default::default(),
             signature: Default::default(),
             scanner_perception: super::scanner::default_perception(),
             sensor_sweep: None,
@@ -1231,6 +1236,7 @@ impl Mech {
         self.overheat_clock.validate()?;
         self.stagger.validate()?;
         self.tag.validate()?;
+        self.artillery_registration.validate()?;
         ensure!(
             self.spotter.is_none_or(|id| id.0 > 0),
             "Invalid spotter identity"

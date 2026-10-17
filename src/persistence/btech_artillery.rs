@@ -5,8 +5,8 @@
 use super::btech_deadlines::Clock;
 use super::write::{Cell, Fields, Rows, purge_rows, sync_changed_rows};
 use crate::{
-    ArtilleryFlight, ArtilleryMode, ArtilleryShot, HexCoordinate, ObjectId, StoredMap, Weapon,
-    World,
+    ArtilleryFlight, ArtilleryMode, ArtilleryOutcome, ArtilleryShot, HexCoordinate, ObjectId,
+    StoredMap, Weapon, World,
 };
 use anyhow::{Context, Result, bail};
 use sqlx::{Row, SqliteConnection, sqlite::SqliteRow};
@@ -21,7 +21,7 @@ const COLUMNS: &[&str] = &[
     "target_y",
     "weapon_part_id",
     "mode",
-    "hit",
+    "scatter",
     "arrives_at",
 ];
 
@@ -46,6 +46,27 @@ fn mode_from_code(code: i64) -> Result<ArtilleryMode> {
     })
 }
 
+/// Stored code for where a round lands: 0 on its aim point, a positive number of hexes for a
+/// scatter fixed at launch, -1 for a direct-fire miss that rolls its distance on arrival.
+fn outcome_code(outcome: ArtilleryOutcome) -> i64 {
+    match outcome {
+        ArtilleryOutcome::Hit => 0,
+        ArtilleryOutcome::Scatter { hexes } => i64::from(hexes),
+        ArtilleryOutcome::DirectMiss => -1,
+    }
+}
+
+/// Landing for a stored code.
+fn outcome_from_code(code: i64) -> Result<ArtilleryOutcome> {
+    Ok(match code {
+        0 => ArtilleryOutcome::Hit,
+        -1 => ArtilleryOutcome::DirectMiss,
+        hexes => ArtilleryOutcome::Scatter {
+            hexes: u16::try_from(hexes).context("Invalid artillery scatter")?,
+        },
+    })
+}
+
 /// Owned column values for one shot, relative to the saved clock.
 fn encode(shot: &ArtilleryShot, clock: Clock) -> Fields {
     let flight = &shot.flight;
@@ -60,7 +81,7 @@ fn encode(shot: &ArtilleryShot, clock: Clock) -> Fields {
             Cell::Integer(i64::from(flight.weapon().part_id())),
         ),
         ("mode", Cell::Integer(mode_code(flight.mode()))),
-        ("hit", Cell::Integer(i64::from(flight.hit()))),
+        ("scatter", Cell::Integer(outcome_code(flight.outcome()))),
         ("arrives_at", clock.deadline(flight.remaining())),
     ])
 }
@@ -85,7 +106,7 @@ fn decode(entry: &SqliteRow, clock: Clock) -> Result<ArtilleryShot> {
             coordinate("target_x", "target_y")?,
             weapon,
             mode_from_code(entry.try_get("mode")?)?,
-            entry.try_get("hit")?,
+            outcome_from_code(entry.try_get("scatter")?)?,
             clock.remaining(entry.try_get("arrives_at")?, i64::from(u16::MAX))?,
         )?,
     })

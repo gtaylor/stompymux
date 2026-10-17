@@ -1,5 +1,5 @@
 //! Restartable artillery flight and impact patterns, independent of weapon admission and damage application.
-use super::{AmmunitionMode, Dice, HexCoordinate, HitTable, Weapon};
+use super::{AmmunitionMode, ArtilleryFire, Dice, HexCoordinate, HitTable, Weapon};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -27,6 +27,54 @@ impl ArtilleryMode {
     }
 }
 
+/// Where a launched round is headed: its aim point, or a scatter from it. A miss scatters in a
+/// direction rolled on the Scatter Diagram when the round lands (Tactical Operations: Advanced
+/// Rules p. 150).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArtilleryOutcome {
+    /// The round strikes its aim point.
+    Hit,
+    /// The round missed and lands this many hexes from its aim point: the margin of failure
+    /// for indirect fire (p. 150), half of it for an artillery cannon (Tactical Operations:
+    /// Advanced Units & Equipment p. 97).
+    Scatter { hexes: u16 },
+    /// A direct-fire round missed and lands 1D6 hexes away, rolled on arrival (Tactical
+    /// Operations: Advanced Rules p. 153).
+    DirectMiss,
+}
+
+impl ArtilleryOutcome {
+    /// The outcome of a launch roll. Indirect fire scatters one hex per point it missed by; a
+    /// cannon half that, rounding up, but never farther than its target lay.
+    pub fn of_launch(
+        fire: ArtilleryFire,
+        hit: bool,
+        target_number: i32,
+        roll: u8,
+        hexes_to_target: u64,
+    ) -> Self {
+        if hit {
+            return Self::Hit;
+        }
+        let margin = u16::try_from((target_number - i32::from(roll)).max(1)).unwrap_or(u16::MAX);
+        match fire {
+            ArtilleryFire::Direct => Self::DirectMiss,
+            ArtilleryFire::Indirect => Self::Scatter { hexes: margin },
+            ArtilleryFire::Cannon => Self::Scatter {
+                hexes: margin
+                    .div_ceil(2)
+                    .min(u16::try_from(hexes_to_target).unwrap_or(u16::MAX)),
+            },
+        }
+    }
+
+    /// Whether the round strikes its aim point.
+    pub fn is_hit(self) -> bool {
+        self == Self::Hit
+    }
+}
+
 /// Owned launch facts and a committed-second countdown. Impact randomness is drawn only on arrival.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "FlightRecord")]
@@ -35,7 +83,7 @@ pub struct ArtilleryFlight {
     target: HexCoordinate,
     weapon: Weapon,
     mode: ArtilleryMode,
-    hit: bool,
+    outcome: ArtilleryOutcome,
     remaining: u16,
 }
 
@@ -47,7 +95,7 @@ struct FlightRecord {
     target: HexCoordinate,
     weapon: Weapon,
     mode: ArtilleryMode,
-    hit: bool,
+    outcome: ArtilleryOutcome,
     remaining: u16,
 }
 
@@ -60,7 +108,7 @@ impl TryFrom<FlightRecord> for ArtilleryFlight {
             record.target,
             record.weapon,
             record.mode,
-            record.hit,
+            record.outcome,
             record.remaining,
         )
     }
@@ -96,6 +144,8 @@ pub struct ArtilleryCell {
 #[must_use = "Apply impact effects and publish feedback in the same transaction as the flight and dice"]
 pub struct ArtilleryImpactPattern {
     pub target: HexCoordinate,
+    /// Where the round came down. A round that scatters off the battlefield lands there,
+    /// outside the map, and affects nothing.
     pub impact: HexCoordinate,
     /// A failed attack can scatter back into its original target hex and still permits adjustment.
     pub missed: bool,
@@ -118,18 +168,22 @@ impl ArtilleryFlight {
         target: HexCoordinate,
         weapon: Weapon,
         mode: ArtilleryMode,
-        hit: bool,
+        outcome: ArtilleryOutcome,
     ) -> Result<Self> {
         validate_coordinate(origin)?;
         validate_coordinate(target)?;
         ensure!(weapon.is_artillery(), "Invalid artillery weapon");
+        ensure!(
+            !matches!(outcome, ArtilleryOutcome::Scatter { hexes } if hexes > MAXIMUM_SCATTER),
+            "Invalid artillery scatter"
+        );
         let remaining = flight_seconds(origin.center(), target.center())?;
         Ok(Self {
             origin,
             target,
             weapon,
             mode,
-            hit,
+            outcome,
             remaining,
         })
     }
@@ -140,18 +194,18 @@ impl ArtilleryFlight {
         target: HexCoordinate,
         weapon: Weapon,
         mode: ArtilleryMode,
-        hit: bool,
+        outcome: ArtilleryOutcome,
         remaining: u16,
     ) -> Result<Self> {
-        let mut flight = Self::new(origin, target, weapon, mode, hit)?;
+        let mut flight = Self::new(origin, target, weapon, mode, outcome)?;
         ensure!(remaining <= flight.remaining, "Invalid artillery countdown");
         flight.remaining = remaining;
         Ok(flight)
     }
 
-    /// Whether the launch hit its aim point; misses scatter on arrival.
-    pub(crate) fn hit(&self) -> bool {
-        self.hit
+    /// Whether the launch hit its aim point, or how far it scatters on arrival.
+    pub fn outcome(&self) -> ArtilleryOutcome {
+        self.outcome
     }
 
     /// Weapon identity is retained through arrival and supplies catalogue damage.
@@ -179,12 +233,11 @@ impl ArtilleryFlight {
         self.remaining
     }
 
-    /// Advance one second using the impact map's current bounds and wind strength.
+    /// Advance one second using the impact map's current bounds.
     /// Failed validation leaves the countdown and random stream unchanged; completed flights cannot repeat.
     pub fn advance(
         &mut self,
         dimensions: (u16, u16),
-        wind_speed: u16,
         dice: &mut Dice,
     ) -> Result<Option<ArtilleryImpactPattern>> {
         ensure!(self.remaining > 0, "Artillery flight has already arrived");
@@ -192,10 +245,6 @@ impl ArtilleryFlight {
         ensure!(
             (1..=1000).contains(&width) && (1..=1000).contains(&height),
             "Invalid artillery map dimensions"
-        );
-        ensure!(
-            wind_speed <= i16::MAX as u16,
-            "Invalid artillery wind speed"
         );
         ensure!(
             contains(dimensions, self.target),
@@ -206,30 +255,26 @@ impl ArtilleryFlight {
             return Ok(None);
         }
         let mut candidate = dice.clone();
-        let pattern = self.pattern(dimensions, wind_speed, &mut candidate)?;
+        let pattern = self.pattern(dimensions, &mut candidate)?;
         self.remaining = 0;
         *dice = candidate;
         Ok(Some(pattern))
     }
 
     /// Resolve arrival randomness into a bounded effect list without modifying the world.
-    fn pattern(
-        &self,
-        dimensions: (u16, u16),
-        wind_speed: u16,
-        dice: &mut Dice,
-    ) -> Result<ArtilleryImpactPattern> {
-        let mut impact = self.target;
-        if !self.hit {
-            let angle = f32::from(dice.die(360)? - 1) * std::f32::consts::PI / 180.0;
-            let distance = u32::from(dice.die(6)? + 1);
-            let wind = u32::from(wind_speed);
-            let weight = 100 * distance * 6 / (distance * 6 + wind);
-            let distance = ((distance * weight + wind / 6 * (100 - weight)) / 100) as f32;
-            impact.x =
-                (impact.x + (distance * angle.cos()) as i32).clamp(0, i32::from(dimensions.0) - 1);
-            impact.y =
-                (impact.y + (distance * angle.sin()) as i32).clamp(0, i32::from(dimensions.1) - 1);
+    fn pattern(&self, dimensions: (u16, u16), dice: &mut Dice) -> Result<ArtilleryImpactPattern> {
+        let impact = match self.outcome {
+            ArtilleryOutcome::Hit => self.target,
+            ArtilleryOutcome::Scatter { hexes } => scatter(self.target, dice, |_| Ok(hexes))?,
+            ArtilleryOutcome::DirectMiss => scatter(self.target, dice, |dice| dice.die(6))?,
+        };
+        if !contains(dimensions, impact) {
+            return Ok(ArtilleryImpactPattern {
+                target: self.target,
+                impact,
+                missed: true,
+                cells: Vec::new(),
+            });
         }
         let mut cells = Vec::new();
         if self.mode == ArtilleryMode::Cluster {
@@ -285,15 +330,36 @@ impl ArtilleryFlight {
         Ok(ArtilleryImpactPattern {
             target: self.target,
             impact,
-            missed: !self.hit,
+            missed: !self.outcome.is_hit(),
             cells,
         })
     }
 }
 
+/// Farthest a round may be recorded to scatter: past the far corner of the largest map.
+const MAXIMUM_SCATTER: u16 = 2000;
+
+/// Walk a missed round from its aim point. One die picks the hexside on the Scatter Diagram,
+/// numbered clockwise from the map's north edge (Tactical Operations: Advanced Rules p. 150),
+/// then `distance` gives how many hexes it travels that way.
+fn scatter(
+    target: HexCoordinate,
+    dice: &mut Dice,
+    distance: impl FnOnce(&mut Dice) -> Result<u16>,
+) -> Result<HexCoordinate> {
+    let hexside = usize::from(dice.die(6)? - 1);
+    let mut impact = target;
+    for _ in 0..distance(dice)? {
+        impact = impact.neighbors()?[hexside];
+    }
+    Ok(impact)
+}
+
 /// Damage by distance from the impact hex for a high-explosive round, from the Artillery
-/// Ordnance Table (Tactical Operations p. 183): the Long Tom reaches two hexes out, the
-/// others one. Artillery cannons and other tubes halve their damage in the adjacent hexes.
+/// Ordnance Table (Tactical Operations: Advanced Rules p. 152): the Long Tom reaches two hexes
+/// out, the others one. An artillery cannon deals its Damage Value in the target hex and ten
+/// less for each hex beyond (Tactical Operations: Advanced Units & Equipment p. 97; Advanced
+/// Rules p. 150), so only the Long Tom cannon reaches the adjacent hexes.
 pub fn blast_rings(weapon: Weapon) -> Vec<u16> {
     match weapon {
         Weapon::LongTom => vec![25, 15, 5],
@@ -302,7 +368,10 @@ pub fn blast_rings(weapon: Weapon) -> Vec<u16> {
         Weapon::ArrowIv | Weapon::ClanArrowIv => vec![20, 10],
         other => {
             let damage = u16::from(other.profile().damage);
-            vec![damage, damage / 2]
+            (0..)
+                .map(|ring| damage.saturating_sub(ring * 10))
+                .take_while(|damage| *damage > 0)
+                .collect()
         }
     }
 }
@@ -385,6 +454,8 @@ mod tests {
         assert_eq!(blast_rings(Weapon::ArrowIv), [20, 10]);
         assert_eq!(blast_rings(Weapon::ClanArrowIv), [20, 10]);
         assert_eq!(blast_rings(Weapon::LongTomCannon), [20, 10]);
+        assert_eq!(blast_rings(Weapon::SniperCannon), [10]);
+        assert_eq!(blast_rings(Weapon::ThumperCannon), [5]);
         assert_eq!(cluster_bomblets(Weapon::LongTom), 20);
         assert_eq!(cluster_bomblets(Weapon::Sniper), 15);
         assert_eq!(cluster_bomblets(Weapon::Thumper), 10);

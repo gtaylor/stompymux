@@ -51,8 +51,10 @@ impl Weapon {
             distance.is_finite() && distance >= 0.0,
             "Invalid weapon range"
         );
+        // Artillery cannons aim as ballistic weapons with hex ranges (Tactical Operations:
+        // Advanced Units & Equipment p. 97); indirect artillery has its own aim rules.
         ensure!(
-            !self.is_artillery(),
+            !self.is_indirect_artillery(),
             "Artillery requires artillery aim rules"
         );
         let mut profile = self.profile_for_ammunition(ammunition);

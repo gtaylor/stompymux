@@ -165,6 +165,15 @@ pub fn advance_artillery_action(
                     super::notify_unit(scripts, notice.clone())?;
                 }
                 report.notices.extend(notices);
+                // A piece that strikes its target hex hits it automatically from then on
+                // (Tactical Operations: Advanced Rules p. 150); artillery cannons do not.
+                if !report.pattern.missed && flight.weapon().is_indirect_artillery() {
+                    super::artillery_registration::register(
+                        &mut scripts.world.borrow_mut(),
+                        source.unit,
+                        report.pattern.target,
+                    );
+                }
             }
             let mut world = scripts.world.borrow_mut();
             let record = world

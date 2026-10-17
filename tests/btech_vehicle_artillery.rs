@@ -56,7 +56,8 @@ fn rules() -> FallRules {
 /// Stop just before arrival so persisted replay includes the map's pattern dice.
 fn approaching(world: &mut World, map: ObjectId, mode: ArtilleryMode) -> ArtilleryFlight {
     let center = HexCoordinate { x: 1, y: 1 };
-    let mut flight = ArtilleryFlight::new(center, center, Weapon::LongTom, mode, true).unwrap();
+    let mut flight =
+        ArtilleryFlight::new(center, center, Weapon::LongTom, mode, ArtilleryOutcome::Hit).unwrap();
     for _ in 0..9 {
         assert!(
             advance_artillery_flight(world, map, &mut flight, rules())

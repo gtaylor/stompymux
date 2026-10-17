@@ -3,11 +3,12 @@ pub mod btech;
 pub use btech::insert_minefield;
 pub use btech::view_map_action as view_battle_map_action;
 pub use btech::{
-    ArtilleryAim, ArtilleryAimInput, ArtilleryObserver, ArtilleryRange,
-    unit_artillery_gunnery_target,
+    ArtilleryAim, ArtilleryAimInput, ArtilleryFire, ArtilleryObserver, ArtilleryRange,
+    DIRECT_ARTILLERY_MINIMUM_RANGE, DIRECT_ARTILLERY_RANGE, unit_artillery_gunnery_target,
 };
 pub use btech::{
     ArtilleryCell, ArtilleryEffect, ArtilleryFlight, ArtilleryImpactPattern, ArtilleryMode,
+    ArtilleryOutcome, ArtilleryRegistration,
 };
 pub use btech::{
     ArtilleryHit, ArtilleryImpactReport, advance_artillery_flight, advance_artillery_flight_action,

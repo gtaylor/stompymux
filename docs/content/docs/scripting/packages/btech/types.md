@@ -1078,9 +1078,11 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 
 ## ArtilleryAim
 
-- `target_number`: `integer` — Out-of-range and underwater aims keep the reference's impossible target numbers.
+- `target_number`: `integer` — Out-of-range, underwater and too-close aims keep impossible target numbers.
 - `maximum_range`: `integer`
-- `range`: `"in_range"|"out_of_range"|"underwater"`
+- `range`: `"in_range"|"out_of_range"|"underwater"|"inside_minimum"` — Only an in-range shot may be fired.
+- `fire`: `"direct"|"indirect"|"cannon"` — A direct-fire miss scatters 1D6 hexes, an indirect one its margin of failure, a cannon's half of it.
+- `automatic`: `boolean` — The hex is registered, so the shot hits without a roll.
 
 ## VehicleInternalDamage
 

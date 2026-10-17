@@ -29,13 +29,23 @@ async fn fixture(
     target: &str,
     artillery: bool,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
+    fixture_rows(observer, target, artillery, 5).await
+}
+
+/// The fixture on a field `rows` hexes long, with the observer on the second-last row.
+async fn fixture_rows(
+    observer: &str,
+    target: &str,
+    artillery: bool,
+    rows: u16,
+) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Visibility field".into(), Kind::Room);
     create_battle_map(
         &mut world,
         map,
         "visibility",
-        MapAsset::from_cells("1 5\n.0\n.0\n.0\n.0\n.0\n").unwrap(),
+        MapAsset::from_cells(&format!("1 {rows}\n{}", ".0\n".repeat(usize::from(rows)))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
@@ -51,7 +61,14 @@ async fn fixture(
         .create(&mut world, id)
         .unwrap();
         support::seed_object_dice(&mut world, id, support::FIXTURE_DICE_SEED);
-        place_battle_unit(&mut world, id, map, 0, if index == 0 { 3 } else { 0 }).unwrap();
+        place_battle_unit(
+            &mut world,
+            id,
+            map,
+            0,
+            if index == 0 { i64::from(rows) - 2 } else { 0 },
+        )
+        .unwrap();
         edit(&mut world, id, |state| {
             state["power"] = serde_json::to_value(Power::Running).unwrap();
             state["dice"] = serde_json::to_value(Dice::seeded([19; 32])).unwrap();
@@ -183,7 +200,10 @@ async fn special_round_controls_share_chassis_transactions_and_restart() {
 #[tokio::test]
 async fn artillery_cluster_controls_feed_real_launches() {
     for source in templates() {
-        let (_dir, config, world, shooter, _) = fixture(&source, &templates()[0], true).await;
+        // Far enough that the shot at the second row is indirect (Tactical Operations:
+        // Advanced Rules p. 147).
+        let (_dir, config, world, shooter, _) =
+            fixture_rows(&source, &templates()[0], true, 22).await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let call = format!("btech.unit.firecluster({},1,0)", shooter.0);
         assert_eq!(

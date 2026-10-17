@@ -60,22 +60,26 @@ pub(super) fn advance(
     let mut cursor = flight.clone();
     let record = candidate.btech.maps.get_mut(&map).unwrap();
     let dimensions = (u16::try_from(record.width)?, u16::try_from(record.height)?);
-    let wind = u16::try_from(record.wind_speed)?;
     let dice = record
         .fire_dice
         .as_mut()
         .context("Map random stream is unavailable")?;
-    let Some(pattern) = cursor.advance(dimensions, wind, dice)? else {
+    let Some(pattern) = cursor.advance(dimensions, dice)? else {
         *flight = cursor;
         return Ok(None);
     };
-    let notices = super::artillery_feedback::arrival_notices(
-        &candidate,
-        map,
-        cursor.weapon(),
-        cursor.mode(),
-        pattern.impact,
-    )?;
+    // A round that scattered off the battlefield lands unseen.
+    let notices = if pattern.cells.is_empty() {
+        Vec::new()
+    } else {
+        super::artillery_feedback::arrival_notices(
+            &candidate,
+            map,
+            cursor.weapon(),
+            cursor.mode(),
+            pattern.impact,
+        )?
+    };
     let origin = cursor.origin();
     let mut report = ArtilleryImpactReport {
         map,
@@ -153,13 +157,13 @@ fn deposit_mine(
 }
 
 /// Damage lost for every level above or below the shell's burst in its own hex (Tactical
-/// Operations p. 183).
+/// Operations: Advanced Rules p. 150).
 const VERTICAL_FALLOFF: u16 = 10;
 
 /// Freeze each occupant's blast arc before ordered packets. The shell bursts on the ground of
-/// its hex and strikes from the direction of the gun (Tactical Operations p. 183); in the
-/// impact hex alone the blast also climbs and sinks, losing ten points a level, while the
-/// outer rings reach only units standing on the ground.
+/// its hex and strikes from the direction of the gun (Tactical Operations: Advanced Rules
+/// p. 150); in the impact hex alone the blast also climbs and sinks, losing ten points a level,
+/// while the outer rings reach only units standing on the ground.
 #[allow(clippy::too_many_arguments)]
 fn hit_cell(
     world: &mut World,

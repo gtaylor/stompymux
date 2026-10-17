@@ -197,8 +197,10 @@ impl Weapon {
     }
 
     /// Supported indirect-fire launchers with selectable hotloading; disposable rockets cannot switch.
+    /// Hot-loading arms missiles (Tactical Operations: Advanced Rules p. 100), so artillery
+    /// cannons, which are ballistic weapons (Advanced Units & Equipment p. 97), cannot.
     pub fn supports_hotload(self) -> bool {
-        self.is_artillery() || (self.supports_indirect_fire() && !self.is_rocket())
+        self.is_indirect_artillery() || (self.supports_indirect_fire() && !self.is_rocket())
     }
 
     /// Supported missile profiles carrying indirect-fire capability, including disposable rockets.

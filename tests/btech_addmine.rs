@@ -282,7 +282,7 @@ async fn artillery_mines_precede_existing_records_without_replacing_them() {
             coordinate,
             Weapon::Thumper,
             ArtilleryMode::Mine,
-            true,
+            ArtilleryOutcome::Hit,
         )
         .unwrap();
         let mut arrival = None;

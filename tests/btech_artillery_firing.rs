@@ -2,6 +2,11 @@
 use crate::support;
 use stompymux_rs::*;
 
+/// Where the platform and its observer stand: more than seventeen hexes from the first rows,
+/// so fire at them is indirect even though the hexes are in sight (Tactical Operations:
+/// Advanced Rules p. 147).
+const POST: HexCoordinate = HexCoordinate { x: 1, y: 21 };
+
 /// A running artillery platform and friendly observer on an open field.
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
     fixture_source(flags, include_str!("fixtures/btech/units/JR7-D.toml")).await
@@ -18,7 +23,7 @@ async fn fixture_source(
         &mut world,
         map,
         "artillery.map",
-        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+        MapAsset::from_cells(&format!("3 22\n{}", ".0.0.0\n".repeat(22))).unwrap(),
     )
     .unwrap();
     let mut template = MechTemplate::parse("test", source).unwrap();
@@ -66,7 +71,7 @@ async fn fixture_source(
             crate::support::templates::legal(template.clone()),
         )
         .unwrap();
-        place_battle_unit(&mut world, id, map, 1, 1).unwrap();
+        place_battle_unit(&mut world, id, map, POST.x.into(), POST.y.into()).unwrap();
         world.objects.get_mut(&pilot).unwrap().location = Some(id);
         assign_battle_pilot(&mut world, id, pilot).unwrap();
         start_battle_unit(&mut world, id, pilot, true).unwrap();
@@ -461,7 +466,7 @@ async fn artillery_cluster_rejects_other_payloads_and_weapons() {
 #[tokio::test]
 async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
     let (_dir, config, mut world, map, shooter, _) = fixture(&[]).await;
-    let center = HexCoordinate { x: 1, y: 1 };
+    let center = POST;
     enqueue_artillery(
         &mut world,
         map,
@@ -471,7 +476,7 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
             center,
             Weapon::ThumperCannon,
             ArtilleryMode::Smoke,
-            true,
+            ArtilleryOutcome::Hit,
         )
         .unwrap(),
     )
@@ -528,7 +533,8 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
     );
 }
 
-/// Observed artillery uses the observer's hex and indirect skill even for a visible hex behind the launcher.
+/// Observed artillery fires at the observer's hex; beyond seventeen hexes that fire is indirect
+/// even though the launcher sees the hex.
 #[tokio::test]
 async fn artillery_observed_launch_and_link_revalidation() {
     let (_dir, config, mut world, map, shooter, index) = fixture(&["Smoke"]).await;
@@ -933,7 +939,7 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
         )
         .unwrap();
         support::seed_object_dice(&mut world, observer, support::FIXTURE_DICE_SEED);
-        place_battle_unit(&mut world, observer, map, 2, 1).unwrap();
+        place_battle_unit(&mut world, observer, map, 2, POST.y.into()).unwrap();
         world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(observer);
         assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
@@ -1009,4 +1015,192 @@ async fn artillery_fires_after_radio_observer_connection() {
             4
         );
     }
+}
+
+/// Give the shooter's connected pilot an artillery skill that cannot miss an indirect shot.
+fn sharpshooter(world: &mut World) {
+    world
+        .objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .flags
+        .insert(Flag::Connected);
+    set_battle_character(
+        world,
+        ObjectId(1),
+        Character {
+            build: 5,
+            reflexes: 4,
+            intuition: 3,
+            learn: 2,
+            charisma: 1,
+            bruise: 0,
+            lethal: 0,
+        },
+    )
+    .unwrap();
+    set_battle_character_value(
+        world,
+        ObjectId(1),
+        "Gunnery-Artillery",
+        CharacterValue {
+            value: 20,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
+}
+
+/// A launcher that sees a hex within seventeen hexes fires at it directly: Gunnery +4 rather
+/// than the indirect +7, and never at a hex within six hexes (Tactical Operations: Advanced
+/// Rules p. 153). A direct-fire miss lands within six hexes of the aim point.
+#[tokio::test]
+async fn artillery_fires_directly_at_visible_hexes_within_seventeen_hexes() {
+    let (_dir, config, mut world, map, shooter, index) = fixture(&[]).await;
+    let gunnery = unit_artillery_gunnery_target(&world, shooter).unwrap();
+    let aim = |world: &World, y: i32| {
+        let mut world = world.clone();
+        select_battle_hex_target(
+            &mut world,
+            shooter,
+            ObjectId(1),
+            HexCoordinate { x: 1, y },
+            HexTargetMode::Hex,
+        )
+        .unwrap();
+        let scripts =
+            Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+        scripts.eval_callback::<(i32, String)>(&format!(
+            "local r=btech.unit.sight({},1,{index}); return r.aim.target_number,r.aim.range",
+            shooter.0
+        ))
+    };
+    // Seventeen hexes away is direct fire; eighteen is indirect.
+    assert_eq!(
+        aim(&world, POST.y - 17).unwrap(),
+        (i32::from(gunnery) + 4, "in_range".into())
+    );
+    assert_eq!(
+        aim(&world, POST.y - 18).unwrap(),
+        (i32::from(gunnery) + 7, "in_range".into())
+    );
+    assert_eq!(aim(&world, POST.y - 6).unwrap().1, "inside_minimum");
+    select_battle_hex_target(
+        &mut world,
+        shooter,
+        ObjectId(1),
+        HexCoordinate {
+            x: 1,
+            y: POST.y - 6,
+        },
+        HexTargetMode::Hex,
+    )
+    .unwrap();
+    let before = world.btech.clone();
+    let scripts = Scripts::new(
+        &config,
+        std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
+    )
+    .unwrap();
+    let error = scripts
+        .eval_callback::<()>(&format!("btech.unit.fire({},1,{index})", shooter.0))
+        .unwrap_err();
+    assert!(format!("{error:#}").contains("too close"), "{error:#}");
+    assert_eq!(scripts.world().btech, before);
+    // A miss from direct fire scatters 1D6 hexes, not its margin of failure.
+    let target = HexCoordinate {
+        x: 1,
+        y: POST.y - 10,
+    };
+    select_battle_hex_target(&mut world, shooter, ObjectId(1), target, HexTargetMode::Hex).unwrap();
+    let seed = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+        .unwrap();
+    world
+        .btech
+        .set_unit_dice(shooter, Dice::seeded([seed; 32]))
+        .unwrap();
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let hit: bool = scripts
+        .eval_callback(&format!(
+            "return btech.unit.fire({},1,{index}).hit",
+            shooter.0
+        ))
+        .unwrap();
+    assert!(!hit);
+    let flight = scripts.world().btech.maps()[&map].artillery_shots()[&0]
+        .flight
+        .clone();
+    assert_eq!(flight.outcome(), ArtilleryOutcome::DirectMiss);
+    let arrival = loop {
+        if let Some(report) = advance_artillery_action(&scripts, &config, rules())
+            .unwrap()
+            .pop()
+        {
+            break report;
+        }
+    };
+    assert!(arrival.pattern.missed);
+    assert!((1..=6).contains(&arrival.pattern.impact.distance(target)));
+}
+
+/// A piece that strikes its target hex hits it automatically from then on, until it spends MP
+/// (Tactical Operations: Advanced Rules p. 150).
+#[tokio::test]
+async fn artillery_hits_a_struck_hex_automatically_until_it_moves() {
+    let (_dir, config, mut world, map, shooter, index) = fixture(&[]).await;
+    sharpshooter(&mut world);
+    let target = HexCoordinate { x: 1, y: 0 };
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let fire = |scripts: &Scripts| -> (bool, bool) {
+        scripts
+            .eval_callback(&format!(
+                "local r=btech.unit.fire({},1,{index}); return r.hit,r.aim.automatic",
+                shooter.0
+            ))
+            .unwrap()
+    };
+    assert_eq!(fire(&scripts), (true, false));
+    // The round has not landed yet, so nothing is registered.
+    assert!(
+        scripts.world().btech.constructed_units()[&shooter]
+            .artillery_registration()
+            .hexes()
+            .is_empty()
+    );
+    while !scripts.world().btech.maps()[&map]
+        .artillery_shots()
+        .is_empty()
+    {
+        advance_artillery_action(&scripts, &config, rules()).unwrap();
+    }
+    assert_eq!(
+        scripts.world().btech.constructed_units()[&shooter]
+            .artillery_registration()
+            .hexes(),
+        [target]
+    );
+    let mut ready = scripts.world().clone();
+    for _ in 0..60 {
+        advance_battle_recycle(&mut ready);
+    }
+    let mut world = ready.clone();
+    advance_battle_units(&mut world, 0, true);
+    let next = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    assert_eq!(fire(&next), (true, true));
+    // Moving off costs the registration.
+    let mut world = ready;
+    world
+        .btech
+        .edit_unit_motion(shooter, |motion| motion.speed = 10.0)
+        .unwrap();
+    advance_battle_units(&mut world, 0, true);
+    assert!(
+        world.btech.constructed_units()[&shooter]
+            .artillery_registration()
+            .hexes()
+            .is_empty()
+    );
+    world.validate(&config).unwrap();
 }

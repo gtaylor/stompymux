@@ -6506,7 +6506,7 @@ async fn artillery_world_damage_and_restart() {
         center,
         Weapon::LongTom,
         ArtilleryMode::Standard,
-        true,
+        ArtilleryOutcome::Hit,
     )
     .unwrap();
     let before = world.btech.clone();
@@ -6580,7 +6580,9 @@ async fn artillery_world_smoke_and_mines() {
         ArtilleryMode::Mine,
         ArtilleryMode::Mine,
     ] {
-        let mut flight = ArtilleryFlight::new(center, center, Weapon::LongTom, mode, true).unwrap();
+        let mut flight =
+            ArtilleryFlight::new(center, center, Weapon::LongTom, mode, ArtilleryOutcome::Hit)
+                .unwrap();
         let mut report = None;
         for _ in 0..10 {
             report = advance_artillery_flight(&mut world, map, &mut flight, rules()).unwrap();
@@ -6663,7 +6665,7 @@ async fn artillery_character_arrival_is_atomic() {
         center,
         Weapon::Thumper,
         ArtilleryMode::Standard,
-        true,
+        ArtilleryOutcome::Hit,
     )
     .unwrap();
     for _ in 0..9 {
@@ -6727,7 +6729,7 @@ async fn artillery_blast_height_limits() {
             center,
             Weapon::LongTom,
             ArtilleryMode::Standard,
-            true,
+            ArtilleryOutcome::Hit,
         )
         .unwrap();
         let mut report = None;
@@ -6782,7 +6784,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
         center,
         Weapon::LongTom,
         ArtilleryMode::Cluster,
-        true,
+        ArtilleryOutcome::Hit,
     )
     .unwrap();
     for _ in 0..9 {
@@ -6846,7 +6848,9 @@ async fn artillery_queue_order_and_database_replay() {
         .into_iter()
         .enumerate()
     {
-        let flight = ArtilleryFlight::new(center, center, Weapon::LongTom, mode, true).unwrap();
+        let flight =
+            ArtilleryFlight::new(center, center, Weapon::LongTom, mode, ArtilleryOutcome::Hit)
+                .unwrap();
         assert_eq!(
             enqueue_artillery(&mut world, map, units[0], flight).unwrap(),
             index as u32
@@ -6939,7 +6943,8 @@ async fn artillery_queue_late_arrival_rolls_back_all_shots() {
             &mut world,
             map,
             units[0],
-            ArtilleryFlight::new(center, center, Weapon::Thumper, mode, true).unwrap(),
+            ArtilleryFlight::new(center, center, Weapon::Thumper, mode, ArtilleryOutcome::Hit)
+                .unwrap(),
         )
         .unwrap();
     }
@@ -6974,7 +6979,7 @@ async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
             stop_battle_unit(&mut world, unit, pilot).unwrap();
         }
         let center = HexCoordinate { x: 1, y: 1 };
-        enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap()).unwrap();
+        enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, ArtilleryOutcome::Hit).unwrap()).unwrap();
         let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         for _ in 0..7 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
         let world_snapshot = scripts.world().clone();
@@ -7002,7 +7007,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
                 assert_eq!(world.btech.constructed_units()[&unit].power(), Power::Off);
             }
             let center = HexCoordinate { x: 1, y: 1 };
-        enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap()).unwrap();
+        enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, ArtilleryOutcome::Hit).unwrap()).unwrap();
         let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         for _ in 0..9 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
         let before = scripts.world().clone();
@@ -7030,7 +7035,14 @@ async fn artillery_queue_rejects_corrupt_saved_cursor() {
         &mut world,
         map,
         units[0],
-        ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap(),
+        ArtilleryFlight::new(
+            center,
+            center,
+            Weapon::LongTom,
+            ArtilleryMode::Mine,
+            ArtilleryOutcome::Hit,
+        )
+        .unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
