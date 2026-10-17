@@ -90,15 +90,6 @@ pub fn resolve_fall(
     resolve_fall_inner(world, id, i32::from(levels), rules, false)
 }
 
-/// Zero-multiplier falls still change posture, roll pilot protection and apply immersion.
-pub(super) fn resolve_zero_fall(
-    world: &mut World,
-    id: ObjectId,
-    rules: FallRules,
-) -> Result<MechFallReport> {
-    resolve_fall_inner(world, id, 0, rules, false)
-}
-
 /// Reverse uphill crashes can have a negative protection modifier and no structural damage.
 pub(super) fn resolve_signed_fall(
     world: &mut World,
