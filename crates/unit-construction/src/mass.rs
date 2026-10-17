@@ -77,6 +77,9 @@ pub fn system_slot_mass(definition: &super::MechTemplate, system: System, clan: 
             u32::from(definition.tons.div_ceil(15)) * 1024 / (2 * legs)
         }
         System::Spikes => 512,
+        // A ton of communications equipment to each slot (TechManual p. 212); a lift hoist's
+        // three tons over its three slots (TechManual p. 344).
+        System::CommunicationsEquipment | System::LiftHoist => 1024,
         System::MachineGunArray => {
             if clan {
                 256
@@ -106,6 +109,8 @@ pub fn system_mass(
     let (item_mass, item_slots) = match system {
         System::BloodhoundProbe => (2048, 3),
         System::WreckingBall => (4096, 5),
+        // A backhoe weighs five tons over six slots (TechManual p. 344).
+        System::Backhoe => (5120, 6),
         System::Sword => (
             u32::from(definition.tons.div_ceil(10)) * 512,
             u32::from(definition.tons.div_ceil(15)),

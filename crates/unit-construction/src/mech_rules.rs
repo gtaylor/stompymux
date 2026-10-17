@@ -83,6 +83,8 @@ fn physical_weapon(system: System, tons: u16) -> Option<PhysicalWeapon> {
         System::DualSaw => (7, false, false, true),
         // Wrecking ball: five slots in an arm whose hand actuator it replaces (TM p. 249).
         System::WreckingBall => (5, false, false, true),
+        // Backhoe: six slots in an arm whose hand actuator it replaces (TM pp. 241, 344).
+        System::Backhoe => (6, false, false, true),
         _ => return None,
     };
     Some(PhysicalWeapon {
@@ -90,8 +92,8 @@ fn physical_weapon(system: System, tons: u16) -> Option<PhysicalWeapon> {
         full_arm,
         hand,
         replaces_hand,
-        // A quad mounts a dual saw in a side torso (TM p. 243).
-        quad_side_torso: system == System::DualSaw,
+        // A quad mounts a dual saw or a backhoe in a side torso (TM pp. 241, 243).
+        quad_side_torso: matches!(system, System::DualSaw | System::Backhoe),
     })
 }
 
@@ -632,9 +634,9 @@ impl MechTemplate {
     }
 
     /// Physical weapons sit in biped arms with the actuators they need, one per location,
-    /// each filling its tonnage-dependent slot count; a quad mounts a dual saw in a side
-    /// torso and no other physical weapon (TM pp. 220, 237, 243, 249; Tactical Operations:
-    /// Advanced Units & Equipment melee weapons).
+    /// each filling its tonnage-dependent slot count; a quad mounts a dual saw or backhoe in a
+    /// side torso and no other physical weapon (TM pp. 220, 237, 241, 243, 249; Tactical
+    /// Operations: Advanced Units & Equipment melee weapons).
     fn validate_physical_weapons(&self, loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
         let mut by_section: BTreeMap<MechSection, Vec<(System, usize)>> = BTreeMap::new();
         for part in &loadout.systems {
@@ -657,7 +659,7 @@ impl MechTemplate {
                 ensure!(
                     weapon.quad_side_torso
                         && matches!(section, MechSection::LeftTorso | MechSection::RightTorso),
-                    "A quad mounts a dual saw in a side torso and no other physical weapon; {system:?} in {name} is refused (TM pp. 243, 249)"
+                    "A quad mounts a dual saw or backhoe in a side torso and no other physical weapon; {system:?} in {name} is refused (TM pp. 241, 243, 249)"
                 );
             } else {
                 ensure!(
@@ -702,9 +704,10 @@ impl MechTemplate {
     /// Multi-slot electronics fill their whole slot count as one item, in contiguous slots of
     /// one location (TM p. 45): the Guardian ECM suite and Beagle probe two slots (their Clan
     /// counterparts one, the Watchdog suite two), the C3 master five, C3i two, Bloodhound
-    /// three (TM pp. 341-343) and the Angel ECM suite two (Tactical Operations: Advanced Units &
-    /// Equipment p. 217). The null-signature system fills one slot in every location but the
-    /// head (ibid. p. 148).
+    /// three (TM pp. 341-343), the lift hoist three (TM p. 344) and the Angel ECM suite two
+    /// (Tactical Operations: Advanced Units & Equipment p. 217). The null-signature system fills
+    /// one slot in every location but the head (ibid. p. 148). Lift hoists and communications
+    /// equipment follow their own placement rules too.
     fn validate_installations(&self, loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
         let clan = self.has_special("Clan");
         let context = super::SystemContext {
@@ -725,6 +728,7 @@ impl MechTemplate {
                     | System::C3Master
                     | System::C3i
                     | System::BloodhoundProbe
+                    | System::LiftHoist
             ) {
                 continue;
             }
@@ -753,6 +757,8 @@ impl MechTemplate {
                 run = 1;
             }
         }
+        self.validate_lift_hoists(loadout, chassis)?;
+        self.validate_communications_equipment(loadout, chassis)?;
         let null_signature = |section| {
             loadout
                 .systems
@@ -775,6 +781,72 @@ impl MechTemplate {
                     null_signature(section)
                 );
             }
+        }
+        Ok(())
+    }
+
+    /// A Mech mounts at most two lift hoists, in its arms and torsos (TM p. 245); a quad's
+    /// front legs are legs.
+    fn validate_lift_hoists(&self, loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
+        let hoists: Vec<_> = loadout
+            .systems
+            .iter()
+            .filter(|part| part.system == System::LiftHoist)
+            .collect();
+        for part in &hoists {
+            let section = part.location.section;
+            ensure!(
+                section != MechSection::Head && !chassis.is_leg(section),
+                "A Mech mounts lift hoists in its arms and torsos, not {} (TM p. 245)",
+                chassis.section_name(section)
+            );
+        }
+        // Each hoist fills three slots, which the installation check counts first.
+        ensure!(
+            hoists.len() <= 6,
+            "A Mech mounts at most two lift hoists; found {} (TM p. 245)",
+            hoists.len() / 3
+        );
+        Ok(())
+    }
+
+    /// A Mech adds one set of communications equipment, one to fifteen whole tons, in one
+    /// contiguous run of a single location, a ton to each slot (TM p. 212).
+    fn validate_communications_equipment(
+        &self,
+        loadout: &MechLoadout,
+        chassis: MechChassis,
+    ) -> Result<()> {
+        let slots: Vec<_> = loadout
+            .systems
+            .iter()
+            .filter(|part| part.system == System::CommunicationsEquipment)
+            .map(|part| part.location)
+            .collect();
+        if slots.is_empty() {
+            return Ok(());
+        }
+        ensure!(
+            contiguous(&slots),
+            "A Mech's communications equipment is one set in contiguous slots of one location (TM p. 212)"
+        );
+        ensure!(
+            slots.len() <= 15,
+            "A set of communications equipment weighs at most 15 tons; {} slots fill {} in {} (TM p. 212)",
+            slots.len(),
+            slots.len(),
+            chassis.section_name(slots[0].section)
+        );
+        for location in &slots {
+            let data = self
+                .sections
+                .get(&location.section)
+                .and_then(|section| section.criticals.get(&location.slot))
+                .map_or("-", |critical| critical.data.as_str());
+            ensure!(
+                data == "-",
+                "A Mech's communications equipment weighs a ton per slot and states no tons (TM p. 212)"
+            );
         }
         Ok(())
     }
@@ -1345,7 +1417,76 @@ mod tests {
         assert!(rejection.contains("over the 35-ton chassis"), "{rejection}");
         refused(
             &saw("Wrecking_Ball", "\"3-7\""),
-            "A quad mounts a dual saw in a side torso and no other physical weapon",
+            "A quad mounts a dual saw or backhoe in a side torso and no other physical weapon",
+        );
+    }
+
+    /// A Mech's communications equipment is one set, a ton to each contiguous slot of one
+    /// location (TM p. 212); lift hoists fill three slots each, at most two, in the arms and
+    /// torsos (TM pp. 245, 344).
+    #[test]
+    fn communications_equipment_and_lift_hoists_follow_their_placement() {
+        let entry = |at: &str, item: &str| format!("    {{ at = {at}, item = \"{item}\" }},\n");
+        // Each complete placement passes these rules and stops at the mass.
+        for (at, item) in [
+            ("\"3-5\"", "Communications_Equipment"),
+            ("\"3-5\"", "Lift_Hoist"),
+        ] {
+            let placed = rejection(&with_left_torso(&entry(at, item))).unwrap_or_default();
+            assert!(
+                placed.contains("over the 35-ton chassis"),
+                "{item}: {placed}"
+            );
+        }
+        refused(
+            &with_left_torso(&format!(
+                "{}{}",
+                entry("3", "Communications_Equipment"),
+                entry("5", "Communications_Equipment")
+            )),
+            "communications equipment is one set in contiguous slots of one location",
+        );
+        refused(
+            &with_left_torso(
+                "    { at = \"3-4\", item = \"Communications_Equipment\", tons = 2 },\n",
+            ),
+            "weighs a ton per slot and states no tons",
+        );
+        refused(
+            &with_left_torso(&entry("\"3-4\"", "Lift_Hoist")),
+            "LiftHoist fills 3 contiguous critical slots per installation",
+        );
+        refused(
+            &with_left_torso(&entry("\"3-11\"", "Lift_Hoist")),
+            "A Mech mounts at most two lift hoists; found 3",
+        );
+        refused(
+            &JENNER.replace(
+                "[sections.left_leg]\narmor = 6\n",
+                "[sections.left_leg]\narmor = 6\nslots = [{ at = \"5-6\", item = \"Lift_Hoist\" }]\n",
+            ),
+            "LiftHoist fills 3 contiguous critical slots",
+        );
+    }
+
+    /// A backhoe replaces its arm's hand actuator, and a quad mounts it in a side torso (TM
+    /// p. 241).
+    #[test]
+    fn backhoes_replace_the_hand_or_sit_in_a_quads_side_torso() {
+        let entry = "    { at = \"5-10\", item = \"Backhoe\" },\n";
+        refused(
+            &right_arm("", entry),
+            "Backhoe replaces the hand actuator in Right_Arm",
+        );
+        let handless =
+            rejection(&right_arm("omit = [\"hand_actuator\"]\n", entry)).unwrap_or_default();
+        assert!(!handless.contains("actuator"), "{handless}");
+        refused(
+            &right_arm(
+                "omit = [\"hand_actuator\"]\n",
+                "    { at = \"5-9\", item = \"Backhoe\" },\n",
+            ),
+            "Backhoe on a 35-ton Mech fills 6 critical slots; found 5",
         );
     }
 

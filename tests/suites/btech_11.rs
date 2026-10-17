@@ -32,6 +32,9 @@ mod btech_equipment_names;
 #[path = "../btech_jump_crew.rs"]
 mod btech_jump_crew;
 
+#[path = "../btech_lift_hoist.rs"]
+mod btech_lift_hoist;
+
 #[path = "../btech_map_check.rs"]
 mod btech_map_check;
 

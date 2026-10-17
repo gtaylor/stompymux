@@ -375,20 +375,35 @@ fn armor_type_modifier(has: impl Fn(Technology) -> bool) -> f64 {
     }
 }
 
-/// BV of a physical weapon from its catalogue entry (TechManual p. 317; TO:AUE pp. 195-197).
-/// Damage-based values use the weapon's damage after triple-strength myomer doubling.
-fn physical_weapon_value(attack: ArmAttack, tons: u16, triple_myomer: bool) -> f64 {
-    let Some(value) = attack.system().and_then(System::physical_battle_value) else {
-        return 0.0;
-    };
-    match value {
-        PhysicalBattleValue::Fixed(value) => f64::from(value),
-        PhysicalBattleValue::DamageTimes(factor) => {
+/// BV of an installed physical weapon from its catalogue entry (TechManual p. 317; TO:AUE
+/// pp. 195-197). Damage-based values use the weapon's damage after triple-strength myomer
+/// doubling; fixed values, such as the backhoe's 8, need no attack profile.
+fn physical_weapon_value(system: System, tons: u16, triple_myomer: bool) -> f64 {
+    match system.physical_battle_value() {
+        None => 0.0,
+        Some(PhysicalBattleValue::Fixed(value)) => f64::from(value),
+        Some(PhysicalBattleValue::DamageTimes(factor)) => {
+            let Some(attack) = ArmAttack::from_system(system) else {
+                return 0.0;
+            };
             let damage = f64::from(attack.damage(tons));
             let doubled = triple_myomer && attack.myomer_doubles();
             factor * if doubled { damage * 2.0 } else { damage }
         }
     }
+}
+
+/// A vehicle's physical equipment, the dual saw, wrecking ball and backhoe, each one item
+/// worth its fixed catalogue value in the Weapon Battle Rating (TechManual pp. 307, 317).
+fn vehicle_physical_value<L>(loadout: &ResolvedLoadout<L>) -> f64 {
+    loadout
+        .systems
+        .iter()
+        .filter_map(|part| match part.system.physical_battle_value() {
+            Some(PhysicalBattleValue::Fixed(value)) => Some(f64::from(value)),
+            _ => None,
+        })
+        .sum()
 }
 
 /// Defensive equipment BV of the installed systems: each complete installation's catalogue
@@ -661,8 +676,8 @@ impl Mech {
                 _ => Arc::Forward,
             },
         );
-        // A biped's physical weapons sit in its arms; a quad's only one, the dual saw, in its
-        // side torsos (TechManual p. 243).
+        // A biped's physical weapons sit in its arms, one to each; a quad's, the dual saw and
+        // the backhoe, in its side torsos (TechManual pp. 241, 243).
         let mut physical = 0.0;
         let mounts = if quad {
             [MechSection::LeftTorso, MechSection::RightTorso]
@@ -670,10 +685,15 @@ impl Mech {
             [MechSection::LeftArm, MechSection::RightArm]
         };
         for mount in mounts {
-            for attack in ArmAttack::HAND_WEAPONS {
-                if attack.system().is_some_and(|system| has(system, mount)) {
-                    physical += physical_weapon_value(attack, tons, triple_myomer);
-                }
+            let installed = loadout
+                .systems
+                .iter()
+                .find(|part| {
+                    part.location.section == mount && part.system.physical_battle_value().is_some()
+                })
+                .map(|part| part.system);
+            if let Some(system) = installed {
+                physical += physical_weapon_value(system, tons, triple_myomer);
             }
         }
         // Talons are worth their kick's final damage, after triple strength myomer and the
@@ -865,7 +885,7 @@ impl super::Vehicle {
             target_modifier,
             weapons: offense.weapons,
             ammunition: offense.ammunition,
-            equipment: machine_gun_array_value(&loadout),
+            equipment: machine_gun_array_value(&loadout) + vehicle_physical_value(&loadout),
             tonnage: f64::from(definition.tons) / 2.0,
             speed_mp: flanking,
             final_multiplier: 1.0,
@@ -910,6 +930,34 @@ mod tests {
 
     fn weapon(value: f64, heat: f64) -> ValuedWeapon {
         ValuedWeapon { value, heat }
+    }
+
+    /// A backhoe is worth a fixed 8 (TechManual p. 317) with no attack profile, damage-based
+    /// weapons their damage times the factor, and a vehicle's dual saw, wrecking ball and
+    /// backhoe their fixed values.
+    #[test]
+    fn physical_equipment_values_follow_the_bv_table() {
+        assert_eq!(physical_weapon_value(System::Backhoe, 40, false), 8.0);
+        // A 50-ton Mech's sword deals 6, and hot triple strength myomer doubles it.
+        assert!((physical_weapon_value(System::Sword, 50, false) - 6.0 * 1.725).abs() < 1e-9);
+        assert!((physical_weapon_value(System::Sword, 50, true) - 12.0 * 1.725).abs() < 1e-9);
+        assert_eq!(physical_weapon_value(System::Ecm, 50, false), 0.0);
+        let part = |system| super::super::SystemCritical {
+            location: (),
+            system,
+            tech_base: None,
+            links: Vec::new(),
+        };
+        let loadout = ResolvedLoadout {
+            weapons: Vec::new(),
+            ammunition: Vec::new(),
+            systems: vec![
+                part(System::Backhoe),
+                part(System::DualSaw),
+                part(System::Ecm),
+            ],
+        };
+        assert_eq!(vehicle_physical_value(&loadout), 8.0 + 9.0);
     }
 
     /// Movement Heat takes the hotter of running and jumping: improved jets halve the jump

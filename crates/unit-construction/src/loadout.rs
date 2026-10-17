@@ -119,6 +119,8 @@ pub(crate) fn system_data_supported(critical: &super::CriticalDefinition) -> boo
             critical.data.parse::<u8>().is_ok()
         }
         Some(System::MachineGunArray) => super::machine_gun_array_links(&critical.data).is_ok(),
+        // A vehicle's communications equipment states its tons (TechManual p. 212).
+        Some(System::CommunicationsEquipment) => critical.data.parse::<u8>().is_ok(),
         _ => false,
     }
 }

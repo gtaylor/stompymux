@@ -25,6 +25,11 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
             crate::ElectronicSuite::Angel,
             crate::ElectronicMode::Eccm,
         ),
+        (
+            "unit_commseccm",
+            crate::ElectronicSuite::Communications,
+            crate::ElectronicMode::Eccm,
+        ),
     ] {
         let callback = lua.create_function(move |lua, (unit, pilot): (i64, i64)| {
             crate::lua::transactions::require(lua)?;

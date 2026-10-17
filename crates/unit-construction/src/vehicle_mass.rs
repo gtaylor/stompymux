@@ -260,17 +260,43 @@ impl VehicleTemplate {
         part: &SystemCritical<VehicleCriticalLocation>,
     ) -> u32 {
         let clan = part.is_clan(self.has_special("Clan"));
-        if part.system != System::TargetingComputer {
-            return self.fixed_system_mass(part.system, clan);
+        match part.system {
+            System::TargetingComputer => {
+                targeting_computer_tons(loadout.weapons.iter().map(|mount| mount.weapon), clan)
+                    * 1024
+            }
+            // A vehicle's communications equipment is one item of the tons its slot states
+            // (TechManual p. 212).
+            System::CommunicationsEquipment => {
+                u32::from(self.communications_tons(part).unwrap_or(0)) * 1024
+            }
+            system => self.fixed_system_mass(system, clan),
         }
-        targeting_computer_tons(loadout.weapons.iter().map(|mount| mount.weapon), clan) * 1024
+    }
+
+    /// The tons of communications equipment a vehicle slot states, `None` for a slot of any
+    /// other system or one that states none.
+    pub fn communications_tons(
+        &self,
+        part: &SystemCritical<VehicleCriticalLocation>,
+    ) -> Option<u8> {
+        if part.system != System::CommunicationsEquipment {
+            return None;
+        }
+        self.sections
+            .get(&part.location.section)?
+            .criticals
+            .get(&part.location.slot)?
+            .data
+            .parse()
+            .ok()
     }
 
     /// Mass of a vehicle system whose weight does not depend on the rest of the loadout, built
     /// from Clan technology when `clan` is set (see [`SystemCritical::is_clan`]): the Beagle
     /// and Clan active probes, the Guardian and Clan ECM suites, CASE II and the machine gun
-    /// array each weigh by their own base (TechManual pp. 204-238). The targeting computer is
-    /// sized by [`Self::system_mass`] and weighs nothing here.
+    /// array each weigh by their own base (TechManual pp. 204-238). The targeting computer and
+    /// communications equipment are sized by [`Self::system_mass`] and weigh nothing here.
     pub(crate) fn fixed_system_mass(&self, system: System, clan: bool) -> u32 {
         match system {
             System::Axe
@@ -281,6 +307,10 @@ impl VehicleTemplate {
             | System::Tag => 1024,
             // A dual saw is one 7-ton item on a vehicle (TechManual p. 344: WT 7, CV 1).
             System::DualSaw => 7168,
+            // A lift hoist weighs three tons and a backhoe five, each one item (TechManual
+            // p. 344).
+            System::LiftHoist => 3072,
+            System::Backhoe => 5120,
             System::C3i => 2560,
             System::AngelEcm | System::BloodhoundProbe => 2048,
             System::C3Master => 5120,
@@ -350,6 +380,7 @@ impl VehicleTemplate {
             | System::Talons
             | System::Spikes
             | System::Cargo
+            | System::CommunicationsEquipment
             | System::TargetingComputer => 0,
             System::MachineGunArray => {
                 if clan {

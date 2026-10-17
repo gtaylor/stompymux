@@ -825,6 +825,13 @@ and `angeleccm` control Angel suites. Selecting the current mode again switches
 that suite off. Guardian and Angel suites operate independently; each requires
 working equipment and a running unit. Shutdown and equipment loss disable them.
 
+`commseccm` switches communications equipment's ECCM field on or off. Three to
+six tons of working communications equipment generate half a Guardian suite's
+ECCM and seven or more tons a whole suite's, over the same area; it never
+generates ECM, and it stops when its equipment, the unit's sensors or a Mech's
+cockpit is damaged (TechManual p. 212; Tactical Operations: Advanced Rules
+p. 98).
+
 ECM protects friendly units and disturbs enemies within six hexes, twelve under
 electromagnetic interference, however high either unit is. Enemy ECCM
 cancels protection, and friendly ECCM cancels disturbance; equal strength cancels.
@@ -835,8 +842,8 @@ guidance bonuses. Angel interference also negates Streak locks: a failed roll
 still launches nothing, and successful attacks use ordinary missile cluster rolls.
 
 Status includes suite selections and current field effects. Lua provides
-`btech.unit.ecm(unit, pilot)`, `eccm`, `angelecm`, and `angeleccm`, each returning
-`"off"`, `"ecm"`, or `"eccm"`. Unit inspection includes the saved `electronics`
+`btech.unit.ecm(unit, pilot)`, `eccm`, `angelecm`, `angeleccm` and `commseccm`,
+each returning `"off"`, `"ecm"`, or `"eccm"`. Unit inspection includes the saved `electronics`
 state and its last committed field observation.
 
 ### iNarc ammunition

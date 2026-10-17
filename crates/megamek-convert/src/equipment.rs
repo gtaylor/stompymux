@@ -92,6 +92,10 @@ pub enum Critical {
     Apollo,
     /// A searchlight, which stompymux records as a chassis special rather than a slot.
     Searchlight,
+    /// One set of communications equipment of the whole tons MegaMek's `SIZE` option states
+    /// (TechManual p. 212). Each of a Mech's slots holds a ton of it; a vehicle states the
+    /// set's tons on its one item.
+    Communications(u8),
 }
 
 impl Critical {
@@ -108,6 +112,7 @@ impl Critical {
             Self::Artemis(tech) => format!("{}.ArtemisIV", tech.namespace()),
             Self::ArtemisV => "ArtemisV".to_owned(),
             Self::Apollo => "ApolloFCS".to_owned(),
+            Self::Communications(_) => "Communications_Equipment".to_owned(),
         })
     }
 
@@ -203,6 +208,9 @@ const SYSTEMS: &[(&str, &str)] = &[
     ("nullsignaturesystem", "NullSig_Device"),
     ("meknullsignaturesystem", "NullSig_Device"),
     ("mechnullsignaturesystem", "NullSig_Device"),
+    ("lifthoist", "Lift_Hoist"),
+    ("lifthoistarrestinghoist", "Lift_Hoist"),
+    ("backhoe", "Backhoe"),
 ];
 
 /// MegaMek weapon keys that differ from the key of the stompymux label they name.
@@ -356,6 +364,9 @@ pub fn parse_for(raw: &str, chassis: TechBase) -> Result<Critical> {
     {
         name = name[..name.len() - 5].trim_end();
     }
+    if let Some(communications) = communications(name)? {
+        return Ok(communications);
+    }
     ensure!(
         !name.contains(['|', ':', '#']),
         "unsupported equipment option in {raw}"
@@ -402,6 +413,35 @@ pub fn parse_for(raw: &str, chassis: TechBase) -> Result<Critical> {
         _ if one_shot => bail!("only launchers can be one-shot: {raw}"),
         critical => Ok(critical),
     }
+}
+
+/// Communications equipment as MegaMek writes it, `Communications Equipment:SIZE:4.0`, with
+/// an optional `(OMNIPOD)` marker: one set of 1 to 15 whole tons (TechManual p. 212). `None`
+/// for any other name.
+fn communications(name: &str) -> Result<Option<Critical>> {
+    let (item, option) = name.split_once(':').unwrap_or((name, ""));
+    let item = item
+        .trim()
+        .strip_suffix("(OMNIPOD)")
+        .or_else(|| item.trim().strip_suffix("(omnipod)"))
+        .unwrap_or(item)
+        .trim();
+    if key(item) != "communicationsequipment" {
+        return Ok(None);
+    }
+    let size = option
+        .strip_prefix("SIZE:")
+        .or_else(|| option.strip_prefix("size:"))
+        .with_context(|| format!("communications equipment needs a SIZE in {name}"))?;
+    let tons: f64 = size
+        .trim()
+        .parse()
+        .with_context(|| format!("invalid communications equipment SIZE in {name}"))?;
+    ensure!(
+        tons.fract() == 0.0 && (1.0..=15.0).contains(&tons),
+        "communications equipment is installed in 1 to 15 whole tons, not {size} (TechManual p. 212)"
+    );
+    Ok(Some(Critical::Communications(tons as u8)))
 }
 
 /// The technology base a slot's system states, for the systems both bases build to their own
@@ -735,6 +775,39 @@ fn key(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Communications equipment states its tons with MegaMek's SIZE option, in whole tons up
+    /// to fifteen (TechManual p. 212); lift hoists and backhoes are ordinary systems.
+    #[test]
+    fn communications_equipment_hoists_and_backhoes_resolve() {
+        for (name, tons) in [
+            ("Communications Equipment:SIZE:4.0", 4),
+            ("Communications Equipment (OMNIPOD):SIZE:3.0", 3),
+            ("Communications Equipment:SIZE:15", 15),
+        ] {
+            assert_eq!(
+                parse(name).unwrap(),
+                Critical::Communications(tons),
+                "{name}"
+            );
+        }
+        assert_eq!(
+            parse("Communications Equipment:SIZE:4.0").unwrap().item(),
+            Some("Communications_Equipment".into())
+        );
+        for name in [
+            "Communications Equipment",
+            "Communications Equipment:SIZE:0.5",
+            "Communications Equipment:SIZE:16.0",
+        ] {
+            assert!(parse(name).is_err(), "{name}");
+        }
+        assert_eq!(
+            parse("Lift Hoist/Arresting Hoist").unwrap(),
+            Critical::System("Lift_Hoist")
+        );
+        assert_eq!(parse("Backhoe").unwrap(), Critical::System("Backhoe"));
+    }
 
     /// Resolve a name that must be a weapon.
     fn weapon(name: &str) -> (Weapon, bool, bool) {

@@ -2366,6 +2366,7 @@ function btech_unit.explosive(dbref, pilot, weapon) end
 ---@class Electronics
 ---@field guardian ElectronicMode
 ---@field angel ElectronicMode
+---@field communications ElectronicMode Communications equipment's ECCM field, or off.
 ---@field field ElectronicField
 
 ---Toggle the corresponding suite mode inside the callback transaction.
@@ -4086,5 +4087,13 @@ function btech_map.set_flag(actor, map, flag, enabled) end
 ---@param type? string Keep only points whose type matches exactly (case-sensitive).
 ---@return MapPointOfInterest[]
 function btech_map.points_of_interest(map, type) end
+
+---Toggle communications equipment's ECCM field inside the callback transaction; three or
+---more tons of working communications equipment generate it (Tactical Operations: Advanced
+---Rules p. 98).
+---@param dbref integer
+---@param pilot integer
+---@return ElectronicMode
+function btech_unit.commseccm(dbref, pilot) end
 
 return btech

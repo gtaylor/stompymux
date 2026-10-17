@@ -72,7 +72,8 @@ impl System {
 
     /// Offensive Battle Value of a physical weapon (TechManual p. 317; Tactical Operations:
     /// Advanced Units & Equipment pp. 195-197). Claws, lances and maces use the final damage
-    /// times the listed factor; flails, dual saws, vibroblades and wrecking balls are fixed.
+    /// times the listed factor; flails, dual saws, vibroblades, wrecking balls and backhoes are
+    /// fixed (TechManual p. 317: backhoe 8).
     pub fn physical_battle_value(self) -> Option<PhysicalBattleValue> {
         use PhysicalBattleValue::{DamageTimes, Fixed};
         Some(match self {
@@ -83,6 +84,7 @@ impl System {
             Self::Flail => Fixed(11),
             Self::DualSaw => Fixed(9),
             Self::WreckingBall => Fixed(8),
+            Self::Backhoe => Fixed(8),
             Self::SmallVibroblade => Fixed(12),
             Self::MediumVibroblade => Fixed(17),
             Self::LargeVibroblade => Fixed(24),
@@ -110,6 +112,10 @@ impl System {
             Self::Flail | Self::LargeVibroblade => 4,
             Self::WreckingBall => 5,
             Self::SmallVibroblade | Self::Spikes | Self::MachineGunArray | Self::Cargo => 1,
+            // Communications equipment is priced per ton, a ton to each Mech slot.
+            Self::CommunicationsEquipment => 1,
+            Self::LiftHoist => 3,
+            Self::Backhoe => 6,
             Self::MediumVibroblade => 2,
             // Talons fill two slots in each leg as one installation.
             Self::Talons => 2 * context.legs.max(2),
@@ -193,6 +199,10 @@ impl System {
             | Self::LaserReflective => 0.0,
             // The standard cargo bay costs nothing (TechManual p. 293).
             Self::Cargo => 0.0,
+            // Communications equipment costs 10,000 a ton; the lift hoist and backhoe 50,000
+            // each (TechManual p. 293).
+            Self::CommunicationsEquipment => 10_000.0,
+            Self::LiftHoist | Self::Backhoe => 50_000.0,
             Self::FuelTank => return None,
         })
     }

@@ -477,7 +477,9 @@ impl VehicleTemplate {
             }
         }
         let vtol = self.is_vtol();
-        let mut dual_saws = Vec::new();
+        let mut physical = Vec::new();
+        let mut hoists = 0;
+        let mut communications = 0;
         for part in &loadout.systems {
             let section = part.location.section;
             let here = format!(
@@ -492,31 +494,61 @@ impl VehicleTemplate {
             match part.system {
                 // Ground vehicles mount one dual saw in each of the front, rear and turret
                 // locations (TechManual p. 243).
-                System::DualSaw => {
-                    ensure!(
-                        !vtol
-                            && matches!(
-                                section,
-                                VehicleSection::Front
-                                    | VehicleSection::Rear
-                                    | VehicleSection::Turret
-                            ),
-                        "{here}: a combat vehicle mounts a dual saw only in its front, rear or turret, and a VTOL none (TechManual p. 243)"
-                    );
-                    ensure!(
-                        !dual_saws.contains(&section),
-                        "{here}: a combat vehicle mounts one dual saw per location (TechManual p. 243)"
-                    );
-                    dual_saws.push(section);
-                }
+                System::DualSaw => ensure!(
+                    !vtol
+                        && matches!(
+                            section,
+                            VehicleSection::Front | VehicleSection::Rear | VehicleSection::Turret
+                        ),
+                    "{here}: a combat vehicle mounts a dual saw only in its front, rear or turret, and a VTOL none (TechManual p. 243)"
+                ),
                 // A ground vehicle mounts a wrecking ball only in its turret (TechManual p. 249).
                 System::WreckingBall => ensure!(
                     !vtol && section == VehicleSection::Turret,
                     "{here}: a combat vehicle mounts a wrecking ball only in its turret, and a VTOL none (TechManual p. 249)"
                 ),
+                // Ground vehicles mount one backhoe in each of the front, rear and turret
+                // (TechManual p. 241).
+                System::Backhoe => ensure!(
+                    !vtol
+                        && matches!(
+                            section,
+                            VehicleSection::Front | VehicleSection::Rear | VehicleSection::Turret
+                        ),
+                    "{here}: a combat vehicle mounts a backhoe only in its front, rear or turret, and a VTOL none (TechManual p. 241)"
+                ),
+                System::LiftHoist => hoists += 1,
+                System::CommunicationsEquipment => {
+                    communications += 1;
+                    let tons = self.communications_tons(part).unwrap_or(0);
+                    ensure!(
+                        (1..=15).contains(&tons),
+                        "{here}: communications equipment is a set of 1 to 15 whole tons stated with tons, not {tons} (TechManual p. 212)"
+                    );
+                }
                 _ => {}
             }
+            // A location holds one of a vehicle's backhoe, dual saw and wrecking ball
+            // (TechManual pp. 241, 243, 249).
+            if matches!(
+                part.system,
+                System::Backhoe | System::DualSaw | System::WreckingBall
+            ) {
+                ensure!(
+                    !physical.contains(&section),
+                    "{here}: a location holds one backhoe, dual saw or wrecking ball (TechManual pp. 241, 243, 249)"
+                );
+                physical.push(section);
+            }
         }
+        ensure!(
+            hoists <= 4,
+            "A combat vehicle mounts at most four lift hoists; found {hoists} (TechManual p. 245)"
+        );
+        ensure!(
+            communications <= 1,
+            "A unit adds one set of communications equipment, a single vehicle item; found {communications} (TechManual p. 212)"
+        );
         Ok(())
     }
 }
@@ -1375,7 +1407,10 @@ slots = [
         );
         let pair = format!("{saw}, {}", saw.replace("at = 1", "at = 2"));
         let refused = rejection(&with_rear(ZHUKOV, &pair));
-        assert!(refused.contains("one dual saw per location"), "{refused}");
+        assert!(
+            refused.contains("a location holds one backhoe, dual saw or wrecking ball"),
+            "{refused}"
+        );
         let refused = rejection(&with_rear(ZHUKOV, r#"{ at = 1, item = "Wrecking_Ball" }"#));
         assert!(
             refused.contains("a wrecking ball only in its turret"),
@@ -1386,6 +1421,84 @@ slots = [
             &format!("[sections.aft_side]\narmor = 8\nslots = [{saw}]\n"),
         )));
         assert!(refused.contains("and a VTOL none"), "{refused}");
+    }
+
+    /// A vehicle mounts one set of communications equipment as a single item of the tons it
+    /// states, up to fifteen (TechManual p. 212); at most four lift hoists of three tons each
+    /// (TechManual pp. 245, 344); and one backhoe of five tons in each of the front, rear and
+    /// turret of a ground vehicle, never beside a dual saw or wrecking ball (TechManual
+    /// p. 241).
+    #[test]
+    fn vehicles_mount_communications_hoists_and_backhoes_by_the_book() {
+        let bare = parse(ZHUKOV);
+        let bare_slots = bare.item_slots(&VehicleLoadout::resolve(&bare).unwrap());
+        let bare_mass = bare.mass().unwrap().equipment;
+        let comms = with_rear(
+            ZHUKOV,
+            r#"{ at = 1, item = "Communications_Equipment", tons = 4 }"#,
+        );
+        assert_eq!(comms.mass().unwrap().equipment, bare_mass + 4 * 1024);
+        assert_eq!(
+            comms.item_slots(&VehicleLoadout::resolve(&comms).unwrap()),
+            bare_slots + 1
+        );
+        assert!(rejection(&comms).contains("more than the vehicle's 75 tons"));
+        let document = comms.to_document().unwrap();
+        assert!(
+            document.contains(r#"{ at = 1, item = "Communications_Equipment", tons = 4 }"#),
+            "{document}"
+        );
+        assert_eq!(parse(&document), comms);
+        let misplaced = VehicleTemplate::parse(
+            "test",
+            &with_rear_text(ZHUKOV, r#"{ at = 1, item = "Lift_Hoist", tons = 3 }"#),
+        )
+        .unwrap_err();
+        assert!(
+            format!("{misplaced:#}").contains("only communications equipment takes tons"),
+            "{misplaced:#}"
+        );
+        for tons in [0, 16] {
+            let refused = rejection(&with_rear(
+                ZHUKOV,
+                &format!(r#"{{ at = 1, item = "Communications_Equipment", tons = {tons} }}"#),
+            ));
+            assert!(refused.contains("a set of 1 to 15 whole tons"), "{refused}");
+        }
+        let refused = rejection(&with_rear(
+            ZHUKOV,
+            r#"{ at = 1, item = "Communications_Equipment", tons = 1 }, { at = 2, item = "Communications_Equipment", tons = 1 }"#,
+        ));
+        assert!(
+            refused.contains("one set of communications equipment"),
+            "{refused}"
+        );
+        let hoist = with_rear(ZHUKOV, r#"{ at = 1, item = "Lift_Hoist" }"#);
+        assert_eq!(hoist.mass().unwrap().equipment, bare_mass + 3 * 1024);
+        let refused = rejection(&with_rear(ZHUKOV, r#"{ at = "1-5", item = "Lift_Hoist" }"#));
+        assert!(
+            refused.contains("at most four lift hoists; found 5"),
+            "{refused}"
+        );
+        let backhoe = with_rear(ZHUKOV, r#"{ at = 1, item = "Backhoe" }"#);
+        assert_eq!(backhoe.mass().unwrap().equipment, bare_mass + 5 * 1024);
+        assert!(rejection(&backhoe).contains("more than the vehicle's 75 tons"));
+        let refused = rejection(&with_rear(
+            ZHUKOV,
+            r#"{ at = 1, item = "Backhoe" }, { at = 2, item = "Dual_Saw" }"#,
+        ));
+        assert!(
+            refused.contains("a location holds one backhoe, dual saw or wrecking ball"),
+            "{refused}"
+        );
+        let refused = rejection(&parse(&YELLOW_JACKET.replace(
+            "[sections.aft_side]\narmor = 8\n",
+            "[sections.aft_side]\narmor = 8\nslots = [{ at = 1, item = \"Backhoe\" }]\n",
+        )));
+        assert!(
+            refused.contains("a backhoe only in its front, rear or turret"),
+            "{refused}"
+        );
     }
 
     /// A slot's stated technology base must match a vehicle's chassis unless the design is

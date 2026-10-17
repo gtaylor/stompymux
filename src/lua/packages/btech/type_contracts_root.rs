@@ -1352,6 +1352,7 @@
 //|---@class Electronics
 //|---@field guardian ElectronicMode
 //|---@field angel ElectronicMode
+//|---@field communications ElectronicMode Communications equipment's ECCM field, or off.
 //|---@field field ElectronicField
 // lua-types-end
 

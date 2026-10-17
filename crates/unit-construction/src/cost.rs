@@ -577,7 +577,11 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
     for part in &loadout.systems {
         let equipment =
             &template.sections[&part.location.section].criticals[&part.location.slot].equipment;
-        let installations = if part.system == System::TargetingComputer {
+        // Communications equipment is priced per ton too (TechManual pp. 212, 293).
+        let installations = if matches!(
+            part.system,
+            System::TargetingComputer | System::CommunicationsEquipment
+        ) {
             f64::from(compatible.system_mass(&loadout, part) / 1024)
         } else {
             1.0
@@ -836,6 +840,49 @@ slots = [
         let plasma = with("front_side", "IS.PlasmaRifle");
         let rifle = Weapon::PlasmaRifle.cost() as f64;
         assert!((cost(&plasma) - cost(TANK) - (rifle + 20_000.0) * 1.75).abs() <= 1.0);
+    }
+
+    /// Communications equipment costs 10,000 C-bills a ton, and a lift hoist or backhoe
+    /// 50,000 (TechManual p. 293).
+    #[test]
+    fn communications_hoists_and_backhoes_follow_the_price_table() {
+        let cost = |source: &str| {
+            vehicle_template_base_cost(
+                &PartPrices::new(),
+                &VehicleTemplate::parse("Tank", source).unwrap(),
+            )
+            .unwrap() as f64
+        };
+        let with = |entry: &str| {
+            TANK.replace(
+                "[sections.aft_side]\narmor = 24\n",
+                &format!("[sections.aft_side]\narmor = 24\nslots = [{entry}]\n"),
+            )
+        };
+        let base = cost(TANK);
+        for (entry, price) in [
+            (
+                r#"{ at = 1, item = "Communications_Equipment", tons = 4 }"#,
+                40_000.0,
+            ),
+            (r#"{ at = 1, item = "Lift_Hoist" }"#, 50_000.0),
+            (r#"{ at = 1, item = "Backhoe" }"#, 50_000.0),
+        ] {
+            assert!(
+                (cost(&with(entry)) - base - price * 1.75).abs() <= 1.0,
+                "{entry}"
+            );
+        }
+        assert_eq!(
+            System::CommunicationsEquipment.slot_price(SystemContext {
+                clan: false,
+                watchdog: false,
+                tons: 35,
+                engine_rating: 245,
+                legs: 2,
+            }),
+            Some(10_000.0)
+        );
     }
 
     /// One-shot launchers cost half their launcher (TechManual p. 291), and equipment prices

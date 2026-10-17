@@ -843,6 +843,8 @@ impl CommandRegistry {
                 .policy(SwitchPolicy::Reject("angelecm takes no switches."), false),
             CommandDefinition::native("angeleccm", P::EVERYONE, crate::btech::electronics::command)
                 .policy(SwitchPolicy::Reject("angeleccm takes no switches."), false),
+            CommandDefinition::native("commseccm", P::EVERYONE, crate::btech::electronics::command)
+                .policy(SwitchPolicy::Reject("commseccm takes no switches."), false),
             CommandDefinition::native("pods", P::EVERYONE, crate::btech::pods::command)
                 .policy(SwitchPolicy::Reject("pods takes no switches."), false),
             CommandDefinition::native(

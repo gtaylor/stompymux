@@ -356,6 +356,7 @@ Each slot entry places one item in a run of consecutive critical slots:
 | `rounds` | Ammunition only, and required: the rounds the bin is loaded with, at most what a ton holds. A machine gun bin is a full ton or a half-ton lot marked with the `Halfton` mode, and lists exactly what that lot holds: 200 or 100 rounds of standard or light machine gun ammunition, 100 or 50 heavy (TechManual pp. 57, 107). Construction never refills a bin or infers its size. |
 | `link` | Non-ammunition only. Required on every Artemis IV, Artemis V and `ApolloFCS` entry: the one-based slot of the first critical of the launcher it guides, in the same section. |
 | `links` | Machine gun arrays (`MGA`) only, and required on each: the one-based first slots of the two to four machine guns it links, in the same section. |
+| `tons` | A vehicle's `Communications_Equipment` only, and required on it: the set's 1 to 15 whole tons. A mech states its set's tons by its slots instead. |
 | `modes` | Ammunition flags or weapon modes, such as `["RearMount"]` or `["Inferno"]`. |
 
 A run fills every slot with the same item, so `{ at = "1-3", item = "HeatSink" }`
@@ -396,6 +397,25 @@ slots = [
 Construction refuses an array without links, with fewer than two or more than
 four, one that links anything but a machine gun's first slot in its section or
 guns of two size classes, and two arrays that share a gun.
+
+Industrial equipment follows the TechManual (pp. 212, 241, 245, 344):
+
+- `Communications_Equipment` is one set of 1 to 15 whole tons per unit. A mech
+  fills a slot per ton in one contiguous run of a single location; a vehicle
+  mounts it as one item stating its `tons`. Three or more tons generate an ECCM
+  field with `commseccm` (see `help piloting`).
+- `Lift_Hoist` weighs three tons in three mech slots, at most two on a mech, in
+  its arms and torsos, or one vehicle item, at most four on a vehicle. A working
+  hoist lets its unit load and unload stock (see `help cargo`).
+- `Backhoe` weighs five tons in six mech slots in an arm whose hand actuator it
+  replaces (a quad's side torso), or one vehicle item in the front, rear or
+  turret of a ground vehicle, never beside a dual saw or wrecking ball.
+
+```toml
+slots = [
+    { at = 1, item = "Communications_Equipment", tons = 7 },
+]
+```
 
 ## Split mounts
 
@@ -447,6 +467,8 @@ engine, structure or armor through the `[construction]` technology keys. A CASE 
 or jump jet of the other technology base keeps its base as an `IS.` or `CL.`
 prefix on its item. A machine gun array lists in `links` up to four machine
 guns of the size class its MegaMek name gives, in its location, nearest first.
+Communications equipment takes its tons from MegaMek's `SIZE` option: a
+vehicle's states them in `tons`, and a mech's fills that many slots.
 MegaMek loads every weapon from one of its own bins, while a stompymux weapon
 fires only the bins of the munition it has selected, so a launcher none of
 whose bins holds standard rounds (only Artemis-capable missiles, say) starts

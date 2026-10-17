@@ -13,6 +13,8 @@ pub struct Slot {
     pub link: Option<u8>,
     /// One-based first slots of the machine guns a machine gun array links.
     pub links: Vec<u8>,
+    /// The tons of a vehicle's communications equipment, which a Mech states by its slots.
+    pub tons: Option<u8>,
     pub modes: Vec<&'static str>,
 }
 
@@ -207,6 +209,9 @@ impl Draft {
                     let links: Vec<_> = slot.links.iter().map(u8::to_string).collect();
                     let _ = write!(out, ", links = [{}]", links.join(", "));
                 }
+                if let Some(tons) = slot.tons {
+                    let _ = write!(out, ", tons = {tons}");
+                }
                 if !slot.modes.is_empty() {
                     let _ = write!(out, ", modes = {}", list(&slot.modes));
                 }
@@ -258,6 +263,7 @@ mod tests {
             rounds: None,
             link: None,
             links: vec![],
+            tons: None,
             modes: modes.to_vec(),
         })
     }
@@ -325,6 +331,7 @@ mod tests {
             rounds: None,
             link: None,
             links: vec![],
+            tons: None,
             modes: vec![],
         });
         section.slots[1] = Some(Slot {
@@ -332,6 +339,7 @@ mod tests {
             rounds: None,
             link: Some(1),
             links: vec![],
+            tons: None,
             modes: vec![],
         });
         section.slots[2] = Some(Slot {
@@ -339,6 +347,7 @@ mod tests {
             rounds: Some(24),
             link: None,
             links: vec![],
+            tons: None,
             modes: vec!["Artemis/Mine"],
         });
         let draft = Draft {

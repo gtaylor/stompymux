@@ -163,6 +163,8 @@ impl<'a> UnitRef<'a> {
         /// Guardian presence is sufficient; a biped Angel suite needs two surviving slots.
         /// A destroyed or flooded part disables the whole corresponding suite family.
         pub fn electronic_suite_available(&self, suite: ElectronicSuite) -> Result<bool>;
+        /// Tons of communications equipment installed (TechManual p. 212).
+        pub fn communications_tons(&self) -> Result<u8>;
         /// Saved electronic controls and last committed field observation.
         pub fn electronics(&self) -> Electronics;
         /// Current persisted shooting-XP policy for this unit.

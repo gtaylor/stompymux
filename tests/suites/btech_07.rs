@@ -5,6 +5,9 @@ use stompymux_test_support as support;
 #[path = "../btech_arcs.rs"]
 mod btech_arcs;
 
+#[path = "../btech_communications.rs"]
+mod btech_communications;
+
 #[path = "../btech_component_failure.rs"]
 mod btech_component_failure;
 

@@ -99,7 +99,7 @@ fn stock_identities_and_reference_mass_facts_are_stable() {
     }
     let mut names = BTreeSet::new();
     let parts: Vec<_> = Part::all().collect();
-    assert_eq!(parts.len(), 608);
+    assert_eq!(parts.len(), 611);
     let mut duplicates = BTreeSet::new();
     for part in parts {
         if !names.insert(part.name.to_ascii_lowercase()) {
