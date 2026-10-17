@@ -1111,6 +1111,7 @@
     "eccm": "Everyone; conscious assigned pilot, running placed unit and working electronic suite required",
     "angelecm": "Everyone; conscious assigned pilot, running placed unit and working electronic suite required",
     "angeleccm": "Everyone; conscious assigned pilot, running placed unit and working electronic suite required",
+    "commseccm": "Everyone; conscious assigned pilot, running placed unit and three or more tons of working communications equipment required",
     "pods": "Everyone; conscious assigned pilot in a running placed unit required",
     "extinguish": "Everyone; conscious assigned vehicle pilot, vehicle not running, active section fire and no existing extinguishing attempt required",
     "removepods": "Everyone; conscious assigned vehicle pilot, running placed vehicle, no forward motion, unstunned idle crew and attached iNarc required",

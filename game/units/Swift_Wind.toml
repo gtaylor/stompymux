@@ -6,7 +6,8 @@ walk_mp = 10
 radio = 5
 radio_type = 126
 radio_range = 210
-max_suits = 0
+cargo_tons = 0.5
+specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -20,6 +21,9 @@ armor = 6
 
 [sections.front_side]
 armor = 6
+slots = [
+    { at = 1, item = "Communications_Equipment", tons = 2 },
+]
 
 [sections.aft_side]
 armor = 6

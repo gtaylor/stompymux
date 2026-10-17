@@ -50,9 +50,12 @@ impl Mech {
     }
 
     /// Installed CASE, CASE II or Clan containment stops internal explosions from transferring,
-    /// including after section loss.
+    /// including after section loss. A unit built on Clan internal structure has CASE in every
+    /// location that stores ammunition or explosive equipment (TechManual p. 210), so in every
+    /// location an explosion can start in; a mixed-technology design's structure decides,
+    /// whichever base its chassis is.
     pub fn has_case(&self, section: MechSection) -> bool {
-        if self.definition().has_special("Clan") || self.has_case_ii(section) {
+        if self.definition().clan_structure() || self.has_case_ii(section) {
             return true;
         }
         self.definition()

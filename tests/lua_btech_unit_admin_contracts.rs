@@ -637,13 +637,16 @@ fn deferred_unit(s: &Scripts) -> stompymux_rs::ObjectId {
 #[tokio::test(flavor = "current_thread")]
 async fn c_schema_unit_configuration_normalizes_empty_invalid_and_stale_rows() {
     let (_d, config, s) = isolated_scripts().await;
-    // A small laser in place of one medium laser leaves room for the cargo installation set
-    // below, which counts toward the Mech's tonnage.
-    let source = include_str!("fixtures/btech/units/JR7-D.toml").replacen(
-        "{ at = \"3-4\", item = \"IS.MediumLaser\" }",
-        "{ at = 3, item = \"IS.SmallLaser\" },\n    { at = 4, item = \"IS.MediumLaser\" }",
-        1,
-    );
+    // A small laser in place of one medium laser leaves room for the half-ton cargo bay set
+    // below, which counts toward the Mech's tonnage and fills a critical slot (TechManual
+    // p. 239).
+    let source = include_str!("fixtures/btech/units/JR7-D.toml")
+        .replacen(
+            "{ at = \"3-4\", item = \"IS.MediumLaser\" }",
+            "{ at = 3, item = \"IS.SmallLaser\" },\n    { at = 4, item = \"IS.MediumLaser\" },\n    { at = 5, item = \"Cargo\" }",
+            1,
+        )
+        .replacen("walk_mp = 7\n", "walk_mp = 7\ncargo_tons = 0.5\n", 1);
     let template = stompymux_rs::MechTemplate::parse("JR7-D", &source).unwrap();
     stompymux_rs::create_battle_unit(&mut s.world_mut(), stompymux_rs::ObjectId(14), template)
         .unwrap();

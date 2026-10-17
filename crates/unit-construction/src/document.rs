@@ -145,6 +145,8 @@ struct SlotDocument {
     link: Option<i32>,
     /// The one-based first slots of the machine guns a machine gun array links.
     links: Option<Vec<u8>>,
+    /// The tons of a vehicle's communications equipment, which a Mech states by its slots.
+    tons: Option<u8>,
     #[serde(default)]
     modes: Vec<String>,
 }
@@ -656,6 +658,22 @@ fn slot_critical(slot: SlotDocument) -> Result<CriticalDefinition> {
             modes: slot.modes,
         });
     }
+    let communications = is_communications_equipment(&slot.item);
+    ensure!(
+        communications || slot.tons.is_none(),
+        "only communications equipment takes tons"
+    );
+    if let Some(tons) = slot.tons {
+        ensure!(
+            slot.link.is_none(),
+            "communications equipment takes no link"
+        );
+        return Ok(CriticalDefinition {
+            equipment: slot.item,
+            data: tons.to_string(),
+            modes: slot.modes,
+        });
+    }
     let data = slot
         .rounds
         .map(|rounds| rounds.to_string())
@@ -1103,8 +1121,13 @@ fn render_section(
                     critical.data, critical.equipment
                 )
             })?;
-            let ammunition = is_ammunition(&critical.equipment);
-            let key = if ammunition { "rounds" } else { "link" };
+            let key = if is_ammunition(&critical.equipment) {
+                "rounds"
+            } else if is_communications_equipment(&critical.equipment) {
+                "tons"
+            } else {
+                "link"
+            };
             write!(entry, ", {key} = {value}")?;
         }
         push_metadata(&mut entry, critical);
@@ -1161,6 +1184,12 @@ fn render_split_mount(
 fn is_machine_gun_array(item: &str) -> bool {
     super::System::installation(item)
         .is_some_and(|(system, _)| system == super::System::MachineGunArray)
+}
+
+/// Whether a slot item is communications equipment, which a vehicle sizes with `tons`.
+fn is_communications_equipment(item: &str) -> bool {
+    super::System::installation(item)
+        .is_some_and(|(system, _)| system == super::System::CommunicationsEquipment)
 }
 
 /// Append modes to an inline slot entry.

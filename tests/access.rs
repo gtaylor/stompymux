@@ -319,6 +319,7 @@ fn c_catalog_defaults() {
                 | "eccm"
                 | "angelecm"
                 | "angeleccm"
+                | "commseccm"
                 | "pods"
                 | "removepod"
                 | "removepods"

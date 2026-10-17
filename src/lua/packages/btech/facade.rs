@@ -130,6 +130,7 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("unit", "unit_eccm", "eccm"),
         ("unit", "unit_angelecm", "angelecm"),
         ("unit", "unit_angeleccm", "angeleccm"),
+        ("unit", "unit_commseccm", "commseccm"),
         ("unit", "unit_pods", "pods"),
         ("unit", "unit_removepod", "removepod"),
         ("unit", "unit_removepods", "removepods"),

@@ -33,8 +33,23 @@ pub(super) fn lines(world: &World, id: ObjectId) -> Result<Vec<String>> {
     for (system, name, mode) in [
         (System::Ecm, "ECM", electronics.guardian),
         (System::AngelEcm, "AngelECM", electronics.angel),
+        (
+            System::CommunicationsEquipment,
+            "Comms",
+            electronics.communications,
+        ),
     ] {
-        let (installed, available) = device(world, id, system)?;
+        // Communications equipment shows here once it can generate ECCM: three tons or more
+        // (Tactical Operations: Advanced Rules p. 98).
+        let (installed, available) = if system == System::CommunicationsEquipment {
+            let unit = world.btech.unit(id).expect("unit record");
+            (
+                unit.communications_tons()? >= btech::electronics::COMMUNICATIONS_ECCM_TONS,
+                unit.electronic_suite_available(ElectronicSuite::Communications)?,
+            )
+        } else {
+            device(world, id, system)?
+        };
         if installed {
             let status = if !available {
                 "[fg=red bold]XX[reset]"

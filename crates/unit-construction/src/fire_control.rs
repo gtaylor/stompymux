@@ -1,8 +1,9 @@
 //! Fire-control links: each Artemis IV, Artemis V or MRM "Apollo" fire-control system names
 //! the launcher it guides by the one-based slot of that launcher's first critical in the
 //! controller's own location. Construction refuses a controller without a link, one linked to
-//! anything but an applicable launcher there, two controllers sharing a launcher, and a unit
-//! that guides some applicable launchers but not all.
+//! anything but an applicable launcher there, two controllers sharing a launcher, a unit
+//! that guides some applicable launchers but not all, and a unit that mixes Artemis IV with
+//! Artemis V.
 use super::{CriticalLocation, ResolvedLoadout, SectionDefinition, System, Weapon};
 use anyhow::{Result, bail, ensure};
 use std::collections::BTreeMap;
@@ -103,6 +104,13 @@ fn check_kind<S: Copy + Ord>(
     section_name: &impl Fn(S) -> &'static str,
     artemis_v_slots: usize,
 ) -> Result<()> {
+    // Artemis V is incompatible with Artemis IV: a unit carries one or the other (Tactical
+    // Operations: Advanced Units & Equipment p. 94).
+    let carries = |system| loadout.systems.iter().any(|part| part.system == system);
+    ensure!(
+        kind != FireControl::Artemis || !(carries(System::ArtemisIv) && carries(System::ArtemisV)),
+        "Artemis V is incompatible with Artemis IV: a unit with one may not carry the other (Tactical Operations: Advanced Units & Equipment p. 94)"
+    );
     // Controller entries grouped by the index of the launcher they link.
     let mut guided: BTreeMap<usize, Vec<&super::SystemCritical<CriticalLocation<S>>>> =
         BTreeMap::new();

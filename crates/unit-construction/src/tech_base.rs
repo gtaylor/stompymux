@@ -61,10 +61,13 @@ impl TechBase {
 impl System {
     /// The one technology base that builds this system, or `None` when both bases build it
     /// under the same critical name. The Bloodhound probe, C3, the null signature system,
-    /// Angel ECM, triple strength myomer, stealth armor, light and heavy ferro-fibrous armor,
-    /// the MRM "Apollo" fire control system and spikes are Inner Sphere only; the light active
-    /// probe, light TAG, Artemis V and talons are Clan only (TechManual pp. 204-245; Tactical
-    /// Operations: Advanced Units & Equipment pp. 100, 142, 217).
+    /// triple strength myomer, stealth armor, light and heavy ferro-fibrous armor, the MRM
+    /// "Apollo" fire control system, the hatchet and sword (TechManual pp. 220, 236), and the
+    /// claws, flail, lance, mace, chain whip, vibroblades and spikes are Inner Sphere only; the
+    /// light active probe, light TAG, Artemis V and talons are Clan only (TechManual
+    /// pp. 204-245; Tactical Operations: Advanced Units & Equipment pp. 100-104, 142, 217).
+    /// Both bases build the Angel ECM suite (ibid. p. 91: "Tech Base: Both"), the retractable
+    /// blade, the dual saw and the wrecking ball (TechManual pp. 236, 243, 249).
     pub fn technology_base(self) -> Option<TechBase> {
         match self {
             Self::BloodhoundProbe
@@ -72,12 +75,21 @@ impl System {
             | Self::C3Slave
             | Self::C3i
             | Self::NullSignature
-            | Self::AngelEcm
             | Self::TripleStrengthMyomer
             | Self::StealthArmor
             | Self::LightFerroFibrous
             | Self::HeavyFerroFibrous
             | Self::ApolloFcs
+            | Self::Axe
+            | Self::Sword
+            | Self::Claw
+            | Self::Flail
+            | Self::Lance
+            | Self::Mace
+            | Self::ChainWhip
+            | Self::SmallVibroblade
+            | Self::MediumVibroblade
+            | Self::LargeVibroblade
             | Self::Spikes => Some(TechBase::InnerSphere),
             Self::LightProbe | Self::LightTag | Self::ArtemisV | Self::Talons => {
                 Some(TechBase::Clan)
@@ -169,6 +181,18 @@ impl Component {
     }
 }
 
+/// A chassis choice that only one technology base builds, such as an XL gyro or a small
+/// cockpit, which construction records as a flag rather than a slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ChassisTechnology {
+    /// Display name, such as `XL gyro`.
+    pub name: &'static str,
+    /// The one base that builds it.
+    pub base: TechBase,
+    /// The rule that limits it to that base.
+    pub citation: &'static str,
+}
+
 /// What a unit is built from, for [`check_technology_base`].
 pub struct TechnologyInventory<'a, W, S> {
     /// `Mech` or `vehicle`, for messages.
@@ -178,14 +202,16 @@ pub struct TechnologyInventory<'a, W, S> {
     pub mixed_tech: bool,
     /// Components built from the other technology base.
     pub other_base_components: Vec<Component>,
+    /// Chassis choices that only one technology base builds.
+    pub chassis_technologies: Vec<ChassisTechnology>,
     pub weapons: W,
     pub systems: S,
 }
 
 /// Refuse anything from the other technology base on a design that does not declare mixed
-/// technology: an engine, structure or armor of the other base (TM p. 46), a weapon of the
-/// other base, a system only the other base builds, or a system whose slot names the other
-/// base.
+/// technology: an engine, structure or armor of the other base (TM p. 46), a chassis choice
+/// only the other base builds, a weapon of the other base, a system only the other base
+/// builds, or a system whose slot names the other base.
 pub fn check_technology_base<W, S>(inventory: TechnologyInventory<'_, W, S>) -> Result<()>
 where
     W: IntoIterator<Item = Weapon>,
@@ -202,6 +228,16 @@ where
             "The {} is not {} technology like the chassis; only a mixed_tech design builds components from both bases (TechManual p. 46)",
             component.label(),
             base.name()
+        );
+    }
+    for technology in inventory.chassis_technologies {
+        ensure!(
+            technology.base == base,
+            "The {} is {} technology on {} {unit}; declare mixed_tech in [construction] ({})",
+            technology.name,
+            technology.base.name(),
+            base.with_article(),
+            technology.citation
         );
     }
     for weapon in inventory.weapons {
@@ -255,6 +291,7 @@ mod tests {
             base,
             mixed_tech,
             other_base_components: components,
+            chassis_technologies: vec![],
             weapons,
             systems,
         })
@@ -323,6 +360,71 @@ mod tests {
         assert!(inventory(Clan, false, vec![], vec![Weapon::APod], vec![]).is_ok());
     }
 
+    /// Both bases build the Angel ECM suite (Tactical Operations: Advanced Units & Equipment
+    /// p. 91), while the hatchet, sword and the advanced melee weapons are Inner Sphere only
+    /// (TechManual pp. 220, 236; ibid. pp. 100-104), so a Clan Mech mounts them only as a
+    /// mixed-technology design.
+    #[test]
+    fn angel_ecm_is_built_by_both_bases_and_melee_weapons_by_the_inner_sphere() {
+        use TechBase::*;
+        for base in [InnerSphere, Clan] {
+            assert!(inventory(base, false, vec![], vec![], vec![System::AngelEcm]).is_ok());
+        }
+        for system in [
+            System::Axe,
+            System::Sword,
+            System::Claw,
+            System::Flail,
+            System::Lance,
+            System::Mace,
+            System::ChainWhip,
+            System::SmallVibroblade,
+            System::MediumVibroblade,
+            System::LargeVibroblade,
+        ] {
+            assert_eq!(system.technology_base(), Some(InnerSphere), "{system:?}");
+            assert!(inventory(Clan, false, vec![], vec![], vec![system]).is_err());
+            assert!(inventory(Clan, true, vec![], vec![], vec![system]).is_ok());
+        }
+        for system in [
+            System::RetractableBlade,
+            System::DualSaw,
+            System::WreckingBall,
+        ] {
+            assert_eq!(system.technology_base(), None, "{system:?}");
+        }
+    }
+
+    /// A chassis choice only one base builds is refused on the other base's chassis unless
+    /// the design is mixed technology.
+    #[test]
+    fn chassis_technologies_follow_their_base() {
+        let gyro = ChassisTechnology {
+            name: "XL gyro",
+            base: TechBase::InnerSphere,
+            citation: "TechManual p. 50",
+        };
+        let check = |base, mixed_tech| {
+            check_technology_base(TechnologyInventory {
+                unit: "Mech",
+                base,
+                mixed_tech,
+                other_base_components: vec![],
+                chassis_technologies: vec![gyro],
+                weapons: Vec::<Weapon>::new(),
+                systems: Vec::<System>::new(),
+            })
+        };
+        let error = check(TechBase::Clan, false).unwrap_err().to_string();
+        assert!(
+            error.contains("The XL gyro is Inner Sphere technology on a Clan Mech")
+                && error.contains("TechManual p. 50"),
+            "{error}"
+        );
+        assert!(check(TechBase::Clan, true).is_ok());
+        assert!(check(TechBase::InnerSphere, false).is_ok());
+    }
+
     /// A slot may state the base of a system both bases build; the stated base must match
     /// the chassis unless the design is mixed technology.
     #[test]
@@ -347,6 +449,7 @@ mod tests {
                 base,
                 mixed_tech: mixed,
                 other_base_components: vec![],
+                chassis_technologies: vec![],
                 weapons: Vec::<Weapon>::new(),
                 systems: vec![installed],
             })

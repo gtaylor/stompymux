@@ -1,5 +1,55 @@
 //! Live effects of chassis-wide technologies on a constructed unit's armor and structure.
 use super::{DamageClass, Mech, MechSection, Technology};
+use serde::{Deserialize, Serialize};
+
+/// One of a location's armor facings: its front armor, or a torso's rear armor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct ArmorFacing {
+    pub section: MechSection,
+    pub rear: bool,
+}
+
+impl ArmorFacing {
+    /// A location's front armor.
+    pub fn front(section: MechSection) -> Self {
+        Self {
+            section,
+            rear: false,
+        }
+    }
+
+    /// A torso's rear armor.
+    pub fn rear(section: MechSection) -> Self {
+        Self {
+            section,
+            rear: true,
+        }
+    }
+
+    /// The facing a hit on `section` strikes: rear-arc hits strike a torso's rear armor, and
+    /// every other location has only front armor.
+    pub fn struck(section: MechSection, rear: bool) -> Self {
+        Self {
+            section,
+            rear: rear
+                && matches!(
+                    section,
+                    MechSection::LeftTorso | MechSection::CenterTorso | MechSection::RightTorso
+                ),
+        }
+    }
+}
+
+/// What one hit does to a location's hardened or laser-reflective armor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ArmorHit {
+    /// Armor points destroyed.
+    pub removed: u16,
+    /// Damage passing on to the internal structure.
+    pub overflow: u16,
+    /// For hardened armor, whether the facing's outermost point is left with one slash.
+    pub dented: Option<bool>,
+}
 
 impl Mech {
     /// Whether this Mech's armor is hardened.
@@ -7,50 +57,72 @@ impl Mech {
         self.definition().has_technology(Technology::HardenedArmor)
     }
 
-    /// Hardened armor points removed from a location and the full-value overflow, or `None`
-    /// for ordinary armor. Rear hits on torsos use rear armor.
+    /// Whether this Mech's armor is laser-reflective.
+    pub(crate) fn reflective_armor(&self) -> bool {
+        self.definition()
+            .has_technology(Technology::LaserReflectiveArmor)
+    }
+
+    /// What an ordinary hit does to a location's hardened armor, or `None` for other armor.
+    /// Rear hits on torsos use rear armor.
     pub(crate) fn hardened_hit(
         &self,
         section: MechSection,
         rear: bool,
         amount: u16,
-    ) -> Option<(u16, u16)> {
+    ) -> Option<ArmorHit> {
         self.armor_hit(section, rear, amount, DamageClass::Ordinary)
     }
 
-    /// Armor points a hit of `class` removes from a location with hardened or reflective
-    /// armor, and the damage that passes on to the structure, or `None` when the location's
-    /// armor absorbs the hit point for point. Rear hits on torsos use rear armor.
+    /// What a hit of `class` does to a location with hardened or reflective armor, or `None`
+    /// when the location's armor absorbs the hit point for point (Tactical Operations:
+    /// Advanced Units & Equipment p. 93). Hardened armor takes two damage per point, keeping
+    /// a half-damaged point between hits, and armor-piercing rounds as standard rounds on
+    /// standard armor. Rear hits on torsos use rear armor.
     pub(crate) fn armor_hit(
         &self,
         section: MechSection,
         rear: bool,
         amount: u16,
         class: DamageClass,
-    ) -> Option<(u16, u16)> {
-        let hardened = self.hardened_armor();
-        let reflective = self
-            .definition()
-            .has_technology(Technology::LaserReflectiveArmor);
-        if !hardened && !reflective {
+    ) -> Option<ArmorHit> {
+        let facing = ArmorFacing::struck(section, rear);
+        let state = &self.sections()[&section];
+        let armor = if facing.rear { state.rear } else { state.armor };
+        if self.hardened_armor() {
+            if class == DamageClass::ArmorPiercing {
+                return None;
+            }
+            let hit = Technology::hardened_hit(
+                u32::from(amount),
+                armor,
+                self.hardened_dents.contains(&facing),
+            );
+            return Some(ArmorHit {
+                removed: hit.removed,
+                overflow: hit.overflow.min(u32::from(u16::MAX)) as u16,
+                dented: Some(hit.dented),
+            });
+        }
+        if !self.reflective_armor() {
             return None;
         }
-        let state = &self.sections()[&section];
-        let torso = matches!(
-            section,
-            MechSection::LeftTorso | MechSection::CenterTorso | MechSection::RightTorso
-        );
-        let armor = if rear && torso {
-            state.rear
+        Technology::reflective_hit(class, u32::from(amount), armor).map(|(removed, overflow)| {
+            ArmorHit {
+                removed,
+                overflow: overflow.min(u32::from(u16::MAX)) as u16,
+                dented: None,
+            }
+        })
+    }
+
+    /// Record whether a hardened facing's outermost point is left half-damaged by a hit.
+    pub(crate) fn mark_hardened_dent(&mut self, facing: ArmorFacing, dented: bool) {
+        if dented {
+            self.hardened_dents.insert(facing);
         } else {
-            state.armor
-        };
-        if hardened {
-            let (removed, overflow) = Technology::hardened_hit(u32::from(amount), armor);
-            return Some((removed, overflow as u16));
+            self.hardened_dents.remove(&facing);
         }
-        Technology::reflective_hit(class, u32::from(amount), armor)
-            .map(|(removed, overflow)| (removed, overflow.min(u32::from(u16::MAX)) as u16))
     }
 
     /// Hardened armor costs a Mech one running MP.
@@ -90,15 +162,33 @@ mod tests {
         specials.push_str(" HARM");
         // Hardened armor's doubled weight comes out of the weapons.
         crate::btech::test_designs::balance(&mut template, &[]);
-        let unit = Mech::from_template(template).unwrap();
+        let mut unit = Mech::from_template(template).unwrap();
         let left_arm = MechSection::LeftArm;
+        let hit = |removed, overflow, dented| {
+            Some(super::ArmorHit {
+                removed,
+                overflow,
+                dented: Some(dented),
+            })
+        };
         // Six damage removes three of four points: three count.
-        assert_eq!(unit.hardened_hit(left_arm, false, 6), Some((3, 0)));
+        assert_eq!(unit.hardened_hit(left_arm, false, 6), hit(3, 0, false));
         // Twelve damage removes all four and four more pass through: eight count.
-        assert_eq!(unit.hardened_hit(left_arm, false, 12), Some((4, 4)));
+        assert_eq!(unit.hardened_hit(left_arm, false, 12), hit(4, 4, false));
         // Rear torso hits use rear armor.
         let torso = MechSection::CenterTorso;
-        assert_eq!(unit.hardened_hit(torso, true, 10), Some((3, 4)));
+        assert_eq!(unit.hardened_hit(torso, true, 10), hit(3, 4, false));
+        // One damage only slashes a point, and the slash belongs to the facing struck.
+        assert_eq!(unit.hardened_hit(left_arm, false, 1), hit(0, 0, true));
+        unit.mark_hardened_dent(super::ArmorFacing::front(left_arm), true);
+        assert_eq!(unit.hardened_hit(left_arm, false, 1), hit(1, 0, false));
+        assert_eq!(unit.hardened_hit(left_arm, true, 1), hit(1, 0, false));
+        assert_eq!(unit.hardened_hit(torso, false, 1), hit(0, 0, true));
+        // Armor-piercing rounds meet hardened armor as standard rounds on standard armor.
+        assert_eq!(
+            unit.armor_hit(left_arm, false, 5, crate::btech::DamageClass::ArmorPiercing),
+            None
+        );
         assert_eq!(unit.hardened_piloting_modifier(), 1);
     }
 

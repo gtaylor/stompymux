@@ -1,7 +1,7 @@
 +++
 title = "Cargo"
 description = "Inspect and transfer loose parts and supplies"
-keywords = ["fixstuff", "cargo", "manifest", "stores", "loadcargo", "unloadcargo"]
+keywords = ["fixstuff", "cargo", "manifest", "stores", "loadcargo", "unloadcargo", "lift hoist"]
 article_tags = ["show_in_index"]
 +++
 
@@ -12,9 +12,15 @@ stock when you are inside a unit. `stores [pattern]` lists the hangar's stock
 from inside a running unit at its loading point.
 
 `loadcargo <pattern> <quantity>` moves matching hangar stock into your unit.
-The unit must have CargoTech, be running and stationary, and be on a map that
-is not marked InCharacter. If the map has a configured loading point, move to
-that hex first. A hidden loading point does not disclose its coordinates.
+The unit must have CargoTech or a working lift hoist, be running and stationary,
+and be on a map that is not marked InCharacter. If the map has a configured
+loading point, move to that hex first. A hidden loading point does not disclose
+its coordinates.
+
+A unit without CargoTech holds its stock in its lift hoists. Each working hoist
+lifts half the unit's tonnage, at most 200 tons, and the hoists' limits add up;
+a Mech's active triple strength myomer doubles them. Hoists work only while the
+unit runs and its pilot is conscious, for unloading too (Total Warfare p. 136).
 
 `unloadcargo <pattern> <quantity>` moves carried stock onto the current map.
 It also works while shut down or moving, and does not require the loading point

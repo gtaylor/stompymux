@@ -710,7 +710,11 @@ fn short_flags(world: &World, id: ObjectId) -> Result<String> {
     {
         flags.push('n');
     }
-    let modes = [electronics.guardian, electronics.angel];
+    let modes = [
+        electronics.guardian,
+        electronics.angel,
+        electronics.communications,
+    ];
     if modes.contains(&ElectronicMode::Eccm) {
         flags.push('P');
     }

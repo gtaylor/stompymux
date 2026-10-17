@@ -77,7 +77,8 @@ fn hit(amount: u32) -> VehicleArmorHit {
     }
 }
 
-/// Reflective armor halves energy hits, doubles area-effect hits and ignores ordinary ones.
+/// Reflective armor halves energy hits, doubles area-effect and impact hits and ignores
+/// ordinary ones.
 #[tokio::test]
 async fn reflective_armor_depends_on_the_damage_class() {
     let text = support::templates::with_flags(
@@ -94,6 +95,8 @@ async fn reflective_armor_depends_on_the_damage_class() {
         (DamageClass::AreaEffect, 10, 20, 0),
         // Twenty damage strips all forty points; the last five pass through.
         (DamageClass::AreaEffect, 25, 50, 5),
+        // Falls, physical attacks and building walls double as well.
+        (DamageClass::Impact, 10, 20, 0),
     ] {
         let (_dir, _config, mut world, id) = fixture(&text).await;
         seed(&mut world, id, 21);
@@ -123,9 +126,10 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
         ("", 0, 0, 0, 0),
         ("", 40, 40, 0, 0),
         ("", 43, 43, 3, 3),
-        ("HardenedArmor_Tech", 81, 41, 1, 1),
+        // Hardened armor reports the points the hit could complete, two damage each.
+        ("HardenedArmor_Tech", 81, 40, 1, 1),
         // Forty hardened points stop eighty; the other five pass at full value.
-        ("HardenedArmor_Tech", 85, 43, 5, 5),
+        ("HardenedArmor_Tech", 85, 42, 5, 5),
     ] {
         let text = include_str!("../game/units/Demolisher.toml");
         let text = if special.is_empty() {
@@ -185,6 +189,37 @@ async fn armor_penetration_uses_one_entry_roll_and_applies_material_modifiers() 
             persistence::load(&config.database()).await.unwrap().btech
         );
     }
+}
+
+/// Hardened armor takes two damage per point and keeps a half-damaged point between hits;
+/// armor-piercing rounds meet it point for point, as standard rounds on standard armor
+/// (Tactical Operations: Advanced Units & Equipment p. 93).
+#[tokio::test]
+async fn hardened_armor_keeps_half_points_and_takes_armor_piercing_point_for_point() {
+    let text = support::templates::with_flags(
+        include_str!("../game/units/Demolisher.toml"),
+        &["HardenedArmor_Tech"],
+    );
+    let (_dir, config, mut world, id) = fixture(&text).await;
+    seed(&mut world, id, 21);
+    let front =
+        |world: &World| world.btech.vehicles()[&id].sections()[&VehicleSection::Front].armor;
+    // A single point only slashes the outermost hardened point.
+    let report = resolve_battle_vehicle_armor_damage(&mut world, id, hit(1), rules()).unwrap();
+    assert_eq!((report.armor_damage, report.absorbed), (0, 0));
+    assert_eq!(front(&world), 40);
+    // The slash survives a save, and the next single point finishes the point.
+    persistence::save(&config.database(), &world).await.unwrap();
+    let mut world = persistence::load(&config.database()).await.unwrap();
+    let report = resolve_battle_vehicle_armor_damage(&mut world, id, hit(1), rules()).unwrap();
+    assert_eq!((report.armor_damage, report.absorbed), (1, 1));
+    assert_eq!(front(&world), 39);
+    let mut request = hit(6);
+    request.armor_piercing = Some(Weapon::Ac10);
+    let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
+    assert_eq!((report.armor_damage, report.absorbed), (6, 6));
+    assert!(report.criticals.is_empty());
+    assert_eq!(front(&world), 33);
 }
 
 #[tokio::test]
@@ -283,6 +318,19 @@ async fn armor_piercing_rolls_on_every_armor_hit_with_the_autocannon_penalty() {
     request.armor_piercing = Some(Weapon::Ac20);
     let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
     assert!(report.criticals.is_empty());
+    // Laser-reflective armor adds two to the armor-piercing roll (Tactical Operations: AUE
+    // p. 93).
+    let reflective = support::templates::with_flags(
+        include_str!("../game/units/Demolisher.toml"),
+        &["LaserRefArmor_Tech"],
+    );
+    let (_dir, _config, mut world, id) = fixture(&reflective).await;
+    set_seed(&mut world, id, stream);
+    let mut request = hit(1);
+    request.armor_piercing = Some(Weapon::Ac2);
+    let report = resolve_battle_vehicle_armor_damage(&mut world, id, request, rules()).unwrap();
+    assert_eq!(report.criticals.len(), 1);
+    assert_eq!(report.criticals[0].selection.modifier, -2);
     let mut world = base.clone();
     let before = world.btech.clone();
     let mut request = hit(1);

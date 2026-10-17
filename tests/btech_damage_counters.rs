@@ -151,7 +151,8 @@ async fn accounting_uses_the_admitted_packet_before_material_reductions() {
             counters(&world, id),
             serde_json::json!({"taken":incoming,"inflicted":0})
         );
-        assert_eq!(report.armor_damage, if rotor { 2 } else { 5 });
+        // Nine hardened damage complete four points and slash a fifth.
+        assert_eq!(report.armor_damage, if rotor { 2 } else { 4 });
         let internal =
             resolve_battle_vehicle_internal_damage(&mut world, id, VehicleSection::Rear, 5, rules)
                 .unwrap();

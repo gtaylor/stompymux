@@ -21,3 +21,12 @@ armor = 8
 
 [sections.aft_side]
 armor = 8
+slots = [
+    { at = 1, item = "Lift_Hoist" },
+]
+
+[sections.turret]
+armor = 8
+slots = [
+    { at = 1, item = "Backhoe" },
+]

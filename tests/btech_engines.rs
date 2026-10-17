@@ -175,18 +175,20 @@ fn clan_engine_layouts_mass_and_side_loss() {
 /// Engine shielding changes internal defensive value independently of installed weapon offense.
 #[test]
 fn battle_value_engine_factors() {
-    for (center, left, right, engine, defensive) in [
-        (6, 0, 0, Engine::Standard, 324.35),
-        (6, 2, 2, Engine::Light, 296.075),
-        (6, 3, 3, Engine::Xl, 267.8),
+    // Four medium lasers and 35 tons at 9 running and 4 jumping MP, a Speed Factor of 1.76:
+    // the center torso jump jet made room for the engine. Ten sinks cover the lasers' 12 heat
+    // after 4 points of jumping heat. An XXL engine doubles the jump heat to 8 (TO:AUE
+    // p. 121), so the fourth laser counts at half value: (3.5 x 46 + 35) x 1.76.
+    for (center, left, right, engine, offensive, defensive) in [
+        (6, 0, 0, Engine::Standard, 385.44, 324.35),
+        (6, 2, 2, Engine::Light, 385.44, 296.075),
+        (6, 3, 3, Engine::Xl, 385.44, 267.8),
         // An Inner Sphere XXL engine keeps a quarter of the structure value (TO:AUE p. 193).
-        (6, 6, 6, Engine::Xxl, 239.525),
+        (6, 6, 6, Engine::Xxl, 344.96, 239.525),
     ] {
         let unit = Mech::from_template(definition(center, left, right, engine)).unwrap();
         let value = unit.battle_value().unwrap();
-        // Four medium lasers and 35 tons at 9 running and 4 jumping MP: the center torso jump
-        // jet made room for the engine.
-        assert!((value.offensive - 385.44).abs() < 0.0001, "{value:?}");
+        assert!((value.offensive - offensive).abs() < 0.0001, "{value:?}");
         assert!((value.defensive - defensive).abs() < 0.0001, "{value:?}");
     }
 }

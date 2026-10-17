@@ -49,6 +49,7 @@ no_list: true
 - [`club`](club/)
 - [`cluster`](cluster/)
 - [`combat_safe`](combat-safe/)
+- [`commseccm`](commseccm/)
 - [`configure_ammunition`](configure-ammunition/)
 - [`contacts`](contacts/)
 - [`create`](create/)

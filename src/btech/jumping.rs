@@ -546,7 +546,11 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
         y: i32::from(position.y),
     }
     .distance(destination);
-    let heat = super::jump::jump_heat(hexes, unit.definition().has_special("ImprovedJJ_Tech"));
+    let heat = super::jump::jump_heat(
+        hexes,
+        unit.definition().has_special("ImprovedJJ_Tech"),
+        unit.engine()? == super::Engine::Xxl,
+    );
     let last_jump = LastJump::from_path(path)?;
     let flight = JumpFlight::new(path);
     Ok(PreparedJump {

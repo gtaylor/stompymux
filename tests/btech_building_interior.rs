@@ -321,6 +321,72 @@ async fn interiors_give_partial_cover_and_block_outside_physical_attacks() {
     );
 }
 
+/// A shot from another level of the same building hex hits a 'Mech on the Special 'Mech Hit
+/// Location Table (Total Warfare p. 175): from above it never finds a leg, and from below
+/// never an arm or the head. Fire inside the same hex is not shielded by the building.
+#[tokio::test]
+async fn shots_between_building_levels_use_the_special_hit_location_table() {
+    let (_dir, _config, base, _map, [shooter, target]) =
+        field(&[".0.0.0", "@4@4@4", ".0.0.0"]).await;
+    let rules = ShotRules {
+        tsm_tow_bonus: true,
+        vehicle_impact: VehicleImpactRules::STANDARD,
+        aim: AimRules {
+            override_weapon_arcs: true,
+        },
+        extended_gunnery: false,
+        extended_piloting: false,
+        target_toughness: false,
+    };
+    use MechSection::*;
+    for (shooter_level, target_level, allowed) in [
+        (
+            2,
+            0,
+            &[LeftArm, LeftTorso, CenterTorso, RightTorso, RightArm, Head][..],
+        ),
+        (0, 2, &[LeftLeg, LeftTorso, RightTorso, RightLeg][..]),
+    ] {
+        let mut world = base.clone();
+        step_inside(&mut world, shooter, shooter_level);
+        step_inside(&mut world, target, target_level);
+        refresh_battle_contacts(&mut world, &[shooter]).unwrap();
+        assert!(
+            visible_battle_contact(&world, shooter, target)
+                .unwrap()
+                .is_some()
+        );
+        let mut hits = 0;
+        for seed in 0..=63 {
+            let mut trial = world.clone();
+            trial
+                .btech
+                .set_unit_dice(shooter, Dice::seeded([seed; 32]))
+                .unwrap();
+            trial
+                .btech
+                .set_unit_dice(target, Dice::seeded([seed; 32]))
+                .unwrap();
+            let report =
+                resolve_battle_shot(&mut trial, shooter, ObjectId(1), target, 0, rules).unwrap();
+            let Some(TargetSalvo::Mech(salvo)) = report.salvo else {
+                continue;
+            };
+            assert!(salvo.building.is_none());
+            for group in &salvo.groups {
+                assert!(
+                    allowed.contains(&group.hit.section),
+                    "{shooter_level} over {target_level}: {:?}",
+                    group.hit.section
+                );
+                assert!(!group.hit.through_armor_critical);
+                hits += 1;
+            }
+        }
+        assert!(hits > 4, "{shooter_level} over {target_level}: {hits} hits");
+    }
+}
+
 /// Make the building hex at `x`, `y` one of `class` with construction factor `cf`.
 fn rebuild(
     world: &mut World,

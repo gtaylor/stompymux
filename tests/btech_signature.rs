@@ -44,7 +44,8 @@ fn equipped() -> MechTemplate {
     template
 }
 
-/// A flag cannot substitute for a missing device; every device remains vulnerable to random criticals.
+/// A flag cannot substitute for a missing device, an incomplete system does not construct, and
+/// every device remains vulnerable to random criticals.
 #[test]
 fn nss_construction_completeness_and_critical_loss() {
     let definition = equipped();
@@ -74,11 +75,14 @@ fn nss_construction_completeness_and_critical_loss() {
             .unwrap()
             .criticals
             .remove(&slot);
+        // The system fills a slot in every location but the head (Tactical Operations:
+        // Advanced Units & Equipment p. 148), so a missing slot does not construct.
+        let refused = Mech::from_template(incomplete).unwrap_err().to_string();
         assert!(
-            !Mech::from_template(incomplete)
-                .unwrap()
-                .has_null_signature()
-                .unwrap()
+            refused.contains(
+                "The null-signature system fills one critical slot in every location but the head"
+            ),
+            "{refused}"
         );
     }
 }

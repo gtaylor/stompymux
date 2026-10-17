@@ -57,10 +57,16 @@ impl JumpCapacity {
 
 /// Heat from one jump (Total Warfare p. 53 and p. 158): one point for every hex jumped, with
 /// a minimum of three. Improved jump jets halve it to one point per two hexes or part
-/// thereof, still with the minimum of three. Gravity never changes it.
-pub fn jump_heat(hexes: u64, improved: bool) -> u64 {
-    let hexes = if improved { hexes.div_ceil(2) } else { hexes };
-    hexes.max(3)
+/// thereof, still with the minimum of three. An XXL engine doubles the heat per hex with a
+/// minimum of six, and with improved jets the halving and the doubling cancel out (Tactical
+/// Operations: Advanced Units & Equipment p. 121). Gravity never changes it.
+pub fn jump_heat(hexes: u64, improved: bool, xxl: bool) -> u64 {
+    match (improved, xxl) {
+        (false, false) => hexes.max(3),
+        (true, false) => hexes.div_ceil(2).max(3),
+        (false, true) => (hexes * 2).max(6),
+        (true, true) => hexes.max(6),
+    }
 }
 
 /// Gravity modifier to the jump-strain roll (Tactical Operations p. 53): one for every full
@@ -479,22 +485,25 @@ mod tests {
     use super::*;
 
     /// One heat per hex jumped with a minimum of three; improved jets halve the count, not
-    /// the minimum (Total Warfare p. 53).
+    /// the minimum (Total Warfare p. 53). An XXL engine doubles the count with a minimum of
+    /// six, and improved jets cancel the doubling (Tactical Operations: AUE p. 121).
     #[test]
     fn jump_heat_charges_hexes_with_a_minimum_of_three() {
-        for (hexes, standard, improved) in [
-            (0, 3, 3),
-            (1, 3, 3),
-            (3, 3, 3),
-            (4, 4, 3),
-            (5, 5, 3),
-            (6, 6, 3),
-            (7, 7, 4),
-            (8, 8, 4),
-            (9, 9, 5),
+        for (hexes, standard, improved, xxl, xxl_improved) in [
+            (0, 3, 3, 6, 6),
+            (1, 3, 3, 6, 6),
+            (3, 3, 3, 6, 6),
+            (4, 4, 3, 8, 6),
+            (5, 5, 3, 10, 6),
+            (6, 6, 3, 12, 6),
+            (7, 7, 4, 14, 7),
+            (8, 8, 4, 16, 8),
+            (9, 9, 5, 18, 9),
         ] {
-            assert_eq!(jump_heat(hexes, false), standard, "{hexes}");
-            assert_eq!(jump_heat(hexes, true), improved, "{hexes}");
+            assert_eq!(jump_heat(hexes, false, false), standard, "{hexes}");
+            assert_eq!(jump_heat(hexes, true, false), improved, "{hexes}");
+            assert_eq!(jump_heat(hexes, false, true), xxl, "{hexes}");
+            assert_eq!(jump_heat(hexes, true, true), xxl_improved, "{hexes}");
         }
     }
 

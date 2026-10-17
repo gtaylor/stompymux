@@ -304,10 +304,18 @@ fn resolve_ammunition_checks(
     report: &mut OverheatReport,
 ) -> Result<()> {
     let inferno_bin = heat_explosion_hazard(&world.btech.constructed_units()[&id], true)?;
+    // Laser heat sinks leave less hot coolant inside the 'Mech: +1 on rolls to avoid
+    // heat-induced ammunition explosions (Tactical Operations: Advanced Units & Equipment
+    // p. 129), counted here as one off the Avoid Number.
+    let laser_sinks = i16::from(
+        world.btech.constructed_units()[&id]
+            .definition()
+            .has_technology(super::Technology::LaserHeatSinks),
+    );
     if let Some(bin) = inferno_bin
         && let Some(target) = inferno_ammunition_target(heat)
     {
-        let check = avoid_roll(world, id, target);
+        let check = avoid_roll(world, id, target - laser_sinks);
         report.inferno_check = Some(check);
         if !check.success {
             let explosion = explode(world, id, bin.index, character, fall_rules, report)?;
@@ -320,7 +328,7 @@ fn resolve_ammunition_checks(
     let Some(target) = ammunition_target(heat) else {
         return Ok(());
     };
-    let check = avoid_roll(world, id, target);
+    let check = avoid_roll(world, id, target - laser_sinks);
     report.ammunition_check = Some(check);
     if check.success {
         return Ok(());

@@ -6,12 +6,14 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
-/// Independently controlled electronic-warfare suite families.
+/// Independently controlled electronic-warfare suite families. Communications equipment
+/// generates ECCM only (Tactical Operations: Advanced Rules p. 98).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ElectronicSuite {
     Guardian,
     Angel,
+    Communications,
 }
 
 /// Selected modes and the last committed field observation; emissions are derived from equipment.
@@ -19,8 +21,15 @@ pub enum ElectronicSuite {
 pub struct Electronics {
     pub guardian: Mode,
     pub angel: Mode,
+    /// Communications equipment generating an ECCM field, or off; it never generates ECM.
+    #[serde(default)]
+    pub communications: Mode,
     pub field: ElectronicField,
 }
+
+/// The fewest tons of communications equipment that generate an ECCM field (Tactical
+/// Operations: Advanced Rules p. 98).
+pub const COMMUNICATIONS_ECCM_TONS: u8 = 3;
 
 impl ElectronicSuite {
     /// Critical identity implementing this suite.
@@ -28,6 +37,7 @@ impl ElectronicSuite {
         match self {
             Self::Guardian => System::Ecm,
             Self::Angel => System::AngelEcm,
+            Self::Communications => System::CommunicationsEquipment,
         }
     }
 }
@@ -40,6 +50,9 @@ impl Mech {
 
     /// Guardian presence is sufficient; a biped Angel suite needs two surviving slots.
     /// A destroyed or flooded part disables the whole corresponding suite family.
+    /// Communications equipment generates ECCM from three tons, a ton to each slot, while its
+    /// slots survive and the Mech's sensors and cockpit are undamaged (TechManual p. 212;
+    /// Tactical Operations: Advanced Rules p. 98).
     pub fn electronic_suite_available(&self, suite: ElectronicSuite) -> Result<bool> {
         let loadout = self.loadout()?;
         let parts: Vec<_> = loadout
@@ -47,15 +60,31 @@ impl Mech {
             .iter()
             .filter(|part| part.system == suite.system())
             .collect();
-        let minimum = if suite == ElectronicSuite::Angel {
-            2
-        } else {
-            1
+        let minimum = match suite {
+            ElectronicSuite::Guardian => 1,
+            ElectronicSuite::Angel => 2,
+            ElectronicSuite::Communications => usize::from(COMMUNICATIONS_ECCM_TONS),
         };
+        if suite == ElectronicSuite::Communications
+            && (self.system_hits(System::Sensors) > 0 || self.system_hits(System::Cockpit) > 0)
+        {
+            return Ok(false);
+        }
         Ok(parts.len() >= minimum
             && parts
                 .iter()
                 .all(|part| !self.critical_unavailable(part.location)))
+    }
+
+    /// Tons of communications equipment installed: a ton to each slot (TechManual p. 212).
+    pub fn communications_tons(&self) -> Result<u8> {
+        let count = self
+            .loadout()?
+            .systems
+            .iter()
+            .filter(|part| part.system == System::CommunicationsEquipment)
+            .count();
+        Ok(u8::try_from(count).unwrap_or(u8::MAX))
     }
 
     /// Shutdown clears both selections; damage disables only the affected suite family.
@@ -68,19 +97,29 @@ impl Mech {
         let angel = self
             .electronic_suite_available(ElectronicSuite::Angel)
             .unwrap_or(false);
-        self.electronics
-            .reconcile(self.power == Power::Running, guardian, angel);
+        let communications = self
+            .electronic_suite_available(ElectronicSuite::Communications)
+            .unwrap_or(false);
+        self.electronics.reconcile(
+            self.power == Power::Running,
+            guardian,
+            angel,
+            communications,
+        );
     }
 }
 
 impl Electronics {
     /// Clear emissions when power or the corresponding equipment is lost.
-    fn reconcile(&mut self, running: bool, guardian: bool, angel: bool) {
+    fn reconcile(&mut self, running: bool, guardian: bool, angel: bool, communications: bool) {
         if !running || !guardian {
             self.guardian = Mode::Off;
         }
         if !running || !angel {
             self.angel = Mode::Off;
+        }
+        if !running || !communications {
+            self.communications = Mode::Off;
         }
     }
 }
@@ -91,7 +130,9 @@ impl super::Vehicle {
         self.electronics
     }
 
-    /// Vehicle electronic suites occupy independent equipment slots.
+    /// Vehicle electronic suites occupy independent equipment slots. Communications equipment
+    /// generates ECCM from three tons while it survives and the vehicle's sensors are
+    /// undamaged (TechManual p. 212; Tactical Operations: Advanced Rules p. 98).
     pub fn electronic_suite_available(&self, suite: ElectronicSuite) -> Result<bool> {
         let loadout = self.loadout()?;
         let parts: Vec<_> = loadout
@@ -99,10 +140,26 @@ impl super::Vehicle {
             .iter()
             .filter(|part| part.system == suite.system())
             .collect();
+        if suite == ElectronicSuite::Communications
+            && (self.sensor_hits() > 0 || self.communications_tons()? < COMMUNICATIONS_ECCM_TONS)
+        {
+            return Ok(false);
+        }
         Ok(!parts.is_empty()
             && parts
                 .iter()
                 .all(|part| !self.critical_unavailable(part.location)))
+    }
+
+    /// Tons of communications equipment installed: the tons its one item states (TechManual
+    /// p. 212).
+    pub fn communications_tons(&self) -> Result<u8> {
+        let loadout = self.loadout()?;
+        Ok(loadout
+            .systems
+            .iter()
+            .filter_map(|part| self.definition().communications_tons(part))
+            .sum())
     }
 
     /// Reconcile equipment-dependent controls after damage or shutdown.
@@ -129,8 +186,16 @@ impl super::Vehicle {
         let angel = self
             .electronic_suite_available(ElectronicSuite::Angel)
             .unwrap_or(false);
+        let communications = self
+            .electronic_suite_available(ElectronicSuite::Communications)
+            .unwrap_or(false);
         let mut electronics = self.electronics;
-        electronics.reconcile(self.power == Power::Running, guardian, angel);
+        electronics.reconcile(
+            self.power == Power::Running,
+            guardian,
+            angel,
+            communications,
+        );
         electronics
     }
 
@@ -188,6 +253,16 @@ pub fn toggle_electronics(
         .context("Unit construction state is unavailable")?;
     ensure!(unit.power == Power::Running, "Start the unit first");
     ensure!(unit.position.is_some(), "Unit is not placed");
+    if suite == ElectronicSuite::Communications {
+        ensure!(
+            requested == Mode::Eccm,
+            "Communications equipment generates ECCM only"
+        );
+        ensure!(
+            available(world, id, suite)?,
+            "This unit does not have {COMMUNICATIONS_ECCM_TONS} or more tons of working communications equipment"
+        );
+    }
     ensure!(
         available(world, id, suite)?,
         "This unit does not have a working {suite:?} ECM suite"
@@ -197,6 +272,7 @@ pub fn toggle_electronics(
         let mode = match suite {
             ElectronicSuite::Guardian => &mut electronics.guardian,
             ElectronicSuite::Angel => &mut electronics.angel,
+            ElectronicSuite::Communications => &mut electronics.communications,
         };
         *mode = mode.toggle(requested);
         *mode
@@ -243,7 +319,10 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
     for other in identities(world) {
         // Most units carry no active suite; reading the switch first keeps this scan cheap.
         let state = state(world, other)?;
-        if state.guardian == Mode::Off && state.angel == Mode::Off {
+        if state.guardian == Mode::Off
+            && state.angel == Mode::Off
+            && state.communications == Mode::Off
+        {
             continue;
         }
         let emitter = super::scanner::scanner_unit(world, other).unwrap();
@@ -276,9 +355,25 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
                 Mode::Off
             },
             personal: Mode::Off,
+            communications_eccm: if state.communications == Mode::Eccm
+                && available(world, other, ElectronicSuite::Communications)?
+            {
+                super::communications_eccm(communications_tons(world, other)?)
+            } else {
+                0
+            },
         });
     }
     super::resolve_electronic_field(previous, team, sources, self_interference)
+}
+
+/// Tons of communications equipment a unit of either store carries.
+fn communications_tons(world: &World, id: ObjectId) -> Result<u8> {
+    let unit = world
+        .btech
+        .unit(id)
+        .context("Unit construction state is unavailable")?;
+    unit.communications_tons()
 }
 
 /// Recompute every observation from one world snapshot, then publish changes together.
@@ -356,15 +451,15 @@ pub(crate) fn configure(
     scripts.atomic(|_| {
         let mode =
             toggle_electronics(&mut scripts.world.borrow_mut(), id, pilot, suite, requested)?;
-        let name = if suite == ElectronicSuite::Angel {
-            "Angel ECM"
-        } else {
-            "ECM"
+        let name = match suite {
+            ElectronicSuite::Guardian => "ECM suite",
+            ElectronicSuite::Angel => "Angel ECM suite",
+            ElectronicSuite::Communications => "communications equipment",
         };
         let text = match mode {
-            Mode::Off => format!("You turn your {name} suite offline."),
-            Mode::Ecm => format!("You turn your {name} suite online (ECM mode)."),
-            Mode::Eccm => format!("You turn your {name} suite online (ECCM mode)."),
+            Mode::Off => format!("You turn your {name} offline."),
+            Mode::Ecm => format!("You turn your {name} online (ECM mode)."),
+            Mode::Eccm => format!("You turn your {name} online (ECCM mode)."),
         };
         super::notify_unit_text(scripts, id, &text)?;
         let notices = refresh_electronic_fields(&mut scripts.world.borrow_mut())?;
@@ -375,13 +470,16 @@ pub(crate) fn configure(
     })
 }
 
-/// Four cockpit commands select Guardian or Angel ECM/ECCM modes.
+/// Four cockpit commands select Guardian or Angel ECM/ECCM modes, and `commseccm` switches
+/// communications ECCM.
 pub(crate) fn command(
     ctx: &crate::CommandContext<'_>,
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
     let suite = if input.name.starts_with('a') {
         ElectronicSuite::Angel
+    } else if input.name.starts_with('c') {
+        ElectronicSuite::Communications
     } else {
         ElectronicSuite::Guardian
     };

@@ -17,7 +17,7 @@ pub use electronics::{
 };
 mod electronic_field;
 pub use electronic_field::{
-    ECM_RANGE, ElectronicField, ElectronicMode, ElectronicSource, ecm_range,
+    ECM_RANGE, ElectronicField, ElectronicMode, ElectronicSource, communications_eccm, ecm_range,
     resolve_electronic_field,
 };
 mod ammunition_feed;
@@ -951,6 +951,8 @@ mod chassis;
 mod motion_speed;
 
 mod leg_support;
+mod lift_hoist;
+pub use lift_hoist::{LIFT_HOIST_MAXIMUM_TONS, lift_hoist_capacity};
 
 mod weapon_failure;
 pub use weapon_failure::{EquipmentFailure, set_weapon_failure};
@@ -1030,6 +1032,9 @@ pub use skid::SlickTrack;
 
 mod bog_down;
 pub use bog_down::advance_bog_down_action;
+
+mod life_support;
+pub use life_support::advance_life_support_action;
 
 mod vehicle_water;
 
@@ -1237,6 +1242,7 @@ pub use weapon_power::disable_gauss_weapon;
 pub(crate) mod mml;
 mod technology;
 pub use mml::toggle_mml_ammunition;
+pub use technology::ArmorFacing;
 
 pub(crate) mod atm;
 pub use atm::toggle_atm_ammunition;

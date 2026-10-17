@@ -311,13 +311,14 @@ fn special_shot_effects_match_reference_validation() {
             crate::Weapon::Srm4,
         ),
         (
-            // Two flamers need six heat sinks (TechManual p. 104).
+            // Standard flamers need a fusion engine, whose ten free sinks cover the six heat
+            // of two (TechManual pp. 104, 218).
             vehicle
                 .replace(
                     "item = \"IS.AC/20\" }",
                     "item = \"IS.Flamer\", modes = [\"Heat\"] }",
                 )
-                .replace("walk_mp = 3\n", "walk_mp = 3\nheat_sinks = 6\n"),
+                .replace("engine = \"ice\"\n", ""),
             crate::Weapon::Flamer,
         ),
         (

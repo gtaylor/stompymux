@@ -288,7 +288,8 @@ mod tests {
             ("Medium_Vibroblade", "MVibro", true, true, 2),
             ("Large_Vibroblade", "LVibro", true, true, 4),
         ] {
-            let replaces_hand = matches!(equipment, "Claw" | "Flail");
+            let replaces_hand =
+                matches!(equipment, "Claw" | "Flail" | "Dual_Saw" | "Wrecking_Ball");
             let first = if replaces_hand { 4 } else { 5 };
             let original = include_str!("../../../game/units/AXM-2N.toml");
             let source = original.replace(

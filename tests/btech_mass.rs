@@ -139,11 +139,21 @@ fn structural_material_slots_mass_rounding_and_critical_exclusion() {
         );
         // The material fills exactly its slot count.
         assert!(Mech::from_template(material_template(name, slots - 1)).is_err());
+        // The spare tonnage becomes a cargo bay, whose slots take critical hits; the
+        // material's slots never do.
         for &section in standard.sections().keys() {
-            assert_eq!(
-                enhanced.critical_candidates(section),
-                standard.critical_candidates(section)
-            );
+            let cargo = |location: &CriticalLocation| {
+                enhanced.definition().sections[&section]
+                    .criticals
+                    .get(&location.slot)
+                    .is_some_and(|part| part.equipment == "Cargo")
+            };
+            let candidates: Vec<_> = enhanced
+                .critical_candidates(section)
+                .into_iter()
+                .filter(|location| !cargo(location))
+                .collect();
+            assert_eq!(candidates, standard.critical_candidates(section));
         }
         enhanced.damage_phase(MechSection::Head, 7, DamagePhase::Armor { rear: false });
         assert_eq!(enhanced.mass().unwrap().armor, damaged_armor, "{name}");

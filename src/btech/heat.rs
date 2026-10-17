@@ -127,17 +127,23 @@ impl Mech {
             * f64::from(u8::from(self.stealth().enabled) + u8::from(self.null_signature().enabled));
         if self.power() == Power::Running {
             production += 5.0 * f64::from(self.system_hits(System::Engine));
-            // Jumping heat is charged once per jump at takeoff (Total Warfare p. 53), not
-            // as a rate while airborne.
-            if let Some(motion) = self.motion().filter(|motion| motion.speed != 0.0) {
-                // Walking heats one point a turn and running two (Total Warfare p. 159); a
-                // throttle above the current walking ceiling is running.
-                production += if self.speed_envelope().is_running(motion.desired_speed) {
-                    2.0
-                } else {
-                    1.0
-                };
-            }
+            // Standing still heats nothing, walking one point a turn and running two (Total
+            // Warfare p. 159); a throttle above the current walking ceiling is running. An XXL
+            // engine runs hotter: two standing still, four walking and six running (Tactical
+            // Operations: Advanced Units & Equipment p. 121).
+            let (standing, walking, running) = if matches!(self.engine(), Ok(super::Engine::Xxl)) {
+                (2.0, 4.0, 6.0)
+            } else {
+                (0.0, 1.0, 2.0)
+            };
+            // Jumping heat is charged once per jump at takeoff (Total Warfare p. 53), in place
+            // of any movement heat while airborne.
+            production += match self.motion().filter(|motion| motion.speed != 0.0) {
+                Some(motion) if self.speed_envelope().is_running(motion.desired_speed) => running,
+                Some(_) => walking,
+                None if self.airborne() => 0.0,
+                None => standing,
+            };
         }
         let mut rates = HeatRates {
             production,
