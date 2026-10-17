@@ -1,4 +1,5 @@
-//! Torpedo launchers fire only from a submerged mount at a target in the water.
+//! Torpedo launchers fire from units in the water at targets in the water (Total Warfare
+//! p. 138), from a submerged mount or from one above the surface.
 use crate::support;
 use std::sync::Arc;
 use stompymux_rs::*;
@@ -14,6 +15,11 @@ fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Va
 /// A Jenner whose only weapon is an IS SRT-6 in its left leg, fed by two torpedo bins. A leg
 /// launcher is submerged even in shallow water.
 fn launcher() -> UnitTemplate {
+    launcher_in(MechSection::LeftLeg)
+}
+
+/// A Jenner whose only weapon is an IS SRT-6 in `section`, fed by two torpedo bins.
+fn launcher_in(section: MechSection) -> UnitTemplate {
     let weapon = Weapon::Srt6;
     let mut definition =
         UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
@@ -26,7 +32,7 @@ fn launcher() -> UnitTemplate {
                 && !Weapon::ALL.iter().any(|w| w.name() == part.equipment)
         });
     }
-    let mount = unit.sections.get_mut(&MechSection::LeftLeg).unwrap();
+    let mount = unit.sections.get_mut(&section).unwrap();
     mount.criticals.retain(|slot, _| *slot < 4);
     for slot in 0..weapon.profile().critical_slots {
         mount.criticals.insert(
@@ -59,6 +65,15 @@ async fn fixture(
     rows: [i64; 2],
     lift: u8,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
+    fixture_with(rows, lift, launcher()).await
+}
+
+/// [`fixture`] with the given launcher design.
+async fn fixture_with(
+    rows: [i64; 2],
+    lift: u8,
+    launcher: UnitTemplate,
+) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Lake".into(), Kind::Room);
     let lake = MapAsset::from_cells("1 8\n~2\n~2\n~2\n~2\n~2\n~1\n.0\n.0\n").unwrap();
@@ -83,7 +98,7 @@ async fn fixture(
         let id = world.create(&config, format!("Unit {index}"), Kind::Thing);
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
         if index == 0 {
-            launcher()
+            launcher.clone()
         } else {
             UnitTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap()
         }
@@ -170,7 +185,7 @@ async fn submerged_launchers_fire_torpedoes_at_targets_in_water() {
 async fn torpedoes_need_water_at_both_ends() {
     for lift in [0, LIFT] {
         for (rows, message) in [
-            ([6, 5], "Torpedoes can only be fired underwater."),
+            ([6, 5], "Torpedoes can only be fired from the water."),
             ([5, 7], "Torpedoes can only strike targets in the water!"),
         ] {
             let (_dir, _config, mut world, shooter, target) = fixture(rows, lift).await;
@@ -183,6 +198,23 @@ async fn torpedoes_need_water_at_both_ends() {
             );
             assert_eq!(world.btech, before.btech);
         }
+    }
+}
+
+/// A Mech wading in the shallow ford fires the torpedo launcher in its torso, above the
+/// surface, at a Mech submerged in the deep lake: torpedoes may be fired from the surface at a
+/// submerged target (Total Warfare p. 138). Its other weapons cannot reach that target.
+#[tokio::test]
+async fn a_wading_mech_fires_torpedoes_from_the_surface_at_a_submerged_target() {
+    for lift in [0, LIFT] {
+        let (_dir, config, mut world, shooter, target) =
+            fixture_with([5, 3], lift, launcher_in(MechSection::LeftTorso)).await;
+        let terrain = battle_unit_terrain_los(&world, shooter, target).unwrap();
+        assert!(!terrain.blocked, "lift {lift}");
+        acquire(&mut world, shooter, target);
+        let report = fire(&mut world, shooter, target).unwrap();
+        assert!(report.expenditure.heat > 0, "lift {lift}");
+        world.validate(&config).unwrap();
     }
 }
 

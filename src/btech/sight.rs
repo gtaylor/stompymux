@@ -301,7 +301,7 @@ fn check_bearing(
         submerged,
         bears,
     } = super::weapon_geometry::geometry(world, shooter, index, hex.center())?;
-    super::weapon_geometry::check_water(weapon, submerged)?;
+    super::weapon_geometry::check_water(world, shooter, weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, weapon)?;
     ensure!(
         rules.override_weapon_arcs
@@ -330,6 +330,7 @@ fn check_unit_target(
     super::torpedo::check_target(
         world,
         weapon,
+        shooter,
         target,
         super::weapon_geometry::submerged(world, shooter, index)?,
     )?;
@@ -348,7 +349,7 @@ fn check_unit_target(
         index,
         recipient.point.context("Target is not placed")?,
     )?;
-    super::weapon_geometry::check_water(geometry.weapon, geometry.submerged)?;
+    super::weapon_geometry::check_water(world, shooter, geometry.weapon, geometry.submerged)?;
     super::planetary_conditions::check_wind(world, shooter, geometry.weapon)?;
     ensure!(
         indirect.is_some() || rules.override_weapon_arcs || geometry.bears,

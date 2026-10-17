@@ -564,6 +564,8 @@ pub(super) struct ShotDamage<'a> {
     pub apollo: bool,
     /// Machine guns fired together as a machine gun array.
     pub array: Option<u8>,
+    /// The weapon fired from under the water.
+    pub submerged: bool,
     pub experience: Option<super::gunnery_experience::GunneryAwardContext<'a>>,
 }
 
@@ -609,6 +611,7 @@ pub(super) fn resolve_salvo_in_candidate(
             apollo: damage.apollo,
             array: damage.array,
             incoming: damage.incoming,
+            submerged: damage.submerged,
         },
         effects,
         damage.glancing,
@@ -660,57 +663,59 @@ enum HitGeometry {
         apollo: bool,
         array: Option<u8>,
         incoming: Option<u8>,
+        /// The weapon fired from under the water.
+        submerged: bool,
     },
 }
 
 impl HitGeometry {
     /// Falls rotate the target and remove standing partial cover before later groups land.
-    fn current(self, world: &World, target: ObjectId) -> Result<(HitArc, bool)> {
+    /// The cover comes with the building hex, if any, that a covered leg hit strikes.
+    fn current(self, world: &World, target: ObjectId) -> Result<(HitArc, Cover)> {
         let shooter = match self {
-            Self::Fixed(arc) => return Ok((arc, false)),
+            Self::Fixed(arc) => return Ok((arc, Cover::default())),
             Self::Direct { shooter, .. } => shooter,
         };
         let arc = super::hit_direction::HitDirection::Direct { shooter }.current(world, target)?;
+        let terrain = super::unit_terrain_los(world, shooter, target)?;
         Ok((
             arc,
-            super::unit_terrain_los(world, shooter, target)?.partial_cover,
+            Cover {
+                partial: terrain.partial_cover,
+                building: terrain.cover_building,
+                legs_only: terrain.wading
+                    && matches!(
+                        self,
+                        Self::Direct {
+                            submerged: true,
+                            ..
+                        }
+                    ),
+            },
         ))
     }
 }
 
-/// The building hex that gives a standing target partial cover from this shooter: the hex
-/// next to the target along the line of sight (Total Warfare p. 102). Cover from a hill, water
-/// or the building the target stands inside is terrain and takes no damage.
-fn cover_building(
-    world: &World,
-    shooter: ObjectId,
-    target: ObjectId,
-) -> Result<Option<super::HexCoordinate>> {
-    let Some(from) = super::scanner::scanner_unit(world, shooter).and_then(|unit| unit.position)
-    else {
-        return Ok(None);
-    };
-    let Some(to) = world.btech.constructed_units()[&target].position() else {
-        return Ok(None);
-    };
-    if from.map != to.map {
-        return Ok(None);
+/// Partial cover between a shooter and a standing 'Mech (Total Warfare p. 102).
+#[derive(Debug, Default, Clone, Copy)]
+struct Cover {
+    partial: bool,
+    /// The building hex a covered leg hit strikes: the ridge hex holding a building, or the
+    /// building the target stands inside (p. 171). A hill or water absorbs the hit.
+    building: Option<super::HexCoordinate>,
+    /// An underwater attack on a 'Mech wading in Depth 1 water: only its legs are under the
+    /// surface, so any other hit strikes the water (Total Warfare p. 108).
+    legs_only: bool,
+}
+
+impl Cover {
+    /// Whether a hit on `section` strikes the cover instead of the 'Mech.
+    fn stops(self, chassis: super::MechChassis, section: super::MechSection) -> bool {
+        if self.legs_only {
+            return !chassis.is_leg(section);
+        }
+        self.partial && chassis.is_leg(section)
     }
-    let hex = |position: super::Position| super::HexCoordinate {
-        x: i32::from(position.x),
-        y: i32::from(position.y),
-    };
-    let cells = super::los_trace::center_trace(hex(from), hex(to))?;
-    let Some(&cover) = cells
-        .len()
-        .checked_sub(2)
-        .and_then(|index| cells.get(index))
-    else {
-        return Ok(None);
-    };
-    let map = &world.btech.maps()[&to.map];
-    let tile = map.base_hex(i64::from(cover.x), i64::from(cover.y))?;
-    Ok(tile.has_building().then_some(cover))
 }
 
 /// Shared cluster and hit-location traversal prevents divergence between damage compositions.
@@ -877,7 +882,7 @@ fn resolve_salvo_with_effects(
             return Ok(report);
         }
     }
-    let building = super::building_interior::absorb(
+    let mut building = super::building_interior::absorb(
         world,
         match geometry {
             HitGeometry::Direct { shooter, .. } => Some(shooter),
@@ -903,7 +908,8 @@ fn resolve_salvo_with_effects(
         if unit.is_destroyed() {
             break;
         }
-        let (arc, partial_cover) = geometry.current(world, target)?;
+        let (arc, cover) = geometry.current(world, target)?;
+        let partial_cover = cover.partial;
         let preferred = match geometry {
             HitGeometry::Direct {
                 aimed: Some(aimed), ..
@@ -935,21 +941,50 @@ fn resolve_salvo_with_effects(
         if packets.single_location && shared_hit.is_none() {
             shared_hit = Some(hit);
         }
-        let covered_legs = partial_cover && unit.chassis().is_leg(hit.section);
+        let covered = cover.stops(unit.chassis(), hit.section);
         world.btech.constructed.get_mut(&target).unwrap().dice = dice;
-        if covered_legs {
+        if covered {
             // Partial cover: a leg hit strikes the cover instead (Total Warfare p. 102). A
-            // building takes the damage; a hill, water or other terrain simply absorbs it.
+            // building takes the damage; a hill, water or other terrain simply absorbs it. An
+            // underwater attack on a wading 'Mech reaches only its legs (p. 108).
             let mut notices = vec![super::Notice {
                 unit: target,
-                text: "The shot strikes the cover in front of your legs!".into(),
+                text: if cover.legs_only {
+                    "The shot spends itself against the surface of the water!".into()
+                } else {
+                    "The shot strikes the cover in front of your legs!".into()
+                },
             }];
             if let HitGeometry::Direct { shooter, .. } = geometry
-                && let Some(coordinate) = cover_building(world, shooter, target)?
-                && let Some(building) =
-                    super::building_damage::resolve(world, shooter, coordinate, damage)?
+                && let Some(coordinate) = cover.building
             {
-                notices.extend(building.notices);
+                // The building around the target takes the hit as more of its share, so an
+                // exhausted hex comes down once the salvo lands; a building in the hex before
+                // the target is struck like any building hex.
+                let map = world.btech.constructed_units()[&target]
+                    .position()
+                    .context("Target is not placed")?
+                    .map;
+                if let Some(around) = building
+                    .as_mut()
+                    .filter(|around| around.coordinate == coordinate)
+                {
+                    around.strike(world, map, damage)?;
+                } else if let Some(struck) = super::surface_weapon::resolve(
+                    world,
+                    shooter,
+                    coordinate,
+                    ((weapon, mode), damage),
+                    tactical_rules.unwrap_or(super::FallRules::STANDARD),
+                    character,
+                )? {
+                    notices.extend(struck.notices);
+                }
+                if let Some(building) =
+                    super::building_damage::resolve(world, shooter, coordinate, damage)?
+                {
+                    notices.extend(building.notices);
+                }
             }
             report.experience.push(None);
             report.groups.push(SalvoGroup {

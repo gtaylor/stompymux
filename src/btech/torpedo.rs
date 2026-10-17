@@ -1,11 +1,12 @@
-//! Torpedo launchers: LRTs and SRTs fire only underwater, at targets in the water.
+//! Torpedo launchers: LRTs and SRTs fire from and at units in the water, along a line that stays
+//! in the water (Total Warfare p. 138), and the surface rules for every other weapon.
 use super::{VehicleMovement, Weapon};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
-/// Whether a unit sits in a water hex at or below the surface, where a torpedo can reach it.
-/// Hovercraft skim over the water and are out of reach.
-pub(super) fn target_in_water(world: &World, target: ObjectId) -> Result<bool> {
+/// Whether a unit sits in a water hex at or below the surface, where a torpedo can reach it
+/// and from where it can fire one. Hovercraft skim over the water and are out of reach.
+pub(super) fn in_water(world: &World, target: ObjectId) -> Result<bool> {
     let position = super::scanner::scanner_unit(world, target)
         .context("Target is unavailable")?
         .position
@@ -35,27 +36,40 @@ pub(super) fn target_in_water(world: &World, target: ObjectId) -> Result<bool> {
     Ok(elevation <= i32::from(tile.water_line()))
 }
 
-/// Torpedoes need a target in the water, and so does any other weapon fired from a submerged
-/// mount: an underwater attack cannot leave the water (Total Warfare p. 107).
+/// Which targets a weapon can reach across the water's surface (Total Warfare pp. 107-108,
+/// 138). A torpedo needs a target in the water and water along the whole line; a weapon fired
+/// from a submerged mount cannot leave the water; and a weapon above the surface cannot reach
+/// a unit entirely under it. A wading 'Mech's legs are under the surface and its upper body
+/// above it, so only its leg weapons reach underwater targets.
 pub(super) fn check_target(
     world: &World,
     weapon: Weapon,
+    shooter: ObjectId,
     target: ObjectId,
     submerged: bool,
 ) -> Result<()> {
     if weapon.is_torpedo() {
         ensure!(
-            target_in_water(world, target)?,
+            in_water(world, target)?,
             "Torpedoes can only strike targets in the water!"
+        );
+        ensure!(
+            !super::unit_terrain_los(world, shooter, target)?.dry,
+            "Torpedoes need water all the way to the target!"
         );
         return Ok(());
     }
     if submerged {
         ensure!(
-            target_in_water(world, target)?,
+            in_water(world, target)?,
             "Submerged weapons can only strike targets in the water!"
         );
+        return Ok(());
     }
+    ensure!(
+        !super::los::unit_underwater(world, target)?,
+        "Only weapons under the water can reach a target beneath it!"
+    );
     Ok(())
 }
 

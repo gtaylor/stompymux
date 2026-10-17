@@ -259,6 +259,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                         indirect: false,
                         apollo: false,
                         array: None,
+                        submerged: false,
                         experience,
                     },
                 )?)

@@ -522,6 +522,33 @@ pub(super) fn absorb(
     }))
 }
 
+impl BuildingCover {
+    /// Charge the building a hit its partial cover stopped: a leg hit on a standing 'Mech it
+    /// covers strikes the building instead, damaging it as normal (Total Warfare p. 171). The
+    /// hex keeps its reduced construction factor unless the hit exhausts it, in which case
+    /// [`collapse`] brings it down once the salvo lands, as for the absorbed share.
+    pub(super) fn strike(&mut self, world: &mut World, map: ObjectId, damage: u16) -> Result<()> {
+        if self.remaining == 0
+            || world.btech.maps()[&map].has_flag(super::MapFlag::IndestructibleStructures)
+        {
+            return Ok(());
+        }
+        let damage = damage.min(self.remaining);
+        self.damage += damage;
+        self.remaining -= damage;
+        if self.remaining > 0 && damage > 0 {
+            let tile = world.btech.maps()[&map]
+                .base_hex(i64::from(self.coordinate.x), i64::from(self.coordinate.y))?;
+            world.btech.maps.get_mut(&map).unwrap().write_hex(
+                i64::from(self.coordinate.x),
+                i64::from(self.coordinate.y),
+                tile.with_structure_damage(damage),
+            )?;
+        }
+        Ok(())
+    }
+}
+
 /// Bring down the building a salvo exhausted, once its hit groupings have landed.
 pub(super) fn collapse(
     world: &mut World,

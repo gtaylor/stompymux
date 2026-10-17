@@ -83,7 +83,9 @@ async fn vehicle_eye_height_changes_ridge_visibility_and_stationary_units_remain
     }
 }
 
-/// Submerged vehicles are hidden from Mechs, hovercraft on the surface are not.
+/// A vehicle on the bed of Depth 1 water is submerged and a hovercraft rides the surface, and
+/// a 'Mech wading in that water sees both: its legs are under the surface and its upper body
+/// above it (Total Warfare p. 108, Underwater Line of Sight Table).
 #[tokio::test]
 async fn vehicle_water_height_and_perception_use_actual_surface_position() {
     for (template, hover) in [
@@ -98,17 +100,15 @@ async fn vehicle_water_height_and_perception_use_actual_surface_position() {
                 .unwrap()
                 .blocked
         );
-        assert_eq!(
-            battle_unit_terrain_los(&world, mech_a, vehicle_b)
+        assert!(
+            !battle_unit_terrain_los(&world, mech_a, vehicle_b)
                 .unwrap()
-                .blocked,
-            !hover
+                .blocked
         );
-        assert_eq!(
-            battle_unit_terrain_los(&world, vehicle_a, mech_b)
+        assert!(
+            !battle_unit_terrain_los(&world, vehicle_a, mech_b)
                 .unwrap()
-                .blocked,
-            !hover
+                .blocked
         );
         assert_eq!(
             battle_unit_elevation(&world, vehicle_a).unwrap(),
@@ -119,11 +119,10 @@ async fn vehicle_water_height_and_perception_use_actual_surface_position() {
                 .unwrap()
                 .is_some()
         );
-        assert_eq!(
+        assert!(
             battle_perceive(&world, mech_a, vehicle_b)
                 .unwrap()
-                .is_some(),
-            hover
+                .is_some()
         );
         assert_eq!(world.btech, before);
     }

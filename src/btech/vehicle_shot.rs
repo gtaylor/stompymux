@@ -95,9 +95,9 @@ pub(super) fn check_with_dice(
         super::unit_elevation(world, id)?.context("Unit is not placed")?;
     }
     let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
-    super::weapon_geometry::check_water(mount.weapon, submerged)?;
+    super::weapon_geometry::check_water(world, shooter, mount.weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, mount.weapon)?;
-    super::torpedo::check_target(world, mount.weapon, target, submerged)?;
+    super::torpedo::check_target(world, mount.weapon, shooter, target, submerged)?;
     if indirect.is_some() {
         super::spotter::check_indirect_water(world, shooter, target)?;
     }

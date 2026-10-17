@@ -2061,10 +2061,11 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
     assert!(aim(&world).subtotal().is_none());
 }
 
-/// Perception aim includes woods in the target hex and partial cover from shallow water.
+/// Perception aim includes woods in the target hex and partial cover from shallow water, which
+/// covers a wading 'Mech from an adjacent attacker too (Total Warfare p. 102).
 #[tokio::test]
 async fn perception_aim_includes_target_woods_and_shallow_water_cover() {
-    for (tile, target_y, expected) in [("`0", 6, 1), ("~1", 6, 0), ("~1", 7, 1)] {
+    for (tile, target_y, expected) in [("`0", 6, 1), ("~1", 6, 1), ("~1", 7, 1)] {
         let source = format!(
             "12 12\n{}",
             (0..12)
@@ -4089,8 +4090,12 @@ async fn prone_fire_forbids_leg_mounts_until_upright() {
     world.validate(&config).unwrap();
 }
 
+/// A prone Mech in Depth 1 water is under the surface, and a Mech wading beside it has its legs
+/// under the surface too: the prone Mech's underwater-capable weapons reach it at +1 for partial
+/// cover, and any hit but a leg hit strikes the water (Total Warfare p. 108, Underwater Line of
+/// Sight Table).
 #[tokio::test]
-async fn prone_fire_cannot_cross_the_waterline_before_expenditure() {
+async fn prone_fire_from_under_the_surface_reaches_only_a_wading_mechs_legs() {
     let (_dir, config, mut world, id, target) = prone_shot_fixture().await;
     let map = world.create(&config, "Shallow water".into(), Kind::Room);
     let source = format!("12 12\n{}", format!("{}\n", "~1".repeat(12)).repeat(12));
@@ -4111,19 +4116,48 @@ async fn prone_fire_cannot_cross_the_waterline_before_expenditure() {
     for _ in 0..5 {
         advance_battle_units(&mut world, 0, true);
     }
+    let terrain = stompymux_rs::battle_unit_terrain_los(&world, id, target).unwrap();
+    assert!(!terrain.blocked);
+    assert!(terrain.partial_cover && terrain.wading);
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
+    let chassis = world.btech.constructed_units()[&target].chassis();
+    let (mut legs, mut water) = (0, 0);
+    for seed in 0..=40 {
+        let mut candidate = world.clone();
+        shot_seed(&mut candidate, target, seed);
+        let shot = stompymux_rs::resolve_battle_shot(
+            &mut candidate,
+            id,
+            ObjectId(1),
+            target,
+            0,
+            shot_rules(),
+        )
+        .unwrap();
+        let Some(stompymux_rs::TargetSalvo::Mech(salvo)) = &shot.salvo else {
+            continue;
+        };
+        for group in &salvo.groups {
+            let struck_water = group
+                .notices
+                .iter()
+                .any(|notice| notice.text.contains("surface of the water"));
+            assert_eq!(
+                struck_water,
+                !chassis.is_leg(group.hit.section),
+                "seed {seed}"
+            );
+            if struck_water {
+                water += 1;
+            } else {
+                legs += 1;
+            }
+        }
+    }
     assert!(
-        stompymux_rs::battle_unit_terrain_los(&world, id, target)
-            .unwrap()
-            .blocked
+        legs > 0 && water > 0,
+        "{legs} leg hits, {water} into the water"
     );
-    let before = world.btech.clone();
-    assert!(
-        stompymux_rs::resolve_battle_shot(&mut world, id, ObjectId(1), target, 0, shot_rules())
-            .unwrap_err()
-            .to_string()
-            .contains("Target is not a current acquired contact")
-    );
-    assert_eq!(world.btech, before);
 }
 
 #[tokio::test]

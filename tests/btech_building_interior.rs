@@ -300,6 +300,8 @@ async fn interiors_give_partial_cover_and_block_outside_physical_attacks() {
     step_inside(&mut world, target, 0);
     let terrain = battle_unit_terrain_los(&world, attacker, target).unwrap();
     assert!(terrain.partial_cover && !terrain.blocked);
+    // A leg hit strikes the building the target stands in (Total Warfare p. 171).
+    assert_eq!(terrain.cover_building, Some(HexCoordinate { x: 1, y: 2 }));
     let physical = PhysicalRules { fall: rules() };
     relocate(&mut world, attacker, _map, 1, 1);
     step_inside(&mut world, target, 0);
@@ -319,6 +321,73 @@ async fn interiors_give_partial_cover_and_block_outside_physical_attacks() {
             .is_none_or(|error| !error.to_string().contains("inside a building")),
         "{result:?}"
     );
+}
+
+/// A leg hit on a 'Mech that the building it stands in covers strikes that building instead,
+/// damaging it as normal (Total Warfare p. 171): the building pays its tenth of the
+/// construction factor and the rest of the shot too, and the legs are untouched.
+#[tokio::test]
+async fn covered_leg_hits_strike_the_building_the_target_stands_in() {
+    let (_dir, _config, base, map, [attacker, target]) =
+        field(&[".3.3.3", ".0.0.0", "@1@1@1", ".0.0.0"]).await;
+    let mut base = base;
+    relocate(&mut base, attacker, map, 1, 0);
+    relocate(&mut base, target, map, 1, 2);
+    step_inside(&mut base, target, 0);
+    refresh_battle_contacts(&mut base, &[attacker]).unwrap();
+    let rules = ShotRules {
+        tsm_tow_bonus: true,
+        vehicle_impact: VehicleImpactRules::STANDARD,
+        aim: AimRules {
+            override_weapon_arcs: true,
+        },
+        extended_gunnery: false,
+        extended_piloting: false,
+        target_toughness: false,
+    };
+    let laser = base.btech.constructed_units()[&attacker]
+        .loadout()
+        .unwrap()
+        .weapons
+        .iter()
+        .position(|mount| mount.weapon == Weapon::MediumLaser)
+        .unwrap();
+    let hit = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
+        .unwrap();
+    base.btech
+        .set_unit_dice(attacker, Dice::seeded([hit; 32]))
+        .unwrap();
+    let before = cf(&base, map, 1, 2);
+    let legs = |world: &World| {
+        let unit = &world.btech.constructed_units()[&target];
+        [MechSection::LeftLeg, MechSection::RightLeg].map(|leg| unit.sections()[&leg].clone())
+    };
+    let covered = (0..=255).find_map(|seed| {
+        let mut world = base.clone();
+        world
+            .btech
+            .set_unit_dice(target, Dice::seeded([seed; 32]))
+            .unwrap();
+        let shot =
+            resolve_battle_shot(&mut world, attacker, ObjectId(1), target, laser, rules).unwrap();
+        let Some(TargetSalvo::Mech(salvo)) = &shot.salvo else {
+            return None;
+        };
+        let group = salvo.groups.first()?;
+        let leg = matches!(
+            group.hit.section,
+            MechSection::LeftLeg | MechSection::RightLeg
+        );
+        leg.then_some((world, group.damage))
+    });
+    let (world, damage) = covered.expect("some seed hits a leg");
+    assert_eq!(
+        damage, 1,
+        "the building absorbs four of the laser's five points"
+    );
+    assert_eq!(cf(&world, map, 1, 2), before - 5);
+    assert_eq!(legs(&world), legs(&base));
 }
 
 /// A shot from another level of the same building hex hits a 'Mech on the Special 'Mech Hit

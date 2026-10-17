@@ -398,15 +398,17 @@ pub(super) fn indirect_hex_for_source(
     Ok((!super::hex_visible(world, source.unit, hex)?).then_some((observer, hex)))
 }
 
-/// Indirect fire cannot cross from a surface shooter into a submerged target's water layer.
+/// Indirect fire cannot cross from a surface shooter into a target entirely under the water; a
+/// 'Mech wading in Depth 1 water stands above the surface and can be hit (Total Warfare
+/// p. 108).
 pub(super) fn check_indirect_water(
     world: &World,
     shooter: ObjectId,
     target: ObjectId,
 ) -> Result<()> {
-    let submerged = |id| super::geometry::unit_submerged(world, id);
+    let underwater = |id| super::los::unit_underwater(world, id);
     ensure!(
-        !submerged(target)? || submerged(shooter)?,
+        !underwater(target)? || underwater(shooter)?,
         "You can't fire into water with that weapon from here."
     );
     Ok(())

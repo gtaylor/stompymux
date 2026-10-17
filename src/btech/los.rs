@@ -37,6 +37,19 @@ pub struct TerrainLos {
     /// A standing 'Mech behind a hex one level above its own ground, or standing in water one
     /// level deep, so that only its upper body can be hit (Total Warfare p. 102).
     pub partial_cover: bool,
+    /// The target is a 'Mech standing in Depth 1 water: its legs are under the surface and its
+    /// upper body above it (Total Warfare p. 108).
+    pub wading: bool,
+    /// The hex beside the target whose one-level rise gives it partial cover, when the cover is
+    /// that ridge rather than the water or building the target stands in.
+    pub cover_hex: Option<HexCoordinate>,
+    /// The building hex that a leg hit stopped by partial cover strikes and damages: the ridge
+    /// hex when it holds a building, or the building the target stands inside (Total Warfare
+    /// pp. 102, 171). Cover from a hill or water takes no damage.
+    pub cover_building: Option<HexCoordinate>,
+    /// An intervening hex holds no open water at least one level deep, so a torpedo cannot
+    /// run along the line (Total Warfare p. 138).
+    pub dry: bool,
     /// Intervening ground (a hill) blocks the line; infrared and radar sensors cannot pass it.
     pub hills: bool,
     /// Building or wall hexes along the line that are not hardened; they block radar and
@@ -149,15 +162,38 @@ fn terrain_los_at_heights(
     let underwater = source.holds_water() && start_height < surface(source);
     let target_underwater = destination.holds_water() && end_height < surface(destination);
     let target_both_worlds = destination.holds_water() && end_ground == surface(destination) - 1.0;
+    // A 'Mech standing in Depth 1 water has a foot in both worlds: its legs are under the
+    // surface and its upper body above it (Total Warfare p. 108).
+    let wading = |hex: super::Hex, ground: f64, eye: f64, height: Option<f64>| {
+        hex.holds_water()
+            && ground == surface(hex) - 1.0
+            && eye == 1.5
+            && height.is_none_or(|height| height == ground)
+    };
+    let observer_wading = !underwater && wading(source, start_ground, eyes.0, airborne.0);
+    let target_wading = !target_underwater && wading(destination, end_ground, eyes.1, airborne.1);
     let mut report = TerrainLos {
         target_woods: visible_destination.woods_density(),
         target_smoke: visible_destination.smoke_density(),
         ..TerrainLos::default()
     };
-    if underwater != target_underwater {
+    // The surface separates an underwater unit from everything above the water, except a
+    // wading 'Mech: an underwater unit and it may attack each other (Total Warfare p. 108,
+    // Underwater Line of Sight Table). Their line runs under the surface.
+    let waterline = (underwater && target_wading) || (target_underwater && observer_wading);
+    if underwater != target_underwater && !waterline {
         report.blocked = true;
         return Ok(report);
     }
+    let underwater_line = underwater || target_underwater;
+    let (start_height, end_height) = if waterline {
+        (
+            start_height.min(surface(source) - 0.5),
+            end_height.min(surface(destination) - 0.5),
+        )
+    } else {
+        (start_height, end_height)
+    };
     if observer == target {
         return Ok(report);
     }
@@ -207,7 +243,7 @@ fn terrain_los_at_heights(
         } else {
             0.0
         };
-        if underwater {
+        if underwater_line {
             // An underwater line follows the water, under any bed and below the surface.
             let height = f64::from(ground.surface_height());
             let sight_height =
@@ -221,6 +257,9 @@ fn terrain_los_at_heights(
             }
             report.water = report.water.saturating_add(1).min(7);
             continue;
+        }
+        if !ground.is_open_water() || ground.water_depth() == 0 {
+            report.dry = true;
         }
         let level = f64::from(ground.level()) - relief;
         if ground.is_water_surface() {
@@ -258,18 +297,34 @@ fn terrain_los_at_heights(
             report.smoke = report.smoke.saturating_add(tile.smoke_density()).min(15);
         }
     }
-    if steps >= 2 && (eyes.1 == 1.5 || kneeling.1) && airborne.1.is_none() {
-        let preceding = base(cells[cells.len() - 2])?;
-        // A hill or building one level up gives cover only to a target the attacker does not
-        // look down on; a kneeling biped and water around the legs are covered from any height.
-        let ridge = (start_height <= end_height || kneeling.1)
-            && !preceding.has_bridge()
-            && f64::from(preceding.surface_height()) == end_ground + 1.0;
-        report.partial_cover =
-            ridge || (destination.is_open_water() && end_ground == surface(destination) - 1.0);
+    if (eyes.1 == 1.5 || kneeling.1) && airborne.1.is_none() {
+        // A hill or building one level up in the hex before the target gives cover only to a
+        // target the attacker does not look down on; a kneeling biped is covered from any
+        // height. An adjacent attacker has no hex between them (Total Warfare p. 102).
+        if steps >= 2 {
+            let cover = cells[cells.len() - 2];
+            let preceding = base(cover)?;
+            if (start_height <= end_height || kneeling.1)
+                && !preceding.has_bridge()
+                && f64::from(preceding.surface_height()) == end_ground + 1.0
+            {
+                report.partial_cover = true;
+                report.cover_hex = Some(cover);
+                report.cover_building = preceding.has_building().then_some(cover);
+            }
+        }
+        // Water one level deep surrounds the legs, so it covers a standing 'Mech from every
+        // attacker, adjacent or higher ones included (p. 102).
+        if steps >= 1 && destination.is_open_water() && end_ground == surface(destination) - 1.0 {
+            report.partial_cover = true;
+            report.wading = true;
+            report.cover_hex = None;
+            report.cover_building = None;
+        }
     }
     // A standing 'Mech inside a building one level below its roof shows only its upper body,
-    // whatever height the attacker fires from (Total Warfare p. 171).
+    // whatever height the attacker fires from, and a leg hit strikes that building instead
+    // (Total Warfare p. 171).
     if steps >= 1
         && eyes.1 == 1.5
         && !kneeling.1
@@ -277,6 +332,8 @@ fn terrain_los_at_heights(
         && airborne.1 == Some(end_ground - 1.0)
     {
         report.partial_cover = true;
+        report.cover_hex = None;
+        report.cover_building = Some(target);
     }
     Ok(report)
 }
@@ -302,6 +359,13 @@ impl UnitSightPoint {
         self.water_surface
             .is_some_and(|surface| self.level < surface - reach)
     }
+}
+
+/// Whether a placed unit is entirely under the water: a 'Mech standing in Depth 2 or deeper
+/// water or lying in Depth 1, or a lower unit in any water (Total Warfare p. 108). A 'Mech
+/// standing in Depth 1 water is not.
+pub(super) fn unit_underwater(world: &World, id: ObjectId) -> Result<bool> {
+    Ok(unit_sight_point(world, id)?.below_waterline())
 }
 
 /// The water surface a unit in `tile` can be below.
@@ -388,6 +452,7 @@ pub(super) fn unit_terrain_geometry(
     );
     let range = super::unit_range(world, observer, target)?;
     let distance = range.spatial;
+    let target_id = target;
     let observer = unit_sight_point(world, observer)?;
     let target = unit_sight_point(world, target)?;
     ensure!(
@@ -425,6 +490,14 @@ pub(super) fn unit_terrain_geometry(
             hex_target: false,
         },
     )?;
+    // Only a standing 'Mech receives partial cover (Total Warfare p. 102); a gun emplacement
+    // standing as tall does not.
+    if !world.btech.constructed_units().contains_key(&target_id) {
+        report.partial_cover = false;
+        report.wading = false;
+        report.cover_hex = None;
+        report.cover_building = None;
+    }
     let tile = map.base_hex(i64::from(target.position.x), i64::from(target.position.y))?;
     if target.level > i32::from(tile.level()) + i32::from(tile.foliage_height()) {
         report.target_woods = 0;

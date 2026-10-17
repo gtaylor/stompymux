@@ -116,10 +116,19 @@ pub(super) fn apply_water_range(
 }
 
 /// Weapon eligibility is checked before launch; target waterline visibility remains a LOS rule.
-/// Torpedoes are the reverse of other weapons: they fire only from a submerged launcher.
-pub(super) fn check_water(weapon: Weapon, submerged: bool) -> Result<()> {
+/// Torpedoes may only be fired from a water hex (Total Warfare p. 138): from a launcher under
+/// the surface, or from a unit standing in the water with its launcher above it.
+pub(super) fn check_water(
+    world: &World,
+    shooter: ObjectId,
+    weapon: Weapon,
+    submerged: bool,
+) -> Result<()> {
     if weapon.is_torpedo() {
-        ensure!(submerged, "Torpedoes can only be fired underwater.");
+        ensure!(
+            submerged || super::torpedo::in_water(world, shooter)?,
+            "Torpedoes can only be fired from the water."
+        );
         return Ok(());
     }
     ensure!(

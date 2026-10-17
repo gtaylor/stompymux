@@ -155,6 +155,7 @@ fn fire_shot(
     // Firing a gun its machine gun array links fires every ready linked gun as one attack
     // (Total Warfare p. 137).
     let volley = attacker.array_volley(weapon_index)?;
+    let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
     drop(loadouts);
     drop(admission);
     let mut candidate = super::shot_transaction::ShotCandidate::new(world);
@@ -339,6 +340,7 @@ fn fire_shot(
                 indirect: indirect_fire,
                 apollo,
                 array,
+                submerged,
                 experience,
             },
         )?))
