@@ -33,7 +33,7 @@ slots = [
 armor = 19
 rear = 5
 slots = [
-    { at = "4-5", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
     { at = 6, item = "IS.SmallLaser" },
     { at = "7-12", item = "FerroFibrous" },
 ]
@@ -42,9 +42,9 @@ slots = [
 armor = 19
 rear = 5
 slots = [
-    { at = "4-5", item = "JumpJet" },
-    { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "4-5", item = "IS.JumpJet" },
+    { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 8, item = "Case" },
     { at = "9-12", item = "FerroFibrous" },
 ]
@@ -53,7 +53,7 @@ slots = [
 armor = 23
 rear = 7
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]

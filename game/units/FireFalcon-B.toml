@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 25
 walk_mp = 8
-heat_sinks = 10
 specials = ["OmniMech_Tech"]
 
 [construction]
@@ -33,7 +32,7 @@ slots = [
 armor = 9
 rear = 2
 slots = [
-    { at = "3-4", item = "TargetingComputer" },
+    { at = "3-4", item = "CL.TargetingComputer" },
     { at = "5-8", item = "EndoSteel" },
 ]
 

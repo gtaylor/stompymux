@@ -13,18 +13,17 @@ structure = "endo_steel"
 
 [sections.left_arm]
 armor = 22
+omit = ["hand_actuator"]
 slots = [
-    { at = 5, item = "EndoSteel" },
-    { at = "6-7", item = "CL.LargePulseLaser" },
-    { at = 8, item = "CL.MediumPulseLaser" },
-    { at = 9, item = "CL.SmallPulseLaser" },
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = 6, item = "CL.MediumPulseLaser" },
+    { at = 7, item = "CL.SmallPulseLaser" },
+    { at = "8-9", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 22
-omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "EndoSteel" },
     { at = "5-10", item = "CL.GaussRifle" },
     { at = "11-12", item = "Ammo_CL.GaussRifle", rounds = 8 },
 ]
@@ -33,16 +32,15 @@ slots = [
 armor = 23
 rear = 7
 slots = [
-    { at = 1, item = "EndoSteel" },
+    { at = 1, item = "CL.LRM-10" },
+    { at = 2, item = "Ammo_CL.LRM-10", rounds = 12 },
 ]
 
 [sections.right_torso]
 armor = 23
 rear = 7
 slots = [
-    { at = 1, item = "EndoSteel" },
-    { at = 2, item = "CL.LRM-10" },
-    { at = 3, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "1-2", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -55,13 +53,13 @@ slots = [
 [sections.left_leg]
 armor = 27
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 27
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

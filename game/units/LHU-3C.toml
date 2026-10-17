@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 75
 walk_mp = 5
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -18,7 +17,6 @@ armor = 23
 omit = ["hand_actuator"]
 slots = [
     { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
@@ -42,6 +40,7 @@ armor = 24
 rear = 7
 slots = [
     { at = "4-5", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

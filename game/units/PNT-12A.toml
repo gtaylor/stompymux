@@ -4,8 +4,6 @@ movement = "biped"
 tons = 35
 walk_mp = 4
 jump_mp = 4
-heat_sinks = 10
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -41,7 +39,7 @@ slots = [
 armor = 12
 rear = 4
 slots = [
-    { at = "1-2", item = "TargetingComputer" },
+    { at = "1-2", item = "IS.TargetingComputer" },
     { at = "3-5", item = "HeatSink" },
     { at = "6-12", item = "EndoSteel" },
 ]
@@ -57,13 +55,13 @@ slots = [
 [sections.left_leg]
 armor = 16
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 16
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

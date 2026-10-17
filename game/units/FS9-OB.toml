@@ -6,6 +6,7 @@ walk_mp = 6
 jump_mp = 6
 heat_sinks = 12
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -36,7 +37,7 @@ armor = 16
 rear = 6
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-9", item = "JumpJet" },
+    { at = "7-9", item = "IS.JumpJet" },
     { at = 10, item = "C3Slave" },
     { at = "11-12", item = "EndoSteel" },
 ]
@@ -46,12 +47,12 @@ armor = 16
 rear = 6
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-9", item = "JumpJet" },
+    { at = "7-9", item = "IS.JumpJet" },
     { at = 10, item = "TAG" },
 ]
 
 [sections.center_torso]
-armor = 18
+armor = 20
 rear = 7
 slots = [
     { at = 11, item = "IS.Flamer" },

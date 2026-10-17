@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 15
 walk_mp = 12
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -14,20 +13,20 @@ armor = "ferro_fibrous"
 armor = 10
 
 [sections.right_side]
-armor = 11
+armor = 10
 
 [sections.front_side]
-armor = 11
+armor = 13
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.aft_side]
-armor = 10
+armor = 8
 
 [sections.turret]
-armor = 11
+armor = 12
 slots = [
     { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "BeagleProbe" },
+    { at = 2, item = "IS.BeagleProbe" },
 ]

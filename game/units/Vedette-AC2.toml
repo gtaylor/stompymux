@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 50
 walk_mp = 5
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -29,8 +28,8 @@ armor = 20
 [sections.turret]
 armor = 20
 slots = [
-    { at = 1, item = "IS.AC/2" },
-    { at = 2, item = "Ammo_IS.AC/2", rounds = 45 },
-    { at = 3, item = "IS.SRM-2" },
-    { at = 4, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = 1, item = "IS.SRM-2" },
+    { at = 2, item = "IS.AC/2" },
+    { at = 3, item = "Ammo_IS.SRM-2", rounds = 50 },
+    { at = 4, item = "Ammo_IS.AC/2", rounds = 45 },
 ]

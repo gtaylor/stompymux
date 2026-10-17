@@ -3,8 +3,8 @@ class = "mech"
 movement = "biped"
 tons = 70
 walk_mp = 4
-heat_sinks = 10
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -31,8 +31,8 @@ slots = [
 armor = 22
 rear = 8
 slots = [
-    { at = "4-8", item = "C3Master" },
-    { at = "9-10", item = "IS.LRM-10" },
+    { at = "4-5", item = "IS.LRM-10" },
+    { at = "6-10", item = "C3Master" },
     { at = 11, item = "Case" },
 ]
 

@@ -6,7 +6,6 @@ walk_mp = 4
 jump_mp = 4
 heat_sinks = 13
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -29,10 +28,10 @@ slots = [
 armor = 10
 rear = 5
 slots = [
-    { at = 1, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = "2-5", item = "HeatSink" },
-    { at = 6, item = "Case" },
-    { at = "7-12", item = "EndoSteel" },
+    { at = "1-4", item = "HeatSink" },
+    { at = 5, item = "Ammo_IS.SRM-4", rounds = 25 },
+    { at = "6-11", item = "EndoSteel" },
+    { at = 12, item = "Case" },
 ]
 
 [sections.right_torso]
@@ -54,13 +53,13 @@ slots = [
 [sections.left_leg]
 armor = 12
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 12
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

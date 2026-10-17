@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 25
 walk_mp = 8
-heat_sinks = 10
 specials = ["OmniMech_Tech"]
 
 [construction]
@@ -33,7 +32,7 @@ slots = [
 armor = 9
 rear = 2
 slots = [
-    { at = "3-4", item = "CL.SRM-4" },
+    { at = "3-4", item = "CL.SRM-4", modes = ["Narc/Smoke"] },
     { at = "5-6", item = "Ammo_CL.SRM-4", rounds = 25, modes = ["Narc/Smoke"] },
     { at = "7-10", item = "EndoSteel" },
 ]

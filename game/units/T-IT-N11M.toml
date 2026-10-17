@@ -5,7 +5,6 @@ tons = 100
 walk_mp = 4
 heat_sinks = 16
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -25,7 +24,7 @@ slots = [
 armor = 29
 slots = [
     { at = "5-7", item = "IS.ERPPC" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "8-11", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -33,11 +32,11 @@ armor = 31
 rear = 11
 slots = [
     { at = 4, item = "IS.StreakSRM-4" },
-    { at = 5, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
-    { at = 6, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
-    { at = "7-8", item = "IS.MediumPulseLaser" },
+    { at = "5-6", item = "IS.MediumPulseLaser" },
+    { at = 7, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
+    { at = 8, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
     { at = 9, item = "Case" },
-    { at = 11, item = "EndoSteel" },
+    { at = 10, item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -45,17 +44,14 @@ armor = 31
 rear = 11
 slots = [
     { at = 4, item = "IS.StreakSRM-4" },
-    { at = "5-6", item = "Ecm" },
-    { at = "7-8", item = "IS.MediumPulseLaser" },
+    { at = "5-6", item = "IS.MediumPulseLaser" },
+    { at = "7-8", item = "IS.Ecm" },
     { at = "9-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 42
 rear = 19
-slots = [
-    { at = 12, item = "EndoSteel" },
-]
 
 [sections.left_leg]
 armor = 38

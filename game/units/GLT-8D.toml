@@ -6,7 +6,6 @@ walk_mp = 4
 jump_mp = 4
 heat_sinks = 14
 radio = 4
-max_suits = 0
 specials = ["SearchLight"]
 
 [construction]
@@ -36,17 +35,17 @@ slots = [
 armor = 21
 rear = 7
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
     { at = "2-4", item = "HeatSink" },
     { at = 5, item = "IS.ERMediumLaser" },
-    { at = "6-9", item = "TargetingComputer" },
+    { at = "6-9", item = "IS.TargetingComputer" },
 ]
 
 [sections.right_torso]
 armor = 21
 rear = 7
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
     { at = "2-7", item = "HeatSink" },
     { at = "8-9", item = "IS.ERLargeLaser" },
     { at = 10, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
@@ -63,13 +62,13 @@ slots = [
 [sections.left_leg]
 armor = 28
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 28
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
 ]
 
 [sections.head]

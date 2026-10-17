@@ -3,7 +3,6 @@ class = "mech"
 movement = "quad"
 tons = 55
 walk_mp = 6
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -21,6 +20,9 @@ slots = [
 
 [sections.front_right_leg]
 armor = 16
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
 
 [sections.left_torso]
 armor = 18
@@ -29,8 +31,8 @@ slots = [
     { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "6-11", item = "EndoSteel" },
-    { at = 12, item = "Case" },
+    { at = 6, item = "Case" },
+    { at = "7-8", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -45,6 +47,9 @@ slots = [
 [sections.center_torso]
 armor = 21
 rear = 6
+slots = [
+    { at = 11, item = "EndoSteel" },
+]
 
 [sections.rear_left_leg]
 armor = 16
@@ -60,3 +65,6 @@ slots = [
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

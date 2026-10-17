@@ -3,14 +3,14 @@ class = "vehicle"
 movement = "wheel"
 tons = 10
 walk_mp = 6
-cargo_tons = 1
-max_suits = 0
-max_ton = 4
 
 [construction]
 tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 40
+
+[transport_bays]
+infantry_compartment = 1
 
 [sections.left_side]
 armor = 10

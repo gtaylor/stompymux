@@ -4,6 +4,7 @@ movement = "biped"
 tons = 90
 walk_mp = 4
 heat_sinks = 16
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -42,9 +43,9 @@ slots = [
 armor = 24
 rear = 11
 slots = [
-    { at = "3-8", item = "CL.UltraAC/2" },
-    { at = 9, item = "Ammo_CL.UltraAC/2", rounds = 45 },
-    { at = "10-11", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-10", item = "CL.UltraAC/2" },
+    { at = 11, item = "Ammo_CL.UltraAC/2", rounds = 45 },
     { at = 12, item = "EndoSteel" },
 ]
 

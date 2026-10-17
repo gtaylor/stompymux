@@ -25,8 +25,8 @@ armor = 24
 rear = 6
 slots = [
     { at = "1-3", item = "IS.LRM-15" },
-    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = 6, item = "IS.SRM-4" },
+    { at = 4, item = "IS.SRM-4" },
+    { at = "5-6", item = "Ammo_IS.LRM-15", rounds = 8 },
     { at = 7, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 
@@ -35,13 +35,13 @@ armor = 24
 rear = 6
 slots = [
     { at = "1-3", item = "IS.LRM-15" },
-    { at = "4-5", item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = 6, item = "IS.SRM-4" },
+    { at = 4, item = "IS.SRM-4" },
+    { at = "5-6", item = "Ammo_IS.LRM-15", rounds = 8 },
     { at = 7, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 
 [sections.center_torso]
-armor = 31
+armor = 33
 rear = 10
 slots = [
     { at = "11-12", item = "IS.MediumLaser", modes = ["RearMount"] },

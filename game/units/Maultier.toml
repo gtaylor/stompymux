@@ -3,16 +3,15 @@ class = "vehicle"
 movement = "hover"
 tons = 15
 walk_mp = 9
-cargo_tons = 3
-max_suits = 0
-max_ton = 3
-specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 50
 armor = "ferro_fibrous"
+
+[transport_bays]
+infantry_compartment = 3
 
 [sections.left_side]
 armor = 10

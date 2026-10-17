@@ -4,9 +4,7 @@ movement = "biped"
 tons = 50
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,29 +15,29 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 12
-omit = ["lower_actuator", "hand_actuator"]
+omit = ["hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.PPC" },
-    { at = "6-7", item = "EndoSteel" },
+    { at = "4-6", item = "IS.PPC" },
+    { at = "7-8", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 12
-omit = ["lower_actuator", "hand_actuator"]
+omit = ["hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.PPC" },
-    { at = "6-7", item = "EndoSteel" },
+    { at = "4-6", item = "IS.PPC" },
+    { at = "7-8", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 14
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = 7, item = "IS.MachineGun" },
-    { at = 8, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 9, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
-    { at = "10-11", item = "BeagleProbe" },
+    { at = 8, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 9, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "10-11", item = "IS.BeagleProbe" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -47,7 +45,7 @@ slots = [
 armor = 14
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = 7, item = "IS.MachineGun" },
     { at = "8-12", item = "EndoSteel" },
 ]

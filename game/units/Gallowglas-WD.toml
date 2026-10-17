@@ -3,7 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 70
 walk_mp = 5
-jump_mp = 4
+jump_mp = 3
 heat_sinks = 15
 
 [construction]
@@ -14,7 +14,7 @@ structure = "endo_steel"
 [sections.left_arm]
 armor = 20
 slots = [
-    { at = "5-6", item = "CL.ERMediumLaser" },
+    { at = "5-6", item = "CL.SmallPulseLaser" },
 ]
 
 [sections.right_arm]
@@ -28,42 +28,36 @@ slots = [
 armor = 23
 rear = 7
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-5", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 23
 rear = 7
 slots = [
-    { at = "1-2", item = "HeatSink" },
-    { at = 3, item = "JumpJet" },
-    { at = 4, item = "CL.ERSmallLaser" },
-    { at = "5-8", item = "EndoSteel" },
+    { at = 1, item = "CL.JumpJet" },
+    { at = "2-3", item = "CL.ERMediumLaser" },
+    { at = "4-5", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 30
 rear = 9
-slots = [
-    { at = 11, item = "EndoSteel" },
-]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "CL.ERSmallLaser" },
-]

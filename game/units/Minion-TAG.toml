@@ -4,8 +4,6 @@ movement = "hover"
 tons = 20
 walk_mp = 9
 radio = 4
-max_suits = 0
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,10 +19,8 @@ armor = 22
 armor = 28
 slots = [
     { at = "1-2", item = "IS.MediumPulseLaser" },
+    { at = 3, item = "TAG" },
 ]
 
 [sections.aft_side]
 armor = 16
-slots = [
-    { at = 1, item = "TAG" },
-]

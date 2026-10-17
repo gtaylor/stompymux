@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 80
 walk_mp = 3
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -18,12 +17,12 @@ armor = 40
 
 [sections.front_side]
 armor = 48
-
-[sections.aft_side]
-armor = 20
 slots = [
     { at = 1, item = "C3Slave" },
 ]
+
+[sections.aft_side]
+armor = 20
 
 [sections.turret]
 armor = 40

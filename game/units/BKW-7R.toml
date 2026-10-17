@@ -4,7 +4,6 @@ movement = "biped"
 tons = 85
 walk_mp = 3
 jump_mp = 3
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -21,16 +20,16 @@ slots = [
 
 [sections.right_arm]
 armor = 24
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-10", item = "IS.UltraAC/10" },
+    { at = "3-9", item = "IS.UltraAC/10" },
 ]
 
 [sections.left_torso]
 armor = 26
 rear = 10
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
     { at = "2-8", item = "IS.MRM-40" },
     { at = 9, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
     { at = "10-12", item = "EndoSteel" },
@@ -40,18 +39,18 @@ slots = [
 armor = 26
 rear = 10
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
     { at = "2-3", item = "Ammo_IS.UltraAC/10", rounds = 10 },
     { at = "4-5", item = "Ammo_IS.MRM-40", rounds = 6 },
-    { at = "6-11", item = "EndoSteel" },
-    { at = 12, item = "Case" },
+    { at = 6, item = "Case" },
+    { at = "7-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 37
 rear = 12
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 

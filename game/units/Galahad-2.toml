@@ -44,8 +44,8 @@ armor = 20
 rear = 8
 slots = [
     { at = "1-2", item = "HeatSink" },
-    { at = "3-6", item = "TargetingComputer" },
-    { at = "7-9", item = "CL.SmallPulseLaser" },
+    { at = "3-5", item = "CL.SmallPulseLaser" },
+    { at = "6-9", item = "CL.TargetingComputer" },
     { at = 10, item = "EndoSteel" },
     { at = "11-12", item = "FerroFibrous" },
 ]

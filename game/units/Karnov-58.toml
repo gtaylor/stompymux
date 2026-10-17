@@ -3,8 +3,6 @@ class = "vtol"
 movement = "vtol"
 tons = 30
 walk_mp = 10
-cargo_tons = 7
-specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -12,10 +10,14 @@ engine = "ice"
 engine_rating = 160
 armor = "ferro_fibrous"
 
+[transport_bays]
+infantry_compartment = 7
+
 [sections.left_side]
 armor = 6
 slots = [
     { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
 [sections.right_side]
@@ -26,9 +28,6 @@ slots = [
 
 [sections.front_side]
 armor = 6
-slots = [
-    { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
-]
 
 [sections.aft_side]
 armor = 6

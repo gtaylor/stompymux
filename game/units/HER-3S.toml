@@ -30,7 +30,7 @@ slots = [
 armor = 6
 rear = 2
 slots = [
-    { at = "1-2", item = "Masc" },
+    { at = "1-2", item = "IS.Masc" },
     { at = "3-9", item = "EndoSteel" },
 ]
 
@@ -38,7 +38,7 @@ slots = [
 armor = 6
 rear = 2
 slots = [
-    { at = "1-2", item = "Ecm" },
+    { at = "1-2", item = "IS.BeagleProbe" },
     { at = "3-9", item = "EndoSteel" },
 ]
 

@@ -38,7 +38,7 @@ armor = 24
 rear = 11
 slots = [
     { at = "3-10", item = "HeatSink" },
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -47,8 +47,8 @@ armor = 24
 rear = 11
 slots = [
     { at = "3-6", item = "HeatSink" },
-    { at = 7, item = "JumpJet" },
-    { at = "8-11", item = "TargetingComputer" },
+    { at = 7, item = "CL.JumpJet" },
+    { at = "8-11", item = "CL.TargetingComputer" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -56,8 +56,8 @@ slots = [
 armor = 40
 rear = 13
 slots = [
-    { at = 11, item = "JumpJet" },
-    { at = 12, item = "Ecm" },
+    { at = 11, item = "CL.JumpJet" },
+    { at = 12, item = "CL.Ecm" },
 ]
 
 [sections.left_leg]

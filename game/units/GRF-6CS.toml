@@ -6,7 +6,6 @@ walk_mp = 5
 jump_mp = 5
 heat_sinks = 12
 radio = 4
-specials = ["ArtemisIV", "ECM"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -27,16 +26,16 @@ slots = [
 armor = 16
 slots = [
     { at = "5-7", item = "IS.ERPPC" },
-    { at = "8-10", item = "EndoSteel" },
+    { at = "8-9", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = "4-5", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
     { at = "6-7", item = "C3i" },
-    { at = "8-9", item = "Ecm" },
+    { at = "8-9", item = "IS.Ecm" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -44,19 +43,19 @@ slots = [
 armor = 18
 rear = 6
 slots = [
-    { at = "4-5", item = "JumpJet" },
-    { at = "6-8", item = "IS.LRM-15" },
-    { at = "9-10", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 11, item = "Case" },
-    { at = 12, item = "ArtemisIV", link = 6 },
+    { at = "4-5", item = "IS.JumpJet" },
+    { at = "6-8", item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 9, item = "IS.ArtemisIV", link = 6 },
+    { at = "10-11", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 12, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 24
 rear = 7
 slots = [
-    { at = 11, item = "IS.ERMediumLaser" },
-    { at = 12, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
+    { at = 12, item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_leg]
@@ -73,3 +72,6 @@ slots = [
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

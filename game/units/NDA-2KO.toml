@@ -21,41 +21,42 @@ slots = [
     { at = "4-5", item = "IS.LargePulseLaser" },
     { at = 6, item = "IS.MediumPulseLaser" },
     { at = 7, item = "IS.SmallPulseLaser" },
-    { at = "8-12", item = "EndoSteel" },
+    { at = 8, item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 22
 slots = [
     { at = "5-9", item = "Sword" },
+    { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = 4, item = "IS.ERMediumLaser", modes = ["RearMount"] },
-    { at = "5-6", item = "IS.MediumPulseLaser" },
-    { at = "7-9", item = "TripleStrengthMyomer" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "4-5", item = "IS.MediumPulseLaser" },
+    { at = 6, item = "IS.ERMediumLaser", modes = ["RearMount"] },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "TripleStrengthMyomer" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = 4, item = "IS.ERMediumLaser", modes = ["RearMount"] },
-    { at = "5-6", item = "IS.MediumPulseLaser" },
-    { at = "7-9", item = "TripleStrengthMyomer" },
-    { at = "10-11", item = "EndoSteel" },
+    { at = "4-5", item = "IS.MediumPulseLaser" },
+    { at = 6, item = "IS.ERMediumLaser", modes = ["RearMount"] },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "TripleStrengthMyomer" },
 ]
 
 [sections.center_torso]
 armor = 31
 rear = 12
 slots = [
-    { at = 11, item = "IS.Flamer" },
-    { at = 12, item = "IS.MediumPulseLaser" },
+    { at = 11, item = "IS.MediumPulseLaser" },
+    { at = 12, item = "IS.Flamer" },
 ]
 
 [sections.left_leg]

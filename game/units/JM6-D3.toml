@@ -18,8 +18,8 @@ heat_sinks = "double"
 armor = 16
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.UltraAC/2" },
-    { at = "6-8", item = "IS.PPC" },
+    { at = "3-5", item = "IS.PPC" },
+    { at = "6-8", item = "IS.UltraAC/2" },
     { at = "9-12", item = "FerroFibrous" },
 ]
 
@@ -27,8 +27,8 @@ slots = [
 armor = 16
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.UltraAC/2" },
-    { at = "6-8", item = "IS.PPC" },
+    { at = "3-5", item = "IS.PPC" },
+    { at = "6-8", item = "IS.UltraAC/2" },
     { at = "9-12", item = "EndoSteel" },
 ]
 

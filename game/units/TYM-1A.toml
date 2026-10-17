@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 4
 heat_sinks = 14
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -45,8 +44,8 @@ armor = 20
 rear = 7
 slots = [
     { at = "4-8", item = "IS.LRM-20" },
-    { at = "9-10", item = "Ecm" },
-    { at = "11-12", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = "9-10", item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.center_torso]

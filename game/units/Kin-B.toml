@@ -5,6 +5,7 @@ tons = 90
 walk_mp = 4
 heat_sinks = 17
 radio = 5
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -33,19 +34,19 @@ armor = 28
 rear = 10
 slots = [
     { at = "1-2", item = "CL.ERMediumLaser" },
-    { at = "4-6", item = "FerroFibrous" },
-    { at = "7-10", item = "EndoSteel" },
+    { at = "3-6", item = "EndoSteel" },
+    { at = "7-9", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 28
 rear = 10
 slots = [
-    { at = 1, item = "CL.ERMediumLaser" },
-    { at = "2-3", item = "HeatSink" },
-    { at = "4-6", item = "EndoSteel" },
-    { at = "7-9", item = "FerroFibrous" },
-    { at = "10-11", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "CL.ERMediumLaser" },
+    { at = "4-5", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

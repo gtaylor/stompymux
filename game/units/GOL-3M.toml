@@ -29,8 +29,8 @@ rear = 13
 slots = [
     { at = "4-5", item = "IS.LRM-10" },
     { at = 6, item = "IS.MachineGun" },
-    { at = "7-8", item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = "9-10", item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = "7-8", item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = "9-10", item = "Ammo_IS.LRM-10", rounds = 12 },
     { at = 11, item = "Case" },
 ]
 

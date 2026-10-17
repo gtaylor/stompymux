@@ -4,6 +4,7 @@ movement = "biped"
 tons = 80
 walk_mp = 5
 heat_sinks = 16
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -48,13 +49,13 @@ rear = 10
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = 6, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "CL.A-Pod" },
+    { at = "5-6", item = "IS.A-Pod" },
 ]
 
 [sections.head]

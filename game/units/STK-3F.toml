@@ -13,42 +13,40 @@ engine_rating = 255
 armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LRM-10" },
-    { at = 5, item = "HeatSink" },
-    { at = 6, item = "IS.MediumLaser" },
-    { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = 8, item = "IS.MediumLaser" },
+    { at = 3, item = "HeatSink" },
+    { at = "4-5", item = "IS.LRM-10" },
+    { at = "6-7", item = "IS.MediumLaser" },
+    { at = 8, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
 [sections.right_arm]
 armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LRM-10" },
-    { at = 5, item = "HeatSink" },
-    { at = 6, item = "IS.MediumLaser" },
-    { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = 8, item = "IS.MediumLaser" },
+    { at = 3, item = "HeatSink" },
+    { at = "4-5", item = "IS.LRM-10" },
+    { at = "6-7", item = "IS.MediumLaser" },
+    { at = 8, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
 [sections.left_torso]
 armor = 25
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.LargeLaser" },
-    { at = "3-4", item = "IS.SRM-6" },
-    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 6, item = "HeatSink" },
+    { at = 1, item = "HeatSink" },
+    { at = "2-3", item = "IS.LargeLaser" },
+    { at = "4-5", item = "IS.SRM-6" },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 
 [sections.right_torso]
 armor = 25
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.LargeLaser" },
-    { at = "3-4", item = "IS.SRM-6" },
-    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 6, item = "HeatSink" },
+    { at = 1, item = "HeatSink" },
+    { at = "2-3", item = "IS.LargeLaser" },
+    { at = "4-5", item = "IS.SRM-6" },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 
 [sections.center_torso]

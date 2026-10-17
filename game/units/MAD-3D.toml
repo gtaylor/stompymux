@@ -4,7 +4,6 @@ movement = "biped"
 tons = 75
 walk_mp = 4
 heat_sinks = 20
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"

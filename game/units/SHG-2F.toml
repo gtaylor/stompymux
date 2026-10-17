@@ -41,8 +41,8 @@ armor = 28
 rear = 8
 slots = [
     { at = "1-2", item = "HeatSink" },
-    { at = "3-4", item = "IS.SRM-6" },
-    { at = "5-7", item = "IS.ERPPC" },
+    { at = "3-5", item = "IS.ERPPC" },
+    { at = "6-7", item = "IS.SRM-6" },
     { at = 8, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 9, item = "Ammo_IS.LRM-15", rounds = 8 },
     { at = 10, item = "Case" },
@@ -53,21 +53,21 @@ armor = 40
 rear = 11
 slots = [
     { at = 11, item = "HeatSink" },
-    { at = 12, item = "JumpJet" },
+    { at = 12, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 36
 slots = [
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "JumpJet" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 36
 slots = [
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "JumpJet" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.head]

@@ -5,7 +5,6 @@ tons = 80
 walk_mp = 4
 heat_sinks = 12
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -31,7 +30,7 @@ slots = [
 armor = 27
 rear = 7
 slots = [
-    { at = "3-6", item = "Masc" },
+    { at = "3-6", item = "IS.Masc" },
     { at = 7, item = "IS.ERMediumLaser" },
     { at = 8, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
     { at = 9, item = "Ammo_IS.LB20-XAC", rounds = 5 },

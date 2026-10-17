@@ -14,14 +14,14 @@ armor = "ferro_fibrous"
 [sections.front_left_leg]
 armor = 20
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.front_right_leg]
 armor = 20
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = 6, item = "FerroFibrous" },
 ]
 
@@ -32,8 +32,8 @@ slots = [
     { at = "1-2", item = "HeatSink" },
     { at = "3-4", item = "CL.MediumPulseLaser" },
     { at = 5, item = "TAG" },
-    { at = "6-7", item = "TargetingComputer" },
-    { at = 8, item = "BeagleProbe" },
+    { at = "6-7", item = "CL.TargetingComputer" },
+    { at = 8, item = "CL.BeagleProbe" },
 ]
 
 [sections.right_torso]
@@ -42,7 +42,7 @@ rear = 4
 slots = [
     { at = "1-2", item = "HeatSink" },
     { at = "3-5", item = "CL.HeavyLargeLaser" },
-    { at = "6-7", item = "Masc" },
+    { at = "6-7", item = "CL.Masc" },
     { at = "8-9", item = "FerroFibrous" },
 ]
 
@@ -50,21 +50,21 @@ slots = [
 armor = 21
 rear = 5
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
     { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.rear_left_leg]
 armor = 20
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.rear_right_leg]
 armor = 20
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = 6, item = "FerroFibrous" },
 ]
 

@@ -3,8 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 70
 walk_mp = 5
-max_suits = 0
-max_ton = 1
 
 [construction]
 tech_base = "inner_sphere"
@@ -28,11 +26,9 @@ armor = 44
 slots = [
     { at = 1, item = "IS.MediumLaser" },
     { at = "2-3", item = "IS.MachineGun" },
+    { at = 4, item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = 5, item = "Case" },
 ]
 
 [sections.aft_side]
 armor = 40
-slots = [
-    { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = 4, item = "Case" },
-]

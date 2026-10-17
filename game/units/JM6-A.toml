@@ -28,17 +28,17 @@ slots = [
 armor = 17
 rear = 3
 slots = [
-    { at = 1, item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 1, item = "IS.MediumLaser" },
     { at = 2, item = "Ammo_IS.AC/2", rounds = 45 },
-    { at = 3, item = "IS.MediumLaser" },
+    { at = 3, item = "Ammo_IS.LRM-15", rounds = 8 },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 3
 slots = [
-    { at = 1, item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = 2, item = "IS.MediumLaser" },
+    { at = 1, item = "IS.MediumLaser" },
+    { at = 2, item = "Ammo_IS.LRM-15", rounds = 8 },
 ]
 
 [sections.center_torso]

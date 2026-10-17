@@ -3,8 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 20
 walk_mp = 10
-heat_sinks = 10
-specials = ["OmniMech_Tech", "Masc", "ECM"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -26,7 +25,7 @@ armor = 3
 slots = [
     { at = "5-6", item = "CL.MachineGun" },
     { at = 7, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
-    { at = 8, item = "Ecm" },
+    { at = 8, item = "CL.Ecm" },
     { at = 9, item = "EndoSteel" },
     { at = 10, item = "FerroFibrous" },
 ]
@@ -54,7 +53,7 @@ slots = [
 armor = 5
 rear = 2
 slots = [
-    { at = 11, item = "Masc" },
+    { at = 11, item = "CL.Masc" },
     { at = 12, item = "EndoSteel" },
 ]
 

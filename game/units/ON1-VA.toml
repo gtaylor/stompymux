@@ -13,16 +13,16 @@ engine_rating = 300
 armor = 24
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser" },
-    { at = 5, item = "IS.SRM-4" },
+    { at = 4, item = "IS.SRM-4" },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 24
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser" },
-    { at = 5, item = "IS.SRM-4" },
+    { at = 4, item = "IS.SRM-4" },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]

@@ -19,13 +19,13 @@ armor = 40
 armor = 42
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.aft_side]
 armor = 26
 slots = [
     { at = 1, item = "IS.MachineGun" },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.turret]

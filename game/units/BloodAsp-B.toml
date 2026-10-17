@@ -4,7 +4,7 @@ movement = "biped"
 tons = 90
 walk_mp = 4
 heat_sinks = 16
-specials = ["OmniMech_Tech", "ArtemisIV"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,8 +16,8 @@ structure = "endo_steel"
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "ArtemisIV", link = 3 },
+    { at = "3-6", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 7, item = "CL.ArtemisIV", link = 3 },
     { at = "8-9", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = "10-12", item = "EndoSteel" },
 ]
@@ -27,8 +27,8 @@ armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-8", item = "CL.LRM-20" },
-    { at = 9, item = "ArtemisIV", link = 5 },
+    { at = "5-8", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 9, item = "CL.ArtemisIV", link = 5 },
     { at = "10-11", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 12, item = "EndoSteel" },
 ]
@@ -54,7 +54,7 @@ slots = [
 armor = 40
 rear = 13
 slots = [
-    { at = 11, item = "Ecm" },
+    { at = 11, item = "CL.Ecm" },
     { at = 12, item = "Ammo_CL.GaussRifle", rounds = 8 },
 ]
 

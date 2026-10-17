@@ -4,7 +4,6 @@ movement = "biped"
 tons = 40
 walk_mp = 8
 jump_mp = 8
-heat_sinks = 10
 specials = ["OmniMech_Tech"]
 
 [construction]
@@ -33,7 +32,7 @@ slots = [
 armor = 13
 rear = 7
 slots = [
-    { at = "3-4", item = "JumpJet" },
+    { at = "3-4", item = "CL.JumpJet" },
     { at = 5, item = "CL.Anti-MissileSystem" },
     { at = 6, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
     { at = "7-9", item = "EndoSteel" },
@@ -44,7 +43,7 @@ slots = [
 armor = 13
 rear = 7
 slots = [
-    { at = "3-4", item = "JumpJet" },
+    { at = "3-4", item = "CL.JumpJet" },
     { at = "5-6", item = "CL.MachineGun" },
     { at = 7, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = "8-10", item = "EndoSteel" },
@@ -61,13 +60,13 @@ slots = [
 [sections.left_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

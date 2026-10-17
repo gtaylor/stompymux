@@ -24,7 +24,7 @@ LARM: Ready RARM: Ready LLEG: Ready RLEG: Ready
  MediumLaser            [ 2] Left Torso    Ready  ||    
  SmallLaser             [ 3] Left Torso    Ready  ||    
  MachineGun             [ 4] Left Torso    Ready  ||    
- MediumLaser            [ 5] Right Torso   Ready  ||    
- SmallLaser             [ 6] Right Torso   Ready  ||    
- SRM-6                  [ 7] Right Torso   Ready  ||    
+ SRM-6                  [ 5] Right Torso   Ready  ||    
+ MediumLaser            [ 6] Right Torso   Ready  ||    
+ SmallLaser             [ 7] Right Torso   Ready  ||    
  MachineGun             [ 8] Right Torso   Ready  ||    

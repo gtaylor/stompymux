@@ -33,6 +33,9 @@ async fn fixture_movement(
         include_str!("../game/units/Flatbed_Truck.toml"),
     )
     .unwrap();
+    // The flatbed's 6-ton cargo bay is its wheeled payload; the heavier tracked and hover
+    // running gear needs that mass.
+    template.attributes.remove(CARGO_TONS);
     template.movement = movement;
     template.restate_engine_rating();
     if movement == VehicleMovement::Hover {

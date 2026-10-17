@@ -4,7 +4,7 @@ movement = "track"
 tons = 90
 walk_mp = 3
 radio = 4
-max_suits = 0
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,23 +19,23 @@ armor = 60
 
 [sections.front_side]
 armor = 76
+slots = [
+    { at = 1, item = "C3Master" },
+    { at = 2, item = "Case" },
+]
 
 [sections.aft_side]
 armor = 40
-slots = [
-    { at = "1-6", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 11, item = "C3Master" },
-    { at = 12, item = "Case" },
-]
 
 [sections.turret]
 armor = 68
 slots = [
     { at = 1, item = "IS.PPC" },
-    { at = 2, item = "IS.LRM-15" },
-    { at = 3, item = "ArtemisIV", link = 2 },
-    { at = 4, item = "IS.LRM-15" },
-    { at = 5, item = "ArtemisIV", link = 4 },
-    { at = 6, item = "IS.LRM-15" },
-    { at = 7, item = "ArtemisIV", link = 6 },
+    { at = 2, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 3, item = "IS.ArtemisIV", link = 2 },
+    { at = 4, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 5, item = "IS.ArtemisIV", link = 4 },
+    { at = 6, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 7, item = "IS.ArtemisIV", link = 6 },
+    { at = "8-13", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
 ]

@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 20
 walk_mp = 8
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"
@@ -20,7 +19,8 @@ armor = 6
 armor = 6
 slots = [
     { at = 1, item = "CL.ERSmallLaser" },
-    { at = 2, item = "BeagleProbe" },
+    { at = 2, item = "CL.BeagleProbe" },
+    { at = 3, item = "Case" },
 ]
 
 [sections.aft_side]

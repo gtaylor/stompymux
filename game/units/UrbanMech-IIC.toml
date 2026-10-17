@@ -29,7 +29,7 @@ armor = 8
 rear = 4
 slots = [
     { at = 1, item = "HeatSink" },
-    { at = 2, item = "JumpJet" },
+    { at = 2, item = "CL.JumpJet" },
 ]
 
 [sections.right_torso]
@@ -37,7 +37,7 @@ armor = 8
 rear = 4
 slots = [
     { at = 1, item = "HeatSink" },
-    { at = 2, item = "JumpJet" },
+    { at = 2, item = "CL.JumpJet" },
     { at = "3-4", item = "Ammo_CL.UltraAC/10", rounds = 10 },
 ]
 
@@ -45,7 +45,7 @@ slots = [
 armor = 11
 rear = 8
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]

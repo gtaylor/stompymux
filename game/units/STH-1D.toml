@@ -4,7 +4,6 @@ movement = "biped"
 tons = 45
 walk_mp = 7
 jump_mp = 7
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -30,22 +29,22 @@ slots = [
 armor = 17
 rear = 5
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = "7-8", item = "IS.SRM-6" },
     { at = 9, item = "IS.MediumLaser" },
     { at = 10, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = "11-12", item = "Masc" },
+    { at = "11-12", item = "IS.Masc" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 5
 slots = [
-    { at = "4-6", item = "JumpJet" },
-    { at = 7, item = "IS.StreakSRM-2" },
-    { at = 8, item = "IS.MediumLaser" },
-    { at = "9-10", item = "BeagleProbe" },
-    { at = 11, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = "4-6", item = "IS.JumpJet" },
+    { at = 7, item = "IS.MediumLaser" },
+    { at = 8, item = "IS.StreakSRM-2" },
+    { at = 9, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = "10-11", item = "IS.BeagleProbe" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -53,7 +52,7 @@ slots = [
 armor = 21
 rear = 6
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 

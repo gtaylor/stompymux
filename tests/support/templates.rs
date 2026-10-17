@@ -113,9 +113,10 @@ pub fn hovercraft(tracked: &str) -> String {
 /// Keep a vehicle that a test arms with extra equipment constructible under the TechManual
 /// rules, changing as little as it can. It adds a heat sink per point of energy weapon heat
 /// (TechManual p. 104); while the vehicle is still illegal, usually over its tonnage
-/// (TechManual p. 97), it trims up to two tons of armor, fits a standard fusion engine in
-/// place of an ICE, trims armor down to four points a location, empties the turret, slows it
-/// to 1 cruising MP and finally raises it to its motive type's maximum tonnage.
+/// (TechManual p. 97), it removes its cargo and transport bays, trims up to two tons of armor,
+/// fits a standard fusion engine in place of an ICE, trims armor down to four points a
+/// location, empties the turret, slows it to 1 cruising MP and finally raises it to its motive
+/// type's maximum tonnage.
 pub fn fit_vehicle(template: &mut stompymux_rs::VehicleTemplate) {
     use stompymux_rs::{VehicleLoadout, VehicleSection, VehicleTemplate};
     template.restate_engine_rating();
@@ -152,6 +153,12 @@ pub fn fit_vehicle(template: &mut stompymux_rs::VehicleTemplate) {
         }
     };
     cover(template);
+    if !legal(template) {
+        // Cargo and transport bays give up their mass before the design does.
+        template.attributes.remove(stompymux_rs::CARGO_TONS);
+        template.attributes.remove("transport_bays");
+        cover(template);
+    }
     trim(template, 32);
     if legal(template) {
         return;

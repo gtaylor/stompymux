@@ -35,8 +35,8 @@ armor = 18
 rear = 8
 
 [sections.center_torso]
-armor = 25
-rear = 10
+armor = 26
+rear = 9
 slots = [
     { at = "11-12", item = "Ammo_IS.LRM-15", rounds = 8 },
 ]

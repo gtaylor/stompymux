@@ -47,21 +47,21 @@ slots = [
 armor = 52
 rear = 10
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.MediumLaser" },
 ]
 
 [sections.left_leg]
 armor = 42
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 
 [sections.right_leg]
 armor = 42
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]
 

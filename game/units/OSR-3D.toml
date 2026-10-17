@@ -4,7 +4,6 @@ movement = "biped"
 tons = 30
 walk_mp = 8
 jump_mp = 4
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -36,7 +35,7 @@ slots = [
 armor = 8
 rear = 3
 slots = [
-    { at = "4-5", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
     { at = 6, item = "IS.MachineGun" },
     { at = 7, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
     { at = 8, item = "Ammo_IS.SRM-6", rounds = 15 },
@@ -47,7 +46,7 @@ slots = [
 armor = 8
 rear = 3
 slots = [
-    { at = "4-5", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
     { at = 6, item = "IS.ERMediumLaser" },
     { at = 7, item = "EndoSteel" },
     { at = "8-12", item = "FerroFibrous" },

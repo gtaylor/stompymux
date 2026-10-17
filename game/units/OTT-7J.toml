@@ -20,14 +20,14 @@ armor = 6
 armor = 9
 rear = 2
 slots = [
-    { at = "1-4", item = "JumpJet" },
+    { at = "1-4", item = "IS.JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 9
 rear = 2
 slots = [
-    { at = "1-4", item = "JumpJet" },
+    { at = "1-4", item = "IS.JumpJet" },
 ]
 
 [sections.center_torso]

@@ -20,8 +20,8 @@ async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_repl
     for proof in [false, true] {
         let source = if proof {
             include_str!("../game/units/Kestrel.toml").replacen(
-                "\"CargoTech\"",
-                "\"CargoTech\", \"CritProof_Tech\"",
+                "walk_mp = 12\n",
+                "walk_mp = 12\nspecials = [\"CritProof_Tech\"]\n",
                 1,
             )
         } else {

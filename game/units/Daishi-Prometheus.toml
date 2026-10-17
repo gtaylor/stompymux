@@ -4,6 +4,7 @@ movement = "biped"
 tons = 100
 walk_mp = 3
 heat_sinks = 23
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,17 +15,17 @@ engine_rating = 300
 armor = 34
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "CL.ERLargeLaser" },
-    { at = "5-6", item = "Ammo_CL.UltraAC/20", rounds = 5 },
-    { at = "7-12", item = "HeatSink" },
+    { at = "4-9", item = "HeatSink" },
+    { at = 10, item = "CL.ERLargeLaser" },
+    { at = "11-12", item = "Ammo_CL.UltraAC/20", rounds = 5 },
 ]
 
 [sections.right_arm]
 armor = 34
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "CL.ERLargeLaser" },
-    { at = "5-12", item = "HeatSink" },
+    { at = "4-11", item = "HeatSink" },
+    { at = 12, item = "CL.ERLargeLaser" },
 ]
 
 [sections.left_torso]

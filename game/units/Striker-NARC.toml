@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 35
 walk_mp = 5
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -11,24 +10,24 @@ engine_rating = 155
 armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 23
+armor = 25
 
 [sections.right_side]
-armor = 23
+armor = 25
 
 [sections.front_side]
-armor = 26
+armor = 28
 
 [sections.aft_side]
-armor = 20
+armor = 21
 
 [sections.turret]
-armor = 24
+armor = 26
 slots = [
-    { at = 1, item = "IS.NarcBeacon" },
-    { at = 2, item = "IS.LRM-10" },
-    { at = "3-4", item = "IS.SRM-2" },
-    { at = 5, item = "Ammo_IS.NarcBeacon", rounds = 6 },
-    { at = 6, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Narc/Smoke"] },
-    { at = 7, item = "Ammo_IS.SRM-2", rounds = 50, modes = ["Narc/Smoke"] },
+    { at = 1, item = "IS.LRM-10", modes = ["Narc/Smoke"] },
+    { at = "2-3", item = "IS.SRM-2", modes = ["Narc/Smoke"] },
+    { at = 4, item = "IS.NarcBeacon" },
+    { at = 5, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Narc/Smoke"] },
+    { at = 6, item = "Ammo_IS.SRM-2", rounds = 50, modes = ["Narc/Smoke"] },
+    { at = 7, item = "Ammo_IS.NarcBeacon", rounds = 6 },
 ]

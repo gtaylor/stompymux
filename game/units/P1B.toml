@@ -5,6 +5,7 @@ tons = 75
 walk_mp = 4
 heat_sinks = 14
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -33,8 +34,8 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = "6-8", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.ERLargeLaser" },
     { at = "9-12", item = "EndoSteel" },
 ]
 
@@ -42,8 +43,8 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = 4, item = "Ammo_IS.GaussRifle", rounds = 8 },
-    { at = "5-7", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = 7, item = "Ammo_IS.GaussRifle", rounds = 8 },
     { at = "8-11", item = "EndoSteel" },
 ]
 

@@ -3,9 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 80
 walk_mp = 3
-max_suits = 0
-max_ton = 1
-specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -31,6 +28,6 @@ armor = 40
 armor = 60
 slots = [
     { at = "1-2", item = "IS.LRM-20" },
-    { at = "3-5", item = "Ammo_IS.LRM-20", rounds = 6 },
-    { at = "6-7", item = "IS.MediumLaser" },
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = "5-7", item = "Ammo_IS.LRM-20", rounds = 6 },
 ]

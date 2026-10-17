@@ -17,8 +17,8 @@ heat_sinks = "double"
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.UltraAC/5" },
-    { at = "8-9", item = "IS.ERLargeLaser" },
+    { at = "3-4", item = "IS.ERLargeLaser" },
+    { at = "5-9", item = "IS.UltraAC/5" },
     { at = "10-12", item = "FerroFibrous" },
 ]
 
@@ -26,8 +26,8 @@ slots = [
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.UltraAC/5" },
-    { at = "8-9", item = "IS.ERLargeLaser" },
+    { at = "3-4", item = "IS.ERLargeLaser" },
+    { at = "5-9", item = "IS.UltraAC/5" },
     { at = "10-12", item = "FerroFibrous" },
 ]
 
@@ -37,8 +37,8 @@ rear = 6
 slots = [
     { at = "4-6", item = "HeatSink" },
     { at = 7, item = "Ammo_IS.UltraAC/5", rounds = 20 },
-    { at = "8-11", item = "FerroFibrous" },
-    { at = 12, item = "Case" },
+    { at = 8, item = "Case" },
+    { at = "9-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -47,8 +47,8 @@ rear = 6
 slots = [
     { at = "4-6", item = "HeatSink" },
     { at = 7, item = "Ammo_IS.UltraAC/5", rounds = 20 },
-    { at = "8-11", item = "FerroFibrous" },
-    { at = 12, item = "Case" },
+    { at = 8, item = "Case" },
+    { at = "9-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

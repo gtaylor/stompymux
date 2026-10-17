@@ -3,8 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 30
 walk_mp = 7
-heat_sinks = 10
-specials = ["Masc"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -17,19 +16,19 @@ armor = "ferro_fibrous"
 armor = 10
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "EndoSteel" },
-    { at = "6-7", item = "FerroFibrous" },
-    { at = 8, item = "Cl.LRM-10" },
-    { at = 9, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = 4, item = "CL.LRM-10" },
+    { at = 5, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "6-10", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 10
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-8", item = "FerroFibrous" },
-    { at = 9, item = "Cl.LRM-10" },
-    { at = 10, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = 4, item = "CL.LRM-10" },
+    { at = 5, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "6-7", item = "FerroFibrous" },
+    { at = "8-9", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -43,15 +42,15 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = "3-4", item = "EndoSteel" },
-    { at = 5, item = "Masc" },
+    { at = 3, item = "CL.Masc" },
+    { at = "4-5", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 15
 rear = 5
 slots = [
-    { at = 11, item = "Cl.LRM-10" },
+    { at = 11, item = "CL.LRM-10" },
     { at = 12, item = "Ammo_CL.LRM-10", rounds = 12 },
 ]
 
@@ -70,5 +69,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "Cl.ERMediumLaser" },
+    { at = 4, item = "CL.ERMediumLaser" },
 ]

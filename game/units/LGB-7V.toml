@@ -5,6 +5,7 @@ tons = 85
 walk_mp = 3
 heat_sinks = 14
 radio = 4
+specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,8 +18,8 @@ armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "HeatSink" },
-    { at = "6-10", item = "IS.LRM-20" },
-    { at = 11, item = "ArtemisIV", link = 6 },
+    { at = "6-10", item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 11, item = "IS.ArtemisIV", link = 6 },
 ]
 
 [sections.right_arm]
@@ -26,8 +27,8 @@ armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "HeatSink" },
-    { at = "6-10", item = "IS.LRM-20" },
-    { at = 11, item = "ArtemisIV", link = 6 },
+    { at = "6-10", item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 11, item = "IS.ArtemisIV", link = 6 },
 ]
 
 [sections.left_torso]

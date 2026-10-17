@@ -3,7 +3,6 @@ class = "mech"
 movement = "quad"
 tons = 70
 walk_mp = 5
-heat_sinks = 10
 
 [construction]
 tech_base = "inner_sphere"

@@ -4,9 +4,7 @@ movement = "biped"
 tons = 50
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
 radio = 4
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -53,19 +51,19 @@ slots = [
 armor = 18
 rear = 8
 slots = [
-    { at = "11-12", item = "JumpJet" },
+    { at = "11-12", item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 13
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 13
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

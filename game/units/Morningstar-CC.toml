@@ -4,19 +4,20 @@ movement = "wheel"
 tons = 60
 walk_mp = 5
 radio = 4
-cargo_tons = 4
-max_suits = 0
-max_ton = 5
 
 [construction]
 tech_base = "inner_sphere"
 engine = "xl"
 engine_rating = 280
 
+[transport_bays]
+infantry_compartment = 4
+
 [sections.left_side]
 armor = 29
 slots = [
     { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
 [sections.right_side]
@@ -29,20 +30,17 @@ slots = [
 armor = 43
 slots = [
     { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "IS.TargetingComputer" },
+    { at = 3, item = "IS.Ecm" },
+    { at = "4-5", item = "C3Master" },
 ]
 
 [sections.aft_side]
 armor = 19
-slots = [
-    { at = 1, item = "Ammo_IS.AC/5", rounds = 20 },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "3-4", item = "C3Master" },
-    { at = 5, item = "Ecm" },
-    { at = 6, item = "TargetingComputer" },
-]
 
 [sections.turret]
 armor = 24
 slots = [
     { at = 1, item = "IS.AC/5" },
+    { at = 2, item = "Ammo_IS.AC/5", rounds = 20 },
 ]

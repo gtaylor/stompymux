@@ -4,9 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
 radio = 4
-specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -20,22 +18,22 @@ armor = 9
 omit = ["hand_actuator"]
 slots = [
     { at = 4, item = "IS.MediumPulseLaser" },
-    { at = "5-12", item = "EndoSteel" },
+    { at = "5-7", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 9
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser" },
-    { at = "5-7", item = "IS.MRM-20" },
+    { at = "4-6", item = "IS.MRM-20" },
+    { at = 7, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = "7-9", item = "IS.MRM-20" },
     { at = "10-11", item = "Ammo_IS.MRM-20", rounds = 12 },
     { at = 12, item = "EndoSteel" },
@@ -45,8 +43,8 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet" },
-    { at = 7, item = "EndoSteel" },
+    { at = "4-6", item = "IS.JumpJet" },
+    { at = "7-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -67,3 +65,6 @@ slots = [
 
 [sections.head]
 armor = 8
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

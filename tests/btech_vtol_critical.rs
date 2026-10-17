@@ -238,8 +238,10 @@ async fn suppressed_rotor_criticals_do_not_draw_dice_or_change_material() {
     let id = world.create(&config, "Protected rotor".into(), Kind::Thing);
     for suppression in ["safe", "proof"] {
         let source = if suppression == "proof" {
-            include_str!("../game/units/Kestrel.toml")
-                .replace("\"CargoTech\"", "\"CargoTech\", \"CritProof_Tech\"")
+            include_str!("../game/units/Kestrel.toml").replace(
+                "walk_mp = 12\n",
+                "walk_mp = 12\nspecials = [\"CritProof_Tech\"]\n",
+            )
         } else {
             include_str!("../game/units/Kestrel.toml").into()
         };
@@ -494,10 +496,13 @@ async fn fuel_tank_explosions_settle_at_the_surface_and_destroy_the_vtol() {
     let id = world.create(&config, "Exploding aircraft".into(), Kind::Thing);
     for case in [false, true] {
         let source = if case {
-            include_str!("../game/units/Kestrel.toml").replace(
-                "[sections.aft_side]\n",
-                "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
-            )
+            // CASE takes the half ton the troop compartment would otherwise hold.
+            include_str!("../game/units/Kestrel.toml")
+                .replace("[transport_bays]\ninfantry_compartment = 3.5\n\n", "")
+                .replace(
+                    "[sections.aft_side]\n",
+                    "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
+                )
         } else {
             include_str!("../game/units/Kestrel.toml").into()
         };

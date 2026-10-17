@@ -4,14 +4,14 @@ movement = "hover"
 tons = 50
 walk_mp = 9
 heat_sinks = 11
-cargo_tons = 4
-max_suits = 0
-max_ton = 4
-specials = ["CargoTech"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 215
+
+[transport_bays]
+infantry_compartment = 4
 
 [sections.left_side]
 armor = 40

@@ -8,6 +8,7 @@ radio = 4
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 330
+heat_sinks = "double"
 
 [sections.front_left_leg]
 armor = 10

@@ -4,9 +4,7 @@ movement = "biped"
 tons = 55
 walk_mp = 5
 jump_mp = 5
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,8 +33,8 @@ slots = [
 armor = 20
 rear = 6
 slots = [
-    { at = "4-6", item = "IS.LRM-15" },
-    { at = 7, item = "ArtemisIV", link = 4 },
+    { at = "4-6", item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 7, item = "IS.ArtemisIV", link = 4 },
     { at = "8-9", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 10, item = "Case" },
 ]
@@ -45,8 +43,8 @@ slots = [
 armor = 20
 rear = 6
 slots = [
-    { at = "4-6", item = "IS.LRM-15" },
-    { at = 7, item = "ArtemisIV", link = 4 },
+    { at = "4-6", item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 7, item = "IS.ArtemisIV", link = 4 },
     { at = "8-9", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 10, item = "Case" },
 ]
@@ -55,19 +53,19 @@ slots = [
 armor = 26
 rear = 7
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

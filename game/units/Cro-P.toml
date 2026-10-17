@@ -3,8 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 65
 walk_mp = 5
-heat_sinks = 10
-specials = ["ArtemisIV"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,8 +13,8 @@ engine_rating = 325
 armor = 18
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.LRM-20" },
-    { at = 8, item = "ArtemisIV", link = 4 },
+    { at = "4-7", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 8, item = "CL.ArtemisIV", link = 4 },
     { at = "9-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]
 
@@ -23,8 +22,8 @@ slots = [
 armor = 18
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.LRM-20" },
-    { at = 8, item = "ArtemisIV", link = 4 },
+    { at = "4-7", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 8, item = "CL.ArtemisIV", link = 4 },
     { at = "9-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]
 

@@ -15,19 +15,19 @@ structure = "endo_steel"
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "HeatSink" },
-    { at = 9, item = "Cl.ERLargeLaser" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = 3, item = "CL.ERLargeLaser" },
+    { at = "4-6", item = "EndoSteel" },
+    { at = "7-12", item = "HeatSink" },
 ]
 
 [sections.right_arm]
 armor = 24
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "HeatSink" },
-    { at = "7-8", item = "Cl.LRM-15" },
-    { at = 9, item = "Cl.SRM-4" },
-    { at = "10-11", item = "Ammo_CL.LRM-15", rounds = 8 },
+    { at = "3-4", item = "CL.LRM-15" },
+    { at = "5-6", item = "Ammo_CL.LRM-15", rounds = 8 },
+    { at = 7, item = "CL.SRM-4" },
+    { at = "8-11", item = "HeatSink" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -35,33 +35,33 @@ slots = [
 armor = 27
 rear = 9
 slots = [
-    { at = "1-4", item = "HeatSink" },
-    { at = 5, item = "JumpJet" },
-    { at = "6-7", item = "Cl.LRM-15" },
-    { at = 8, item = "Cl.SRM-4" },
-    { at = "9-10", item = "Ammo_CL.LRM-15", rounds = 8 },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "1-2", item = "CL.LRM-15" },
+    { at = "3-4", item = "Ammo_CL.LRM-15", rounds = 8 },
+    { at = 5, item = "CL.SRM-4" },
+    { at = "6-9", item = "HeatSink" },
+    { at = "10-11", item = "EndoSteel" },
+    { at = 12, item = "CL.JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 27
 rear = 9
 slots = [
-    { at = "1-4", item = "HeatSink" },
-    { at = 5, item = "JumpJet" },
-    { at = "6-7", item = "Cl.LRM-15" },
-    { at = 8, item = "Cl.SRM-4" },
-    { at = "9-10", item = "Ammo_CL.LRM-15", rounds = 8 },
-    { at = 11, item = "Ammo_CL.SRM-4", rounds = 25 },
-    { at = 12, item = "EndoSteel" },
+    { at = "1-2", item = "CL.LRM-15" },
+    { at = "3-4", item = "Ammo_CL.LRM-15", rounds = 8 },
+    { at = 5, item = "CL.SRM-4" },
+    { at = 6, item = "Ammo_CL.SRM-4", rounds = 25 },
+    { at = "7-10", item = "HeatSink" },
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "CL.JumpJet" },
 ]
 
 [sections.center_torso]
 armor = 39
 rear = 12
 slots = [
-    { at = 11, item = "JumpJet" },
-    { at = 12, item = "Cl.ERLargeLaser" },
+    { at = 11, item = "CL.ERLargeLaser" },
+    { at = 12, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]
@@ -79,5 +79,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "Cl.ERLargeLaser" },
+    { at = 4, item = "CL.ERLargeLaser" },
 ]

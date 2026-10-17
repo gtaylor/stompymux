@@ -3,17 +3,20 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 10
-specials = ["CargoTech"]
 
 [construction]
 tech_base = "clan"
 engine_rating = 175
 armor = "ferro_fibrous"
 
+[transport_bays]
+infantry_compartment = 5
+
 [sections.left_side]
 armor = 11
 slots = [
     { at = 1, item = "CL.MachineGun" },
+    { at = 2, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.right_side]
@@ -27,14 +30,14 @@ armor = 14
 slots = [
     { at = "1-2", item = "CL.LRM-5" },
     { at = 3, item = "Ammo_CL.LRM-5", rounds = 24 },
-    { at = 4, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 4, item = "Case" },
 ]
 
 [sections.aft_side]
 armor = 10
 
 [sections.turret]
-armor = 12
+armor = 11
 slots = [
     { at = "1-2", item = "CL.StreakSRM-2" },
     { at = 3, item = "Ammo_CL.StreakSRM-2", rounds = 50 },

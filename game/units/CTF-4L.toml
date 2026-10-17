@@ -5,7 +5,6 @@ tons = 70
 walk_mp = 4
 heat_sinks = 13
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -38,7 +37,7 @@ rear = 8
 slots = [
     { at = "1-6", item = "HeatSink" },
     { at = "7-8", item = "Ammo_IS.GaussRifle", rounds = 8 },
-    { at = "9-10", item = "Ecm" },
+    { at = "9-10", item = "IS.Ecm" },
     { at = "11-12", item = "StealthArmor" },
 ]
 

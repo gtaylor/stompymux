@@ -4,7 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 8
 heat_sinks = 13
-specials = ["SearchLight"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"

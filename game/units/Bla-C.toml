@@ -5,6 +5,7 @@ tons = 50
 walk_mp = 5
 jump_mp = 5
 heat_sinks = 14
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -13,51 +14,49 @@ engine_rating = 250
 
 [sections.left_arm]
 armor = 16
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-9", item = "CL.GaussRifle" },
-    { at = 10, item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = 9, item = "Ammo_CL.GaussRifle", rounds = 8 },
 ]
 
 [sections.right_arm]
 armor = 16
 
 [sections.left_torso]
-armor = 15
+armor = 16
 rear = 8
-engine_at = 3
 slots = [
-    { at = 1, item = "CL.SRM-4" },
-    { at = 2, item = "Ammo_CL.SRM-4", rounds = 25 },
-    { at = "5-8", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "CL.SRM-4" },
+    { at = 8, item = "Ammo_CL.SRM-4", rounds = 25 },
 ]
 
 [sections.right_torso]
-armor = 15
+armor = 16
 rear = 8
-engine_at = 2
 slots = [
-    { at = 1, item = "CL.SmallPulseLaser" },
-    { at = "4-7", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "CL.SmallPulseLaser" },
 ]
 
 [sections.center_torso]
 armor = 23
 rear = 8
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 20
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 20
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

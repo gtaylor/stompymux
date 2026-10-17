@@ -32,7 +32,7 @@ rear = 8
 slots = [
     { at = "4-5", item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = "6-7", item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = 12, item = "Case" },
+    { at = 8, item = "Case" },
 ]
 
 [sections.right_torso]

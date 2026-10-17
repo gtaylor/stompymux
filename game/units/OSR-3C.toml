@@ -11,18 +11,16 @@ engine_rating = 300
 
 [sections.left_arm]
 armor = 8
-omit = ["hand_actuator"]
 
 [sections.right_arm]
 armor = 8
-omit = ["hand_actuator"]
 
 [sections.left_torso]
 armor = 22
 rear = 4
 slots = [
-    { at = "1-2", item = "IS.LargeLaser" },
-    { at = 3, item = "HeatSink" },
+    { at = 1, item = "HeatSink" },
+    { at = "2-3", item = "IS.LargeLaser" },
 ]
 
 [sections.right_torso]

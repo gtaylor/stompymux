@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 50
 walk_mp = 6
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -32,8 +30,8 @@ slots = [
 armor = 17
 rear = 6
 slots = [
-    { at = "4-6", item = "TargetingComputer" },
-    { at = "7-9", item = "Masc" },
+    { at = "4-6", item = "IS.TargetingComputer" },
+    { at = "7-9", item = "IS.Masc" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -42,8 +40,8 @@ armor = 17
 rear = 6
 slots = [
     { at = "4-6", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
-    { at = 8, item = "Case" },
-    { at = "9-12", item = "EndoSteel" },
+    { at = 7, item = "Case" },
+    { at = "8-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

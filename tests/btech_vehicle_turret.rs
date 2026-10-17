@@ -506,7 +506,11 @@ async fn automatic_tracking_is_shared_by_ground_and_rotorcraft() {
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("engine_rating = 240\n", "")
             .replace("walk_mp = 3", "walk_mp = 0"),
-        format!("{vtol}\n[sections.turret]\narmor = 1\ninternals = 1\n"),
+        // The turret's mass comes from the troop compartment.
+        format!(
+            "{}\n[sections.turret]\narmor = 1\ninternals = 1\n",
+            vtol.replace("[transport_bays]\ninfantry_compartment = 3.5\n\n", "")
+        ),
         vtol.into(),
     ] {
         let (_dir, config, mut world) = support::isolated_world().await;

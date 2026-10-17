@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 25
 walk_mp = 8
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"
@@ -15,16 +14,15 @@ armor = "ferro_fibrous"
 armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "CL.StreakSRM-2" },
-    { at = 4, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = "3-4", item = "CL.StreakSRM-2" },
 ]
 
 [sections.right_arm]
 armor = 8
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "CL.StreakSRM-2" },
-    { at = 4, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = "3-4", item = "CL.StreakSRM-2" },
+    { at = 5, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.left_torso]
@@ -46,10 +44,10 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 9
-rear = 3
+armor = 10
+rear = 2
 slots = [
-    { at = 11, item = "CL.MediumPulseLaser" },
+    { at = 11, item = "CL.ERMediumLaser" },
     { at = 12, item = "EndoSteel" },
 ]
 

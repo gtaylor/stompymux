@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 60
 walk_mp = 4
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"
@@ -17,7 +16,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-8", item = "CL.GaussRifle" },
     { at = "9-10", item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = 12, item = "FerroFibrous" },
+    { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -26,15 +25,15 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-8", item = "CL.GaussRifle" },
     { at = "9-10", item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = 12, item = "FerroFibrous" },
+    { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 8
 slots = [
-    { at = "10-11", item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = 1, item = "EndoSteel" },
+    { at = "2-3", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -42,8 +41,8 @@ armor = 20
 rear = 8
 slots = [
     { at = "1-2", item = "HeatSink" },
-    { at = "10-11", item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = 3, item = "EndoSteel" },
+    { at = "4-5", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

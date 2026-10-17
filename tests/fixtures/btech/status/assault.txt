@@ -18,8 +18,8 @@ Temp: |.............|.....|......................|
 LARM: Ready RARM: Ready LLEG: Ready RLEG: Ready 
 ==================WEAPON SYSTEMS===========================AMMUNITION========
 ------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
- MediumLaser            [ 0] Left Arm      Ready  || SRM-6                15
- MediumLaser            [ 1] Right Arm     Ready  || LRM-20               12
+ MediumLaser            [ 0] Left Arm      Ready  || LRM-20               12
+ MediumLaser            [ 1] Right Arm     Ready  || SRM-6                15
  LRM-20                 [ 2] Left Torso    Ready  || AC/20                10
  SRM-6                  [ 3] Left Torso    Ready  ||    
  AC/20                  [ 4] Right Torso   Ready  ||    

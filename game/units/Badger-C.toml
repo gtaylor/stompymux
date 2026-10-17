@@ -3,14 +3,14 @@ class = "vehicle"
 movement = "track"
 tons = 30
 walk_mp = 6
-cargo_tons = 4
-max_suits = 0
-max_ton = 4
-specials = ["CargoTech"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 180
+
+[transport_bays]
+infantry_compartment = 4
 
 [sections.left_side]
 armor = 18
@@ -26,10 +26,10 @@ slots = [
 ]
 
 [sections.aft_side]
-armor = 16
+armor = 14
 
 [sections.turret]
-armor = 8
+armor = 18
 slots = [
     { at = 1, item = "IS.LRM-5" },
 ]

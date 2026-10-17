@@ -3,8 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 20
 walk_mp = 10
-heat_sinks = 10
-specials = ["Masc"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -35,27 +34,27 @@ slots = [
 armor = 4
 rear = 2
 slots = [
-    { at = 3, item = "EndoSteel" },
-    { at = "4-5", item = "FerroFibrous" },
-    { at = "7-8", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "EndoSteel" },
+    { at = "6-7", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 4
 rear = 2
 slots = [
-    { at = 3, item = "CL.Anti-MissileSystem" },
-    { at = "4-5", item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
-    { at = "6-7", item = "HeatSink" },
-    { at = "8-9", item = "FerroFibrous" },
-    { at = 10, item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "CL.Anti-MissileSystem" },
+    { at = "6-7", item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
+    { at = 8, item = "EndoSteel" },
+    { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 5
 rear = 2
 slots = [
-    { at = 11, item = "Masc" },
+    { at = 11, item = "CL.Masc" },
     { at = 12, item = "EndoSteel" },
 ]
 

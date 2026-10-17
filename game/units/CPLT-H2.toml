@@ -32,7 +32,7 @@ slots = [
 armor = 22
 rear = 8
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = "3-8", item = "IS.RL-20", modes = ["OneShot"] },
     { at = "9-11", item = "HeatSink" },
 ]
@@ -41,7 +41,7 @@ slots = [
 armor = 22
 rear = 8
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = "3-8", item = "IS.RL-20", modes = ["OneShot"] },
     { at = "9-11", item = "HeatSink" },
 ]

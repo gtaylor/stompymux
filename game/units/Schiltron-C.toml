@@ -4,6 +4,7 @@ movement = "wheel"
 tons = 80
 walk_mp = 3
 heat_sinks = 32
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,13 +20,13 @@ armor = 34
 
 [sections.front_side]
 armor = 46
+slots = [
+    { at = 1, item = "C3Master" },
+    { at = 2, item = "IS.Ecm" },
+]
 
 [sections.aft_side]
 armor = 25
-slots = [
-    { at = 1, item = "C3Master" },
-    { at = 2, item = "Ecm" },
-]
 
 [sections.turret]
 armor = 40

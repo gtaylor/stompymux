@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 5
 heat_sinks = 15
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,8 +20,8 @@ omit = ["hand_actuator"]
 slots = [
     { at = "4-5", item = "IS.ERLargeLaser" },
     { at = 6, item = "IS.MediumLaser" },
-    { at = "7-9", item = "FerroFibrous" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -31,33 +30,31 @@ omit = ["hand_actuator"]
 slots = [
     { at = "4-5", item = "IS.ERLargeLaser" },
     { at = 6, item = "IS.MediumLaser" },
-    { at = "7-9", item = "FerroFibrous" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 22
 rear = 7
 slots = [
-    { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
-    { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV", link = 4 },
+    { at = "4-5", item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 4 },
     { at = 7, item = "IS.MediumPulseLaser" },
     { at = 8, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
-    { at = "9-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 7
 slots = [
-    { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
-    { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV", link = 4 },
+    { at = "4-5", item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 4 },
     { at = 7, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
-    { at = "8-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "8-9", item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
@@ -70,15 +67,15 @@ slots = [
 [sections.left_leg]
 armor = 28
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 28
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]

@@ -4,7 +4,6 @@ movement = "track"
 tons = 100
 walk_mp = 3
 heat_sinks = 12
-specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
@@ -13,42 +12,40 @@ engine_rating = 300
 armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 41
+armor = 42
 slots = [
     { at = 1, item = "CL.StreakSRM-6" },
-    { at = 2, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "2-3", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
 ]
 
 [sections.right_side]
-armor = 41
+armor = 42
 slots = [
     { at = 1, item = "CL.StreakSRM-6" },
-    { at = 2, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
 ]
 
 [sections.front_side]
 armor = 48
 slots = [
     { at = 1, item = "CL.LB10-XAC" },
-    { at = 2, item = "CL.LRM-15" },
-    { at = 3, item = "ArtemisIV", link = 2 },
-    { at = 4, item = "CL.LRM-15" },
-    { at = 5, item = "ArtemisIV", link = 4 },
-    { at = 6, item = "CL.LRM-15" },
-    { at = 7, item = "ArtemisIV", link = 6 },
-    { at = 8, item = "Ammo_CL.LB10-XAC", rounds = 10 },
-    { at = 9, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "10-12", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 2, item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 3, item = "CL.ArtemisIV", link = 2 },
+    { at = 4, item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 5, item = "CL.ArtemisIV", link = 4 },
+    { at = 6, item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 7, item = "CL.ArtemisIV", link = 6 },
+    { at = "8-10", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 11, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 12, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 13, item = "CL.Ecm" },
+    { at = 14, item = "Case" },
 ]
 
 [sections.aft_side]
-armor = 35
-slots = [
-    { at = 1, item = "Ecm" },
-]
+armor = 34
 
 [sections.turret]
-armor = 46
+armor = 45
 slots = [
     { at = 1, item = "CL.ERLargeLaser" },
     { at = 2, item = "CL.GaussRifle" },

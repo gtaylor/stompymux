@@ -25,8 +25,8 @@ armor = 20
 rear = 6
 slots = [
     { at = "1-5", item = "IS.LRM-20" },
-    { at = "6-7", item = "Ammo_IS.LRM-20", rounds = 6 },
-    { at = 8, item = "IS.SRM-4" },
+    { at = 6, item = "IS.SRM-4" },
+    { at = "7-8", item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
 
 [sections.right_torso]
@@ -34,8 +34,8 @@ armor = 20
 rear = 6
 slots = [
     { at = "1-5", item = "IS.LRM-20" },
-    { at = "6-7", item = "Ammo_IS.LRM-20", rounds = 6 },
-    { at = 8, item = "IS.SRM-4" },
+    { at = 6, item = "IS.SRM-4" },
+    { at = "7-8", item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
 
 [sections.center_torso]

@@ -35,7 +35,7 @@ slots = [
 armor = 20
 rear = 5
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "CL.JumpJet" },
     { at = 4, item = "CL.MediumPulseLaser" },
     { at = 5, item = "CL.StreakSRM-2" },
     { at = 6, item = "CL.MachineGun" },
@@ -48,10 +48,10 @@ slots = [
 armor = 20
 rear = 5
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "CL.JumpJet" },
     { at = "4-5", item = "CL.MediumPulseLaser" },
     { at = 6, item = "CL.StreakSRM-2" },
-    { at = "7-9", item = "TargetingComputer" },
+    { at = "7-9", item = "CL.TargetingComputer" },
     { at = "10-11", item = "EndoSteel" },
     { at = 12, item = "FerroFibrous" },
 ]
@@ -67,13 +67,13 @@ slots = [
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

@@ -37,7 +37,7 @@ slots = [
 armor = 6
 rear = 1
 slots = [
-    { at = 11, item = "Masc" },
+    { at = 11, item = "CL.Masc" },
     { at = 12, item = "FerroFibrous" },
 ]
 

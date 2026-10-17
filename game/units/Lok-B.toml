@@ -4,7 +4,7 @@ movement = "biped"
 tons = 65
 walk_mp = 5
 heat_sinks = 13
-specials = ["ArtemisIV"]
+specials = ["OmniMech_Tech", "SearchLight"]
 
 [construction]
 tech_base = "clan"
@@ -13,37 +13,36 @@ engine_rating = 325
 
 [sections.left_arm]
 armor = 11
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.LB5-XAC" },
-    { at = 8, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = "3-6", item = "CL.LB5-XAC" },
+    { at = 7, item = "Ammo_CL.LB5-XAC", rounds = 20 },
 ]
 
 [sections.right_arm]
 armor = 11
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-9", item = "CL.GaussRifle" },
-    { at = 10, item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = 9, item = "Ammo_CL.GaussRifle", rounds = 8 },
 ]
 
 [sections.left_torso]
 armor = 14
 rear = 7
-engine_at = 7
 slots = [
-    { at = 1, item = "CL.ERSmallLaser" },
+    { at = 3, item = "CL.ERSmallLaser" },
 ]
 
 [sections.right_torso]
 armor = 14
 rear = 7
-engine_at = 7
 slots = [
-    { at = "1-2", item = "CL.SRM-6" },
-    { at = "3-4", item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
-    { at = 5, item = "ArtemisIV", link = 1 },
-    { at = 6, item = "ArtemisIV", link = 2 },
+    { at = 3, item = "CL.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 4, item = "CL.ArtemisIV", link = 3 },
+    { at = 5, item = "CL.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 6, item = "CL.ArtemisIV", link = 5 },
+    { at = "7-8", item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
 ]
 
 [sections.center_torso]

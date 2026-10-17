@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 50
 walk_mp = 4
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -22,7 +21,7 @@ slots = [
 armor = 14
 slots = [
     { at = 5, item = "IS.MediumLaser" },
-    { at = "6-8", item = "FerroFibrous" },
+    { at = "6-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -39,7 +38,6 @@ armor = 20
 rear = 4
 slots = [
     { at = "1-10", item = "IS.AC/20" },
-    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
@@ -50,14 +48,12 @@ rear = 5
 armor = 19
 slots = [
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 19
 slots = [
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]

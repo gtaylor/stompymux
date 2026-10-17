@@ -5,7 +5,6 @@ tons = 40
 walk_mp = 7
 heat_sinks = 11
 radio = 4
-specials = ["ECM", "C3SlaveTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,19 +16,20 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 12
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser" },
-    { at = "5-10", item = "EndoSteel" },
-    { at = "11-12", item = "StealthArmor" },
+    { at = 3, item = "IS.MediumPulseLaser" },
+    { at = "4-7", item = "EndoSteel" },
+    { at = "8-9", item = "StealthArmor" },
 ]
 
 [sections.right_arm]
 armor = 12
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser" },
-    { at = "11-12", item = "StealthArmor" },
+    { at = 3, item = "IS.MediumPulseLaser" },
+    { at = "4-7", item = "EndoSteel" },
+    { at = "8-9", item = "StealthArmor" },
 ]
 
 [sections.left_torso]
@@ -38,8 +38,8 @@ rear = 5
 slots = [
     { at = 4, item = "IS.ERMediumLaser" },
     { at = 5, item = "C3Slave" },
-    { at = "6-10", item = "EndoSteel" },
-    { at = "11-12", item = "StealthArmor" },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-10", item = "StealthArmor" },
 ]
 
 [sections.right_torso]
@@ -57,7 +57,7 @@ slots = [
 armor = 17
 rear = 6
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

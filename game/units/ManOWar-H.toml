@@ -4,6 +4,7 @@ movement = "biped"
 tons = 80
 walk_mp = 5
 heat_sinks = 16
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -24,7 +25,8 @@ armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-6", item = "CL.UltraAC/10" },
-    { at = 7, item = "FerroFibrous" },
+    { at = "7-8", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+    { at = 9, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -40,8 +42,7 @@ slots = [
 armor = 24
 rear = 10
 slots = [
-    { at = "3-4", item = "Ammo_CL.UltraAC/10", rounds = 10 },
-    { at = "5-6", item = "FerroFibrous" },
+    { at = "3-4", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

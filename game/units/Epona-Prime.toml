@@ -4,6 +4,7 @@ movement = "hover"
 tons = 50
 walk_mp = 9
 heat_sinks = 16
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -18,6 +19,9 @@ armor = 20
 
 [sections.front_side]
 armor = 21
+slots = [
+    { at = 1, item = "Case" },
+]
 
 [sections.aft_side]
 armor = 18

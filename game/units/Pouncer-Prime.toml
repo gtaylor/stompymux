@@ -5,6 +5,7 @@ tons = 40
 walk_mp = 6
 jump_mp = 5
 heat_sinks = 12
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -17,48 +18,47 @@ armor = "ferro_fibrous"
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC" },
-    { at = 5, item = "FerroFibrous" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-6", item = "CL.ERPPC" },
+    { at = 7, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC" },
-    { at = 5, item = "FerroFibrous" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-6", item = "CL.ERPPC" },
+    { at = 7, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 11
 rear = 7
-engine_at = 4
 slots = [
-    { at = 1, item = "EndoSteel" },
-    { at = "2-3", item = "FerroFibrous" },
-    { at = "6-7", item = "JumpJet" },
-    { at = 8, item = "CL.ERSmallLaser" },
-    { at = "9-12", item = "HeatSink" },
+    { at = "3-4", item = "CL.JumpJet" },
+    { at = 5, item = "CL.ERSmallLaser" },
+    { at = 6, item = "EndoSteel" },
+    { at = "7-8", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 11
 rear = 7
-engine_at = 4
 slots = [
-    { at = 1, item = "EndoSteel" },
-    { at = "2-3", item = "FerroFibrous" },
-    { at = "6-7", item = "JumpJet" },
-    { at = "8-10", item = "TargetingComputer" },
-    { at = "11-12", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-6", item = "CL.JumpJet" },
+    { at = "7-9", item = "CL.TargetingComputer" },
+    { at = 10, item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 12
 rear = 8
 slots = [
-    { at = 11, item = "EndoSteel" },
-    { at = 12, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]

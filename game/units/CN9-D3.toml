@@ -4,7 +4,6 @@ movement = "biped"
 tons = 50
 walk_mp = 6
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -32,8 +31,8 @@ slots = [
 armor = 13
 rear = 6
 slots = [
-    { at = "4-5", item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV", link = 4 },
+    { at = "4-5", item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 4 },
     { at = "7-10", item = "EndoSteel" },
 ]
 

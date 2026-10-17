@@ -5,13 +5,14 @@ tons = 30
 walk_mp = 8
 heat_sinks = 13
 radio = 5
-cargo_tons = 7
-specials = ["CargoTech"]
 
 [construction]
 tech_base = "clan"
 engine_rating = 100
 armor = "ferro_fibrous"
+
+[transport_bays]
+infantry_compartment = 7
 
 [sections.left_side]
 armor = 14
@@ -20,14 +21,14 @@ armor = 14
 armor = 14
 
 [sections.front_side]
-armor = 16
+armor = 15
 slots = [
     { at = 1, item = "CL.ERMediumLaser" },
     { at = 2, item = "CL.MediumPulseLaser" },
 ]
 
 [sections.aft_side]
-armor = 9
+armor = 12
 slots = [
     { at = 1, item = "CL.MediumPulseLaser" },
 ]

@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 25
 walk_mp = 6
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -42,16 +40,16 @@ rear = 2
 slots = [
     { at = 3, item = "Ammo_IS.SRM-4", rounds = 25, modes = ["Artemis/Mine"] },
     { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = "5-11", item = "EndoSteel" },
-    { at = 12, item = "Case" },
+    { at = 5, item = "Case" },
+    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 8
 rear = 3
 slots = [
-    { at = 11, item = "IS.SRM-4" },
-    { at = 12, item = "ArtemisIV", link = 11 },
+    { at = 11, item = "IS.SRM-4", modes = ["Artemis/Mine"] },
+    { at = 12, item = "IS.ArtemisIV", link = 11 },
 ]
 
 [sections.left_leg]

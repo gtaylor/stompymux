@@ -3,32 +3,32 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 9
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 140
+armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 14
+armor = 16
 
 [sections.right_side]
-armor = 14
+armor = 16
 
 [sections.front_side]
-armor = 15
+armor = 20
 slots = [
     { at = 1, item = "IS.MediumPulseLaser" },
-    { at = 2, item = "BeagleProbe" },
-    { at = 3, item = "Ecm" },
-    { at = 4, item = "TAG" },
+    { at = 2, item = "IS.BeagleProbe" },
+    { at = 3, item = "TAG" },
+    { at = 4, item = "IS.Ecm" },
 ]
 
 [sections.aft_side]
-armor = 14
+armor = 10
 
 [sections.turret]
-armor = 15
+armor = 18
 slots = [
     { at = "1-2", item = "IS.SRM-6" },
     { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },

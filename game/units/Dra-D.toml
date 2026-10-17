@@ -4,7 +4,7 @@ movement = "biped"
 tons = 40
 walk_mp = 8
 jump_mp = 8
-heat_sinks = 10
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -17,36 +17,36 @@ armor = "ferro_fibrous"
 armor = 12
 slots = [
     { at = "5-6", item = "CL.StreakSRM-6" },
-    { at = 7, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = 12, item = "FerroFibrous" },
+    { at = "7-8", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 12
 slots = [
     { at = "5-6", item = "CL.ERMediumLaser" },
-    { at = 12, item = "FerroFibrous" },
+    { at = "7-8", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 13
 rear = 7
 slots = [
-    { at = "3-4", item = "FerroFibrous" },
-    { at = "5-7", item = "EndoSteel" },
-    { at = "8-9", item = "JumpJet" },
-    { at = 10, item = "CL.ERSmallLaser" },
+    { at = "3-4", item = "CL.JumpJet" },
+    { at = 5, item = "CL.ERSmallLaser" },
+    { at = 6, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "7-9", item = "EndoSteel" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 13
 rear = 7
 slots = [
-    { at = "3-4", item = "FerroFibrous" },
-    { at = "5-7", item = "EndoSteel" },
-    { at = "8-9", item = "JumpJet" },
-    { at = 10, item = "CL.LRM-5" },
-    { at = 11, item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = "3-4", item = "CL.JumpJet" },
+    { at = 5, item = "CL.LRM-5" },
+    { at = 6, item = "Ammo_CL.LRM-5", rounds = 24 },
+    { at = "7-9", item = "EndoSteel" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
@@ -59,13 +59,13 @@ slots = [
 [sections.left_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 35
 walk_mp = 6
-heat_sinks = 10
 radio = 4
-specials = ["BeagleProbe", "ECM"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,8 +33,8 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = "4-5", item = "Ecm" },
-    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "4-5", item = "IS.Ecm" },
+    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
     { at = "7-8", item = "Ammo_IS.NarcBeacon", rounds = 6 },
     { at = "9-10", item = "StealthArmor" },
 ]
@@ -46,7 +44,7 @@ armor = 10
 rear = 4
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-8", item = "IS.SRM-6" },
+    { at = "7-8", item = "IS.SRM-6", modes = ["Narc/Smoke"] },
     { at = 9, item = "TAG" },
     { at = "10-11", item = "StealthArmor" },
 ]
@@ -55,7 +53,7 @@ slots = [
 armor = 15
 rear = 4
 slots = [
-    { at = "11-12", item = "BeagleProbe" },
+    { at = "11-12", item = "IS.BeagleProbe" },
 ]
 
 [sections.left_leg]

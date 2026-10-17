@@ -16,37 +16,37 @@ heat_sinks = "double"
 armor = 20
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
 ]
 
 [sections.right_arm]
 armor = 20
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "IS.Anti-MissileSystem" },
-    { at = "3-11", item = "HeatSink" },
+    { at = "1-9", item = "HeatSink" },
+    { at = 10, item = "IS.MediumLaser" },
+    { at = 11, item = "IS.Anti-MissileSystem" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = "1-2", item = "IS.SRM-6" },
-    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 4, item = "IS.MediumLaser" },
-    { at = 5, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
-    { at = 6, item = "IS.MachineGun" },
-    { at = "7-12", item = "HeatSink" },
+    { at = "1-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.SRM-6" },
+    { at = 9, item = "IS.MediumLaser" },
+    { at = 10, item = "IS.MachineGun" },
+    { at = 11, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 12, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
 ]
 
 [sections.center_torso]

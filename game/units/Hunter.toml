@@ -3,17 +3,16 @@ class = "vehicle"
 movement = "track"
 tons = 35
 walk_mp = 5
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 175
 
 [sections.left_side]
-armor = 22
+armor = 24
 
 [sections.right_side]
-armor = 22
+armor = 24
 
 [sections.front_side]
 armor = 32

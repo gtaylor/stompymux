@@ -4,8 +4,6 @@ movement = "hover"
 tons = 35
 walk_mp = 8
 heat_sinks = 3
-max_suits = 0
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"

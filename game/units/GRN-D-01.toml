@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 80
 walk_mp = 3
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -37,8 +35,8 @@ slots = [
 armor = 24
 rear = 10
 slots = [
-    { at = "4-8", item = "IS.LRM-20" },
-    { at = 9, item = "ArtemisIV", link = 4 },
+    { at = "4-8", item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 9, item = "IS.ArtemisIV", link = 4 },
     { at = "10-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]
 
@@ -46,8 +44,8 @@ slots = [
 armor = 24
 rear = 10
 slots = [
-    { at = "4-8", item = "IS.LRM-20" },
-    { at = 9, item = "ArtemisIV", link = 4 },
+    { at = "4-8", item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 9, item = "IS.ArtemisIV", link = 4 },
     { at = "10-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]
 

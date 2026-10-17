@@ -18,8 +18,8 @@ heat_sinks = "double"
 armor = 16
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser" },
-    { at = "5-6", item = "IS.LargeLaser" },
+    { at = "4-5", item = "IS.LargeLaser" },
+    { at = 6, item = "IS.MediumLaser" },
     { at = "7-9", item = "EndoSteel" },
 ]
 
@@ -36,7 +36,7 @@ armor = 20
 rear = 4
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-8", item = "JumpJet" },
+    { at = "7-8", item = "IS.JumpJet" },
     { at = "9-11", item = "EndoSteel" },
 ]
 
@@ -44,18 +44,18 @@ slots = [
 armor = 20
 rear = 4
 slots = [
-    { at = "4-5", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
     { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "8-10", item = "EndoSteel" },
-    { at = 11, item = "Case" },
+    { at = 8, item = "Case" },
+    { at = "9-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 26
 rear = 6
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.MediumLaser" },
 ]
 

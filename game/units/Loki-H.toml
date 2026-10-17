@@ -4,7 +4,7 @@ movement = "biped"
 tons = 65
 walk_mp = 5
 heat_sinks = 13
-specials = ["SearchLight"]
+specials = ["OmniMech_Tech", "SearchLight"]
 
 [construction]
 tech_base = "clan"
@@ -30,7 +30,7 @@ armor = 14
 rear = 7
 slots = [
     { at = "3-6", item = "CL.HeavySmallLaser" },
-    { at = 7, item = "BeagleProbe" },
+    { at = 7, item = "CL.BeagleProbe" },
     { at = "8-9", item = "CL.LRM-15" },
     { at = "10-11", item = "Ammo_CL.LRM-15", rounds = 8 },
 ]
@@ -50,13 +50,13 @@ rear = 8
 [sections.left_leg]
 armor = 15
 slots = [
-    { at = 5, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
 ]
 
 [sections.right_leg]
 armor = 15
 slots = [
-    { at = 5, item = "CL.A-Pod" },
+    { at = 5, item = "IS.A-Pod" },
 ]
 
 [sections.head]

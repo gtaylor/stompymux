@@ -3,7 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 35
 walk_mp = 6
-heat_sinks = 10
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,38 +16,38 @@ armor = "ferro_fibrous"
 armor = 12
 slots = [
     { at = 5, item = "CL.ERLargeLaser" },
-    { at = 12, item = "FerroFibrous" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 12
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-6", item = "CL.UltraAC/5" },
-    { at = 7, item = "Ammo_CL.UltraAC/5", rounds = 20 },
-    { at = 12, item = "FerroFibrous" },
+    { at = "3-5", item = "CL.UltraAC/5" },
+    { at = 6, item = "Ammo_CL.UltraAC/5", rounds = 20 },
+    { at = 7, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = 3, item = "CL.StreakSRM-2" },
-    { at = 4, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
-    { at = "5-6", item = "HeatSink" },
-    { at = 10, item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "CL.StreakSRM-2" },
+    { at = 6, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = 7, item = "EndoSteel" },
+    { at = "8-9", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = 3, item = "CL.StreakSRM-2" },
-    { at = 4, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
-    { at = "5-6", item = "HeatSink" },
-    { at = 10, item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "CL.StreakSRM-2" },
+    { at = 6, item = "Ammo_CL.StreakSRM-2", rounds = 50 },
+    { at = 7, item = "EndoSteel" },
+    { at = "8-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

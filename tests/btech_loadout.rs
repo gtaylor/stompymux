@@ -173,8 +173,11 @@ fn awesome_and_hunchback_resolve_conventional_energy_loadouts() {
     }
     assert!(
         Mech::from_template(
-            MechTemplate::parse("HBK-4P", &cargo.replace("max_suits = 0", "max_suits = 1"))
-                .unwrap()
+            MechTemplate::parse(
+                "HBK-4P",
+                &cargo.replace("walk_mp = 4\n", "walk_mp = 4\nmax_suits = 1\n")
+            )
+            .unwrap()
         )
         .is_err()
     );
@@ -770,7 +773,7 @@ async fn existing_arctic_fox_xl_engine_constructs() {
     let template = MechTemplate::parse("AF1", include_str!("../game/units/AF1.toml")).unwrap();
     assert_eq!(
         template.attributes["specials"],
-        "XLEngine_Tech EndoSteel_Tech DoubleHS"
+        "XLEngine_Tech EndoSteel_Tech DoubleHS OmniMech_Tech"
     );
     let id = world.create(&config, "Arctic Fox".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));

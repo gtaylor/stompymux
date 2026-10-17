@@ -4,8 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
-specials = ["OmniMech_Tech", "Masc", "ArtemisIV", "ECM", "BeagleProbe"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -18,8 +17,8 @@ armor = "ferro_fibrous"
 armor = 10
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.LRM-15" },
-    { at = 5, item = "ArtemisIV", link = 3 },
+    { at = "3-4", item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 5, item = "CL.ArtemisIV", link = 3 },
     { at = 6, item = "CL.ERMediumLaser" },
     { at = "7-8", item = "EndoSteel" },
 ]
@@ -28,8 +27,8 @@ slots = [
 armor = 10
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.LRM-15" },
-    { at = 5, item = "ArtemisIV", link = 3 },
+    { at = "3-4", item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 5, item = "CL.ArtemisIV", link = 3 },
     { at = 6, item = "CL.ERMediumLaser" },
     { at = "7-8", item = "EndoSteel" },
 ]
@@ -38,9 +37,9 @@ slots = [
 armor = 18
 rear = 4
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "CL.JumpJet" },
     { at = "4-5", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 6, item = "Ecm" },
+    { at = 6, item = "CL.Ecm" },
     { at = 7, item = "EndoSteel" },
     { at = "8-10", item = "FerroFibrous" },
 ]
@@ -49,9 +48,9 @@ slots = [
 armor = 18
 rear = 4
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "CL.JumpJet" },
     { at = "4-5", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 6, item = "BeagleProbe" },
+    { at = 6, item = "CL.BeagleProbe" },
     { at = 7, item = "EndoSteel" },
     { at = "8-11", item = "FerroFibrous" },
 ]
@@ -60,19 +59,19 @@ slots = [
 armor = 20
 rear = 6
 slots = [
-    { at = "11-12", item = "Masc" },
+    { at = "11-12", item = "CL.Masc" },
 ]
 
 [sections.left_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

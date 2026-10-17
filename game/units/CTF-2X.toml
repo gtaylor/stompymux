@@ -35,8 +35,8 @@ slots = [
 armor = 20
 rear = 10
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
-    { at = "2-8", item = "IS.AC/10" },
+    { at = "1-7", item = "IS.AC/10" },
+    { at = 8, item = "IS.MediumLaser" },
 ]
 
 [sections.center_torso]

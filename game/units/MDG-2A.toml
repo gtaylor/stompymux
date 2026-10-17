@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 5
 heat_sinks = 15
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -20,8 +19,8 @@ armor = 21
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-8", item = "IS.RotaryAC/5" },
-    { at = "9-10", item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -30,8 +29,8 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-4", item = "IS.LargePulseLaser" },
     { at = "5-6", item = "IS.MediumPulseLaser" },
-    { at = "7-9", item = "FerroFibrous" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -39,8 +38,8 @@ armor = 22
 rear = 7
 slots = [
     { at = "4-6", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
-    { at = "7-9", item = "FerroFibrous" },
-    { at = "10-12", item = "EndoSteel" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -48,8 +47,8 @@ armor = 22
 rear = 7
 slots = [
     { at = "4-5", item = "IS.MediumPulseLaser" },
-    { at = "6-8", item = "FerroFibrous" },
-    { at = "9-10", item = "EndoSteel" },
+    { at = "6-7", item = "EndoSteel" },
+    { at = "8-10", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
@@ -62,15 +61,15 @@ slots = [
 [sections.left_leg]
 armor = 28
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 28
 slots = [
-    { at = 5, item = "FerroFibrous" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]

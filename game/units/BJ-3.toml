@@ -4,7 +4,6 @@ movement = "biped"
 tons = 45
 walk_mp = 4
 jump_mp = 4
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -51,13 +50,13 @@ rear = 9
 [sections.left_leg]
 armor = 17
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 17
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

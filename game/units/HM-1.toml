@@ -4,7 +4,6 @@ movement = "biped"
 tons = 30
 walk_mp = 7
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -30,10 +29,10 @@ slots = [
 armor = 8
 rear = 4
 slots = [
-    { at = "4-5", item = "Ecm" },
-    { at = 6, item = "IS.LRM-5", modes = ["Artemis/Mine"] },
-    { at = 7, item = "ArtemisIV", link = 6 },
-    { at = 8, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
+    { at = 4, item = "IS.LRM-5", modes = ["Artemis/Mine"] },
+    { at = 5, item = "IS.ArtemisIV", link = 4 },
+    { at = 6, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
+    { at = "7-8", item = "IS.Ecm" },
     { at = "9-12", item = "EndoSteel" },
 ]
 
@@ -42,7 +41,7 @@ armor = 8
 rear = 4
 slots = [
     { at = "4-5", item = "HeatSink" },
-    { at = "6-7", item = "BeagleProbe" },
+    { at = "6-7", item = "IS.BeagleProbe" },
     { at = "8-11", item = "EndoSteel" },
 ]
 
@@ -59,7 +58,7 @@ armor = 9
 [sections.right_leg]
 armor = 9
 slots = [
-    { at = "5-6", item = "Masc" },
+    { at = "5-6", item = "IS.Masc" },
 ]
 
 [sections.head]

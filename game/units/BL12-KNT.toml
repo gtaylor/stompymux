@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 4
 heat_sinks = 16
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -32,10 +31,10 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = "1-6", item = "TargetingComputer" },
-    { at = "7-8", item = "IS.LargeLaser" },
-    { at = 9, item = "IS.ERMediumLaser" },
-    { at = "10-12", item = "HeatSink" },
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = 3, item = "IS.ERMediumLaser" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-12", item = "IS.TargetingComputer" },
 ]
 
 [sections.right_torso]

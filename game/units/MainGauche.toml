@@ -4,7 +4,6 @@ movement = "track"
 tons = 30
 walk_mp = 4
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,15 +16,13 @@ armor = 19
 armor = 19
 
 [sections.front_side]
-armor = 21
+armor = 29
 slots = [
     { at = 1, item = "IS.LightGaussRifle" },
     { at = "2-3", item = "IS.MachineGun" },
+    { at = 4, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
+    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.aft_side]
 armor = 13
-slots = [
-    { at = 1, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
-]

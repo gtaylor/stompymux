@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 40
 walk_mp = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,8 +18,8 @@ armor = 30
 armor = 30
 slots = [
     { at = 1, item = "IS.LB20-XAC" },
-    { at = "2-3", item = "Ammo_IS.LB20-XAC", rounds = 5 },
-    { at = "4-6", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = "2-4", item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = "5-6", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
 ]
 
 [sections.aft_side]

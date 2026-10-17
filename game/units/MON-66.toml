@@ -29,7 +29,7 @@ slots = [
 armor = 10
 rear = 2
 slots = [
-    { at = "1-2", item = "BeagleProbe" },
+    { at = "1-2", item = "IS.BeagleProbe" },
     { at = "3-9", item = "EndoSteel" },
 ]
 

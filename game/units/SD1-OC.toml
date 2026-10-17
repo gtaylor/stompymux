@@ -5,6 +5,7 @@ tons = 90
 walk_mp = 4
 heat_sinks = 15
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -32,8 +33,8 @@ slots = [
 armor = 28
 rear = 10
 slots = [
-    { at = 4, item = "C3Slave" },
-    { at = 5, item = "IS.MediumLaser" },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "C3Slave" },
 ]
 
 [sections.right_torso]

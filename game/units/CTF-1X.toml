@@ -27,9 +27,7 @@ slots = [
 armor = 16
 rear = 6
 slots = [
-    { at = 1, item = "Ammo_IS.AC/10", rounds = 10 },
-    { at = 2, item = "IS.MediumLaser", modes = ["RearMount"] },
-    { at = 3, item = "HeatSink" },
+    { at = 1, item = "IS.MediumLaser", modes = ["RearMount"] },
 ]
 
 [sections.right_torso]
@@ -38,6 +36,7 @@ rear = 6
 slots = [
     { at = "1-7", item = "IS.AC/10" },
     { at = 8, item = "IS.MediumLaser", modes = ["RearMount"] },
+    { at = 9, item = "Ammo_IS.AC/10", rounds = 10 },
 ]
 
 [sections.center_torso]
@@ -58,3 +57,6 @@ slots = [
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "HeatSink" },
+]

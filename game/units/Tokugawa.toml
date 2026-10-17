@@ -3,32 +3,33 @@ class = "vehicle"
 movement = "wheel"
 tons = 60
 walk_mp = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 220
 
 [sections.left_side]
-armor = 26
+armor = 33
 
 [sections.right_side]
-armor = 26
+armor = 33
 
 [sections.front_side]
-armor = 24
+armor = 40
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
+    { at = "1-2", item = "IS.MediumPulseLaser" },
 ]
 
 [sections.aft_side]
-armor = 20
+armor = 26
 
 [sections.turret]
-armor = 20
+armor = 36
 slots = [
-    { at = "1-2", item = "IS.AC/2" },
-    { at = 3, item = "IS.SRM-6" },
-    { at = 4, item = "Ammo_IS.AC/2", rounds = 45 },
-    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 1, item = "IS.LB10-XAC" },
+    { at = 2, item = "IS.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 3, item = "IS.ArtemisIV", link = 2 },
+    { at = "4-5", item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "7-8", item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
 ]

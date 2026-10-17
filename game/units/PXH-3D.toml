@@ -35,8 +35,8 @@ slots = [
 armor = 16
 rear = 3
 slots = [
-    { at = "4-6", item = "JumpJet" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.JumpJet" },
     { at = "10-11", item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
     { at = 12, item = "EndoSteel" },
 ]
@@ -45,8 +45,8 @@ slots = [
 armor = 16
 rear = 3
 slots = [
-    { at = "4-6", item = "JumpJet" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.JumpJet" },
     { at = "10-12", item = "EndoSteel" },
 ]
 

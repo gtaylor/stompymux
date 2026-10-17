@@ -27,8 +27,8 @@ slots = [
 armor = 16
 rear = 8
 slots = [
-    { at = "1-2", item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = 3, item = "IS.MediumLaser", modes = ["RearMount"] },
+    { at = 1, item = "IS.MediumLaser", modes = ["RearMount"] },
+    { at = "2-3", item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
 [sections.right_torso]

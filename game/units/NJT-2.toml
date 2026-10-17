@@ -5,7 +5,6 @@ tons = 65
 walk_mp = 6
 heat_sinks = 12
 radio = 4
-specials = ["C3SlaveTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,7 +18,6 @@ armor = 18
 omit = ["hand_actuator"]
 slots = [
     { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
@@ -42,7 +40,8 @@ rear = 7
 slots = [
     { at = "4-5", item = "IS.MRM-10" },
     { at = 6, item = "Ammo_IS.MRM-10", rounds = 24 },
-    { at = 12, item = "Case" },
+    { at = 7, item = "Case" },
+    { at = "8-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -54,9 +53,15 @@ slots = [
 
 [sections.left_leg]
 armor = 27
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
 
 [sections.right_leg]
 armor = 27
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
 
 [sections.head]
 armor = 9

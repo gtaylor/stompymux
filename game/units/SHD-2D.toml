@@ -5,7 +5,6 @@ tons = 55
 walk_mp = 5
 jump_mp = 3
 heat_sinks = 14
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -27,29 +26,29 @@ slots = [
 armor = 9
 rear = 5
 slots = [
-    { at = "1-4", item = "IS.AC/5" },
-    { at = 5, item = "Ammo_IS.AC/5", rounds = 20 },
-    { at = 6, item = "Ammo_IS.SRM-2", rounds = 50 },
-    { at = 7, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
+    { at = "2-5", item = "IS.AC/5" },
+    { at = 6, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 7, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]
 
 [sections.right_torso]
 armor = 9
 rear = 5
 slots = [
-    { at = 1, item = "IS.LRM-5" },
-    { at = 2, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = 3, item = "Ammo_IS.SRM-2", rounds = 50 },
-    { at = 4, item = "JumpJet" },
-    { at = "5-7", item = "HeatSink" },
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "IS.JumpJet" },
+    { at = 5, item = "IS.LRM-5" },
+    { at = 6, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 7, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]
 
 [sections.center_torso]
 armor = 12
 rear = 6
 slots = [
-    { at = 11, item = "IS.SRM-2" },
-    { at = 12, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
+    { at = 12, item = "IS.SRM-2" },
 ]
 
 [sections.left_leg]

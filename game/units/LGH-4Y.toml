@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 55
 walk_mp = 7
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -17,14 +16,14 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 18
 slots = [
-    { at = "5-12", item = "EndoSteel" },
+    { at = "5-8", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 18
 slots = [
     { at = "5-6", item = "IS.LargePulseLaser" },
-    { at = "7-9", item = "FerroFibrous" },
+    { at = "7-11", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -32,8 +31,7 @@ armor = 19
 rear = 7
 slots = [
     { at = "4-5", item = "IS.ERMediumLaser" },
-    { at = "6-11", item = "EndoSteel" },
-    { at = 12, item = "FerroFibrous" },
+    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -50,12 +48,13 @@ armor = 26
 rear = 10
 slots = [
     { at = 11, item = "IS.ERSmallLaser" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 26
 slots = [
-    { at = "5-6", item = "FerroFibrous" },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
@@ -66,3 +65,6 @@ slots = [
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

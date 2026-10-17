@@ -5,6 +5,7 @@ tons = 90
 walk_mp = 4
 heat_sinks = 15
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -32,18 +33,18 @@ slots = [
 armor = 28
 rear = 10
 slots = [
-    { at = "4-8", item = "C3Master" },
-    { at = 9, item = "IS.MediumLaser" },
-    { at = 10, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = "6-10", item = "C3Master" },
 ]
 
 [sections.right_torso]
 armor = 28
 rear = 10
 slots = [
-    { at = "4-8", item = "C3Master" },
-    { at = 9, item = "IS.MediumLaser" },
-    { at = 10, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = "6-10", item = "C3Master" },
 ]
 
 [sections.center_torso]

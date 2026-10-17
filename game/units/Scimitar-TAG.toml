@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 8
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -27,7 +26,7 @@ armor = 20
 armor = 25
 slots = [
     { at = 1, item = "IS.NarcBeacon" },
-    { at = "2-3", item = "IS.SRM-4" },
+    { at = "2-3", item = "IS.SRM-4", modes = ["Narc/Smoke"] },
     { at = 4, item = "TAG" },
     { at = "5-6", item = "Ammo_IS.NarcBeacon", rounds = 6 },
     { at = 7, item = "Ammo_IS.SRM-4", rounds = 25, modes = ["Narc/Smoke"] },

@@ -4,7 +4,6 @@ movement = "biped"
 tons = 20
 walk_mp = 8
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -24,7 +23,7 @@ slots = [
 armor = 6
 rear = 2
 slots = [
-    { at = "1-2", item = "BeagleProbe" },
+    { at = "1-2", item = "IS.BeagleProbe" },
     { at = "3-9", item = "FerroFibrous" },
 ]
 
@@ -40,7 +39,7 @@ armor = 6
 rear = 4
 slots = [
     { at = 11, item = "IS.SmallLaser" },
-    { at = 12, item = "Masc" },
+    { at = 12, item = "IS.Masc" },
 ]
 
 [sections.left_leg]

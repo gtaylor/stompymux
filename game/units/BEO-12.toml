@@ -32,7 +32,7 @@ slots = [
 armor = 16
 rear = 6
 slots = [
-    { at = "4-5", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
     { at = "6-12", item = "FerroFibrous" },
 ]
 
@@ -40,8 +40,8 @@ slots = [
 armor = 16
 rear = 6
 slots = [
-    { at = "4-5", item = "JumpJet" },
-    { at = "6-7", item = "Masc" },
+    { at = "4-5", item = "IS.JumpJet" },
+    { at = "6-7", item = "IS.Masc" },
     { at = "8-12", item = "FerroFibrous" },
 ]
 
@@ -49,20 +49,20 @@ slots = [
 armor = 20
 rear = 7
 slots = [
-    { at = "11-12", item = "BeagleProbe" },
+    { at = "11-12", item = "IS.BeagleProbe" },
 ]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "FerroFibrous" },
 ]
 

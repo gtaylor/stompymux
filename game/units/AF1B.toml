@@ -3,8 +3,8 @@ class = "mech"
 movement = "biped"
 tons = 30
 walk_mp = 6
-heat_sinks = 10
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,8 +17,8 @@ heat_sinks = "double"
 armor = 10
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "EndoSteel" },
-    { at = "7-12", item = "IS.LB10-XAC" },
+    { at = "3-8", item = "IS.LB10-XAC" },
+    { at = "9-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
@@ -32,8 +32,8 @@ armor = 11
 rear = 3
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = 8, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 9, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 8, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
 ]
 
 [sections.right_torso]

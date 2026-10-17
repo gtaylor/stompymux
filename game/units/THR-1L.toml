@@ -18,18 +18,15 @@ armor = 22
 [sections.right_arm]
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
-slots = [
-    { at = "3-12", item = "IS.AC/20" },
-]
 
 [sections.left_torso]
 armor = 23
 rear = 7
 slots = [
-    { at = 4, item = "IS.LRM-5" },
-    { at = 5, item = "IS.MediumPulseLaser" },
-    { at = "6-8", item = "Ammo_IS.AC/20", rounds = 5 },
-    { at = 9, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = 5, item = "IS.LRM-5" },
+    { at = 6, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = "7-9", item = "Ammo_IS.AC/20", rounds = 5 },
     { at = 10, item = "Case" },
 ]
 
@@ -37,7 +34,7 @@ slots = [
 armor = 23
 rear = 7
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = 6, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.center_torso]
@@ -55,3 +52,10 @@ armor = 30
 
 [sections.head]
 armor = 9
+
+[[split_mounts]]
+item = "IS.AC/20"
+placements = [
+    { section = "right_arm", at = "3-10" },
+    { section = "right_torso", at = "4-5" },
+]

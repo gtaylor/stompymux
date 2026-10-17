@@ -6,6 +6,7 @@ walk_mp = 4
 jump_mp = 4
 heat_sinks = 13
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,8 +36,8 @@ slots = [
 armor = 18
 rear = 6
 slots = [
-    { at = "4-5", item = "IS.MediumLaser" },
-    { at = 6, item = "IS.MediumPulseLaser" },
+    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = "5-6", item = "IS.MediumLaser" },
     { at = "7-12", item = "EndoSteel" },
 ]
 
@@ -59,13 +60,13 @@ slots = [
 [sections.left_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 65
 walk_mp = 4
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -13,18 +12,17 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 20
-omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.LRM-15" },
-    { at = 7, item = "IS.MediumLaser" },
+    { at = "5-7", item = "IS.LRM-15" },
+    { at = 8, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 20
 slots = [
     { at = "5-7", item = "IS.LRM-15" },
-    { at = 8, item = "IS.Flamer" },
-    { at = 9, item = "IS.MediumLaser" },
+    { at = 8, item = "IS.MediumLaser" },
+    { at = 9, item = "IS.Flamer" },
 ]
 
 [sections.left_torso]

@@ -4,6 +4,7 @@ movement = "biped"
 tons = 100
 walk_mp = 3
 heat_sinks = 22
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -12,32 +13,31 @@ engine_rating = 300
 
 [sections.left_arm]
 armor = 34
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.ERLargeLaser" },
-    { at = "7-8", item = "CL.MediumPulseLaser" },
-    { at = "9-11", item = "CL.UltraAC/5" },
-    { at = 12, item = "Ammo_CL.UltraAC/5", rounds = 20 },
+    { at = "3-4", item = "CL.ERLargeLaser" },
+    { at = "5-7", item = "CL.UltraAC/5" },
+    { at = "8-9", item = "CL.MediumPulseLaser" },
+    { at = 10, item = "Ammo_CL.UltraAC/5", rounds = 20 },
 ]
 
 [sections.right_arm]
 armor = 34
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.ERLargeLaser" },
-    { at = "7-8", item = "CL.MediumPulseLaser" },
-    { at = "9-11", item = "CL.UltraAC/5" },
-    { at = 12, item = "Ammo_CL.UltraAC/5", rounds = 20 },
+    { at = "3-4", item = "CL.ERLargeLaser" },
+    { at = "5-7", item = "CL.UltraAC/5" },
+    { at = "8-9", item = "CL.MediumPulseLaser" },
+    { at = 10, item = "Ammo_CL.UltraAC/5", rounds = 20 },
 ]
 
 [sections.left_torso]
 armor = 32
 rear = 10
-engine_at = 3
 slots = [
-    { at = 1, item = "CL.LRM-10" },
-    { at = 2, item = "Ammo_CL.LRM-10", rounds = 12 },
-    { at = "5-12", item = "HeatSink" },
+    { at = "3-10", item = "HeatSink" },
+    { at = 11, item = "CL.LRM-10" },
+    { at = 12, item = "Ammo_CL.LRM-10", rounds = 12 },
 ]
 
 [sections.right_torso]

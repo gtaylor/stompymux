@@ -27,16 +27,16 @@ slots = [
 armor = 24
 rear = 6
 slots = [
-    { at = 1, item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = "2-4", item = "HeatSink" },
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
 [sections.right_torso]
 armor = 24
 rear = 6
 slots = [
-    { at = 1, item = "Ammo_IS.LRM-10", rounds = 12 },
-    { at = "2-4", item = "HeatSink" },
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
 [sections.center_torso]

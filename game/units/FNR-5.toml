@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 100
 walk_mp = 3
-heat_sinks = 10
 radio = 5
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -51,7 +49,7 @@ slots = [
 armor = 46
 rear = 16
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

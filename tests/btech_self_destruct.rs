@@ -442,7 +442,7 @@ async fn self_destruct_order_and_failed_tick_replay() {
     // Ammunition stored in the head makes the detonation lethal, forcing an evacuation.
     let template = include_str!("../game/units/JR7-D.toml")
         .replace(
-            "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n",
+            "    { at = 3, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n",
             "",
         )
         .replace(

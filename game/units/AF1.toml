@@ -3,8 +3,8 @@ class = "mech"
 movement = "biped"
 tons = 30
 walk_mp = 6
-heat_sinks = 10
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -16,15 +16,15 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 10
 slots = [
-    { at = "5-8", item = "EndoSteel" },
-    { at = 9, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-9", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 10
 slots = [
-    { at = "5-8", item = "EndoSteel" },
-    { at = 9, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = "6-9", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -32,9 +32,9 @@ armor = 11
 rear = 3
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = 7, item = "IS.SRM-4" },
-    { at = 8, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = "9-11", item = "IS.ERPPC" },
+    { at = "7-9", item = "IS.ERPPC" },
+    { at = 10, item = "IS.SRM-4" },
+    { at = 11, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 
 [sections.right_torso]

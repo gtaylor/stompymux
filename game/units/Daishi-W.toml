@@ -3,7 +3,8 @@ class = "mech"
 movement = "biped"
 tons = 100
 walk_mp = 3
-heat_sinks = 25
+heat_sinks = 20
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,26 +15,26 @@ engine_rating = 300
 armor = 34
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "HeatSink" },
-    { at = "9-10", item = "CL.LargePulseLaser" },
-    { at = "11-12", item = "CL.ERPPC" },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "9-12", item = "Ammo_CL.GaussRifle", rounds = 8 },
 ]
 
 [sections.right_arm]
 armor = 34
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "HeatSink" },
-    { at = "7-8", item = "CL.LargePulseLaser" },
-    { at = "9-10", item = "CL.ERPPC" },
-    { at = "11-12", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = "3-10", item = "HeatSink" },
+    { at = 11, item = "CL.ERLargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 32
 rear = 10
 slots = [
-    { at = "3-12", item = "HeatSink" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-8", item = "CL.LRM-20" },
+    { at = "9-10", item = "Ammo_CL.LRM-20", rounds = 6 },
+    { at = "11-12", item = "Ammo_CL.UltraAC/20", rounds = 5 },
 ]
 
 [sections.right_torso]
@@ -48,7 +49,7 @@ slots = [
 armor = 47
 rear = 14
 slots = [
-    { at = "11-12", item = "CL.ERMediumLaser" },
+    { at = "11-12", item = "CL.MediumPulseLaser" },
 ]
 
 [sections.left_leg]

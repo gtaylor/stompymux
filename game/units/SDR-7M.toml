@@ -28,7 +28,7 @@ slots = [
 armor = 6
 rear = 2
 slots = [
-    { at = "1-4", item = "JumpJet" },
+    { at = "1-4", item = "IS.JumpJet" },
     { at = "5-11", item = "EndoSteel" },
 ]
 
@@ -36,7 +36,7 @@ slots = [
 armor = 6
 rear = 2
 slots = [
-    { at = "1-4", item = "JumpJet" },
+    { at = "1-4", item = "IS.JumpJet" },
     { at = "5-11", item = "EndoSteel" },
 ]
 

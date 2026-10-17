@@ -17,16 +17,16 @@ armor = "ferro_fibrous"
 armor = 22
 slots = [
     { at = "5-6", item = "CL.MachineGun" },
-    { at = 7, item = "Ecm" },
-    { at = 8, item = "Ammo_CL.MachineGun", rounds = 200 },
-    { at = "9-10", item = "Ammo_CL.UltraAC/2", rounds = 45 },
+    { at = 7, item = "Ammo_CL.MachineGun", rounds = 200 },
+    { at = "8-9", item = "Ammo_CL.UltraAC/2", rounds = 45 },
+    { at = 10, item = "CL.Ecm" },
     { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 22
 slots = [
-    { at = "5-8", item = "TargetingComputer" },
+    { at = "5-8", item = "CL.TargetingComputer" },
     { at = 9, item = "FerroFibrous" },
 ]
 
@@ -34,9 +34,9 @@ slots = [
 armor = 22
 rear = 10
 slots = [
-    { at = "3-4", item = "JumpJet" },
-    { at = "5-6", item = "CL.SmallPulseLaser" },
-    { at = "7-8", item = "CL.UltraAC/2" },
+    { at = "3-4", item = "CL.JumpJet" },
+    { at = "5-6", item = "CL.UltraAC/2" },
+    { at = "7-8", item = "CL.SmallPulseLaser" },
     { at = 9, item = "EndoSteel" },
     { at = "10-11", item = "FerroFibrous" },
 ]
@@ -45,10 +45,9 @@ slots = [
 armor = 22
 rear = 10
 slots = [
-    { at = "3-4", item = "JumpJet" },
-    { at = "5-6", item = "CL.SmallPulseLaser" },
-    { at = "7-8", item = "CL.ERLargeLaser" },
-    { at = 9, item = "CL.SmallPulseLaser" },
+    { at = "3-4", item = "CL.JumpJet" },
+    { at = "5-6", item = "CL.ERLargeLaser" },
+    { at = "7-9", item = "CL.SmallPulseLaser" },
     { at = 10, item = "EndoSteel" },
     { at = "11-12", item = "FerroFibrous" },
 ]
@@ -57,7 +56,7 @@ slots = [
 armor = 30
 rear = 12
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 

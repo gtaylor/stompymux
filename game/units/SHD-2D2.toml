@@ -6,8 +6,6 @@ walk_mp = 5
 jump_mp = 3
 heat_sinks = 12
 radio = 4
-max_suits = 0
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -29,7 +27,7 @@ slots = [
 armor = 13
 rear = 5
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
     { at = "2-5", item = "IS.AC/5" },
     { at = 6, item = "Ammo_IS.AC/5", rounds = 20 },
 ]
@@ -38,8 +36,8 @@ slots = [
 armor = 13
 rear = 5
 slots = [
-    { at = 1, item = "JumpJet" },
-    { at = 2, item = "HeatSink" },
+    { at = 1, item = "HeatSink" },
+    { at = 2, item = "IS.JumpJet" },
     { at = 3, item = "IS.LRM-5" },
     { at = 4, item = "Ammo_IS.LRM-5", rounds = 24 },
     { at = 5, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
@@ -49,7 +47,7 @@ slots = [
 armor = 16
 rear = 6
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.StreakSRM-2" },
 ]
 

@@ -36,8 +36,8 @@ slots = [
 armor = 13
 rear = 5
 slots = [
-    { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 6, item = "Ammo_IS.LRM-10", rounds = 12 },
     { at = 7, item = "Case" },
     { at = "8-12", item = "EndoSteel" },

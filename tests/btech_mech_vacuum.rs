@@ -302,12 +302,15 @@ async fn cockpit_exposure_rolls_back_failed_evacuation_and_survives_restart() {
 /// Losing the remaining jets during a jump completes a fall in the enclosing impact.
 #[tokio::test]
 async fn vacuum_loss_of_last_jets_interrupts_flight() {
-    let (_dir, config, mut world, id, _, _) = firing::fixture_with_target(
-        include_str!("../game/units/JR7-D.toml"),
-        None,
-        include_str!("../game/units/AS7-D.toml"),
-    )
-    .await;
+    // The right torso holds its ammunition in slot 1 and its jump jets in slots 2-3, the jet
+    // in slot 3 being the one the seeded critical hit finds.
+    let jenner = include_str!("../game/units/JR7-D.toml").replace(
+        "    { at = \"1-2\", item = \"IS.JumpJet\" },\n    { at = 3, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n",
+        "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"IS.JumpJet\" },\n",
+    );
+    assert_ne!(jenner, include_str!("../game/units/JR7-D.toml"));
+    let (_dir, config, mut world, id, _, _) =
+        firing::fixture_with_target(&jenner, None, include_str!("../game/units/AS7-D.toml")).await;
     let section = MechSection::RightTorso;
     let other_jets: Vec<_> = world.btech.constructed_units()[&id]
         .loadout()

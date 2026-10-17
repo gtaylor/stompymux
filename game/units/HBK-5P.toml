@@ -5,7 +5,6 @@ tons = 50
 walk_mp = 4
 heat_sinks = 18
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -46,7 +45,7 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

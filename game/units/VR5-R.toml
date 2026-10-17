@@ -16,13 +16,14 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 20
 slots = [
-    { at = "5-12", item = "EndoSteel" },
+    { at = "5-7", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 20
 slots = [
     { at = "5-7", item = "IS.ERPPC" },
+    { at = "8-10", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -39,10 +40,12 @@ armor = 24
 rear = 6
 slots = [
     { at = 4, item = "IS.MediumLaser" },
-    { at = "5-6", item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
     { at = "8-9", item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
-    { at = 12, item = "Case" },
+    { at = 10, item = "Case" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

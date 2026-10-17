@@ -3,8 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 30
 walk_mp = 6
-heat_sinks = 10
-specials = ["ECM", "BeagleProbe"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,19 +15,20 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 7
 slots = [
-    { at = "5-6", item = "CL.MachineGun" },
-    { at = 7, item = "CL.ERLargeLaser" },
-    { at = 8, item = "CL.SmallPulseLaser" },
-    { at = 11, item = "EndoSteel" },
-    { at = 12, item = "FerroFibrous" },
+    { at = 5, item = "CL.ERLargeLaser" },
+    { at = 6, item = "CL.SmallPulseLaser" },
+    { at = "7-8", item = "CL.MachineGun" },
+    { at = 9, item = "EndoSteel" },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 7
 slots = [
-    { at = 6, item = "Ecm" },
-    { at = "7-9", item = "CL.Anti-MissileSystem" },
-    { at = 10, item = "BeagleProbe" },
+    { at = "5-7", item = "CL.Anti-MissileSystem" },
+    { at = 8, item = "CL.Ecm" },
+    { at = 9, item = "TAG" },
+    { at = 10, item = "CL.BeagleProbe" },
     { at = 11, item = "EndoSteel" },
     { at = 12, item = "FerroFibrous" },
 ]
@@ -37,10 +37,10 @@ slots = [
 armor = 8
 rear = 4
 slots = [
-    { at = 3, item = "CL.A-Pod" },
-    { at = 4, item = "Ammo_CL.MachineGun", rounds = 200 },
-    { at = "9-10", item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-6", item = "HeatSink" },
+    { at = 7, item = "Ammo_CL.MachineGun", rounds = 200 },
+    { at = "8-9", item = "EndoSteel" },
+    { at = "10-11", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -48,14 +48,13 @@ armor = 8
 rear = 4
 slots = [
     { at = "3-6", item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
-    { at = 7, item = "CL.A-Pod" },
-    { at = "8-10", item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 9
-rear = 5
+rear = 4
 slots = [
     { at = "11-12", item = "HeatSink" },
 ]
@@ -63,13 +62,13 @@ slots = [
 [sections.left_leg]
 armor = 8
 slots = [
-    { at = "5-6", item = "HeatSink" },
+    { at = 5, item = "IS.A-Pod" },
 ]
 
 [sections.right_leg]
 armor = 8
 slots = [
-    { at = "5-6", item = "HeatSink" },
+    { at = 5, item = "IS.A-Pod" },
 ]
 
 [sections.head]

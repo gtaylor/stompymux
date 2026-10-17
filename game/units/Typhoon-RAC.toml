@@ -3,8 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 70
 walk_mp = 3
-max_suits = 0
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,14 +19,12 @@ armor = 40
 armor = 43
 slots = [
     { at = "1-2", item = "IS.StreakSRM-2" },
-    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 3, item = "IS.BeagleProbe" },
+    { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.aft_side]
 armor = 32
-slots = [
-    { at = 1, item = "BeagleProbe" },
-]
 
 [sections.turret]
 armor = 42

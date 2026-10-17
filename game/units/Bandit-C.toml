@@ -3,14 +3,14 @@ class = "vehicle"
 movement = "hover"
 tons = 50
 walk_mp = 9
-cargo_tons = 4
-max_suits = 0
-max_ton = 4
-specials = ["CargoTech"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 215
+
+[transport_bays]
+infantry_compartment = 4
 
 [sections.left_side]
 armor = 40
@@ -23,12 +23,10 @@ armor = 42
 
 [sections.aft_side]
 armor = 32
-slots = [
-    { at = 1, item = "Ammo_IS.SRM-6", rounds = 15 },
-]
 
 [sections.turret]
 armor = 22
 slots = [
     { at = "1-2", item = "IS.SRM-6" },
+    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]

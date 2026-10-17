@@ -4,6 +4,7 @@ movement = "biped"
 tons = 85
 walk_mp = 4
 heat_sinks = 20
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -13,22 +14,20 @@ armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 28
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.ERPPC" },
-    { at = 6, item = "FerroFibrous" },
-    { at = "7-8", item = "CL.ERPPC" },
-    { at = 9, item = "CL.LRM-10" },
-    { at = 10, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = "3-6", item = "CL.ERPPC" },
+    { at = 7, item = "CL.LRM-10" },
+    { at = 8, item = "Ammo_CL.LRM-10", rounds = 12 },
+    { at = 9, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 28
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.ERPPC" },
-    { at = 6, item = "FerroFibrous" },
-    { at = "7-8", item = "CL.ERPPC" },
+    { at = "3-6", item = "CL.ERPPC" },
+    { at = 7, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -42,11 +41,10 @@ slots = [
 [sections.right_torso]
 armor = 26
 rear = 10
-engine_at = 7
 slots = [
-    { at = "1-5", item = "TargetingComputer" },
-    { at = "9-10", item = "HeatSink" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-9", item = "CL.TargetingComputer" },
+    { at = "10-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

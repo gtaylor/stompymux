@@ -4,6 +4,7 @@ movement = "biped"
 tons = 40
 walk_mp = 6
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -29,8 +30,8 @@ armor = 14
 rear = 5
 slots = [
     { at = 1, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = "2-7", item = "EndoSteel" },
-    { at = 8, item = "Case" },
+    { at = 2, item = "Case" },
+    { at = "3-8", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -38,8 +39,8 @@ armor = 14
 rear = 5
 slots = [
     { at = 1, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = "2-7", item = "EndoSteel" },
-    { at = 8, item = "Case" },
+    { at = 2, item = "Case" },
+    { at = "3-8", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

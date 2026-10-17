@@ -4,6 +4,7 @@ movement = "biped"
 tons = 100
 walk_mp = 3
 heat_sinks = 21
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -12,27 +13,27 @@ engine_rating = 300
 
 [sections.left_arm]
 armor = 34
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-9", item = "CL.GaussRifle" },
-    { at = "10-12", item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = "9-11", item = "Ammo_CL.GaussRifle", rounds = 8 },
 ]
 
 [sections.right_arm]
 armor = 34
+omit = ["hand_actuator"]
 slots = [
-    { at = "5-10", item = "CL.LargePulseLaser" },
-    { at = "11-12", item = "HeatSink" },
+    { at = "4-5", item = "HeatSink" },
+    { at = "6-11", item = "CL.LargePulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 32
 rear = 10
 slots = [
-    { at = "3-4", item = "HeatSink" },
-    { at = "5-8", item = "CL.StreakSRM-6" },
-    { at = "9-10", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = "11-12", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-10", item = "CL.StreakSRM-6" },
+    { at = "11-12", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
 ]
 
 [sections.right_torso]

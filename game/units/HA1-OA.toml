@@ -6,6 +6,7 @@ walk_mp = 3
 jump_mp = 3
 heat_sinks = 17
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -14,22 +15,20 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 32
-omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERMediumLaser" },
-    { at = "6-7", item = "IS.SRM-6" },
-    { at = 8, item = "ArtemisIV", link = 6 },
-    { at = "9-11", item = "HeatSink" },
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-9", item = "IS.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 10, item = "IS.ArtemisIV", link = 8 },
+    { at = "11-12", item = "IS.ERMediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 32
-omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERMediumLaser" },
-    { at = "6-7", item = "IS.SRM-6" },
-    { at = 8, item = "ArtemisIV", link = 6 },
-    { at = "9-11", item = "HeatSink" },
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-9", item = "IS.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 10, item = "IS.ArtemisIV", link = 8 },
+    { at = "11-12", item = "IS.ERMediumLaser" },
 ]
 
 [sections.left_torso]
@@ -53,19 +52,19 @@ slots = [
 armor = 45
 rear = 15
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 40
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 40
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
 ]
 
 [sections.head]

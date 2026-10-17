@@ -28,16 +28,16 @@ slots = [
 armor = 21
 rear = 9
 slots = [
-    { at = "1-2", item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = "3-4", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
+    { at = "3-4", item = "Ammo_IS.LRM-15", rounds = 8 },
 ]
 
 [sections.right_torso]
 armor = 21
 rear = 9
 slots = [
-    { at = "1-2", item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = "3-4", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
+    { at = "3-4", item = "Ammo_IS.LRM-15", rounds = 8 },
 ]
 
 [sections.center_torso]

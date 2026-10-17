@@ -27,11 +27,11 @@ slots = [
 armor = 12
 rear = 6
 slots = [
-    { at = 1, item = "IS.SRM-4" },
-    { at = 2, item = "Ammo_IS.SRM-4", rounds = 25 },
+    { at = 1, item = "HeatSink" },
+    { at = 2, item = "IS.SRM-4" },
     { at = 3, item = "IS.MachineGun" },
-    { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
-    { at = 5, item = "HeatSink" },
+    { at = 4, item = "Ammo_IS.SRM-4", rounds = 25 },
+    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.right_torso]
@@ -46,21 +46,21 @@ slots = [
 armor = 18
 rear = 9
 slots = [
-    { at = "11-12", item = "JumpJet" },
+    { at = "11-12", item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 20
 slots = [
-    { at = 5, item = "JumpJet" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 20
 slots = [
-    { at = 5, item = "JumpJet" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.head]

@@ -3,7 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 35
 walk_mp = 6
-heat_sinks = 10
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,18 +16,17 @@ armor = "ferro_fibrous"
 armor = 12
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.LRM-15" },
+    { at = "4-5", item = "CL.LRM-15", modes = ["Narc/Smoke"] },
     { at = "6-7", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
     { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 12
-omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "CL.LRM-15" },
-    { at = "6-7", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
-    { at = 8, item = "FerroFibrous" },
+    { at = "5-6", item = "CL.LRM-15", modes = ["Narc/Smoke"] },
+    { at = "7-8", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
+    { at = 9, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -36,21 +35,19 @@ rear = 4
 slots = [
     { at = "3-4", item = "HeatSink" },
     { at = 5, item = "CL.MediumPulseLaser" },
+    { at = 6, item = "EndoSteel" },
     { at = "7-8", item = "FerroFibrous" },
-    { at = 9, item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 12
 rear = 4
-engine_at = 4
 slots = [
-    { at = 1, item = "CL.NarcBeacon" },
-    { at = 2, item = "Ammo_CL.NarcBeacon", rounds = 6 },
-    { at = 6, item = "FerroFibrous" },
-    { at = "7-8", item = "HeatSink" },
-    { at = 9, item = "FerroFibrous" },
-    { at = 10, item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
+    { at = 5, item = "CL.NarcBeacon" },
+    { at = 6, item = "Ammo_CL.NarcBeacon", rounds = 6 },
+    { at = 7, item = "EndoSteel" },
+    { at = "8-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

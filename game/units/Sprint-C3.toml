@@ -18,14 +18,12 @@ armor = 3
 [sections.front_side]
 armor = 6
 slots = [
-    { at = 1, item = "BeagleProbe" },
+    { at = 1, item = "C3Slave" },
+    { at = 2, item = "IS.BeagleProbe" },
 ]
 
 [sections.aft_side]
 armor = 3
-slots = [
-    { at = 1, item = "C3Slave" },
-]
 
 [sections.rotor]
 armor = 2

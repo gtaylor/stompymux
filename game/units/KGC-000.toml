@@ -3,14 +3,13 @@ class = "mech"
 movement = "biped"
 tons = 100
 walk_mp = 3
-heat_sinks = 12
+heat_sinks = 15
 radio = 4
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 300
 armor = "ferro_fibrous"
-heat_sinks = "double"
 
 [sections.left_arm]
 armor = 34
@@ -23,11 +22,10 @@ armor = 30
 rear = 12
 slots = [
     { at = "3-5", item = "IS.LRM-15" },
-    { at = 6, item = "ArtemisIV", link = 3 },
-    { at = "7-8", item = "Ammo_IS.AC/20", rounds = 5 },
-    { at = 9, item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 10, item = "Case" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = 6, item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 7, item = "Ammo_IS.LRM-15", rounds = 8 },
+    { at = 8, item = "Case" },
+    { at = "9-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -35,28 +33,31 @@ armor = 30
 rear = 12
 slots = [
     { at = "3-4", item = "IS.LargeLaser" },
-    { at = "5-6", item = "Ammo_IS.AC/20", rounds = 5 },
-    { at = 7, item = "Case" },
-    { at = "8-12", item = "FerroFibrous" },
+    { at = 5, item = "Ammo_IS.AC/20", rounds = 5 },
+    { at = 6, item = "Case" },
+    { at = "7-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 40
-rear = 15
+armor = 39
+rear = 16
 slots = [
-    { at = "11-12", item = "FerroFibrous" },
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.left_leg]
 armor = 35
 slots = [
-    { at = "5-6", item = "FerroFibrous" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 35
 slots = [
-    { at = "5-6", item = "FerroFibrous" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]

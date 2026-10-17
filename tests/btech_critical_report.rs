@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 
 /// Supported chassis share the same report fixtures, including an authored stationary vehicle
-/// and the Ontos, whose turret holds thirteen entries.
+/// and the Ontos, whose turret holds seventeen entries.
 fn templates() -> Vec<String> {
     let vehicle = include_str!("../game/units/Demolisher.toml");
     vec![
@@ -298,26 +298,28 @@ async fn vehicle_sections_list_slots_past_twelve() {
     .await;
     let turret = VehicleSection::Turret.name();
     let report = battle_critical_report(&world, id, turret).unwrap();
-    assert_eq!(report.slots.len(), 13);
-    assert_eq!(report.slots[12].equipment, "ArtemisIV");
+    // The record's turret: seven lasers, three launchers and their Artemis IV systems, then
+    // the ammunition from the body beside the launchers it feeds.
+    assert_eq!(report.slots.len(), 17);
+    assert_eq!(report.slots[12].equipment, "IS ArtemisIV");
     assert_eq!(report.slots[12].controls_slot, Some(12));
     let text = battle_critical_status(&world, id, turret).unwrap();
-    assert_eq!(text.lines().count(), 1 + 7);
+    assert_eq!(text.lines().count(), 1 + 9, "{text}");
     let last = text.lines().last().unwrap();
-    assert!(last.starts_with(" 7 ") && last.contains("|"), "{text}");
+    assert!(last.starts_with(" 9 ") && last.contains("|"), "{text}");
     assert!(
-        text.lines().any(|line| line.contains("13 ArtemisIV")),
+        text.lines().any(|line| line.contains("13 IS ArtemisIV")),
         "{text}"
     );
     let unit = &world.btech.vehicles()[&id];
-    let srm4 = unit
+    let srm6 = unit
         .loadout()
         .unwrap()
         .weapons
         .iter()
-        .position(|mount| mount.weapon == Weapon::Srm4)
+        .position(|mount| mount.weapon == Weapon::Srm6)
         .unwrap();
-    assert!(unit.artemis_operational(srm4).unwrap());
+    assert!(unit.artemis_operational(srm6).unwrap());
     let location = VehicleCriticalLocation {
         section: VehicleSection::Turret,
         slot: 12,
@@ -325,7 +327,7 @@ async fn vehicle_sections_list_slots_past_twelve() {
     destroy_battle_vehicle_critical(&mut world, id, location).unwrap();
     assert!(
         !world.btech.vehicles()[&id]
-            .artemis_operational(srm4)
+            .artemis_operational(srm6)
             .unwrap()
     );
     let row = &battle_critical_report(&world, id, turret).unwrap().slots[12];
@@ -340,7 +342,7 @@ async fn vehicle_sections_list_slots_past_twelve() {
     );
     assert!(
         !loaded.btech.vehicles()[&id]
-            .artemis_operational(srm4)
+            .artemis_operational(srm6)
             .unwrap()
     );
 }
@@ -351,30 +353,24 @@ async fn critical_equipment_labels() {
     let mut template =
         MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
     support::templates::small_cockpit(&mut template, "SMCPIT");
-    let missile = template
+    // Artemis IV sits beside its launcher (TechManual p. 206): the SRM-4 moves from slot 12
+    // into the jump jet's slot 11 with its controller in slot 12, and the displaced jump jet
+    // moves to the left torso.
+    let center = template
         .sections
         .get_mut(&MechSection::CenterTorso)
-        .unwrap()
-        .criticals
-        .get_mut(&10)
         .unwrap();
+    let mut missile = center.criticals.remove(&11).unwrap();
     missile.modes = vec!["OneShot".into(), "OneShot_Used".into(), "RearMount".into()];
-    // Artemis IV sits beside its launcher (TechManual p. 206); the displaced jump jet moves
-    // to the left torso.
-    let jet = template
-        .sections
-        .get_mut(&MechSection::CenterTorso)
-        .unwrap()
-        .criticals
-        .insert(
-            11,
-            CriticalDefinition {
-                equipment: "ArtemisIV".into(),
-                data: "11".into(),
-                modes: vec![],
-            },
-        )
-        .unwrap();
+    let jet = center.criticals.insert(10, missile).unwrap();
+    center.criticals.insert(
+        11,
+        CriticalDefinition {
+            equipment: "ArtemisIV".into(),
+            data: "11".into(),
+            modes: vec![],
+        },
+    );
     template
         .sections
         .get_mut(&MechSection::LeftTorso)
@@ -386,7 +382,7 @@ async fn critical_equipment_labels() {
         .get_mut(&MechSection::RightTorso)
         .unwrap()
         .criticals
-        .get_mut(&0)
+        .get_mut(&2)
         .unwrap()
         .modes = vec!["Inferno".into()];
     let (_dir, config, mut world, id) = fixture(UnitTemplate::Mech(template)).await;

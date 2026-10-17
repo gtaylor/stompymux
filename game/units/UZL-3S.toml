@@ -6,7 +6,6 @@ walk_mp = 6
 jump_mp = 6
 heat_sinks = 11
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -27,15 +26,15 @@ slots = [
 armor = 12
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-7", item = "IS.LB2-XAC" },
-    { at = 8, item = "IS.ERMediumLaser" },
+    { at = 4, item = "IS.ERMediumLaser" },
+    { at = "5-8", item = "IS.LB2-XAC" },
 ]
 
 [sections.left_torso]
 armor = 14
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = 7, item = "IS.ERSmallLaser" },
     { at = "8-12", item = "EndoSteel" },
 ]
@@ -44,10 +43,10 @@ slots = [
 armor = 14
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = 7, item = "IS.ERSmallLaser" },
     { at = 8, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 9, item = "Ammo_IS.LB2-XAC", rounds = 45, modes = ["LBX/Cluster"] },
+    { at = 9, item = "Ammo_IS.LB2-XAC", rounds = 45 },
     { at = "10-12", item = "EndoSteel" },
 ]
 

@@ -5,6 +5,7 @@ tons = 75
 walk_mp = 4
 heat_sinks = 14
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -34,9 +35,9 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = 4, item = "Ammo_IS.UltraAC/10", rounds = 10 },
-    { at = 5, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = "6-8", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = 7, item = "Ammo_IS.UltraAC/10", rounds = 10 },
+    { at = 8, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
     { at = "9-12", item = "EndoSteel" },
 ]
 
@@ -44,8 +45,8 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = "4-5", item = "Ammo_IS.UltraAC/10", rounds = 10 },
-    { at = "6-8", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-8", item = "Ammo_IS.UltraAC/10", rounds = 10 },
     { at = "9-12", item = "EndoSteel" },
 ]
 

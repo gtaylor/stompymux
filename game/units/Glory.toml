@@ -4,7 +4,6 @@ movement = "track"
 tons = 85
 walk_mp = 3
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,22 +20,20 @@ armor = 50
 armor = 60
 slots = [
     { at = "1-2", item = "IS.ERMediumLaser" },
+    { at = 3, item = "IS.Ecm" },
 ]
 
 [sections.aft_side]
-armor = 31
-slots = [
-    { at = "1-2", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
-    { at = "3-6", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 7, item = "Ecm" },
-]
+armor = 30
 
 [sections.turret]
-armor = 59
+armor = 60
 slots = [
     { at = 1, item = "IS.RotaryAC/5" },
     { at = 2, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
-    { at = 3, item = "ArtemisIV", link = 2 },
+    { at = 3, item = "IS.ArtemisIV", link = 2 },
     { at = 4, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
-    { at = 5, item = "ArtemisIV", link = 4 },
+    { at = 5, item = "IS.ArtemisIV", link = 4 },
+    { at = "6-7", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
+    { at = "8-11", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
 ]

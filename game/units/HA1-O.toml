@@ -5,6 +5,7 @@ tons = 95
 walk_mp = 3
 heat_sinks = 17
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -15,18 +16,18 @@ heat_sinks = "double"
 armor = 32
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = 6, item = "IS.MediumPulseLaser" },
-    { at = "7-12", item = "HeatSink" },
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-11", item = "IS.ERLargeLaser" },
+    { at = 12, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 32
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = 6, item = "IS.MediumPulseLaser" },
-    { at = "7-12", item = "HeatSink" },
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-11", item = "IS.ERLargeLaser" },
+    { at = 12, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_torso]
@@ -41,11 +42,11 @@ slots = [
 armor = 30
 rear = 10
 slots = [
-    { at = 1, item = "IS.StreakSRM-2" },
-    { at = "2-3", item = "Ammo_IS.LB20-XAC", rounds = 5 },
-    { at = 4, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
-    { at = 5, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = "6-11", item = "HeatSink" },
+    { at = "1-6", item = "HeatSink" },
+    { at = 7, item = "IS.StreakSRM-2" },
+    { at = "8-9", item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 10, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 11, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
     { at = 12, item = "Case" },
 ]
 
@@ -53,7 +54,7 @@ slots = [
 armor = 45
 rear = 15
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

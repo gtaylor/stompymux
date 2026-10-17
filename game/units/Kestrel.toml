@@ -3,12 +3,14 @@ class = "vtol"
 movement = "vtol"
 tons = 25
 walk_mp = 12
-specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 160
+
+[transport_bays]
+infantry_compartment = 3.5
 
 [sections.left_side]
 armor = 5

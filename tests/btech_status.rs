@@ -9,8 +9,8 @@ async fn electronic_status_colors_follow_countering_without_refreshing_the_field
         (
             "constructed",
             include_str!("../game/units/JR7-D.toml").replace(
-                "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]\n\n[sections.right_torso]",
-                "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n    { at = \"3-4\", item = \"Ecm\" },\n    { at = \"5-6\", item = \"AngelEcm\" },\n]\n\n[sections.right_torso]",
+                "slots = [\n    { at = \"1-2\", item = \"IS.JumpJet\" },\n]\n\n[sections.right_torso]",
+                "slots = [\n    { at = \"1-2\", item = \"IS.JumpJet\" },\n    { at = \"3-4\", item = \"Ecm\" },\n    { at = \"5-6\", item = \"AngelEcm\" },\n]\n\n[sections.right_torso]",
             ),
         ),
         (
@@ -89,14 +89,14 @@ async fn electronic_status_colors_follow_countering_without_refreshing_the_field
 async fn advanced_technology_keeps_reference_order_and_counter_colors() {
     let source = support::templates::with_flags(include_str!("../game/units/JR7-D.toml"), &["SuperCharger_Tech"])
         .replace(
-            "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n]\n\n[sections.right_torso]",
-            "slots = [\n    { at = \"1-2\", item = \"JumpJet\" },\n    { at = 3, item = \"TAG\" },\n    { at = \"4-5\", item = \"Masc\" },\n    { at = 6, item = \"JumpJet\" },\n]\n\n[sections.right_torso]",
+            "slots = [\n    { at = \"1-2\", item = \"IS.JumpJet\" },\n]\n\n[sections.right_torso]",
+            "slots = [\n    { at = \"1-2\", item = \"IS.JumpJet\" },\n    { at = 3, item = \"TAG\" },\n    { at = \"4-5\", item = \"Masc\" },\n    { at = 6, item = \"IS.JumpJet\" },\n]\n\n[sections.right_torso]",
         )
         // A 35-ton Mech's MASC fills two slots (TechManual p. 52), and the supercharger takes
         // the center torso jump jet's slot beside the engine.
         .replace(
-            "    { at = 12, item = \"JumpJet\" },",
-            "    { at = 12, item = \"SuperCharger\" },",
+            "    { at = 11, item = \"IS.JumpJet\" },",
+            "    { at = 11, item = \"SuperCharger\" },",
         );
     let (_dir, config, mut world, id, _) = fixture(&source).await;
     for (counter, color) in [

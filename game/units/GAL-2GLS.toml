@@ -4,7 +4,6 @@ movement = "biped"
 tons = 70
 walk_mp = 4
 jump_mp = 3
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -39,30 +38,30 @@ armor = 23
 rear = 7
 slots = [
     { at = "1-4", item = "IS.LargeLaser" },
-    { at = "8-9", item = "Ammo_IS.GaussRifle", rounds = 8 },
-    { at = "10-11", item = "EndoSteel" },
-    { at = 12, item = "Case" },
+    { at = "5-6", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = 7, item = "Case" },
+    { at = "8-9", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 30
 rear = 9
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "EndoSteel" },
 ]
 

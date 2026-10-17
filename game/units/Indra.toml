@@ -4,12 +4,14 @@ movement = "wheel"
 tons = 35
 walk_mp = 5
 heat_sinks = 15
-specials = ["CargoTech"]
 
 [construction]
 tech_base = "clan"
 engine_rating = 155
 armor = "ferro_fibrous"
+
+[transport_bays]
+infantry_compartment = 3
 
 [sections.left_side]
 armor = 20
@@ -21,6 +23,7 @@ armor = 20
 armor = 25
 slots = [
     { at = 1, item = "CL.ERPPC" },
+    { at = 2, item = "Case" },
 ]
 
 [sections.aft_side]

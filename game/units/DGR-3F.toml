@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 75
 walk_mp = 4
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -15,16 +14,18 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 24
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "5-11", item = "IS.GaussRifle" },
-    { at = 12, item = "EndoSteel" },
+    { at = "3-9", item = "IS.GaussRifle" },
+    { at = 10, item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 24
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "5-10", item = "IS.LB10-XAC" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "3-8", item = "IS.LB10-XAC" },
+    { at = "9-10", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -32,8 +33,8 @@ armor = 26
 rear = 6
 slots = [
     { at = 4, item = "IS.MediumPulseLaser" },
-    { at = "5-6", item = "Ecm" },
-    { at = "7-8", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "5-6", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "7-8", item = "IS.Ecm" },
     { at = "9-12", item = "EndoSteel" },
 ]
 
@@ -43,8 +44,8 @@ rear = 6
 slots = [
     { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "6-10", item = "EndoSteel" },
-    { at = 11, item = "Case" },
+    { at = 6, item = "Case" },
+    { at = "7-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
