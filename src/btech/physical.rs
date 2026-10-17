@@ -1066,21 +1066,13 @@ fn attack_profile_inner(
     let upper = actuator(source, limb, 1, System::UpperActuator)?;
     let lower = actuator(source, limb, 2, System::LowerActuator)?;
     let foot = actuator(source, limb, 3, System::HandOrFootActuator)?;
+    // A club takes +2 for each damaged or missing upper or lower actuator in either arm
+    // (Total Warfare p. 146).
     let actuators = if club {
         let mut penalty = 0;
         for section in [MechSection::LeftArm, MechSection::RightArm] {
             for (slot, system) in [(1, System::UpperActuator), (2, System::LowerActuator)] {
-                let location = CriticalLocation { section, slot };
-                let right = CriticalLocation {
-                    section: MechSection::RightArm,
-                    slot,
-                };
-                let installed = source
-                    .loadout()?
-                    .systems
-                    .iter()
-                    .any(|part| part.location == right && part.system == system);
-                penalty += 2 * u8::from(source.critical_unavailable(location) || !installed);
+                penalty += 2 * u8::from(!actuator(source, section, slot, system)?);
             }
         }
         penalty
