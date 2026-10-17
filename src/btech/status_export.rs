@@ -43,6 +43,7 @@ pub(super) fn mode_letter(mode: Mode, weapon: Weapon) -> char {
         Mode::ThunderAugmented => 'H',
         Mode::ThunderVibrabomb => 'V',
         Mode::ThunderActive => 'K',
+        Mode::Homing => 'O',
     }
 }
 
@@ -219,6 +220,7 @@ mod tests {
         assert_eq!(mode_letter(Mode::Cluster, Weapon::Lbx10), 'L');
         assert_eq!(mode_letter(Mode::Smoke, Weapon::ArrowIv), 'S');
         assert_eq!(mode_letter(Mode::Mine, Weapon::ArrowIv), 'M');
+        assert_eq!(mode_letter(Mode::Homing, Weapon::ArrowIv), 'O');
         assert_eq!(mode_letter(Mode::Artemis, Weapon::Lrm5), 'A');
         assert_eq!(mode_letter(Mode::Narc, Weapon::Srm4), 'N');
     }

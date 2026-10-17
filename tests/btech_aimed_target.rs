@@ -816,7 +816,8 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                     base_world.clone(),
                     &config,
                     &source,
-                    Some(Weapon::ClanLrm20),
+                    // Swarm-I is Inner Sphere technology (Tactical Operations: AUE p. 183).
+                    Some(Weapon::Lrm20),
                     recipient,
                     false,
                     Some(flag),
@@ -860,8 +861,13 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                         .unwrap();
                     let value = serde_json::to_value(value).unwrap();
                     assert_eq!(value["glancing"], serde_json::json!(roll == threshold));
-                    assert_eq!(value["salvo"].is_object(), roll >= threshold, "{value}");
-                    // Swarm rounds are not exempt from AMS (Tactical Operations: AUE p. 181).
+                    // A Swarm flight that misses flies on, so it always reports its flight.
+                    assert_eq!(
+                        value["salvo"].is_object(),
+                        roll >= threshold || ammunition != AmmunitionMode::Normal,
+                        "{value}"
+                    );
+                    // Swarm rounds are not exempt from AMS (Tactical Operations: AUE p. 183).
                     assert_eq!(value["ams"].is_object(), roll >= threshold, "{value}");
                     if roll < threshold {
                         let mut expected = world.clone();

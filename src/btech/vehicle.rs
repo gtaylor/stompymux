@@ -173,6 +173,8 @@ pub struct Vehicle {
     #[serde(default)]
     pub(super) aimed_section: Option<super::AimSelection>,
     pub(super) artillery_adjustment: u8,
+    /// Hexes this vehicle's artillery has struck since it last moved.
+    pub(super) artillery_registration: super::ArtilleryRegistration,
     pub(super) c3_network: Option<u64>,
     pub(super) c3i_network: Option<u64>,
     /// Which network families the server may link automatically.
@@ -373,6 +375,8 @@ struct VehicleRecord {
     #[serde(default)]
     aimed_section: Option<super::AimSelection>,
     artillery_adjustment: u8,
+    #[serde(default)]
+    artillery_registration: super::ArtilleryRegistration,
     c3_network: Option<u64>,
     c3i_network: Option<u64>,
     #[serde(default)]
@@ -483,6 +487,7 @@ super::saved_parts::saved_parts!(Vehicle {
         building_entry,
         beacons,
         artillery_adjustment,
+        artillery_registration,
         c3_network,
         c3i_network,
         network_automation,
@@ -997,6 +1002,7 @@ impl Vehicle {
             target_lock: None,
             aimed_section: None,
             artillery_adjustment: 0,
+            artillery_registration: Default::default(),
             c3_network: None,
             c3i_network: None,
             network_automation: Default::default(),
@@ -1734,6 +1740,7 @@ impl Vehicle {
             target_lock: record.target_lock,
             aimed_section: record.aimed_section,
             artillery_adjustment: record.artillery_adjustment,
+            artillery_registration: record.artillery_registration,
             c3_network: record.c3_network,
             c3i_network: record.c3i_network,
             network_automation: record.network_automation,
@@ -2129,6 +2136,7 @@ impl Vehicle {
             "Invalid attack timestamp"
         );
         self.tag.validate()?;
+        self.artillery_registration.validate()?;
         ensure!(
             self.c3_network != Some(0) && self.c3i_network != Some(0),
             "Invalid vehicle command-network identity"

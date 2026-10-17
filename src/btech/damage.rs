@@ -137,7 +137,7 @@ impl Mech {
                     .iter()
                     .any(|location| location.section == section)
         }) {
-            self.ams_enabled = false;
+            self.ams_enabled &= self.ams_intact();
         }
         for (index, bin) in loadout.ammunition.iter().enumerate() {
             if bin.location.section == section {

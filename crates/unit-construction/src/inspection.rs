@@ -351,6 +351,7 @@ pub fn inspection_ammunition_modes(flags: &[String]) -> Vec<i32> {
         ("ThunderAug", 8388608),
         ("ThunderVibra", 16777216),
         ("ThunderActive", 33554432),
+        ("Homing", 67108864),
     ];
     MODES
         .iter()

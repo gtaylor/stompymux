@@ -1369,7 +1369,7 @@ pub fn advance_artillery_flight_action(
     scripts: &Scripts,
     config: &Config,
     map: ObjectId,
-    flight: &mut super::ArtilleryFlight,
+    (flight, shooter): (&mut super::ArtilleryFlight, ObjectId),
     rules: super::FallRules,
 ) -> Result<Option<super::ArtilleryImpactReport>> {
     let mut cursor = flight.clone();
@@ -1377,7 +1377,7 @@ pub fn advance_artillery_flight_action(
         let report = super::artillery_impact::advance(
             &mut scripts.world.borrow_mut(),
             map,
-            &mut cursor,
+            (&mut cursor, Some(shooter)),
             rules,
             true,
         )?;

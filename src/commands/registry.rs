@@ -908,6 +908,12 @@ impl CommandRegistry {
                 SwitchPolicy::Reject("firecluster takes no switches."),
                 false,
             ),
+            CommandDefinition::native(
+                "firehoming",
+                P::EVERYONE,
+                crate::btech::ammunition_mode::homing_command,
+            )
+            .policy(SwitchPolicy::Reject("firehoming takes no switches."), false),
             CommandDefinition::native("lbx", P::EVERYONE, crate::btech::ammunition_mode::command)
                 .policy(SwitchPolicy::Reject("lbx takes no switches."), false),
             CommandDefinition::native("flamerheat", P::EVERYONE, crate::btech::fire_mode::command)

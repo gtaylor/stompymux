@@ -6,11 +6,10 @@ use stompymux_rs::*;
 fn arrive(
     flight: &mut ArtilleryFlight,
     dimensions: (u16, u16),
-    wind: u16,
     dice: &mut Dice,
 ) -> ArtilleryImpactPattern {
     loop {
-        if let Some(pattern) = flight.advance(dimensions, wind, dice).unwrap() {
+        if let Some(pattern) = flight.advance(dimensions, dice).unwrap() {
             return pattern;
         }
     }
@@ -27,48 +26,54 @@ fn artillery_flight_timing_and_saved_cursor_validation() {
             target,
             Weapon::LongTom,
             ArtilleryMode::Standard,
-            true,
+            ArtilleryOutcome::Hit,
         )
         .unwrap();
         assert_eq!(flight.remaining(), delay);
         let mut dice = Dice::seeded([1; 32]);
         let untouched = dice.clone();
         for _ in 1..delay {
-            assert!(
-                flight
-                    .advance((1000, 1000), 0, &mut dice)
-                    .unwrap()
-                    .is_none()
-            );
+            assert!(flight.advance((1000, 1000), &mut dice).unwrap().is_none());
             assert_eq!(dice, untouched);
             let restored: ArtilleryFlight =
                 serde_json::from_value(serde_json::to_value(&flight).unwrap()).unwrap();
             assert_eq!(restored, flight);
         }
-        assert!(
-            flight
-                .advance((1000, 1000), 0, &mut dice)
-                .unwrap()
-                .is_some()
-        );
+        assert!(flight.advance((1000, 1000), &mut dice).unwrap().is_some());
         assert_eq!(flight.remaining(), 0);
         assert_eq!(dice, untouched);
         let done = flight.clone();
-        assert!(flight.advance((1000, 1000), 0, &mut dice).is_err());
+        assert!(flight.advance((1000, 1000), &mut dice).is_err());
         assert_eq!(flight, done);
         assert_eq!(dice, untouched);
     }
-    let flight =
-        ArtilleryFlight::new(origin, origin, Weapon::LongTom, ArtilleryMode::Mine, false).unwrap();
+    let flight = ArtilleryFlight::new(
+        origin,
+        origin,
+        Weapon::LongTom,
+        ArtilleryMode::Mine,
+        ArtilleryOutcome::Scatter { hexes: 3 },
+    )
+    .unwrap();
     let data = serde_json::to_value(&flight).unwrap();
     for (field, invalid) in [("remaining", 11), ("weapon", 0)] {
         let mut corrupt = data.clone();
         corrupt[field] = invalid.into();
         assert!(serde_json::from_value::<ArtilleryFlight>(corrupt).is_err());
     }
+    let mut corrupt = data.clone();
+    corrupt["outcome"] = serde_json::json!({ "scatter": { "hexes": 2001 } });
+    assert!(serde_json::from_value::<ArtilleryFlight>(corrupt).is_err());
     for weapon in [Weapon::MediumLaser, Weapon::Srm4] {
         assert!(
-            ArtilleryFlight::new(origin, origin, weapon, ArtilleryMode::Standard, true).is_err()
+            ArtilleryFlight::new(
+                origin,
+                origin,
+                weapon,
+                ArtilleryMode::Standard,
+                ArtilleryOutcome::Hit
+            )
+            .is_err()
         );
         let mut corrupt = data.clone();
         corrupt["weapon"] = serde_json::to_value(weapon).unwrap();
@@ -79,19 +84,27 @@ fn artillery_flight_timing_and_saved_cursor_validation() {
     assert!(serde_json::from_value::<ArtilleryFlight>(corrupt).is_err());
 }
 
-/// Ordinary blasts cover the center and six neighbors; smoke draws one duration per cell and mines stay local.
+/// High-explosive, cluster and smoke rounds cover the center and its six neighbors, cluster
+/// rounds with their own Damage Values in 5-point groups, and FASCAM stays in the target hex
+/// (Tactical Operations: Advanced Rules p. 152; Advanced Units & Equipment pp. 166-169). No
+/// dice are drawn for a round that hits.
 #[test]
-fn artillery_standard_smoke_and_mine_patterns() {
+fn artillery_payload_patterns_follow_the_ordnance_table() {
     let center = HexCoordinate { x: 5, y: 5 };
-    for mode in [
-        ArtilleryMode::Standard,
-        ArtilleryMode::Smoke,
-        ArtilleryMode::Mine,
+    for (weapon, mode, damage) in [
+        (Weapon::Thumper, ArtilleryMode::Standard, Some((15, 5))),
+        (Weapon::Thumper, ArtilleryMode::Cluster, Some((10, 1))),
+        (Weapon::Sniper, ArtilleryMode::Cluster, Some((15, 5))),
+        (Weapon::LongTom, ArtilleryMode::Cluster, Some((20, 10))),
+        (Weapon::LongTom, ArtilleryMode::Smoke, None),
+        (Weapon::Sniper, ArtilleryMode::Mine, None),
     ] {
-        let mut flight = ArtilleryFlight::new(center, center, Weapon::Thumper, mode, true).unwrap();
+        let mut flight =
+            ArtilleryFlight::new(center, center, weapon, mode, ArtilleryOutcome::Hit).unwrap();
         let mut dice = Dice::seeded([7; 32]);
-        let mut expected_dice = dice.clone();
-        let pattern = arrive(&mut flight, (12, 12), 32767, &mut dice);
+        let untouched = dice.clone();
+        let pattern = arrive(&mut flight, (12, 12), &mut dice);
+        assert_eq!(dice, untouched);
         assert_eq!(pattern.impact, center);
         assert!(!pattern.missed);
         assert!(pattern.cells[0].direct);
@@ -100,159 +113,151 @@ fn artillery_standard_smoke_and_mine_patterns() {
             assert_eq!(pattern.cells.len(), 1);
             assert_eq!(
                 pattern.cells[0].effect,
-                ArtilleryEffect::Mine { strength: 15 }
+                ArtilleryEffect::Mine { strength: 20 }
             );
-        } else {
-            assert_eq!(pattern.cells.len(), 7);
-            assert_eq!(
-                pattern.cells[1..]
-                    .iter()
-                    .map(|cell| cell.position)
-                    .collect::<Vec<_>>(),
-                center.neighbors().unwrap()
-            );
-            for (index, cell) in pattern.cells.iter().enumerate() {
-                assert_eq!(cell.direct, index == 0);
-                if mode == ArtilleryMode::Smoke {
-                    assert_eq!(
-                        cell.effect,
-                        ArtilleryEffect::Smoke {
-                            seconds: 89 + expected_dice.die(61).unwrap()
-                        }
-                    );
-                } else {
-                    assert_eq!(
-                        cell.effect,
-                        // A Thumper's high-explosive round: fifteen in the target hex, five
-                        // in the ring around it (Tactical Operations p. 183).
-                        ArtilleryEffect::Damage {
-                            total: if index == 0 { 15 } else { 5 },
-                            packet_size: 5,
-                            table: HitTable::Weapon
-                        }
-                    );
-                }
-            }
+            continue;
         }
-        assert_eq!(dice, expected_dice);
+        // Smoke reaches only one ring, even from a Long Tom.
+        assert_eq!(pattern.cells.len(), 7, "{weapon:?} {mode:?}");
+        assert_eq!(
+            pattern.cells[1..]
+                .iter()
+                .map(|cell| cell.position)
+                .collect::<Vec<_>>(),
+            center.neighbors().unwrap()
+        );
+        for (index, cell) in pattern.cells.iter().enumerate() {
+            assert_eq!(cell.direct, index == 0);
+            let expected = match damage {
+                Some((center, ring)) => ArtilleryEffect::Damage {
+                    total: if index == 0 { center } else { ring },
+                    packet_size: 5,
+                    table: HitTable::Weapon,
+                },
+                None => ArtilleryEffect::Smoke,
+            };
+            assert_eq!(cell.effect, expected, "{weapon:?} {mode:?}");
+        }
+    }
+    // Artillery cannons fire no special rounds, and the Inner Sphere Thumper no FASCAM
+    // (Advanced Units & Equipment pp. 97, 165; Advanced Rules p. 152).
+    for (weapon, mode) in [
+        (Weapon::LongTomCannon, ArtilleryMode::Smoke),
+        (Weapon::SniperCannon, ArtilleryMode::Cluster),
+        (Weapon::Thumper, ArtilleryMode::Mine),
+    ] {
+        assert!(ArtilleryFlight::new(center, center, weapon, mode, ArtilleryOutcome::Hit).is_err());
     }
 }
 
-/// Cluster rounds retain every two-point bomblet on the map, including one-cell and edge maps.
-#[test]
-fn artillery_cluster_conservation_bounds_and_replay() {
-    for dimensions in [(1, 1), (2, 3), (20, 20)] {
-        for center in [
-            HexCoordinate { x: 0, y: 0 },
-            HexCoordinate {
-                x: i32::from(dimensions.0) - 1,
-                y: i32::from(dimensions.1) - 1,
-            },
-        ] {
-            for seed in 0..32 {
-                let mut flight = ArtilleryFlight::new(
-                    center,
-                    center,
-                    Weapon::LongTom,
-                    ArtilleryMode::Cluster,
-                    true,
-                )
-                .unwrap();
-                let mut dice = Dice::seeded([seed; 32]);
-                for _ in 0..5 {
-                    assert!(flight.advance(dimensions, 0, &mut dice).unwrap().is_none());
-                }
-                let mut restored =
-                    serde_json::from_value(serde_json::to_value(&flight).unwrap()).unwrap();
-                let mut restored_dice =
-                    serde_json::from_value(serde_json::to_value(&dice).unwrap()).unwrap();
-                let pattern = arrive(&mut flight, dimensions, 0, &mut dice);
-                assert_eq!(
-                    arrive(&mut restored, dimensions, 0, &mut restored_dice),
-                    pattern
-                );
-                assert_eq!(restored_dice, dice);
-                assert!(pattern.cells.len() <= 20);
-                let mut total_damage = 0;
-                for cell in pattern.cells {
-                    assert!((0..i32::from(dimensions.0)).contains(&cell.position.x));
-                    assert!((0..i32::from(dimensions.1)).contains(&cell.position.y));
-                    assert!((cell.position.x - center.x).abs() <= 2);
-                    assert!((cell.position.y - center.y).abs() <= 2);
-                    let ArtilleryEffect::Damage {
-                        total,
-                        packet_size: 2,
-                        table: HitTable::Punch,
-                    } = cell.effect
-                    else {
-                        panic!("Unexpected cluster effect")
-                    };
-                    assert!(total.is_multiple_of(2));
-                    total_damage += total;
-                }
-                assert_eq!(total_damage, 40);
-            }
-        }
-    }
-}
-
-/// Misses scatter at arrival with current wind, clamp to map bounds and retain the original aim point.
+/// A miss scatters in a direction rolled on the Scatter Diagram, clockwise from north: an
+/// indirect round as many hexes as it missed by, a direct-fire round 1D6 hexes (Tactical
+/// Operations: Advanced Rules pp. 150, 153). Invalid arrivals change nothing, and a round that
+/// scatters off the battlefield lands without effect.
 #[test]
 fn artillery_scatter_and_atomic_invalid_arrival() {
     let center = HexCoordinate { x: 10, y: 10 };
+    let mut directions = std::collections::BTreeSet::new();
+    let mut distances = std::collections::BTreeSet::new();
     for seed in 0..32 {
         let mut flight = ArtilleryFlight::new(
             center,
             center,
             Weapon::LongTom,
             ArtilleryMode::Standard,
-            false,
+            ArtilleryOutcome::Scatter { hexes: 4 },
         )
         .unwrap();
         let mut dice = Dice::seeded([seed; 32]);
         for _ in 0..9 {
-            assert!(flight.advance((20, 20), 0, &mut dice).unwrap().is_none());
+            assert!(flight.advance((40, 40), &mut dice).unwrap().is_none());
         }
-        for (dimensions, wind) in [
-            ((0, 20), 0),
-            ((1001, 20), 0),
-            ((1, 1), 0),
-            ((20, 20), 32768),
-        ] {
+        for dimensions in [(0, 20), (1001, 20), (1, 1)] {
             let before = flight.clone();
             let before_dice = dice.clone();
-            assert!(flight.advance(dimensions, wind, &mut dice).is_err());
+            assert!(flight.advance(dimensions, &mut dice).is_err());
             assert_eq!(flight, before);
             assert_eq!(dice, before_dice);
         }
-        let mut windy = flight.clone();
-        let mut windy_dice = dice.clone();
-        let calm = arrive(&mut flight, (20, 20), 0, &mut dice);
-        let gust = arrive(&mut windy, (20, 20), 32767, &mut windy_dice);
-        assert!(calm.missed && gust.missed);
-        assert_eq!(calm.target, center);
-        assert!((calm.impact.x - center.x).abs() <= 7 && (calm.impact.y - center.y).abs() <= 7);
-        assert!(
-            gust.impact.x == 0 || gust.impact.x == 19 || gust.impact.y == 0 || gust.impact.y == 19
-        );
-        assert_eq!(dice, windy_dice);
+        let mut expected = dice.clone();
+        let hexside = usize::from(expected.die(6).unwrap() - 1);
+        let mut landing = center;
+        for _ in 0..4 {
+            landing = landing.neighbors().unwrap()[hexside];
+        }
+        let pattern = arrive(&mut flight, (40, 40), &mut dice);
+        assert!(pattern.missed);
+        assert_eq!(pattern.target, center);
+        assert_eq!(pattern.impact, landing);
+        assert_eq!(pattern.impact.distance(center), 4);
+        directions.insert(hexside);
+
+        let mut direct = ArtilleryFlight::new(
+            center,
+            center,
+            Weapon::Sniper,
+            ArtilleryMode::Standard,
+            ArtilleryOutcome::DirectMiss,
+        )
+        .unwrap();
+        let mut dice = Dice::seeded([seed; 32]);
+        let mut expected = dice.clone();
+        expected.die(6).unwrap();
+        let hexes = expected.die(6).unwrap();
+        let pattern = arrive(&mut direct, (40, 40), &mut dice);
+        assert_eq!(pattern.impact.distance(center), u64::from(hexes));
+        distances.insert(hexes);
     }
-    let center = HexCoordinate { x: 0, y: 0 };
+    assert_eq!(directions.len(), 6);
+    assert_eq!(distances.len(), 6);
+    // Off the map edge the round is lost.
+    let corner = HexCoordinate { x: 0, y: 0 };
     let mut flight = ArtilleryFlight::new(
-        center,
-        center,
+        corner,
+        corner,
         Weapon::Thumper,
         ArtilleryMode::Standard,
-        false,
+        ArtilleryOutcome::Scatter { hexes: 30 },
     )
     .unwrap();
-    let pattern = arrive(&mut flight, (1, 1), 0, &mut Dice::seeded([3; 32]));
+    let pattern = arrive(&mut flight, (20, 20), &mut Dice::seeded([3; 32]));
     assert!(pattern.missed);
-    assert_eq!(pattern.impact, pattern.target);
-    assert_eq!(pattern.cells.len(), 1);
+    assert_eq!(pattern.impact.distance(corner), 30);
+    assert!(pattern.cells.is_empty());
 }
 
-/// Artillery uses map-sheet range, direct/indirect skill arithmetic and truncation toward zero.
+/// A launch roll decides where the round lands: indirect fire scatters its margin of failure,
+/// direct fire 1D6 on arrival, and a cannon half its margin, rounded up, but no farther than
+/// its target (Tactical Operations: Advanced Units & Equipment p. 97).
+#[test]
+fn artillery_launch_outcomes_follow_the_fire_type() {
+    use ArtilleryOutcome as O;
+    assert_eq!(
+        O::of_launch(ArtilleryFire::Indirect, true, 9, 9, 30),
+        O::Hit
+    );
+    assert_eq!(
+        O::of_launch(ArtilleryFire::Indirect, false, 12, 7, 30),
+        O::Scatter { hexes: 5 }
+    );
+    assert_eq!(
+        O::of_launch(ArtilleryFire::Direct, false, 12, 7, 10),
+        O::DirectMiss
+    );
+    assert_eq!(
+        O::of_launch(ArtilleryFire::Cannon, false, 12, 7, 10),
+        O::Scatter { hexes: 3 }
+    );
+    assert_eq!(
+        O::of_launch(ArtilleryFire::Cannon, false, 12, 2, 4),
+        O::Scatter { hexes: 4 }
+    );
+}
+
+/// Artillery uses map-sheet range and the Tactical Operations: Advanced Rules arithmetic:
+/// indirect fire is Gunnery +7 with the spotter's term (truncated toward zero) less one per
+/// adjusted shot, and no extra term for an unspotted shot (pp. 148-150); a visible hex within
+/// seventeen hexes is fired at directly at Gunnery +4 (p. 153).
 #[test]
 fn artillery_aim_ranges_observers_and_corrections() {
     // Indirect pieces reach the Tactical Operations p. 149 mapsheet counts (8, 9, 30, 18 and 21
@@ -270,91 +275,114 @@ fn artillery_aim_ranges_observers_and_corrections() {
     assert_eq!(ARTILLERY_MAPSHEET_HEXES, 17);
     assert_eq!(Weapon::LongTom.effective_range(), 510);
     for (weapon, maximum) in weapons {
-        {
-            let base = ArtilleryAimInput {
-                distance: f64::from(maximum),
-                submerged: false,
-                visible: false,
-                gunnery: 4,
-                observer: ArtilleryObserver::Unassisted,
-                adjustment: 0,
-                interference: false,
-            };
-            assert_eq!(
-                weapon.artillery_aim(base).unwrap(),
-                ArtilleryAim {
-                    target_number: 12,
-                    maximum_range: maximum,
-                    range: ArtilleryRange::InRange
-                }
-            );
-            for (observer, indirect) in [
-                (ArtilleryObserver::Unassisted, 12),
-                (ArtilleryObserver::Unavailable, 11),
-                (ArtilleryObserver::Spotting(0), 9),
-                (ArtilleryObserver::Spotting(1), 10),
-                (ArtilleryObserver::Spotting(3), 11),
-                (ArtilleryObserver::Spotting(5), 11),
-                (ArtilleryObserver::Spotting(7), 12),
-                (ArtilleryObserver::Spotting(8), 13),
-            ] {
-                for adjustment in [0, 1, 255] {
-                    for visible in [false, true] {
-                        let result = weapon
+        let cannon = !weapon.is_indirect_artillery();
+        let base = ArtilleryAimInput {
+            distance: f64::from(maximum),
+            submerged: false,
+            visible: false,
+            gunnery: 4,
+            observer: ArtilleryObserver::Unassisted,
+            adjustment: 0,
+            interference: false,
+            attacker_movement: 0,
+            attacker_condition: 0,
+            intervening: 0,
+            registered: false,
+            spotter_attacked: false,
+        };
+        assert_eq!(
+            weapon.artillery_aim(base).unwrap(),
+            ArtilleryAim {
+                target_number: 11,
+                maximum_range: maximum,
+                range: ArtilleryRange::InRange,
+                fire: if cannon {
+                    ArtilleryFire::Cannon
+                } else {
+                    ArtilleryFire::Indirect
+                },
+                automatic: false,
+            }
+        );
+        for (observer, indirect) in [
+            (ArtilleryObserver::Unassisted, 11),
+            (ArtilleryObserver::Unavailable, 11),
+            (ArtilleryObserver::Spotting(0), 9),
+            (ArtilleryObserver::Spotting(1), 10),
+            (ArtilleryObserver::Spotting(3), 11),
+            (ArtilleryObserver::Spotting(5), 11),
+            (ArtilleryObserver::Spotting(7), 12),
+            (ArtilleryObserver::Spotting(8), 13),
+        ] {
+            for adjustment in [0, 1, 255] {
+                let result = weapon
+                    .artillery_aim(ArtilleryAimInput {
+                        observer,
+                        adjustment,
+                        ..base
+                    })
+                    .unwrap();
+                assert_eq!(result.target_number, indirect - i32::from(adjustment));
+                // Electromagnetic interference adds two to direct and indirect fire alike
+                // (Tactical Operations: Advanced Rules p. 53).
+                for visible in [false, true] {
+                    let aim = |interference| {
+                        weapon
                             .artillery_aim(ArtilleryAimInput {
                                 observer,
                                 adjustment,
                                 visible,
+                                interference,
+                                distance: 10.0,
                                 ..base
                             })
-                            .unwrap();
-                        assert_eq!(
-                            result.target_number,
-                            if visible { 9 } else { indirect } - i32::from(adjustment)
-                        );
-                        // Electromagnetic interference adds two to direct and indirect fire
-                        // alike (Tactical Operations: Advanced Rules p. 53).
-                        let interfered = weapon
-                            .artillery_aim(ArtilleryAimInput {
-                                observer,
-                                adjustment,
-                                visible,
-                                interference: true,
-                                ..base
-                            })
-                            .unwrap();
-                        assert_eq!(interfered.target_number, result.target_number + 2);
-                    }
+                            .unwrap()
+                            .target_number
+                    };
+                    assert_eq!(aim(true), aim(false) + 2);
                 }
             }
-            let out = weapon
-                .artillery_aim(ArtilleryAimInput {
-                    distance: f64::from(maximum) + 0.001,
-                    adjustment: 255,
-                    ..base
-                })
-                .unwrap();
-            assert_eq!(out.range, ArtilleryRange::OutOfRange);
-            assert_eq!(out.target_number, 1000);
-            let submerged = weapon
-                .artillery_aim(ArtilleryAimInput {
-                    submerged: true,
-                    distance: 2000.0,
-                    ..base
-                })
-                .unwrap();
-            assert_eq!(submerged.range, ArtilleryRange::Underwater);
-            assert_eq!(submerged.target_number, 5000);
-            for distance in [f64::NAN, f64::INFINITY, -1.0] {
-                assert!(
-                    weapon
-                        .artillery_aim(ArtilleryAimInput { distance, ..base })
-                        .is_err()
-                );
-            }
-            assert!(Weapon::MediumLaser.artillery_aim(base).is_err());
         }
-        assert!(weapon.range_modifier(1.0).is_err());
+        if !cannon {
+            let direct = weapon
+                .artillery_aim(ArtilleryAimInput {
+                    distance: 12.0,
+                    visible: true,
+                    adjustment: 3,
+                    observer: ArtilleryObserver::Spotting(0),
+                    ..base
+                })
+                .unwrap();
+            assert_eq!(direct.target_number, 8);
+            assert_eq!(direct.fire, ArtilleryFire::Direct);
+        }
+        let out = weapon
+            .artillery_aim(ArtilleryAimInput {
+                distance: f64::from(maximum) + 0.001,
+                adjustment: 255,
+                ..base
+            })
+            .unwrap();
+        assert_eq!(out.range, ArtilleryRange::OutOfRange);
+        let submerged = weapon
+            .artillery_aim(ArtilleryAimInput {
+                submerged: true,
+                distance: 2000.0,
+                ..base
+            })
+            .unwrap();
+        assert_eq!(submerged.range, ArtilleryRange::Underwater);
+        for distance in [f64::NAN, f64::INFINITY, -1.0] {
+            assert!(
+                weapon
+                    .artillery_aim(ArtilleryAimInput { distance, ..base })
+                    .is_err()
+            );
+        }
+        assert!(Weapon::MediumLaser.artillery_aim(base).is_err());
+        // Only artillery cannons have ordinary range brackets (Tactical Operations: Advanced
+        // Units & Equipment p. 97).
+        assert_eq!(weapon.range_modifier(5.0).is_ok(), cannon);
         assert!(weapon.damage_groups(None).is_err());
         assert_eq!(weapon.gunnery_skill(false), "Gunnery-Artillery");
     }
@@ -435,7 +463,7 @@ async fn artillery_occupants_resolve_their_own_attack_direction() {
         HexCoordinate { x: 1, y: 2 },
         Weapon::LongTom,
         ArtilleryMode::Standard,
-        true,
+        ArtilleryOutcome::Hit,
     )
     .unwrap();
     let report = loop {

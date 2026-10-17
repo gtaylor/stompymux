@@ -164,7 +164,8 @@ pub(super) fn resolve_with_context_in_candidate(
             angel_blocked: request.angel_blocked,
             target_beacon,
             artemis_v,
-            ams_engaged: request.ams_engaged,
+            // A Swarm flight meets an anti-missile system on its own terms below.
+            ams_engaged: request.ams_engaged && incoming.is_none(),
             indirect: request.indirect,
             apollo: request.apollo,
             array: request.array,
@@ -173,8 +174,9 @@ pub(super) fn resolve_with_context_in_candidate(
         },
         &mut world.btech.vehicles.get_mut(&target).unwrap().dice,
     )?;
-    packets.limit_missiles(incoming);
-    packets.finish_burst_glancing(fire_mode, request.glancing);
+    if let Some(incoming) = incoming {
+        packets.swarm_flight(incoming, request.ams_engaged)?;
+    }
     let mut report = VehicleSalvoReport {
         building: None,
         collapse: None,

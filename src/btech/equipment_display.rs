@@ -44,5 +44,6 @@ pub(super) fn ammunition_description(weapon: Weapon, mode: A) -> &'static str {
         A::ThunderAugmented => " Thunder-Augmented",
         A::ThunderVibrabomb => " Thunder-Vibrabomb",
         A::ThunderActive => " Thunder-Active",
+        A::Homing => " Homing",
     }
 }

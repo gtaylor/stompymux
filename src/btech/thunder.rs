@@ -4,8 +4,13 @@ use crate::{ObjectId, World};
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 
-/// Densest field that repeated Thunder salvos may build up in one hex.
-pub const THUNDER_MAXIMUM_STRENGTH: i16 = 30;
+/// Densest total that Thunder salvos may lay in one hex (Tactical Operations: Advanced Units &
+/// Equipment p. 185); only a pre-designated field may be built up further, to thirty.
+pub const THUNDER_MAXIMUM_STRENGTH: i16 = 20;
+
+/// Density a scattered Thunder salvo loses (Tactical Operations: Advanced Units & Equipment
+/// p. 185).
+const SCATTER_DENSITY_LOSS: u16 = 5;
 
 /// Toggle a controlled, intact and recycled LRM launcher between normal rounds and one of
 /// the specialized Thunder rounds.
@@ -117,67 +122,123 @@ fn field_type(world: &World, shooter: ObjectId, mode: AmmunitionMode) -> Result<
     })
 }
 
-/// Seed or reinforce Thunder minefields after a salvo lands on `coordinate`. The field's
-/// strength is the salvo's damage. Augmented rounds spread half of it, rounding up, over the
-/// target hex and each adjacent hex on the map. A salvo landing on a field it matches
-/// thickens that field instead of adding another, up to the maximum strength.
+/// Seed or reinforce Thunder minefields after a salvo lands on `coordinate` (Tactical
+/// Operations: Advanced Units & Equipment p. 185). A salvo lays a field as dense as its
+/// launcher is large; Augmented rounds lay half that, rounding up, in the target hex and each
+/// adjacent hex on the map; a salvo that scattered lays five points less. Weapon-delivered
+/// fields in one hex total at most twenty points, joining a field of the same kind and
+/// owner; landing on a pre-designated field of the same kind thickens it to at most thirty.
 pub(super) fn lay(
     world: &mut World,
     shooter: ObjectId,
     map: ObjectId,
     coordinate: HexCoordinate,
     mode: AmmunitionMode,
-    damage: u16,
+    (launcher, scattered): (u16, bool),
 ) -> Result<ThunderReport> {
     let (kind, extra) = field_type(world, shooter, mode)?;
-    let mut cells = Vec::new();
-    if mode.munition() == AmmunitionMode::ThunderAugmented {
-        let spread = damage.div_ceil(2);
-        cells.push((coordinate, spread));
-        let record = world.btech.maps().get(&map).context("Map not found")?;
-        for neighbor in record.neighbors(coordinate)?.into_iter().flatten() {
-            cells.push((neighbor, spread));
-        }
+    let mut density = if mode.munition() == AmmunitionMode::ThunderAugmented {
+        launcher.div_ceil(2)
     } else {
-        cells.push((coordinate, damage));
+        launcher
+    };
+    if scattered {
+        density = density.saturating_sub(SCATTER_DENSITY_LOSS);
+    }
+    let mut cells = vec![coordinate];
+    if mode.munition() == AmmunitionMode::ThunderAugmented {
+        let record = world.btech.maps().get(&map).context("Map not found")?;
+        cells.extend(record.neighbors(coordinate)?.into_iter().flatten());
     }
     let mut report = ThunderReport::default();
-    for (coordinate, strength) in cells {
-        if strength == 0 {
-            continue;
-        }
-        let strength = i16::try_from(strength)
-            .unwrap_or(i16::MAX)
-            .min(THUNDER_MAXIMUM_STRENGTH);
-        let existing = world.btech.maps()[&map]
+    if density == 0 {
+        return Ok(report);
+    }
+    let density = i16::try_from(density).unwrap_or(i16::MAX);
+    for coordinate in cells {
+        let here: Vec<_> = world.btech.maps()[&map]
             .ordered_minefields()
-            .find(|(_, field)| {
-                field.coordinate == coordinate
-                    && field.kind == kind
-                    && field.extra == extra
-                    && field.owner == shooter
-            })
-            .map(|(ordinal, field)| (*ordinal, *field));
-        let (ordinal, mine) = if let Some((ordinal, mut field)) = existing {
-            field.strength = field
+            .filter(|(_, field)| field.coordinate == coordinate)
+            .map(|(ordinal, field)| (*ordinal, *field))
+            .collect();
+        let predesignated = here.iter().find(|(_, field)| {
+            field.kind == kind
+                && field.extra == extra
+                && !super::minefield::weapon_delivered(world, field)
+        });
+        let (ordinal, mine) = if let Some(&(ordinal, field)) = predesignated {
+            let strength = field
                 .strength
-                .saturating_add(strength)
-                .min(THUNDER_MAXIMUM_STRENGTH);
+                .saturating_add(density)
+                .min(super::artillery_impact::PREDESIGNATED_MAXIMUM_DENSITY.max(field.strength));
+            if strength == field.strength {
+                continue;
+            }
+            let field = Minefield { strength, ..field };
             super::set_minefield(world, map, ordinal, Some(field))?;
             (ordinal, field)
         } else {
-            let field = Minefield {
-                coordinate,
-                kind,
-                strength,
-                extra,
-                owner: shooter,
-            };
-            (super::insert_minefield(world, map, field)?, field)
+            let laid: i16 = here
+                .iter()
+                .filter(|(_, field)| super::minefield::weapon_delivered(world, field))
+                .map(|(_, field)| field.strength.max(0))
+                .sum();
+            let strength = density.min(THUNDER_MAXIMUM_STRENGTH - laid);
+            if strength <= 0 {
+                continue;
+            }
+            let existing = here.iter().find(|(_, field)| {
+                field.kind == kind && field.extra == extra && field.owner == shooter
+            });
+            if let Some(&(ordinal, field)) = existing {
+                let field = Minefield {
+                    strength: field.strength + strength,
+                    ..field
+                };
+                super::set_minefield(world, map, ordinal, Some(field))?;
+                (ordinal, field)
+            } else {
+                let field = Minefield {
+                    coordinate,
+                    kind,
+                    strength,
+                    extra,
+                    owner: shooter,
+                };
+                (super::insert_minefield(world, map, field)?, field)
+            }
         };
         report.fields.push(ThunderField { ordinal, mine });
     }
     Ok(report)
+}
+
+/// Where a missed Thunder salvo lands, scattered as artillery is (Tactical Operations: Advanced
+/// Units & Equipment p. 185; Advanced Rules pp. 150, 153): a die picks the hexside on the
+/// Scatter Diagram, clockwise from north, and the salvo travels its margin of failure in hexes
+/// when fired indirectly, or 1D6 hexes when fired directly. `None` when it leaves the map.
+pub(super) fn scatter(
+    world: &mut World,
+    shooter: ObjectId,
+    map: ObjectId,
+    target: HexCoordinate,
+    indirect_margin: Option<u16>,
+) -> Result<Option<HexCoordinate>> {
+    let dice = super::dice::unit_dice_mut(world, shooter)?;
+    let hexside = usize::from(dice.die(6)? - 1);
+    let hexes = match indirect_margin {
+        Some(margin) => margin,
+        None => dice.die(6)?,
+    };
+    let mut landing = target;
+    for _ in 0..hexes {
+        landing = landing.neighbors()?[hexside];
+    }
+    let record = world.btech.maps().get(&map).context("Map not found")?;
+    Ok(record
+        .base_hex(i64::from(landing.x), i64::from(landing.y))
+        .ok()
+        .map(|_| landing))
 }
 
 #[cfg(test)]
@@ -188,10 +249,14 @@ mod tests {
     /// Only LRM families take specialized Thunder rounds, and plain mine rounds count as Thunder.
     #[test]
     fn thunder_rounds_belong_to_lrm_launchers() {
-        for weapon in [Weapon::Lrm20, Weapon::ClanLrm5, Weapon::Nlrm10] {
+        for weapon in [Weapon::Lrm20, Weapon::Nlrm10] {
             assert!(weapon.supports_thunder());
             assert!(AmmunitionMode::ThunderActive.supports(weapon));
         }
+        // Clan launchers fire plain Thunder rounds but not the Inner Sphere variants (Tactical
+        // Operations: Advanced Units & Equipment p. 185).
+        assert!(AmmunitionMode::Mine.supports(Weapon::ClanLrm5));
+        assert!(!AmmunitionMode::ThunderActive.supports(Weapon::ClanLrm5));
         for weapon in [
             Weapon::Srm6,
             Weapon::Mml9,

@@ -180,6 +180,7 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("unit", "unit_lbx", "lbx"),
         ("unit", "unit_cluster", "cluster"),
         ("unit", "unit_cluster", "firecluster"),
+        ("unit", "unit_firehoming", "firehoming"),
         ("unit", "unit_firesmoke", "firesmoke"),
         ("unit", "unit_firemine", "firemine"),
         ("unit", "unit_fireaugmented", "fireaugmented"),

@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firehoming", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
 article_tags = ["show_in_index"]
 +++
 
@@ -476,6 +476,8 @@ p. 139).
 
 
 `firecluster <selection>` (also `cluster`) toggles artillery between normal and cluster rounds.
+`firehoming <selection>` toggles an Arrow IV launcher between normal rounds and homing
+missiles, which need a matching ammunition bin.
 It requires an intact, recycled launcher and preserves an existing smoke or mine
 selection by rejecting the change. Matching ammunition is required to fire.
 
@@ -734,21 +736,22 @@ A running unit with defense enabled automatically engages an incoming missile
 attack that reaches its base target number with one ready mount whose firing arc
 covers the attack direction (Total Warfare pp. 129-130). Missed attacks and
 attacks from outside every mount's arc preserve defensive ammunition, heat and
-recycle time. Defensive weapons cannot be fired manually.
+readiness. Defensive weapons cannot be fired manually.
 
 An engagement applies -4 to the attack's cluster roll, never below 2; a locked
 Streak launcher counts as a roll of 11 before the -4. Electromagnetic interference
 takes two more from either. A single-missile attack
 (Narc and iNarc pods, Thunderbolts) instead rolls one die and is destroyed on a
 1-3. Each engagement spends one round of ammunition and the system's heat, and
-the mount's recycle time is the once-per-turn limit. Inner Sphere and Clan
-systems follow the same rules. An empty bin prevents activation. Critical
-destruction disables AMS until its capability is restored. Lua can toggle with
+each AMS engages at most one attack a turn: thirty seconds pass before that mount
+can engage again. Inner Sphere and Clan systems follow the same rules. Each AMS
+works on its own: one with an empty bin, or one destroyed by a critical hit,
+leaves the attack to the next ready mount covering it. Lua can toggle with
 `btech.unit.ams(unit, pilot)` or set an explicit state with a third boolean
 argument.
 
-Laser AMS uses the same switch but needs no ammunition. Its recycle time is 25
-seconds; IS laser AMS generates 7 heat per engagement and Clan laser AMS 5.
+Laser AMS uses the same switch but needs no ammunition. IS laser AMS generates
+7 heat per engagement and Clan laser AMS 5.
 
 ### Machine gun arrays
 
@@ -996,12 +999,51 @@ fire. Without that lock, your observer supplies the target even when you give
 `fire` an explicit target ID.
 
 For artillery, your observer must select a visible hex. The observer must remain
-running, friendly, conscious and on your battlefield. Artillery uses the observer's
-hex and indirect aim, even if you can also see that hex. Clear any unit target lock
-before firing artillery. Retargeting the observer resets accumulated correction.
-Artillery reach follows Tactical Operations (p. 149): Arrow IV 8 mapsheets (Clan 9),
-Thumper 21, Sniper 18 and Long Tom 30, at seventeen hexes per mapsheet. Artillery
-cannons are direct-fire weapons with ordinary hex ranges.
+running, friendly, conscious and on your battlefield. Artillery fires at the
+observer's hex. Clear any unit target lock before firing artillery. Retargeting the
+observer resets accumulated correction. Artillery reach follows Tactical Operations
+(p. 149): Arrow IV 8 mapsheets (Clan 9), Thumper 21, Sniper 18 and Long Tom 30, at
+seventeen hexes per mapsheet; a hex beyond it cannot be fired at.
+
+Artillery you fire at a hex you can see within seventeen hexes is direct fire
+(Tactical Operations p. 153): your artillery gunnery +4, plus your movement, heat,
+sensor and actuator damage and the woods or smoke you fire through, with no range
+or target modifiers. Direct fire cannot be made at a hex within six hexes. A
+direct-fire miss scatters 1D6 hexes. Every other artillery shot is indirect
+(pp. 148-150): gunnery +7, plus your observer's spotting modifier and +1 if it also
+attacked within the last thirty seconds, less one for each corrected miss, plus your
+movement when the hex lies within seventeen hexes.
+An indirect miss scatters one hex for each point it missed by. A miss scatters in
+a direction rolled on one die, clockwise from north; a round that scatters off the
+map lands harmlessly. Once one of your rounds strikes its target hex, every later
+shot you fire at that hex hits it automatically, until you move, turn or jump.
+
+Arrow IV homing missiles (Tactical Operations: AUE p. 166) are fired at a hex like any
+artillery round. When one arrives it attacks a unit that a TAG on your side designates
+within eight hexes of that hex: the one you have locked if it is designated, otherwise the
+designated unit nearest the hex. On 4 or more on 2D6 it strikes that unit for 20 points in
+5-point groups from your direction, and 5 points strike every other unit in its hex; on 3
+or less it strikes the hex for 5 points to every unit there. With no designated unit in
+reach when it arrives, it falls on the hex it was fired at as an unguided round, 5 points to
+every unit there, scattering on a miss like any other round. In the book the firer chooses
+between these two attacks when firing; in realtime the missile chooses on arrival, since
+nobody can know at launch whether a designation will hold. A homing missile never makes its
+hex an automatic hit.
+
+An artillery round that strikes a building hex damages every unit inside a light,
+medium or heavy building in full, whatever floor it stands on, and every unit on its
+roof (Tactical Operations p. 152). In a hardened building the round bursts on the
+roof: the roof and the level below take its full damage, the next level half and
+the floors below nothing. The building then loses three times the round's damage,
+plus twice it for the level below the roof and once for the level below that; a
+building, wall or bridge in the ring around the struck hex loses twice the ring's
+damage, plus once for the level below its roof (Total Warfare p. 174).
+
+Artillery cannons are ballistic weapons that deal artillery damage (Tactical
+Operations: Advanced Units & Equipment p. 97): one that sees its hex aims with its
+own range brackets and minimum range and no hex bonus, and a miss scatters half the
+margin it missed by, rounded up, never farther than the target lay. A cannon's
+round deals its damage in the target hex and ten less in each ring around it.
 
 Use `lock x y` to select coordinates, or append H (hex), B (building), I (ignite),
 or C (clear). Coordinate locks take effect at once, even outside visibility.
@@ -1015,9 +1057,10 @@ smoke add nothing, since a hex does not stand in itself. Artillery always fires
 at the selected hex and arrives after a flight delay, applying its ammunition
 payload to the area.
 Without a spotter, artillery may still fire at a hex you cannot see (Tactical
-Operations p. 148), but that fire cannot be adjusted: a miss earns trajectory
-correction only while a friendly unit can see the target hex. Underground,
-artillery fired at your locked hex needs an observer or your own sight of it.
+Operations p. 148), with no extra modifier, but that fire cannot be adjusted: a
+miss earns trajectory correction only while a friendly unit can see the target hex.
+Underground, artillery fired at your locked hex needs an observer or your own sight
+of it.
 
 
 Crossing into a mined hex, landing or falling can trigger its mines. Conventional
@@ -1554,14 +1597,18 @@ usual weapon selections and work on Mechs, ground vehicles and VTOLs. A matching
 ammunition bin is required to fire. Swarm rounds are LRM munitions: only standard
 LRM launchers and MMLs loaded with long-range rounds can use these modes.
 
-After an initial hit, unused missiles can attack nearby units in map order.
-Ordinary Swarm can hit friends and return to its launcher. Swarm-1 excludes
-friendly secondary targets. Retargeting requires the previous target to see the
-next unit in its own hex or an adjacent one. Combat-safe units are skipped as secondary targets.
-The flight stops when its missiles are spent, its cumulative range runs out, or
-it has attacked eleven distinct targets. AMS engages the initial attack like
-any other LRM flight (Tactical Operations: AUE p. 181).
-An initial miss ends the flight; secondary misses retain the unused missiles.
+Missiles that do not strike a target fly on to the nearest unit, friend or foe,
+in its hex or an adjacent one, nearest first and at random among equals; no line
+of sight is needed, and a miss sends every missile on (Tactical Operations: AUE
+p. 183). Swarm can hit friends and return to its launcher. Each later attack keeps
+the first attack's modifiers but takes its own target's movement and terrain
+modifiers, and its Cluster Hits roll uses the column for the missiles still
+flying. Swarm-1 takes +2 against friendly units, unless they stand in hostile ECM
+or have lost sensors. No unit is attacked twice, and combat-safe units are
+skipped. In hostile ECM, Swarm-1 acts as Swarm, and a Swarm flight attacking a
+target in hostile ECM acts as an ordinary LRM flight and flies no farther. An AMS
+takes no -4 from a Swarm flight: the missiles that attack its unit land as though
+an 8 were rolled on their own column, and the rest fly on.
 Empty-coordinate fire does not retarget.
 
 Lua provides `btech.unit.fireswarm(unit, pilot, weapon)` and
@@ -1573,13 +1620,22 @@ Lua provides `btech.unit.fireswarm(unit, pilot, weapon)` and
 
 `firesmoke <selection>` and `firemine <selection>` select Smoke or Mine ammunition
 on missile launchers. Smoke rounds load in standard SRM, LRM and MML launchers;
-Mine (Thunder) rounds load in standard LRM launchers only. Repeat the selected
-command to return to normal ammunition. Matching supplies are required to fire.
-Both controls work on Mechs and vehicles; other launchers, one-shot launchers and
-artillery are rejected.
+Mine (Thunder) rounds load in standard LRM launchers only, and the Thunder-Active,
+-Augmented and -Vibrabomb rounds (`fireactive`, `fireaugmented`, `firevibrabomb`)
+in Inner Sphere ones. Repeat the selected command to return to normal ammunition.
+Matching supplies are required to fire. Both controls work on Mechs and vehicles;
+other launchers, one-shot launchers and artillery are rejected.
 
-These missile modes retain ordinary missile damage, and AMS engages both. They
-do not create smoke clouds or minefields.
+Smoke and Thunder missiles may only target hexes and damage no unit (Tactical
+Operations: AUE pp. 183, 185): fire them at a coordinate or a hex lock, whoever
+stands there. A Smoke hit fills the hex with smoke until the End Phase three turns
+later: light smoke when the salvo delivers 5 points of damage or less, heavy
+otherwise. A Thunder hit lays a minefield as dense as the launcher is large (20
+for an LRM-20); Augmented rounds lay half that, rounded up, in the hex and every
+hex around it. A Thunder miss scatters as artillery does, 1D6 hexes from direct
+fire or the margin of failure from indirect fire, and lays five points less.
+Weapon-delivered fields in one hex total at most 20 points, except that a field
+placed before play may be thickened to 30.
 Artillery templates can separately carry Smoke and Mine payloads, which create
 their environmental effects on arrival. These cockpit controls follow the
 reference's missile eligibility rather than selecting those artillery payloads.

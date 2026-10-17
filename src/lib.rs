@@ -3,11 +3,12 @@ pub mod btech;
 pub use btech::insert_minefield;
 pub use btech::view_map_action as view_battle_map_action;
 pub use btech::{
-    ArtilleryAim, ArtilleryAimInput, ArtilleryObserver, ArtilleryRange,
-    unit_artillery_gunnery_target,
+    ArtilleryAim, ArtilleryAimInput, ArtilleryFire, ArtilleryObserver, ArtilleryRange,
+    DIRECT_ARTILLERY_MINIMUM_RANGE, DIRECT_ARTILLERY_RANGE, unit_artillery_gunnery_target,
 };
 pub use btech::{
     ArtilleryCell, ArtilleryEffect, ArtilleryFlight, ArtilleryImpactPattern, ArtilleryMode,
+    ArtilleryOutcome, ArtilleryRegistration, HOMING_DAMAGE, HOMING_SPLASH_DAMAGE,
 };
 pub use btech::{
     ArtilleryHit, ArtilleryImpactReport, advance_artillery_flight, advance_artillery_flight_action,
@@ -94,11 +95,11 @@ pub use btech::{
     toggle_caseless as toggle_battle_caseless, toggle_cluster as toggle_battle_cluster,
     toggle_electronics as toggle_battle_electronics, toggle_explosive as toggle_battle_explosive,
     toggle_flamer_heat as toggle_battle_flamer_heat, toggle_flechette as toggle_battle_flechette,
-    toggle_gatling as toggle_battle_gatling, toggle_hotload as toggle_battle_hotload,
-    toggle_lbx as toggle_battle_lbx, toggle_narc as toggle_battle_narc,
-    toggle_precision as toggle_battle_precision, toggle_rapid as toggle_battle_rapid,
-    toggle_ultra as toggle_battle_ultra, unit_elevation as battle_unit_elevation,
-    unit_gunnery_target as battle_unit_gunnery_target,
+    toggle_gatling as toggle_battle_gatling, toggle_homing as toggle_battle_homing,
+    toggle_hotload as toggle_battle_hotload, toggle_lbx as toggle_battle_lbx,
+    toggle_narc as toggle_battle_narc, toggle_precision as toggle_battle_precision,
+    toggle_rapid as toggle_battle_rapid, toggle_ultra as toggle_battle_ultra,
+    unit_elevation as battle_unit_elevation, unit_gunnery_target as battle_unit_gunnery_target,
     unit_inside_building as battle_unit_inside_building,
     unit_piloting_target as battle_unit_piloting_target, unit_range as battle_unit_range,
     unit_terrain_los as battle_unit_terrain_los, update_contact as update_battle_contact,

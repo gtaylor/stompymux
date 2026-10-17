@@ -93,6 +93,8 @@ fn install_test_ams_at(
 }
 
 /// Automatic defense uses one ready mount even on misses; a shortage limits cost, not capacity.
+/// An engaged mount waits a thirty-second turn before it may engage again (Total Warfare
+/// p. 129).
 async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, f64, u16)]) {
     use stompymux_rs::*;
     let (_dir, config, pristine, _id, _target) = shot_fixture().await;
@@ -303,25 +305,25 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, f64, u16)]) {
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_ams() {
     use stompymux_rs::Weapon;
-    ams_interception_matrix(&[(Weapon::AntiMissileSystem, 1.0, 10)]).await;
+    ams_interception_matrix(&[(Weapon::AntiMissileSystem, 1.0, 30)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_clan_ams() {
     use stompymux_rs::Weapon;
-    ams_interception_matrix(&[(Weapon::ClanAntiMissileSystem, 1.0, 10)]).await;
+    ams_interception_matrix(&[(Weapon::ClanAntiMissileSystem, 1.0, 30)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_laser_ams() {
     use stompymux_rs::Weapon;
-    ams_interception_matrix(&[(Weapon::LaserAms, 7.0, 25)]).await;
+    ams_interception_matrix(&[(Weapon::LaserAms, 7.0, 30)]).await;
 }
 
 #[tokio::test]
 async fn ams_interception_expenditure_eligibility_and_restart_clan_laser_ams() {
     use stompymux_rs::Weapon;
-    ams_interception_matrix(&[(Weapon::ClanLaserAms, 5.0, 25)]).await;
+    ams_interception_matrix(&[(Weapon::ClanLaserAms, 5.0, 30)]).await;
 }
 
 /// Native and Lua controls/firing share defense effects and rollback all expenditure on callback abort.
@@ -547,7 +549,8 @@ async fn ams_cluster_packets_and_streak_lock() {
     }
 }
 
-/// Selection skips unavailable or recycling mounts, but an empty first ready type ends the search.
+/// Each AMS works on its own (Total Warfare p. 129): selection skips a destroyed, flooded,
+/// recycling or empty mount and engages with the next.
 #[tokio::test]
 async fn ams_multiple_mount_selection_and_capability_loss() {
     use stompymux_rs::*;
@@ -636,21 +639,14 @@ async fn ams_multiple_mount_selection_and_capability_loss() {
                 },
             )
             .unwrap();
-            assert!(!world.btech.constructed_units()[&target].ams_enabled());
-            assert!(set_battle_ams(&mut world, target, ObjectId(2), true).is_err());
+            assert!(world.btech.constructed_units()[&target].ams_enabled());
+            set_battle_ams(&mut world, target, ObjectId(2), true).unwrap();
         }
         let before = world.clone();
         let report =
             resolve_battle_shot(&mut world, id, ObjectId(1), target, index, shot_rules()).unwrap();
         let target_state = &world.btech.constructed_units()[&target];
-        if matches!(case, "first_empty" | "first_destroyed") {
-            assert!(report.ams.is_none());
-            assert_eq!(
-                target_state.ammunition()[second_bin],
-                before.btech.constructed_units()[&target].ammunition()[second_bin]
-            );
-            assert!(!target_state.weapon_recycle().contains_key(&second));
-        } else {
+        {
             let defense = report.ams.as_ref().unwrap();
             let use_first = case == "first";
             assert_eq!(defense.weapon_index, if use_first { first } else { second });
@@ -714,7 +710,13 @@ fn install_test_narc(
             },
         );
     }
-    for (slot, modes) in [(4, vec![]), (5, vec!["Narc/Smoke".into()])] {
+    // Only the Inner Sphere builds explosive pods (Total Warfare p. 141).
+    let explosive = if weapon.is_clan() {
+        vec![]
+    } else {
+        vec!["Narc/Smoke".into()]
+    };
+    for (slot, modes) in [(4, vec![]), (5, explosive)] {
         torso.criticals.insert(
             slot,
             CriticalDefinition {
@@ -754,6 +756,9 @@ async fn narc_pod_outcomes_and_restart() {
     use stompymux_rs::*;
     for weapon in [Weapon::NarcBeacon, Weapon::ClanNarcBeacon] {
         for case in ["hit", "miss", "intercepted", "explosive"] {
+            if case == "explosive" && weapon.is_clan() {
+                continue;
+            }
             let (_dir, config, mut world, id, target) = shot_fixture().await;
             let (index, normal_bin) = install_test_narc(&mut world, id, weapon);
             shot_skill(&mut world, 30);

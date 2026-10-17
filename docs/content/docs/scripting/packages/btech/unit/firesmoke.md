@@ -5,7 +5,8 @@ linkTitle: "firesmoke"
 manualLinkTitle: "firesmoke"
 ---
 
-Select missile Smoke rounds. This cockpit control does not select artillery payloads.
+Select missile Smoke rounds, which may only target hexes and fill a hit hex with smoke.
+This cockpit control does not select artillery payloads.
 
 ## Signature
 

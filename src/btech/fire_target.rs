@@ -130,6 +130,14 @@ pub(super) fn resolve_conventional_for_source(
     if let Some((_, hex)) = super::spotter::observed_hex_for_source(world, source, index)? {
         return Ok(ResolvedFireTarget::Hex(hex));
     }
+    // Smoke and Thunder missiles fire at a hex, never at the unit standing in it.
+    if hex_only_munition(world, shooter, index)? {
+        match (requested, hex_lock) {
+            (FireTarget::Hex { coordinate }, _) => return Ok(ResolvedFireTarget::Hex(coordinate)),
+            (FireTarget::Selected, Some(lock)) => return Ok(ResolvedFireTarget::Hex(lock.hex)),
+            _ => anyhow::bail!("{HEX_ONLY}"),
+        }
+    }
     let (explicit, mut coordinate) = match requested {
         FireTarget::Selected => (None, None),
         FireTarget::Unit { unit } => (Some(unit), None),
@@ -177,6 +185,30 @@ pub(super) fn resolve_conventional_for_source(
 }
 
 /// Stealth lock admission and team safeties for the shooting unit.
+/// Refusal for a unit target of a hex-only munition.
+const HEX_ONLY: &str = "Smoke and Thunder missiles can only target hexes!";
+
+/// Whether the weapon is loaded with Smoke or Thunder missiles, which may only target hexes
+/// (Tactical Operations: Advanced Units & Equipment pp. 183, 185).
+fn hex_only_munition(world: &World, shooter: ObjectId, index: usize) -> Result<bool> {
+    let unit = world.btech.unit(shooter).context("Unit is unavailable")?;
+    super::with_unit!(unit, |unit| {
+        let weapon = unit
+            .loadout()?
+            .weapons
+            .get(index)
+            .context("Weapon index out of bounds")?
+            .weapon;
+        Ok(weapon.profile().missiles > 0 && unit.ammunition_mode(index)?.targets_hexes_only())
+    })
+}
+
+/// Refuse a unit target for a weapon loaded with Smoke or Thunder missiles.
+pub(super) fn check_unit_munition(world: &World, shooter: ObjectId, index: usize) -> Result<()> {
+    ensure!(!hex_only_munition(world, shooter, index)?, "{HEX_ONLY}");
+    Ok(())
+}
+
 pub(super) fn check_target_safety_for_source(
     world: &World,
     targeting: TargetSource,

@@ -122,8 +122,12 @@ fn shot_rules() -> ShotRules {
     }
 }
 
-/// Fire the launcher at a hex with the first dice seed that hits.
-fn fire_until_hit(world: &mut World, shooter: ObjectId, coordinate: HexCoordinate) {
+/// Fire the launcher at a hex with the first dice seed that hits, returning the report.
+fn fire_until_hit(
+    world: &mut World,
+    shooter: ObjectId,
+    coordinate: HexCoordinate,
+) -> HexShotReport {
     select_battle_hex_target(world, shooter, ObjectId(1), coordinate, HexTargetMode::Hex).unwrap();
     for seed in 0..=255 {
         let mut trial = world.clone();
@@ -144,15 +148,8 @@ fn fire_until_hit(world: &mut World, shooter: ObjectId, coordinate: HexCoordinat
                 report.terrain.is_empty(),
                 "Thunder rounds do not blast terrain"
             );
-            assert!(!report.thunder.fields.is_empty());
-            assert!(
-                report
-                    .notices()
-                    .iter()
-                    .any(|notice| notice.text.contains("Thunder salvo seeds"))
-            );
             *world = trial;
-            return;
+            return report;
         }
     }
     panic!("No seed hit the target hex");
@@ -165,17 +162,25 @@ fn recycle(world: &mut World, shooter: ObjectId) {
     });
 }
 
-/// Each Thunder round lays its own kind of field, owned by the shooter and sized by the salvo.
+/// Each Thunder round lays its own kind of field, owned by the shooter and as dense as the
+/// launcher is large; Augmented rounds lay half that in the hex and its neighbors (Tactical
+/// Operations: Advanced Units & Equipment p. 185).
 #[tokio::test]
 async fn thunder_rounds_lay_their_minefields() {
     let (_dir, config, initial, shooter, map) = fixture().await;
     let target = HexCoordinate { x: 1, y: 3 };
-    for (mode, kind, extra, cells) in [
-        (AmmunitionMode::Mine, MineKind::Standard, 0, 1),
-        (AmmunitionMode::ThunderAugmented, MineKind::Standard, 0, 7),
+    for (mode, kind, extra, cells, density) in [
+        (AmmunitionMode::Mine, MineKind::Standard, 0, 1, 20),
+        (
+            AmmunitionMode::ThunderAugmented,
+            MineKind::Standard,
+            0,
+            7,
+            10,
+        ),
         // A negative threshold stands for one ton above the shooter's weight after firing.
-        (AmmunitionMode::ThunderVibrabomb, MineKind::Vibra, -1, 1),
-        (AmmunitionMode::ThunderActive, MineKind::Active, 0, 1),
+        (AmmunitionMode::ThunderVibrabomb, MineKind::Vibra, -1, 1, 20),
+        (AmmunitionMode::ThunderActive, MineKind::Active, 0, 1, 20),
     ] {
         let mut world = initial.clone();
         let selected = if mode == AmmunitionMode::Mine {
@@ -184,7 +189,13 @@ async fn thunder_rounds_lay_their_minefields() {
             toggle_battle_thunder(&mut world, shooter, ObjectId(1), 0, mode).unwrap()
         };
         assert_eq!(selected, mode);
-        fire_until_hit(&mut world, shooter, target);
+        let report = fire_until_hit(&mut world, shooter, target);
+        assert!(
+            report
+                .notices()
+                .iter()
+                .any(|notice| notice.text.contains("Thunder salvo seeds"))
+        );
         let extra = if extra < 0 {
             let mass = world.btech.constructed_units()[&shooter]
                 .effective_mass()
@@ -199,30 +210,101 @@ async fn thunder_rounds_lay_their_minefields() {
             fields.iter().all(|field| field.kind == kind
                 && field.extra == extra
                 && field.owner == shooter
-                && field.strength > 0),
+                && field.strength == density),
             "{mode:?} {fields:?}"
         );
         assert!(fields.iter().any(|field| field.coordinate == target));
-        if cells > 1 {
-            let strength = fields[0].strength;
-            assert!(fields.iter().all(|field| field.strength == strength));
-        }
         assert!(world.btech.maps()[&map].mine_coverage(target).unwrap());
         world.validate(&config).unwrap();
-        // A second salvo thickens the same field, never past the cap.
+        // Weapon-delivered fields in one hex total at most twenty points, so a second salvo
+        // adds nothing there.
         if mode == AmmunitionMode::Mine {
-            let first = fields[0].strength;
             recycle(&mut world, shooter);
-            fire_until_hit(&mut world, shooter, target);
+            let report = fire_until_hit(&mut world, shooter, target);
+            assert!(report.thunder.fields.is_empty());
             let fields: Vec<_> = world.btech.maps()[&map].minefields().values().collect();
             assert_eq!(fields.len(), 1);
-            assert!(fields[0].strength > first);
-            assert!(fields[0].strength <= THUNDER_MAXIMUM_STRENGTH);
+            assert_eq!(fields[0].strength, THUNDER_MAXIMUM_STRENGTH);
         }
         persistence::save(&config.database(), &world).await.unwrap();
         let replay = persistence::load(&config.database()).await.unwrap();
         assert_eq!(replay.btech.maps(), world.btech.maps());
     }
+}
+
+/// A salvo landing on a pre-designated field of its kind thickens it to at most thirty points
+/// (Tactical Operations: Advanced Units & Equipment p. 185).
+#[tokio::test]
+async fn thunder_thickens_a_predesignated_field_to_thirty() {
+    let (_dir, config, mut world, shooter, map) = fixture().await;
+    let target = HexCoordinate { x: 1, y: 3 };
+    set_minefield(
+        &mut world,
+        map,
+        0,
+        Some(Minefield {
+            coordinate: target,
+            kind: MineKind::Standard,
+            strength: 15,
+            extra: 0,
+            owner: ObjectId(1),
+        }),
+    )
+    .unwrap();
+    toggle_battle_missile_rounds(&mut world, shooter, ObjectId(1), 0, AmmunitionMode::Mine)
+        .unwrap();
+    let report = fire_until_hit(&mut world, shooter, target);
+    assert_eq!(report.thunder.fields.len(), 1);
+    let fields: Vec<_> = world.btech.maps()[&map].minefields().values().collect();
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0].strength, 30);
+    assert_eq!(fields[0].owner, ObjectId(1));
+    world.validate(&config).unwrap();
+}
+
+/// A missed salvo scatters as artillery does and lays five points less where it lands
+/// (Tactical Operations: Advanced Units & Equipment p. 185); direct fire scatters 1D6 hexes.
+#[tokio::test]
+async fn thunder_misses_scatter_and_lay_thinner_fields() {
+    let (_dir, _config, initial, shooter, map) = fixture().await;
+    let target = HexCoordinate { x: 1, y: 3 };
+    let mut world = initial.clone();
+    // A poor gunner, so that some rolls miss.
+    set_battle_character_value(
+        &mut world,
+        ObjectId(1),
+        "Gunnery-Battlemech",
+        CharacterValue {
+            value: 0,
+            experience: 0,
+            last_used: 0,
+        },
+    )
+    .unwrap();
+    toggle_battle_missile_rounds(&mut world, shooter, ObjectId(1), 0, AmmunitionMode::Mine)
+        .unwrap();
+    select_battle_hex_target(&mut world, shooter, ObjectId(1), target, HexTargetMode::Hex).unwrap();
+    let mut laid = false;
+    for seed in 0..=255 {
+        let mut trial = world.clone();
+        edit(&mut trial, shooter, |unit| {
+            unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap()
+        });
+        let report =
+            resolve_battle_hex_shot(&mut trial, shooter, ObjectId(1), target, 0, shot_rules())
+                .unwrap();
+        if report.hit || report.thunder.fields.is_empty() {
+            continue;
+        }
+        let field = report.thunder.fields[0].mine;
+        assert_ne!(field.coordinate, target);
+        assert!((1..=6).contains(&field.coordinate.distance(target)));
+        assert_eq!(field.strength, 15);
+        assert_eq!(trial.btech.maps()[&map].minefields().values().count(), 1);
+        laid = true;
+        break;
+    }
+    assert!(laid, "No seed scattered a salvo onto the map");
 }
 
 /// Only LRM launchers accept specialized Thunder rounds, and toggling twice restores normal fire.

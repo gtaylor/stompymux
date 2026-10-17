@@ -18,7 +18,10 @@ fn ammunition_template(weapon: Weapon, flags: &[&str]) -> MechTemplate {
     template
 }
 
-/// Every artillery family retains all four payloads through loadout resolution and saved unit state.
+/// Every artillery family retains the payloads it may fire through loadout resolution and saved
+/// unit state. Artillery cannons fire no special rounds and cannot be hot-loaded, and the Inner
+/// Sphere Thumper has no FASCAM round (Tactical Operations: Advanced Units & Equipment pp. 97,
+/// 165; Advanced Rules pp. 100, 152).
 #[test]
 fn artillery_ammunition_payloads_and_round_trip() {
     for weapon in Weapon::ALL
@@ -26,7 +29,7 @@ fn artillery_ammunition_payloads_and_round_trip() {
         .copied()
         .filter(|weapon| weapon.is_artillery())
     {
-        assert!(weapon.supports_hotload());
+        assert_eq!(weapon.supports_hotload(), weapon.is_indirect_artillery());
         for (flag, mode, payload) in [
             (None, AmmunitionMode::Normal, ArtilleryMode::Standard),
             (
@@ -39,6 +42,17 @@ fn artillery_ammunition_payloads_and_round_trip() {
         ] {
             let flags: Vec<_> = flag.into_iter().collect();
             let template = ammunition_template(weapon, &flags);
+            let fires = mode == AmmunitionMode::Normal
+                || (weapon.is_indirect_artillery()
+                    && !(weapon == Weapon::Thumper && mode == AmmunitionMode::Mine));
+            assert_eq!(mode.supports(weapon), fires, "{weapon:?} {mode:?}");
+            if !fires {
+                assert!(
+                    MechLoadout::resolve(&template).is_err(),
+                    "{weapon:?} {mode:?}"
+                );
+                continue;
+            }
             let unit = Mech::from_template(template).unwrap();
             let bin = unit.loadout().unwrap().ammunition[0].clone();
             assert_eq!(bin.mode, mode);
@@ -170,5 +184,48 @@ fn artillery_mount_payload_resolution_and_conflicts() {
         }
         let error = MechLoadout::resolve(&template).unwrap_err();
         assert!(format!("{error:#}").contains("Conflicting artillery ammunition flags"));
+    }
+}
+
+/// The shipped Arrow IV designs whose MegaMek records carry homing missiles construct as live
+/// units, with their homing bins (Tactical Operations: Advanced Units & Equipment p. 166).
+#[test]
+fn shipped_arrow_iv_designs_carry_homing_missiles() {
+    for (name, source) in [
+        ("CPLT-C5", include_str!("../game/units/CPLT-C5.toml")),
+        ("Chaparral", include_str!("../game/units/Chaparral.toml")),
+        (
+            "Demolisher-Arrow",
+            include_str!("../game/units/Demolisher-Arrow.toml"),
+        ),
+        ("Padilla", include_str!("../game/units/Padilla.toml")),
+        (
+            "Pilum-Arrow",
+            include_str!("../game/units/Pilum-Arrow.toml"),
+        ),
+        ("Schiltron", include_str!("../game/units/Schiltron.toml")),
+    ] {
+        let modes: Vec<_> = match UnitTemplate::parse(name, source).unwrap() {
+            UnitTemplate::Mech(template) => Mech::from_template(template)
+                .unwrap()
+                .loadout()
+                .unwrap()
+                .ammunition
+                .iter()
+                .filter(|bin| bin.weapon == Weapon::ArrowIv)
+                .map(|bin| bin.mode)
+                .collect(),
+            UnitTemplate::Vehicle(template) => Vehicle::new(template)
+                .unwrap()
+                .loadout()
+                .unwrap()
+                .ammunition
+                .iter()
+                .filter(|bin| bin.weapon == Weapon::ArrowIv)
+                .map(|bin| bin.mode)
+                .collect(),
+        };
+        assert!(modes.contains(&AmmunitionMode::Homing), "{name}");
+        assert!(modes.contains(&AmmunitionMode::Normal), "{name}");
     }
 }

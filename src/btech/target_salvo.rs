@@ -14,12 +14,17 @@ pub enum TargetSalvo {
 }
 
 impl TargetSalvo {
-    /// Missile hits before an anti-missile engagement shifted the cluster roll.
+    /// Missile hits before an anti-missile engagement shifted the cluster roll; for a Swarm
+    /// flight, the missiles that attacked its first target.
     pub(super) fn missiles_before_defense(&self) -> Option<u8> {
         match self {
             Self::Mech(report) => report.missiles_before_defense,
             Self::Vehicle(report) => report.missiles_before_defense,
-            Self::Swarm(report) => Some(report.launched),
+            Self::Swarm(report) => report
+                .hops
+                .first()
+                .and_then(|hop| hop.salvo.as_ref())
+                .and_then(Self::missiles_before_defense),
         }
     }
 
@@ -28,7 +33,11 @@ impl TargetSalvo {
         match self {
             Self::Mech(report) => report.missiles_intercepted,
             Self::Vehicle(report) => report.missiles_intercepted,
-            Self::Swarm(_) => None,
+            Self::Swarm(report) => report
+                .hops
+                .first()
+                .and_then(|hop| hop.salvo.as_ref())
+                .and_then(Self::missiles_intercepted),
         }
     }
 }

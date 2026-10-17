@@ -6506,7 +6506,7 @@ async fn artillery_world_damage_and_restart() {
         center,
         Weapon::LongTom,
         ArtilleryMode::Standard,
-        true,
+        ArtilleryOutcome::Hit,
     )
     .unwrap();
     let before = world.btech.clone();
@@ -6562,8 +6562,8 @@ async fn artillery_world_damage_and_restart() {
     );
 }
 
-/// Smoke covers the pattern except where a fire burns, and survives storage; delivered mines
-/// neither reinforce nor replace existing fields.
+/// Smoke covers the target hex and its neighbors except where a fire burns, and survives
+/// storage; delivered mines neither reinforce nor replace existing weapon-delivered fields.
 #[tokio::test]
 async fn artillery_world_smoke_and_mines() {
     let (_dir, config, mut world, map, _) = fixture_field(Terrain::Clear, 0, 3).await;
@@ -6580,7 +6580,9 @@ async fn artillery_world_smoke_and_mines() {
         ArtilleryMode::Mine,
         ArtilleryMode::Mine,
     ] {
-        let mut flight = ArtilleryFlight::new(center, center, Weapon::LongTom, mode, true).unwrap();
+        let mut flight =
+            ArtilleryFlight::new(center, center, Weapon::LongTom, mode, ArtilleryOutcome::Hit)
+                .unwrap();
         let mut report = None;
         for _ in 0..10 {
             report = advance_artillery_flight(&mut world, map, &mut flight, rules()).unwrap();
@@ -6597,8 +6599,10 @@ async fn artillery_world_smoke_and_mines() {
                     assert_eq!(decoration.kind, DecorationKind::Fire);
                     continue;
                 }
-                assert_eq!(decoration.kind, DecorationKind::Smoke);
-                assert!((90..=150).contains(&decoration.remaining));
+                // Heavy smoke until the End Phase three turns later (Tactical Operations:
+                // Advanced Units & Equipment p. 168).
+                assert_eq!(decoration.kind, DecorationKind::HeavySmoke);
+                assert!((91..=120).contains(&decoration.remaining));
                 assert_eq!(
                     world.btech.maps()[&map]
                         .base_hex(i64::from(cell.position.x), i64::from(cell.position.y))
@@ -6663,7 +6667,7 @@ async fn artillery_character_arrival_is_atomic() {
         center,
         Weapon::Thumper,
         ArtilleryMode::Standard,
-        true,
+        ArtilleryOutcome::Hit,
     )
     .unwrap();
     for _ in 0..9 {
@@ -6684,9 +6688,10 @@ async fn artillery_character_arrival_is_atomic() {
     assert_eq!(world.btech, before);
     assert_eq!(flight, cursor);
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    let report = advance_artillery_flight_action(&scripts, &config, map, &mut flight, rules())
-        .unwrap()
-        .unwrap();
+    let report =
+        advance_artillery_flight_action(&scripts, &config, map, (&mut flight, units[0]), rules())
+            .unwrap()
+            .unwrap();
     assert_eq!(report.hits.len(), 2);
     assert_eq!(flight.remaining(), 0);
     assert!(
@@ -6727,7 +6732,7 @@ async fn artillery_blast_height_limits() {
             center,
             Weapon::LongTom,
             ArtilleryMode::Standard,
-            true,
+            ArtilleryOutcome::Hit,
         )
         .unwrap();
         let mut report = None;
@@ -6746,7 +6751,8 @@ async fn artillery_blast_height_limits() {
     }
 }
 
-/// Occupants across the complete cluster area receive two-point punch packets; failed character admission restores scatter dice.
+/// Occupants across the cluster area receive 5-point groups; failed character admission restores
+/// the world and the flight cursor.
 #[tokio::test]
 async fn artillery_cluster_world_packets_and_random_rollback() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
@@ -6782,7 +6788,7 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
         center,
         Weapon::LongTom,
         ArtilleryMode::Cluster,
-        true,
+        ArtilleryOutcome::Hit,
     )
     .unwrap();
     for _ in 0..9 {
@@ -6797,30 +6803,28 @@ async fn artillery_cluster_world_packets_and_random_rollback() {
     let report = advance_artillery_flight(&mut world, map, &mut flight, rules())
         .unwrap()
         .unwrap();
-    assert_eq!(
-        report
-            .hits
-            .iter()
-            .map(|hit| hit.impacts.len())
-            .sum::<usize>(),
-        20
-    );
+    // A Long Tom cluster round is twenty points in its hex and ten in each neighbor, in 5-point
+    // groups on the Weapon table (Tactical Operations: Advanced Rules p. 152).
+    assert_eq!(report.pattern.cells.len(), 7);
     for cell in &report.pattern.cells {
         let ArtilleryEffect::Damage {
             total,
-            packet_size: 2,
-            table: HitTable::Punch,
+            packet_size: 5,
+            table: HitTable::Weapon,
         } = cell.effect
         else {
             panic!("Expected cluster packet")
         };
-        let hit = report
+        assert_eq!(total, if cell.direct { 20 } else { 10 });
+        for hit in report
             .hits
             .iter()
-            .find(|hit| hit.coordinate == cell.position)
-            .unwrap();
-        assert_eq!(hit.impacts.len(), usize::from(total / 2));
+            .filter(|hit| hit.coordinate == cell.position)
+        {
+            assert_eq!(hit.impacts.len(), usize::from(total / 5));
+        }
     }
+    assert!(report.hits.len() >= 7);
     world.validate(&config).unwrap();
     let rejected_unit = report.hits.last().unwrap().unit;
     let mut invalid = before;
@@ -6846,7 +6850,9 @@ async fn artillery_queue_order_and_database_replay() {
         .into_iter()
         .enumerate()
     {
-        let flight = ArtilleryFlight::new(center, center, Weapon::LongTom, mode, true).unwrap();
+        let flight =
+            ArtilleryFlight::new(center, center, Weapon::LongTom, mode, ArtilleryOutcome::Hit)
+                .unwrap();
         assert_eq!(
             enqueue_artillery(&mut world, map, units[0], flight).unwrap(),
             index as u32
@@ -6895,7 +6901,7 @@ async fn artillery_queue_order_and_database_replay() {
             assert_eq!(first.len(), 2);
             assert!(matches!(
                 first[0].pattern.cells[0].effect,
-                ArtilleryEffect::Smoke { .. }
+                ArtilleryEffect::Smoke
             ));
             assert!(matches!(
                 first[1].pattern.cells[0].effect,
@@ -6939,7 +6945,8 @@ async fn artillery_queue_late_arrival_rolls_back_all_shots() {
             &mut world,
             map,
             units[0],
-            ArtilleryFlight::new(center, center, Weapon::Thumper, mode, true).unwrap(),
+            ArtilleryFlight::new(center, center, Weapon::Thumper, mode, ArtilleryOutcome::Hit)
+                .unwrap(),
         )
         .unwrap();
     }
@@ -6974,7 +6981,7 @@ async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
             stop_battle_unit(&mut world, unit, pilot).unwrap();
         }
         let center = HexCoordinate { x: 1, y: 1 };
-        enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap()).unwrap();
+        enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, ArtilleryOutcome::Hit).unwrap()).unwrap();
         let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         for _ in 0..7 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
         let world_snapshot = scripts.world().clone();
@@ -7002,7 +7009,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
                 assert_eq!(world.btech.constructed_units()[&unit].power(), Power::Off);
             }
             let center = HexCoordinate { x: 1, y: 1 };
-        enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap()).unwrap();
+        enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, ArtilleryOutcome::Hit).unwrap()).unwrap();
         let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         for _ in 0..9 { assert!(advance_artillery_action(&scripts, &config, rules()).unwrap().is_empty()); }
         let before = scripts.world().clone();
@@ -7030,7 +7037,14 @@ async fn artillery_queue_rejects_corrupt_saved_cursor() {
         &mut world,
         map,
         units[0],
-        ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap(),
+        ArtilleryFlight::new(
+            center,
+            center,
+            Weapon::LongTom,
+            ArtilleryMode::Mine,
+            ArtilleryOutcome::Hit,
+        )
+        .unwrap(),
     )
     .unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
