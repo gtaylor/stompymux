@@ -781,7 +781,12 @@ async fn shared_control_commands_apply_aircraft_velocity_and_rotor_limits() {
             record["vtol_flight"]["phase"] = serde_json::json!({"kind":"airborne"});
         })
         .unwrap();
-    let _ = stop_battle_unit(&mut world, id, ObjectId(2), MovementRules::STANDARD.fall).unwrap();
+    // The pilot must land before shutting down; an administrative power-down drops it.
+    let before = world.btech.clone();
+    let error = stop_battle_unit(&mut world, id, ObjectId(2)).unwrap_err();
+    assert!(format!("{error:#}").contains("land before"), "{error:#}");
+    assert_eq!(world.btech, before);
+    let _ = power_down_battle_unit(&mut world, id).unwrap();
     let unit = &world.btech.vehicles()[&id];
     assert_eq!(unit.power(), Power::Off);
     assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Falling);

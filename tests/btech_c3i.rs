@@ -189,7 +189,7 @@ async fn membership_capacity_shutdown_and_restart_are_shared() {
             .to_string()
             .contains("already")
     );
-    stop_battle_unit(&mut world, first, pilot, MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, first, pilot).unwrap();
     assert_eq!(battle_c3i_members(&world, first).unwrap(), expected);
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
@@ -335,7 +335,7 @@ async fn interference_is_temporary_but_hardware_team_and_map_loss_disconnect() {
     world.validate(&config).unwrap();
 
     let mut world = connected;
-    stop_battle_unit(&mut world, first, pilot, MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, first, pilot).unwrap();
     let map = world.btech.constructed_units()[&first]
         .position()
         .unwrap()
@@ -767,7 +767,7 @@ async fn shared_range_ignores_unavailable_peers() {
     .unwrap();
     assert!(jammed_shooter.network_range.is_none());
     let mut world = baseline;
-    stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, peer, peer_pilot).unwrap();
     let stopped = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(stopped.range.unwrap().modifier, 4);
     assert_eq!(stopped.network_range.unwrap().source, None);
@@ -882,7 +882,7 @@ async fn team_spotted_targets_are_engaged_along_the_shooters_own_line_of_fire() 
 
     // A shut-down teammate spots nothing for the side.
     let mut world = spotted;
-    stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, peer, peer_pilot).unwrap();
     assert!(
         visible_battle_contact(&world, first, target)
             .unwrap()
@@ -938,13 +938,7 @@ async fn network_messages_filter_receivers_without_changing_membership_or_dice()
     relocate(&mut world, units[1].0, 3);
     relocate(&mut world, units[2].0, 4);
     relocate(&mut world, units[4].0, 5);
-    stop_battle_unit(
-        &mut world,
-        units[1].0,
-        units[1].1,
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, units[1].0, units[1].1).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["recoveries"][units[2].1.0.to_string()] = serde_json::json!({
         "mode": {"kind":"tactical", "injuries":1}, "remaining": 10,
@@ -1001,13 +995,7 @@ async fn network_messages_filter_receivers_without_changing_membership_or_dice()
         prepare_battle_c3i_message(&restored, first, pilot, " \tHold [red]fire  ").unwrap(),
         notices
     );
-    stop_battle_unit(
-        &mut world,
-        units[4].0,
-        units[4].1,
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, units[4].0, units[4].1).unwrap();
     assert_eq!(
         prepare_battle_c3i_message(&world, first, pilot, "Echo")
             .unwrap()
@@ -1158,13 +1146,7 @@ async fn status_excludes_shutdown_and_jammed_peers_but_reports_unconscious_pilot
     relocate(&mut world, units[1].0, 3);
     relocate(&mut world, units[2].0, 4);
     relocate(&mut world, units[4].0, 5);
-    stop_battle_unit(
-        &mut world,
-        units[1].0,
-        units[1].1,
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, units[1].0, units[1].1).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["recoveries"][units[2].1.0.to_string()] = serde_json::json!({
         "mode":{"kind":"tactical","injuries":1},"remaining":10,"pain_resistance":false,"toughness":false,"dice":Dice::seeded([17;32])
@@ -1203,7 +1185,7 @@ async fn status_excludes_shutdown_and_jammed_peers_but_reports_unconscious_pilot
             recovery["remaining"] = 0.into();
         }
         world.btech = serde_json::from_value(encoded).unwrap();
-        stop_battle_unit(&mut world, id, pilot, MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world, id, pilot).unwrap();
     }
     let empty = battle_c3i_status(&world, first, pilot).unwrap();
     assert!(empty.rows.is_empty());
@@ -1303,7 +1285,7 @@ async fn team_spotted_targets_carry_identification_and_shared_range_without_own_
         unlinked[0].short_text
     );
     // A shut-down teammate spots nothing for the side.
-    stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, peer, peer_pilot).unwrap();
     assert!(displayed_battle_contacts(&world, first).unwrap().is_empty());
 }
 
@@ -1549,13 +1531,7 @@ async fn classic_native_lua_rollback_and_lifecycle_use_the_shared_membership_eng
         ))
         .unwrap();
     assert_eq!((count, live), (2, true));
-    stop_battle_unit(
-        &mut scripts.world_mut(),
-        first,
-        pilot,
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut scripts.world_mut(), first, pilot).unwrap();
     assert_eq!(battle_c3_members(&scripts.world(), first).unwrap().len(), 2);
     let map = scripts.world().btech.constructed_units()[&first]
         .position()
@@ -1613,7 +1589,7 @@ async fn classic_range_has_priority_and_falls_back_to_c3i_only_after_disconnecti
     assert_eq!(classic.network_range.unwrap().kind, CommandNetwork::C3);
     assert_eq!(classic.network_range.unwrap().source, Some(peer));
     assert_eq!(classic.range.unwrap().modifier, 2);
-    stop_battle_unit(&mut world, peer, peer_pilot, MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, peer, peer_pilot).unwrap();
     let stopped = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(stopped.network_range.unwrap().kind, CommandNetwork::C3);
     assert_eq!(stopped.network_range.unwrap().source, None);
@@ -1670,13 +1646,7 @@ async fn inactive_master_reduces_temporary_capacity_without_erasing_membership()
     let index = weapon_index(&world, first, Weapon::Lrm20);
     let active = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(active.network_range.unwrap().source, Some(units[3].0));
-    stop_battle_unit(
-        &mut world,
-        units[5].0,
-        units[5].1,
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, units[5].0, units[5].1).unwrap();
     let before = world.btech.clone();
     let reduced = battle_aim_modifiers(&world, first, target, index, 4, aim_rules()).unwrap();
     assert_eq!(reduced.network_range.unwrap().source, Some(units[2].0));
@@ -1885,13 +1855,7 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     encoded["recoveries"] = serde_json::json!({});
     world.btech = serde_json::from_value(encoded).unwrap();
-    stop_battle_unit(
-        &mut world,
-        units[5].0,
-        units[5].1,
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, units[5].0, units[5].1).unwrap();
     let before = world.btech.clone();
     assert_eq!(
         battle_c3_status(&world, first, pilot)

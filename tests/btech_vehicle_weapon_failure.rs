@@ -91,7 +91,7 @@ async fn critical_jams_select_unaffected_weapons_and_replay_powered_recovery() {
     );
     assert_eq!(world.btech, checkpoint);
     assert_eq!(world.btech, loaded.btech);
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     let checkpoint = world.btech.clone();
     for _ in 0..120 {
         assert!(advance_battle_recycle(&mut world).is_empty());

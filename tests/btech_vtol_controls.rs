@@ -586,7 +586,7 @@ async fn launch_cancellation_preserves_literal_pilot_name_and_callback_rollback(
 }
 
 #[tokio::test]
-async fn live_flight_persists_and_host_shutdown_descent_settles_after_restart() {
+async fn live_flight_refuses_shutdown_and_an_administrative_descent_settles_after_restart() {
     let (_dir, config, world, id) = fixture().await;
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let output = support::run_text(&scripts, &config, ObjectId(2), 1, "takeoff");
@@ -603,8 +603,15 @@ async fn live_flight_persists_and_host_shutdown_descent_settles_after_restart() 
             .altitude
             > 4.0
     );
+    // The pilot must land first; an administrative power-down cuts the lift instead.
+    let before = scripts.world().btech.clone();
     let output = support::run_text(&scripts, &config, ObjectId(2), 1, "shutdown");
-    assert!(output.contains("shut down"), "{output}");
+    assert!(
+        output.contains("You must land before you can shut down."),
+        "{output}"
+    );
+    assert_eq!(scripts.world().btech, before);
+    power_down_battle_unit(&mut scripts.world_mut(), id).unwrap();
     assert_eq!(
         scripts.world().btech.vehicles()[&id]
             .vtol_flight()

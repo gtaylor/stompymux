@@ -75,11 +75,7 @@ pub(super) fn pickup(
     if candidate.btech.tows().contains_key(&target) {
         notices.extend(super::release_tow(&mut candidate, target)?);
     }
-    notices.extend(super::pickup::prepare_target(
-        &mut candidate,
-        target,
-        rules,
-    )?);
+    notices.extend(super::pickup::prepare_target(&mut candidate, target)?);
     notices.extend(super::broadcast::interaction_notices(
         world, carrier, target, "picks up",
     ));

@@ -1623,7 +1623,7 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
             world.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
         }
         if outcome == "shutdown" {
-            stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         }
         let supply = world.btech.constructed_units()[&id].ammunition()[0];
         persistence::save(&config.database(), &world).await.unwrap();
@@ -4752,7 +4752,7 @@ async fn power_observers_receive_completion_and_never_a_shutdown_fall() {
             serde_json::json!({"state":"starting","remaining":remaining});
         world.btech = serde_json::from_value(state).unwrap();
         let mut abort = world.clone();
-        let notices = stop_battle_unit(&mut abort, subject, ObjectId(1), fall_rules()).unwrap();
+        let notices = stop_battle_unit(&mut abort, subject, ObjectId(1)).unwrap();
         assert!(notices.iter().all(|notice| notice.unit == subject));
         assert!(advance_battle_units(&mut abort, 0, true).is_empty());
         for _ in 1..remaining {
@@ -7258,7 +7258,7 @@ async fn cockpit_status_native_lua_sections_damage_and_restart() {
             .unwrap()
             .contains(&format!("{:2}[reset]", old - 1))
     );
-    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     let after = battle_unit_status(&world, id, "").unwrap();
     assert!(after.contains("SHUTDOWN"));
     persistence::save(&config.database(), &world).await.unwrap();
@@ -7366,7 +7366,7 @@ async fn cockpit_status_reports_airborne_and_pending_state_without_advancing() {
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(battle_unit_status(&loaded, id, "info").unwrap(), status);
-    power_down_battle_unit(&mut world, id, fall_rules()).unwrap();
+    power_down_battle_unit(&mut world, id).unwrap();
     assert!(world.btech.constructed_units()[&id].free_fall().is_some());
     assert!(
         battle_unit_status(&world, id, "info")
@@ -7596,7 +7596,7 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
             );
             world.validate(&config).unwrap();
             if hit {
-                stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
                 for _ in 0..61 {
                     advance_battle_recycle(&mut world);
                 }

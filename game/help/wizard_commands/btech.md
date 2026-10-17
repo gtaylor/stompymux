@@ -529,9 +529,8 @@ staged messages are discarded together.
 
 `CLEARUNITS` shuts down every unit on your current map and removes its tactical
 coordinates and contacts. Units and their occupants remain in the map room.
-External tow links are released. A moving Mech simply stops and one in the air starts
-free fall, while a moving vehicle can tumble and injure its crew;
-all changes and messages roll back together if the operation fails. Terrain,
+External tow links are released. A moving Mech or vehicle simply stops and one in the
+air starts free fall; all changes and messages roll back together if the operation fails. Terrain,
 map settings and objects remain intact. The optional command argument is ignored.
 Trusted Lua uses `btech.map.clear_units(actor, map)` and receives removed unit
 numbers in map-slot order. The actor must be a wizard.
@@ -563,7 +562,7 @@ or world save discards the queued write.
 dimensions, bridges and conditions, and removes map objects. Fire and smoke drawn in
 the file start burning as permanent effects. GOD (#1) keeps units on
 the map; other wizards shut down and clear units after loading. Shutdown
-consequences, such as a vehicle tumble or a jumping Mech's free fall, therefore use
+consequences, such as a flying VTOL's or a jumping Mech's free fall, therefore use
 the newly loaded terrain and conditions. Units keep their physical
 altitude until movement resolves it. Other map settings, including cloud base,
 remain intact. Invalid assets or crops that exclude placed units fail atomically;

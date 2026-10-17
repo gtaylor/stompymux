@@ -104,13 +104,7 @@ async fn landing_target_is_rolled_among_the_hexes_mechs() {
         world.validate(&config).unwrap();
     }
     let (_dir, _, mut world, ids) = fixture(&[0, 0, 0]).await;
-    stop_battle_unit(
-        &mut world,
-        ids[0],
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, ids[0], ObjectId(1)).unwrap();
     // A shut-down 'Mech is landed on like any other.
     seed(&mut world, ids[1], 2, 1, Some(12));
     let before = world.btech.clone();

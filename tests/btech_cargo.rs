@@ -104,13 +104,7 @@ async fn all_chassis_share_load_unload_gates_and_restart() {
         assert_eq!(battle_inventory_mass(&world, unit).unwrap(), 4080);
         persistence::save(&config.database(), &world).await.unwrap();
         world = persistence::load(&config.database()).await.unwrap();
-        stop_battle_unit(
-            &mut world,
-            unit,
-            ObjectId(1),
-            FallRules::configured(&config),
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, unit, ObjectId(1)).unwrap();
         world
             .objects
             .get_mut(&map)

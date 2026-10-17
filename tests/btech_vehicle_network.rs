@@ -205,13 +205,7 @@ async fn mixed_membership_capacity_and_sqlite_replay() {
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(world.btech, loaded.btech);
     for candidate in [&mut world, &mut loaded] {
-        stop_battle_unit(
-            candidate,
-            units[0].0,
-            units[0].1,
-            MovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(candidate, units[0].0, units[0].1).unwrap();
         assert_eq!(battle_c3_members(candidate, units[0].0).unwrap().len(), 4);
         assert_eq!(battle_c3i_members(candidate, units[0].0).unwrap().len(), 6);
         destroy_battle_vehicle_critical(
@@ -353,7 +347,7 @@ async fn vehicle_network_native_lua_controls_and_lifecycle_agree() {
         assert_eq!(count, 2);
         let connected = lua.world().clone();
         let mut moved = connected.clone();
-        stop_battle_unit(&mut moved, id, pilot, MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut moved, id, pilot).unwrap();
         remove_battle_unit(&mut moved, id, ObjectId(config.home())).unwrap();
         assert!(battle_c3_members(&moved, id).unwrap().is_empty());
         assert!(battle_c3i_members(&moved, id).unwrap().is_empty());
@@ -407,7 +401,7 @@ async fn vehicle_ecm_temporarily_blocks_mixed_network_without_erasing_links() {
     assert_eq!(battle_c3_members(&world, first).unwrap().len(), 2);
     assert!(prepare_battle_c3i_message(&world, first, pilot, "Jammed").is_err());
     assert!(battle_c3_status(&world, first, pilot).is_err());
-    stop_battle_unit(&mut world, jammer, operator, MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, jammer, operator).unwrap();
     assert_eq!(
         prepare_battle_c3i_message(&world, first, pilot, "Clear")
             .unwrap()

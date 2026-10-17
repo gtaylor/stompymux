@@ -18,10 +18,10 @@ releases it. Pilot assignments survive a server restart.
 After taking the cockpit on a battlefield, use `startup`. The startup cycle
 runs for 30 simulation seconds and reports six stages. Wizards can use
 `startup override` for a five-second cycle. `shutdown` stops the engine or aborts
-startup, and releases the cockpit. Use `pilot` again before restarting. A Mech shuts
-down only once it has come to a stop on the ground: `shutdown` is refused while it has
-any forward or reverse speed or is in the air, so stop or land first. Shutting down
-takes no piloting roll (Total Warfare p. 160).
+startup, and releases the cockpit. Use `pilot` again before restarting. A Mech or vehicle
+shuts down only once it has come to a stop on the ground: `shutdown` is refused while it
+has any forward or reverse speed or is in the air, so stop, or land a VTOL, first.
+Shutting down takes no piloting roll and never tumbles a vehicle (Total Warfare p. 160).
 A reactor cannot restart at 30 or more heat, the operator override included.
 From 14 to 29 heat, `startup` rolls 2d6 against the highest current shutdown
 avoid number (4 at 14, 6 at 18, 8 at 22, 10 at 26); a failed roll keeps the

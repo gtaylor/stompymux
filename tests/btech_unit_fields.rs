@@ -323,7 +323,7 @@ async fn special_field_commands_scenario(f: &UnitFields) {
         .position()
         .unwrap()
         .map;
-    stop_battle_unit(&mut world, unit, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, unit, ObjectId(1)).unwrap();
     for (id, set, view, assignment) in [
         (map, "@setmap", "@viewmap", "mapname A field with spaces"),
         (unit, "@setunit", "@viewunit", "team 7"),
@@ -1129,7 +1129,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
                 .as_i64()
                 .unwrap()
         };
-        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -1137,7 +1137,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
             advance_battle_units(&mut world, now, true);
         }
         assert_eq!(history(&world), -50);
-        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         advance_battle_units(&mut world, 102, true);
         assert_eq!(history(&world), -50);
         for (fast, duration, start) in [(true, 5, 1_800_000_000_i64), (false, 30, 1_900_000_000)] {
@@ -1164,7 +1164,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
             }
             advance_battle_units(&mut world, start + 100, true);
             assert_eq!(history(&world), start + duration);
-            stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         }
         let scripts = &f.native;
         support::install(scripts, world.clone());

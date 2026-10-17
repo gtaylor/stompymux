@@ -1,5 +1,5 @@
-//! Shutdown across chassis: a Mech shuts down only once stopped on the ground, while vehicles
-//! still tumble from speed and airborne units keep their restart-safe descent.
+//! Shutdown across chassis: a Mech or vehicle shuts down only once stopped on the ground, and
+//! an administrative power-down of an airborne unit keeps its restart-safe descent.
 use crate::support;
 use crate::support::btech_firing as firing;
 use std::{cell::RefCell, rc::Rc};
@@ -13,15 +13,9 @@ fn speed(world: &mut World, id: ObjectId, value: f64) {
     });
 }
 
-/// Whether the chassis at this index of [`firing::templates`] is a Mech.
-fn mech(chassis: usize) -> bool {
-    chassis < 2
-}
-
-/// A Mech shuts down voluntarily only in the End Phase, after movement (Total Warfare p. 160):
-/// the command and Lua refuse it at any forward or reverse speed and change nothing, and a
-/// stopped Mech shuts down with no roll. A vehicle above one movement point still tumbles;
-/// reverse or slower motion does not.
+/// A Mech shuts down voluntarily only in the End Phase, after movement (Total Warfare p. 160),
+/// and a vehicle the same way: the command and Lua refuse it at any forward or reverse speed
+/// and change nothing, and a stopped unit shuts down with no roll and no tumble.
 #[tokio::test]
 async fn shutdown_speed_boundaries_share_native_lua_and_restart() {
     for (chassis, source) in firing::templates().into_iter().enumerate() {
@@ -42,7 +36,7 @@ async fn shutdown_speed_boundaries_share_native_lua_and_restart() {
             let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
             let call = format!("btech.unit.stop({},1)", id.0);
-            if mech(chassis) && value != 0.0 {
+            if value != 0.0 {
                 let output = support::run_text(&native, &config, ObjectId(1), 1, "shutdown");
                 assert!(
                     output.contains("You must come to a stop before you can shut down."),
@@ -72,11 +66,7 @@ async fn shutdown_speed_boundaries_share_native_lua_and_restart() {
                 output.contains("All systems shut down."),
                 "{chassis} {value}: {output}"
             );
-            assert_eq!(
-                output.contains("mid-motion"),
-                value > 10.75,
-                "{chassis} {value}: {output}"
-            );
+            assert!(!output.contains("mid-motion"), "{chassis}: {output}");
             assert_eq!(native.world().btech, lua.world().btech);
             let key = if before.vehicles().contains_key(&id) {
                 "vehicles"
@@ -88,17 +78,10 @@ async fn shutdown_speed_boundaries_share_native_lua_and_restart() {
             let new = serde_json::to_value(&saved.btech).unwrap();
             assert_eq!(new[key][id.0.to_string()]["power"]["state"], "off");
             assert!(new[key][id.0.to_string()]["pilot"].is_null());
-            if value <= 10.75 {
-                assert_eq!(
-                    new[key][id.0.to_string()]["dice"],
-                    old[key][id.0.to_string()]["dice"]
-                );
-            } else {
-                assert_ne!(
-                    new[key][id.0.to_string()]["dice"],
-                    old[key][id.0.to_string()]["dice"]
-                );
-            }
+            assert_eq!(
+                new[key][id.0.to_string()]["dice"],
+                old[key][id.0.to_string()]["dice"]
+            );
             saved.validate(&config).unwrap();
             persistence::save(&config.database(), &saved).await.unwrap();
             assert_eq!(
@@ -109,9 +92,10 @@ async fn shutdown_speed_boundaries_share_native_lua_and_restart() {
     }
 }
 
-/// A jumping Mech must land before it shuts down, and the refusal changes nothing; airborne
-/// vehicles still shut down into the existing descent path rather than a ground tumble, and
-/// aborting startup never falls.
+/// A jumping Mech, an unsupported ground vehicle and a flying VTOL must land before their
+/// pilots shut them down, and the refusal changes nothing. An administrative power-down still
+/// drops each into the existing descent rather than a ground tumble, and aborting startup
+/// never falls.
 #[tokio::test]
 async fn airborne_shutdown_preserves_descent_and_startup_abort_does_not_fall() {
     for chassis in [0, 2, 4, 6] {
@@ -136,21 +120,18 @@ async fn airborne_shutdown_preserves_descent_and_startup_abort_does_not_fall() {
         }
         let original = world.btech.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-        if mech(chassis) {
-            let error = stop_battle_unit_action(&scripts, &config, id, ObjectId(1)).unwrap_err();
-            assert!(
-                format!("{error:#}").contains("You must land before you can shut down."),
-                "{error:#}"
-            );
-            assert_eq!(scripts.world().btech, original);
-            assert!(scripts.drain_outbox().is_empty());
-            let lua = format!("return btech.unit.stop({},1)", id.0);
-            let error = scripts.eval_callback::<bool>(&lua).unwrap_err();
-            assert!(format!("{error:#}").contains("land before"), "{error:#}");
-            assert_eq!(scripts.world().btech, original);
-            continue;
-        }
-        let notices = stop_battle_unit_action(&scripts, &config, id, ObjectId(1)).unwrap();
+        let error = stop_battle_unit_action(&scripts, &config, id, ObjectId(1)).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("You must land before you can shut down."),
+            "{chassis}: {error:#}"
+        );
+        assert_eq!(scripts.world().btech, original);
+        assert!(scripts.drain_outbox().is_empty());
+        let lua = format!("return btech.unit.stop({},1)", id.0);
+        let error = scripts.eval_callback::<bool>(&lua).unwrap_err();
+        assert!(format!("{error:#}").contains("land before"), "{error:#}");
+        assert_eq!(scripts.world().btech, original);
+        let notices = power_down_battle_unit(&mut scripts.world_mut(), id).unwrap();
         assert!(
             notices
                 .iter()
@@ -162,11 +143,16 @@ async fn airborne_shutdown_preserves_descent_and_startup_abort_does_not_fall() {
                 .any(|notice| notice.text.contains("mid-motion"))
         );
         let saved = scripts.world().clone();
+        let key = if chassis == 0 {
+            "constructed"
+        } else {
+            "vehicles"
+        };
         let before = serde_json::to_value(original).unwrap();
         let after = serde_json::to_value(&saved.btech).unwrap();
         assert_eq!(
-            before["vehicles"][id.0.to_string()]["dice"],
-            after["vehicles"][id.0.to_string()]["dice"]
+            before[key][id.0.to_string()]["dice"],
+            after[key][id.0.to_string()]["dice"]
         );
         saved.validate(&config).unwrap();
         persistence::save(&config.database(), &saved).await.unwrap();
@@ -207,7 +193,7 @@ async fn landed_and_stopped_mech_shuts_down_without_a_roll() {
     .await;
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
     let mut jumping = world.clone();
-    let error = stop_battle_unit(&mut jumping, id, ObjectId(1), FallRules::STANDARD).unwrap_err();
+    let error = stop_battle_unit(&mut jumping, id, ObjectId(1)).unwrap_err();
     assert!(format!("{error:#}").contains("land before"), "{error:#}");
     assert_eq!(jumping.btech, world.btech);
     while world.btech.constructed_units()[&id].flight().is_some() {
@@ -215,7 +201,7 @@ async fn landed_and_stopped_mech_shuts_down_without_a_roll() {
     }
     speed(&mut world, id, 0.0);
     let before = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
-    let notices = stop_battle_unit(&mut world, id, ObjectId(1), FallRules::STANDARD).unwrap();
+    let notices = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert_eq!(
         notices
             .iter()

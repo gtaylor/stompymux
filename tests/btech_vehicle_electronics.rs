@@ -208,13 +208,7 @@ async fn vehicle_shutdown_clears_both_suites_and_rejects_invalid_saved_emissions
             .unwrap();
     }
     refresh_battle_electronic_fields(&mut world).unwrap();
-    stop_battle_unit(
-        &mut world,
-        emitter,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, emitter, ObjectId(1)).unwrap();
     let state = world.btech.vehicles()[&emitter].electronics();
     assert_eq!(state.guardian, ElectronicMode::Off);
     assert_eq!(state.angel, ElectronicMode::Off);

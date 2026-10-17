@@ -141,7 +141,7 @@ async fn restart_avoid_roll_binds_for_the_turn_and_keeps_the_pilot() {
     // A voluntary shutdown restarts under the same Avoid Roll (Total Warfare p. 160,
     // Voluntary Shutdown), but never by itself.
     world.btech.set_unit_power(id, Power::Running).unwrap();
-    stop_battle_unit(&mut world, id, ObjectId(1), FallRules::STANDARD).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     heat_due(&mut world, id, 13.0, true);
     assert!(

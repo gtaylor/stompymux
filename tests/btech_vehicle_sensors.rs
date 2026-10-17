@@ -179,13 +179,7 @@ async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
         "{}",
         swept.text
     );
-    stop_battle_unit(
-        &mut scripts.world_mut(),
-        id,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
     let stopped = battle_perception_report(&scripts.world(), id).unwrap();
     assert!(!stopped.running);
     assert!(

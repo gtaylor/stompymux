@@ -1,24 +1,9 @@
-//! Shutdown host transactions publish vehicle tumble and crew effects through shared combat
-//! resolvers. A Mech shuts down only once stopped on the ground, so it never falls.
+//! The pilot's shutdown as a host transaction. A Mech or vehicle shuts down only once stopped
+//! on the ground, so shutting down never moves, damages or injures anything.
 use crate::{Config, ObjectId, Scripts};
 use anyhow::Result;
 
-/// Secondary shutdown consequences retained until the enclosing host action can publish them.
-#[derive(Default)]
-pub(super) struct ShutdownEffects {
-    pub pilot_notices: Vec<super::PilotNotice>,
-    pub vehicle_falls: Vec<super::VehicleFallReport>,
-}
-
-/// Publish nested shutdown effects once, before newly lethal crew are evacuated.
-pub(super) fn publish(scripts: &Scripts, config: &Config, effects: &ShutdownEffects) -> Result<()> {
-    for fall in &effects.vehicle_falls {
-        super::evacuation::publish_vehicle_fall_consequences(scripts, config, fall)?;
-    }
-    Ok(())
-}
-
-/// Shut down a piloted unit with transactional damage, notices, personal injury and evacuation.
+/// Shut down a piloted unit transactionally and publish its notices.
 pub fn stop_unit_action(
     scripts: &Scripts,
     config: &Config,
@@ -27,16 +12,8 @@ pub fn stop_unit_action(
 ) -> Result<Vec<super::Notice>> {
     scripts.atomic(|before| {
         super::power::check_shutdown_control(before, id, pilot)?;
-        let mut effects = ShutdownEffects::default();
-        let notices = super::power::stop_admitted_in_action(
-            &mut scripts.world_mut(),
-            id,
-            super::FallRules::configured(config),
-            &mut effects,
-        )?;
-        super::piloting::publish_ordered_notices(scripts, &notices, &effects.pilot_notices)?;
-        publish(scripts, config, &effects)?;
-        super::evacuation::publish_new_casualties(scripts, config, before)?;
+        let notices = super::power::power_down_unit(&mut scripts.world_mut(), id)?;
+        super::piloting::publish_ordered_notices(scripts, &notices, &[])?;
         scripts.world().validate_action(config)?;
         scripts.effects.validate()?;
         Ok(notices)

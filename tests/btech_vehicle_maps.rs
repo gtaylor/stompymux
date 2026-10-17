@@ -244,13 +244,7 @@ async fn mixed_maps_navigation_and_measurements_share_every_supported_movement_t
                     ("bogus", "pilot")
                 }
                 "power" => {
-                    let _ = stop_battle_unit(
-                        &mut candidate,
-                        observer,
-                        ObjectId(1),
-                        FallRules::configured(&config),
-                    )
-                    .unwrap();
+                    let _ = power_down_battle_unit(&mut candidate, observer).unwrap();
                     assign_battle_pilot(&mut candidate, observer, ObjectId(1)).unwrap();
                     support::seed_object_dice(
                         &mut candidate,

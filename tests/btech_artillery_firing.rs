@@ -518,7 +518,7 @@ async fn artillery_arrival_feedback_survives_shooter_removal_and_restart() {
     assert_eq!(scripts.drain_outbox(), replay.drain_outbox());
     let mut stopped = restored;
     let observer = report[0].notices[0].unit;
-    stop_battle_unit(&mut stopped, observer, ObjectId(2), rules()).unwrap();
+    stop_battle_unit(&mut stopped, observer, ObjectId(2)).unwrap();
     let stopped =
         Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(stopped))).unwrap();
     assert!(
@@ -622,7 +622,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
         let mut world = base.clone();
         let expected = match failure {
             "stopped" => {
-                stop_battle_unit(&mut world, observer, ObjectId(2), rules()).unwrap();
+                stop_battle_unit(&mut world, observer, ObjectId(2)).unwrap();
                 "Spotter is unavailable"
             }
             "role" => {
@@ -661,7 +661,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                 .unwrap();
                 support::seed_object_dice(&mut world, ridge, support::FIXTURE_DICE_SEED);
                 for (unit, pilot, y) in [(shooter, ObjectId(1), 1), (observer, ObjectId(2), 0)] {
-                    stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
+                    stop_battle_unit(&mut world, unit, pilot).unwrap();
                     place_battle_unit(&mut world, unit, ridge, 1, y).unwrap();
                     assign_battle_pilot(&mut world, unit, pilot).unwrap();
                     support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
@@ -691,7 +691,7 @@ async fn artillery_observed_launch_and_link_revalidation() {
                 )
                 .unwrap();
                 support::seed_object_dice(&mut world, other, support::FIXTURE_DICE_SEED);
-                stop_battle_unit(&mut world, observer, ObjectId(2), rules()).unwrap();
+                stop_battle_unit(&mut world, observer, ObjectId(2)).unwrap();
                 place_battle_unit(&mut world, observer, other, 1, 1).unwrap();
                 assign_battle_pilot(&mut world, observer, ObjectId(2)).unwrap();
                 support::seed_object_dice(&mut world, ObjectId(2), support::FIXTURE_DICE_SEED);
@@ -761,7 +761,7 @@ async fn unspotted_artillery_fires_at_an_unseen_hex_without_adjustment() {
             state["maps"][ridge.0.to_string()]["flags"] = MapFlag::Underground.bit().into();
             world.btech = serde_json::from_value(state).unwrap();
         }
-        stop_battle_unit(&mut world, shooter, ObjectId(1), rules()).unwrap();
+        stop_battle_unit(&mut world, shooter, ObjectId(1)).unwrap();
         place_battle_unit(&mut world, shooter, ridge, 1, 2).unwrap();
         assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -919,7 +919,7 @@ async fn mech_artillery_uses_vehicle_observers_in_slot_order() {
             .copied()
             .find(|id| *id != shooter)
             .unwrap();
-        stop_battle_unit(&mut world, first, ObjectId(2), rules()).unwrap();
+        stop_battle_unit(&mut world, first, ObjectId(2)).unwrap();
         if !stopped_first {
             remove_battle_unit(&mut world, first, ObjectId(config.home())).unwrap();
         }

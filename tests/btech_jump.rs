@@ -418,13 +418,7 @@ async fn connected_jump_domain_updates_height_heat_landing_and_stabilization_aft
     assert_eq!(unit.jump_stabilization(), 12);
     assert_eq!(unit.motion().unwrap().desired_speed, 32.25);
     let mut shutdown = world.clone();
-    stop_battle_unit(
-        &mut shutdown,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut shutdown, id, ObjectId(1)).unwrap();
     assert_eq!(
         shutdown.btech.constructed_units()[&id].jump_stabilization(),
         0
@@ -1936,13 +1930,7 @@ fn jump_hills(
         }
         source.push('\n');
     }
-    stop_battle_unit(
-        world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(world, id, ObjectId(1)).unwrap();
     let home = world.objects[&id].home.unwrap();
     remove_battle_unit(world, id, home).unwrap();
     reload_battle_map(
@@ -2079,13 +2067,7 @@ async fn dry_terrain_jump_routes_share_adapters_heat_and_restartable_landing() {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
         let home = world.objects[&id].home.unwrap();
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            stompymux_rs::MovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         remove_battle_unit(&mut world, id, home).unwrap();
         let row = format!("{}0", terrain.symbol()).repeat(12) + "\n";
         reload_battle_map(
@@ -2200,13 +2182,7 @@ async fn water_jump_fixture(
     let (dir, config, mut world, id) = runtime_fixture().await;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let home = world.objects[&id].home.unwrap();
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     remove_battle_unit(&mut world, id, home).unwrap();
     let mut source = "12 12\n".to_owned();
     for y in 0..12 {
@@ -2450,7 +2426,7 @@ async fn airborne_shutdown_refusal_and_saved_descent_agree() {
     );
     assert_eq!(native.world().btech, before);
     let mut world = native.world().clone();
-    let notices = power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
+    let notices = power_down_battle_unit(&mut world, id).unwrap();
     assert!(
         notices
             .iter()
@@ -2508,7 +2484,7 @@ async fn free_fall_impact_failure_is_atomic_and_removal_cancels_descent() {
     use stompymux_rs::*;
     let (_dir, config, mut world, id) = runtime_fixture().await;
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-    power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
+    power_down_battle_unit(&mut world, id).unwrap();
     for _ in 0..2 {
         assert!(
             advance_battle_jumps(
@@ -2590,7 +2566,7 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
     ] {
         let (_dir, config, mut base, id) = runtime_fixture().await;
         launch_battle_jump(&mut base, id, ObjectId(1), 0, 1.0).unwrap();
-        power_down_battle_unit(&mut base, id, jump_rules()).unwrap();
+        power_down_battle_unit(&mut base, id).unwrap();
         let map = base.btech.constructed_units()[&id].position().unwrap().map;
         let mut world = base;
         let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -2655,7 +2631,7 @@ async fn restarted_free_fall_can_land_and_retains_its_pending_impact() {
     for roll in [2, 11] {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-        power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
+        power_down_battle_unit(&mut world, id).unwrap();
         world
             .btech
             .rewrite_unit_record(id, |record| {
@@ -2784,7 +2760,7 @@ async fn powered_off_free_fall_stabilization_counts_down_through_restart() {
         .set_unit_dice(id, Dice::seeded([1; 32]))
         .unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-    power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
+    power_down_battle_unit(&mut world, id).unwrap();
     for _ in 0..3 {
         advance_battle_jumps(
             &mut world,
@@ -2887,7 +2863,7 @@ async fn tcp_airborne_shutdown_refusal_and_free_fall_impact_save_across_restart(
         task.await.unwrap().unwrap();
         // The jump loses power offline instead, starting the descent the server resumes.
         let mut saved = persistence::load(&config.database()).await.unwrap();
-        power_down_battle_unit(&mut saved, id, jump_rules()).unwrap();
+        power_down_battle_unit(&mut saved, id).unwrap();
         persistence::save(&config.database(), &saved).await.unwrap();
         sqlx::query(sqlx::AssertSqlSafe(format!("CREATE TRIGGER reject_impact BEFORE UPDATE ON btech_units WHEN NEW.dbref={} AND json_extract(OLD.live,'$.free_fall') IS NOT NULL AND json_extract(NEW.live,'$.free_fall') IS NULL BEGIN SELECT RAISE(ABORT,'impact failure'); END",id.0))).execute(&mut sql).await.unwrap();
         let saved = persistence::load(&config.database()).await.unwrap();
@@ -3777,9 +3753,9 @@ async fn dfa_launch_rejection_and_shutdown() {
     assert_eq!(world.btech, before);
     // The pilot cannot shut down in the air (Total Warfare p. 160); losing power ends the
     // attack with the flight.
-    assert!(stop_battle_unit(&mut world, id, ObjectId(1), jump_rules()).is_err());
+    assert!(stop_battle_unit(&mut world, id, ObjectId(1)).is_err());
     assert_eq!(world.btech, before);
-    power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
+    power_down_battle_unit(&mut world, id).unwrap();
     assert!(world.btech.constructed_units()[&id].flight().is_none());
     world.validate(&config).unwrap();
 }
@@ -4101,7 +4077,7 @@ async fn character_free_fall_action_replays_and_rolls_back_casualties() {
     for fatal in [false, true] {
         let (_dir, config, mut world, id) = runtime_fixture().await;
         launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
-        power_down_battle_unit(&mut world, id, jump_rules()).unwrap();
+        power_down_battle_unit(&mut world, id).unwrap();
         let movement = MovementRules {
             fall: jump_rules(),
             ..MovementRules::STANDARD

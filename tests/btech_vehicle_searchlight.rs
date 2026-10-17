@@ -71,8 +71,7 @@ async fn shared_lamps_switch_light_units_and_terrain_and_resume_after_restart() 
             assert!(!battle_unit_illuminated(&world, target));
             assert!(!battle_hex_illuminated(&world, map, HexCoordinate { x: 0, y: 9 }).unwrap());
         }
-        let notices =
-            stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+        let notices = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         assert!(
             notices
                 .iter()

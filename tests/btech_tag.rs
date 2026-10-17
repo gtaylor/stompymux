@@ -357,8 +357,7 @@ async fn vehicle_tag_shutdown_recycles_and_inspection_exposes_state() {
             .unwrap();
         assert_eq!(selected, target.0);
         assert_eq!(scripts.world().btech, world.btech);
-        let notices =
-            stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config)).unwrap();
+        let notices = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         assert!(
             notices
                 .iter()

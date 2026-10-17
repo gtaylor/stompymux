@@ -562,13 +562,7 @@ async fn retained_altitude_over_water_drives_range_launch_and_placement_after_re
             < 1e-9
     );
     let mut placed = loaded.clone();
-    stop_battle_unit(
-        &mut placed,
-        units[0],
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut placed, units[0], ObjectId(1)).unwrap();
     assert!(
         (battle_unit_range(&placed, units[0], units[1])
             .unwrap()
@@ -637,13 +631,7 @@ async fn ice_surface_contacts_and_fire_match_native_lua_after_restart() {
     {
         let (_dir, config, mut world, map, units) = fixture(depth).await;
         let [shooter, target] = units;
-        stop_battle_unit(
-            &mut world,
-            target,
-            ObjectId(2),
-            stompymux_rs::MovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, target, ObjectId(2)).unwrap();
         place_battle_unit(&mut world, target, map, 1, 0).unwrap();
         assert!(
             !battle_unit_terrain_los(&world, shooter, target)
@@ -870,13 +858,7 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
 async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, 1, 8).await;
     for (pilot, id, y) in [(ObjectId(1), units[0], 0), (ObjectId(2), units[1], 7)] {
-        stop_battle_unit(
-            &mut world,
-            id,
-            pilot,
-            stompymux_rs::MovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, pilot).unwrap();
         place_battle_unit(&mut world, id, map, 1, y).unwrap();
     }
     // A saved prone unit retained at elevation zero has its eyes above the waterline.
@@ -914,13 +896,7 @@ async fn bridge_deck_contacts_refresh_after_collapse_and_restart() {
     for height in [0, 1, 3, 9] {
         let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Bridge, height).await;
         let [observer, target] = units;
-        stop_battle_unit(
-            &mut world,
-            target,
-            ObjectId(2),
-            stompymux_rs::MovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, target, ObjectId(2)).unwrap();
         place_battle_unit(&mut world, target, map, 1, 0).unwrap();
         let mut state = serde_json::to_value(&world.btech).unwrap();
         for (index, id) in units.into_iter().enumerate() {
@@ -1081,13 +1057,7 @@ async fn elevation_inspection_tracks_surface_collapse_flight_and_unplaced_state(
             }
             assert_elevation_inspection(&config, &world, id, Some(4));
         }
-        stop_battle_unit(
-            &mut world,
-            id,
-            ObjectId(1),
-            stompymux_rs::MovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         remove_battle_unit(&mut world, id, ObjectId(config.home())).unwrap();
         assert_elevation_inspection(&config, &world, id, None);
         assert!(battle_unit_elevation(&world, ObjectId(-1)).is_err());
@@ -1145,13 +1115,7 @@ async fn bridge_falls_choose_deck_or_lower_surface_at_the_two_level_boundary() {
 async fn bridge_deck_fire_and_standing_share_native_lua_transactions() {
     let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Bridge, 3).await;
     let [id, target] = units;
-    stop_battle_unit(
-        &mut world,
-        target,
-        ObjectId(2),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, target, ObjectId(2)).unwrap();
     place_battle_unit(&mut world, target, map, 1, 0).unwrap();
     world
         .btech
@@ -2196,13 +2160,7 @@ async fn autofall_native_lua_controls_are_atomic_and_survive_restart_and_shutdow
     .unwrap();
     assert_eq!(lua.world().btech, before);
     let mut saved = native.world().clone();
-    stop_battle_unit(
-        &mut saved,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut saved, id, ObjectId(1)).unwrap();
     assert!(saved.btech.constructed_units()[&id].auto_fall());
     assign_battle_pilot(&mut saved, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut saved, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -4765,7 +4723,7 @@ async fn strong_wind_fire_replays_new_ignition_and_retains_scheduled_delay() {
 #[tokio::test]
 async fn smoke_over_water_preserves_altitude_cooling_los_range_and_flooding() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, 3, 3).await;
-    let _shutdown = stop_battle_unit(&mut world, units[1], ObjectId(2), rules()).unwrap();
+    let _shutdown = stop_battle_unit(&mut world, units[1], ObjectId(2)).unwrap();
     place_battle_unit(&mut world, units[1], map, 1, 0).unwrap();
     let id = units[0];
     let range = battle_unit_range(&world, id, units[1]).unwrap();
@@ -5106,7 +5064,7 @@ async fn building_integrity_configuration_persistence_and_rejection() {
     );
     for id in units {
         let pilot = world.btech.constructed_units()[&id].pilot().unwrap();
-        stop_battle_unit(&mut world, id, pilot, MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world, id, pilot).unwrap();
         remove_battle_unit(&mut world, id, ObjectId(config.home())).unwrap();
     }
     reload_battle_map(
@@ -7013,7 +6971,7 @@ async fn artillery_flight_in_progress_leaves_its_row_unchanged() {
         use sqlx::Connection;
         let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
         for (unit, pilot) in units.into_iter().zip([ObjectId(1), ObjectId(2)]) {
-            stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
+            stop_battle_unit(&mut world, unit, pilot).unwrap();
         }
         let center = HexCoordinate { x: 1, y: 1 };
         enqueue_artillery(&mut world, map, units[0], ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap()).unwrap();
@@ -7040,7 +6998,7 @@ async fn artillery_queue_server_save_failure_and_retry() {
         use sqlx::Connection;
         let (_dir, config, mut world, map, units) = fixture_field(Terrain::Clear, 0, 3).await;
         for (unit, pilot) in units.into_iter().zip([ObjectId(1), ObjectId(2)]) {
-                let _notices = stop_battle_unit(&mut world, unit, pilot, rules()).unwrap();
+                let _notices = stop_battle_unit(&mut world, unit, pilot).unwrap();
                 assert_eq!(world.btech.constructed_units()[&unit].power(), Power::Off);
             }
             let center = HexCoordinate { x: 1, y: 1 };

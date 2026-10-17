@@ -151,7 +151,7 @@ async fn shutdown_cancels_changes_preserves_completed_posture_and_falls_clear_it
                 advance_battle_units(&mut world, 0, true);
             }
         }
-        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         let state = world.btech.constructed_units()[&id].hull_down();
         assert_eq!(
             state,
@@ -360,7 +360,7 @@ async fn pickup_clears_completed_quad_cover() {
     let (_dir, config, mut world, id, carrier) =
         fixture(QUAD, include_str!("fixtures/btech/units/AS7-D.toml")).await;
     lower(&mut world, id);
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     let position = world.btech.constructed_units()[&id].position().unwrap();
     place_battle_unit(
         &mut world,
@@ -387,14 +387,7 @@ async fn pickup_clears_completed_quad_cover() {
     let before = world.btech.clone();
     assert!(set_battle_tow(&mut world, carrier, Some(id)).is_err());
     assert_eq!(world.btech, before);
-    let _ = prepare_battle_pickup(
-        &mut world,
-        carrier,
-        ObjectId(1),
-        id,
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    let _ = prepare_battle_pickup(&mut world, carrier, ObjectId(1), id).unwrap();
     assert_eq!(
         world.btech.constructed_units()[&id].hull_down(),
         HullDownState::default()

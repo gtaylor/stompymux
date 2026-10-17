@@ -134,7 +134,7 @@ async fn vehicle_control_uses_configured_skills_cockpit_and_saved_dice() {
 async fn stopped_unconscious_and_unavailable_vehicle_checks_do_not_consume_dice() {
     let (_dir, _config, world, id) = fixture().await;
     let mut stopped = world.clone();
-    stop_battle_unit(&mut stopped, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut stopped, id, ObjectId(1)).unwrap();
     let before = stopped.btech.clone();
     let check = roll_battle_piloting(&mut stopped, id, -100, true).unwrap();
     assert!(!check.success && check.roll.is_none());

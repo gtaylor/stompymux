@@ -240,7 +240,7 @@ async fn driving_penalties_apply_once_per_tier_and_an_immobilized_hovercraft_sin
         MapAsset::from_cells("1 1\n~1\n").unwrap(),
     )
     .unwrap();
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     place_battle_unit(&mut world, id, deep, 0, 0).unwrap();
     set_seed(
         &mut world,

@@ -197,7 +197,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, f64, u16)]) {
                 set_battle_ams(&mut world, target, ObjectId(2), false).unwrap();
             }
             if case == "shutdown" {
-                stop_battle_unit(&mut world, target, ObjectId(2), fall_rules()).unwrap();
+                stop_battle_unit(&mut world, target, ObjectId(2)).unwrap();
             }
             if case == "destroyed" {
                 destroy_battle_critical(
@@ -1206,7 +1206,7 @@ async fn electronics_modes_fields_damage_and_restart() {
                     .unwrap();
                 }
                 _ => {
-                    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
                 }
             }
             assert!(
@@ -2510,7 +2510,7 @@ async fn stealth_switch_effects_damage_and_restart() {
             world.btech
         );
         if case == "interrupted" {
-            stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
             assert!(advance_battle_stealth(&mut world).is_empty());
             assert_eq!(
                 world.btech.constructed_units()[&id].stealth(),
@@ -2548,7 +2548,7 @@ async fn stealth_switch_effects_damage_and_restart() {
                 .unwrap();
             }
             _ => {
-                stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
             }
         }
         assert!(!world.btech.constructed_units()[&id].stealth().enabled);
@@ -2842,7 +2842,7 @@ async fn nss_switch_damage_accounting_and_restart() {
                 .unwrap();
             }
             _ => {
-                stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
             }
         }
         assert!(
@@ -3273,7 +3273,7 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
                 .unwrap();
             }
             "shutdown" => {
-                let notices = stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                let notices = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
                 assert!(
                     notices
                         .iter()
@@ -4566,14 +4566,14 @@ async fn hex_target_selection_lifecycle_and_validation() {
     let mut moved = world.clone();
     place_battle_unit(&mut moved, target, map, 7, 7).unwrap();
     assert!(moved.btech.constructed_units()[&id].hex_lock().is_some());
-    stop_battle_unit(&mut moved, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut moved, id, ObjectId(1)).unwrap();
     place_battle_unit(&mut moved, id, map, 6, 6).unwrap();
     assert!(
         moved.btech.constructed_units()[&id]
             .target_selection()
             .is_none()
     );
-    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert!(
         world.btech.constructed_units()[&id]
             .target_selection()

@@ -148,7 +148,7 @@ async fn vehicle_feed_clearing_admission_lua_rollback_and_silent_expiry() {
             saved["vehicles"][id.0.to_string()]["ammunition"] = serde_json::json!([0, 0, 0, 0]);
             world.btech = serde_json::from_value(saved.clone()).unwrap();
         } else if condition == "off" {
-            stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         } else {
             let location = world.btech.vehicles()[&id].loadout().unwrap().weapons[0].criticals[0];
             destroy_battle_vehicle_critical(&mut world, id, location).unwrap();

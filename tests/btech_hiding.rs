@@ -320,7 +320,7 @@ async fn hiding_damage_and_shutdown_distinguish_cover_from_preparation() {
             );
             test.validate(&config).unwrap();
         }
-        stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config)).unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         assert_eq!(hiding(&world, id), (None, true));
         world.validate(&config).unwrap();
     }
@@ -753,13 +753,7 @@ async fn weapons_hold_controls_admission_cover_and_saved_state() {
             .unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, held);
-        stop_battle_unit(
-            &mut restored,
-            id,
-            ObjectId(1),
-            FallRules::configured(&config),
-        )
-        .unwrap();
+        stop_battle_unit(&mut restored, id, ObjectId(1)).unwrap();
         assert!(weapons_hold(&restored, id).unwrap());
         set_battle_weapons_hold(&mut restored, id, false).unwrap();
         assert!(!weapons_hold(&restored, id).unwrap());
@@ -831,13 +825,7 @@ async fn weapons_hold_authority_and_rejected_edits_are_atomic() {
             assert!(!text.contains("Currently in weapons hold."), "{text}");
             assert_eq!(scripts.world().btech, held);
         }
-        stop_battle_unit(
-            &mut scripts.world_mut(),
-            id,
-            ObjectId(1),
-            FallRules::configured(&config),
-        )
-        .unwrap();
+        stop_battle_unit(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
         assign_battle_pilot(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
         support::seed_object_dice(
             &mut scripts.world_mut(),

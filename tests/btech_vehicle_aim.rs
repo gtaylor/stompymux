@@ -150,7 +150,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
         0
     );
     world = moving;
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    power_down_battle_unit(&mut world, id).unwrap();
     assert_eq!(
         battle_unit_target_movement_modifier(&world, id, 10.0).unwrap(),
         -4

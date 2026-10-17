@@ -75,7 +75,7 @@ async fn vehicle_cycles_reserve_ammunition_replay_and_pause_when_shutdown() {
             .ready
     );
     let _cycle = reserve_battle_vehicle_weapon(&mut world, id, ObjectId(1), 0, true).unwrap();
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     let checkpoint = world.btech.clone();
     assert!(advance_battle_recycle(&mut world).is_empty());
     assert_eq!(world.btech, checkpoint);

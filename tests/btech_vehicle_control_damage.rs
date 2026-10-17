@@ -225,7 +225,7 @@ async fn crew_stun_limits_controls_restarts_and_recovers_after_shutdown() {
         world.btech.vehicles()[&id].motion().unwrap().desired_speed,
         -cruise
     );
-    stop_battle_unit(&mut world, id, pilot, MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, pilot).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     let mut recovery_notices = Vec::new();
@@ -250,7 +250,7 @@ async fn powered_off_crew_recovery_retries_failed_server_ticks() {
     tokio::task::LocalSet::new().run_until(async {
         let (_dir,config,mut world,id)=fixture(include_str!("../game/units/Demolisher.toml")).await;
         damage_battle_vehicle_controls(&mut world,id,VehicleControlHit::CrewStun).unwrap();
-        stop_battle_unit(&mut world,id,ObjectId(1),MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world,id,ObjectId(1)).unwrap();
         for _ in 0..28 {advance_battle_units(&mut world, 0, true);}
         persistence::save(&config.database(),&world).await.unwrap();
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();

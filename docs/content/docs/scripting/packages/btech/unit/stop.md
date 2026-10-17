@@ -5,7 +5,7 @@ linkTitle: "stop"
 manualLinkTitle: "stop"
 ---
 
-Abort startup or shut down the assigned pilot's unit, releasing the cockpit. A Mech must be stopped on the ground; it is refused while moving or in the air.
+Abort startup or shut down the assigned pilot's unit, releasing the cockpit. A Mech or vehicle must be stopped on the ground; it is refused while moving or in the air.
 
 ## Signature
 

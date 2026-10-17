@@ -88,13 +88,47 @@ pub(super) fn start_by_actor(
     })
 }
 
-/// Abort startup or shut down, releasing the cockpit assignment.
-pub(super) fn stop_admitted(
-    world: &mut World,
-    id: ObjectId,
-    mut rules: super::FallRules,
-    effects: Option<&mut super::shutdown::ShutdownEffects>,
-) -> Result<Vec<Notice>> {
+/// Whether a mobile vehicle is held above the surface that would support it: a flying or
+/// falling VTOL, a ground vehicle left unsupported, or one dropping from orbit. Hovercraft and
+/// amphibious vehicles are supported by the water they float on.
+fn above_support(unit: &super::Vehicle, tile: super::Hex) -> bool {
+    unit.definition().movement != super::VehicleMovement::Stationary
+        && unit.elevation_level(tile) > unit.terrain_elevation(tile, unit.under_bridge())
+}
+
+/// Whether a vehicle is in the air: above the surface that would support it, or dropping from
+/// orbit.
+fn in_the_air(unit: &super::Vehicle, tile: super::Hex) -> bool {
+    unit.orbital_drop().is_some() || above_support(unit, tile)
+}
+
+/// A pilot's own shutdown waits until the vehicle has stopped on the ground, as a 'Mech's
+/// does (Total Warfare p. 160): a VTOL must land first and a moving vehicle must come to a
+/// stop. Neither refusal changes anything; an administrative shutdown is not held back.
+pub(super) fn check_shutdown_ready(world: &World, id: ObjectId) -> Result<()> {
+    let Some(unit) = world.btech.vehicles().get(&id) else {
+        return Ok(());
+    };
+    if unit.power() == Power::Off {
+        return Ok(());
+    }
+    let position = unit.position().context("Vehicle is not placed")?;
+    let tile =
+        world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
+    ensure!(
+        !in_the_air(unit, tile),
+        "You must land before you can shut down."
+    );
+    ensure!(
+        unit.motion().is_none_or(|motion| motion.speed == 0.0),
+        "You must come to a stop before you can shut down."
+    );
+    Ok(())
+}
+
+/// Abort startup or shut down, releasing the cockpit assignment. A moving vehicle simply
+/// stops; one an administrative shutdown catches in the air starts an unpowered descent.
+pub(super) fn stop_admitted(world: &mut World, id: ObjectId) -> Result<Vec<Notice>> {
     let unit = &world.btech.vehicles()[&id];
     ensure!(
         unit.power() != Power::Off,
@@ -104,14 +138,7 @@ pub(super) fn stop_admitted(
     let position = unit.position().context("Vehicle is not placed")?;
     let tile =
         world.btech.maps()[&position.map].base_hex(i64::from(position.x), i64::from(position.y))?;
-    let altitude = unit.elevation_level(tile);
-    let airborne = unit.definition().movement != super::VehicleMovement::Stationary
-        && altitude > i32::from(tile.standing_height())
-        && altitude < 300;
-    let moving = unit.motion().is_some_and(|motion| motion.speed > 10.75);
-    rules.toughness |= unit
-        .pilot()
-        .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
+    let airborne = above_support(unit, tile) && unit.elevation_level(tile) < 300;
     let mut candidate = world.clone();
     let mut notices = vec![Notice {
         unit: id,
@@ -134,36 +161,6 @@ pub(super) fn stop_admitted(
             unit: id,
             text: "You start free-fall.. Enjoy the ride!".into(),
         });
-    } else if !starting && moving {
-        notices.push(Notice {
-            unit: id,
-            text: "Your systems stop in mid-motion!".into(),
-        });
-        notices.push(Notice {
-            unit: id,
-            text: "You tumble end over end and come to a crashing halt!".into(),
-        });
-        notices.extend(super::broadcast::observer_notices(
-            &candidate,
-            id,
-            "tumbles end over end and comes to a crashing halt!",
-        ));
-        let fall = super::vehicle_fall::resolve_in_candidate(
-            &mut candidate,
-            id,
-            1,
-            rules,
-            effects.is_some(),
-        )?;
-        notices.extend(fall.feedback.notices.iter().cloned());
-        if let Some(effects) = effects {
-            super::piloting::append_feedback(
-                &mut effects.pilot_notices,
-                fall.feedback.pilot_notices.iter().cloned(),
-                notices.len() - fall.feedback.notices.len(),
-            );
-            effects.vehicle_falls.push(fall);
-        }
     }
     let unit = candidate.btech.vehicles.get_mut(&id).unwrap();
     if unit.searchlight.on {

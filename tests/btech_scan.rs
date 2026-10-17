@@ -1433,13 +1433,7 @@ async fn long_range_stacked_markers_share_native_lua_and_restart_order() {
         (true, true, false, 'b'),
     ] {
         let (_dir, config, mut world, map, source, target) = fixture().await;
-        stop_battle_unit(
-            &mut world,
-            source,
-            ObjectId(1),
-            MovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut world, source, ObjectId(1)).unwrap();
         place_battle_unit(&mut world, source, map, 1, 20).unwrap();
         assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -4052,13 +4046,7 @@ async fn probe_contacts_through_terrain_hide_identity_and_friendly_categories() 
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    let _ = stop_battle_unit(
-        &mut world,
-        source,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    let _ = stop_battle_unit(&mut world, source, ObjectId(1)).unwrap();
     place_battle_unit(&mut world, source, map, 1, 1).unwrap();
     assign_battle_pilot(&mut world, source, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -5793,13 +5781,7 @@ async fn ammunition_dump_controls_timers_and_restart_share_native_lua_state() {
 #[tokio::test]
 async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels() {
     let (_dir, config, mut world, map, source, _) = fixture().await;
-    stop_battle_unit(
-        &mut world,
-        source,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, source, ObjectId(1)).unwrap();
     let id = world.create(&config, "Dumping Atlas".into(), Kind::Thing);
     world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     create_battle_unit(
@@ -5849,7 +5831,7 @@ async fn ammunition_dump_low_capacity_bins_preserve_cadence_and_shutdown_cancels
     assert!(world.btech.constructed_units()[&id].dumping().is_none());
     begin_battle_dump(&mut world, id, ObjectId(1), "all").unwrap();
     let before = world.btech.constructed_units()[&id].ammunition().to_vec();
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert!(advance_battle_dumping(&mut world).unwrap().is_empty());
     assert!(world.btech.constructed_units()[&id].dumping().is_none());
     assert_eq!(world.btech.constructed_units()[&id].ammunition(), before);

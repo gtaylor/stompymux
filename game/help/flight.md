@@ -47,5 +47,6 @@ driving roll to land on clear, paved or rough ground or a building (p. 197).
 
 Use `land` near a suitable surface (open ground or a building roof, clear of fire and
 smoke), with low horizontal speed and a gentle descent. Landing requires working lift,
-and fuel for an internal combustion VTOL. Landing activates applicable mines. Shutting
-down in flight starts a fall; it does not perform a controlled landing.
+and fuel for an internal combustion VTOL. Landing activates applicable mines. You
+cannot `shutdown` in flight: land first ("You must land before you can shut down.").
+Only an administrative shutdown can cut a flying VTOL's power, and then it falls.

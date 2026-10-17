@@ -106,7 +106,7 @@ async fn switches_resume_after_restart_and_commands_rollback() {
             .contains("full power")
     );
     toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
-    stop_battle_unit(&mut world, lamp, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, lamp, ObjectId(1)).unwrap();
     for _ in 0..5 {
         assert!(advance_battle_searchlights(&mut world).is_empty());
     }
@@ -566,7 +566,7 @@ async fn automatic_lamps_follow_map_light_changes_and_transfers() {
     assert!(lamp_state(&world, lamp).on);
 
     // Shutdown extinguishes the lamp; completing startup relights it.
-    stop_battle_unit(&mut world, lamp, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, lamp, ObjectId(1)).unwrap();
     assert!(!lamp_state(&world, lamp).on);
     assign_battle_pilot(&mut world, lamp, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);

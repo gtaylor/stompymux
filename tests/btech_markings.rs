@@ -165,13 +165,7 @@ async fn markings_recheck_visibility_and_running_admission_without_side_effects(
             .to_string(),
         "You do not have a default target set!"
     );
-    stop_battle_unit(
-        &mut world,
-        observer,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, observer, ObjectId(1)).unwrap();
     assert!(view_battle_unit_markings(&world, observer, ObjectId(1), Some(target)).is_err());
     world.validate(&config).unwrap();
 }

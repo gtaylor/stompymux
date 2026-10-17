@@ -1822,7 +1822,7 @@ async fn club_carry_lifecycle_and_guards() {
             .is_none()
     );
     world = base;
-    let notices = stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+    let notices = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert!(
         notices
             .iter()
@@ -2462,7 +2462,7 @@ async fn charge_tracking_timeout_and_distance() {
         .btech
         .edit_unit_motion(id, |motion| motion.speed = 0.0)
         .unwrap();
-    stop_battle_unit(&mut stopped, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut stopped, id, ObjectId(1)).unwrap();
     assert_eq!(
         stopped.btech.constructed_units()[&id].charge(),
         ChargeState {
@@ -7376,7 +7376,7 @@ async fn movement_experience_cadence_and_restart() {
         let source = format!("12 60\n{}", format!("{}\n", ".0".repeat(12)).repeat(60));
         let (_dir, config, mut world, id) = fixture_source(&source).await;
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
-        let _ = stop_battle_unit(&mut world, id, ObjectId(1), RULES.fall).unwrap();
+        let _ = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         place_battle_unit(&mut world, id, map, 5, 45).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);

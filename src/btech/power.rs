@@ -152,25 +152,20 @@ fn start_unit_by_actor(
 }
 
 /// Abort startup or shut down a running unit, releasing the pilot as part of power-down. A
-/// Mech must be stopped on the ground first.
-pub fn stop_unit(
-    world: &mut World,
-    id: ObjectId,
-    pilot: ObjectId,
-    rules: super::FallRules,
-) -> Result<Vec<Notice>> {
+/// Mech or vehicle must be stopped on the ground first.
+pub fn stop_unit(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Vec<Notice>> {
     check_shutdown_control(world, id, pilot)?;
-    power_down_unit(world, id, rules)
+    power_down_unit(world, id)
 }
 
 /// Shared cockpit authority for the pilot's own shutdown, by command, Lua or the mechanical
 /// entry point. A Mech shuts down voluntarily in the End Phase, after movement and with no
 /// piloting roll (Total Warfare p. 160), so the pilot must bring it to a stop on the ground
-/// first; a Mech that is moving or in the air keeps running.
+/// first; a Mech that is moving or in the air keeps running. Vehicles follow the same rule.
 pub(super) fn check_shutdown_control(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
     controlled(world, id, pilot)?;
     let Some(unit) = world.btech.constructed_units().get(&id) else {
-        return Ok(());
+        return super::vehicle_power::check_shutdown_ready(world, id);
     };
     if unit.power == Power::Off {
         return Ok(());
@@ -185,37 +180,19 @@ pub(super) fn check_shutdown_control(world: &World, id: ObjectId, pilot: ObjectI
 
 /// Cut a unit's power once the caller has established authority over it, or
 /// administratively, as clearing a map or a carrier's pickup does: no cockpit authority and
-/// no stopped requirement. A moving Mech simply stops, and one caught in the air starts an
-/// unpowered descent. A pilot's own shutdown waits for the ground (see [`stop_unit`]).
-pub fn power_down_unit(
-    world: &mut World,
-    id: ObjectId,
-    rules: super::FallRules,
-) -> Result<Vec<Notice>> {
-    stop_inner(world, id, rules, None)
+/// no stopped requirement. A moving Mech or vehicle simply stops, and one caught in the air
+/// starts an unpowered descent. A pilot's own shutdown waits for the ground (see
+/// [`stop_unit`]).
+pub fn power_down_unit(world: &mut World, id: ObjectId) -> Result<Vec<Notice>> {
+    stop_inner(world, id)
 }
 
-/// Shutdown admitted by an enclosing host action that owns secondary consequences.
-pub(super) fn stop_admitted_in_action(
-    world: &mut World,
-    id: ObjectId,
-    rules: super::FallRules,
-    effects: &mut super::shutdown::ShutdownEffects,
-) -> Result<Vec<Notice>> {
-    stop_inner(world, id, rules, Some(effects))
-}
-
-/// One shutdown transition for both mechanical callers and character-capable host actions.
-/// A Mech stops where it stands without a roll; only an administrative shutdown, such as
-/// clearing a map, can still catch one in the air, and then it falls.
-fn stop_inner(
-    world: &mut World,
-    id: ObjectId,
-    rules: super::FallRules,
-    effects: Option<&mut super::shutdown::ShutdownEffects>,
-) -> Result<Vec<Notice>> {
+/// One shutdown transition for every caller. A Mech stops where it stands without a roll;
+/// only an administrative shutdown, such as clearing a map, can still catch one in the air,
+/// and then it falls.
+fn stop_inner(world: &mut World, id: ObjectId) -> Result<Vec<Notice>> {
     if world.btech.vehicles().contains_key(&id) {
-        return super::vehicle_power::stop_admitted(world, id, rules, effects);
+        return super::vehicle_power::stop_admitted(world, id);
     }
     let unit = world
         .btech

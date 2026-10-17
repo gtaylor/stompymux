@@ -73,13 +73,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
     assert_eq!(world.btech.vehicles()[&id].power(), Power::Running);
     assert!(advance_battle_units(&mut world, 0, true).is_empty());
     assert!(remove_battle_unit(&mut world, id, ObjectId(config.start())).is_err());
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert_eq!(world.btech.vehicles()[&id].power(), Power::Off);
     assert_eq!(world.btech.vehicles()[&id].pilot(), None);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -184,6 +178,12 @@ async fn server_tick_retries_failed_countdowns_without_publishing_completion() {
         client.send("speed 10.75").await;
         client.until("Desired speed changed to 10 KPH.").await;
         heartbeats.until_saved(&config, 20, |saved| saved.btech.vehicles()[&id].motion().unwrap().point != before_point).await;
+        // A moving vehicle must stop before its pilot can shut it down.
+        client.send("shutdown").await;
+        client.until("You must come to a stop before you can shut down.").await;
+        client.send("speed 0").await;
+        client.until("Desired speed changed to 0 KPH.").await;
+        heartbeats.until_saved(&config, 20, |saved| saved.btech.vehicles()[&id].motion().unwrap().speed == 0.0).await;
         client.send("shutdown").await;
         client.until("All systems shut down.").await;
         let loaded=persistence::load(&config.database()).await.unwrap();
