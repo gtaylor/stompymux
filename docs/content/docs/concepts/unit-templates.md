@@ -197,11 +197,15 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   Sphere only, needs an ECM suite and generates 10 heat that the heat sinks must
   cover besides the energy weapons (TacOps AUE pp. 92-93).
 - Heat sinks are single, at a ton each beyond the ten a fusion engine carries
-  free, and must cover the heat of every energy weapon firing at once.
+  free, and must cover the heat of every energy weapon firing at once, laser
+  anti-missile systems included and vehicle flamers excepted (TechManual pp.
+  104, 218; TacOps AUE p. 131). An `ice` engine mounts vehicle flamers, never
+  standard flamers (TechManual p. 218); the same holds for an `ice` mech.
 - Armor may not exceed 3.5 points per ton plus 40, and a rotor carries at most
   2 points. Locations have a single armor value, so `rear` is refused.
 - The vehicle has 5 item slots plus 1 per 5 tons, less 2 for an Inner Sphere XL
-  engine (1 for Clan XL or light), 2 for Inner Sphere ferro-fibrous armor (1
+  engine (1 for Clan XL or light), 4 for an Inner Sphere XXL engine (2 for Clan
+  XXL; TacOps AUE p. 120), 2 for Inner Sphere ferro-fibrous armor (1
   for Clan or light, 3 for heavy), 1 for hardened or laser-reflective armor, 2
   for stealth armor, and plus 1 for a compact engine (TacOps AUE p. 92 for the
   advanced armors). Each weapon
@@ -221,8 +225,9 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   which a vehicle states in its template), no CASE II or null-signature system,
   and none of the Mech melee weapons (hatchet, sword, retractable blade, claws,
   flail, lance, mace, chain whip, vibroblades, talons, spikes). A ground vehicle
-  mounts one dual saw in each of its front, rear and turret and a wrecking ball
-  in its turret; a VTOL mounts neither (TechManual pp. 243, 249; TacOps AUE pp.
+  mounts one dual saw in each of its front, rear and turret, each a single
+  7-ton item, and a wrecking ball in its turret; a VTOL mounts neither
+  (TechManual pp. 243, 249, 344; TacOps AUE pp.
   100-104, 111, 148). Inner Sphere CASE takes an item slot; Clan CASE, built
   into Clan structure, takes none (TechManual p. 210).
 - Everything together may not weigh more than the vehicle. Unspent tonnage is

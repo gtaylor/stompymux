@@ -627,7 +627,8 @@ impl MechTemplate {
 
     /// Artemis IV or V serves every applicable launcher or none, each linked to the launcher it
     /// guides in its own location (TM p. 206), as the MRM Apollo system serves every MRM
-    /// launcher (Tactical Operations: Advanced Units & Equipment p. 142); CASE goes in torsos (TM p. 210); rear-firing weapons sit in
+    /// launcher (Tactical Operations: Advanced Units & Equipment p. 142); CASE goes in torsos (TM p. 210); an
+    /// internal combustion Mech mounts no standard flamer (TM p. 218); rear-firing weapons sit in
     /// torsos, legs or the head (TM p. 46); a heavy Gauss rifle sits in the torsos, splitting
     /// only between a side and the center torso (TM p. 218); and only ranged weapons of eight
     /// or more slots split, across two adjacent locations other than the legs (TM p. 47).
@@ -1041,6 +1042,24 @@ mod tests {
                 1,
             ),
             "Inner Sphere CASE may only be mounted in torso locations",
+        );
+    }
+
+    /// Only fusion and fission units mount standard flamers (TM p. 218).
+    #[test]
+    fn combustion_mechs_mount_no_standard_flamers() {
+        let flamer = JENNER.replacen(
+            "{ at = \"3-4\", item = \"IS.MediumLaser\" }",
+            "{ at = 3, item = \"IS.Flamer\" }",
+            1,
+        );
+        let combustion =
+            flamer.replacen("[construction]\n", "[construction]\nengine = \"ice\"\n", 1);
+        refused(&combustion, "IS.Flamer needs a fusion engine");
+        assert!(
+            !rejection(&flamer)
+                .unwrap_or_default()
+                .contains("fusion engine")
         );
     }
 

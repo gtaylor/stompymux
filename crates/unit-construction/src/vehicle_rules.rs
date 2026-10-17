@@ -116,7 +116,9 @@ pub fn vehicle_refusal(system: System) -> Option<&'static str> {
 impl VehicleTemplate {
     /// Item slots the chassis offers: 5 plus 1 per 5 full tons (TechManual p. 98), less the
     /// slots an XL or light engine claims and plus the one a compact engine frees (TechManual
-    /// p. 101, Combat Vehicle Engine Space Table), less the slots ferro-fibrous armor claims
+    /// p. 101, Combat Vehicle Engine Space Table), less the 4 an Inner Sphere or 2 a Clan XXL
+    /// engine claims (Tactical Operations: Advanced Units & Equipment p. 120, Advanced Engine
+    /// Master Table), less the slots ferro-fibrous armor claims
     /// (TechManual p. 105, Combat Vehicle Armor Table) and the slots the advanced armors claim
     /// in the CV column of the Advanced Armor Table: 1 for hardened and for Inner Sphere or Clan
     /// laser-reflective armor, 2 for vehicular stealth armor (Tactical Operations: Advanced
@@ -126,6 +128,8 @@ impl VehicleTemplate {
         let engine = match self.engine_family() {
             Some(Engine::Xl) if self.clan_engine() => -1,
             Some(Engine::Xl) => -2,
+            Some(Engine::Xxl) if self.clan_engine() => -2,
+            Some(Engine::Xxl) => -4,
             Some(Engine::Light) => -1,
             Some(Engine::Compact) => 1,
             _ => 0,
@@ -188,9 +192,12 @@ impl VehicleTemplate {
 
     /// Whether a weapon's heat needs heat sinks on a combat vehicle: every energy weapon but
     /// the vehicle flamer, which burns chemical fuel and needs none, though it counts as an
-    /// energy weapon in play (TechManual pp. 104, 218).
+    /// energy weapon in play (TechManual pp. 104, 218), and the laser anti-missile system,
+    /// which counts as an energy weapon for a unit without a heat scale (Tactical
+    /// Operations: Advanced Units & Equipment p. 131).
     pub fn needs_heat_sinks(weapon: Weapon) -> bool {
-        weapon.is_energy() && weapon != Weapon::VehicleFlamer
+        (weapon.is_energy() && weapon != Weapon::VehicleFlamer)
+            || matches!(weapon, Weapon::LaserAms | Weapon::ClanLaserAms)
     }
 
     /// The fusion engine family, or `None` for an internal combustion engine.
@@ -454,6 +461,17 @@ impl VehicleTemplate {
             computers <= 1,
             "A combat vehicle mounts one targeting computer, a single item sized by its direct-fire weapons; found {computers} entries (TechManual p. 238)"
         );
+        // Only fusion and fission units mount standard flamers; a combustion engine takes
+        // vehicle flamers (TechManual p. 218).
+        if self.engine()?.powerplant == VehiclePowerplant::Combustion {
+            for mount in &loadout.weapons {
+                ensure!(
+                    !matches!(mount.weapon, Weapon::Flamer | Weapon::ClanFlamer),
+                    "{} needs a fusion engine; an internal combustion vehicle mounts vehicle flamers instead (TechManual p. 218)",
+                    mount.weapon.name()
+                );
+            }
+        }
         let vtol = self.is_vtol();
         let mut dual_saws = Vec::new();
         for part in &loadout.systems {
@@ -815,7 +833,8 @@ slots = [
         assert!(rejection(&crowded).contains("12 items exceed the 11 item slots"));
     }
 
-    /// Ferro-fibrous armor and XL engines claim item slots; a compact engine frees one.
+    /// Ferro-fibrous armor and XL and XXL engines claim item slots; a compact engine frees one
+    /// (TechManual pp. 101, 105; Tactical Operations: Advanced Units & Equipment p. 120).
     #[test]
     fn item_slots_follow_engine_and_armor_choices() {
         let jacket = parse(YELLOW_JACKET);
@@ -825,6 +844,8 @@ slots = [
             ("Clan XLEngine_Tech", 10),
             ("LightEngine_Tech", 10),
             ("CompactEngine_Tech", 12),
+            ("XXL_Tech", 7),
+            ("Clan XXL_Tech", 9),
             ("ICEEngine_Tech FerroFibrous_Tech", 9),
             ("Clan ICEEngine_Tech FerroFibrous_Tech", 10),
             ("ICEEngine_Tech LtFerroFibrous_Tech", 10),
@@ -1162,6 +1183,32 @@ slots = [
             assert!(VehicleTemplate::needs_heat_sinks(weapon), "{weapon:?}");
         }
         assert!(!VehicleTemplate::needs_heat_sinks(Weapon::GaussRifle));
+        // A laser anti-missile system counts as an energy weapon for the heat sinks (Tactical
+        // Operations: Advanced Units & Equipment p. 131).
+        for weapon in [Weapon::LaserAms, Weapon::ClanLaserAms] {
+            assert!(VehicleTemplate::needs_heat_sinks(weapon), "{weapon:?}");
+        }
+        let laser_ams = YELLOW_JACKET.replace(
+            "{ at = 1, item = \"IS.GaussRifle\" },\n    { at = \"2-3\", item = \"Ammo_IS.GaussRifle\", rounds = 8 },",
+            "{ at = 1, item = \"IS.LaserAMS\" },",
+        );
+        let template = parse(&laser_ams);
+        let loadout = VehicleLoadout::resolve(&template).unwrap();
+        assert_eq!(VehicleTemplate::energy_heat(&loadout), 7);
+        assert!(rejection(&template).contains("heat sinks cannot vent the 7 heat"));
+        // A combustion engine mounts vehicle flamers, never standard ones (TechManual p. 218).
+        let standard = flamer
+            .replace("IS.VehicleFlamer\" }", "IS.Flamer\" }")
+            .replace(
+                "{ at = 2, item = \"Ammo_IS.VehicleFlamer\", rounds = 20 },",
+                "",
+            );
+        assert!(
+            rejection(&parse(&standard))
+                .contains("IS.Flamer needs a fusion engine; an internal combustion vehicle mounts vehicle flamers instead"),
+            "{}",
+            rejection(&parse(&standard))
+        );
         // The heavy flamer is a vehicle weapon too, and its heat needs sinks.
         let heavy = flamer
             .replace("IS.VehicleFlamer\" }", "IS.HeavyFlamer\" }")
@@ -1170,6 +1217,19 @@ slots = [
                 "Ammo_IS.HeavyFlamer\", rounds = 10",
             );
         assert!(rejection(&parse(&heavy)).contains("heat sinks cannot vent"));
+    }
+
+    /// A dual saw is one item weighing its full seven tons on a vehicle (TechManual p. 344).
+    #[test]
+    fn a_vehicle_dual_saw_weighs_seven_tons() {
+        let bare = parse(ZHUKOV).mass().unwrap().equipment;
+        let saw = with_rear(ZHUKOV, r#"{ at = 1, item = "Dual_Saw" }"#);
+        assert_eq!(saw.mass().unwrap().equipment, bare + 7 * 1024);
+        let loadout = VehicleLoadout::resolve(&saw).unwrap();
+        assert_eq!(
+            saw.item_slots(&loadout),
+            parse(ZHUKOV).item_slots(&VehicleLoadout::resolve(&parse(ZHUKOV)).unwrap()) + 1
+        );
     }
 
     /// A vehicle mounts its own technology base's weapons unless it declares mixed

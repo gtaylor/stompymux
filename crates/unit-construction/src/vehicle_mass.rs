@@ -276,10 +276,11 @@ impl VehicleTemplate {
             System::Axe
             | System::Claw
             | System::Mace
-            | System::DualSaw
             | System::Masc
             | System::C3Slave
             | System::Tag => 1024,
+            // A dual saw is one 7-ton item on a vehicle (TechManual p. 344: WT 7, CV 1).
+            System::DualSaw => 7168,
             System::C3i => 2560,
             System::AngelEcm | System::BloodhoundProbe => 2048,
             System::C3Master => 5120,
