@@ -186,11 +186,12 @@ fn through_armor_criticals_are_unconditional_on_a_roll_of_two_without_dice() {
         }
     }
     assert_eq!(dice, before);
-    // A roll of 12 is a head hit in every direction; rear head hits are not rear armor.
+    // A roll of 12 is a head hit in every direction; a rear head hit still records its arc,
+    // though the head has only front armor to take it on.
     for arc in [Arc::Front, Arc::Rear, Arc::Left, Arc::Right] {
         let hit = resolve_battle_hit(&unit(10), arc, 12, &mut dice).unwrap();
         assert_eq!(hit.section, Section::Head);
-        assert!(!hit.rear_armor);
+        assert_eq!(hit.rear_armor, arc == Arc::Rear);
         assert!(!hit.through_armor_critical);
     }
     assert_eq!(dice, before);
@@ -269,7 +270,7 @@ fn quad_head_hits_follow_chassis_and_preserve_dice_replay() {
                 serde_json::from_value(serde_json::to_value(&dice).unwrap()).unwrap();
             let hit = resolve_battle_hit(&target, arc, 12, &mut dice).unwrap();
             assert_eq!(hit.section, Section::Head);
-            assert!(!hit.rear_armor);
+            assert_eq!(hit.rear_armor, arc == Arc::Rear);
             assert!(!hit.through_armor_critical);
             assert_eq!(
                 hit,
@@ -334,15 +335,9 @@ fn delegated_mech_tables_cover_anatomy_precedence_immunity_and_replay() {
                         let hit = resolve_battle_hit(&target, arc, entry, &mut dice).unwrap();
                         assert_eq!(hit.section, expected_section);
                         assert_eq!(hit.through_armor_critical, !safe && !proof && selected == 2);
-                        assert_eq!(
-                            hit.rear_armor,
-                            !safe
-                                && arc == Arc::Rear
-                                && matches!(
-                                    expected_section,
-                                    Section::LeftTorso | Section::RightTorso | Section::CenterTorso
-                                )
-                        );
+                        // Every rear-arc hit records its arc: torsos take it on their rear
+                        // armor and limbs pass it to their side torso's rear armor.
+                        assert_eq!(hit.rear_armor, !safe && arc == Arc::Rear);
                         assert_eq!(dice, expected);
                         assert_eq!(
                             resolve_battle_hit(&target, arc, entry, &mut replay).unwrap(),

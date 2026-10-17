@@ -615,3 +615,187 @@ async fn character_pilot_health_recovery_and_fatal_evacuation() {
         candidate.btech
     );
 }
+
+/// An in-character unit and its assigned pilot, ObjectId(2), with IC casualties enabled.
+async fn character_unit(
+    template: MechTemplate,
+) -> (
+    tempfile::TempDir,
+    stompymux_rs::Config,
+    stompymux_rs::World,
+    ObjectId,
+    ObjectId,
+) {
+    use stompymux_rs::*;
+    let (dir, config, mut world) = support::isolated_world().await;
+    let unit = world.create(&config, "Casualty unit".into(), Kind::Thing);
+    world.objects.get_mut(&unit).unwrap().home = Some(ObjectId(config.home()));
+    create_battle_unit(&mut world, unit, template).unwrap();
+    support::seed_object_dice(&mut world, unit, support::FIXTURE_DICE_SEED);
+    world
+        .objects
+        .get_mut(&unit)
+        .unwrap()
+        .flags
+        .insert(Flag::InCharacter);
+    let pilot = ObjectId(2);
+    world
+        .objects
+        .get_mut(&pilot)
+        .unwrap()
+        .flags
+        .remove(Flag::Wizard);
+    world.objects.get_mut(&pilot).unwrap().location = Some(unit);
+    set_battle_character(
+        &mut world,
+        pilot,
+        Character {
+            build: 5,
+            reflexes: 5,
+            intuition: 5,
+            learn: 5,
+            charisma: 5,
+            bruise: 0,
+            lethal: 0,
+        },
+    )
+    .unwrap();
+    assign_battle_pilot(&mut world, unit, pilot).unwrap();
+    support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
+    (dir, config, world, unit, pilot)
+}
+
+/// A torso-mounted cockpit's MechWarrior outlives the head and dies with the center torso
+/// that holds the cockpit (Tactical Operations: Advanced Units & Equipment p. 113).
+#[tokio::test]
+async fn torso_cockpit_pilots_survive_the_head_and_die_with_the_center_torso() {
+    use stompymux_rs::*;
+    let template =
+        MechTemplate::parse("JR10-X", include_str!("fixtures/btech/units/JR10-X.toml")).unwrap();
+    let (_dir, config, world, unit, pilot) = character_unit(template).await;
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let hit = |section| Hit {
+        section,
+        rear_armor: false,
+        through_armor_critical: false,
+    };
+    let report =
+        resolve_battle_impact_action(&scripts, &config, unit, hit(MechSection::Head), 100).unwrap();
+    assert!(!report.destroyed);
+    assert_eq!(report.crew_casualty(), None);
+    assert_eq!(
+        scripts.world().btech.constructed_units()[&unit].sections()[&MechSection::Head].internal,
+        0
+    );
+    assert_eq!(scripts.world().objects[&pilot].location, Some(unit));
+    assert_eq!(
+        scripts.world().btech.constructed_units()[&unit].pilot(),
+        Some(pilot)
+    );
+    let report =
+        resolve_battle_impact_action(&scripts, &config, unit, hit(MechSection::CenterTorso), 100)
+            .unwrap();
+    assert!(report.destroyed);
+    assert_eq!(report.crew_casualty(), Some(CrewCasualty::CockpitDestroyed));
+    let afterlife = ObjectId(config.battletech.afterlife_dbref);
+    assert_eq!(scripts.world().objects[&pilot].location, Some(afterlife));
+}
+
+/// A center torso destroyed by an area-effect weapon kills the MechWarrior; one destroyed
+/// any other way does not (Total Warfare p. 128).
+#[tokio::test]
+async fn area_effect_damage_that_destroys_the_center_torso_kills_the_mechwarrior() {
+    use stompymux_rs::*;
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let map = world.create(&config, "Artillery field".into(), Kind::Room);
+    create_battle_map(
+        &mut world,
+        map,
+        "test",
+        MapAsset::from_cells("3 3\n.0.0.0\n.0.0.0\n.0.0.0\n").unwrap(),
+    )
+    .unwrap();
+    let id = world.create(&config, "Target".into(), Kind::Thing);
+    world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+    create_battle_unit(
+        &mut world,
+        id,
+        MechTemplate::parse("JR7-D", JENNER).unwrap(),
+    )
+    .unwrap();
+    // Facing the gun to the north, so the blast strikes the front.
+    place_battle_unit(&mut world, id, map, 1, 2).unwrap();
+    support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
+    // Strip the center torso to its last internal point with an ordinary hit first.
+    let core = Hit {
+        section: MechSection::CenterTorso,
+        rear_armor: false,
+        through_armor_critical: false,
+    };
+    let base = (0..=255)
+        .find_map(|seed| {
+            let mut candidate = world.clone();
+            candidate
+                .btech
+                .set_unit_dice(id, Dice::seeded([seed; 32]))
+                .unwrap();
+            let report = resolve_battle_impact(&mut candidate, id, core, 20).unwrap();
+            let unit = &candidate.btech.constructed_units()[&id];
+            (report.criticals.is_empty()
+                && unit.sections()[&MechSection::CenterTorso].internal == 1)
+                .then_some(candidate)
+        })
+        .unwrap();
+    assert_eq!(
+        resolve_battle_impact(&mut base.clone(), id, core, 1)
+            .unwrap()
+            .crew_casualty(),
+        None
+    );
+    let mut exercised = false;
+    for seed in 0..=63 {
+        let mut world = base.clone();
+        world
+            .btech
+            .set_unit_dice(id, Dice::seeded([seed; 32]))
+            .unwrap();
+        let mut flight = ArtilleryFlight::new(
+            HexCoordinate { x: 1, y: 0 },
+            HexCoordinate { x: 1, y: 2 },
+            Weapon::LongTom,
+            ArtilleryMode::Standard,
+            ArtilleryOutcome::Hit,
+        )
+        .unwrap();
+        let report = loop {
+            if let Some(report) =
+                advance_artillery_flight(&mut world, map, &mut flight, MovementRules::STANDARD.fall)
+                    .unwrap()
+            {
+                break report;
+            }
+        };
+        let unit = &world.btech.constructed_units()[&id];
+        if unit.sections()[&MechSection::CenterTorso].internal > 0 {
+            continue;
+        }
+        let impacts: Vec<_> = report
+            .hits
+            .iter()
+            .flat_map(|hit| &hit.impacts)
+            .filter_map(|impact| match impact {
+                BlastImpact::Mech(impact) => Some(impact),
+                BlastImpact::Vehicle(_) => None,
+            })
+            .collect();
+        let fatal = impacts
+            .iter()
+            .find(|impact| impact.impact.area_effect_killed_crew)
+            .expect("the blast that destroyed the center torso kills the crew");
+        assert_eq!(fatal.impact.crew_casualty(), Some(CrewCasualty::AreaEffect));
+        assert!(fatal.pilot_injuries.iter().any(|injury| injury.killed));
+        exercised = true;
+        break;
+    }
+    assert!(exercised);
+}

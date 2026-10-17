@@ -155,27 +155,30 @@ async fn ammunition_cascade_bypasses_torso_armor_and_consumes_bin_once() {
     );
 }
 
+/// A hit that destroys a limb sends its overflow onward whatever the dice say: structure damage
+/// lands before the critical roll, and a destroyed location without explosive slots is not
+/// checked at all (Total Warfare pp. 122-124).
 #[tokio::test]
-async fn internal_twelve_severs_limb_without_transferring_overflow() {
+async fn destroying_hits_transfer_limb_overflow_on_every_roll() {
     let (_dir, _config, baseline, id) = fixture().await;
-    let mut found = false;
-    for value in 0..128 {
+    let core = baseline.btech.constructed_units()[&id].sections()[&Section::CenterTorso].armor;
+    for value in 0..32 {
         let mut world = baseline.clone();
         seed(&mut world, id, value);
+        // Thirty damage: the arm's 4 armor and 6 internal, the torso's 8 and 8, then 4 to the
+        // center torso's armor.
         let report =
             resolve_battle_impact(&mut world, id, hit(Section::LeftArm, false), 30).unwrap();
-        if report.phases.len() != 2 {
-            continue;
-        }
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.sections()[&Section::LeftArm].internal, 0);
+        assert_eq!(unit.sections()[&Section::LeftTorso].internal, 0);
         assert_eq!(
-            world.btech.constructed_units()[&id].sections()[&Section::LeftTorso],
-            baseline.btech.constructed_units()[&id].sections()[&Section::LeftTorso]
+            unit.sections()[&Section::CenterTorso].armor,
+            core - 4,
+            "seed {value}"
         );
-        assert_eq!(report.phases[1].remaining, 0);
-        found = true;
-        break;
+        assert!(report.criticals.is_empty(), "seed {value}");
     }
-    assert!(found, "seeded scenarios must exercise limb severing");
 }
 
 /// A wreck alone does not imply crew death; head and cockpit losses are explicit casualty triggers.
@@ -473,6 +476,61 @@ async fn armor_and_structure_technologies_modify_mech_damage() {
             (armor, internal),
             "{specials} {damage}"
         );
+    }
+}
+
+/// Laser-reflective armor is brittle: a fall strips it at double rate (Tactical Operations:
+/// Advanced Units & Equipment p. 93).
+#[tokio::test]
+async fn reflective_armor_takes_falls_doubled() {
+    for reflective in [false, true] {
+        let (_dir, config, mut world) = support::isolated_world().await;
+        let id = world.create(&config, "Reflective Jenner".into(), Kind::Thing);
+        let object = world.objects.get_mut(&id).unwrap();
+        object.location = Some(ObjectId(config.start()));
+        object.home = Some(ObjectId(config.home()));
+        let source = include_str!("fixtures/btech/units/JR7-D.toml");
+        let mut template = if reflective {
+            let source = support::templates::with_flags(source, &["LaserRefArmor_Tech"]);
+            let mut template = MechTemplate::parse("JR7-D", &source).unwrap();
+            // Inner Sphere reflective armor fills ten of the left torso's free slots.
+            let torso = template.sections.get_mut(&Section::LeftTorso).unwrap();
+            for slot in 2..12 {
+                torso.criticals.insert(
+                    slot,
+                    stompymux_rs::CriticalDefinition {
+                        equipment: "LaserReflective".into(),
+                        data: "-".into(),
+                        modes: Vec::new(),
+                    },
+                );
+            }
+            template
+        } else {
+            MechTemplate::parse("JR7-D", source).unwrap()
+        };
+        support::templates::book_legal_keeping(&mut template, Some(Section::Head));
+        create_battle_unit(&mut world, id, template).unwrap();
+        seed(&mut world, id, 4);
+        let before = world.btech.constructed_units()[&id].sections().clone();
+        // A 35-ton Jenner falling in place takes one four-point group.
+        let report =
+            stompymux_rs::resolve_battle_fall(&mut world, id, 1, stompymux_rs::FallRules::STANDARD)
+                .unwrap();
+        assert_eq!(report.damage, 4);
+        let group = &report.groups[0];
+        let section = group.hit.section;
+        let armor = if group.hit.rear_armor
+            && matches!(
+                section,
+                Section::LeftTorso | Section::CenterTorso | Section::RightTorso
+            ) {
+            before[&section].rear
+        } else {
+            before[&section].armor
+        };
+        let expected = if reflective { armor.min(8) } else { 4 };
+        assert_eq!(group.impact.phases[0].absorbed, expected, "{reflective}");
     }
 }
 

@@ -35,6 +35,38 @@ fn definition() -> MechTemplate {
     crate::support::templates::legal(template)
 }
 
+/// Built-in Clan CASE comes with Clan internal structure, not with the chassis's base: a
+/// mixed-technology Clan design on Inner Sphere structure has none, and an Inner Sphere design
+/// on Clan structure has it everywhere (TechManual p. 210).
+#[test]
+fn clan_case_follows_the_internal_structure() {
+    let flagged = |template: &MechTemplate, flags: &str| {
+        let mut template = template.clone();
+        let specials = template.attributes.entry("specials".into()).or_default();
+        specials.push(' ');
+        specials.push_str(flags);
+        Mech::from_template(crate::support::templates::legal(template)).unwrap()
+    };
+    let clan = flagged(&definition(), "MixedTech ISStructure_Tech");
+    assert!(!clan.definition().clan_structure());
+    assert!(
+        clan.sections()
+            .keys()
+            .all(|section| !clan.has_case(*section))
+    );
+    let inner_sphere = flagged(
+        &MechTemplate::parse("JR7-D", include_str!("fixtures/btech/units/JR7-D.toml")).unwrap(),
+        "MixedTech ClanStructure_Tech",
+    );
+    assert!(inner_sphere.definition().clan_structure());
+    assert!(
+        inner_sphere
+            .sections()
+            .keys()
+            .all(|section| inner_sphere.has_case(*section))
+    );
+}
+
 /// Two-slot loss removes two units of cooling; seven material slots activate Clan construction.
 #[test]
 fn clan_sink_groups_containment_and_material_mass() {

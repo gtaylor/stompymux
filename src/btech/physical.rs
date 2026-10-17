@@ -1328,7 +1328,7 @@ fn resolve_attack_inner(
                         arc: vehicle_side(side),
                         character,
                         attacker: Some(attacker),
-                        class: DamageClass::Ordinary,
+                        class: DamageClass::Impact,
                     },
                     false,
                     fall_rules,
@@ -1369,7 +1369,7 @@ fn resolve_attack_inner(
                     fall_rules,
                     super::impact::AttackImpact {
                         attacker: Some(attacker),
-                        weapon_effect: None,
+                        weapon_effect: Some(super::impact::WeaponEffect::Impact),
                         character,
                         followup: false,
                     },
@@ -1448,7 +1448,7 @@ fn resolve_attack_inner(
                 fall_rules,
                 super::impact::AttackImpact {
                     attacker: None,
-                    weapon_effect: None,
+                    weapon_effect: Some(super::impact::WeaponEffect::Impact),
                     character,
                     followup: false,
                 },

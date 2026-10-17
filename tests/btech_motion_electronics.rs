@@ -6996,7 +6996,6 @@ async fn weapons_hold_physical_damage_warns_without_suppressing_transfers() {
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
             .unwrap();
         shot_seed(&mut base, id, seed);
-        shot_seed(&mut base, target, 0);
         if transfer {
             base.btech
                 .rewrite_unit_record(target, |record| {
@@ -7012,6 +7011,30 @@ async fn weapons_hold_physical_damage_warns_without_suppressing_transfers() {
                 })
                 .unwrap();
         }
+        // The target's stream decides the criticals the transferred damage rolls; the explosion
+        // case takes the first stream that sets off the torso's ammunition.
+        let target_seed = (0..=255)
+            .find(|target_seed| {
+                let mut trial = base.clone();
+                shot_seed(&mut trial, target, *target_seed);
+                let report = resolve_battle_kick(
+                    &mut trial,
+                    id,
+                    ObjectId(1),
+                    target,
+                    Leg::Left,
+                    kick_rules(),
+                )
+                .unwrap();
+                !explosion
+                    || report.impact.is_some_and(|impact| {
+                        impact.impact.criticals.iter().any(|(_, loss)| {
+                            matches!(loss, CriticalLoss::Ammunition { explosion_damage, .. } if *explosion_damage > 0)
+                        })
+                    })
+            })
+            .unwrap();
+        shot_seed(&mut base, target, target_seed);
         let mut ordinary = base.clone();
         let mut held = base.clone();
         set_battle_weapons_hold(&mut held, id, true).unwrap();
@@ -7042,10 +7065,12 @@ async fn weapons_hold_physical_damage_warns_without_suppressing_transfers() {
             .iter()
             .filter(|n| n.text == "You are currently in weapons hold!")
             .collect();
+        // One warning for the kick's entry and one for its transfer to the torso; the explosion
+        // its criticals set off enters the torso and transfers to the center torso.
         assert_eq!(
             warnings.len(),
             if explosion {
-                5
+                4
             } else if transfer {
                 2
             } else {

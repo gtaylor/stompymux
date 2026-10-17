@@ -280,7 +280,7 @@ fn hit_hex(
             super::blast_damage::BlastDamage {
                 damage,
                 packet_size: 5,
-                class: DamageClass::Ordinary,
+                class: DamageClass::AreaEffect,
                 table: HitTable::Kick,
                 arc,
                 heat,

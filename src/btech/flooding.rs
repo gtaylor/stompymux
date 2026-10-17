@@ -1,4 +1,5 @@
-//! Persistent flooded equipment, submerged armor breaches and immediate BattleMech falls.
+//! Persistent flooded equipment, submerged armor breaches and hull-breach rolls, and immediate
+//! BattleMech falls.
 use super::{FallRules, MechSection, Posture, SectionExposureReport};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -72,6 +73,95 @@ fn flood_section_inner(
     rules: FallRules,
     whole_unit: bool,
 ) -> Result<Option<SectionExposureReport>> {
+    if !section_underwater(world, id, section, whole_unit)? {
+        return Ok(None);
+    }
+    let unit = &world.btech.constructed_units()[&id];
+    let state = &unit.sections()[&section];
+    if state.armor > 0 && (state.rear > 0 || unit.definition().sections[&section].rear == 0) {
+        return Ok(None);
+    }
+    super::section_exposure::disable_section(
+        world,
+        id,
+        section,
+        super::SectionExposure::Water,
+        Some(rules),
+        None,
+    )
+    .map(Some)
+}
+
+/// Roll for a hull breach in an underwater location a hit has just damaged, inside the
+/// enclosing damage checkpoint.
+pub(super) fn roll_hull_breach(
+    world: &mut World,
+    id: ObjectId,
+    section: MechSection,
+    rules: FallRules,
+) -> Result<Option<SectionExposureReport>> {
+    ensure!(
+        world
+            .objects
+            .get(&id)
+            .is_some_and(|object| !object.flags.contains(Flag::InCharacter)),
+        "Character flooding requires casualty publication"
+    );
+    roll_hull_breach_inner(world, id, section, rules)
+}
+
+/// Hull breach roll inside a character-capable action checkpoint.
+pub(super) fn roll_hull_breach_in_action(
+    world: &mut World,
+    id: ObjectId,
+    section: MechSection,
+    rules: FallRules,
+) -> Result<Option<SectionExposureReport>> {
+    roll_hull_breach_inner(world, id, section, rules)
+}
+
+/// Total Warfare p. 121: whenever an underwater unit takes a hit that inflicts damage, it rolls
+/// 2D6, and on 10 or more the location struck loses integrity and fills with water. A location
+/// above the surface, already flooded or destroyed rolls nothing.
+fn roll_hull_breach_inner(
+    world: &mut World,
+    id: ObjectId,
+    section: MechSection,
+    rules: FallRules,
+) -> Result<Option<SectionExposureReport>> {
+    if !section_underwater(world, id, section, false)? {
+        return Ok(None);
+    }
+    let roll = world
+        .btech
+        .constructed
+        .get_mut(&id)
+        .context("Unit construction state is unavailable")?
+        .dice
+        .generic_roll();
+    if roll < 10 {
+        return Ok(None);
+    }
+    super::section_exposure::disable_section(
+        world,
+        id,
+        section,
+        super::SectionExposure::Water,
+        Some(rules),
+        None,
+    )
+    .map(Some)
+}
+
+/// Whether a surviving, undisabled section of a placed unit is under the water: every location
+/// in water two or more levels deep or while prone, and only the legs of a 'Mech standing in
+/// Depth 1 (Total Warfare p. 121). Whole-unit immersion measures from the bottom.
+fn section_underwater(
+    world: &World,
+    id: ObjectId,
+    section: MechSection,
+    whole_unit: bool,
+) -> Result<bool> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(
         !object.flags.contains(Flag::Going),
@@ -84,10 +174,10 @@ fn flood_section_inner(
         .context("Unit construction state is unavailable")?;
     unit.validate()?;
     if unit.combat_safe {
-        return Ok(None);
+        return Ok(false);
     }
     let Some(position) = unit.position() else {
-        return Ok(None);
+        return Ok(false);
     };
     let tile = world
         .btech
@@ -103,26 +193,11 @@ fn flood_section_inner(
         water_line - elevation
     };
     if !tile.immerses(elevation) || depth <= 0 {
-        return Ok(None);
+        return Ok(false);
     }
     let leg = unit.chassis().is_leg(section);
     if depth == 1 && unit.posture() == Posture::Standing && !leg {
-        return Ok(None);
+        return Ok(false);
     }
-    let state = &unit.sections()[&section];
-    if state.internal == 0
-        || unit.section_disabled(section)
-        || (state.armor > 0 && (state.rear > 0 || unit.definition().sections[&section].rear == 0))
-    {
-        return Ok(None);
-    }
-    super::section_exposure::disable_section(
-        world,
-        id,
-        section,
-        super::SectionExposure::Water,
-        Some(rules),
-        None,
-    )
-    .map(Some)
+    Ok(unit.sections()[&section].internal > 0 && !unit.section_disabled(section))
 }

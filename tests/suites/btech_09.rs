@@ -44,6 +44,9 @@ mod btech_swarm;
 #[path = "../btech_template_comments.rs"]
 mod btech_template_comments;
 
+#[path = "../btech_underwater_damage.rs"]
+mod btech_underwater_damage;
+
 #[path = "../btech_underwater_fire.rs"]
 mod btech_underwater_fire;
 

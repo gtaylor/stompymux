@@ -355,14 +355,37 @@ fn resolve_material_with_tonnage(
         } else {
             None
         };
-        let wet = if let Some(position) = position {
+        // Total Warfare p. 57: a fall into water from above its surface strikes the surface
+        // and then the bottom, each for half damage; a fall below the surface takes half. The
+        // levels fallen say where the fall began. A fall that begins at the surface itself,
+        // such as a jumping 'Mech tumbling to the bottom on landing (p. 53) or one breaking
+        // through ice, is a single halved fall to the bottom.
+        let stages = if let Some(position) = position {
             let tile = world.btech.maps()[&position.map]
                 .base_hex(i64::from(position.x), i64::from(position.y))?;
-            tile.immerses(world.btech.constructed_units()[&id].elevation_level(tile))
+            let landing = world.btech.constructed_units()[&id].elevation_level(tile);
+            if tile.immerses(landing) {
+                let water_line = i32::from(tile.water_line());
+                super::fall_profile::water_fall_stages(
+                    tons,
+                    levels,
+                    water_line - landing,
+                    landing + levels - 1 > water_line,
+                    gravity,
+                )?
+            } else {
+                vec![(
+                    super::fall_profile::damage(tons, levels, false, gravity)?,
+                    true,
+                )]
+            }
         } else {
-            false
+            vec![(
+                super::fall_profile::damage(tons, levels, false, gravity)?,
+                true,
+            )]
         };
-        let damage = super::fall_profile::damage(tons, levels, wet, gravity)?;
+        let damage = stages.iter().map(|(damage, _)| damage).sum();
         let flooding = if position.is_none() {
             Vec::new()
         } else if character {
@@ -382,44 +405,36 @@ fn resolve_material_with_tonnage(
             motion.desired_heading = motion.heading;
         }
         let mut groups = Vec::new();
-        let mut remaining = if safe { 0 } else { damage };
-        while remaining > 0 {
-            let amount = remaining.min(5);
-            remaining -= amount;
-            let amount = amount as u16;
-            let unit = &world.btech.constructed_units()[&id];
-            let mut dice = unit.dice.clone();
-            let roll = dice.generic_roll();
-            let hit = super::resolve_hit(unit, arc, roll, &mut dice)?;
-            world.btech.constructed.get_mut(&id).unwrap().dice = dice;
-            // Native falling continues rolling each five-point group after a lethal packet;
-            // its damage entry point then ignores the already destroyed unit.
-            if world.btech.constructed_units()[&id].is_destroyed() {
-                continue;
-            }
-            let outcome = if character {
-                super::impact::resolve_character_impact_with_rules(
-                    world,
-                    id,
+        for (stage, hull_check) in stages {
+            let mut remaining = if safe { 0 } else { stage };
+            while remaining > 0 {
+                let amount = remaining.min(5);
+                remaining -= amount;
+                let amount = amount as u16;
+                let unit = &world.btech.constructed_units()[&id];
+                let mut dice = unit.dice.clone();
+                let roll = dice.generic_roll();
+                let hit = super::resolve_hit(unit, arc, roll, &mut dice)?;
+                world.btech.constructed.get_mut(&id).unwrap().dice = dice;
+                // Native falling continues rolling each five-point group after a lethal packet;
+                // its damage entry point then ignores the already destroyed unit.
+                if world.btech.constructed_units()[&id].is_destroyed() {
+                    continue;
+                }
+                let outcome = super::impact::resolve_fall_group(
+                    world, id, hit, amount, rules, character, hull_check,
+                )?;
+                groups.push(SalvoGroup {
+                    damage: amount,
                     hit,
-                    amount,
-                    Some(rules),
-                )?
-            } else {
-                super::pilot_injury::resolve_tactical_impact_in_candidate(
-                    world, id, hit, amount, rules, None,
-                )?
-            };
-            groups.push(SalvoGroup {
-                damage: amount,
-                hit,
-                impact: outcome.impact,
-                pilot_injuries: outcome.pilot_injuries,
-                pilot_notices: outcome.pilot_notices,
-                notices: outcome.notices,
-                balance: outcome.balance,
-                flooding: outcome.flooding,
-            });
+                    impact: outcome.impact,
+                    pilot_injuries: outcome.pilot_injuries,
+                    pilot_notices: outcome.pilot_notices,
+                    notices: outcome.notices,
+                    balance: outcome.balance,
+                    flooding: outcome.flooding,
+                });
+            }
         }
         let mines = if position.is_some() {
             super::mine_event::resolve(world, id, super::MineTriggerReason::Fall, rules, character)?

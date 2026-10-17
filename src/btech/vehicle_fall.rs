@@ -230,7 +230,7 @@ pub(super) fn resolve_material_profile(
                     armor_piercing: None,
                     rear: arc == HitArc::Rear,
                     attacker: None,
-                    class: DamageClass::Ordinary,
+                    class: DamageClass::Impact,
                 },
                 rules.vehicle_impact,
             )?;

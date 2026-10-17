@@ -124,6 +124,10 @@ pub struct Vehicle {
     /// Sections whose equipment was disabled by vacuum exposure.
     #[serde(default)]
     pub(super) breached_sections: std::collections::BTreeSet<VehicleSection>,
+    /// Hardened armor faces whose outermost point has taken one of its two damage points
+    /// (Tactical Operations: Advanced Units & Equipment p. 93).
+    #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
+    pub(super) hardened_dents: std::collections::BTreeSet<VehicleSection>,
     /// Hull disabled by destruction of its carrier, independently of crew injury.
     transport_destroyed: bool,
     /// Flight stabilizer (tail rotor) hit: cruising speed only, harder to control and aim.
@@ -322,6 +326,8 @@ struct VehicleRecord {
     flooded: bool,
     #[serde(default)]
     breached_sections: std::collections::BTreeSet<VehicleSection>,
+    #[serde(default)]
+    hardened_dents: std::collections::BTreeSet<VehicleSection>,
     /// Hull disabled by destruction of its carrier, independently of crew injury.
     transport_destroyed: bool,
     /// Flight stabilizer (tail rotor) hit: cruising speed only, harder to control and aim.
@@ -459,6 +465,7 @@ super::saved_parts::saved_parts!(Vehicle {
         character_pilot,
         flooded,
         breached_sections,
+        hardened_dents,
         transport_destroyed,
         tail_rotor_destroyed,
         engine_destroyed,
@@ -740,6 +747,7 @@ impl Vehicle {
         if let Some(value) = armor {
             original.armor = value;
             current.armor = value;
+            self.hardened_dents.remove(&section);
         }
         if let Some(value) = internal {
             original.internal = value;
@@ -766,7 +774,10 @@ impl Vehicle {
         }
         let current = self.sections.get_mut(&section).expect("validated section");
         match kind {
-            super::AdministrativeRepairKind::Armor => current.armor = value,
+            super::AdministrativeRepairKind::Armor => {
+                current.armor = value;
+                self.hardened_dents.remove(&section);
+            }
             super::AdministrativeRepairKind::Internal => current.internal = value,
             super::AdministrativeRepairKind::RearArmor => current.rear = value,
             super::AdministrativeRepairKind::Reattach => {
@@ -955,6 +966,7 @@ impl Vehicle {
             character_pilot: None,
             flooded: false,
             breached_sections: Default::default(),
+            hardened_dents: Default::default(),
             transport_destroyed: false,
             tail_rotor_destroyed: false,
             engine_destroyed: false,
@@ -1588,6 +1600,10 @@ impl Vehicle {
             self.live_mass.invalidate();
         }
         result.remaining -= result.absorbed;
+        if state.armor == 0 || state.internal == 0 {
+            // No armor point is left to carry a hardened slash.
+            self.hardened_dents.remove(&section);
+        }
         if matches!(phase, DamagePhase::Internal) && state.internal == 0 {
             state.armor = 0;
             state.rear = 0;
@@ -1706,6 +1722,7 @@ impl Vehicle {
             character_pilot: record.character_pilot,
             flooded: record.flooded,
             breached_sections: record.breached_sections,
+            hardened_dents: record.hardened_dents,
             transport_destroyed: record.transport_destroyed,
             tail_rotor_destroyed: record.tail_rotor_destroyed,
             engine_destroyed: record.engine_destroyed,

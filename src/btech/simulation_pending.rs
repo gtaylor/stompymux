@@ -42,6 +42,7 @@ pub(crate) fn pending(world: &World, has_scanner_observers: bool) -> bool {
         || crate::map_smoke_pending(world)
         || super::magma::pending(world)
         || super::bog_down::pending(world)
+        || super::life_support::pending(world)
         || crate::battle_illumination_pending(world)
         || crate::battle_electronic_fields_pending(world)
         || world
