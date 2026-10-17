@@ -26,11 +26,12 @@ pub enum PhysicalBattleValue {
 }
 
 impl SystemContext {
-    /// The context of one installation whose slot states `base`: a stated base replaces the
-    /// chassis's for the facts it sizes.
-    pub fn for_installation(self, base: Option<super::super::TechBase>) -> Self {
+    /// The context of one installed system: the part's own technology base (see
+    /// [`super::super::SystemCritical::is_clan`]) replaces the chassis's for the facts it
+    /// sizes, values and prices.
+    pub fn for_part<L>(self, part: &super::super::SystemCritical<L>) -> Self {
         Self {
-            clan: base.map_or(self.clan, |base| base == super::super::TechBase::Clan),
+            clan: part.is_clan(self.clan),
             ..self
         }
     }

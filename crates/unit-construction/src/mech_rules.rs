@@ -7,7 +7,7 @@
 use super::construction::{Component, MIXED_TECH, SPEED_PER_MP};
 use super::document::ENGINE_RATING;
 use super::engine::declared_engine_rating;
-use super::tech_base::{TechBase, TechnologyInventory, check_technology_base};
+use super::tech_base::{ChassisTechnology, TechBase, TechnologyInventory, check_technology_base};
 use super::{
     Engine, MechChassis, MechLoadout, MechSection, MechTemplate, System, rated_output,
     running_mp_of_walking,
@@ -656,9 +656,20 @@ impl MechTemplate {
                 .all(|part| part.system != System::Case || torso(part.location.section)),
             "Inner Sphere CASE may only be mounted in torso locations"
         );
+        // Only fusion and fission units mount standard flamers; an internal combustion engine
+        // takes vehicle flamers (TechManual p. 218).
+        let combustion = self.has_special("ICEEngine_Tech");
         for mount in &loadout.weapons {
             let primary = mount.criticals[0].section;
             let name = mount.weapon.name();
+            ensure!(
+                !combustion
+                    || !matches!(
+                        mount.weapon,
+                        super::Weapon::Flamer | super::Weapon::ClanFlamer
+                    ),
+                "{name} needs a fusion engine; an internal combustion Mech mounts vehicle flamers instead (TechManual p. 218)"
+            );
             ensure!(
                 !mount.rear_mount
                     || torso(primary)
@@ -698,7 +709,9 @@ impl MechTemplate {
     /// A Mech builds its engine, structure and armor and mounts its weapons and equipment from
     /// its own technology base unless the template declares mixed technology (TM p. 46;
     /// Tactical Operations: Advanced Units & Equipment p. 189). The Watchdog suite is Clan
-    /// equipment.
+    /// equipment. Compact, heavy-duty and XL gyros (TM p. 50) and the small cockpit (TM
+    /// p. 52) are Inner Sphere chassis choices, and composite structure is Inner Sphere
+    /// structure (Tactical Operations: Advanced Units & Equipment p. 154).
     fn validate_technology_base(&self, loadout: &MechLoadout) -> Result<()> {
         let clan = self.has_special("Clan");
         let mixed_tech = self.has_special(MIXED_TECH);
@@ -706,6 +719,31 @@ impl MechTemplate {
             clan || mixed_tech || !self.has_technology(super::Technology::Watchdog),
             "The Watchdog suite is Clan technology on an Inner Sphere Mech; declare mixed_tech in [construction]"
         );
+        ensure!(
+            !self.has_technology(super::Technology::CompositeStructure) || !self.clan_structure(),
+            "Composite structure is Inner Sphere technology; a Clan chassis builds it only as Inner Sphere structure (structure_tech = \"inner_sphere\") on a mixed_tech design (Tactical Operations: Advanced Units & Equipment p. 154)"
+        );
+        let mut chassis_technologies = Vec::new();
+        let gyro = match super::Gyro::from_definition(self) {
+            super::Gyro::Standard => None,
+            super::Gyro::Xl => Some("XL gyro"),
+            super::Gyro::Compact => Some("compact gyro"),
+            super::Gyro::Hardened => Some("heavy-duty gyro"),
+        };
+        if let Some(name) = gyro {
+            chassis_technologies.push(ChassisTechnology {
+                name,
+                base: TechBase::InnerSphere,
+                citation: "TechManual p. 50",
+            });
+        }
+        if self.has_technology(super::Technology::SmallCockpit) {
+            chassis_technologies.push(ChassisTechnology {
+                name: "small cockpit",
+                base: TechBase::InnerSphere,
+                citation: "TechManual p. 52",
+            });
+        }
         // CASE as a BattleMech item is Inner Sphere CASE: Clan CASE is built into every
         // location of a Clan-structure Mech rather than installed (TechManual p. 210).
         ensure!(
@@ -725,6 +763,7 @@ impl MechTemplate {
                 .into_iter()
                 .filter(|component| self.has_special(component.flag(!clan)))
                 .collect(),
+            chassis_technologies,
             weapons: loadout.weapons.iter().map(|mount| mount.weapon),
             systems: loadout
                 .systems
@@ -1035,6 +1074,70 @@ mod tests {
             &JENNER.replacen("item = \"IS.MediumLaser\"", "item = \"LightTAG\"", 1),
             "LightTag is Clan technology on an Inner Sphere Mech",
         );
+    }
+
+    /// Compact, heavy-duty and XL gyros (TM p. 50) and the small cockpit (TM p. 52) are
+    /// Inner Sphere chassis choices, so a Clan Mech uses them only as a mixed-technology design;
+    /// composite structure is always Inner Sphere structure (Tactical Operations: Advanced
+    /// Units & Equipment p. 154).
+    #[test]
+    fn inner_sphere_chassis_choices_need_mixed_technology_on_a_clan_mech() {
+        let technology = |source: &str| {
+            let template = MechTemplate::parse("JR7-D", source).unwrap();
+            let loadout = crate::MechLoadout::resolve(&template).unwrap();
+            template
+                .validate_technology_base(&loadout)
+                .err()
+                .map(|error| error.to_string())
+        };
+        // The Jenner's head sink stays a single sink. A small cockpit fills head slots 1-4, so
+        // that sink moves to slot 5.
+        let clan = |choice: &str| {
+            let source = JENNER.replace(
+                "tech_base = \"inner_sphere\"",
+                &format!("tech_base = \"clan\"\nheat_sinks = \"single\"\n{choice}"),
+            );
+            if !choice.starts_with("cockpit") {
+                return source;
+            }
+            source.replace(
+                "{ at = 4, item = \"HeatSink\" }",
+                "{ at = 5, item = \"HeatSink\" }",
+            )
+        };
+        let mixed = |source: String| {
+            source.replacen("[construction]\n", "[construction]\nmixed_tech = true\n", 1)
+        };
+        for (choice, name, page) in [
+            ("gyro = \"compact\"", "compact gyro", "TechManual p. 50"),
+            (
+                "gyro = \"heavy_duty\"",
+                "heavy-duty gyro",
+                "TechManual p. 50",
+            ),
+            ("cockpit = \"small\"", "small cockpit", "TechManual p. 52"),
+        ] {
+            let refusal = technology(&clan(choice)).unwrap_or_default();
+            assert!(
+                refusal.contains(&format!(
+                    "The {name} is Inner Sphere technology on a Clan Mech"
+                )) && refusal.contains(page),
+                "{refusal}"
+            );
+            assert_eq!(technology(&mixed(clan(choice))), None, "{choice}");
+        }
+        let composite = clan("structure = \"composite\"");
+        let refusal = technology(&composite).unwrap_or_default();
+        assert!(
+            refusal.contains("Composite structure is Inner Sphere technology"),
+            "{refusal}"
+        );
+        assert!(technology(&mixed(composite.clone())).is_some());
+        let inner_sphere_structure = mixed(composite.replace(
+            "structure = \"composite\"",
+            "structure = \"composite\"\nstructure_tech = \"inner_sphere\"",
+        ));
+        assert_eq!(technology(&inner_sphere_structure), None);
     }
 
     /// A slot may state the base of equipment both bases build, which then sizes it and must

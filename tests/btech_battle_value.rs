@@ -104,6 +104,19 @@ fn clan_battle_value() {
     assert!((value.defensive - 962.975).abs() < 0.005, "{value:?}");
 }
 
+/// CASE comes with Clan internal structure (TechManual p. 210), so a mixed-technology Jenner
+/// built on Clan structure loses its side-torso ammunition penalty: fifteen points times the
+/// Defensive Factor of 1.4.
+#[test]
+fn clan_structure_carries_case() {
+    let clan_structure = JENNER.replacen(
+        "[construction]\n",
+        "[construction]\nmixed_tech = true\nstructure_tech = \"clan\"\n",
+        1,
+    );
+    score(&unit(&clan_structure), 525.96, 349.3 + 15.0 * 1.4, 896);
+}
+
 /// Gauss weapons count their slots against a Clan centre torso, while their
 /// inert ammunition carries no penalty.
 #[test]

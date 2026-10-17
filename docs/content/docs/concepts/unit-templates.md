@@ -111,12 +111,17 @@ only a mixed-technology design builds components from both bases (TechManual p.
 Without `mixed_tech`, construction refuses anything from the other technology
 base, on mechs and vehicles alike: a weapon of the other base, and equipment
 only the other base builds. The Bloodhound probe, C3, the null signature system,
-Angel ECM, triple strength myomer, stealth armor and light and heavy
-ferro-fibrous armor are Inner Sphere equipment; the light active probe, light
-TAG, Artemis V, laser heat sinks and the Watchdog suite are Clan equipment.
-CASE is an Inner Sphere item that goes in a torso; Clan CASE is built into
-every location of a Clan-structure unit rather than installed (TechManual p.
-210).
+triple strength myomer, stealth armor, light and heavy ferro-fibrous armor, the
+hatchet, the sword, and the claws, flail, lance, mace, chain whip, vibroblades
+and spikes are Inner Sphere equipment; the light active probe, light TAG,
+Artemis V, laser heat sinks, talons and the Watchdog suite are Clan equipment.
+Both bases build the Angel ECM suite, the retractable blade, the dual saw and
+the wrecking ball. Compact, heavy-duty and XL gyros and the small cockpit are
+Inner Sphere chassis choices (TechManual pp. 50, 52), and composite structure is
+Inner Sphere structure: a Clan mech with it needs `mixed_tech` and
+`structure_tech = "inner_sphere"` (TacOps AUE p. 154). CASE is an Inner Sphere
+item that goes in a torso; Clan CASE is built into every location of a
+Clan-structure unit rather than installed (TechManual p. 210).
 
 CASE II, ECM suites, active probes, MASC, targeting computers, Artemis IV, jump
 jets and machine gun arrays (`MGA`) are built by both bases to their own
@@ -162,7 +167,8 @@ checks:
   counts (TechManual pp. 220, 237; Tactical Operations: Advanced Units &
   Equipment).
 - Artemis IV serves every standard LRM, SRM and MML launcher from its location or
-  none, each controller linked to its own launcher (see [Slots](#slots)); Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
+  none, each controller linked to its own launcher (see [Slots](#slots)), and a
+  unit carries Artemis IV or Artemis V, never both (TacOps AUE p. 94); Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
   or the head; a Heavy Gauss Rifle sits in the torsos (TechManual pp. 46, 206,
   210, 218).
 - `OneShot` applies only to LRM, SRM, MRM and Streak SRM launchers and Narc and
@@ -210,6 +216,15 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   the full ton (TechManual p. 238).
 - Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or
   triple-strength myomer. A VTOL's turret is a chin turret (TacOps AUE p. 160).
+- Vehicles mount no BattleMech-only equipment: no Mech critical-slot entries
+  (actuators, engine, gyro, cockpit, heat sinks, or structure and armor slots,
+  which a vehicle states in its template), no CASE II or null-signature system,
+  and none of the Mech melee weapons (hatchet, sword, retractable blade, claws,
+  flail, lance, mace, chain whip, vibroblades, talons, spikes). A ground vehicle
+  mounts one dual saw in each of its front, rear and turret and a wrecking ball
+  in its turret; a VTOL mounts neither (TechManual pp. 243, 249; TacOps AUE pp.
+  100-104, 111, 148). Inner Sphere CASE takes an item slot; Clan CASE, built
+  into Clan structure, takes none (TechManual p. 210).
 - Everything together may not weigh more than the vehicle. Unspent tonnage is
   cargo space or wasted weight and is only reported. Controls weigh 5 percent of
   the vehicle and the turret 10 percent of the items in it, both rounded up to

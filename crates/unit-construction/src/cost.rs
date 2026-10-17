@@ -488,10 +488,7 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
         },
     };
     for part in &loadout.systems {
-        if let Some(price) = part
-            .system
-            .slot_price(context.for_installation(part.tech_base))
-        {
+        if let Some(price) = part.system.slot_price(context.for_part(part)) {
             total += price;
             continue;
         }

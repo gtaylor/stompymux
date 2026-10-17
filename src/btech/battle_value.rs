@@ -379,18 +379,20 @@ fn defensive_system_value<L>(
     context: SystemContext,
     slots: impl Fn(System, SystemContext) -> u16,
 ) -> f64 {
-    // Each installation is valued and sized by its own technology base.
-    let mut counts: BTreeMap<(System, Option<super::TechBase>), usize> = BTreeMap::new();
+    // Each installation is valued and sized by its own technology base, as the equipment
+    // tables key a probe's or ECM suite's value and slots to the base that built it
+    // (TechManual pp. 317-318).
+    let mut counts: BTreeMap<(System, bool), usize> = BTreeMap::new();
     for part in &loadout.systems {
-        let context = context.for_installation(part.tech_base);
+        let context = context.for_part(part);
         if part.system.defensive_battle_value(context).is_some() {
-            *counts.entry((part.system, part.tech_base)).or_default() += 1;
+            *counts.entry((part.system, context.clan)).or_default() += 1;
         }
     }
     counts
         .into_iter()
-        .map(|((system, base), count)| {
-            let context = context.for_installation(base);
+        .map(|((system, clan), count)| {
+            let context = SystemContext { clan, ..context };
             let value = system.defensive_battle_value(context).unwrap_or(0);
             let size = usize::from(slots(system, context).max(1));
             (count / size) as f64 * f64::from(value)
@@ -464,6 +466,7 @@ impl Mech {
             )
         });
         let clan_engine = definition.clan_engine();
+        let clan_structure = definition.clan_structure();
         // 'Mech Engine Type Modifier (TechManual p. 315; TO:AUE p. 193).
         let engine_modifier = match engine {
             Engine::Standard | Engine::Compact => 1.0,
@@ -562,8 +565,9 @@ impl Mech {
             if fragile_engine || core(section) {
                 return true;
             }
-            // Clan 'Mechs are assumed to carry CASE in every location.
-            !clan && !protected_by(System::Case, section)
+            // A 'Mech built with Clan internal structure carries CASE in every location
+            // (TechManual p. 210), whatever its other technology.
+            !clan_structure && !protected_by(System::Case, section)
         };
         let ammunition_slots = loadout
             .ammunition
