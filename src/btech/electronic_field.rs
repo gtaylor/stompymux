@@ -23,12 +23,27 @@ impl ElectronicMode {
     }
 }
 
+/// Hexes a Guardian or Angel ECM suite reaches in either mode (Total Warfare p. 134).
+pub const ECM_RANGE: f64 = 6.0;
+
+/// The effective reach of an ECM suite on a battlefield: electromagnetic `interference` doubles
+/// it (Tactical Operations: Advanced Rules p. 53).
+pub fn ecm_range(interference: bool) -> f64 {
+    if interference {
+        2.0 * ECM_RANGE
+    } else {
+        ECM_RANGE
+    }
+}
+
 /// Emissions of one unit on the subject's map, with its actual three-dimensional range.
 /// Equipment availability and lifecycle changes must be applied before building this input.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ElectronicSource {
     pub team: i32,
     pub distance: f64,
+    /// How far the source's Guardian and Angel suites reach; see [`ecm_range`].
+    pub range: f64,
     pub guardian: ElectronicMode,
     pub angel: ElectronicMode,
     pub personal: ElectronicMode,
@@ -133,10 +148,13 @@ pub fn resolve_electronic_field(
     let mut hostile_eccm = Strength::default();
     for source in sources {
         ensure!(
-            source.distance.is_finite() && source.distance >= 0.0,
+            source.distance.is_finite()
+                && source.distance >= 0.0
+                && source.range.is_finite()
+                && source.range >= 0.0,
             "Invalid electronic source range"
         );
-        if source.distance > 6.0 {
+        if source.distance > source.range {
             continue;
         }
         let friendly = source.team == team;
@@ -184,4 +202,47 @@ pub fn resolve_electronic_field(
         angel_disturbed: angel_disturbance,
         countered: !protected && (friendly_ecm.total() > 0 || hostile_eccm.total() > 0),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A suite reaches six hexes, twelve under electromagnetic interference (Tactical
+    /// Operations: Advanced Rules p. 53), and each source's own reach decides whether it
+    /// touches the subject.
+    #[test]
+    fn interference_doubles_ecm_reach() {
+        assert_eq!(ecm_range(false), 6.0);
+        assert_eq!(ecm_range(true), 12.0);
+        let source = |distance, range| ElectronicSource {
+            team: 2,
+            distance,
+            range,
+            guardian: ElectronicMode::Ecm,
+            angel: ElectronicMode::Off,
+            personal: ElectronicMode::Off,
+        };
+        let disturbed = |source| {
+            resolve_electronic_field(ElectronicField::default(), 1, [source], false)
+                .unwrap()
+                .disturbed
+        };
+        assert!(disturbed(source(6.0, ecm_range(false))));
+        assert!(!disturbed(source(9.0, ecm_range(false))));
+        assert!(disturbed(source(9.0, ecm_range(true))));
+        assert!(disturbed(source(12.0, ecm_range(true))));
+        assert!(!disturbed(source(12.01, ecm_range(true))));
+        for range in [f64::NAN, f64::INFINITY, -1.0] {
+            assert!(
+                resolve_electronic_field(
+                    ElectronicField::default(),
+                    1,
+                    [source(1.0, range)],
+                    false
+                )
+                .is_err()
+            );
+        }
+    }
 }

@@ -26,12 +26,12 @@ impl Motion {
         }
     }
 
-    /// Project one movement event, preserving reverse travel and shared map scaling.
-    pub(super) fn project_step(self, rate: f64) -> Result<Point> {
-        ensure!(rate.is_finite() && rate >= 0.0, "Invalid movement rate");
+    /// Project one second of movement, preserving reverse travel. One movement point
+    /// (10.75 speed units) covers one hex every 60 seconds.
+    pub(super) fn project_step(self) -> Result<Point> {
         self.point.project(
             self.heading + if self.speed < 0.0 { 180.0 } else { 0.0 },
-            self.speed.abs() / 645.0 * rate,
+            self.speed.abs() / 645.0,
         )
     }
 

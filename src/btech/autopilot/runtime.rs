@@ -666,19 +666,13 @@ fn advance_controller(
                     .map_or(Default::default(), |m| m.pursuit_policy),
             );
             if let Some(own) = o.position {
-                let rate = if map.movement_modifier > 0 {
-                    map.movement_modifier as f64 / 100.0
-                } else {
-                    1.0
-                };
                 let maximum = crate::btech::motion_controls::throttle_maximum(
                     world,
                     id,
                     config.battletech.tsm_tow_bonus != 0,
                 )
                 .unwrap_or(0.0);
-                let speed =
-                    maximum * f64::from(controller_config.speed_percent) / 100.0 / 645.0 * rate;
+                let speed = maximum * f64::from(controller_config.speed_percent) / 100.0 / 645.0;
                 let in_firing_range = o
                     .contacts
                     .iter()
@@ -1349,19 +1343,9 @@ fn advance_controller(
         cap,
         combat,
         engagement.is_some_and(|e| e.aim != e.target),
-        plan.pursuit.velocity().map(|velocity| {
-            (
-                velocity,
-                cap / 645.0
-                    * world.btech.maps().get(&position.map).map_or(1.0, |m| {
-                        if m.movement_modifier > 0 {
-                            m.movement_modifier as f64 / 100.0
-                        } else {
-                            1.0
-                        }
-                    }),
-            )
-        }),
+        plan.pursuit
+            .velocity()
+            .map(|velocity| (velocity, cap / 645.0)),
         &mut plan.steering,
         simulation_time,
         notices,
@@ -2255,19 +2239,9 @@ fn drive_pending(
         cap,
         combat,
         true,
-        plan.pursuit.velocity().map(|velocity| {
-            (
-                velocity,
-                cap / 645.0
-                    * world.btech.maps().get(&position.map).map_or(1.0, |m| {
-                        if m.movement_modifier > 0 {
-                            m.movement_modifier as f64 / 100.0
-                        } else {
-                            1.0
-                        }
-                    }),
-            )
-        }),
+        plan.pursuit
+            .velocity()
+            .map(|velocity| (velocity, cap / 645.0)),
         &mut plan.steering,
         now,
         notices,

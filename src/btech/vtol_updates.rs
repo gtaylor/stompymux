@@ -115,12 +115,10 @@ pub(super) fn advance_all(
             .is_some_and(|pilot| super::skills::boolean_advantage(world, pilot, "Toughness"));
         let movement = VehicleMotionRules {
             speed_demon,
-            movement_modifier: map.movement_modifier,
             // Fog and buildings slow ground movement, not rotorcraft in flight.
             extra_cost: 0,
         };
         let current = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-        let movement_modifier = map.movement_modifier;
         let current_hex = super::HexCoordinate {
             x: i32::from(position.x),
             y: i32::from(position.y),
@@ -155,12 +153,7 @@ pub(super) fn advance_all(
         unit.slick
             .observe(true, controlled.speed != 0.0, controlled.heading);
         let held = unit.slick.heading;
-        let leaving = unit
-            .vtol_motion_step(movement_modifier)?
-            .motion
-            .point
-            .containing_hex()?
-            != current_hex;
+        let leaving = unit.vtol_motion_step()?.motion.point.containing_hex()? != current_hex;
         let cruise =
             super::vtol_speed::remaining_speed(maximum, flight.vertical_speed)? * 2.0 / 3.0;
         if leaving && unit.slick.turned && controlled.speed.abs() > cruise + 0.1 {

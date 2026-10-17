@@ -93,6 +93,17 @@ async fn obstacle_fixture(source: &str) -> (tempfile::TempDir, Config, World, Ob
     (dir, config, base, id, map)
 }
 
+/// The saved point a tenth of a hex short of the north edge of the obstacle course's start
+/// hex (0, 2), so one second northbound at 129 kph (a fifth of a hex) enters the obstacle.
+fn short_of_north_edge() -> serde_json::Value {
+    let center = HexCoordinate { x: 0, y: 2 }.center();
+    serde_json::to_value(Point {
+        x: center.x,
+        y: 2.1,
+    })
+    .unwrap()
+}
+
 /// Flying into terrain crashes the VTOL in the hex it entered (Total Warfare p. 54), with or
 /// without a pilot and with no roll to avoid it; the crash damage follows TW p. 68, and the
 /// VTOL has landed on the hilltop when it comes through still able to fly.
@@ -117,7 +128,7 @@ async fn flying_into_terrain_crashes_in_the_hex_entered_without_a_roll() {
         unit["motion"]["desired_speed"] = 129.0.into();
         unit["vtol_flight"]["altitude"] = f64::from(previous.surface_height().max(0) + 1).into();
         unit["vtol_flight"]["vertical_speed"] = 0.0.into();
-        encoded["maps"][map.0.to_string()]["movement_modifier"] = 1000.into();
+        unit["motion"]["point"] = short_of_north_edge();
         world.btech = serde_json::from_value(encoded).unwrap();
         let before = world.clone();
         persistence::save(&config.database(), &world).await.unwrap();
@@ -196,7 +207,7 @@ async fn flying_into_terrain_crashes_in_the_hex_entered_without_a_roll() {
 /// place to land, so the wreck is a write-off (Total Warfare pp. 54 and 68).
 #[tokio::test]
 async fn flying_into_the_treetops_crashes_in_the_woods() {
-    let (_dir, config, base, id, map) = obstacle_fixture("1 3\n.0\n`0\n.0\n").await;
+    let (_dir, config, base, id, _) = obstacle_fixture("1 3\n.0\n`0\n.0\n").await;
     for (altitude, crashes) in [(1.0, true), (2.0, true), (3.0, false)] {
         let mut world = base.clone();
         let mut encoded = serde_json::to_value(&world.btech).unwrap();
@@ -205,7 +216,7 @@ async fn flying_into_the_treetops_crashes_in_the_woods() {
         unit["motion"]["desired_speed"] = 129.0.into();
         unit["vtol_flight"]["altitude"] = altitude.into();
         unit["vtol_flight"]["vertical_speed"] = 0.0.into();
-        encoded["maps"][map.0.to_string()]["movement_modifier"] = 1000.into();
+        unit["motion"]["point"] = short_of_north_edge();
         world.btech = serde_json::from_value(encoded).unwrap();
         let before = world.clone();
         persistence::save(&config.database(), &world).await.unwrap();
@@ -226,7 +237,7 @@ async fn flying_into_the_treetops_crashes_in_the_woods() {
                 ),
                 "{altitude}: {outcome:?}"
             );
-            assert_eq!(unit.position().unwrap().y, 0);
+            assert_eq!(unit.position().unwrap().y, 1);
             assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Airborne);
             continue;
         }
@@ -639,7 +650,7 @@ async fn live_validation_rejects_impossible_flight_lifecycle_combinations() {
     let before = waiting.btech.clone();
     advance_battle_motion(&mut waiting, MovementRules::STANDARD).unwrap();
     assert_eq!(waiting.btech, before);
-    assert!(waiting.btech.vehicles()[&id].vtol_motion_step(0).is_err());
+    assert!(waiting.btech.vehicles()[&id].vtol_motion_step().is_err());
     // Powered vertical travel cannot remain active after power is removed; such a
     // vehicle is refused as it loads.
     let mut powered_vertical = base.clone();
@@ -763,7 +774,7 @@ async fn native_and_lua_asset_loading_admit_flying_and_stationary_aircraft() {
 async fn a_flanking_vtol_rolls_against_sideslipping_after_a_turn() {
     let field = format!("6 6\n{}", format!("{}\n", ".0".repeat(6)).repeat(6));
     for (roll, flank) in [(2, true), (12, true), (12, false)] {
-        let (_dir, config, mut world, id, map) = obstacle_fixture(&field).await;
+        let (_dir, config, mut world, id, _) = obstacle_fixture(&field).await;
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == roll)
             .unwrap();
@@ -777,7 +788,6 @@ async fn a_flanking_vtol_rolls_against_sideslipping_after_a_turn() {
         unit["vtol_flight"]["altitude"] = 3.0.into();
         unit["vtol_flight"]["vertical_speed"] = 0.0.into();
         unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
-        encoded["maps"][map.0.to_string()]["movement_modifier"] = 200.into();
         world.btech = serde_json::from_value(encoded).unwrap();
         let mut checked = false;
         for _ in 0..12 {

@@ -317,7 +317,6 @@ async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World,
         .unwrap()
         .map;
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["movement_modifier"] = 800.into();
     for id in &ids[1..] {
         state["constructed"][id.0.to_string()]["position"]["y"] = 2.into();
         state["constructed"][id.0.to_string()]["motion"]["point"] =
@@ -325,7 +324,18 @@ async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World,
     }
     world.btech = serde_json::from_value(state).unwrap();
     launch_battle_jump(&mut world, ids[0], ObjectId(1), 180, 1.0).unwrap();
-    advance_battle_jumps(&mut world, stompymux_rs::MovementRules::STANDARD).unwrap();
+    // Fly until the next jump event is the landing.
+    loop {
+        advance_battle_jumps(&mut world, stompymux_rs::MovementRules::STANDARD).unwrap();
+        let unit = &world.btech.constructed_units()[&ids[0]];
+        let mut flight = unit.flight().unwrap();
+        let capacity = unit
+            .jump_capacity(world.btech.maps()[&map].gravity)
+            .unwrap();
+        if flight.advance(capacity).unwrap().outcome == JumpOutcome::Landing {
+            break;
+        }
+    }
     assert!(world.btech.constructed_units()[&ids[0]].flight().is_some());
     world.validate(&config).unwrap();
     (dir, config, world, ids)

@@ -44,7 +44,6 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             "visual_range",
             map.visual_range().map_err(mlua::Error::external)?,
         )?;
-        result.set("sensor_flags", map.sensor_flags)?;
         Ok(result)
     })?;
     native.set("map", error::wrap(lua, map, "btech.operation.failed")?)?;

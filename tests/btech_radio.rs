@@ -1450,11 +1450,15 @@ async fn observer_scans_keep_acquisition_and_lock_loss_without_routine_chatter()
     assert_eq!(compared.btech, normal.btech);
     let _ = select_battle_target(&mut observing, observer, ObjectId(1), Some(target)).unwrap();
     let _ = select_battle_target(&mut normal, observer, ObjectId(1), Some(target)).unwrap();
-    // Heavy fog without sensors drops every distant contact; the adjacent target, which a clear
-    // line always keeps in sight and which relocating would unlock outright, goes invisible.
+    // Heavy fog and a sweep of 12, which finds nothing, drop every distant contact; the adjacent
+    // target, which a clear line always keeps in sight and which relocating would unlock
+    // outright, goes invisible.
     for world in [&mut normal, &mut observing] {
         set_battle_map_conditions(world, map, Light::Day, Weather::HeavyFog).unwrap();
-        set_battle_map_perception(world, map, MapPerceptionFlag::Sensors, false).unwrap();
+        world
+            .btech
+            .set_unit_sensor_sweep(observer, Some(12))
+            .unwrap();
         set_battle_visibility(
             world,
             target,

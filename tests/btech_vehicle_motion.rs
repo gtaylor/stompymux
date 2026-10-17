@@ -45,7 +45,7 @@ fn vehicle_motion_reaches_terrain_adjusted_targets_and_brakes_without_overshoot(
 }
 
 #[test]
-fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
+fn vehicle_motion_handles_road_turning_hover_advantage_and_time_scale() {
     let mut template = template();
     let mut motion = Motion::stationary(HexCoordinate { x: 50, y: 50 }.center());
     motion.desired_speed = template.max_speed;
@@ -68,22 +68,8 @@ fn vehicle_motion_handles_road_turning_hover_advantage_and_map_rate() {
         )
         .unwrap();
     assert_eq!(fast.speed, normal.speed * 1.25);
-    let double = template
-        .ground_motion_step(
-            motion,
-            Hex::new(Terrain::Clear, 0),
-            VehicleMotionRules {
-                movement_modifier: 200,
-                ..VehicleMotionRules::STANDARD
-            },
-        )
-        .unwrap();
-    assert!(
-        (motion.point.range(double.point).unwrap()
-            - 2.0 * motion.point.range(normal.point).unwrap())
-        .abs()
-            < 1e-12
-    );
+    // One movement point (10.75 speed units) covers one hex every 60 seconds.
+    assert!((motion.point.range(normal.point).unwrap() - normal.speed / 645.0).abs() < 1e-12);
     motion.speed = 64.5;
     motion.desired_heading = 90.0;
     let road = template

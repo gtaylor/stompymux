@@ -72,9 +72,12 @@ async fn vehicle_contacts_acquire_retain_lose_and_replay_without_extra_rolls() {
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
         assert_eq!(restored.btech, world.btech);
-        // Pitch black limits sight to 3 hexes and the targets sit 4 hexes away; with the map's
-        // sensors switched off no channel reaches them.
-        set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Sensors, false).unwrap();
+        // Pitch black limits sight to 3 hexes and the targets sit 4 hexes away; with a sweep of
+        // 12, which finds nothing, no channel reaches them.
+        restored
+            .btech
+            .set_unit_sensor_sweep(vehicle, Some(12))
+            .unwrap();
         set_battle_map_conditions(&mut restored, map, Light::PitchBlack, Weather::Clear).unwrap();
         let update = update_battle_contact(&mut restored, vehicle, target).unwrap();
         assert_eq!(update.transition, ContactTransition::Lost);

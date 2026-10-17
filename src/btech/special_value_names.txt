@@ -93,7 +93,6 @@ BTech fields available to view and set:
 	2	windspeed
 	2	cloudbase
 	2	flags
-	2	sensorflags
 	2	regen_factor
 	4	arcs
 	4	parent

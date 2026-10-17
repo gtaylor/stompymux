@@ -121,7 +121,7 @@ impl FreeFall {
     /// Advance one committed second against the currently applicable surface.
     /// Terrain selection and impact effects belong to the caller. Impact retains
     /// the pre-contact altitude for damage rules that inspect water or bridges.
-    /// Gravity and map movement rates do not change this event's cadence.
+    /// Gravity does not change this event's cadence.
     /// Invalid arithmetic and impact outcomes leave the cursor unchanged.
     pub fn advance(&mut self, surface: i32) -> Result<FreeFallStep> {
         self.advance_with_lift(surface, false)

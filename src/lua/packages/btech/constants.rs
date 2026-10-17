@@ -1029,8 +1029,8 @@ pub(super) static MAP_FLAGS: Catalog = Catalog {
             value: 256,
         },
         Entry {
-            name: "NO_PHYSICAL_ATTACKS",
-            value: 512,
+            name: "ELECTROMAGNETIC_INTERFERENCE",
+            value: 1024,
         },
     ],
 };

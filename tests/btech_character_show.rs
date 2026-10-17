@@ -53,7 +53,7 @@ async fn wizard_catalogs_are_read_only_and_available_after_restart() {
     assert!(fields.contains("\t0\tmapindex"));
     assert!(fields.contains("\t4\tlockmode"));
     assert!(fields.contains("\t0\thexes_walked"));
-    assert_eq!(fields.lines().count(), 115);
+    assert_eq!(fields.lines().count(), 114);
     for command in ["+show char_skills", "+show s", "+show btechvalues mech"] {
         assert!(
             support::run_text(&scripts, &config, ObjectId(1), 1, command)

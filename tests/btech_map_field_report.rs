@@ -44,7 +44,6 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
         ("windspeed", Some("0")),
         ("cloudbase", Some("200")),
         ("flags", Some("-")),
-        ("sensorflags", Some("-")),
         ("regen_factor", Some("1")),
     ];
     assert_eq!(
@@ -56,7 +55,7 @@ async fn report_values_order_filters_and_layouts_are_explicit() {
         expected
     );
     assert_eq!(report.columns, 2);
-    assert_eq!(report.text.lines().count(), 13);
+    assert_eq!(report.text.lines().count(), 12);
     assert!(report.text.contains("Data for [fg=red]Map[reset] (MAP)"));
     assert_eq!(output(&scripts), report.text);
     for (arguments, columns, names) in [
@@ -148,7 +147,7 @@ async fn field_reports_leave_every_chassis_unchanged_and_survive_restart() {
         let before = world.btech.clone();
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let report = view_battle_map_fields_action(&scripts, &config, actor, map, "1").unwrap();
-        assert_eq!(report.fields.len(), 17);
+        assert_eq!(report.fields.len(), 16);
         assert_eq!(output(&scripts), report.text);
         assert_eq!(scripts.world().btech, before);
         let saved = scripts.world().clone();

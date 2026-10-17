@@ -231,6 +231,14 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
     let Some(position) = position else {
         return Ok(ElectronicField::default());
     };
+    // Every emitter shares the subject's map, so one battlefield condition sets their reach.
+    let reach = super::ecm_range(
+        world
+            .btech
+            .maps()
+            .get(&position.map)
+            .is_some_and(super::StoredMap::electromagnetic_interference),
+    );
     let mut sources = Vec::new();
     for other in identities(world) {
         // Most units carry no active suite; reading the switch first keeps this scan cheap.
@@ -250,12 +258,13 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
             continue;
         }
         let distance = super::unit_range(world, id, other)?.spatial;
-        if distance > 6.0 {
+        if distance > reach {
             continue;
         }
         sources.push(ElectronicSource {
             team: emitter.signature.team,
             distance,
+            range: reach,
             guardian: if available(world, other, ElectronicSuite::Guardian)? {
                 state.guardian
             } else {

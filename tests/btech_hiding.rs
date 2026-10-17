@@ -556,7 +556,6 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
         world
             .btech
             .rewrite_map_record(map, |record| {
-                record["movement_modifier"] = 10000.into();
                 record["terrain"][4] =
                     serde_json::to_value(Hex::new(Terrain::LightWoods, 0)).unwrap();
                 record["terrain"][7] = serde_json::to_value(Hex::new(Terrain::Clear, 1)).unwrap();
@@ -571,6 +570,10 @@ async fn hiding_aircraft_crash_orders_crossing_before_damage_and_replays() {
             // is already at ground level and comes down too fast to land.
             unit["motion"]["speed"] = if crossed { 100.0 } else { 1.0 }.into();
             unit["motion"]["desired_speed"] = if crossed { 100.0 } else { 1.0 }.into();
+            // A tenth of a hex short of the woods, which one second at 100 kph crosses into.
+            if crossed {
+                unit["motion"]["point"]["y"] = 1.6.into();
+            }
             unit["vtol_flight"] = serde_json::to_value(VtolFlight {
                 phase: VtolFlightPhase::Airborne,
                 altitude: if crossed { 2.5 } else { 1.9 },

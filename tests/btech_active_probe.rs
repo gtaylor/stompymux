@@ -232,6 +232,23 @@ async fn probes_let_the_carrier_aim_through_a_point_of_woods() {
     };
     assert_eq!(aim(&world, bare), 2, "two light woods on the way");
     assert_eq!(aim(&world, probed), 1, "the probe sees through one of them");
+    // Electromagnetic interference renders the probe useless (Tactical Operations: Advanced
+    // Rules p. 53): it no longer sees through the woods.
+    let mut interfered = world.clone();
+    interfered
+        .btech
+        .rewrite_map_record(map, |record| {
+            let flags = record["flags"].as_i64().unwrap();
+            record["flags"] = MapFlag::ElectromagneticInterference
+                .apply(flags, true)
+                .into();
+        })
+        .unwrap();
+    assert_eq!(
+        aim(&interfered, probed),
+        2,
+        "the useless probe sees no woods"
+    );
     relocate(&mut world, enemy, map, 5);
     refresh_battle_contacts(&mut world, &[bare, probed]).unwrap();
     assert_eq!(

@@ -246,6 +246,9 @@ fn resolve_hex_shot_inner(
                             && super::artemis::apollo_operational(world, shooter, weapon_index)?,
                         array,
                         unit_without_heat: false,
+                        interference: super::planetary_conditions::under_interference(
+                            world, shooter,
+                        ),
                     },
                     super::dice::unit_dice_mut(world, shooter)?,
                 )?;

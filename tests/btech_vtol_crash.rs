@@ -662,7 +662,9 @@ async fn launch_rechecks_ceiling_and_unlinked_boundaries_stop_horizontal_flight(
     aircraft(&mut world, id, map, false);
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["flags"] = 0.into();
-    state["maps"][map.0.to_string()]["movement_modifier"] = 64500.into();
+    // Northbound at 100 kph, a twentieth of a hex from the edge: the next second leaves the map.
+    state["vehicles"][id.0.to_string()]["motion"]["point"]["y"] = 0.05.into();
+    state["vehicles"][id.0.to_string()]["motion"]["speed"] = 100.into();
     state["vehicles"][id.0.to_string()]["motion"]["desired_speed"] = 100.into();
     world.btech = serde_json::from_value(state).unwrap();
     world
@@ -794,7 +796,6 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         let mut world = base.clone();
         aircraft(&mut world, id, map, false);
         let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["movement_modifier"] = 10000.into();
         state["vehicles"][id.0.to_string()]["position"]["x"] = 1.into();
         state["vehicles"][id.0.to_string()]["position"]["y"] = 1.into();
         state["vehicles"][id.0.to_string()]["motion"] = serde_json::to_value(Motion {
@@ -806,8 +807,22 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         })
         .unwrap();
         world.btech = serde_json::from_value(state).unwrap();
-        let mut pure = world.btech.vehicles()[&id].clone();
-        let path = pure.advance_vtol_clear_path(&asset, 10000).unwrap();
+        // Fly out of the center hex, one second at a time, to the first step that would leave
+        // the map.
+        let rules = MovementRules::STANDARD.fall;
+        let (pure, path) = loop {
+            let mut pure = world.btech.vehicles()[&id].clone();
+            let path = pure.advance_vtol_clear_path(&asset).unwrap();
+            if matches!(path, VtolPath::MapEdge { .. }) {
+                break (pure, path);
+            }
+            assert!(matches!(path, VtolPath::Advanced { .. }), "{heading}");
+            assert_eq!(
+                advance_battle_vtol_environment(&mut world, id, rules).unwrap(),
+                VtolEnvironment::Movement { path }
+            );
+            assert_eq!(world.btech.vehicles()[&id], pure);
+        };
         let VtolPath::MapEdge {
             hex,
             last,
@@ -822,11 +837,10 @@ async fn boundary_resolution_reuses_the_first_exit_and_preserves_saved_replay() 
         let before = world.btech.clone();
         assert_eq!(pure, before.vehicles()[&id]);
         let mut replay = world.clone();
-        let result =
-            advance_battle_vtol_environment(&mut world, id, MovementRules::STANDARD.fall).unwrap();
+        let result = advance_battle_vtol_environment(&mut world, id, rules).unwrap();
         assert_eq!(result, VtolEnvironment::Boundary { path });
         assert_eq!(
-            advance_battle_vtol_environment(&mut replay, id, MovementRules::STANDARD.fall).unwrap(),
+            advance_battle_vtol_environment(&mut replay, id, rules).unwrap(),
             result
         );
         assert_eq!(world.btech, replay.btech);
@@ -863,12 +877,13 @@ async fn an_intermediate_ground_collision_takes_precedence_over_a_map_exit() {
     let id = world.create(&config, "Hill aircraft".into(), Kind::Thing);
     aircraft(&mut world, id, map, false);
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["movement_modifier"] = 10000.into();
     state["vehicles"][id.0.to_string()]["position"]["y"] = 2.into();
+    // Northwest from the start hex's corner: one second at 100 kph clips the hill hex and
+    // would then cross the west edge of the map.
     state["vehicles"][id.0.to_string()]["motion"] = serde_json::to_value(Motion {
-        point: HexCoordinate { x: 0, y: 2 }.center(),
-        heading: 0.0,
-        desired_heading: 0.0,
+        point: Point { x: 0.05, y: 2.02 },
+        heading: 315.0,
+        desired_heading: 315.0,
         speed: 100.0,
         desired_speed: 100.0,
     })

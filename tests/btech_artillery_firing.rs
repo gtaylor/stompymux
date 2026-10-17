@@ -739,6 +739,86 @@ async fn artillery_observed_launch_and_link_revalidation() {
     );
 }
 
+/// Indirect artillery may target a hex no friendly unit can see, without a spotter; that fire
+/// cannot be adjusted onto target (Tactical Operations p. 148). Underground, unobserved
+/// indirect fire is still refused.
+#[tokio::test]
+async fn unspotted_artillery_fires_at_an_unseen_hex_without_adjustment() {
+    for underground in [false, true] {
+        let (_dir, config, mut world, _, shooter, index) = fixture(&[]).await;
+        // A ridge hides the far row from the launcher; its friend stays on the first field.
+        let ridge = world.create(&config, "Ridge field".into(), Kind::Room);
+        create_battle_map(
+            &mut world,
+            ridge,
+            "ridge.map",
+            MapAsset::from_cells("3 3\n.0.0.0\n.9.9.9\n.0.0.0\n").unwrap(),
+        )
+        .unwrap();
+        support::seed_object_dice(&mut world, ridge, support::FIXTURE_DICE_SEED);
+        if underground {
+            let mut state = serde_json::to_value(&world.btech).unwrap();
+            state["maps"][ridge.0.to_string()]["flags"] = MapFlag::Underground.bit().into();
+            world.btech = serde_json::from_value(state).unwrap();
+        }
+        stop_battle_unit(&mut world, shooter, ObjectId(1), rules()).unwrap();
+        place_battle_unit(&mut world, shooter, ridge, 1, 2).unwrap();
+        assign_battle_pilot(&mut world, shooter, ObjectId(1)).unwrap();
+        support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
+        start_battle_unit(&mut world, shooter, ObjectId(1), true).unwrap();
+        for _ in 0..5 {
+            advance_battle_units(&mut world, 0, true);
+        }
+        let target = HexCoordinate { x: 1, y: 0 };
+        select_battle_hex_target(&mut world, shooter, ObjectId(1), target, HexTargetMode::Hex)
+            .unwrap();
+        assert!(!battle_hex_visible(&world, shooter, target).unwrap());
+        let before = world.btech.clone();
+        let lua = Scripts::new(
+            &config,
+            std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
+        )
+        .unwrap();
+        let native =
+            Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+        let launch = lua.eval_callback::<bool>(&format!(
+            "return btech.unit.fire({},1,{index}).launched",
+            shooter.0
+        ));
+        let text = support::run_text(&native, &config, ObjectId(1), 1, &format!("fire {index}"));
+        assert_eq!(native.world().btech, lua.world().btech);
+        if underground {
+            let error = launch.unwrap_err();
+            assert!(
+                format!("{error:#}").contains("cannot fire indirect weapons underground"),
+                "{error:#}"
+            );
+            assert!(text.contains("underground"), "{text}");
+            assert_eq!(lua.world().btech, before);
+            continue;
+        }
+        assert!(launch.unwrap());
+        assert!(text.contains("You fire"), "{text}");
+        assert_eq!(lua.world().btech.maps()[&ridge].artillery_shots().len(), 1);
+        let mut arrivals = Vec::new();
+        while !lua.world().btech.maps()[&ridge]
+            .artillery_shots()
+            .is_empty()
+        {
+            arrivals.extend(advance_artillery_action(&lua, &config, rules()).unwrap());
+        }
+        // The shot misses, and with nobody watching the target hex the miss earns no
+        // correction for the next one.
+        assert_eq!(arrivals.len(), 1);
+        assert!(arrivals[0].pattern.missed);
+        assert_eq!(
+            lua.world().btech.constructed_units()[&shooter].artillery_adjustment(),
+            0
+        );
+        lua.world().validate(&config).unwrap();
+    }
+}
+
 /// Hotloaded artillery shares native/Lua controls, never jams and spends once per launch.
 #[tokio::test]
 async fn artillery_hotload_launches_without_jamming() {

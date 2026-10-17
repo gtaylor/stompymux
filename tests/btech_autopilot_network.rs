@@ -48,8 +48,9 @@ fn place(
     id
 }
 
-/// Hunter and spotter share C3i on a moonlit field without sensors: units see ten hexes, the
-/// spotter stands beside the enemy, and the hunter starts eighteen hexes away.
+/// Hunter and spotter share C3i on a moonless field: units see five hexes, the spotter stands
+/// beside the enemy, and the hunter starts thirty-two hexes away, past the thirty-hex long band
+/// of every sensor it carries.
 async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
     let (directory, _, mut world) = support::isolated_world().await;
     let config = Config::load(directory.path()).unwrap();
@@ -58,12 +59,11 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         &mut world,
         map,
         "network.hunt",
-        MapAsset::from_cells(&format!("7 26\n{}", (".0".repeat(7) + "\n").repeat(26))).unwrap(),
+        MapAsset::from_cells(&format!("7 40\n{}", (".0".repeat(7) + "\n").repeat(40))).unwrap(),
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
     set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let hunter = place(
         &mut world,
         &config,
@@ -80,7 +80,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         map,
         "Spotter",
         networked_jenner(),
-        (4, 20),
+        (4, 34),
         Some(spotter_pilot),
     );
     let enemy = place(
@@ -89,7 +89,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {
         map,
         "Enemy",
         MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap(),
-        (3, 20),
+        (3, 34),
         None,
     );
     set_battle_unit_signature(
@@ -119,6 +119,17 @@ fn holds(world: &World, observer: ObjectId, target: ObjectId) -> bool {
         .unwrap()
         .iter()
         .any(|contact| contact.target == target && contact.detection.is_some())
+}
+
+/// Whether `observer` sees `target` itself, rather than holding only a sensor blip or a
+/// teammate's sighting.
+fn sees(world: &World, observer: ObjectId, target: ObjectId) -> bool {
+    visible_battle_contacts(world, observer)
+        .unwrap()
+        .iter()
+        .any(|contact| {
+            contact.target == target && contact.detection == Some(DetectionChannel::Sight)
+        })
 }
 
 /// Current row of the hunter.
@@ -214,14 +225,14 @@ async fn autopilot_hunts_an_enemy_only_a_teammate_can_see() {
             "the relayed enemy stays locked (tick {tick})"
         );
         if metrics.autopilot.autonomous_shots > 0 {
-            fired_at = Some((tick, holds(&world, hunter, enemy)));
+            fired_at = Some((tick, sees(&world, hunter, enemy)));
             break;
         }
     }
     let (_, own_sighting) = fired_at.expect("hunter fired on the relayed enemy");
     assert!(
         !own_sighting,
-        "the hunter fired before it perceived the enemy itself"
+        "the hunter fired before it saw the enemy itself"
     );
     assert!(
         row(&harness.world(), hunter) > start,

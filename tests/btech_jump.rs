@@ -608,23 +608,15 @@ async fn projected_jump_checks_requested_range_before_destination_snapping() {
 #[test]
 fn timed_flight_replays_after_serialization_and_snaps_to_the_endpoint() {
     use stompymux_rs::{JumpFlight, JumpOutcome};
-    for (gravity, modifier, seconds) in [
-        (100, 100, 60),
-        (100, 0, 60),
-        (100, -50, 60),
-        (100, 50, 120),
-        (100, 200, 30),
-        (50, 100, 30),
-        (200, 100, 120),
-    ] {
+    for (gravity, seconds) in [(100, 60), (50, 30), (200, 120)] {
         let capacity = jenner().jump_capacity(gravity).unwrap();
         let mut flight = JumpFlight::new(flight_path());
         let mut restored = flight;
         for second in 1..=seconds {
             let previous = flight.sample();
-            let step = flight.advance(capacity, modifier).unwrap();
+            let step = flight.advance(capacity).unwrap();
             assert_eq!(step.from, previous);
-            assert_eq!(step, restored.advance(capacity, modifier).unwrap());
+            assert_eq!(step, restored.advance(capacity).unwrap());
             assert_eq!(
                 step.outcome,
                 if second == seconds {
@@ -645,7 +637,7 @@ fn timed_flight_replays_after_serialization_and_snaps_to_the_endpoint() {
         assert_eq!(flight.sample().point, Point { x: 2.0, y: 8.0 });
         assert_eq!(flight.sample().elevation, 4.0);
         let before = flight;
-        assert!(flight.advance(capacity, modifier).is_err());
+        assert!(flight.advance(capacity).is_err());
         assert_eq!(flight, before);
     }
 }
@@ -656,7 +648,7 @@ fn flight_uses_current_thrust_without_rewriting_the_previous_airborne_sample() {
     let mut flight = JumpFlight::new(flight_path());
     let full = jenner().jump_capacity(100).unwrap();
     for _ in 0..15 {
-        let _ = flight.advance(full, 100).unwrap();
+        let _ = flight.advance(full).unwrap();
     }
     let previous = flight.sample();
     let damaged = JumpCapacity {
@@ -666,7 +658,7 @@ fn flight_uses_current_thrust_without_rewriting_the_previous_airborne_sample() {
     let before = flight;
     // A damaged jet changes the next integration step, not the last committed point.
     assert_eq!(flight.sample(), previous);
-    let step = flight.advance(damaged, 100).unwrap();
+    let step = flight.advance(damaged).unwrap();
     assert_eq!(step.from, previous);
     assert!((flight.travelled() - before.travelled() - 0.05).abs() < 1e-12);
     assert_eq!(
@@ -679,13 +671,10 @@ fn flight_uses_current_thrust_without_rewriting_the_previous_airborne_sample() {
     assert_eq!(restored, flight);
     let before = flight;
     let lost = flight
-        .advance(
-            JumpCapacity {
-                speed: 0.0,
-                movement_points: 0,
-            },
-            100,
-        )
+        .advance(JumpCapacity {
+            speed: 0.0,
+            movement_points: 0,
+        })
         .unwrap();
     assert_eq!(lost.outcome, JumpOutcome::LostThrust);
     assert_eq!(lost.from, lost.to);
@@ -709,10 +698,15 @@ fn flight_uses_current_thrust_without_rewriting_the_previous_airborne_sample() {
             movement_points: 4,
         },
     ] {
-        assert!(flight.advance(bad, 100).is_err());
+        assert!(flight.advance(bad).is_err());
         assert_eq!(flight, before);
     }
-    let step = flight.advance(full, i64::MAX).unwrap();
+    let step = loop {
+        let step = flight.advance(full).unwrap();
+        if step.outcome != JumpOutcome::Airborne {
+            break step;
+        }
+    };
     assert_eq!(step.outcome, JumpOutcome::Landing);
     assert_eq!(step.to.point, Point { x: 2.0, y: 8.0 });
 }
@@ -748,9 +742,7 @@ fn saved_flight_rejects_corrupt_progress_and_reconstructs_launch_geometry() {
     hop["path"]["end_elevation"] = serde_json::json!(-1);
     let mut hop = serde_json::from_value::<JumpFlight>(hop).unwrap();
     assert!(!hop.arrived());
-    let step = hop
-        .advance(jenner().jump_capacity(100).unwrap(), 100)
-        .unwrap();
+    let step = hop.advance(jenner().jump_capacity(100).unwrap()).unwrap();
     assert_eq!(step.outcome, stompymux_rs::JumpOutcome::Landing);
     assert_eq!(step.from, step.to);
     assert_eq!(step.to.point, flight_path().sample(0.0, 5).unwrap().point);
@@ -2578,7 +2570,7 @@ async fn free_fall_impact_failure_is_atomic_and_removal_cancels_descent() {
     assert!(!world.btech.constructed_units()[&id].airborne());
 }
 
-/// Falling chooses the bridge underside and ice top, independently of movement rate or gravity.
+/// Falling chooses the bridge underside and ice top, independently of gravity.
 #[tokio::test]
 async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
     use stompymux_rs::*;
@@ -2600,7 +2592,6 @@ async fn free_fall_surface_contact_and_engine_restart_keep_the_event_cadence() {
         });
         let field = &mut state["maps"][map.0.to_string()];
         field["gravity"] = 200.into();
-        field["movement_modifier"] = 800.into();
         for tile in field["terrain"].as_array_mut().unwrap() {
             *tile = serde_json::to_value(Hex::new(terrain, elevation)).unwrap();
         }
@@ -3632,10 +3623,7 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
         let mut flight = unit.flight().unwrap();
         let map = &world.btech.maps()[&map];
         if flight
-            .advance(
-                unit.jump_capacity(map.gravity).unwrap(),
-                map.movement_modifier,
-            )
+            .advance(unit.jump_capacity(map.gravity).unwrap())
             .unwrap()
             .outcome
             == JumpOutcome::Landing
@@ -3853,10 +3841,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
         let mut flight = unit.flight().unwrap();
         let map = &world.btech.maps()[&unit.position().unwrap().map];
         if flight
-            .advance(
-                unit.jump_capacity(map.gravity).unwrap(),
-                map.movement_modifier,
-            )
+            .advance(unit.jump_capacity(map.gravity).unwrap())
             .unwrap()
             .outcome
             == JumpOutcome::Landing
@@ -4346,10 +4331,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         let mut flight = unit.flight().unwrap();
         let map = &world.btech.maps()[&unit.position().unwrap().map];
         if flight
-            .advance(
-                unit.jump_capacity(map.gravity).unwrap(),
-                map.movement_modifier,
-            )
+            .advance(unit.jump_capacity(map.gravity).unwrap())
             .unwrap()
             .outcome
             == JumpOutcome::Landing

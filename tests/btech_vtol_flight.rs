@@ -426,29 +426,30 @@ fn public_takeoff_vertical_control_and_landing_form_a_replayable_sequence() {
 
 #[test]
 fn flight_projection_preserves_fractional_altitude_and_shared_reverse_geometry() {
-    for (speed, modifier, distance) in [(64.5, 100, 0.1), (64.5, 200, 0.2), (-64.5, 0, 0.1)] {
+    for speed in [64.5, -64.5] {
         let mut unit = at_altitude(landing_aircraft(speed, speed, 64.5), 5.25);
         let before = unit.clone();
-        let first = unit.vtol_motion_step(modifier).unwrap();
+        let first = unit.vtol_motion_step().unwrap();
         // 64.5 kph is six MP of climb: six levels a minute, a tenth of a level a second.
         assert!((first.altitude - 5.35).abs() < 1e-12);
         assert_eq!(first.elevation(), 5);
         assert!(!first.ceiling_reached);
         let start = unit.motion().unwrap().point;
-        assert!((first.motion.point.range(start).unwrap() - distance).abs() < 1e-12);
+        // Six MP of travel is also six hexes a minute, a tenth of a hex a second.
+        assert!((first.motion.point.range(start).unwrap() - 0.1).abs() < 1e-12);
         assert_eq!(first.motion.point.x, start.x);
         assert_eq!(first.motion.point.y > start.y, speed < 0.0);
-        let replay = restored(&unit).vtol_motion_step(modifier).unwrap();
+        let replay = restored(&unit).vtol_motion_step().unwrap();
         assert_eq!(first, replay);
         assert_eq!(unit, before);
         unit.commit_vtol_motion(first).unwrap();
         unit = restored(&unit);
-        let second = unit.vtol_motion_step(modifier).unwrap();
+        let second = unit.vtol_motion_step().unwrap();
         assert!((second.altitude - 5.45).abs() < 1e-12);
     }
     // The ceiling is 500 levels (TW p. 54): a climb past it stops there.
     let unit = at_altitude(landing_aircraft(0.0, 0.0, 129.0), 499.9);
-    let step = unit.vtol_motion_step(100).unwrap();
+    let step = unit.vtol_motion_step().unwrap();
     assert_eq!(step.altitude, 500.0);
     assert_eq!(step.vertical_speed, 0.0);
     assert!(step.ceiling_reached);
@@ -464,7 +465,7 @@ fn flight_projection_preserves_fractional_altitude_and_shared_reverse_geometry()
         assert!(serde_json::from_value::<Vehicle>(saved).is_err());
     }
     let grounded = aircraft();
-    assert!(grounded.vtol_motion_step(100).is_err());
+    assert!(grounded.vtol_motion_step().is_err());
 }
 
 #[test]
@@ -515,7 +516,7 @@ fn flight_surface_contact_distinguishes_water_bridge_clearance_and_ground_impact
             unit.clone(),
             altitude + 21.5 / VERTICAL_KPH_PER_LEVEL_SECOND,
         )
-        .vtol_motion_step(100)
+        .vtol_motion_step()
         .unwrap();
         assert_eq!(
             step.surface_contact(Hex::new(terrain, elevation)),
@@ -532,10 +533,20 @@ fn at_altitude(unit: Vehicle, altitude: f64) -> Vehicle {
     serde_json::from_value(saved).unwrap()
 }
 
+/// A point in hex (0, `row`) `gap` hex heights short of its north edge, so a northbound
+/// one-second step longer than `gap` enters the hex beyond. One movement point covers a hex
+/// a minute, so 129 kph (twelve MP) travels a fifth of a hex each second.
+fn short_of_north_edge(row: i32, gap: f64) -> Point {
+    Point {
+        x: HexCoordinate { x: 0, y: row }.center().x,
+        y: f64::from(row) + gap,
+    }
+}
+
 #[test]
 fn altitude_commits_reject_stale_or_altered_proposals_and_preserve_height_on_lift_loss() {
     let mut unit = at_altitude(landing_aircraft(21.5, 21.5, 64.5), 12.25);
-    let step = unit.vtol_motion_step(100).unwrap();
+    let step = unit.vtol_motion_step().unwrap();
     let before = unit.clone();
     let mut forged = step;
     forged.altitude = 100.0;
@@ -575,11 +586,10 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
                 serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), altitude))
                     .unwrap();
             saved["position"]["y"] = 2.into();
-            saved["motion"]["point"] =
-                serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
+            saved["motion"]["point"] = serde_json::to_value(short_of_north_edge(2, 0.1)).unwrap();
             let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
             let before = unit.clone();
-            let outcome = unit.advance_vtol_clear_path(&map, 1000).unwrap();
+            let outcome = unit.advance_vtol_clear_path(&map).unwrap();
             assert_eq!(
                 matches!(
                     outcome,
@@ -593,7 +603,7 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
             if obstructed {
                 assert_eq!(unit, before);
                 assert!(matches!(
-                    unit.advance_vtol_environment(&map, 1000).unwrap(),
+                    unit.advance_vtol_environment(&map).unwrap(),
                     VtolEnvironment::CrashRequired { .. }
                 ));
                 assert_eq!(unit, before);
@@ -602,23 +612,23 @@ fn forest_entry_checks_canopy_only_when_crossing_hexes() {
         let forest = MapAsset::from_cells(&format!("1 1\n{terrain}0\n")).unwrap();
         let mut hover = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 3.0);
         assert!(matches!(
-            hover.advance_vtol_clear_path(&forest, 100).unwrap(),
+            hover.advance_vtol_clear_path(&forest).unwrap(),
             VtolPath::Advanced { .. }
         ));
     }
 }
 
 #[test]
-fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
-    // Northbound from row 2 to row 0: both endpoint surfaces are clear, row 1 is raised.
+fn flight_path_stops_at_raised_hexes_and_map_edges_are_atomic() {
+    // Northbound from row 2 into row 1, which is raised above the aircraft.
     let map = MapAsset::from_cells("1 3\n.0\n^9\n.0\n").unwrap();
     let mut saved =
         serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 0.0), 5.0)).unwrap();
     saved["position"]["y"] = 2.into();
-    saved["motion"]["point"] = serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
+    saved["motion"]["point"] = serde_json::to_value(short_of_north_edge(2, 0.1)).unwrap();
     let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
     let before = unit.clone();
-    let result = unit.advance_vtol_clear_path(&map, 1000).unwrap();
+    let result = unit.advance_vtol_clear_path(&map).unwrap();
     assert!(matches!(
         result,
         VtolPath::Contact {
@@ -630,21 +640,25 @@ fn flight_path_cannot_skip_intermediate_hills_and_map_edges_are_atomic() {
     assert_eq!(unit, before);
     let clear = MapAsset::from_cells("1 3\n.0\n.0\n.0\n").unwrap();
     let mut replay = restored(&unit);
-    let result = unit.advance_vtol_clear_path(&clear, 1000).unwrap();
+    let result = unit.advance_vtol_clear_path(&clear).unwrap();
     assert!(matches!(result, VtolPath::Advanced { .. }));
-    assert_eq!(
-        replay.advance_vtol_clear_path(&clear, 1000).unwrap(),
-        result
-    );
+    assert_eq!(replay.advance_vtol_clear_path(&clear).unwrap(), result);
     assert_eq!(unit, replay);
-    assert_eq!(unit.position().unwrap().y, 0);
+    assert_eq!(unit.position().unwrap().y, 1);
     assert_eq!(restored(&unit), unit);
-    let before = unit.clone();
-    assert!(matches!(
-        unit.advance_vtol_clear_path(&clear, 1000).unwrap(),
-        VtolPath::MapEdge { .. }
-    ));
-    assert_eq!(unit, before);
+    // Fly on to the north edge: the step that would leave the map changes nothing.
+    loop {
+        let before = unit.clone();
+        match unit.advance_vtol_clear_path(&clear).unwrap() {
+            VtolPath::Advanced { .. } => continue,
+            VtolPath::MapEdge { .. } => {
+                assert_eq!(unit, before);
+                break;
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+    assert_eq!(unit.position().unwrap().y, 0);
 }
 
 #[test]
@@ -654,21 +668,21 @@ fn vertical_path_detects_bridge_bands_and_water_without_committing_hazardous_mot
     // the descent is stopped at the deck, the first surface it comes down on.
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -1935.0), 6.0);
     let before = unit.clone();
-    let result = unit.advance_vtol_clear_path(&bridge, 100).unwrap();
+    let result = unit.advance_vtol_clear_path(&bridge).unwrap();
     assert!(
         matches!(result, VtolPath::Contact { contact: VtolSurfaceContact::Ground { .. }, altitude, .. } if (5.0..6.0).contains(&altitude))
     );
     assert_eq!(unit, before);
     let mut under = at_altitude(landing_aircraft(0.0, 0.0, 0.0), 3.0);
     assert!(matches!(
-        under.advance_vtol_clear_path(&bridge, 100).unwrap(),
+        under.advance_vtol_clear_path(&bridge).unwrap(),
         VtolPath::Advanced { .. }
     ));
     let water = MapAsset::from_cells("1 1\n~5\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -129.0), -0.5);
     let before = unit.clone();
     assert!(matches!(
-        unit.advance_vtol_clear_path(&water, 100).unwrap(),
+        unit.advance_vtol_clear_path(&water).unwrap(),
         VtolPath::Contact {
             contact: VtolSurfaceContact::Water,
             ..
@@ -682,7 +696,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     let ground = MapAsset::from_cells("1 1\n.1\n").unwrap();
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -5.0), 1.01);
     let mut replay = restored(&unit);
-    let result = unit.advance_vtol_environment(&ground, 100).unwrap();
+    let result = unit.advance_vtol_environment(&ground).unwrap();
     assert!(matches!(
         result,
         VtolEnvironment::Landed {
@@ -690,10 +704,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
             ..
         }
     ));
-    assert_eq!(
-        replay.advance_vtol_environment(&ground, 100).unwrap(),
-        result
-    );
+    assert_eq!(replay.advance_vtol_environment(&ground).unwrap(), result);
     assert_eq!(unit, replay);
     assert_eq!(unit.vtol_flight().unwrap().altitude, 1.0);
     assert_eq!(unit.vtol_flight().unwrap().phase, VtolFlightPhase::Landed);
@@ -701,7 +712,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     let mut crash = at_altitude(landing_aircraft(0.0, 0.0, -129.0), 1.5);
     let before = crash.clone();
     assert!(matches!(
-        crash.advance_vtol_environment(&ground, 100).unwrap(),
+        crash.advance_vtol_environment(&ground).unwrap(),
         VtolEnvironment::CrashRequired { levels: 13, .. }
     ));
     assert_eq!(crash, before);
@@ -709,7 +720,7 @@ fn surface_resolution_shares_landing_and_flooding_and_defers_crashes_atomically(
     let mut unit = at_altitude(landing_aircraft(0.0, 0.0, -129.0), -0.5);
     let before = unit.clone();
     assert!(matches!(
-        unit.advance_vtol_environment(&water, 100).unwrap(),
+        unit.advance_vtol_environment(&water).unwrap(),
         VtolEnvironment::Flooded { newly: true, .. }
     ));
     assert!(unit.flooded() && unit.is_destroyed());
@@ -745,11 +756,10 @@ fn horizontal_flight_entry_distinguishes_bridge_clearance_ice_and_water() {
             serde_json::to_value(at_altitude(landing_aircraft(129.0, 129.0, 1.0), altitude))
                 .unwrap();
         saved["position"]["y"] = 2.into();
-        saved["motion"]["point"] =
-            serde_json::to_value(HexCoordinate { x: 0, y: 2 }.center()).unwrap();
+        saved["motion"]["point"] = serde_json::to_value(short_of_north_edge(2, 0.1)).unwrap();
         let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
         let before = unit.clone();
-        let path = unit.advance_vtol_clear_path(&map, 1000).unwrap();
+        let path = unit.advance_vtol_clear_path(&map).unwrap();
         let actual = match path {
             VtolPath::Contact { contact, hex, .. } => {
                 assert_eq!(hex, HexCoordinate { x: 0, y: 1 });
@@ -771,11 +781,12 @@ fn slow_hill_entry_defers_landing_and_keeps_continuous_and_hex_positions_consist
     let mut saved =
         serde_json::to_value(at_altitude(landing_aircraft(10.0, 10.0, 0.0), 1.0)).unwrap();
     saved["position"]["y"] = 1.into();
-    saved["motion"]["point"] = serde_json::to_value(HexCoordinate { x: 0, y: 1 }.center()).unwrap();
+    // Ten kph covers a sixty-fourth of a hex each second.
+    saved["motion"]["point"] = serde_json::to_value(short_of_north_edge(1, 0.01)).unwrap();
     let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
     let before = unit.clone();
     assert!(matches!(
-        unit.advance_vtol_environment(&map, 6450).unwrap(),
+        unit.advance_vtol_environment(&map).unwrap(),
         VtolEnvironment::CrashRequired { .. }
     ));
     assert_eq!(unit, before);

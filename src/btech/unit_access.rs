@@ -458,6 +458,19 @@ impl UnitEdit {
             None => self.fail(anyhow!("the unit has no motion")),
         }
     }
+
+    /// Set this turn's 2d6 sensor sweep, or clear it so the next contact refresh rolls one. A
+    /// sweep of 9 or more finds nothing in any band; see [`SensorBand::of_result`].
+    pub fn set_sensor_sweep(&mut self, roll: Option<u8>) {
+        if roll.is_some_and(|roll| !(2..=12).contains(&roll)) {
+            self.fail(anyhow!("a sensor sweep is a 2d6 roll"));
+            return;
+        }
+        match &mut self.draft {
+            Draft::Mech(unit) => unit.sensor_sweep = roll,
+            Draft::Vehicle(vehicle) => vehicle.sensor_sweep = roll,
+        }
+    }
 }
 
 impl BtechState {
@@ -552,6 +565,11 @@ impl BtechState {
     /// Edit a placed unit's motion. See [`UnitEdit::edit_motion`].
     pub fn edit_unit_motion(&mut self, id: ObjectId, edit: impl FnOnce(&mut Motion)) -> Result<()> {
         self.edit_unit(id, |unit| unit.edit_motion(edit))
+    }
+
+    /// Set a unit's sensor sweep. See [`UnitEdit::set_sensor_sweep`].
+    pub fn set_unit_sensor_sweep(&mut self, id: ObjectId, roll: Option<u8>) -> Result<()> {
+        self.edit_unit(id, |unit| unit.set_sensor_sweep(roll))
     }
 
     /// Replace a player's consciousness recovery dice stream.

@@ -54,7 +54,6 @@ fn edit(world: &mut World, map: ObjectId, field: &str, value: &str) -> Result<Ve
         "temperature" => record.temperature = i64::from(integer()?.clamp(-128, 127)),
         "cloudbase" => record.cloud_base = short()? as i16,
         "flags" => record.flags = super::parse_map_flags(value)?,
-        "sensorflags" => record.sensor_flags = super::parse_perception_flags(value)?,
         "mapname" => {
             ensure!(!value.chars().any(char::is_control), "Invalid map name");
             let mut end = value.len().min(29);

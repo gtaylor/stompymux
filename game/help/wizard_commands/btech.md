@@ -405,6 +405,8 @@ BattleTech map to change its environment. Gravity is a percentage of Earth
 gravity, from 0 to 255; temperature is Celsius, from -128 to 127. Optional flags
 accept 0 or 1. Omitted vacuum is cleared. Setting underground to 1 enables it;
 this command retains underground status once enabled, even when passed 0.
+Electromagnetic interference is a map flag rather than a `setcond` argument; see
+"Edit map fields" below.
 
 Special environmental rules are enabled for vacuum, gravity other than 100,
 or temperatures outside -30 through 50. Existing movement, heat and flight
@@ -648,9 +650,9 @@ match in full without regard to case. Lua uses
 `btech.map.set_field(actor, map, field, value)` with the same wizard authority.
 
 Writable fields are `cf`, `cfmax`, `regen_factor`, `gravity`, `temperature`,
-`maplight`, `mapname`, `mapweather`, `winddir`, `windspeed`, `cloudbase`, `flags`
-and `sensorflags`. Dimensions, `buildonmap` and `firstfree` are read-only.
-`flags` and `sensorflags` take a list of names separated by spaces or commas,
+`maplight`, `mapname`, `mapweather`, `winddir`, `windspeed`, `cloudbase` and
+`flags`. Dimensions, `buildonmap` and `firstfree` are read-only.
+`flags` takes a list of names separated by spaces or commas,
 which replaces the current set; `-` clears every flag. `@VIEWMAP` shows the same
 names. Map `flags` are:
 
@@ -661,11 +663,8 @@ names. Map `flags` are:
 | `dark` | Units see only terrain in their line of sight. |
 | `indestructible_structures` | Weapon fire cannot damage buildings, walls or bridges. |
 | `no_friendly_fire` | Teammates cannot damage each other with weapons. |
-| `no_physical_attacks` | Physical attacks are not allowed. |
+| `electromagnetic_interference` | Electromagnetic interference over the whole map (Tactical Operations: Advanced Rules p. 53): ranged weapon attacks take +2 to hit, every Cluster Hits Table roll takes -2 (never below 2), active probes are useless and ECM suites reach twelve hexes. Physical attacks and built-in sensors are unaffected. Lua uses `btech.map.flags.ELECTROMAGNETIC_INTERFERENCE`. |
 
-`sensorflags` switches perception off for everyone on the map: `sensors`
-disables the built-in sensors, `radar` the radar system alone and `probes`
-active probes.
 Light accepts 0–5 (day through pitch black, as for `map-conditions`) and weather
 0–17 in the order of the weather names `map-conditions` lists. Wind direction must be 0–359 and speed
 nonnegative. Integrity must stay between zero and its maximum; set the maximum

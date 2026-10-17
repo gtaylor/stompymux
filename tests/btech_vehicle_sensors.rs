@@ -193,9 +193,11 @@ async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
     );
 }
 
-/// Map switches silence sensors, the radar system and probes independently and survive restart.
+/// Electromagnetic interference renders a vehicle's probes useless while its built-in sensors
+/// keep sweeping, and the condition survives a restart (Tactical Operations: Advanced Rules
+/// p. 53).
 #[tokio::test]
-async fn vehicle_map_perception_switches_persist() {
+async fn vehicle_probes_are_useless_under_electromagnetic_interference() {
     let (_dir, config, mut world, id) = fixture(&equipped()).await;
     let map = world.btech.vehicles()[&id].position().unwrap().map;
     let modes = |world: &World| {
@@ -207,74 +209,46 @@ async fn vehicle_map_perception_switches_persist() {
             .map(|system| system.mode)
             .collect::<Vec<_>>()
     };
+    assert_eq!(modes(&world)[0], SensorMode::Probe);
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            let flags = record["flags"].as_i64().unwrap();
+            record["flags"] = MapFlag::ElectromagneticInterference
+                .apply(flags, true)
+                .into();
+        })
+        .unwrap();
+    let profile = battle_perception_profile(&world, id).unwrap();
+    assert_eq!(profile.sensor.status, PerceptionStatus::Ready);
+    assert_eq!(
+        profile.probe.unwrap().status,
+        PerceptionStatus::Interference
+    );
     assert_eq!(
         modes(&world),
         [
-            SensorMode::Probe,
             SensorMode::Infrared,
             SensorMode::Magscan,
             SensorMode::Radar,
             SensorMode::Seismic
         ]
     );
-    for flag in [MapPerceptionFlag::Sensors, MapPerceptionFlag::Probes] {
-        set_battle_map_perception(&mut world, map, flag, false).unwrap();
-    }
-    let profile = battle_perception_profile(&world, id).unwrap();
-    assert_eq!(profile.sensor.status, PerceptionStatus::Disabled);
-    assert!(profile.sensor.systems.is_empty());
-    assert_eq!(profile.probe.unwrap().status, PerceptionStatus::Disabled);
-    assert_eq!(
-        battle_perception_report(&world, id).unwrap().text,
-        [
-            "Sight:   5 hexes (moonless night, clear): +3 to hit, +0 if lit; lit targets seen to 45",
-            "Sensors: disabled on this battlefield",
-            "Probe:   Bloodhound Active Probe, reveals hidden units within 8 hexes (disabled on this battlefield)",
-        ]
-        .join("\r\n")
-    );
-    persistence::save(&config.database(), &world).await.unwrap();
-    let mut restored = persistence::load(&config.database()).await.unwrap();
-    assert_eq!(battle_perception_profile(&restored, id).unwrap(), profile);
-    set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Sensors, true).unwrap();
-    let profile = battle_perception_profile(&restored, id).unwrap();
-    assert_eq!(profile.sensor.status, PerceptionStatus::Ready);
-    assert_eq!(
-        profile.probe.unwrap().status,
-        PerceptionStatus::Disabled,
-        "probes stay off"
-    );
-    assert!(!modes(&restored).contains(&SensorMode::Probe));
-    set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Probes, true).unwrap();
-    let profile = battle_perception_profile(&restored, id).unwrap();
-    assert_eq!(profile.probe.unwrap().status, PerceptionStatus::Ready);
-    assert_eq!(
-        profile.sensor.systems[0],
-        SensorSystem {
-            mode: SensorMode::Probe,
-            bands: SensorBands {
-                short: 16,
-                medium: 32,
-                long: 48
-            }
-        }
-    );
     assert!(
-        battle_perception_report(&restored, id).unwrap().text.contains(
-            "Probe:   Bloodhound Active Probe, sweeps 16/32/48 hexes and reveals hidden units within 8 hexes"
+        battle_perception_report(&world, id).unwrap().text.ends_with(
+            "Probe:   Bloodhound Active Probe, reveals hidden units within 8 hexes (useless under electromagnetic interference)"
         )
     );
-    // Only the radar system minds the radar switch.
-    set_battle_map_perception(&mut restored, map, MapPerceptionFlag::Radar, false).unwrap();
-    let profile = battle_perception_profile(&restored, id).unwrap();
-    assert_eq!(profile.sensor.status, PerceptionStatus::Ready);
-    assert_eq!(
-        modes(&restored),
-        [
-            SensorMode::Probe,
-            SensorMode::Infrared,
-            SensorMode::Magscan,
-            SensorMode::Seismic
-        ]
-    );
+    persistence::save(&config.database(), &world).await.unwrap();
+    let restored = persistence::load(&config.database()).await.unwrap();
+    assert_eq!(battle_perception_profile(&restored, id).unwrap(), profile);
+    let scripts =
+        Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
+    let status: String = scripts
+        .eval_callback(&format!(
+            "return btech.unit.perception({}).probe.status",
+            id.0
+        ))
+        .unwrap();
+    assert_eq!(status, "interference");
 }

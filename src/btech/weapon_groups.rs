@@ -30,6 +30,9 @@ pub(super) struct WeaponGroupRequest {
     /// The target is a unit that tracks no heat, such as a vehicle: a plasma rifle adds 2D6
     /// to its damage instead of heating it (Total Warfare p. 139).
     pub unit_without_heat: bool,
+    /// Electromagnetic interference covers the attacker: -2 on every Cluster Hits Table roll,
+    /// whatever the weapon, never below 2 (Tactical Operations: Advanced Rules p. 53).
+    pub interference: bool,
 }
 
 /// Shared cluster draw and ordered damage packet sizes, before cover and terrain absorption.
@@ -67,6 +70,7 @@ pub(super) fn roll_weapon_groups(
         apollo,
         array,
         unit_without_heat,
+        interference,
     } = request;
     let array = array.filter(|guns| *guns >= 2);
     let burst = fire_mode.rounds_per_cycle() > 1;
@@ -94,6 +98,11 @@ pub(super) fn roll_weapon_groups(
             roll
         }
     });
+    // Electromagnetic interference takes two from the array, rotary and two-shell tables here;
+    // the guided path that missiles, LB-X cluster rounds and HAGs take sums it with their
+    // guidance and range bonuses before the floor.
+    let plain_roll = table_roll
+        .map(|roll| super::planetary_conditions::interfered_cluster_roll(roll, interference));
     let missile_damage = if mode == AmmunitionMode::Cluster || weapon.is_hag() {
         1
     } else {
@@ -114,7 +123,7 @@ pub(super) fn roll_weapon_groups(
         let mut damage = if let Some(guns) = array {
             // A glancing blow shifts a cluster roll down four, never below 2 (Tactical
             // Operations p. 79).
-            let roll = table_roll.expect("array cluster roll");
+            let roll = plain_roll.expect("array cluster roll");
             let roll = if glancing {
                 roll.saturating_sub(4).max(2)
             } else {
@@ -157,12 +166,13 @@ pub(super) fn roll_weapon_groups(
                 artemis_v: false,
                 guidance_blocked: false,
                 ams_engaged,
+                interference,
             })?
         } else if weapon.is_rotary() && burst {
-            weapon.rotary_damage_groups(fire_mode, table_roll.unwrap(), glancing)?
+            weapon.rotary_damage_groups(fire_mode, plain_roll.unwrap(), glancing)?
         } else if burst {
             weapon
-                .double_shot_damage_groups(table_roll.unwrap(), glancing)?
+                .double_shot_damage_groups(plain_roll.unwrap(), glancing)?
                 .into_iter()
                 .map(|damage| mode.armored_damage(damage))
                 .collect()
@@ -193,6 +203,7 @@ pub(super) fn roll_weapon_groups(
                 artemis_v,
                 guidance_blocked,
                 ams_engaged,
+                interference,
             })?
         };
         // A glancing blow halves damage rounding down (Tactical Operations p. 79), so a one-point
@@ -284,6 +295,7 @@ mod tests {
             apollo: false,
             array: None,
             unit_without_heat: false,
+            interference: false,
         }
     }
 
@@ -344,6 +356,7 @@ mod tests {
                         artemis_v: true,
                         guidance_blocked: false,
                         ams_engaged: false,
+                        interference: false,
                     })
                     .unwrap(),
                 weapon
@@ -445,6 +458,65 @@ mod tests {
                 .damage_groups(Some(roll.saturating_sub(1).max(2)))
                 .unwrap();
             assert_eq!(guided.damage, expected, "roll {roll}");
+        }
+    }
+
+    /// Electromagnetic interference takes two from every Cluster Hits Table roll, never below 2,
+    /// whatever weapon reads the table: missiles, LB-X cluster rounds, machine gun arrays and
+    /// rotary and Ultra autocannon bursts (Tactical Operations: Advanced Rules p. 53). The dice
+    /// stream and the reported roll are unchanged.
+    #[test]
+    fn interference_takes_two_from_every_cluster_table() {
+        use AmmunitionMode::{Cluster, Normal};
+        let cases = [
+            (Weapon::Lrm20, Normal, FireMode::Normal, None),
+            (Weapon::Lbx10, Cluster, FireMode::Normal, None),
+            (Weapon::MachineGun, Normal, FireMode::Normal, Some(4)),
+            (Weapon::RotaryAc5, Normal, FireMode::Rotary6, None),
+            (Weapon::UltraAc5, Normal, FireMode::Ultra, None),
+        ];
+        for seed in 0..=255 {
+            for (weapon, ammunition, fire_mode, array) in cases {
+                let mut dice = Dice::seeded([seed; 32]);
+                let plain = roll_weapon_groups(
+                    WeaponGroupRequest {
+                        array,
+                        ..request(weapon, ammunition, fire_mode)
+                    },
+                    &mut dice,
+                )
+                .unwrap();
+                let mut interfered_dice = Dice::seeded([seed; 32]);
+                let interfered = roll_weapon_groups(
+                    WeaponGroupRequest {
+                        array,
+                        interference: true,
+                        ..request(weapon, ammunition, fire_mode)
+                    },
+                    &mut interfered_dice,
+                )
+                .unwrap();
+                assert_eq!(dice, interfered_dice);
+                let roll = plain.cluster_roll.unwrap();
+                assert_eq!(interfered.cluster_roll, Some(roll));
+                let lowered = roll.saturating_sub(2).max(2);
+                let expected = match (array, fire_mode) {
+                    (Some(guns), _) => {
+                        let hits = super::super::salvo::cluster_hits(guns, lowered).unwrap();
+                        vec![u16::from(weapon.profile().damage); usize::from(hits)]
+                    }
+                    (None, FireMode::Rotary6) => weapon
+                        .rotary_damage_groups(fire_mode, lowered, false)
+                        .unwrap(),
+                    (None, FireMode::Ultra) => {
+                        weapon.double_shot_damage_groups(lowered, false).unwrap()
+                    }
+                    _ => weapon
+                        .damage_groups_for_ammunition(ammunition, Some(lowered), 7.0)
+                        .unwrap(),
+                };
+                assert_eq!(interfered.damage, expected, "{weapon:?} roll {roll}");
+            }
         }
     }
 
@@ -622,6 +694,7 @@ mod streak_lrm_tests {
                                 apollo: false,
                                 array: None,
                                 unit_without_heat: false,
+                                interference: false,
                             },
                             &mut dice,
                         )

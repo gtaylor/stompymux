@@ -112,6 +112,7 @@ pub(super) fn modifiers_for_source(
         &mut modifiers,
     )?;
     modifiers.environment = super::planetary_conditions::aim_modifier(world, shooter, weapon);
+    modifiers.interference = super::planetary_conditions::interference_aim_modifier(world, shooter);
     Ok(HexAimModifiers {
         hex,
         mode,

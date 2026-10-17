@@ -191,7 +191,7 @@ mod tests {
     fn wind_targets_follow_parity_rounding_and_map_bounds() {
         let mut map: StoredMap = serde_json::from_value(serde_json::json!({
             "name":"wind", "width":6, "height":6, "gravity":100, "temperature":20,
-            "flags":0, "light":2, "weather":0, "cloud_base":200, "sensor_flags":0
+            "flags":0, "light":2, "weather":0, "cloud_base":200
         }))
         .unwrap();
         let even = HexCoordinate { x: 2, y: 2 };
@@ -247,7 +247,7 @@ mod tests {
     fn fire_and_smoke_travel_downwind() {
         let mut map: StoredMap = serde_json::from_value(serde_json::json!({
             "name":"wind", "width":6, "height":6, "gravity":100, "temperature":20,
-            "flags":0, "light":2, "weather":0, "cloud_base":200, "sensor_flags":0
+            "flags":0, "light":2, "weather":0, "cloud_base":200
         }))
         .unwrap();
         let width = map.width;

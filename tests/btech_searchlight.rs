@@ -259,7 +259,8 @@ async fn searchlights_extend_night_sight_to_lit_targets() {
         perceived(&world),
         Some((DetectionChannel::Sensors, false, 0))
     );
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    // A sweep of 12 finds nothing, leaving sight alone.
+    field(&mut world, lamp, "sensor_sweep", serde_json::json!(12));
     assert_eq!(perceived(&world), None);
     place_battle_unit(&mut world, target, map, 2, 30).unwrap();
     assert_eq!(perceived(&world), Some((DetectionChannel::Sight, true, 0)));

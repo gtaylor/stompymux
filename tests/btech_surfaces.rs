@@ -73,6 +73,33 @@ fn rules() -> FallRules {
     }
 }
 
+/// Advance a jump one quiet second at a time until its next event is the landing. A jump
+/// movement point covers a hex a minute, so even a short jump spans many events.
+fn fly_until_landing_is_next(world: &mut World, id: ObjectId) {
+    loop {
+        let unit = &world.btech.constructed_units()[&id];
+        let map = unit.position().unwrap().map;
+        let mut flight = unit.flight().unwrap();
+        let capacity = unit
+            .jump_capacity(world.btech.maps()[&map].gravity)
+            .unwrap();
+        if flight.advance(capacity).unwrap().outcome == JumpOutcome::Landing {
+            return;
+        }
+        assert!(
+            advance_battle_jumps(
+                world,
+                stompymux_rs::MovementRules {
+                    fall: rules(),
+                    ..stompymux_rs::MovementRules::STANDARD
+                }
+            )
+            .unwrap()
+            .is_empty()
+        );
+    }
+}
+
 #[tokio::test]
 async fn ice_fracture_drops_neighbors_before_trigger_and_replays_after_restart() {
     let (_dir, config, mut world, map, units) = fixture(3).await;
@@ -837,12 +864,11 @@ async fn ice_standing_native_lua_and_restart_cover_success_failure_and_fracture(
 }
 
 /// Six water hexes break the clear line only once the target settles below the waterline,
-/// using the retained altitude before and after a restart. Sensors are switched off so only
-/// sight answers.
+/// using the retained altitude before and after a restart. Sweeps of 12, which find nothing,
+/// leave sight alone to answer.
 #[tokio::test]
 async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     let (_dir, config, mut world, map, units) = fixture_field(Terrain::Water, 1, 8).await;
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     for (pilot, id, y) in [(ObjectId(1), units[0], 0), (ObjectId(2), units[1], 7)] {
         stop_battle_unit(
             &mut world,
@@ -858,6 +884,7 @@ async fn optical_water_attenuation_uses_retained_altitude_after_restart() {
     for id in units {
         state["constructed"][id.0.to_string()]["posture"] = serde_json::json!("prone");
         state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(0.0);
+        state["constructed"][id.0.to_string()]["sensor_sweep"] = serde_json::json!(12);
     }
     world.btech = serde_json::from_value(state).unwrap();
     persistence::save(&config.database(), &world).await.unwrap();
@@ -1292,19 +1319,11 @@ async fn below_bridge_cooling_and_fresh_breaches_use_actual_depth() {
 /// cleared by the displayed flight and landed beyond.
 #[tokio::test]
 async fn bridge_decks_bound_jump_routes_at_launch_and_legal_spans_are_cleared() {
-    for (deck, rate, clears) in [
-        (9, 100, false),
-        (6, 100, false),
-        (5, 160, true),
-        (5, 100, true),
-    ] {
+    for (deck, clears) in [(9, false), (6, false), (5, true)] {
         let source = format!("3 5\n.0.0.0\n.0.0.0\n/{deck}/{deck}/{deck}\n.0.0.0\n.0.0.0\n");
-        let (_dir, config, mut world, map, units) =
+        let (_dir, config, mut world, _, units) =
             fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
-        let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(rate);
-        world.btech = serde_json::from_value(state).unwrap();
         let before = world.btech.clone();
         let launch = launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0);
         if !clears {
@@ -1360,10 +1379,9 @@ async fn bridge_decks_bound_jump_routes_at_launch_and_legal_spans_are_cleared() 
 /// refused a jump before it leaves the ground.
 #[tokio::test]
 async fn jumps_are_refused_beneath_a_bridge_deck() {
-    let (_dir, config, mut world, map, units) = fixture_surface(Terrain::Bridge, 3).await;
+    let (_dir, config, mut world, _, units) = fixture_surface(Terrain::Bridge, 3).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(50);
     state["constructed"][id.0.to_string()]["ground_elevation"] = serde_json::json!(-1);
     world.btech = serde_json::from_value(state).unwrap();
     let before = world.btech.clone();
@@ -2080,18 +2098,17 @@ async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_equals_
 }
 
 #[tokio::test]
-async fn first_cliff_stops_unpiloted_fast_motion_without_consuming_dice() {
+async fn a_cliff_stops_unpiloted_motion_without_consuming_dice() {
     for downhill in [false, true] {
         let (old, new) = if downhill { (9, 0) } else { (0, 9) };
         let old_row = format!(".{old}").repeat(3);
         let row = format!(".{new}").repeat(3);
         let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
-        let (_dir, config, mut world, map, units) =
+        let (_dir, config, mut world, _, units) =
             fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
         let id = units[0];
         prepare_reverse_step(&mut world, id, 2);
         let mut state = serde_json::to_value(&world.btech).unwrap();
-        state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(10000);
         state["constructed"][id.0.to_string()]["pilot"] = serde_json::Value::Null;
         world.btech = serde_json::from_value(state).unwrap();
         let before = world.clone();
@@ -2952,7 +2969,6 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
         fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(800);
     state["constructed"][units[1].0.to_string()]["position"]["y"] = serde_json::json!(2);
     state["constructed"][units[1].0.to_string()]["motion"]["point"] =
         serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
@@ -2971,6 +2987,12 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
     }
     world.btech = serde_json::from_value(state).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
+    // At a twelfth of standard gravity the jets carry the 'Mech over two-thirds of a hex each
+    // second, so its landing second starts above the ice and comes down in the water beyond.
+    world
+        .btech
+        .rewrite_map_record(map, |record| record["gravity"] = 12.into())
+        .unwrap();
     for _ in 0..2 {
         assert!(
             advance_battle_jumps(
@@ -3066,7 +3088,7 @@ async fn descending_jump_breaks_previous_ice_before_finishing_horizontal_entry()
 
 #[tokio::test]
 async fn ascending_saved_flight_breaks_ice_without_falling_or_spending_its_dice() {
-    let (_dir, config, mut world, map, units) = airborne_under_ice_fixture().await;
+    let (_dir, config, mut world, map, units) = airborne_under_ice_fixture(UnderIce::Rising).await;
     let observer = fracture_observer(&mut world, &config, map, units);
     let id = units[0];
     let dice = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"].clone();
@@ -3125,36 +3147,63 @@ async fn ascending_saved_flight_breaks_ice_without_falling_or_spending_its_dice(
     );
 }
 
-/// A valid saved flight below ice after a capacity change, with a surface neighbor.
-async fn airborne_under_ice_fixture() -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 2])
-{
+/// What the under-ice fixture's next jump second does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UnderIce {
+    /// The flight climbs back through the ice without landing.
+    Rising,
+    /// The flight lands in the iced hex.
+    Landing,
+}
+
+/// A valid saved flight below ice, with a surface neighbor.
+async fn airborne_under_ice_fixture(
+    next: UnderIce,
+) -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 2]) {
     let source = "3 5\n.0.0.0\n.0.0.0\n.0.0.0\n~5~5~5\n~5~5~5\n";
     let (_dir, config, mut world, map, units) =
         fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
-    // A lower-capacity sample followed by restored gravity can cross the ice plane upward.
-    world
-        .btech
-        .rewrite_map_record(map, |record| {
-            record["gravity"] = serde_json::json!(150);
-            record["movement_modifier"] = serde_json::json!(3240);
-        })
-        .unwrap();
-    advance_battle_jumps(
-        &mut world,
-        stompymux_rs::MovementRules {
-            fall: rules(),
-            ..stompymux_rs::MovementRules::STANDARD
-        },
-    )
-    .unwrap();
+    match next {
+        UnderIce::Landing => fly_until_landing_is_next(&mut world, id),
+        UnderIce::Rising => {
+            // Twenty-one seconds of standard gravity bring the 'Mech down over the water.
+            for _ in 0..21 {
+                assert!(
+                    advance_battle_jumps(
+                        &mut world,
+                        stompymux_rs::MovementRules {
+                            fall: rules(),
+                            ..stompymux_rs::MovementRules::STANDARD
+                        }
+                    )
+                    .unwrap()
+                    .is_empty()
+                );
+            }
+            // A lower-capacity sample followed by restored gravity can cross the ice plane
+            // upward: at 2.5 G the jets give two MP, which flattens the sampled curve below
+            // the water line, and the next sample at standard gravity is higher again.
+            world
+                .btech
+                .rewrite_map_record(map, |record| record["gravity"] = 250.into())
+                .unwrap();
+            advance_battle_jumps(
+                &mut world,
+                stompymux_rs::MovementRules {
+                    fall: rules(),
+                    ..stompymux_rs::MovementRules::STANDARD
+                },
+            )
+            .unwrap();
+        }
+    }
     assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(-2));
     assert!(world.btech.constructed_units()[&id].flight().is_some());
     // Represent a saved field with ice formed above that already airborne unit.
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["maps"][map.0.to_string()]["gravity"] = serde_json::json!(100);
-    state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(20);
     state["maps"][map.0.to_string()]["terrain"][10] =
         serde_json::to_value(Hex::new(Terrain::Ice, 5)).unwrap();
     state["constructed"][units[1].0.to_string()]["position"]["y"] = serde_json::json!(3);
@@ -3168,15 +3217,10 @@ async fn airborne_under_ice_fixture() -> (tempfile::TempDir, Config, World, Obje
 #[tokio::test]
 async fn landing_in_existing_ice_precedes_the_final_upward_breakout() {
     for fracture in [false, true] {
-        let (_dir, config, mut world, map, units) = airborne_under_ice_fixture().await;
+        let (_dir, config, mut world, map, units) =
+            airborne_under_ice_fixture(UnderIce::Landing).await;
         let observer = fracture_observer(&mut world, &config, map, units);
         let id = units[0];
-        world
-            .btech
-            .rewrite_map_record(map, |record| {
-                record["movement_modifier"] = serde_json::json!(1000);
-            })
-            .unwrap();
         ice_landing_seed(&mut world, id, fracture);
         // Keep the neighbor's fall reproducible independently of ice-break ordering.
         world
@@ -3332,26 +3376,10 @@ async fn wet_running_controls_match_native_lua_and_preserve_rejected_throttle() 
 async fn mapped_surface_jump_routes_land_at_height_and_replay() {
     for terrain in [Terrain::Building, Terrain::Wall] {
         for height in [0, 3, 9] {
-            let (_dir, config, mut world, map, units) = fixture_field(terrain, height, 5).await;
+            let (_dir, config, mut world, _, units) = fixture_field(terrain, height, 5).await;
             let id = units[0];
-            world
-                .btech
-                .rewrite_map_record(map, |record| {
-                    record["movement_modifier"] = serde_json::json!(800);
-                })
-                .unwrap();
             launch_battle_jump(&mut world, id, ObjectId(1), 180, 1.0).unwrap();
-            assert!(
-                advance_battle_jumps(
-                    &mut world,
-                    stompymux_rs::MovementRules {
-                        fall: rules(),
-                        ..stompymux_rs::MovementRules::STANDARD
-                    }
-                )
-                .unwrap()
-                .is_empty()
-            );
+            fly_until_landing_is_next(&mut world, id);
             persistence::save(&config.database(), &world).await.unwrap();
             let mut loaded = persistence::load(&config.database()).await.unwrap();
             assert_eq!(
@@ -3393,11 +3421,10 @@ async fn structure_jump_controls_land_or_refuse_the_route_with_saved_replay() {
         for height in [0, 3, 9] {
             let row = format!("{symbol}{height}").repeat(3);
             let source = format!("3 5\n.0.0.0\n.0.0.0\n{row}\n.0.0.0\n.0.0.0\n");
-            let (_dir, config, mut world, map, units) =
+            let (_dir, config, mut world, _, units) =
                 fixture_asset(MapAsset::from_cells(&source).unwrap()).await;
             let id = units[0];
             let mut state = serde_json::to_value(&world.btech).unwrap();
-            state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(400);
             state["constructed"][id.0.to_string()]["dice"] =
                 serde_json::to_value(Dice::seeded([3; 32])).unwrap();
             world.btech = serde_json::from_value(state).unwrap();
@@ -3428,7 +3455,7 @@ async fn structure_jump_controls_land_or_refuse_the_route_with_saved_replay() {
             persistence::save(&config.database(), &world).await.unwrap();
             let mut loaded = persistence::load(&config.database()).await.unwrap();
             let mut notices = Vec::new();
-            for _ in 0..6 {
+            while world.btech.constructed_units()[&id].flight().is_some() {
                 let tick = advance_battle_jumps(
                     &mut world,
                     stompymux_rs::MovementRules {
@@ -4033,14 +4060,12 @@ async fn upward_character_breakout_preserves_breaker_and_rolls_back() {
 /// Landing fracture and upward crossing publish neighboring character casualties in the live tick.
 #[tokio::test]
 async fn airborne_ice_action_evacuates_neighbors_and_replays() {
-    for (modifier, fracture) in [(20, false), (1000, false), (1000, true)] {
-        let (_dir, config, mut world, map, units) = airborne_under_ice_fixture().await;
-        world
-            .btech
-            .rewrite_map_record(map, |record| {
-                record["movement_modifier"] = modifier.into();
-            })
-            .unwrap();
+    for (next, fracture) in [
+        (UnderIce::Rising, false),
+        (UnderIce::Landing, false),
+        (UnderIce::Landing, true),
+    ] {
+        let (_dir, config, mut world, map, units) = airborne_under_ice_fixture(next).await;
         ice_seed(&mut world, units[0], fracture, false);
         let movement = MovementRules {
             fall: rules(),
@@ -4152,7 +4177,6 @@ async fn character_interrupted_jump_finishes_water_entry_atomically() {
         fixture_asset(MapAsset::from_cells(source).unwrap()).await;
     let id = units[0];
     let mut state = serde_json::to_value(&world.btech).unwrap();
-    state["maps"][map.0.to_string()]["movement_modifier"] = serde_json::json!(800);
     state["constructed"][units[1].0.to_string()]["position"]["y"] = serde_json::json!(2);
     state["constructed"][units[1].0.to_string()]["motion"]["point"] =
         serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
@@ -4171,6 +4195,12 @@ async fn character_interrupted_jump_finishes_water_entry_atomically() {
     }
     world.btech = serde_json::from_value(state).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 180, 2.0).unwrap();
+    // At a twelfth of standard gravity the jets carry the 'Mech over two-thirds of a hex each
+    // second, so its landing second starts above the ice and comes down in the water beyond.
+    world
+        .btech
+        .rewrite_map_record(map, |record| record["gravity"] = 12.into())
+        .unwrap();
     for _ in 0..2 {
         assert!(
             advance_battle_jumps(

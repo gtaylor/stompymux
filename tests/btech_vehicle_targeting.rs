@@ -171,8 +171,12 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
     refresh_battle_contacts(&mut initial, &[observer]).unwrap();
     select_battle_target(&mut initial, observer, ObjectId(1), Some(vehicle)).unwrap();
     let mut world = initial.clone();
-    // Pitch black sees three hexes; with the map's sensors off nothing reaches the target.
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    // Pitch black sees three hexes; with a sweep of 12, which finds nothing, nothing reaches
+    // the target.
+    world
+        .btech
+        .set_unit_sensor_sweep(observer, Some(12))
+        .unwrap();
     set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
     let events = refresh_battle_contacts(&mut world, &[observer]).unwrap();
     assert!(

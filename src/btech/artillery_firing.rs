@@ -299,13 +299,8 @@ pub(super) fn prepare(
             || !record.has_flag(super::MapFlag::Underground),
         "You cannot fire indirect weapons underground!"
     );
-    ensure!(
-        explicit_hex.is_some()
-            || visible
-            || config.battletech.idf_requires_spotter == 0
-            || spotter.is_some(),
-        "That hex target is not in your direct line of sight and you do not have a spotter set!!"
-    );
+    // Above ground, indirect artillery may target a hex no friendly unit observes; that fire
+    // simply cannot be adjusted onto target (Tactical Operations p. 148).
     let bearing = motion.point.bearing(coordinate.center())?.unwrap_or(180.0);
     let rules = ShotRules::configured(&config.battletech, false);
     ensure!(
@@ -349,6 +344,7 @@ pub(super) fn prepare(
         gunnery: unit_artillery_gunnery_target(world, shooter)?,
         observer,
         adjustment,
+        interference: super::planetary_conditions::under_interference(world, shooter),
     })?;
     Ok(PreparedArtillery {
         map,

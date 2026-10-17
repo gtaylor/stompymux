@@ -161,6 +161,7 @@ fn terrain_damage(world: &mut World, request: &DirectEffectRequest) -> Result<u1
             apollo: false,
             array: None,
             unit_without_heat: false,
+            interference: super::planetary_conditions::under_interference(world, request.shooter),
         },
         super::dice::unit_dice_mut(world, request.shooter)?,
     )?;

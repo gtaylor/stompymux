@@ -141,8 +141,6 @@ pub struct BattleTechConfig {
     pub usedunitstore: i64,
     /// Configuration value for `ooc_comsys`; defaults are centralized below.
     pub ooc_comsys: i64,
-    /// Configuration value for `idf_requires_spotter`; defaults are centralized below.
-    pub idf_requires_spotter: i64,
     /// Configuration value for `tsm_tow_bonus`; defaults are centralized below.
     pub tsm_tow_bonus: i64,
     /// Configuration value for `cost_debug`; defaults are centralized below.
@@ -186,7 +184,6 @@ impl Default for BattleTechConfig {
             mw_losmap: 1,
             usedunitstore: 3,
             ooc_comsys: 0,
-            idf_requires_spotter: 1,
             tsm_tow_bonus: 1,
             cost_debug: 0,
             allow_cargo_commands: true,

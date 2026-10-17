@@ -20,7 +20,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     }
     let mut maps = BTreeMap::new();
     for row in sqlx::query(
-        "SELECT dbref,first_free,on_map,map_name,width,height,gravity,temperature,flags,move_mod,light,weather,cloudbase,sensor_flags,wind_direction,wind_speed,cf,cf_max,build_flag,regen_factor FROM btech_maps ORDER BY dbref",
+        "SELECT dbref,first_free,on_map,map_name,width,height,gravity,temperature,flags,light,weather,cloudbase,wind_direction,wind_speed,cf,cf_max,build_flag,regen_factor FROM btech_maps ORDER BY dbref",
     )
     .fetch_all(&mut *c)
     .await?
@@ -52,11 +52,9 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
                     flags: row.try_get("build_flag")?,
                     regeneration: row.try_get("regen_factor")?,
                 },
-                movement_modifier: row.try_get("move_mod")?,
                 light: row.try_get("light")?,
                 weather: row.try_get("weather")?,
                 cloud_base: i16::try_from(row.try_get::<i64, _>("cloudbase")?)?,
-                sensor_flags: row.try_get("sensor_flags")?,
                 wind_direction: row.try_get("wind_direction")?,
                 wind_speed: row.try_get("wind_speed")?,
             fire_dice: None,
@@ -487,11 +485,9 @@ fn map_fields(map: &StoredMap) -> super::write::Fields {
         ("cf_max", Cell::Integer(map.building.maximum_integrity)),
         ("build_flag", Cell::Integer(map.building.flags)),
         ("regen_factor", Cell::Integer(map.building.regeneration)),
-        ("move_mod", Cell::Integer(map.movement_modifier)),
         ("light", Cell::Integer(map.light)),
         ("weather", Cell::Integer(map.weather)),
         ("cloudbase", Cell::Integer(i64::from(map.cloud_base))),
-        ("sensor_flags", Cell::Integer(map.sensor_flags)),
         ("wind_direction", Cell::Integer(map.wind_direction)),
         ("wind_speed", Cell::Integer(map.wind_speed)),
     ])

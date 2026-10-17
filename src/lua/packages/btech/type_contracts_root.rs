@@ -80,7 +80,6 @@
 //|---@field light integer 0 day, 1 dawn, 2 dusk, 3 full moon night, 4 moonless night, 5 pitch black
 //|---@field weather integer Weather condition index, in the order of btech.map.weather_conditions
 //|---@field visual_range integer How far units on the map see under its light and weather, in hexes
-//|---@field sensor_flags integer Disabled perception channels: sensors bit 0 (1), radar bit 5 (32), probes bit 6 (64).
 //|---@field terrain_ready boolean Whether saved tiles have a valid dictionary.
 // lua-types-end
 
@@ -246,7 +245,7 @@
 
 // lua-types-begin btech 00043
 //|---@alias DetectionChannel "sight"|"sensors"|"probe" Values from btech.unit.detection_channels.
-//|---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"disabled"|"absent"
+//|---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"interference"|"absent"
 //|---@alias SensorMode "infrared"|"magscan"|"radar"|"seismic"|"probe" A sensor system of a unit's suite.
 //|---@alias SensorBand "short"|"medium"|"long"
 // lua-types-end
@@ -839,6 +838,7 @@
 //|---@field orbital_drop integer Minus two while the target has an intact cocoon; zero after a breach.
 //|---@field light integer Darkness on the target's map, less what searchlights and target heat offset.
 //|---@field environment integer|nil Wind and gravity on the shooter's map for this weapon class; nil when the wind keeps the weapon from firing.
+//|---@field interference integer +2 for a ranged weapon attack on a battlefield under electromagnetic interference (Tactical Operations: Advanced Rules p. 53).
 //|---@field heat integer
 //|---@field sensors integer
 //|---@field control_damage integer Vehicle commander/sensor critical penalties.

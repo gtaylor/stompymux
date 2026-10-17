@@ -800,12 +800,12 @@ async fn team_spotted_targets_are_engaged_along_the_shooters_own_line_of_fire() 
         .position()
         .unwrap()
         .map;
-    // Moonless night without sensors: only the peer, adjacent to the target, perceives it.
+    // Moonless night, and sweeps of 12 that find nothing: only the peer, adjacent to the target, perceives it.
     set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &(id, _) in &units {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
+        encoded["constructed"][id.0.to_string()]["sensor_sweep"] = serde_json::json!(12);
     }
     encoded["constructed"][peer.0.to_string()]["contacts"][target.0.to_string()] =
         serde_json::json!({"identified":true});
@@ -1244,12 +1244,12 @@ async fn team_spotted_targets_carry_identification_and_shared_range_without_own_
         .position()
         .unwrap()
         .map;
-    // Moonless night without sensors: only the peer, adjacent to the target, perceives it.
+    // Moonless night, and sweeps of 12 that find nothing: only the peer, adjacent to the target, perceives it.
     set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &(id, _) in &units {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
+        encoded["constructed"][id.0.to_string()]["sensor_sweep"] = serde_json::json!(12);
     }
     encoded["constructed"][peer.0.to_string()]["contacts"][target.0.to_string()] =
         serde_json::json!({"identified":true});
@@ -1851,13 +1851,13 @@ async fn classic_reports_apply_active_capacity_and_keep_unconscious_masters() {
         .position()
         .unwrap()
         .map;
-    // Moonless night without sensors: the master at y17 spots the target for the side; the
+    // Moonless night, and sweeps of 12 that find nothing: the master at y17 spots the target for the side; the
     // shooter has no detection of its own.
     set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
     let mut encoded = serde_json::to_value(&world.btech).unwrap();
     for &(id, _) in &units {
         encoded["constructed"][id.0.to_string()]["contacts"] = serde_json::json!({});
+        encoded["constructed"][id.0.to_string()]["sensor_sweep"] = serde_json::json!(12);
     }
     encoded["constructed"][units[4].0.0.to_string()]["contacts"][target.0.to_string()] =
         serde_json::json!({"identified":false});

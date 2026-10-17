@@ -32,7 +32,7 @@ fn unit_hex(world: &World, id: ObjectId) -> HexCoordinate {
 
 /// Sight is cut across the boundary, including equality, independently of chassis. Sensors
 /// trace terrain rather than light, so a short-band sweep still blips the neighbour across the
-/// clouds without identifying it, and nothing crosses once the map's sensors are switched off.
+/// clouds without identifying it, and nothing crosses on a sweep that finds nothing.
 #[tokio::test]
 async fn cloud_boundary_filters_all_supported_unit_pairs() {
     for source in firing::templates() {
@@ -41,15 +41,14 @@ async fn cloud_boundary_filters_all_supported_unit_pairs() {
                 firing::fixture_with_target(&source, None, &target).await;
             let map = world.btech.units()[&observer].map.unwrap();
             raised_target(&mut world, map, target);
-            // A short-band sweep on both units finds the adjacent neighbour on infrared.
-            for id in [observer, target] {
-                firing::edit(&mut world, id, |state| {
-                    state["sensor_sweep"] = serde_json::json!(7)
-                });
-            }
-            for sensors in [true, false] {
-                set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, sensors)
-                    .unwrap();
+            // A short-band sweep on both units finds the adjacent neighbour on infrared; a sweep
+            // of 12 finds nothing in any band.
+            for (sweep, sensed) in [(7, true), (12, false)] {
+                for id in [observer, target] {
+                    firing::edit(&mut world, id, |state| {
+                        state["sensor_sweep"] = serde_json::json!(sweep)
+                    });
+                }
                 set_battle_map_cloud_base(&mut world, ObjectId(1), map, 0).unwrap();
                 let ordinary = battle_perceive(&world, observer, target).unwrap();
                 assert_eq!(
@@ -61,8 +60,8 @@ async fn cloud_boundary_filters_all_supported_unit_pairs() {
                     let across = battle_perceive(&world, a, b).unwrap();
                     assert_eq!(
                         across.map(|perception| (perception.channel, perception.identified)),
-                        sensors.then_some((DetectionChannel::Sensors, false)),
-                        "sensors {sensors}"
+                        sensed.then_some((DetectionChannel::Sensors, false)),
+                        "sweep {sweep}"
                     );
                     assert!(!battle_hex_visible(&world, a, unit_hex(&world, b)).unwrap());
                 }

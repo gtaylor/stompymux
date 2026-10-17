@@ -236,8 +236,12 @@ async fn vehicle_authored_terrain_shares_elevation_hazards_and_replay() {
     }
 }
 
-/// A saved straight segment with a caller-selected movement rate.
-async fn fast_corridor(rate: i64) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
+/// Seconds of eastward driving the corridor tests cover. One movement point covers a hex a
+/// minute, so at 86 kph (eight MP) the truck travels two and two-thirds hexes.
+const CORRIDOR_SECONDS: usize = 20;
+
+/// A saved straight eastward segment at eight MP.
+async fn corridor() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     let (dir, config, mut world, id, map) = fixture().await;
     let mut saved = serde_json::to_value(&world.btech).unwrap();
     let unit = &mut saved["vehicles"][id.0.to_string()];
@@ -245,18 +249,46 @@ async fn fast_corridor(rate: i64) -> (tempfile::TempDir, Config, World, ObjectId
     unit["motion"]["desired_heading"] = 90.0.into();
     unit["motion"]["speed"] = 86.0.into();
     unit["motion"]["desired_speed"] = 86.0.into();
-    saved["maps"][map.0.to_string()]["movement_modifier"] = rate.into();
     world.btech = serde_json::from_value(saved).unwrap();
     (dir, config, world, id, map)
 }
 
-/// Candidate travel supplies a fixture route; mine assertions independently track packet expenditure.
+/// Candidate travel supplies a fixture route over the corridor's seconds; mine assertions
+/// independently track packet expenditure.
 fn corridor_entries(world: &World, id: ObjectId) -> Vec<HexCoordinate> {
-    let origin = world.btech.vehicles()[&id].motion().unwrap().point;
     let mut clear = world.clone();
-    advance_battle_motion(&mut clear, MovementRules::STANDARD).unwrap();
-    let end = clear.btech.vehicles()[&id].motion().unwrap().point;
-    origin.trace(end).unwrap().into_iter().skip(1).collect()
+    let mut entries = Vec::new();
+    for _ in 0..CORRIDOR_SECONDS {
+        let origin = clear.btech.vehicles()[&id].motion().unwrap().point;
+        advance_battle_motion(&mut clear, MovementRules::STANDARD).unwrap();
+        let end = clear.btech.vehicles()[&id].motion().unwrap().point;
+        entries.extend(origin.trace(end).unwrap().into_iter().skip(1));
+    }
+    entries
+}
+
+/// Drive the corridor's seconds, collecting every notice in order.
+fn drive_corridor(world: &mut World) -> Vec<Notice> {
+    (0..CORRIDOR_SECONDS)
+        .flat_map(|_| advance_battle_motion(world, mine_movement_rules()).unwrap())
+        .collect()
+}
+
+/// Drive quietly until the truck's next second enters `hex`.
+fn approach(world: &mut World, id: ObjectId, hex: HexCoordinate) {
+    loop {
+        let mut probe = world.clone();
+        advance_battle_motion(&mut probe, mine_movement_rules()).unwrap();
+        let point = probe.btech.vehicles()[&id].motion().unwrap().point;
+        if point.containing_hex().unwrap() == hex {
+            return;
+        }
+        assert!(
+            advance_battle_motion(world, mine_movement_rules())
+                .unwrap()
+                .is_empty()
+        );
+    }
 }
 
 /// Prevent incidental critical cascades from obscuring the per-crossing mine packet checks.
@@ -345,20 +377,17 @@ fn reinforce_truck(world: &mut World, id: ObjectId) {
 
 #[tokio::test]
 async fn vehicle_movement_checks_each_mined_crossing_and_replays_expenditure() {
-    let (_dir, config, mut world, id, map) = fast_corridor(2000).await;
+    let (_dir, config, mut world, id, map) = corridor().await;
     reinforce_truck(&mut world, id);
     let entries = corridor_entries(&world, id);
     assert!(entries.len() > 1);
     let mut expected = world.clone();
-    advance_battle_motion(&mut expected, mine_movement_rules()).unwrap();
+    drive_corridor(&mut expected);
     let seed = seed_corridor_mines(&mut world, id, map, &entries);
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
-    let notices = advance_battle_motion(&mut world, mine_movement_rules()).unwrap();
-    assert_eq!(
-        advance_battle_motion(&mut loaded, mine_movement_rules()).unwrap(),
-        notices
-    );
+    let notices = drive_corridor(&mut world);
+    assert_eq!(drive_corridor(&mut loaded), notices);
     assert_eq!(loaded.btech, world.btech);
     assert_eq!(
         world.btech.vehicles()[&id].motion(),
@@ -388,8 +417,10 @@ async fn vehicle_movement_checks_each_mined_crossing_and_replays_expenditure() {
 
 #[tokio::test]
 async fn vehicle_mine_callbacks_publish_once_and_restore_failed_movement() {
-    let (dir, config, mut world, id, map) = fast_corridor(2000).await;
+    let (dir, config, mut world, id, map) = corridor().await;
     reinforce_truck(&mut world, id);
+    let entries = corridor_entries(&world, id);
+    approach(&mut world, id, entries[0]);
     let entries = corridor_entries(&world, id);
     seed_corridor_mines(&mut world, id, map, &entries);
     world.objects.get_mut(&id).unwrap().lua_parent = "vehicle_mines.lua".into();
@@ -410,6 +441,7 @@ async fn vehicle_mine_callbacks_publish_once_and_restore_failed_movement() {
     )
     .unwrap();
     scripts.inspect_lua().load("mine_fail=true").exec().unwrap();
+    // The first second enters the first mined hex.
     let error = advance_battle_motion_action(&scripts, &config, mine_movement_rules()).unwrap_err();
     assert!(format!("{error:#}").contains("vehicle mine callback abort"));
     assert_eq!(
@@ -422,7 +454,9 @@ async fn vehicle_mine_callbacks_publish_once_and_restore_failed_movement() {
         .load("mine_fail=false")
         .exec()
         .unwrap();
-    advance_battle_motion_action(&scripts, &config, mine_movement_rules()).unwrap();
+    for _ in 0..CORRIDOR_SECONDS {
+        advance_battle_motion_action(&scripts, &config, mine_movement_rules()).unwrap();
+    }
     let count: usize = scripts
         .eval_callback(&format!(
             "return mux.world.object({}):state('mine'):get('count')",
@@ -442,7 +476,7 @@ async fn vehicle_mine_callbacks_publish_once_and_restore_failed_movement() {
 
 #[tokio::test]
 async fn unrelated_mines_and_motion_inside_one_hex_do_not_trigger_or_stop_vehicles() {
-    let (_dir, config, mut world, id, map) = fast_corridor(100).await;
+    let (_dir, config, mut world, id, map) = corridor().await;
     let before = world.clone();
     set_minefield(
         &mut world,
@@ -510,10 +544,10 @@ async fn unrelated_mines_and_motion_inside_one_hex_do_not_trigger_or_stop_vehicl
 
 #[tokio::test]
 async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
-    let (_dir, config, mut world, id, map) = fast_corridor(2000).await;
+    let (_dir, config, mut world, id, map) = corridor().await;
+    let first = corridor_entries(&world, id)[0];
+    approach(&mut world, id, first);
     seed_detonation(&mut world, id);
-    let entries = corridor_entries(&world, id);
-    let first = entries[0];
     // Only a command-detonated field reaches the neighbouring hexes, so the second truck
     // waits in the mined hex itself.
     let other = world.create(&config, "Second truck".into(), Kind::Thing);
@@ -593,9 +627,10 @@ async fn mine_blast_disables_a_later_vehicle_before_its_scheduled_movement() {
 async fn vehicle_mine_movement_retries_a_failed_server_save() {
     tokio::task::LocalSet::new().run_until(async {
         use sqlx::Connection;
-        let (_dir, config, mut world, id, map) = fast_corridor(2000).await;
-        seed_detonation(&mut world, id);
+        let (_dir, config, mut world, id, map) = corridor().await;
         let first = corridor_entries(&world, id)[0];
+        approach(&mut world, id, first);
+        seed_detonation(&mut world, id);
         set_minefield(&mut world, map, 0, Some(Minefield {
             coordinate: first, kind: MineKind::Standard, strength: 4, extra: 0, owner: ObjectId(1),
         })).unwrap();

@@ -278,6 +278,7 @@ fn artillery_aim_ranges_observers_and_corrections() {
                 gunnery: 4,
                 observer: ArtilleryObserver::Unassisted,
                 adjustment: 0,
+                interference: false,
             };
             assert_eq!(
                 weapon.artillery_aim(base).unwrap(),
@@ -311,6 +312,18 @@ fn artillery_aim_ranges_observers_and_corrections() {
                             result.target_number,
                             if visible { 9 } else { indirect } - i32::from(adjustment)
                         );
+                        // Electromagnetic interference adds two to direct and indirect fire
+                        // alike (Tactical Operations: Advanced Rules p. 53).
+                        let interfered = weapon
+                            .artillery_aim(ArtilleryAimInput {
+                                observer,
+                                adjustment,
+                                visible,
+                                interference: true,
+                                ..base
+                            })
+                            .unwrap();
+                        assert_eq!(interfered.target_number, result.target_number + 2);
                     }
                 }
             }

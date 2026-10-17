@@ -158,8 +158,12 @@ async fn vehicle_aim_rechecks_contact_sensors_and_does_not_spend_candidate_dice(
     let before = world.btech.clone();
     assert!(battle_aim_modifiers(&world, shooter, target, 99, 6, rules()).is_err());
     assert_eq!(world.btech, before);
-    // Pitch black sees three hexes; with the map's sensors off nothing reaches the target.
-    set_battle_map_perception(&mut world, map, MapPerceptionFlag::Sensors, false).unwrap();
+    // Pitch black sees three hexes; with a sweep of 12, which finds nothing, nothing reaches
+    // the target.
+    world
+        .btech
+        .set_unit_sensor_sweep(shooter, Some(12))
+        .unwrap();
     set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
     let before = world.btech.clone();
     let unseen = battle_aim_modifiers(&world, shooter, target, 0, 6, rules()).unwrap();
