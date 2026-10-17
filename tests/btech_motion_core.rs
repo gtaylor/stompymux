@@ -4360,7 +4360,7 @@ async fn water_falls_scale_damage_and_replay_before_standing() {
                     .btech
                     .set_unit_dice(id, stompymux_rs::Dice::seeded([*seed; 32]))
                     .unwrap();
-                resolve_battle_fall(&mut probe, id, 1, fall_rules()).unwrap();
+                let _fall = resolve_battle_fall(&mut probe, id, 1, fall_rules()).unwrap();
                 probe.btech.constructed_units()[&id]
                     .flooded_sections()
                     .is_empty()
