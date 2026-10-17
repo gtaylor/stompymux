@@ -27,16 +27,6 @@ pub struct DfaProfile {
 /// A missed landing is a two-level fall: damage multiplier three (Total Warfare p. 150).
 const MISS_FALL_MULTIPLIER: u8 = 3;
 
-/// Recovery-sensitive weapon sections; torso physical recovery does not itself prevent a landing attack.
-pub(super) const SECTIONS: [MechSection; 6] = [
-    MechSection::LeftArm,
-    MechSection::RightArm,
-    MechSection::LeftLeg,
-    MechSection::RightLeg,
-    MechSection::LeftTorso,
-    MechSection::RightTorso,
-];
-
 /// Damage a landing attack deals its target and its own legs (Total Warfare p. 150): three
 /// times the attacker's tonnage over ten, rounded up, and tonnage over five.
 fn damage(tons: u16, specialist: bool) -> (u16, u16) {
@@ -98,34 +88,15 @@ fn dfa_profile_inner(
         position.x == other.x && position.y == other.y,
         "Your DFA target has moved!"
     );
-    let loadout = source.loadout()?;
+    // One physical attack a turn, and no weapon attacks in the turn of a death from above
+    // attack (Total Warfare pp. 144, 149).
     ensure!(
-        !loadout
-            .weapons
-            .iter()
-            .enumerate()
-            .any(
-                |(index, mount)| source.weapon_recycle().contains_key(&index)
-                    && mount
-                        .criticals
-                        .iter()
-                        .any(|part| SECTIONS.contains(&part.section))
-            ),
-        "You have weapons recycling in a DFA section"
+        !source.fired_this_turn(world.btech.simulation_time()),
+        "You fired weapons this turn and cannot also make a death from above attack."
     );
     ensure!(
-        !source
-            .limb_recycle()
-            .keys()
-            .any(|section| matches!(section, MechSection::LeftLeg | MechSection::RightLeg)),
-        "Your legs are still recovering from your last attack."
-    );
-    ensure!(
-        !source
-            .limb_recycle()
-            .keys()
-            .any(|section| matches!(section, MechSection::LeftArm | MechSection::RightArm)),
-        "Your arms are still recovering from your last attack."
+        source.limb_recycle().is_empty(),
+        "Your limbs are still recovering from your last attack."
     );
     ensure!(
         !victim.airborne() && victim.free_fall().is_none(),
@@ -529,10 +500,13 @@ fn resolve_dfa_inner(
             report.flooding = fall.feedback.flooding.clone();
             report.miss_fall = Some(fall);
         }
-        let source = world.btech.constructed.get_mut(&attacker).unwrap();
-        for section in SECTIONS {
-            source.limb_recycle.insert(section, 60);
-        }
+        // The attacker may not fire or make another physical attack for the rest of the turn.
+        world
+            .btech
+            .constructed
+            .get_mut(&attacker)
+            .unwrap()
+            .tie_up_every_section();
         world.btech.validate_action(world)?;
         Ok(report)
     })

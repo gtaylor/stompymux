@@ -676,6 +676,22 @@ Info shows coordinates, movement, Mech heat or VTOL fuel, turret facing,
 targeting and towing. The header includes power and condition banners.
 
 
+### Physical attacks and the turn
+
+A Mech makes one physical attack in a thirty-second turn (Total Warfare p. 144).
+Punching with both arms, or striking with both claws, in one command is a single
+attack; a second physical weapon is not. After a punch, kick, trip, club or weapon
+swing no other physical attack can start for thirty seconds, and the weapons in the
+attacking limbs cannot fire until then: the punching or swinging arm, both arms for
+a club, the kicking leg, or both rear legs when a four-legged Mech kicks behind
+itself. A limb that fired a weapon in the last thirty seconds cannot punch, kick,
+club or swing, even after that weapon has finished recycling; weapons elsewhere on
+the Mech do not matter (Total Warfare pp. 145-147). A charge or death from above
+attack needs thirty seconds without any weapon fire, and afterwards no weapon can
+fire and no other physical attack can start for thirty seconds (Total Warfare
+pp. 148-149). Picking up a club works the same way (Total Warfare p. 146). `status`
+shows how long each limb stays tied up.
+
 Use `charge` to select your current target for a ground charge, or `charge #unit`
 to select a visible unit. `charge -` cancels. Selection does not start movement:
 set your heading and speed to approach the target. A charge is attempted when
@@ -694,8 +710,8 @@ selected DFA target during flight.
 
 A successful attack damages the target and your legs. A miss is a two-level fall
 onto your back: every hit strikes your rear and your pilot makes the fall's
-piloting check at +1. Both outcomes impose
-physical recovery on your arms, legs and side torsos. An accepted DFA uses this
+piloting check at +1. Both outcomes tie up every section for thirty seconds, as
+described above. An accepted DFA uses this
 physical recovery instead of ordinary jump stabilization. `land` can trigger the
 attack early if you are already in the target's hex.
 
@@ -839,9 +855,10 @@ For example, `removepod CT E` attempts to remove an ECM pod from the center tors
 
 You must be the conscious pilot of a running, placed unit. An arm pod requires
 the opposite arm; other locations use your best available arm. The arm must be
-intact and free of weapon or physical recovery. Actuator damage makes the attempt
+intact, free of physical recovery, and must not have fired a weapon in the last
+thirty seconds (Total Warfare pp. 141, 220). Actuator damage makes the attempt
 harder. A failed attempt damages the selected location, and either outcome leaves
-the arm recovering for 60 seconds. Conventional Narc pods cannot be swatted off.
+the arm recovering for 30 seconds. Conventional Narc pods cannot be swatted off.
 
 Lua provides `btech.unit.pods(unit, pilot)` and
 `btech.unit.removepod(unit, pilot, location, type)`.
@@ -1601,8 +1618,9 @@ shut down or off-map.
 selected arm. Arms default to both, and each arm uses its own weapon, so a Mech
 with a sword in one arm and a claw in the other needs no separate command for
 either. Arms without a physical weapon are skipped when both are selected. Claws
-may strike with both arms in one action; any other weapon's swing leaves the
-second arm recovering. Use `punch` for bare fists.
+may strike with both arms in one action, as punches do; any other weapon swings
+once, and that swing is the turn's physical attack, so the second arm does not
+swing. Use `punch` for bare fists.
 
 | Weapon | Template name | Damage | To-hit | Hand needed |
 |---|---|---|---|---|

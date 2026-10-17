@@ -349,7 +349,7 @@
 //|---@field triple_myomer_active boolean Derived from installed myomer and sampled excess heat.
 //|---@field movement_maximum_speed number Current throttle ceiling, including active myomer.
 //|---@field charge {target: integer?, elapsed: integer, distance: number} Persistent charge intent and movement counters.
-//|---@field limb_recycle table<string, integer> Remaining physical recovery seconds by limb.
+//|---@field limb_recycle table<string, integer> Remaining seconds each section is tied up by a physical attack: its weapons cannot fire and no further physical attack can start.
 //|---@field stagger Stagger
 //|---@field posture "standing"|"prone"
 //|---@field flooded_sections string[] Persistent flooded section names.
@@ -368,6 +368,7 @@
 //|---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 //|---@field artillery_adjustment integer Saved correction for the current artillery target.
 //|---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
+//|---@field section_fire table<string, integer> Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 //|---@field tag TagState
 //|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 //|---@field scanner_perception integer Perception captured at startup completion.

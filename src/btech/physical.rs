@@ -4,6 +4,12 @@ use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
+/// Seconds a physical attack ties up the attacker: one tabletop turn
+/// ([`TURN_SECONDS`](super::spotter::TURN_SECONDS)). A 'Mech makes one physical attack a turn,
+/// and the limbs it attacks with cannot fire their weapons in that turn (Total Warfare
+/// pp. 144-149). The realtime game counts the turn from the moment of the attack.
+pub(super) const PHYSICAL_RECOVERY_SECONDS: u16 = super::spotter::TURN_SECONDS as u16;
+
 /// The leg used by a kick or trip; the other must still support the unit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -107,6 +113,19 @@ impl PhysicalAttack {
             );
         }
         Ok(())
+    }
+
+    /// Sections the attack ties up for the turn. None of them may have fired a weapon this
+    /// turn, and their weapons cannot fire until the turn is out: the punching or swinging arm,
+    /// both arms for a club, and the kicking leg (Total Warfare pp. 145-147). A four-legged
+    /// 'Mech kicking into its rear arc uses its rear legs, and may not do so after firing
+    /// rear leg-mounted weapons that turn (Total Warfare p. 147).
+    fn limbs(self, chassis: MechChassis, rear_kick: bool) -> Vec<MechSection> {
+        match self {
+            Self::Club => vec![MechSection::LeftArm, MechSection::RightArm],
+            Self::Kick { .. } if rear_kick => vec![MechSection::LeftLeg, MechSection::RightLeg],
+            attack => vec![attack.section(chassis)],
+        }
     }
 
     /// Whether the attack uses leg reach and the real forward arc.
@@ -791,20 +810,6 @@ fn attack_profile_inner(
             "The required hand is destroyed or missing"
         );
     }
-    let loadout = source.loadout()?;
-    ensure!(
-        !loadout
-            .weapons
-            .iter()
-            .enumerate()
-            .any(|(index, mount)| mount
-                .criticals
-                .iter()
-                .any(|slot| slot.section == attack.section(source.chassis())
-                    || (club && slot.section == MechSection::LeftArm))
-                && source.weapon_recycle().contains_key(&index)),
-        "You have weapons recycling on your selected limb."
-    );
     ensure!(
         !victim.airborne,
         "You can't perform physical attacks on airborne units!"
@@ -918,6 +923,16 @@ fn attack_profile_inner(
         forward || side || rear_kick,
         "Target is outside the attacking limb's arc!"
     );
+    // A limb that fired this turn cannot also attack physically, however short its weapons'
+    // recycle (Total Warfare pp. 145-147).
+    let now = world.btech.simulation_time();
+    for section in attack.limbs(source.chassis(), rear_kick) {
+        ensure!(
+            !source.section_fired_this_turn(section, now),
+            "Your {} fired weapons this turn and cannot also make a physical attack.",
+            source.chassis().section_name(section).replace('_', " ")
+        );
+    }
     let upper = actuator(
         source,
         attack.section(source.chassis()),
@@ -1200,9 +1215,8 @@ fn resolve_attack_inner(
     world.attempt(|world| {
         let unit = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = unit.dice.generic_roll();
-        unit.limb_recycle.insert(attack.section(unit.chassis()), 60);
-        if attack == PhysicalAttack::Club {
-            unit.limb_recycle.insert(MechSection::LeftArm, 60);
+        for section in attack.limbs(unit.chassis(), profile.rear_kick > 0) {
+            unit.limb_recycle.insert(section, PHYSICAL_RECOVERY_SECONDS);
         }
         let weapon = attack.hand_weapon();
         unit.heat.stored += f64::from(weapon.map_or(0, ArmAttack::heat));
@@ -1642,6 +1656,17 @@ impl Mech {
     /// Physical recovery timers keyed by the limb that performed an attack.
     pub fn limb_recycle(&self) -> &std::collections::BTreeMap<MechSection, u16> {
         &self.limb_recycle
+    }
+
+    /// Tie up every surviving section for one turn. After a charge, a death from above attack
+    /// or picking up a club, a 'Mech may neither fire a weapon nor make another physical attack
+    /// that turn (Total Warfare pp. 146, 148-149).
+    pub(super) fn tie_up_every_section(&mut self) {
+        for section in MechSection::ALL {
+            if self.sections[&section].internal > 0 {
+                self.limb_recycle.insert(section, PHYSICAL_RECOVERY_SECONDS);
+            }
+        }
     }
 }
 
@@ -2224,4 +2249,70 @@ pub(crate) fn charge_command(
     input: &crate::CommandInput,
 ) -> Result<crate::CommandAction> {
     command_for(ctx, input, PhysicalCommand::Charge)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A physical attack ties up its attacking limbs for exactly one turn.
+    #[test]
+    fn physical_recovery_is_one_turn() {
+        assert_eq!(
+            i64::from(PHYSICAL_RECOVERY_SECONDS),
+            super::super::spotter::TURN_SECONDS
+        );
+    }
+
+    /// Each attack names the limbs whose weapons it ties up and which must not have fired
+    /// (Total Warfare pp. 145-147).
+    #[test]
+    fn attacks_tie_up_their_own_limbs() {
+        use MechSection::*;
+        let biped = MechChassis::Biped;
+        let quad = MechChassis::Quad;
+        let punch = PhysicalAttack::Punch { arm: Arm::Left };
+        assert_eq!(punch.limbs(biped, false), [LeftArm]);
+        let swing = PhysicalAttack::Weapon {
+            arm: Arm::Right,
+            weapon: ArmAttack::Sword,
+        };
+        assert_eq!(swing.limbs(biped, false), [RightArm]);
+        assert_eq!(
+            PhysicalAttack::Club.limbs(biped, false),
+            [LeftArm, RightArm]
+        );
+        let kick = PhysicalAttack::Kick { leg: Leg::Right };
+        assert_eq!(kick.limbs(biped, false), [RightLeg]);
+        assert_eq!(kick.limbs(quad, false), [RightArm]);
+        assert_eq!(kick.limbs(quad, true), [LeftLeg, RightLeg]);
+        let trip = PhysicalAttack::Trip { leg: Leg::Left };
+        assert_eq!(trip.limbs(biped, false), [LeftLeg]);
+    }
+
+    /// A charge, a death from above attack or a club pickup ties up every surviving section.
+    #[test]
+    fn every_surviving_section_is_tied_up() {
+        let mut unit = Mech::from_template(
+            MechTemplate::parse(
+                "JR7-D",
+                include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        unit.sections
+            .get_mut(&MechSection::LeftArm)
+            .unwrap()
+            .internal = 0;
+        unit.tie_up_every_section();
+        for section in MechSection::ALL {
+            let expected = (section != MechSection::LeftArm).then_some(PHYSICAL_RECOVERY_SECONDS);
+            assert_eq!(
+                unit.limb_recycle.get(&section).copied(),
+                expected,
+                "{section:?}"
+            );
+        }
+    }
 }

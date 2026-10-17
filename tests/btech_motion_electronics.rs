@@ -5,8 +5,8 @@
 
 use crate::btech_motion_common::{
     RULES, balance_hit, balance_skill, fall_rules, fixture, fixture_assets, kick_fixture,
-    kick_rules, optical_aim_rules, overheat_due, overheat_rules, prepare_test_charge, shot_fixture,
-    shot_rules, shot_seed, shot_skill, water_fixture, without_xp_timestamps,
+    kick_rules, optical_aim_rules, overheat_due, overheat_rules, pass_seconds, prepare_test_charge,
+    shot_fixture, shot_rules, shot_seed, shot_skill, water_fixture, without_xp_timestamps,
 };
 use crate::support;
 use crate::support::{restore_database, snapshot_database};
@@ -2160,7 +2160,9 @@ fn prepare_test_pod_removal(
         .unwrap();
 }
 
-/// Swatting chooses the less impaired available arm, requires the opposite arm for arm pods, and recovers on hits or misses.
+/// Swatting chooses the less impaired available arm, requires the opposite arm for arm pods, and
+/// recovers on hits or misses. An arm that fired this turn cannot swat (Total Warfare pp. 141,
+/// 220).
 #[tokio::test]
 async fn pod_removal_arm_selection_damage_and_restart() {
     use stompymux_rs::*;
@@ -2175,6 +2177,8 @@ async fn pod_removal_arm_selection_damage_and_restart() {
         "both_recycle",
         "left_pod",
         "blocked_left_pod",
+        "left_fired",
+        "left_fired_last_turn",
     ] {
         let (_dir, config, mut world, id, _) = shot_fixture().await;
         let section = if case.contains("left_pod") {
@@ -2195,9 +2199,13 @@ async fn pod_removal_arm_selection_damage_and_restart() {
             },
         )
         .unwrap();
+        let now = world.btech.simulation_time();
         world
             .btech
             .rewrite_unit_record(id, |record| {
+                if case.starts_with("left_fired") {
+                    record["section_fire"] = serde_json::json!({"LeftArm": now});
+                }
                 if matches!(case, "upper" | "lower" | "hand" | "right_better") {
                     let slot = match case {
                         "upper" => 1,
@@ -2221,6 +2229,9 @@ async fn pod_removal_arm_selection_damage_and_restart() {
                 }
             })
             .unwrap();
+        if case == "left_fired_last_turn" {
+            pass_seconds(&mut world, 30);
+        }
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
@@ -2244,7 +2255,10 @@ async fn pod_removal_arm_selection_damage_and_restart() {
         assert_eq!(report.removed, removed);
         assert_eq!(
             report.arm,
-            if matches!(case, "right_better" | "left_recycle" | "left_pod") {
+            if matches!(
+                case,
+                "right_better" | "left_recycle" | "left_pod" | "left_fired"
+            ) {
                 Arm::Right
             } else {
                 Arm::Left
@@ -2262,7 +2276,7 @@ async fn pod_removal_arm_selection_damage_and_restart() {
         );
         assert_eq!(
             world.btech.constructed_units()[&id].limb_recycle()[&report.arm.section()],
-            60
+            30
         );
         assert_eq!(
             world.btech.constructed_units()[&id].has_beacon(BeaconKind::Homing),
@@ -6699,7 +6713,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
         assert_eq!(
             candidate.btech.constructed_units()[&id].limb_recycle()
                 [&leg.section(MechChassis::Quad)],
-            60
+            30
         );
         candidate.validate(&config).unwrap();
         persistence::save(&config.database(), &candidate)

@@ -7485,7 +7485,7 @@ async fn kick_native_lua_hit_miss_rollback_and_saved_recovery() {
         let mut world = lua.world().clone();
         assert_eq!(
             world.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
-            60
+            30
         );
         let before = world.btech.clone();
         assert!(
@@ -7500,9 +7500,9 @@ async fn kick_native_lua_hit_miss_rollback_and_saved_recovery() {
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(
             loaded.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
-            43
+            13
         );
-        for _ in 0..42 {
+        for _ in 0..12 {
             advance_battle_recycle(&mut loaded);
         }
         assert!(
@@ -7598,7 +7598,7 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
                 }
                 assert_eq!(
                     world.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
-                    60
+                    30
                 );
                 assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
                 support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -8157,7 +8157,7 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
         }
         assert_eq!(
             world.btech.constructed_units()[&id].limb_recycle()[&MechSection::LeftLeg],
-            60
+            30
         );
         world.validate(&config).unwrap();
     }

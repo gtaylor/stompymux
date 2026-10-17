@@ -316,7 +316,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `triple_myomer_active`: `boolean` — Derived from installed myomer and sampled excess heat.
 - `movement_maximum_speed`: `number` — Current throttle ceiling, including active myomer.
 - `charge`: `{target: integer?, elapsed: integer, distance: number}` — Persistent charge intent and movement counters.
-- `limb_recycle`: `table<string, integer>` — Remaining physical recovery seconds by limb.
+- `limb_recycle`: `table<string, integer>` — Remaining seconds each section is tied up by a physical attack: its weapons cannot fire and no further physical attack can start.
 - `stagger`: `Stagger`
 - `posture`: `"standing"|"prone"`
 - `flooded_sections`: `string[]` — Persistent flooded section names.
@@ -335,6 +335,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `spotter`: `integer?` — Self ID while spotting, otherwise the selected observer.
 - `artillery_adjustment`: `integer` — Saved correction for the current artillery target.
 - `last_weapon_fire`: `integer|nil` — Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
+- `section_fire`: `table<string, integer>` — Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 - `tag`: `TagState`
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.

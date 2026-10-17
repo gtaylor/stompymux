@@ -301,6 +301,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
         state.set("spotter", unit.spotter().map(|id| id.0))?;
         state.set("last_weapon_fire", unit.last_weapon_fire())?;
         state.set("physical_assault_time", unit.physical_assault_time())?;
+        state.set("section_fire", detached(lua, unit.section_fire())?)?;
         state.set("artillery_adjustment", unit.artillery_adjustment())?;
         state.set("tag", detached(lua, &unit.tag())?)?;
         state.set(

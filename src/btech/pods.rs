@@ -101,24 +101,13 @@ fn actuator(unit: &Mech, section: MechSection, slot: u8, system: System) -> bool
             .is_some_and(|part| System::named(&part.equipment) == Some(system))
 }
 
-/// Return the arm's aiming penalty and halved damage, or reject unavailable/recycling arms.
-fn arm_profile(unit: &Mech, arm: Arm) -> Result<Option<(i32, u16)>> {
+/// Return the arm's aiming penalty and halved damage, or reject an unavailable or recovering
+/// arm. An arm that fired a weapon this turn cannot swat at a pod (Total Warfare pp. 141, 220).
+fn arm_profile(unit: &Mech, arm: Arm, now: i64) -> Result<Option<(i32, u16)>> {
     let section = arm.section();
-    if unit.sections()[&section].internal == 0 || unit.limb_recycle().contains_key(&section) {
-        return Ok(None);
-    }
-    if unit
-        .loadout()?
-        .weapons
-        .iter()
-        .enumerate()
-        .any(|(index, mount)| {
-            unit.weapon_recycle().contains_key(&index)
-                && mount
-                    .criticals
-                    .iter()
-                    .any(|location| location.section == section)
-        })
+    if unit.sections()[&section].internal == 0
+        || unit.limb_recycle().contains_key(&section)
+        || unit.section_fired_this_turn(section, now)
     {
         return Ok(None);
     }
@@ -195,15 +184,16 @@ fn resolve(
         _ => &[Arm::Left, Arm::Right],
     };
     let mut selected = None;
+    let now = world.btech.simulation_time();
     for &arm in choices {
-        if let Some((penalty, damage)) = arm_profile(unit, arm)?
+        if let Some((penalty, damage)) = arm_profile(unit, arm, now)?
             && selected.is_none_or(|(_, old, _)| penalty < old)
         {
             selected = Some((arm, penalty, damage));
         }
     }
     let (arm, penalty, damage) = selected.context(
-        "You need an intact arm without recycling weapons or physical recovery to remove that pod!",
+        "You need an intact arm that has not fired or attacked this turn to remove that pod!",
     )?;
     let target_number =
         i32::from(unit_piloting_target(world, id, rules.extended_piloting)?) + 4 + penalty;
@@ -285,7 +275,7 @@ fn resolve(
             .get_mut(&id)
             .unwrap()
             .limb_recycle
-            .insert(arm.section(), 60);
+            .insert(arm.section(), super::physical::PHYSICAL_RECOVERY_SECONDS);
         notices.extend(refresh_electronic_fields(world)?);
         world.btech.validate_action(world)?;
         Ok(PodRemoval {

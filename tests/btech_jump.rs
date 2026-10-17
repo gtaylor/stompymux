@@ -3885,7 +3885,7 @@ async fn dfa_landing_dispatch_and_saved_replay() {
     let unit = &world.btech.constructed_units()[&id];
     assert!(unit.flight().is_none());
     assert_eq!(unit.jump_stabilization(), 0);
-    assert_eq!(unit.limb_recycle().len(), 6);
+    assert_eq!(unit.limb_recycle().len(), MechSection::ALL.len());
     assert_eq!(unit.posture(), Posture::Prone);
     assert!(advance_battle_jumps(&mut world, rules).unwrap().is_empty());
     world.validate(&config).unwrap();
@@ -4078,7 +4078,7 @@ async fn dfa_landing_early_attack_uses_shared_policy() {
     let unit = &world.btech.constructed_units()[&id];
     assert!(unit.flight().is_none());
     assert_eq!(unit.jump_stabilization(), 0);
-    assert_eq!(unit.limb_recycle().len(), 6);
+    assert_eq!(unit.limb_recycle().len(), MechSection::ALL.len());
     world.validate(&config).unwrap();
 }
 
@@ -4431,7 +4431,7 @@ async fn character_dfa_landing_dispatch_rolls_back_and_replays() {
         candidate.btech.constructed_units()[&id]
             .limb_recycle()
             .len(),
-        6
+        MechSection::ALL.len()
     );
     candidate.validate(&config).unwrap();
     persistence::save(&config.database(), &candidate)

@@ -146,6 +146,10 @@ pub struct Mech {
     /// spot for the rest of that turn (Total Warfare p. 111).
     #[serde(default)]
     pub(super) physical_assault_time: Option<i64>,
+    /// Simulation time a weapon in each section last launched; that limb may not make a
+    /// physical attack for the rest of the turn (Total Warfare pp. 145-147).
+    #[serde(default)]
+    pub(super) section_fire: BTreeMap<MechSection, i64>,
     /// Saved correction for the current artillery target.
     #[serde(default)]
     pub(super) artillery_adjustment: u8,
@@ -464,6 +468,7 @@ super::saved_parts::saved_parts!(Mech {
         unjam,
         last_weapon_fire,
         physical_assault_time,
+        section_fire,
     ],
     // The stagger phase wraps every second on a running unit and is stored as a timer; the
     // object stays in the live part so its blanked text never flips between present and absent.
@@ -957,6 +962,7 @@ impl Mech {
             spotter: None,
             last_weapon_fire: None,
             physical_assault_time: None,
+            section_fire: Default::default(),
             artillery_adjustment: 0,
             signature: Default::default(),
             scanner_perception: super::scanner::default_perception(),
@@ -1215,15 +1221,9 @@ impl Mech {
         );
         self.charge.validate()?;
         ensure!(
-            self.limb_recycle.iter().all(|(section, seconds)| matches!(
-                section,
-                MechSection::LeftArm
-                    | MechSection::RightArm
-                    | MechSection::LeftLeg
-                    | MechSection::RightLeg
-                    | MechSection::LeftTorso
-                    | MechSection::RightTorso
-            ) && (1..=60).contains(seconds)),
+            self.limb_recycle
+                .values()
+                .all(|seconds| (1..=super::physical::PHYSICAL_RECOVERY_SECONDS).contains(seconds)),
             "Invalid physical recovery timer"
         );
         self.searchlight
@@ -1237,7 +1237,8 @@ impl Mech {
         );
         ensure!(
             self.last_weapon_fire.is_none_or(|time| time >= 0)
-                && self.physical_assault_time.is_none_or(|time| time >= 0),
+                && self.physical_assault_time.is_none_or(|time| time >= 0)
+                && self.section_fire.values().all(|&time| time >= 0),
             "Invalid attack timestamp"
         );
         ensure!(
