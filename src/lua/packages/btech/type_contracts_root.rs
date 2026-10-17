@@ -245,7 +245,7 @@
 
 // lua-types-begin btech 00043
 //|---@alias DetectionChannel "sight"|"sensors"|"probe" Values from btech.unit.detection_channels.
-//|---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"interference"|"absent"
+//|---@alias PerceptionStatus "ready"|"jammed"|"damaged"|"interference"|"stealth"|"absent"
 //|---@alias SensorMode "infrared"|"magscan"|"radar"|"seismic"|"probe" A sensor system of a unit's suite.
 //|---@alias SensorBand "short"|"medium"|"long"
 // lua-types-end
@@ -371,7 +371,7 @@
 //|---@field physical_assault_time integer|nil Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
 //|---@field section_fire table<string, integer> Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 //|---@field tag TagState
-//|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
+//|---@field signature {team: integer, illuminated: boolean} Team and scenario lighting.
 //|---@field scanner_perception integer Perception captured at startup completion.
 //|---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
 //|---@field facing {torso: "left"|"center"|"right"|"both", arms_flipped: boolean}
@@ -379,7 +379,6 @@
 //|---@field pilot_injuries integer Tactical injury count; six means scenario pilot loss.
 //|---@field self_destruct {remaining: integer}|nil Admitted ammunition self-destruct countdown.
 //|---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
-//|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown; random state stays private.
 //|---@field character_pilot {injuries: integer, killed: boolean}? Saved character-mode injury status; character health determines death.
 //|---@field heat_cutoff {requested: integer, shut_off: integer} Heat sinks shut off this turn and the count requested for the next.
@@ -478,11 +477,10 @@
 //|---@field crew_stunned boolean Effective crew stun, independent of its timer.
 //|---@field self_destruct {remaining: integer}|nil Admitted self-destruct countdown.
 //|---@field self_destruct_safe boolean Scenario protection from new self-destruct requests.
-//|---@field hide_elapsed integer|nil Elapsed camouflage checks; nil when no hide event is pending.
 //|---@field crew_recovery_remaining integer Empty-crew consciousness countdown, separate from crew stun.
 //|---@field gunnery_damage integer Cumulative firing penalty from sensor and commander damage.
 //|---@field lost_stabilizers string[] Sections with destroyed weapon stabilizers.
-//|---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
+//|---@field signature {team: integer, illuminated: boolean} Team and scenario lighting.
 //|---@field scanner_perception integer Perception captured at startup completion.
 //|---@field sensor_sweep integer|nil This turn's 2d6 sensor sweep, once rolled.
 //|---@field sensor_ranges {tactical: integer, long_range: integer, scan: integer} Current display and scan reach in hexes after script overrides.

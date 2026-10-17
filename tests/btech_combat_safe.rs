@@ -310,9 +310,6 @@ async fn immunity_preserves_hit_routing_and_internal_damage_boundaries() {
     for source in templates() {
         let (_dir, config, mut world, id, _) = fixture(&source, &source, false).await;
         set_battle_combat_safe(&mut world, id, true).unwrap();
-        edit(&mut world, id, |unit| {
-            unit["signature"]["hidden"] = true.into()
-        });
         let before = state(&world, id);
         if world.btech.vehicles().contains_key(&id) {
             let rules = FallRules::configured(&config).vehicle_impact.criticals;

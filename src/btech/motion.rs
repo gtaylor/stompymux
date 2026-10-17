@@ -439,9 +439,6 @@ fn advance_motion_candidate(
         .notices
         .extend(advance_fall_headings(&mut candidate, rules)?);
     super::towing::synchronize(&mut candidate)?;
-    report
-        .notices
-        .extend(super::hiding::movement_changes(&mut candidate, world));
     for unit in candidate.btech.constructed_units().values() {
         unit.validate()?;
     }
@@ -1081,9 +1078,6 @@ fn resolve_ground_segment(
         } else {
             hex.center()
         };
-        if unit.position != Some(old_position) {
-            notices.extend(super::hiding::movement(world, id));
-        }
         let check_ice = if falls.is_some() {
             super::surface_break::check_ice_landing_in_action
         } else {

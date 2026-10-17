@@ -359,8 +359,7 @@ pub(super) fn lamp_on(world: &World, id: ObjectId) -> bool {
 }
 
 /// A target is lit by its own lamp, scenario lighting, an unobstructed searchlight beam, or
-/// by fire: inferno fuel on it or a neighbour, a burning hex under or beside it, or glowing
-/// laser heat sinks.
+/// by fire: inferno fuel on it or a neighbour, or a burning hex under or beside it.
 pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
     unit_illumination(world, target) != super::Illumination::None
 }
@@ -383,10 +382,7 @@ pub fn unit_illumination(world: &World, target: ObjectId) -> super::Illumination
     if beam(world, target).is_some() || searchlit(world, target, illumination_sources(world)) {
         return super::Illumination::Searchlight;
     }
-    if inferno(world, target) > 0
-        || laser_heat_sink_glow(world, target)
-        || fire_lit(world, target, illumination_sources(world))
-    {
+    if inferno(world, target) > 0 || fire_lit(world, target, illumination_sources(world)) {
         return super::Illumination::Fire;
     }
     super::Illumination::None
@@ -459,25 +455,6 @@ fn scenario_lit(world: &World, target: ObjectId) -> bool {
         .btech
         .unit(target)
         .is_some_and(|unit| super::with_unit!(unit, |unit| unit.signature().illuminated))
-}
-
-/// Running laser heat sinks glow, so the unit counts as illuminated in darkness.
-fn laser_heat_sink_glow(world: &World, target: ObjectId) -> bool {
-    let technology = super::Technology::LaserHeatSinks;
-    world
-        .btech
-        .constructed_units()
-        .get(&target)
-        .map(|unit| {
-            unit.definition().has_technology(technology) && unit.power() == super::Power::Running
-        })
-        .or_else(|| {
-            world.btech.vehicles().get(&target).map(|unit| {
-                unit.definition().has_technology(technology)
-                    && unit.power() == super::Power::Running
-            })
-        })
-        .unwrap_or(false)
 }
 
 /// Scenario lighting, nearby infernos and other lamps can trigger external-light warnings.
@@ -711,7 +688,6 @@ impl<'w> IlluminationContext<'w> {
         let value = live
             && lamp_state(world, target).is_some_and(|_| {
                 inferno(world, target) > 0
-                    || laser_heat_sink_glow(world, target)
                     || beam(world, target).is_some()
                     || externally_illuminated_with_sources(
                         world,

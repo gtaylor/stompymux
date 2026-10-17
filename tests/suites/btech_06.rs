@@ -20,9 +20,6 @@ mod btech_duel;
 #[path = "../btech_electronic_field.rs"]
 mod btech_electronic_field;
 
-#[path = "../btech_hiding.rs"]
-mod btech_hiding;
-
 #[path = "../btech_hotload.rs"]
 mod btech_hotload;
 
@@ -76,6 +73,9 @@ mod btech_vehicle_state;
 
 #[path = "../btech_vtol_impact.rs"]
 mod btech_vtol_impact;
+
+#[path = "../btech_weapons_hold.rs"]
+mod btech_weapons_hold;
 
 #[path = "../btech_xptop.rs"]
 mod btech_xptop;

@@ -1843,7 +1843,7 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
 #[tokio::test]
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
-    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::HeavyFog).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 7 };
     let fire = HexCoordinate { x: 1, y: 8 };
     assert!(!battle_hex_visible(&world, source, coordinate).unwrap());
@@ -3485,7 +3485,6 @@ async fn brief_modes_are_unit_owned_and_control_buildings_and_notices() {
         );
     }
     let event = ContactEvent {
-        revealed: None,
         identified: true,
         observer: source,
         target,
@@ -3683,7 +3682,7 @@ async fn contact_status_columns_share_precedence_with_native_and_lua() {
             "   Sn",
         ),
         (
-            serde_json::json!({"beacons":{"CenterTorso":["homing"]},"signature":{"team":99,"hidden":false,"illuminated":false}}),
+            serde_json::json!({"beacons":{"CenterTorso":["homing"]},"signature":{"team":99,"illuminated":false}}),
             "   SN",
         ),
         (
@@ -3917,7 +3916,6 @@ async fn automatic_contact_modes_control_detail_color_and_escaping() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let event = ContactEvent {
-        revealed: None,
         identified: true,
         observer: source,
         target,
@@ -4143,7 +4141,6 @@ async fn shutdown_contact_notice_preference_is_independent_and_durable() {
     let shared = std::rc::Rc::new(std::cell::RefCell::new(world));
     let scripts = Scripts::new(&config, shared.clone()).unwrap();
     let event = ContactEvent {
-        revealed: None,
         identified: true,
         observer: source,
         target,

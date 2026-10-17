@@ -553,9 +553,6 @@ fn condition_lines(
             }
         }
     }
-    if owned && scan.signature.hidden {
-        flags.push(("HIDDEN", "green bold"));
-    }
     let (lamp, electronics, inferno) = if let Some(u) = world.btech.constructed_units().get(&id) {
         (u.searchlight(), u.electronics(), false)
     } else {
@@ -600,9 +597,6 @@ fn condition_lines(
         if enabled {
             flags.push((label, color));
         }
-    }
-    if !owned && scan.signature.hidden {
-        flags.push(("HIDDEN", "green bold"));
     }
     for (kind, label) in [
         (BeaconKind::Narc, "NARC POD ATTACHED"),

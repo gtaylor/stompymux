@@ -97,7 +97,6 @@ no_list: true
 - [`gunnery`](gunnery/)
 - [`heading`](heading/)
 - [`heatcutoff`](heatcutoff/)
-- [`hide`](hide/)
 - [`hotload`](hotload/)
 - [`hulldown`](hulldown/)
 - [`inarc`](inarc/)

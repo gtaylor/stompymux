@@ -314,7 +314,7 @@
 //|---@field sight_range integer How far the unit sees under the light and weather, stretched to 30 by its own searchlight at night.
 //|---@field lit_sight_range integer How far it sees a target lit by another source at night.
 //|---@field sensor {systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil, probe_clan: boolean} Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep; probe_clan marks a probe that is Clan technology by its own slots.
-//|---@field probe {kind: ProbeKind, clan: boolean, range: integer, status: PerceptionStatus}|nil Best installed active probe, whether it is Clan technology by its own slots (a Clan-built Beagle is the Clan active probe), and how far it reveals hidden units.
+//|---@field probe {kind: ProbeKind, clan: boolean, range: integer, status: PerceptionStatus}|nil Best installed active probe, whether it is Clan technology by its own slots (a Clan-built Beagle is the Clan active probe), and how far it lets attacks see into woods.
 //|---@field running boolean Stopped units perceive nothing.
 //|---@field text string The report printed by the sensor command.
 // lua-types-end
@@ -609,15 +609,6 @@
 //|---@param pilot integer
 //|---@return table report Contains optional check/fall, flooding, stepping mines and ordered notices.
 //|function btech_unit.prone(dbref, pilot) end
-// lua-types-end
-
-// lua-types-begin btech 00218
-//|---Begin hiding in forest, mountains or rough terrain; requires camouflage equipment or a wizard pilot.
-//|---Hostile acquired contacts or leaving the ground stop preparation. Hex crossings and firing cancel it.
-//|---@param dbref integer Supported unit dbref.
-//|---@param pilot integer Assigned pilot.
-//|---@return boolean accepted Timer and cockpit feedback commit with the callback.
-//|function btech_unit.hide(dbref, pilot) end
 // lua-types-end
 
 // lua-types-begin btech 00247

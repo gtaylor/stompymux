@@ -1042,19 +1042,9 @@ async fn pickup_admission_rejects_motion_hidden_targets_enemies_and_overlap_with
             );
             assert_eq!(case.btech, before);
         }
-        let mut hidden = world.clone();
+        let mut rival = world.clone();
         set_battle_unit_signature(
-            &mut hidden,
-            target,
-            UnitSignature {
-                hidden: true,
-                ..Default::default()
-            },
-        )
-        .unwrap();
-        assert!(battle_pickup_admission(&hidden, carrier, ObjectId(1), target).is_err());
-        set_battle_unit_signature(
-            &mut hidden,
+            &mut rival,
             target,
             UnitSignature {
                 team: 1,
@@ -1062,7 +1052,7 @@ async fn pickup_admission_rejects_motion_hidden_targets_enemies_and_overlap_with
             },
         )
         .unwrap();
-        assert!(battle_pickup_admission(&hidden, carrier, ObjectId(1), target).is_err());
+        assert!(battle_pickup_admission(&rival, carrier, ObjectId(1), target).is_err());
         set_battle_tow(&mut world, carrier, Some(target)).unwrap();
         let before = world.btech.clone();
         assert!(battle_pickup_admission(&world, carrier, ObjectId(1), target).is_err());

@@ -1,14 +1,6 @@
-//! Active probes: the hidden units each family reveals within its reach and clear line, and the
-//! woods a probe lets its carrier aim through.
+//! Active probes: the woods a probe lets its carrier aim through within its reach.
 use crate::support;
 use stompymux_rs::*;
-
-/// Every probe family in order of increasing reach, with its template equipment name.
-const FAMILIES: [(ActiveProbe, &str); 3] = [
-    (ActiveProbe::Light, "Light_BAP"),
-    (ActiveProbe::Beagle, "BeagleProbe"),
-    (ActiveProbe::Bloodhound, "BloodhoundProbe"),
-];
 
 /// A one-hex-wide lane built from per-hex rows, listed north to south.
 async fn lane(rows: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId) {
@@ -23,13 +15,6 @@ async fn lane(rows: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId) {
     .unwrap();
     support::seed_world_dice(&mut world, support::FIXTURE_DICE_SEED);
     (dir, config, world, map)
-}
-
-/// A lane whose second hex is a hill that blocks every sightline from the first hex.
-async fn hill_lane(length: usize) -> (tempfile::TempDir, Config, World, ObjectId) {
-    let mut rows = vec![".0"; length];
-    rows[1] = ".9";
-    lane(&rows).await
 }
 
 /// Start a unit without the startup countdown by editing its saved power state.
@@ -145,74 +130,6 @@ fn shot_rules() -> ShotRules {
     }
 }
 
-/// Every probe family reveals a hidden enemy exactly as far as Total Warfare lets it (Light 3,
-/// Beagle 4, Bloodhound 8 hexes), never one hex farther or through a hill.
-#[tokio::test]
-async fn probes_reveal_hidden_units_within_their_reach_and_line_of_sight() {
-    for (family, equipment) in FAMILIES {
-        let reach = i64::from(family.range(false));
-        let (_dir, config, mut world, map) = lane(&[".0"; 12]).await;
-        let carrier = probe_vehicle(&mut world, &config, map, Some(equipment), false, 0);
-        seat(&mut world, carrier, ObjectId(1));
-        let hidden = target(&mut world, &config, map, reach + 1);
-        let conceal_unit = |world: &mut World| {
-            set_battle_unit_signature(
-                world,
-                hidden,
-                UnitSignature {
-                    team: 2,
-                    hidden: true,
-                    illuminated: false,
-                },
-            )
-            .unwrap();
-        };
-        conceal_unit(&mut world);
-        let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
-        assert!(
-            events.iter().all(|event| event.revealed.is_none()),
-            "{family:?} one hex past its reach"
-        );
-        assert!(battle_perceive(&world, carrier, hidden).unwrap().is_none());
-        relocate(&mut world, hidden, map, reach);
-        conceal_unit(&mut world);
-        let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
-        assert!(
-            events.iter().any(|event| event.revealed.is_some()),
-            "{family:?} at its reach"
-        );
-        assert!(
-            !world.btech.constructed_units()[&hidden].signature().hidden,
-            "{family:?} revealed the unit"
-        );
-        assert_eq!(
-            battle_perceive(&world, carrier, hidden)
-                .unwrap()
-                .map(|perception| perception.channel),
-            Some(DetectionChannel::Sight)
-        );
-        world.validate(&config).unwrap();
-    }
-    // A hill between the carrier and its target breaks the probe's line.
-    let (_dir, config, mut world, map) = hill_lane(12).await;
-    let carrier = probe_vehicle(&mut world, &config, map, Some("BloodhoundProbe"), false, 0);
-    seat(&mut world, carrier, ObjectId(1));
-    let hidden = target(&mut world, &config, map, 3);
-    set_battle_unit_signature(
-        &mut world,
-        hidden,
-        UnitSignature {
-            team: 2,
-            hidden: true,
-            illuminated: false,
-        },
-    )
-    .unwrap();
-    let events = refresh_battle_contacts(&mut world, &[carrier]).unwrap();
-    assert!(events.iter().all(|event| event.revealed.is_none()));
-    assert!(world.btech.constructed_units()[&hidden].signature().hidden);
-}
-
 /// A working probe within its reach lets the carrier shoot through one point of woods.
 #[tokio::test]
 async fn probes_let_the_carrier_aim_through_a_point_of_woods() {
@@ -256,4 +173,134 @@ async fn probes_let_the_carrier_aim_through_a_point_of_woods() {
         2,
         "five hexes is past the Beagle's reach"
     );
+}
+
+/// Put a running tower of `team` at row `y` whose only item is `equipment`, an ECM suite
+/// switched to ECM mode.
+fn ecm_tower(
+    world: &mut World,
+    config: &Config,
+    map: ObjectId,
+    equipment: &str,
+    team: i32,
+    y: i64,
+) -> ObjectId {
+    let id = probe_vehicle(world, config, map, Some(equipment), true, y);
+    set_battle_unit_signature(
+        world,
+        id,
+        UnitSignature {
+            team,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let suite = if equipment == "AngelEcm" {
+        "angel"
+    } else {
+        "guardian"
+    };
+    world
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["electronics"][suite] = serde_json::to_value(ElectronicMode::Ecm).unwrap();
+        })
+        .unwrap();
+    id
+}
+
+/// The woods modifier a Beagle and a Bloodhound carrier at the lane's head each take against
+/// the hostile Jenner three hexes off, through two light woods, with an ECM tower of `team`
+/// at row `y`.
+async fn probe_aim_near_ecm(
+    equipment: &str,
+    team: i32,
+    y: i64,
+) -> (World, [ObjectId; 2], [i16; 2]) {
+    let mut rows = vec![".0"; 10];
+    rows[1] = "`0";
+    rows[2] = "`0";
+    let (_dir, config, mut world, map) = lane(&rows).await;
+    let beagle = probe_vehicle(&mut world, &config, map, Some("BeagleProbe"), false, 0);
+    let bloodhound = probe_vehicle(&mut world, &config, map, Some("BloodhoundProbe"), false, 0);
+    let enemy = target(&mut world, &config, map, 3);
+    ecm_tower(&mut world, &config, map, equipment, team, y);
+    seat(&mut world, beagle, ObjectId(1));
+    seat(&mut world, bloodhound, ObjectId(2));
+    refresh_battle_electronic_fields(&mut world).unwrap();
+    refresh_battle_contacts(&mut world, &[beagle, bloodhound]).unwrap();
+    let aim = |shooter| {
+        battle_aim_modifiers(&world, shooter, enemy, 0, 4, shot_rules().aim)
+            .unwrap()
+            .perception
+            .unwrap()
+            .modifier
+    };
+    let modifiers = [aim(beagle), aim(bloodhound)];
+    (world, [beagle, bloodhound], modifiers)
+}
+
+/// A probe on a unit inside a hostile ECM bubble cannot penetrate it, so it no longer sees
+/// into woods (Total Warfare p. 134). A Bloodhound ignores Guardian ECM but not an Angel suite
+/// (Tactical Operations: Advanced Units & Equipment, Bloodhound Active Probe and Angel ECM
+/// Suite). A third side's tower five hexes off covers both carriers and the Jenner without
+/// protecting the Jenner. The jammed probe still sweeps, as the double-blind rules charge the
+/// jamming to its roll (Tactical Operations: Advanced Rules p. 191).
+#[tokio::test]
+async fn hostile_ecm_on_the_carrier_jams_its_probe() {
+    for (equipment, expected, statuses) in [
+        (
+            "IS.Ecm",
+            [2, 1],
+            [PerceptionStatus::Jammed, PerceptionStatus::Ready],
+        ),
+        (
+            "AngelEcm",
+            [2, 2],
+            [PerceptionStatus::Jammed, PerceptionStatus::Jammed],
+        ),
+    ] {
+        let (world, carriers, modifiers) = probe_aim_near_ecm(equipment, 3, 5).await;
+        assert_eq!(modifiers, expected, "{equipment}");
+        for (carrier, status) in carriers.into_iter().zip(statuses) {
+            let report = battle_perception_report(&world, carrier).unwrap();
+            let probe = report.profile.probe.unwrap();
+            assert_eq!(probe.status, status, "{equipment} {:?}", probe.kind);
+            assert!(
+                report
+                    .profile
+                    .sensor
+                    .systems
+                    .iter()
+                    .any(|system| system.mode == SensorMode::Probe),
+                "a jammed probe still sweeps"
+            );
+            if status == PerceptionStatus::Jammed {
+                assert!(report.text.contains("(jammed by ECM)"), "{}", report.text);
+            }
+        }
+    }
+}
+
+/// The target's own side's ECM tower eight hexes from the carriers covers the Jenner but not
+/// them: no Beagle gets through the bubble, a Bloodhound gets through Guardian ECM but not
+/// an Angel suite (Total Warfare p. 134; Tactical Operations: Advanced Units & Equipment,
+/// Bloodhound Active Probe and Angel ECM Suite).
+#[tokio::test]
+async fn ecm_around_the_target_shuts_out_probes_but_a_bloodhound_beats_guardian() {
+    for (equipment, expected) in [("IS.Ecm", [2, 1]), ("AngelEcm", [2, 2])] {
+        let (world, carriers, modifiers) = probe_aim_near_ecm(equipment, 2, 8).await;
+        assert_eq!(modifiers, expected, "{equipment}");
+        for carrier in carriers {
+            assert_eq!(
+                battle_perception_report(&world, carrier)
+                    .unwrap()
+                    .profile
+                    .probe
+                    .unwrap()
+                    .status,
+                PerceptionStatus::Ready
+            );
+        }
+    }
 }

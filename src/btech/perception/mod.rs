@@ -3,14 +3,13 @@
 //!
 //! * **Sight** needs a clear line and reaches as far as the light and weather allow: sixty
 //!   hexes in daylight, three in pitch black. At night a unit's own searchlight stretches its
-//!   sight to thirty hexes and a target lit by anything else is seen at forty-five. Smoke
-//!   along the line shortens sight by its density. A sighted unit is identified.
+//!   sight to thirty hexes and a target lit by anything else is seen at forty-five, as far
+//!   as the weather allows. Smoke along the line shortens sight by its density. A sighted unit is identified.
 //! * **Sensors** are one selected system (infrared, magscan, radar, seismic or an active
 //!   probe) swept with 2d6 once a turn; the sweep's result picks the range band that turn's
 //!   sweep finds targets in. Sensors do not need a clear line, though hills stop infrared and
 //!   radar, buildings stop radar and magscan, and nothing but magscan crosses the water's
 //!   surface. A sensor contact is a blip: a position and height, not an identity.
-//! * A **hidden** unit is perceived by no enemy until something reveals it.
 //!
 //! Darkness and weather cost to hit through the map's conditions, not here; cover along the
 //! line and in the target's hex is reported as the perception's aim modifier.
@@ -94,13 +93,19 @@ pub struct Perception {
 pub enum PerceptionStatus {
     /// Working.
     Ready,
-    /// Working while hostile ECM adds to its sweeps.
+    /// Shut out by hostile ECM: an active probe on a unit inside a hostile ECM bubble, or on a
+    /// unit with stealth armor engaged, cannot penetrate it (Total Warfare pp. 134, 142). It
+    /// still sweeps in the double-blind rules, which charge the jamming to the sweep roll
+    /// instead (Tactical Operations: Advanced Rules p. 191).
     Jammed,
     /// Destroyed or otherwise failed equipment.
     Damaged,
     /// Rendered useless by electromagnetic interference over the battlefield, as every active
     /// probe is (Tactical Operations: Advanced Rules p. 53).
     Interference,
+    /// Unusable while the carrier's own stealth armor is engaged, as a Bloodhound active probe
+    /// is (Tactical Operations: Advanced Units & Equipment, Bloodhound Active Probe).
+    Stealth,
     /// The unit carries no such equipment.
     Absent,
 }
@@ -134,7 +139,7 @@ pub struct SensorSystem {
     pub bands: SensorBands,
 }
 
-/// The best installed active probe and its standard-rules reach for finding hidden units.
+/// The best installed active probe and its standard-rules reach.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct ProbeProfile {
     pub kind: ActiveProbe,
@@ -142,10 +147,59 @@ pub struct ProbeProfile {
     /// Beagle slot is the Clan active probe, with its reach, Sensor Range Table brackets and
     /// ECM/Stealth Modifier Table row (Tactical Operations: Advanced Rules pp. 190-191).
     pub clan: bool,
-    /// Hexes within which the probe reveals a hidden unit it has line of sight to (Total
-    /// Warfare p. 129).
+    /// The probe's standard-rules range in hexes (Total Warfare p. 129): a target this close
+    /// with line of sight takes one off the woods modifier of an attack on it (Tactical
+    /// Operations: Advanced Rules p. 97).
     pub range: u16,
     pub status: PerceptionStatus,
+}
+
+impl ProbeProfile {
+    /// Whether the probe sweeps with the sensor suite: when working, and when jammed, since
+    /// the double-blind rules charge the jamming to the sweep roll (Tactical Operations:
+    /// Advanced Rules p. 191).
+    pub fn sweeps(self) -> bool {
+        matches!(
+            self.status,
+            PerceptionStatus::Ready | PerceptionStatus::Jammed
+        )
+    }
+
+    /// Whether the probe sees through hostile ECM around a target: a Bloodhound ignores
+    /// Guardian, Clan and Watchdog ECM, but nothing gets through an Angel suite (Total Warfare
+    /// p. 134; Tactical Operations: Advanced Units & Equipment, Bloodhound Active Probe and
+    /// Angel ECM Suite).
+    fn penetrates(self, guardian: bool, angel: bool) -> bool {
+        !angel && (!guardian || self.kind == ActiveProbe::Bloodhound)
+    }
+}
+
+/// The hostile electronic warfare on a probe's carrier that can shut the probe out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ProbeJamming {
+    /// A hostile Guardian, Clan or Watchdog ECM suite, or an iNarc ECM pod, covers the carrier.
+    guardian: bool,
+    /// A hostile Angel ECM suite covers the carrier.
+    angel: bool,
+    /// The carrier's stealth armor is engaged, which leaves it as if inside hostile ECM
+    /// (Total Warfare p. 142).
+    stealth: bool,
+}
+
+impl ProbeJamming {
+    /// The status a working probe of `kind` takes under this jamming. Engaged stealth armor
+    /// jams every probe and leaves a Bloodhound unusable; an Angel suite jams every probe; any
+    /// other ECM jams all but the Bloodhound (Total Warfare pp. 134, 142; Tactical Operations:
+    /// Advanced Units & Equipment, Bloodhound Active Probe and Angel ECM Suite).
+    fn status(self, kind: ActiveProbe) -> PerceptionStatus {
+        if self.stealth && kind == ActiveProbe::Bloodhound {
+            return PerceptionStatus::Stealth;
+        }
+        if self.stealth || self.angel || (self.guardian && kind != ActiveProbe::Bloodhound) {
+            return PerceptionStatus::Jammed;
+        }
+        PerceptionStatus::Ready
+    }
 }
 
 /// Everything an observer can currently perceive with, computed once per observation.
@@ -153,8 +207,8 @@ pub struct ProbeProfile {
 pub struct PerceptionProfile {
     pub light: Light,
     pub weather: Weather,
-    /// How far the observer sees under the light and weather, stretched to thirty hexes by
-    /// its own searchlight at night.
+    /// How far the observer sees under the light and weather, its own searchlight standing in
+    /// for the light at night (see [`sight_ranges`]).
     pub sight_range: u16,
     /// How far the observer sees a target lit by another source at night.
     pub lit_sight_range: u16,
@@ -172,13 +226,10 @@ pub struct PerceptionProfile {
     vehicle: bool,
     #[serde(skip)]
     underwater: bool,
-    /// Hostile ECM covers the observer: any suite, and an Angel suite.
-    #[serde(skip)]
-    disturbed: (bool, bool),
 }
 
 impl PerceptionProfile {
-    /// The probe that can currently reveal hidden units, if any.
+    /// The probe that currently works, if any.
     pub(super) fn ready_probe(&self) -> Option<ProbeProfile> {
         self.probe
             .filter(|probe| probe.status == PerceptionStatus::Ready)
@@ -214,21 +265,26 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         .context("Map not found")?;
     let light = map.light_level()?;
     let weather = map.weather_condition()?;
-    let visual = u16::from(map.visual_range()?);
     let searchlight_on = crate::btech::searchlight::lamp_on(world, observer);
-    let sight_range = if light.searchlights_help_sight() && searchlight_on {
-        visual.max(u16::from(crate::btech::SEARCHLIGHT_SIGHT))
-    } else {
-        visual
-    };
-    let lit_sight_range = if light.searchlights_help_sight() {
-        sight_range.max(u16::from(crate::btech::LIT_TARGET_SIGHT))
-    } else {
-        sight_range
-    };
+    let (sight_range, lit_sight_range) = sight_ranges(light, weather, searchlight_on);
     let field = crate::btech::electronic_field(world, observer)?;
-    let probe = probe_profile(world, observer, map.electromagnetic_interference())?;
-    let sensor = sensor_profile(world, observer, &unit, probe, field.disturbed)?;
+    let jamming = ProbeJamming {
+        guardian: field.disturbed,
+        angel: field.angel_disturbed,
+        stealth: world
+            .btech
+            .constructed_units()
+            .get(&observer)
+            .is_some_and(|mech| mech.stealth_active()),
+    };
+    let probe = probe_profile(world, observer, map.electromagnetic_interference(), jamming)?;
+    let sensor = sensor_profile(
+        world,
+        observer,
+        &unit,
+        probe,
+        field.blocks_outgoing_guidance(),
+    )?;
     let point = crate::btech::los::unit_sight_point(world, observer)?;
     Ok(PerceptionProfile {
         light,
@@ -243,8 +299,28 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         team: unit.signature.team,
         vehicle: unit.vehicle,
         underwater: point.below_waterline(),
-        disturbed: (field.disturbed, field.angel_disturbed),
     })
+}
+
+/// How far an observer sees ordinary and lit targets under `light` and `weather`, with its own
+/// searchlight on when `searchlight_on` (Tactical Operations: Advanced Rules p. 189). At night
+/// and at dawn or dusk a mounted searchlight's thirty hexes, or forty-five to a target lit by
+/// another source, stand in for the light's row of the Visual Range Table; the weather's row
+/// still applies, since only the most restrictive condition counts.
+fn sight_ranges(light: Light, weather: Weather, searchlight_on: bool) -> (u16, u16) {
+    let by_light = u16::from(light.visual_range());
+    let by_weather = u16::from(weather.visual_range());
+    if !light.searchlights_help_sight() {
+        let range = by_light.min(by_weather);
+        return (range, range);
+    }
+    let own = if searchlight_on {
+        by_light.max(u16::from(crate::btech::SEARCHLIGHT_SIGHT))
+    } else {
+        by_light
+    };
+    let lit = own.max(u16::from(crate::btech::LIT_TARGET_SIGHT));
+    (own.min(by_weather), lit.min(by_weather))
 }
 
 /// Resolve the selected sensor from equipment, damage and jamming.
@@ -268,9 +344,9 @@ fn sensor_profile(
     let probe_kind = probe.map(|probe| probe.kind);
     let probe_clan = probe.is_some_and(|probe| probe.clan);
     let mut systems = Vec::new();
-    // A working probe sweeps first, with its own brackets, so a target it finds shows as a
-    // probe contact; the built-in sensors follow.
-    if probe.is_some_and(|probe| probe.status == PerceptionStatus::Ready) {
+    // A working or jammed probe sweeps first, with its own brackets, so a target it finds
+    // shows as a probe contact; the built-in sensors follow.
+    if probe.is_some_and(ProbeProfile::sweeps) {
         systems.push(SensorSystem {
             mode: SensorMode::Probe,
             bands: SensorBands::of(SensorMode::Probe, unit.vehicle, probe_kind, probe_clan),
@@ -303,12 +379,14 @@ fn sensor_profile(
 }
 
 /// Pick the working probe with the longest reach, or else the best installed one as damaged.
-/// Under electromagnetic `interference` the working probe is useless: it neither sweeps,
-/// reveals hidden units nor sees through woods (Tactical Operations: Advanced Rules p. 53).
+/// Under electromagnetic `interference` the working probe is useless: it neither sweeps nor
+/// sees through woods (Tactical Operations: Advanced Rules p. 53). Hostile `jamming` on the
+/// carrier shuts it out as [`ProbeJamming::status`] says.
 fn probe_profile(
     world: &World,
     observer: ObjectId,
     interference: bool,
+    jamming: ProbeJamming,
 ) -> Result<Option<ProbeProfile>> {
     // Build the equipment projection once and check every family against it. Each fitted
     // probe reaches by its own technology base, not the chassis's.
@@ -349,7 +427,7 @@ fn probe_profile(
             status: if interference {
                 PerceptionStatus::Interference
             } else {
-                PerceptionStatus::Ready
+                jamming.status(kind)
             },
         }));
     }
@@ -365,7 +443,8 @@ pub fn perceive(world: &World, observer: ObjectId, target: ObjectId) -> Result<O
 /// Cover an attack on `target` must clear, from the terrain already traced between the
 /// units: woods, smoke and crops along the line and in the target's hex, partial cover and
 /// hull-down posture behind it, less the woods a probe within reach lets the shooter see
-/// through (Tactical Operations p. 97).
+/// through (Tactical Operations p. 97). The probe must work and get through any ECM bubble
+/// the target's side has around it (Total Warfare p. 134).
 pub(crate) fn cover_aim(
     world: &World,
     profile: &PerceptionProfile,
@@ -376,14 +455,37 @@ pub(crate) fn cover_aim(
     let hull_down = crate::btech::hull_down::cover_modifier(world, target, terrain.partial_cover);
     let cover = sight::cover(terrain, hull_down);
     let woods = i16::from(terrain.woods) + i16::from(terrain.target_woods);
-    let probe_helps = profile
+    if woods == 0 {
+        return cover;
+    }
+    let Some(probe) = profile
         .ready_probe()
-        .is_some_and(|probe| !terrain.blocked && range.hex_distance <= u64::from(probe.range));
-    if probe_helps && woods > 0 {
+        .filter(|probe| !terrain.blocked && range.hex_distance <= u64::from(probe.range))
+    else {
+        return cover;
+    };
+    if probe_reaches(world, profile, probe, target) {
         cover - 1
     } else {
         cover
     }
+}
+
+/// Whether `probe` gets through the ECM around `target`: the target's own side's working ECM
+/// is hostile to an observer on another team (Total Warfare p. 134).
+fn probe_reaches(
+    world: &World,
+    profile: &PerceptionProfile,
+    probe: ProbeProfile,
+    target: ObjectId,
+) -> bool {
+    let hostile = crate::btech::scanner::scanner_unit(world, target)
+        .is_some_and(|unit| unit.signature.team != profile.team);
+    if !hostile {
+        return true;
+    }
+    crate::btech::electronic_field(world, target)
+        .is_ok_and(|field| probe.penetrates(field.protected, field.angel_protected))
 }
 
 /// Perceive one target, reusing an observation's profile, pair geometry and lighting cache.
@@ -405,11 +507,6 @@ pub(crate) fn perceive_prepared(
     let other =
         crate::btech::scanner::scanner_unit(world, target).context("Target is not constructed")?;
     if other.visibility.invisible {
-        return Ok(None);
-    }
-    // A hidden unit stays unseen by the enemy until something reveals it (Total Warfare
-    // p. 259); its own side always knows where it is.
-    if other.signature.hidden && other.signature.team != profile.team {
         return Ok(None);
     }
     let (terrain, range) = match geometry {
@@ -452,6 +549,7 @@ pub(crate) fn perceive_prepared(
     } else if let Some(roll) = profile.sensor.sweep {
         sweep = sweep_suite(
             world,
+            observer,
             profile,
             target,
             &other,
@@ -484,6 +582,7 @@ pub(crate) fn perceive_prepared(
 #[allow(clippy::too_many_arguments)]
 fn sweep_suite(
     world: &World,
+    observer: ObjectId,
     profile: &PerceptionProfile,
     target: ObjectId,
     other: &crate::btech::scanner::ScannerUnit<'_>,
@@ -504,7 +603,9 @@ fn sweep_suite(
             y: i32::from(position.y),
         })?
         .is_some_and(|effect| effect.kind == crate::btech::DecorationKind::Fire);
-    let field = crate::btech::electronic_field(world, target)?;
+    // Every hostile ECM suite at the observer's hex or the target's adds its column (Tactical
+    // Operations: Advanced Rules p. 191).
+    let ecm = crate::btech::hostile_ecm_against(world, observer, target)?;
     let (heat_penalties, tons, airborne, inferno, stealth, null_signature) =
         match world.btech.constructed_units().get(&target) {
             Some(mech) => (
@@ -512,7 +613,7 @@ fn sweep_suite(
                 u32::from(mech.definition().tons),
                 mech.airborne(),
                 false,
-                mech.stealth().enabled,
+                mech.stealth_active(),
                 mech.null_signature().enabled,
             ),
             None => {
@@ -531,9 +632,8 @@ fn sweep_suite(
             }
         };
     let systems = TargetSystems {
-        angel: profile.disturbed.1 || field.angel_protected,
-        guardian: (profile.disturbed.0 && !profile.disturbed.1)
-            || (field.protected && !field.angel_protected),
+        angel: ecm.angel,
+        guardian: ecm.guardian,
         null_signature,
         stealth,
     };
@@ -699,5 +799,68 @@ mod tests {
         let mut sorted = DetectionChannel::ALL;
         sorted.sort();
         assert_eq!(sorted, DetectionChannel::ALL);
+    }
+
+    /// A searchlight or a lit target stands in for the light, never for the weather: at night
+    /// in heavy fog both are seen five hexes off, the same as in daylight (TO:AR p. 189).
+    #[test]
+    fn searchlights_replace_the_light_but_not_the_weather() {
+        use Weather::{Clear, HeavyFog, LightFog, ModerateRain};
+        assert_eq!(sight_ranges(Light::MoonlessNight, Clear, false), (5, 45));
+        assert_eq!(sight_ranges(Light::MoonlessNight, Clear, true), (30, 45));
+        assert_eq!(sight_ranges(Light::PitchBlack, HeavyFog, true), (5, 5));
+        assert_eq!(sight_ranges(Light::Day, HeavyFog, false), (5, 5));
+        assert_eq!(sight_ranges(Light::FullMoonNight, LightFog, true), (30, 30));
+        assert_eq!(sight_ranges(Light::Dusk, ModerateRain, false), (15, 20));
+        assert_eq!(sight_ranges(Light::Dusk, ModerateRain, true), (20, 20));
+        assert_eq!(sight_ranges(Light::Day, Clear, true), (60, 60));
+    }
+
+    /// Hostile ECM on the carrier jams every probe but the Bloodhound, an Angel suite jams
+    /// them all, and engaged stealth armor jams them all and leaves a Bloodhound unusable
+    /// (Total Warfare pp. 134, 142; TO:AUE Bloodhound Active Probe, Angel ECM Suite). Jammed
+    /// probes still sweep; a stealth carrier's Bloodhound does not.
+    #[test]
+    fn carrier_jamming_decides_probe_status() {
+        use ActiveProbe::{Beagle, Bloodhound, Light, Watchdog};
+        use PerceptionStatus::{Jammed, Ready, Stealth};
+        let jamming = |guardian, angel, stealth| ProbeJamming {
+            guardian,
+            angel,
+            stealth,
+        };
+        let statuses = |jamming: ProbeJamming| {
+            [Beagle, Light, Watchdog, Bloodhound].map(|kind| jamming.status(kind))
+        };
+        assert_eq!(
+            statuses(jamming(false, false, false)),
+            [Ready, Ready, Ready, Ready]
+        );
+        assert_eq!(
+            statuses(jamming(true, false, false)),
+            [Jammed, Jammed, Jammed, Ready]
+        );
+        assert_eq!(
+            statuses(jamming(false, true, false)),
+            [Jammed, Jammed, Jammed, Jammed]
+        );
+        assert_eq!(
+            statuses(jamming(false, false, true)),
+            [Jammed, Jammed, Jammed, Stealth]
+        );
+        let profile = |kind, status| ProbeProfile {
+            kind,
+            clan: false,
+            range: 4,
+            status,
+        };
+        assert!(profile(Beagle, Jammed).sweeps());
+        assert!(!profile(Bloodhound, Stealth).sweeps());
+        assert!(!profile(Beagle, PerceptionStatus::Interference).sweeps());
+        // Around the target: a Bloodhound gets through Guardian ECM, nothing through Angel.
+        assert!(profile(Beagle, Ready).penetrates(false, false));
+        assert!(!profile(Beagle, Ready).penetrates(true, false));
+        assert!(profile(Bloodhound, Ready).penetrates(true, false));
+        assert!(!profile(Bloodhound, Ready).penetrates(false, true));
     }
 }

@@ -86,7 +86,6 @@ pub fn pickup_admission(
         world.btech.towed_by(carrier).is_none() && world.btech.towed_by(target).is_none(),
         "That unit is already being towed"
     );
-    ensure!(!victim.signature.hidden, "You cannot pickup hiding targets");
     let tons = if let Some(unit) = world.btech.vehicles().get(&carrier) {
         ensure!(unit.crew_recovery().remaining == 0, "You are unconscious");
         ensure!(

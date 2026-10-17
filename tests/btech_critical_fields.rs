@@ -589,13 +589,12 @@ async fn primary_critical_fields_project_shared_conditions_and_mech_damage() {
         });
         fields.verify(damaged_lamp, id, "critstatus", "k").await;
         firing::edit(&mut world, id, |unit| {
-            unit["signature"]["hidden"] = true.into();
             unit["towable"] = true.into();
             unit["illumination_observed"] = true.into();
             unit["visibility"] = serde_json::json!({"invisible":true,"clairvoyant":true});
             unit["observer"] = true.into();
         });
-        fields.verify(world, id, "critstatus", "dlqzAC").await;
+        fields.verify(world, id, "critstatus", "lqzAC").await;
         if index >= 2 {
             continue;
         }

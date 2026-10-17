@@ -1,7 +1,6 @@
 //! Perception under the Tactical Operations double-blind rules: visual ranges by light and
 //! weather, searchlights and lit targets, smoke, the automatic sensor suite's sweeps by system
-//! and band, the terrain each sensor cares about, probe sweeps and the discovery of hidden
-//! units.
+//! and band, the terrain each sensor cares about, and probe sweeps.
 use crate::support;
 use stompymux_rs::*;
 
@@ -31,13 +30,12 @@ impl Lane {
     }
 
     /// Replace the target's scenario signature on the hostile team.
-    fn target_signature(&mut self, hidden: bool, illuminated: bool) {
+    fn target_signature(&mut self, illuminated: bool) {
         set_battle_unit_signature(
             &mut self.world,
             self.target,
             UnitSignature {
                 team: 2,
-                hidden,
                 illuminated,
             },
         )
@@ -67,6 +65,53 @@ impl Lane {
                     .into();
             })
             .unwrap();
+    }
+
+    /// Place a running radio tower of `team` at row `y` whose only item, a Guardian ECM suite,
+    /// is switched to ECM mode.
+    fn ecm_tower(&mut self, team: i32, y: i64) -> ObjectId {
+        let id = self
+            .world
+            .create(&self.config, "ECM tower".into(), Kind::Thing);
+        self.world.objects.get_mut(&id).unwrap().home = Some(ObjectId(self.config.home()));
+        let mut definition = crate::support::templates::fitted(
+            VehicleTemplate::parse("test", include_str!("../game/units/RadioTower.toml")).unwrap(),
+        );
+        let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
+        front.criticals.clear();
+        front.criticals.insert(
+            0,
+            CriticalDefinition {
+                equipment: "IS.Ecm".into(),
+                data: "-".into(),
+                modes: vec![],
+            },
+        );
+        create_battle_vehicle(
+            &mut self.world,
+            id,
+            crate::support::templates::fitted(definition),
+        )
+        .unwrap();
+        place_battle_unit(&mut self.world, id, self.map, 0, y).unwrap();
+        set_power(&mut self.world, id, Power::Running);
+        set_battle_unit_signature(
+            &mut self.world,
+            id,
+            UnitSignature {
+                team,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        self.world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["electronics"]["guardian"] =
+                    serde_json::to_value(ElectronicMode::Ecm).unwrap();
+            })
+            .unwrap();
+        id
     }
 
     /// Give the observer a fixed sweep result for the turn.
@@ -205,7 +250,7 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
         observer: observer_id,
         target,
     };
-    lane.target_signature(false, false);
+    lane.target_signature(false);
     lane
 }
 
@@ -286,7 +331,7 @@ async fn searchlights_lit_targets_and_smoke_change_the_reach_of_sight() {
     lane.place_target(31);
     assert_eq!(lane.perceived(), None);
     // A lit target is seen far beyond the observer's own reach, lamp or no lamp.
-    lane.target_signature(false, true);
+    lane.target_signature(true);
     lane.place_target(45);
     assert_eq!(lane.perceived(), Some((Sight, true)));
     lane.place_target(46);
@@ -300,7 +345,7 @@ async fn searchlights_lit_targets_and_smoke_change_the_reach_of_sight() {
     assert_eq!(lane.perceived(), Some((Sight, true)));
     assert_eq!(LIT_TARGET_SIGHT, 45);
     // Daylight needs no lamp: sixty hexes with or without one.
-    lane.target_signature(false, false);
+    lane.target_signature(false);
     lane.conditions(Light::Day, Weather::Clear);
     assert_eq!(lane.perceived(), Some((Sight, true)));
     // One point of light smoke on the way shortens a moonless night's five hexes to four.
@@ -317,6 +362,39 @@ async fn searchlights_lit_targets_and_smoke_change_the_reach_of_sight() {
     assert_eq!(lane.perceived(), None);
     lane.place_target(4);
     assert_eq!(lane.perceived(), Some((Sight, true)));
+    lane.world.validate(&lane.config).unwrap();
+}
+
+/// The weather still limits sight at night: a searchlight or a lit target stands in for the
+/// light alone, as only the most restrictive condition counts (Tactical Operations: Advanced
+/// Rules p. 189). In heavy fog a lamp and a lit target reach five hexes, as in daylight; in
+/// light fog thirty.
+#[tokio::test]
+async fn weather_limits_searchlights_and_lit_targets() {
+    let mut lane = lane(&grass(50), Observer::Mech).await;
+    lane.sweep(12);
+    lane.conditions(Light::MoonlessNight, Weather::HeavyFog);
+    toggle_battle_searchlight(&mut lane.world, lane.observer, ObjectId(1)).unwrap();
+    for _ in 0..6 {
+        advance_battle_searchlights(&mut lane.world);
+    }
+    assert!(battle_unit_illuminated(&lane.world, lane.observer));
+    lane.place_target(5);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    lane.place_target(6);
+    assert_eq!(lane.perceived(), None);
+    lane.target_signature(true);
+    assert_eq!(lane.perceived(), None);
+    lane.conditions(Light::MoonlessNight, Weather::LightFog);
+    lane.place_target(30);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    lane.place_target(31);
+    assert_eq!(lane.perceived(), None);
+    let report = battle_perception_report(&lane.world, lane.observer).unwrap();
+    assert_eq!(
+        (report.profile.sight_range, report.profile.lit_sight_range),
+        (30, 30)
+    );
     lane.world.validate(&lane.config).unwrap();
 }
 
@@ -445,79 +523,6 @@ fn world_turn(world: &mut World, phase: i64) {
     world.btech = serde_json::from_value(state).unwrap();
 }
 
-/// A hidden enemy is never perceived until an enemy stands next to it or an enemy probe in
-/// reveal range has a clear line to it; its own side always sees it.
-#[tokio::test]
-async fn hidden_units_are_revealed_by_adjacency_and_probes() {
-    let mut lane = lane(&grass(12), Observer::Vehicle(Some("BeagleProbe"))).await;
-    lane.target_signature(true, false);
-    lane.place_target(5);
-    assert_eq!(lane.perceived(), None, "hidden five hexes off in daylight");
-    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
-    assert!(events.iter().all(|event| event.revealed.is_none()));
-    assert!(
-        lane.world.btech.constructed_units()[&lane.target]
-            .signature()
-            .hidden
-    );
-    // Within the Beagle's four hexes the probe finds it, unless electromagnetic interference
-    // renders the probe useless (Tactical Operations: Advanced Rules p. 53).
-    lane.place_target(4);
-    lane.target_signature(true, false);
-    lane.interference(true);
-    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
-    assert!(events.iter().all(|event| event.revealed.is_none()));
-    assert!(
-        lane.world.btech.constructed_units()[&lane.target]
-            .signature()
-            .hidden
-    );
-    lane.interference(false);
-    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
-    assert!(
-        events.iter().any(|event| event.revealed.is_some()),
-        "{events:?}"
-    );
-    assert!(
-        !lane.world.btech.constructed_units()[&lane.target]
-            .signature()
-            .hidden
-    );
-    assert_eq!(lane.perceived(), Some((Sight, true)));
-    // A hill between them hides it from the probe again.
-    lane.terrain(2, Hex::new(Terrain::Clear, 9));
-    lane.target_signature(true, false);
-    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
-    assert!(events.iter().all(|event| event.revealed.is_none()));
-    assert!(
-        lane.world.btech.constructed_units()[&lane.target]
-            .signature()
-            .hidden
-    );
-    // Standing next to it reveals it, probe or no probe, hill or no hill.
-    lane.terrain(2, Hex::new(Terrain::Clear, 0));
-    lane.place_target(1);
-    lane.target_signature(true, false);
-    assert_eq!(lane.perceived(), None);
-    let events = refresh_battle_contacts(&mut lane.world, &[lane.observer]).unwrap();
-    assert!(events.iter().any(|event| event.revealed.is_some()));
-    assert_eq!(lane.perceived(), Some((Sight, true)));
-    // A teammate always knows where its hidden friend is.
-    lane.target_signature(true, false);
-    set_battle_unit_signature(
-        &mut lane.world,
-        lane.observer,
-        UnitSignature {
-            team: 2,
-            hidden: false,
-            illuminated: false,
-        },
-    )
-    .unwrap();
-    assert_eq!(lane.perceived(), Some((Sight, true)));
-    lane.world.validate(&lane.config).unwrap();
-}
-
 /// A carried probe sweeps with the suite ahead of the built-in sensors, with its own longer
 /// brackets, and what it finds shows the probe channel.
 #[tokio::test]
@@ -546,7 +551,7 @@ async fn probe_sweeps_with_the_probes_brackets() {
     );
     assert!(
         report.text.contains(
-            "Probe:   Beagle Active Probe, sweeps 12/24/36 hexes and reveals hidden units within 4 hexes"
+            "Probe:   Beagle Active Probe, sweeps 12/24/36 hexes and sees into woods within 4 hexes"
         ),
         "{}",
         report.text
@@ -579,7 +584,7 @@ async fn probe_sweeps_with_the_probes_brackets() {
     );
     assert!(
         report.text.contains(
-            "Probe:   Beagle Active Probe, reveals hidden units within 4 hexes (useless under electromagnetic interference)"
+            "Probe:   Beagle Active Probe, sees into woods within 4 hexes (useless under electromagnetic interference)"
         ),
         "{}",
         report.text
@@ -596,8 +601,8 @@ async fn probe_sweeps_with_the_probes_brackets() {
             Some(ActiveProbe::Beagle),
             false,
             TargetSystems {
-                angel: false,
-                guardian: true,
+                angel: 0,
+                guardian: 1,
                 null_signature: false,
                 stealth: false,
             }
@@ -656,9 +661,9 @@ async fn a_high_vtol_sees_a_target_below_it_within_its_visual_range_in_hexes() {
 
 /// A Beagle slot's technology base is the probe's own: its `IS.` or `CL.` prefix, or the
 /// chassis's when it states none. A Clan-built one is the Clan active probe, sweeping
-/// 15/30/45 hexes and revealing hidden units within five; an Inner Sphere Beagle sweeps
-/// 12/24/36 and reveals within four, whatever chassis carries either (Tactical Operations:
-/// Advanced Rules p. 190; Total Warfare p. 129).
+/// 15/30/45 hexes and reaching five; an Inner Sphere Beagle sweeps 12/24/36 and reaches
+/// four, whatever chassis carries either (Tactical Operations: Advanced Rules p. 190; Total
+/// Warfare p. 129).
 #[tokio::test]
 async fn a_probe_sweeps_and_reaches_by_its_own_technology_base() {
     for (probe, clan_chassis, clan_probe) in [
@@ -696,7 +701,7 @@ async fn a_probe_sweeps_and_reaches_by_its_own_technology_base() {
         assert_eq!(report.profile.sensor.probe_clan, clan_probe, "{case}");
         assert!(
             report.text.contains(&format!(
-                "Probe:   {name}, sweeps {}/{}/{} hexes and reveals hidden units within {reach} hexes",
+                "Probe:   {name}, sweeps {}/{}/{} hexes and sees into woods within {reach} hexes",
                 brackets.0, brackets.1, brackets.2
             )),
             "{case}: {}",
@@ -783,4 +788,51 @@ async fn a_probe_meets_ecm_on_its_own_technology_base_row() {
         );
         lane.world.validate(&lane.config).unwrap();
     }
+}
+
+/// Every hostile ECM suite around the spotter or its target adds its column to the sweep
+/// (Tactical Operations: Advanced Rules p. 191). In pitch black a Beagle's sweep of 3 meets a
+/// Jenner ten hexes off: one Guardian tower by the Jenner adds 4, bringing the roll into the
+/// Beagle's short band; a second adds 4 more, past every band. ECM friendly to the spotter
+/// adds nothing, even around a target it protects.
+#[tokio::test]
+async fn hostile_ecm_suites_combine_against_a_sweep() {
+    let mut lane = lane(&grass(20), Observer::Vehicle(Some("BeagleProbe"))).await;
+    lane.conditions(Light::PitchBlack, Weather::Clear);
+    lane.place_target(10);
+    lane.sweep(3);
+    assert_eq!(lane.perceived(), None, "the long band starts at 25 hexes");
+    lane.ecm_tower(2, 12);
+    assert_eq!(lane.perceived(), Some((Probe, false)));
+    lane.ecm_tower(2, 13);
+    assert_eq!(lane.perceived(), None);
+    let ecm = battle_hostile_ecm_against(&lane.world, lane.observer, lane.target).unwrap();
+    assert_eq!(
+        ecm,
+        EcmSystems {
+            guardian: 2,
+            angel: 0
+        }
+    );
+    lane.world.validate(&lane.config).unwrap();
+    // A sweep of 7 finds the Jenner in the short band, and the same towers on the spotter's
+    // own side, protecting a friendly Jenner, leave it found.
+    let mut friendly = self::lane(&grass(20), Observer::Vehicle(Some("BeagleProbe"))).await;
+    friendly.conditions(Light::PitchBlack, Weather::Clear);
+    friendly.place_target(10);
+    set_battle_unit_signature(
+        &mut friendly.world,
+        friendly.target,
+        UnitSignature::default(),
+    )
+    .unwrap();
+    friendly.ecm_tower(0, 12);
+    friendly.ecm_tower(0, 13);
+    friendly.sweep(7);
+    assert_eq!(
+        battle_hostile_ecm_against(&friendly.world, friendly.observer, friendly.target).unwrap(),
+        EcmSystems::default()
+    );
+    assert_eq!(friendly.perceived(), Some((Probe, false)));
+    friendly.world.validate(&friendly.config).unwrap();
 }

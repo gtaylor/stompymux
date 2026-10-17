@@ -207,7 +207,6 @@ async fn explicit_attack_uses_filtered_sensor_observation() {
         target,
         UnitSignature {
             team: 1,
-            hidden: false,
             illuminated: false,
         },
     )

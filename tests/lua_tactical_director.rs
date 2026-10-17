@@ -183,7 +183,6 @@ async fn encounter_fixture() -> EncounterFixture {
         enemy,
         UnitSignature {
             team: 1,
-            hidden: false,
             illuminated: false,
         },
     )

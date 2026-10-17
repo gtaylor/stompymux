@@ -277,7 +277,6 @@ pub(super) fn primary_criticals(world: &World, id: ObjectId) -> Result<u32> {
         (0, gyro >= 2),
         (1, lost.contains(&S::Sensors)),
         (2, lost.contains(&S::Tag)),
-        (3, scanner.signature.hidden),
         (4, gyro > 0),
         (5, hips > 0),
         (6, lost.contains(&S::LifeSupport)),

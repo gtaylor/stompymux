@@ -183,8 +183,6 @@ impl<'a> UnitRef<'a> {
         pub fn has_beacon(&self, kind: BeaconKind) -> bool;
         /// Current coordinate target, independent of visibility or an occupying unit.
         pub fn hex_lock(&self) -> Option<HexLock>;
-        /// Elapsed committed hide checks; zero is the initial scheduled event.
-        pub fn hide_elapsed(&self) -> Option<u16>;
         /// Core structure, cockpit loss or three engine hits destroy the unit, not its MUX object.
         pub fn is_destroyed(&self) -> bool;
         /// Administrator-controlled observer mode; cockpit pilots cannot enable it through radio settings.

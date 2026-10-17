@@ -193,7 +193,6 @@ pub(super) fn resolve_rear_followup_in_candidate(
         return Ok(result);
     }
     super::damage_counters::record(world, id, context.attacker, hit.amount)?;
-    result.notices.extend(super::hiding::damage(world, id));
     if !rear
         && hit.section == VehicleSection::Front
         && !world.btech.vehicles()[&id].definition().is_vtol()

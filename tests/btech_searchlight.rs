@@ -286,7 +286,6 @@ async fn searchlights_extend_night_sight_to_lit_targets() {
         target,
         UnitSignature {
             team: 0,
-            hidden: false,
             illuminated: true,
         },
     )
@@ -305,7 +304,6 @@ async fn searchlights_extend_night_sight_to_lit_targets() {
         target,
         UnitSignature {
             team: 0,
-            hidden: false,
             illuminated: false,
         },
     )
@@ -436,8 +434,8 @@ async fn terrain_beams_reach_beyond_unit_illumination_and_stop_at_obstructions()
     let distant = HexCoordinate { x: 2, y: 5 };
     let beyond = HexCoordinate { x: 2, y: 4 };
     let behind = HexCoordinate { x: 2, y: 36 };
-    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::HeavyRain).unwrap();
-    assert_eq!(visual_range(Light::MoonlessNight, Weather::HeavyRain), 5);
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
+    assert_eq!(visual_range(Light::MoonlessNight, Weather::Clear), 5);
     assert!(!battle_hex_visible(&world, lamp, distant).unwrap());
     let _ = toggle_battle_searchlight(&mut world, lamp, ObjectId(1)).unwrap();
     for _ in 0..5 {

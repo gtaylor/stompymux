@@ -171,7 +171,6 @@ pub(in crate::lua::packages) fn install(lua: &Lua, api: &Table, mux: &Table) -> 
         ("unit", "unit_tic", "tic"),
         ("unit", "unit_tic_fire", "tic_fire"),
         ("unit", "unit_heatcutoff", "heatcutoff"),
-        ("unit", "unit_hide", "hide"),
         ("unit", "unit_disable", "disable"),
         ("unit", "unit_usebin", "usebin"),
         ("unit", "unit_autoturret", "autoturret"),

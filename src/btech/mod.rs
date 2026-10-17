@@ -12,13 +12,13 @@ pub(crate) mod unit_lifecycle;
 pub use special_commands::{CommandClass, SpecialCommand, SpecialType};
 pub(crate) mod electronics;
 pub use electronics::{
-    ElectronicSuite, Electronics, electronic_field, electronic_fields_pending,
+    ElectronicSuite, Electronics, electronic_field, electronic_fields_pending, hostile_ecm_against,
     refresh_electronic_fields, toggle_electronics,
 };
 mod electronic_field;
 pub use electronic_field::{
-    ECM_RANGE, ElectronicField, ElectronicMode, ElectronicSource, communications_eccm, ecm_range,
-    resolve_electronic_field,
+    ECM_RANGE, EcmSystems, ElectronicField, ElectronicMode, ElectronicSource, communications_eccm,
+    ecm_range, hostile_ecm_systems, resolve_electronic_field,
 };
 mod ammunition_feed;
 mod artemis;
@@ -1171,11 +1171,6 @@ pub use wreck_cleanup::{advance_battle_wrecks_action, wrecks_pending};
 
 pub(crate) mod prone;
 pub use prone::{ProneReport, prone_action};
-
-pub(crate) mod hiding;
-pub use hiding::{
-    HIDE_SECONDS, VTOL_HIDE_SECONDS, advance_battle_hiding, begin_battle_hiding, hiding_pending,
-};
 
 mod weapons_hold;
 pub use weapons_hold::{set_battle_weapons_hold, weapons_hold};

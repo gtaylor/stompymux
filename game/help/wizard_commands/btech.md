@@ -267,7 +267,7 @@ survives restart, and changing the IC flag does not cancel an admitted event.
 
 Use `@btech unit-weapons-hold <unit>=on|off` to prohibit or restore cockpit
 weapon fire for a Mech or vehicle. Hold also rejects TIC groups before their
-arguments are decoded and preserves a hidden unit's cover. It does not change
+arguments are decoded. It does not change
 mechanical readiness or ammunition. `status info` displays `WEAPONS HOLD` while
 active. The setting survives shutdown and restart. Trusted Lua uses
 `btech.unit.weapons_hold(unit[, enabled])`; omitting the value reads it.
@@ -277,8 +277,7 @@ active. The setting survives shutdown and restart. Trusted Lua uses
 operator visibility flags. Invisible units cannot be acquired by ordinary sensors.
 Clairvoyant units can inspect contacts and terrain through visibility restrictions,
 including invisible units, but this does not provide a sensor lock or ordinary
-weapon aim. Both flags are independent of observer mode and exclude the unit from
-opponents that prevent HIDE preparation. The flags persist through restart and
+weapon aim. Both flags are independent of observer mode. The flags persist through restart and
 apply to Mechs and supported vehicles. Trusted Lua uses
 `btech.unit.visibility(id, {invisible = true, clairvoyant = false})`; omit the table
 to read the current flags.
@@ -768,8 +767,7 @@ All three operations require wizard authority.
 Inside a physical unit, `setteam <number>` changes its team. The unit must be on a
 map; the value is a signed 32-bit integer, with negatives normalized to zero.
 Changing teams clears its C3/C3i network assignment; the next heartbeat links it
-with its new team. The unit's hiding and
-scenario-lighting state are preserved. Lua uses `btech.unit.set_team(actor, unit, team)`.
+with its new team. The unit's scenario-lighting state is preserved. Lua uses `btech.unit.set_team(actor, unit, team)`.
 
 Inside a physical unit, `@losemit <message>` broadcasts an emote to running units
 that currently see it. The source cockpit is excluded; you receive “Broadcast
@@ -1077,7 +1075,7 @@ stays clear: inspect sight results for cover against a particular target.
 Reading unit status does not run or change a line-of-sight observation.
 
 `@viewunit critstatus` reports equipment failures and critical conditions:
-`a/e` destroyed/damaged gyro, `b` damaged sensors, `c` TAG, `d` hidden,
+`a/e` destroyed/damaged gyro, `b` damaged sensors, `c` TAG,
 `f/r` damaged/both destroyed biped hips, `g` life support, `h` Angel ECM,
 `i` C3i, `j` null signature hardware, `k` destroyed searchlight,
 `l` last observed illumination, `p` heat cutoff, `q` towable,

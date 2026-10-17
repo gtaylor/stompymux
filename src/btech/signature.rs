@@ -63,8 +63,9 @@ impl Mech {
     }
 
     /// Either concealment system supplies one range penalty; their heat production remains additive.
+    /// Stealth armor counts only while in effect (see [`Mech::stealth_active`]).
     pub fn range_concealed(&self) -> bool {
-        self.stealth.enabled || self.null_signature.enabled
+        self.stealth_active() || self.null_signature.enabled
     }
 
     /// Clear active concealment on shutdown or device loss, preserving the pending destination.

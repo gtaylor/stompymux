@@ -2710,6 +2710,86 @@ async fn stealth_firing_requires_target_lock() {
     }
 }
 
+/// Engaged stealth armor takes over its ECM suite, which then makes no field of its own (Total
+/// Warfare p. 142). An Angel suite may still generate ECCM, but then the armor loses every
+/// effect but its heat: no range concealment and no interference with its own electronics
+/// (Tactical Operations: Advanced Rules p. 98).
+#[tokio::test]
+async fn stealth_armor_takes_over_its_ecm_suite() {
+    use stompymux_rs::*;
+    for suite in ["guardian", "angel"] {
+        let (_dir, config, mut world, id, target) = shot_fixture().await;
+        install_test_stealth(&mut world, target);
+        if suite == "angel" {
+            let mut definition = world.btech.constructed_units()[&target]
+                .definition()
+                .clone();
+            for part in definition
+                .sections
+                .get_mut(&MechSection::LeftTorso)
+                .unwrap()
+                .criticals
+                .values_mut()
+                .filter(|part| part.equipment == "Ecm")
+            {
+                part.equipment = "AngelEcm".into();
+            }
+            world
+                .btech
+                .rewrite_unit_record(target, |record| {
+                    crate::support::templates::set_record_definition(record, definition)
+                })
+                .unwrap();
+        }
+        let set = |world: &mut World, mode: ElectronicMode, stealth: bool| {
+            let mut state = serde_json::to_value(&world.btech).unwrap();
+            state["constructed"][id.0.to_string()]["signature"]["team"] = 1.into();
+            let unit = &mut state["constructed"][target.0.to_string()];
+            unit["signature"]["team"] = 2.into();
+            unit["power"] = serde_json::json!({"state": "running"});
+            unit["electronics"][suite] = serde_json::to_value(mode).unwrap();
+            unit["stealth"] = serde_json::json!({"enabled": stealth, "pending": null});
+            world.btech = serde_json::from_value(state).unwrap();
+        };
+        // With the armor off the suite jams the enemy beside it.
+        set(&mut world, ElectronicMode::Ecm, false);
+        assert!(
+            battle_electronic_field(&world, id)
+                .unwrap()
+                .blocks_outgoing_guidance()
+        );
+        // Engaged, the armor takes the suite: no jamming, and the armor works.
+        set(&mut world, ElectronicMode::Ecm, true);
+        let enemy = battle_electronic_field(&world, id).unwrap();
+        assert!(
+            !enemy.blocks_outgoing_guidance() && !enemy.countered,
+            "{suite}"
+        );
+        let stealthy = &world.btech.constructed_units()[&target];
+        assert!(stealthy.stealth_active() && stealthy.range_concealed());
+        assert!(battle_electronic_field(&world, target).unwrap().disturbed);
+        // Switched to ECCM, a Guardian suite stays dark while an Angel suite counters the
+        // enemy's electronics and leaves the armor with nothing but its heat.
+        set(&mut world, ElectronicMode::Eccm, true);
+        let angel = suite == "angel";
+        assert_eq!(
+            battle_electronic_field(&world, id).unwrap().countered,
+            angel,
+            "{suite}"
+        );
+        let stealthy = &world.btech.constructed_units()[&target];
+        assert!(stealthy.stealth().enabled);
+        assert_eq!(stealthy.stealth_active(), !angel, "{suite}");
+        assert_eq!(stealthy.range_concealed(), !angel, "{suite}");
+        assert_eq!(
+            battle_electronic_field(&world, target).unwrap().disturbed,
+            !angel,
+            "{suite}"
+        );
+        world.validate(&config).unwrap();
+    }
+}
+
 /// Install seven NSS devices in free slots, moving one torso jet to preserve the existing loadout.
 fn install_test_nss(world: &mut stompymux_rs::World, id: ObjectId) {
     use stompymux_rs::*;

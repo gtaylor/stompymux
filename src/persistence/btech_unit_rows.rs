@@ -295,7 +295,7 @@ mod tests {
                     motion: TimerMotion::Down,
                 },
                 SavedTimer {
-                    timer: Timer::Hide,
+                    timer: Timer::Charge,
                     slot: 0,
                     value: second,
                     motion: TimerMotion::Up,

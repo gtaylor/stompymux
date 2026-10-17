@@ -152,7 +152,6 @@ async fn observers_share_admin_disclosure_radio_and_saved_role() {
             target,
             acquired: true,
             lock_lost: false,
-            revealed: None,
         };
         assert!(event.notice(&observing).is_none());
         let lost = ContactEvent {

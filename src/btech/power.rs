@@ -270,7 +270,6 @@ pub(super) fn finish_shutdown(
             text: "Your searchlight shuts off.".into(),
         });
     }
-    unit.hide_elapsed = None;
     unit.masc.shutdown();
     unit.supercharger.shutdown();
     if unit.tag.stop() {

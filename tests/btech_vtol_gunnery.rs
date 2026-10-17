@@ -105,7 +105,6 @@ async fn conventional_vtol_experience_uses_the_same_aerospace_skill() {
             unit,
             UnitSignature {
                 team,
-                hidden: false,
                 illuminated: false,
             },
         )

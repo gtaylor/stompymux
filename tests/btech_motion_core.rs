@@ -1260,10 +1260,11 @@ async fn sensor_command_and_lua_report_read_only_perception() {
             line,
         )
     };
-    // A moonless night sees five hexes and blowing sand ten: the night rules. The fixture has
-    // not reached a turn boundary, so no sensor sweep has been rolled yet.
+    // A moonless night sees five hexes and blowing sand ten: the night rules, and a lit target
+    // is seen only as far as the sand allows. The fixture has not reached a turn boundary, so
+    // no sensor sweep has been rolled yet.
     let expected = [
-        "Sight:   5 hexes (moonless night, blowing sand): +3 to hit, +0 if lit; lit targets seen to 45",
+        "Sight:   5 hexes (moonless night, blowing sand): +3 to hit, +0 if lit; lit targets seen to 10",
         "Sensors: infrared 10/20/30, magnetic anomaly 10/20/30, radar 8/16/24, seismic 2/4/6 hexes; sweep pending",
         "Probe:   none",
     ]
@@ -1517,7 +1518,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
-    let target = world.create(&config, "Hidden scanner target".into(), Kind::Thing);
+    let target = world.create(&config, "Scanner target".into(), Kind::Thing);
     create_battle_unit(
         &mut world,
         target,
@@ -1552,20 +1553,17 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
         target,
         UnitSignature {
             team: 2,
-            hidden: true,
-            illuminated: false,
+            ..Default::default()
         },
     )
     .unwrap();
     let observers = battle_contact_observers(&world);
     assert_eq!(observers, vec![id]);
-    // A running unit's first refresh rolls its sensor sweep; the hidden hostile six hexes
-    // away is still not recorded.
-    assert!(
-        refresh_battle_contacts(&mut world, &observers)
-            .unwrap()
-            .is_empty()
-    );
+    // A running unit's first refresh rolls its sensor sweep and acquires the hostile six
+    // hexes away.
+    let events = refresh_battle_contacts(&mut world, &observers).unwrap();
+    assert_eq!(events.len(), 1);
+    assert!(events[0].acquired && events[0].target == target);
     assert!(
         world.btech.constructed_units()[&id]
             .sensor_sweep()
@@ -1577,25 +1575,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
             .unwrap()
             .is_empty()
     );
-    assert_eq!(world.btech, before); // A hidden hostile stays unseen until something reveals it.
-    // Next to the observer the hidden unit is discovered (Total Warfare p. 259), then acquired.
-    place_battle_unit(&mut world, target, map, 5, 6).unwrap();
-    let events = refresh_battle_contacts(&mut world, &[id, id]).unwrap();
-    assert_eq!(events.len(), 2);
-    assert_eq!(events[0].observer, target);
-    assert!(
-        events[0]
-            .revealed
-            .as_deref()
-            .is_some_and(|text| text.contains("blundered"))
-    );
-    assert!(!world.btech.constructed_units()[&target].signature().hidden);
-    assert!(events[1].acquired && events[1].target == target);
-    assert!(
-        refresh_battle_contacts(&mut world, &observers)
-            .unwrap()
-            .is_empty()
-    );
+    assert_eq!(world.btech, before);
     persistence::save(&config.database(), &world).await.unwrap();
     assert_eq!(
         persistence::load(&config.database()).await.unwrap().btech,
@@ -2040,7 +2020,6 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
         target,
         stompymux_rs::UnitSignature {
             team: 0,
-            hidden: false,
             illuminated: true,
         },
     )
@@ -2059,6 +2038,61 @@ async fn perception_aim_chooses_the_best_channel_and_never_uses_stale_contacts()
     place_battle_unit(&mut world, target, map, 5, 9).unwrap(); // Clears acquisition, despite geometric visibility.
     assert!(aim(&world).perception.is_none());
     assert!(aim(&world).subtotal().is_none());
+}
+
+/// Laser heat sinks give a 'Mech away only when it makes heat (Tactical Operations: Advanced
+/// Units & Equipment p. 129): a turn in which it fires takes one off the night modifier for
+/// shots against it, and any heat on its scale cancels the modifier. They never light the
+/// 'Mech, so they neither stretch sight nor count as fire.
+#[tokio::test]
+async fn laser_heat_sinks_ease_darkness_only_when_the_mech_makes_heat() {
+    use stompymux_rs::{Light, Weather, battle_aim_modifiers, set_battle_map_conditions};
+    let (_dir, config, mut world, id, _) = lock_fixture().await;
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    let source = include_str!("../game/units/NightGyr-A.toml").replace(
+        "armor = \"ferro_fibrous\"\n",
+        "armor = \"ferro_fibrous\"\nheat_sinks = \"laser\"\n",
+    );
+    assert!(source.contains("heat_sinks = \"laser\"\n"));
+    let glowing = world.create(&config, "Glowing Nightgyr".into(), Kind::Thing);
+    create_battle_unit(
+        &mut world,
+        glowing,
+        MechTemplate::parse("NightGyr-A", &source).unwrap(),
+    )
+    .unwrap();
+    support::seed_object_dice(&mut world, glowing, support::FIXTURE_DICE_SEED);
+    place_battle_unit(&mut world, glowing, map, 5, 8).unwrap();
+    world.btech.set_unit_power(glowing, Power::Running).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
+    stompymux_rs::refresh_battle_contacts(&mut world, &[id]).unwrap();
+    let light = |world: &stompymux_rs::World| {
+        battle_aim_modifiers(world, id, glowing, 0, 4, optical_aim_rules())
+            .unwrap()
+            .light
+    };
+    // Running, idle and cool, the sinks shed no light.
+    assert_eq!(light(&world), 3);
+    assert!(!stompymux_rs::battle_unit_illuminated(&world, glowing));
+    // A weapon fired within the turn takes one off.
+    let now = world.btech.simulation_time();
+    world
+        .btech
+        .rewrite_unit_record(glowing, |record| {
+            record["section_fire"] = serde_json::json!({"RightArm": now});
+        })
+        .unwrap();
+    assert_eq!(light(&world), 2);
+    assert!(!stompymux_rs::battle_unit_illuminated(&world, glowing));
+    // Heat on the scale cancels the modifier entirely.
+    world
+        .btech
+        .rewrite_unit_record(glowing, |record| {
+            record["heat"]["excess"] = serde_json::json!(1.0);
+        })
+        .unwrap();
+    assert_eq!(light(&world), 0);
+    world.validate(&config).unwrap();
 }
 
 /// Perception aim includes woods in the target hex and partial cover from shallow water.

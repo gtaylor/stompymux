@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firehoming", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "push", "ram", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firehoming", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "push", "ram", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
 article_tags = ["show_in_index"]
 +++
 
@@ -260,13 +260,14 @@ by what means your unit can perceive right now:
 
 - Sight: the light and the weather set how far you see; at night a lit target
   can be seen out to forty-five hexes and your own searchlight lets you see
-  thirty. Darkness also costs to hit; see `help night`.
+  thirty, as far as the weather allows. Darkness also costs to hit; see
+  `help night`.
 - Sensors: your infrared, magnetic anomaly, radar and seismic sensors. Every
   thirty seconds each unit rolls one sweep, and a target sight misses is found
   if any system's range band for that roll covers it; the report lists each
   system's brackets and the current roll and band.
 - Probe: a carried active probe, which sweeps ahead of the built-in sensors
-  with longer brackets and reveals hidden units nearby.
+  with longer brackets, and lets your attacks see a little way into nearby woods.
 
 See `help line of sight` for the full rules. `sensor` takes no arguments. Lua
 `btech.unit.perception(unit)` returns the same report as a table.
@@ -312,18 +313,8 @@ not without walking MP (TW pp. 50-51); it can stand on land or in water.
 Ice and bridge standing still require their terrain rules. `stand` takes no switches.
 
 
-Use `hide` where Total Warfare allows a hidden unit: not on pavement, a road or
-a bridge, Mechs not in clear terrain, and in water only when fully submerged.
-Come to a stop first; a VTOL must be landed. Preparation takes 50 seconds for
-Mechs and ground vehicles, or 40 seconds for VTOLs. Once hidden, enemies do not
-perceive you until an enemy moves adjacent, an enemy active probe reaches you
-with a clear line, or you move, fire or take damage. Moving into another hex or
-attempting to fire cancels hiding and reveals you. Being towed or completing an
-explicit building entry does not itself break cover; moving through a map edge
-does. Shutdown cancels preparation. Lua uses `btech.unit.hide(unit, pilot)`.
-
 An operator can place your unit in weapons hold. While held, `fire` and
-`firetic` are rejected without breaking cover; `status info` shows `WEAPONS HOLD`.
+`firetic` are rejected; `status info` shows `WEAPONS HOLD`.
 Physical attacks can still deal damage while held, with a weapons-hold warning.
 
 Use `weapons` to list your mounted weapons and their current readiness, recycle
@@ -911,9 +902,16 @@ cockpit is damaged (TechManual p. 212; Tactical Operations: Advanced Rules
 p. 98).
 
 ECM protects friendly units and disturbs enemies within six hexes, twelve under
-electromagnetic interference, however high either unit is. Enemy ECCM
-cancels protection, and friendly ECCM cancels disturbance; equal strength cancels.
-Angel suites count twice. Team identifiers determine which units are friendly.
+electromagnetic interference, however high either unit is. Enemy ECCM cancels
+protection, and friendly ECCM cancels disturbance: ECCM equal to or greater than
+the ECM in a hex cancels it there, a Guardian, Clan or Watchdog suite counting as
+one and communications equipment as half or one. Only Angel ECCM counters Angel
+ECM, one suite for one, and a single Angel ECCM counters any number of other
+suites (Tactical Operations: Advanced Rules p. 98). Engaged stealth armor and an
+attached iNarc ECM pod disturb their own unit whatever ECCM is near. Team
+identifiers determine which units are friendly. Against a radar or probe sweep,
+every hostile suite working around the spotter or its target adds its own
+penalty (Tactical Operations: Advanced Rules p. 191).
 
 Protection on a target or disturbance on a shooter suppresses Narc and Artemis
 guidance bonuses. Angel interference also negates Streak locks: a failed roll
@@ -978,7 +976,10 @@ guidance. Enemy radar and probe sweeps take +4 to +7 against you (Tactical
 Operations ECM/Stealth table), so enemies mostly rely on sight, infrared,
 magscan and seismic sensors, or a Bloodhound probe. Enemies firing at you take
 range penalties of 3 at medium range and 6 at long range. Short and minimum
-range are unchanged.
+range are unchanged. While the armor is engaged its ECM suite powers it and makes
+no ECM or ECCM field, and your own active probe is jammed. An Angel suite set to
+ECCM (`angeleccm`) keeps its ECCM field, but then the armor loses every effect
+but its ten heat (Tactical Operations: Advanced Rules p. 98).
 Shutdown or ECM damage disables active armor. A pending switch only completes
 if the unit is running and its ECM works when the delay expires.
 
@@ -1008,18 +1009,21 @@ inspection includes `null_signature` and its pending destination/countdown.
 
 ### Active probes
 
-A working Beagle, Light, Watchdog or Bloodhound Active Probe reveals hidden units
-within four, three, three or eight hexes (Clan probes five) when it has a clear
-line to them, and lets you ignore one point of woods when aiming at a target in
-that reach. It also sweeps with your sensor suite, ahead of the built-in
-sensors, using its longer brackets (Beagle 12/24/36, Clan 15/30/45, Light and
-Watchdog 9/18/27, Bloodhound 16/32/48); nothing blocks a probe sweep but the
-surface of water, and a target it finds shows as a probe contact. Guardian and
-Angel ECM, stealth armor and null signature systems add to the sweep roll
-against them; only the Bloodhound finds stealth and null signature units. A
+A working Beagle, Light, Watchdog or Bloodhound Active Probe lets you ignore one
+point of woods when aiming at a target within four, three, three or eight hexes
+(Clan probes five) that it has a clear line to. It also sweeps with your sensor
+suite, ahead of the built-in sensors, using its longer brackets (Beagle 12/24/36,
+Clan 15/30/45, Light and Watchdog 9/18/27, Bloodhound 16/32/48); nothing blocks
+a probe sweep but the surface of water, and a target it finds shows as a probe
+contact. Guardian and Angel ECM, stealth armor and null signature systems add to
+the sweep roll against them. Hostile ECM jams a probe: inside an enemy ECM bubble,
+or with your own stealth armor engaged, it no longer sees into woods, and no probe
+sees into woods inside the enemy's own ECM bubble. A Bloodhound ignores Guardian,
+Clan and Watchdog ECM but not an Angel suite, and cannot be used at all while your
+stealth armor is engaged. A jammed probe still sweeps, taking the ECM penalty. A
 damaged probe stops working; `sensor` shows its condition. Electromagnetic
-interference renders every probe useless: it neither sweeps, reveals hidden units nor sees
-through woods while the condition lasts.
+interference renders every probe useless: it neither sweeps nor sees through
+woods while the condition lasts.
 
 ### Radar
 
@@ -1748,7 +1752,7 @@ hit locations. Hidden sides and covered legs fall back to ordinary hit routing.
 Use `sight <number>` to check the selected target, or add a contact ID, `#unit`,
 or `x y` coordinates just as with `fire`. Sighting displays the base-to-hit
 number or reports that the target is out of range. It works while the weapon
-is recycling or out of ammunition, and preserves hiding and weapons hold.
+is recycling or out of ammunition, and preserves weapons hold.
 It consumes the aiming dice but never fires, spends ammunition, adds heat,
 or clears a jam. Destroyed and defensive-only weapons cannot be sighted.
 

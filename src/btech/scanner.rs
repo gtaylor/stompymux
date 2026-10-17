@@ -4,11 +4,10 @@ use crate::{Flag, Kind, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
-/// Scenario-owned signature facts: team, hiding and scenario lighting.
+/// Scenario-owned signature facts: team and scenario lighting.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UnitSignature {
     pub team: i32,
-    pub hidden: bool,
     pub illuminated: bool,
 }
 
@@ -22,21 +21,12 @@ pub struct ContactEvent {
     pub acquired: bool,
     /// This contact loss also canceled the observer's selected target.
     pub lock_lost: bool,
-    /// A hidden unit was found: the text for its cockpit, with `observer` the unit revealed
-    /// and `target` the enemy that found it.
-    pub revealed: Option<String>,
 }
 
 impl ContactEvent {
     /// Capture cockpit feedback without changing acquisition or lock state.
     /// Observer units suppress routine contact chatter but still announce a lost weapon lock.
     pub fn notice(&self, world: &World) -> Option<super::Notice> {
-        if let Some(text) = &self.revealed {
-            return Some(super::Notice {
-                unit: self.observer,
-                text: text.clone(),
-            });
-        }
         let unit = scanner_unit(world, self.observer)?;
         let mut lines = Vec::new();
         if !unit.observer
@@ -134,7 +124,7 @@ impl Mech {
 }
 
 impl super::Vehicle {
-    /// Saved team, hiding and scenario illumination facts for vehicle observations.
+    /// Saved team and scenario illumination facts for vehicle observations.
     pub fn signature(&self) -> UnitSignature {
         self.signature
     }
@@ -323,10 +313,9 @@ pub fn contact_observers(world: &World) -> Vec<ObjectId> {
 
 /// Refresh contacts in stable object order, committing all contacts and events together.
 ///
-/// Hidden units an enemy has found are revealed first (Total Warfare p. 259). Perception is
-/// then resolved against the unchanged world, sharing one observer profile and lighting cache
-/// per observer. Commits follow in the same order; nothing they change (contacts, locks) feeds
-/// back into perception.
+/// Perception is resolved against the unchanged world, sharing one observer profile and
+/// lighting cache per observer. Commits follow in the same order; nothing they change
+/// (contacts, locks) feeds back into perception.
 pub fn refresh_contacts(world: &mut World, observers: &[ObjectId]) -> Result<Vec<ContactEvent>> {
     world.attempt(|world| {
         let mut events = Vec::new();
@@ -339,18 +328,6 @@ pub fn refresh_contacts(world: &mut World, observers: &[ObjectId]) -> Result<Vec
             }) && available(world, observer)
             {
                 super::perception::sweep_unit(world, observer)?;
-            }
-        }
-        for (id, finder, how) in super::hiding::discoveries(world)? {
-            for notice in super::hiding::reveal_discovered_unit(world, id, finder, how) {
-                events.push(ContactEvent {
-                    identified: true,
-                    observer: notice.unit,
-                    target: finder,
-                    acquired: true,
-                    lock_lost: false,
-                    revealed: Some(notice.text),
-                });
             }
         }
         let observations = observe(world, observers)?;
@@ -381,7 +358,6 @@ pub fn refresh_contacts(world: &mut World, observers: &[ObjectId]) -> Result<Vec
                     target,
                     acquired: update.transition == ContactTransition::Acquired,
                     lock_lost: selected && update.transition == ContactTransition::Lost,
-                    revealed: None,
                 });
             }
         }

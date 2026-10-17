@@ -86,9 +86,6 @@ impl SavedTimers for Mech {
             self.jump_stabilization,
             if stabilizing { Down } else { Held },
         );
-        if let Some(elapsed) = self.hide_elapsed {
-            list.add(T::Hide, 0, elapsed, Up);
-        }
         if let Some(dump) = self.dumping {
             list.add(
                 T::Dump,

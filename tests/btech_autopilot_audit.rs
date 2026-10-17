@@ -347,7 +347,6 @@ async fn weapons_hold_and_heat_ceiling_admit_no_autonomous_shot() {
         target,
         UnitSignature {
             team: 1,
-            hidden: false,
             illuminated: false,
         },
     )
@@ -420,7 +419,6 @@ async fn autonomous_fire_rechecks_heat_between_multiple_mounts() {
         target,
         UnitSignature {
             team: 1,
-            hidden: false,
             illuminated: false,
         },
     )
@@ -575,7 +573,6 @@ async fn failed_firing_heartbeat_discards_shots_and_retries_identically() {
         target,
         UnitSignature {
             team: 1,
-            hidden: false,
             illuminated: false,
         },
     )

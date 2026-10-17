@@ -1,4 +1,4 @@
-//! Mixed-unit terrain sight lines, perception, illumination and hidden-unit searches use live vehicle height.
+//! Mixed-unit terrain sight lines, perception and illumination use live vehicle height.
 use crate::support;
 use stompymux_rs::*;
 

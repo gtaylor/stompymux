@@ -132,20 +132,8 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     assert!(battle_perceive(&world, observer, target).unwrap().is_none());
     let signature = UnitSignature {
         team: -17,
-        hidden: true,
         illuminated: true,
     };
-    // Enemies never perceive a hidden unit, so put the observer on the target's side and let
-    // the lighting alone decide.
-    set_battle_unit_signature(
-        &mut world,
-        observer,
-        UnitSignature {
-            team: -17,
-            ..Default::default()
-        },
-    )
-    .unwrap();
     set_battle_unit_signature(&mut world, target, signature).unwrap();
     assert!(battle_unit_illuminated(&world, target));
     let lit = battle_perceive(&world, observer, target).unwrap().unwrap();
@@ -159,12 +147,9 @@ async fn vehicle_signature_drives_scenario_lighting_and_detached_lua_state() {
     assert!(battle_unit_illuminated(&restored, target));
     let scripts =
         Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(restored))).unwrap();
-    let (team, hidden, illuminated, perception): (i32, bool, bool, i16) = scripts.eval_callback(&format!(
-        "local s=btech.unit.state({}); local team=s.signature.team; s.signature.team=99; return team,s.signature.hidden,s.signature.illuminated,s.scanner_perception", target.0)).unwrap();
-    assert_eq!(
-        (team, hidden, illuminated, perception),
-        (-17, true, true, 6)
-    );
+    let (team, illuminated, perception): (i32, bool, i16) = scripts.eval_callback(&format!(
+        "local s=btech.unit.state({}); local team=s.signature.team; s.signature.team=99; return team,s.signature.illuminated,s.scanner_perception", target.0)).unwrap();
+    assert_eq!((team, illuminated, perception), (-17, true, 6));
     assert_eq!(
         scripts.world().btech.vehicles()[&target].signature(),
         signature

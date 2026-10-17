@@ -245,24 +245,5 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         "unit_slite",
         error::wrap(lua, searchlight, "btech.operation.failed")?,
     )?;
-    let hide = lua.create_function(move |lua, (unit, pilot): (i64, i64)| {
-        crate::lua::transactions::require(lua)?;
-        let scripts = crate::Scripts::services(lua)?;
-        crate::lua::transactions::run(lua, &scripts.world, || {
-            let notice = crate::begin_battle_hiding(
-                &mut scripts.world.borrow_mut(),
-                ObjectId(unit),
-                ObjectId(pilot),
-            )
-            .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
-            crate::btech::notify_unit(&scripts, notice)
-                .map_err(|e| error::failure("btech.operation.failed", format!("{e:#}")))?;
-            Ok(true)
-        })
-    })?;
-    native.set(
-        "unit_hide",
-        error::wrap(lua, hide, "btech.operation.failed")?,
-    )?;
     Ok(())
 }

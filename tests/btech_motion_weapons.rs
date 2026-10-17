@@ -4331,7 +4331,7 @@ async fn observer_broadcasts_use_current_acquired_contacts_without_mutation() {
         "shutdown",
         "observer_gone",
         "subject_gone",
-        "hidden",
+        "invisible",
         "moved",
     ] {
         let mut altered = world.clone();
@@ -4360,7 +4360,7 @@ async fn observer_broadcasts_use_current_acquired_contacts_without_mutation() {
                     .flags
                     .insert(Flag::Going);
             }
-            "moved" | "hidden" => {}
+            "moved" | "invisible" => {}
             _ => unreachable!(),
         }
         altered.btech = serde_json::from_value(state).unwrap();
@@ -4375,7 +4375,7 @@ async fn observer_broadcasts_use_current_acquired_contacts_without_mutation() {
             .unwrap();
             place_battle_unit(&mut altered, subject, map, 0, 0).unwrap();
         }
-        if case == "hidden" {
+        if case == "invisible" {
             // An adjacent subject is always in sight; only invisibility leaves the saved
             // contact stale.
             set_battle_visibility(

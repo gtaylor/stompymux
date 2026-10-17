@@ -1720,10 +1720,6 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         }
         if direct_hit {
             direct_hit = false;
-            context
-                .report
-                .notices
-                .extend(super::hiding::damage(context.world, context.id));
             if context.rules.is_some() && context.unit().posture() != super::Posture::Prone {
                 // Errata: each hardened armor point lost counts as one damage toward the
                 // twenty-damage piloting check; damage beyond the armor counts in full.

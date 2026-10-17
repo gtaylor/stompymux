@@ -146,7 +146,6 @@ fn displace_chain(
         unit: id,
         text: "You are shoved into the next hex!".into(),
     });
-    report.notices.extend(super::hiding::movement(world, id));
     let rules = super::physical::participant_fall_rules(world, id, rules);
     if crowded && drop >= 2 {
         // Two or more levels down onto another unit: an accidental fall from above.

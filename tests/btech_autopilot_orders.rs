@@ -314,7 +314,6 @@ async fn attack_move_pursues_a_visible_contact_then_resumes_destination() {
                 target,
                 UnitSignature {
                     team: 1,
-                    hidden: false,
                     illuminated: false,
                 },
             )
@@ -456,7 +455,6 @@ async fn opportunistic_fire_changes_hostile_target_armor() {
                 target,
                 UnitSignature {
                     team: 1,
-                    hidden: false,
                     illuminated: false,
                 },
             )

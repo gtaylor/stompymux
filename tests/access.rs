@@ -268,7 +268,6 @@ fn c_catalog_defaults() {
                 | "disable"
                 | "usebin"
                 | "heatcutoff"
-                | "hide"
                 | "firetic"
                 | "addtic"
                 | "deltic"
