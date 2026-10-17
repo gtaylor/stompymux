@@ -118,7 +118,10 @@ fn fire_shot(
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
     let requested = target;
     let target = observed.map_or(requested.unit, |link| link.target);
-    let coordinate = if indirect.is_some() {
+    let coordinate = if indirect.is_some()
+        || super::spotter::unspotted_indirect(world, operator.source, target, weapon_index)?
+            .is_some()
+    {
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
             .context("Target is not placed")?;

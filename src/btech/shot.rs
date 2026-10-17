@@ -311,7 +311,12 @@ fn resolve_shot_inner(
         super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
 
     let target = observed.map_or(target, |link| link.target);
-    let coordinate = if indirect.is_some() {
+    // Indirect through a declared spotter's link, or without one at a TAG-designated or
+    // Narc-podded lock (Total Warfare pp. 111, 139, 142).
+    let indirect_fire = indirect.is_some()
+        || super::spotter::unspotted_indirect(world, operator.source, target, weapon_index)?
+            .is_some();
+    let coordinate = if indirect_fire {
         let position = super::scanner::scanner_unit(world, target)
             .and_then(|unit| unit.position)
             .context("Target is not placed")?;
@@ -343,7 +348,7 @@ fn resolve_shot_inner(
     super::weapon_geometry::check_water(world, shooter, selected_weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, selected_weapon)?;
     super::torpedo::check_target(world, selected_weapon, shooter, target, submerged)?;
-    if indirect.is_some() {
+    if indirect_fire {
         super::spotter::check_indirect_water(world, shooter, target)?;
     } else {
         super::weapon_geometry::check_leg_cover_unit(world, shooter, weapon_index, target)?;
@@ -360,7 +365,7 @@ fn resolve_shot_inner(
     );
     let mount = &loadout.weapons[weapon_index];
     ensure!(
-        indirect.is_some()
+        indirect_fire
             || rules.aim.override_weapon_arcs
             || super::weapon_bears_on(world, shooter, target, weapon_index)?,
         "Target is outside weapon arc"

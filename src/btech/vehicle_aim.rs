@@ -76,14 +76,7 @@ pub(super) fn modifiers(
     } else {
         super::aim::lock_modifier(world, source, target, rules.override_weapon_arcs)?
     };
-    aim.perception = super::aim::perception_aim(
-        world,
-        indirect.map_or(shooter, |aim| aim.spotter),
-        target,
-        // The spotter's terrain modifiers apply however it designated the target (Total
-        // Warfare p. 111); only a TAG-guided shot drops them.
-        indirect.is_some_and(|aim| aim.tag_guided),
-    )?;
+    aim.perception = super::aim::indirect_perception(world, shooter, target, indirect)?;
     let submerged = super::weapon_geometry::apply_water_range(
         world,
         shooter,

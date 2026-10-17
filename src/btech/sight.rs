@@ -336,8 +336,8 @@ fn check_unit_target(
         target,
         super::weapon_geometry::submerged(world, shooter, index)?,
     )?;
-    let indirect = super::spotter::indirect_target_for_source(world, targeting, index)?;
-    if indirect.is_some() {
+    let indirect = super::spotter::fires_indirectly(world, targeting, target, index)?;
+    if indirect {
         super::spotter::check_indirect_water(world, shooter, target)?;
     } else {
         super::weapon_geometry::check_leg_cover_unit(world, shooter, index, target)?;
@@ -356,7 +356,7 @@ fn check_unit_target(
     super::weapon_geometry::check_water(world, shooter, geometry.weapon, geometry.submerged)?;
     super::planetary_conditions::check_wind(world, shooter, geometry.weapon)?;
     ensure!(
-        indirect.is_some() || rules.override_weapon_arcs || geometry.bears,
+        indirect || rules.override_weapon_arcs || geometry.bears,
         "Target is outside weapon arc"
     );
     Ok(())

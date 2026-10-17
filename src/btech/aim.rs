@@ -42,7 +42,10 @@ pub struct PerceptionAim {
 /// also attacked this turn. Semi-guided missiles at a TAG-designated target ignore all of it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct IndirectAim {
-    pub spotter: ObjectId,
+    /// The unit spotting the target: a declared spotter, or a friendly unit whose TAG
+    /// designates it (TW p. 142). Narc-guided missiles at a Narc-podded target need none
+    /// (p. 139).
+    pub spotter: Option<ObjectId>,
     /// The spotter's attacker-movement modifier: walked +1, ran +2, jumped +3, prone +2.
     pub movement: u8,
     /// The spotter launched a weapon within the last turn, so it is attacking as well as
@@ -463,9 +466,36 @@ pub(super) fn perception_aim(
     let modifier = super::perception::cover_aim(world, reader.profile(), target, terrain, range);
     Ok(Some(PerceptionAim {
         channel,
-        direct_fire,
+        // Direct fire needs line of sight, which three points of woods and smoke or six hexes
+        // of crops break even for a target held on sensors or relayed by a teammate (Total
+        // Warfare pp. 99-100).
+        direct_fire: direct_fire && terrain.clear_line(),
         modifier: if tag_guided { 0 } else { modifier },
     }))
+}
+
+/// The perception term of a shot, from the spotter's view for indirect fire. The spotter's
+/// terrain modifiers apply however it designated the target (Total Warfare p. 111); a
+/// TAG-guided shot drops them (p. 142), and Narc-guided fire with no spotter has no spotter's
+/// line to take them from (p. 139), though the firer must still hold the target as a contact.
+pub(super) fn indirect_perception(
+    world: &World,
+    shooter: ObjectId,
+    target: ObjectId,
+    indirect: Option<IndirectAim>,
+) -> Result<Option<PerceptionAim>> {
+    let Some(aim) = indirect else {
+        return perception_aim(world, shooter, target, false);
+    };
+    let Some(spotter) = aim.spotter else {
+        return Ok(
+            perception_aim(world, shooter, target, true)?.map(|perception| PerceptionAim {
+                modifier: 0,
+                ..perception
+            }),
+        );
+    };
+    perception_aim(world, spotter, target, aim.tag_guided)
 }
 
 /// Shared firing admission: the target must be a perceived contact, and a direct shot needs a
@@ -613,14 +643,7 @@ pub(super) fn aim_modifiers_for_source(
     } else {
         lock_modifier(world, source, target, rules.override_weapon_arcs)?
     };
-    modifiers.perception = perception_aim(
-        world,
-        indirect.map_or(shooter, |aim| aim.spotter),
-        target,
-        // The spotter's terrain modifiers apply however it designated the target (Total
-        // Warfare p. 111); only a TAG-guided shot drops them.
-        indirect.is_some_and(|aim| aim.tag_guided),
-    )?;
+    modifiers.perception = indirect_perception(world, shooter, target, indirect)?;
     Ok(modifiers)
 }
 
@@ -768,8 +791,7 @@ pub(super) fn target_modifiers(
     ammunition: super::AmmunitionMode,
     distance: f64,
 ) -> Result<TargetAimModifiers> {
-    let attacker = super::scanner::scanner_unit(world, shooter)
-        .context("Shooter construction is unavailable")?;
+    super::scanner::scanner_unit(world, shooter).context("Shooter construction is unavailable")?;
     let defender = super::scanner::scanner_unit(world, target)
         .context("Target construction is unavailable")?;
     let movement = unit_target_movement(world, target, distance)?;
@@ -779,10 +801,7 @@ pub(super) fn target_modifiers(
         && !super::electronic_field(world, target)?.blocks_incoming_guidance();
     // The shooter's own TAG designates as well as any other friendly unit's (TW p. 142).
     let tag_guided = ammunition.munition() == super::AmmunitionMode::SemiGuided
-        && super::tagged_by(world, target).is_some_and(|tagger| {
-            super::scanner::scanner_unit(world, tagger)
-                .is_some_and(|unit| unit.signature.team == attacker.signature.team)
-        });
+        && super::tag::friendly_tagger(world, shooter, target).is_some();
     let airborne = target_airborne(world, target);
     Ok(TargetAimModifiers {
         ammunition_accuracy: airborne_ammunition_adjustment(weapon, ammunition, airborne),
@@ -874,7 +893,7 @@ mod tests {
     #[test]
     fn indirect_modifier_adds_spotter_movement_and_attack() {
         let base = IndirectAim {
-            spotter: ObjectId(5),
+            spotter: Some(ObjectId(5)),
             movement: 0,
             spotter_attacked: false,
             tag_guided: false,

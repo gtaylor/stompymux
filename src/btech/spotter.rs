@@ -139,7 +139,9 @@ pub(super) fn spotting_prohibited(world: &World, id: ObjectId) -> Option<&'stati
     assaulting.then_some("cannot spot in the turn of a charge or death from above attack")
 }
 
-/// Shared perception and movement contributions for both shooters and observer types.
+/// Shared perception and movement contributions for both shooters and observer types: a
+/// declared spotter's link, or failing that a friendly TAG designation or a Narc pod on the
+/// locked target (see [`unspotted_indirect`]).
 pub(super) fn indirect_aim(
     world: &World,
     source: super::fire_target::TargetSource,
@@ -147,7 +149,7 @@ pub(super) fn indirect_aim(
     index: usize,
 ) -> Result<Option<IndirectAim>> {
     let Some(link) = indirect_target_for_source(world, source, index)? else {
-        return Ok(None);
+        return unspotted_indirect(world, source, target, index);
     };
     ensure!(
         link.target == target,
@@ -163,11 +165,73 @@ pub(super) fn observer_aim(world: &World, spotter: ObjectId) -> Result<IndirectA
         unit.attacker_movement_modifier()
     });
     Ok(IndirectAim {
-        spotter,
+        spotter: Some(spotter),
         movement,
         spotter_attacked: attacked_this_turn(world, spotter),
         tag_guided: false,
     })
+}
+
+/// Indirect LRM fire at the locked target without a declared spotter, when the firer cannot
+/// see it itself. A friendly unit whose TAG designates the target spots it (Total Warfare
+/// p. 142): its movement counts, but TAG is used before the attack phase, so its own attacks
+/// add nothing. Failing that, Narc-equipped missiles fire indirectly at a target carrying a
+/// Narc pod, or an iNarc homing pod, that no enemy ECM covers, with no spotter at all
+/// (p. 139). Hex targets and artillery never qualify.
+pub(super) fn unspotted_indirect(
+    world: &World,
+    source: super::fire_target::TargetSource,
+    target: ObjectId,
+    index: usize,
+) -> Result<Option<IndirectAim>> {
+    let firer = source.unit;
+    let (weapon, ammunition) = installation(world, firer, index)?;
+    if !weapon.supports_indirect_ammunition(ammunition)
+        || weapon.is_artillery()
+        || target == firer
+        || !matches!(
+            source.selection(world),
+            Some(TargetSelection::Unit(lock)) if lock.target == target
+        )
+        || attacker_sees(world, firer, target)?
+    {
+        return Ok(None);
+    }
+    if let Some(tagger) = super::tag::friendly_tagger(world, firer, target)
+        && tagger != firer
+        && spotting_prohibited(world, tagger).is_none()
+    {
+        return Ok(Some(IndirectAim {
+            spotter_attacked: false,
+            ..observer_aim(world, tagger)?
+        }));
+    }
+    let homing = super::narc::has_beacon(world, target, BeaconKind::Narc)
+        || super::narc::has_beacon(world, target, BeaconKind::Homing);
+    if ammunition.munition() == AmmunitionMode::Narc
+        && homing
+        && !super::electronic_field(world, target)?.blocks_incoming_guidance()
+    {
+        return Ok(Some(IndirectAim {
+            spotter: None,
+            movement: 0,
+            spotter_attacked: false,
+            tag_guided: false,
+        }));
+    }
+    Ok(None)
+}
+
+/// Whether a shot at `target` is indirect: through a declared spotter's link, or without one
+/// (see [`unspotted_indirect`]).
+pub(super) fn fires_indirectly(
+    world: &World,
+    source: super::fire_target::TargetSource,
+    target: ObjectId,
+    index: usize,
+) -> Result<bool> {
+    Ok(indirect_target_for_source(world, source, index)?.is_some()
+        || unspotted_indirect(world, source, target, index)?.is_some())
 }
 
 /// Select a friendly observer, declare self spotting, or clear either role.
@@ -250,8 +314,10 @@ pub fn spotter_target(world: &World, firer: ObjectId) -> Result<SpotterTarget> {
             .context("Your spotter's hex is empty; no unit target is available")?,
         None => anyhow::bail!("Your spotter has no target set!"),
     };
+    // The spotter must have line of sight to the target itself (Total Warfare p. 111): a
+    // contact a teammate relays, or a sensor blip behind a hill, will not do.
     ensure!(
-        visible_contact(world, spotter, target)?.is_some(),
+        attacker_sees(world, spotter, target)?,
         "Your spotter does not have a target in LOS!"
     );
     Ok(SpotterTarget { spotter, target })
@@ -341,7 +407,7 @@ pub(super) fn indirect_target_for_source(
     Ok((!attacker_sees(world, source.unit, link.target)?).then_some(link))
 }
 
-/// Whether the attacker itself perceives the target along a line of fire.
+/// Whether the attacker itself perceives the target along a clear line of sight.
 fn attacker_sees(world: &World, firer: ObjectId, target: ObjectId) -> Result<bool> {
     Ok(super::aim::perception_aim(world, firer, target, false)?
         .is_some_and(|perception| perception.channel.is_some() && perception.direct_fire))

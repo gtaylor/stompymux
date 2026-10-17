@@ -829,7 +829,7 @@
 
 // lua-types-begin btech 00179
 //|---@class AimModifiers
-//|---@field indirect {spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
+//|---@field indirect {spotter: integer|nil, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. The spotter is a declared spotter or a friendly TAG designator, and absent for Narc-guided fire at a Narc-podded target. Perception then describes the spotter's view.
 //|---@field gunnery integer
 //|---@field distance number Weapon range in hexes from the shooter's hex to the target's; elevation does not add to it.
 //|---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range in hexes; physical limits and firing visibility remain separate.

@@ -71,12 +71,11 @@ pub(super) fn check_with_dice(
         .get(weapon_index)
         .context("Weapon index out of bounds")?;
     attacker.check_spotter_fire(shooter, weapon_index)?;
-    let indirect =
-        super::spotter::indirect_target_for_source(world, operator.source, weapon_index)?;
     ensure!(
         shooter != target,
         "You cannot target yourself with this weapon"
     );
+    let indirect = super::spotter::fires_indirectly(world, operator.source, target, weapon_index)?;
     ensure!(!mount.weapon.is_ams(), "That weapon is defensive only!");
     ensure!(
         !mount.weapon.is_artillery(),
@@ -98,7 +97,7 @@ pub(super) fn check_with_dice(
     super::weapon_geometry::check_water(world, shooter, mount.weapon, submerged)?;
     super::planetary_conditions::check_wind(world, shooter, mount.weapon)?;
     super::torpedo::check_target(world, mount.weapon, shooter, target, submerged)?;
-    if indirect.is_some() {
+    if indirect {
         super::spotter::check_indirect_water(world, shooter, target)?;
     }
     let defender = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
@@ -117,7 +116,7 @@ pub(super) fn check_with_dice(
     );
     let range = super::unit_range(world, shooter, target)?;
     ensure!(
-        indirect.is_some()
+        indirect
             || rules.aim.override_weapon_arcs
             || attacker.weapon_bears_on(weapon_index, range.bearing.unwrap_or(180.0))?,
         "Target is outside weapon arc"

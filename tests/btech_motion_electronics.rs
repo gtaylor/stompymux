@@ -4021,7 +4021,7 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     assert_eq!(
         indirect,
         IndirectAim {
-            spotter: observer,
+            spotter: Some(observer),
             movement: 0,
             spotter_attacked: false,
             tag_guided: false,
@@ -4053,7 +4053,7 @@ async fn indirect_spotter_aim_routing_and_rollback() {
     assert_eq!(
         attacked_aim.indirect.unwrap(),
         IndirectAim {
-            spotter: observer,
+            spotter: Some(observer),
             movement: 1,
             spotter_attacked: true,
             tag_guided: false,

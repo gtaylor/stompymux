@@ -70,6 +70,13 @@ impl TerrainLos {
         self.woods.saturating_add(self.smoke)
     }
 
+    /// Whether the line is clear for sight and direct fire: nothing blocks it, and it crosses
+    /// fewer than three points of woods and smoke and fewer than six hexes of crops (Total
+    /// Warfare p. 100; Tactical Operations p. 38).
+    pub fn clear_line(self) -> bool {
+        !self.blocked && self.obscuring_points() < 3 && self.fields < 6
+    }
+
     /// Building hexes of any class along the line, hardened ones included.
     pub fn building_hexes(self) -> u8 {
         self.buildings.saturating_add(self.hardened_buildings)
