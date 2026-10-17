@@ -479,6 +479,61 @@ async fn armor_and_structure_technologies_modify_mech_damage() {
     }
 }
 
+/// Laser-reflective armor is brittle: a fall strips it at double rate (Tactical Operations:
+/// Advanced Units & Equipment p. 93).
+#[tokio::test]
+async fn reflective_armor_takes_falls_doubled() {
+    for reflective in [false, true] {
+        let (_dir, config, mut world) = support::isolated_world().await;
+        let id = world.create(&config, "Reflective Jenner".into(), Kind::Thing);
+        let object = world.objects.get_mut(&id).unwrap();
+        object.location = Some(ObjectId(config.start()));
+        object.home = Some(ObjectId(config.home()));
+        let source = include_str!("fixtures/btech/units/JR7-D.toml");
+        let mut template = if reflective {
+            let source = support::templates::with_flags(source, &["LaserRefArmor_Tech"]);
+            let mut template = MechTemplate::parse("JR7-D", &source).unwrap();
+            // Inner Sphere reflective armor fills ten of the left torso's free slots.
+            let torso = template.sections.get_mut(&Section::LeftTorso).unwrap();
+            for slot in 2..12 {
+                torso.criticals.insert(
+                    slot,
+                    stompymux_rs::CriticalDefinition {
+                        equipment: "LaserReflective".into(),
+                        data: "-".into(),
+                        modes: Vec::new(),
+                    },
+                );
+            }
+            template
+        } else {
+            MechTemplate::parse("JR7-D", source).unwrap()
+        };
+        support::templates::book_legal_keeping(&mut template, Some(Section::Head));
+        create_battle_unit(&mut world, id, template).unwrap();
+        seed(&mut world, id, 4);
+        let before = world.btech.constructed_units()[&id].sections().clone();
+        // A 35-ton Jenner falling in place takes one four-point group.
+        let report =
+            stompymux_rs::resolve_battle_fall(&mut world, id, 1, stompymux_rs::FallRules::STANDARD)
+                .unwrap();
+        assert_eq!(report.damage, 4);
+        let group = &report.groups[0];
+        let section = group.hit.section;
+        let armor = if group.hit.rear_armor
+            && matches!(
+                section,
+                Section::LeftTorso | Section::CenterTorso | Section::RightTorso
+            ) {
+            before[&section].rear
+        } else {
+            before[&section].armor
+        };
+        let expected = if reflective { armor.min(8) } else { 4 };
+        assert_eq!(group.impact.phases[0].absorbed, expected, "{reflective}");
+    }
+}
+
 /// Construction mass follows the technology flags: hardened armor weighs double, reinforced
 /// structure double and composite structure half, and the small cockpit weighs two tons.
 #[tokio::test]

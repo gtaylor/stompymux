@@ -86,6 +86,10 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str, tsm_bonus: bool)
         unit.lose_vtol_lift();
         unit.halt();
     }
+    if old_sections != unit.sections {
+        // Replacement material says nothing of half-damaged hardened points.
+        unit.hardened_dents.clear();
+    }
     if old_sections != unit.sections || old_ammunition != unit.ammunition {
         unit.live_mass.invalidate();
     }
@@ -154,6 +158,10 @@ fn set_mech(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
         if unit.critical_unavailable(bin.location) {
             unit.ammunition[index] = 0;
         }
+    }
+    if protection_changed {
+        // Replacement material says nothing of half-damaged hardened points.
+        unit.hardened_dents.clear();
     }
     if protection_changed || previous_ammunition != unit.ammunition {
         unit.live_mass.invalidate();

@@ -125,7 +125,9 @@ pub use speed::{
     parse_template_speed, read_template_speed, template_walking_mp, write_template_speed,
 };
 pub use tech_base::{SystemInstallation, TechBase, TechnologyInventory, check_technology_base};
-pub use technology::{DamageClass, Technology, flag_spells_technology, reflective_armor_slots};
+pub use technology::{
+    DamageClass, HardenedHit, Technology, flag_spells_technology, reflective_armor_slots,
+};
 pub use template_check::{TemplateCheck, check_template};
 pub use transport_bay::{BaySize, TRANSPORT_BAYS, TransportBay, TransportBays};
 pub use unit::UnitTemplate;

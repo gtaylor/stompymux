@@ -404,10 +404,16 @@ fn resolve_material_with_tonnage(
                     hit,
                     amount,
                     Some(rules),
+                    Some(super::impact::WeaponEffect::Impact),
                 )?
             } else {
                 super::pilot_injury::resolve_tactical_impact_in_candidate(
-                    world, id, hit, amount, rules, None,
+                    world,
+                    id,
+                    hit,
+                    amount,
+                    rules,
+                    Some(super::impact::WeaponEffect::Impact),
                 )?
             };
             groups.push(SalvoGroup {

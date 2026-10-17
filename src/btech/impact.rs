@@ -27,8 +27,11 @@ pub(super) enum WeaponEffect {
     Plasma,
     /// Lasers, PPCs and flamers, which reflective armor partly deflects.
     Energy,
-    /// Artillery blasts, which reflective armor absorbs poorly.
+    /// Artillery blasts and minefields, which reflective armor absorbs poorly.
     AreaEffect,
+    /// Falls, physical attacks and moving through building walls, which reflective armor
+    /// also takes doubled (Tactical Operations: Advanced Units & Equipment p. 93).
+    Impact,
 }
 
 impl WeaponEffect {
@@ -37,7 +40,19 @@ impl WeaponEffect {
         match self {
             Self::Plasma | Self::Energy => super::DamageClass::Energy,
             Self::AreaEffect => super::DamageClass::AreaEffect,
-            Self::Conventional | Self::ArmorPiercing(_) => super::DamageClass::Ordinary,
+            Self::Impact => super::DamageClass::Impact,
+            Self::ArmorPiercing(_) => super::DamageClass::ArmorPiercing,
+            Self::Conventional => super::DamageClass::Ordinary,
+        }
+    }
+
+    /// The effect a material packet of `class` carries into the cascade, if any.
+    pub(super) fn of_class(class: super::DamageClass) -> Option<Self> {
+        match class {
+            super::DamageClass::Ordinary | super::DamageClass::ArmorPiercing => None,
+            super::DamageClass::Energy => Some(Self::Energy),
+            super::DamageClass::AreaEffect => Some(Self::AreaEffect),
+            super::DamageClass::Impact => Some(Self::Impact),
         }
     }
 }
@@ -146,16 +161,18 @@ pub(super) fn resolve_character_impact(
     hit: Hit,
     damage: u16,
 ) -> Result<super::TacticalImpact> {
-    resolve_character_impact_with_rules(world, id, hit, damage, None)
+    resolve_character_impact_with_rules(world, id, hit, damage, None, None)
 }
 
-/// Character damage with optional fall and flooding policy supplied by an enclosing action.
+/// Character damage with optional fall and flooding policy supplied by an enclosing action,
+/// and the hit's interaction with specialized armor.
 pub(super) fn resolve_character_impact_with_rules(
     world: &mut World,
     id: ObjectId,
     hit: Hit,
     damage: u16,
     rules: Option<super::FallRules>,
+    weapon_effect: Option<WeaponEffect>,
 ) -> Result<super::TacticalImpact> {
     ensure!(
         world
@@ -176,7 +193,7 @@ pub(super) fn resolve_character_impact_with_rules(
     let mut context = ImpactContext::new(world, id, rules)?;
     context.character_effects = true;
     context.character_toughness = Some(toughness);
-    resolve_packet(context, hit, damage, None, 0)
+    resolve_packet(context, hit, damage, weapon_effect, 0)
 }
 
 /// Wizard damage attributes the hit to the damaged unit while retaining ordinary injury policy.
@@ -1119,10 +1136,8 @@ impl<'a> ImpactContext<'a> {
         if vented == 0 || self.unit().sections()[&section].internal == 0 {
             return Ok(());
         }
-        let points = self
-            .unit()
-            .hardened_hit(section, true, vented)
-            .map_or(vented, |(removed, _)| removed);
+        let hardened = self.unit().hardened_hit(section, true, vented);
+        let points = hardened.map_or(vented, |hit| hit.removed);
         let points = if matches!(
             section,
             MechSection::LeftArm
@@ -1140,6 +1155,13 @@ impl<'a> ImpactContext<'a> {
             return Ok(());
         }
         let armor = self.damage_phase(section, points, DamagePhase::Armor { rear: true })?;
+        // A limb's capped vent stops short of the hardened points the blast reached.
+        if let Some(dented) = hardened.and_then(|hit| hit.dented)
+            && armor.absorbed == hardened.map_or(0, |hit| hit.removed)
+        {
+            self.unit_mut()
+                .mark_hardened_dent(super::ArmorFacing::struck(section, true), dented);
+        }
         self.record_phase(armor)?;
         if self.rules.is_some() {
             self.report.notices.push(super::Notice {
@@ -1571,13 +1593,15 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 let counted = context
                     .unit()
                     .armor_hit(section, rear, damage, damage_class)
-                    .map_or(damage, |(removed, overflow)| removed + overflow);
+                    .map_or(damage, |hit| hit.removed + hit.overflow);
                 context.unit_mut().stagger.record(counted);
             }
         }
         plasma_returns += 1;
         if rear
-            && weapon_effect.is_some_and(|effect| !matches!(effect, WeaponEffect::AreaEffect))
+            && weapon_effect.is_some_and(|effect| {
+                !matches!(effect, WeaponEffect::AreaEffect | WeaponEffect::Impact)
+            })
             && matches!(
                 section,
                 MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
@@ -1603,11 +1627,16 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
                 .armor_hit(section, rear, damage, damage_class);
             let armor = context.damage_phase(
                 section,
-                special.map_or(damage, |(removed, _)| removed),
+                special.map_or(damage, |hit| hit.removed),
                 DamagePhase::Armor { rear },
             )?;
+            if let Some(dented) = special.and_then(|hit| hit.dented) {
+                context
+                    .unit_mut()
+                    .mark_hardened_dent(super::ArmorFacing::struck(section, rear), dented);
+            }
             let warning = super::combat_warnings::armor_level(context.unit(), section, rear);
-            damage = special.map_or(armor.remaining, |(_, overflow)| overflow);
+            damage = special.map_or(armor.remaining, |hit| hit.overflow);
             armor_damaged = armor.absorbed > 0;
             context.record_phase(armor)?;
             if warning > previous_warning
@@ -1654,24 +1683,33 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             } else {
                 0
             };
-            rolls.push(critical_penalty.saturating_add(hardened));
+            rolls.push(-i16::from(critical_penalty.saturating_add(hardened)));
         }
         // Total Warfare p. 140: an armor-piercing hit that damages armor rolls once for a
         // critical with the autocannon's modifier, on the location struck only. A hit that
         // also damages that location's internal structure makes only the standard roll below.
-        // Hardened armor negates the round's effect (Tactical Operations: AUE p. 93).
+        // Hardened armor negates the round's effect, and laser-reflective armor adds two to
+        // the roll (Tactical Operations: AUE p. 93).
         if original
             && armor_damaged
             && !structure_damaged
             && let Some(WeaponEffect::ArmorPiercing(weapon)) = weapon_effect
             && !context.unit().hardened_armor()
         {
-            rolls.push(critical_penalty.saturating_add(weapon.armor_piercing_penalty()));
+            let reflective = if context.unit().reflective_armor() {
+                super::Technology::REFLECTIVE_ARMOR_PIERCING_BONUS
+            } else {
+                0
+            };
+            rolls.push(
+                i16::from(reflective)
+                    - i16::from(critical_penalty.saturating_add(weapon.armor_piercing_penalty())),
+            );
         }
         // Total Warfare p. 123: each hit that damages internal structure makes one Determining
         // Critical Hits roll, independently of the hit location roll.
         if structure_damaged {
-            rolls.push(critical_penalty);
+            rolls.push(-i16::from(critical_penalty));
         }
         resolve_location_criticals(context, section, &rolls, destroyed, vented)?;
         if let Some(had_pilot) = head_pilot
@@ -1833,16 +1871,17 @@ impl DestroyedLocation {
 }
 
 /// Make a location's Determining Critical Hits rolls for one hit, after its structure damage
-/// has been applied (Total Warfare p. 123, Step 4). Each entry of `penalties` is one roll and
-/// the amount subtracted from it. A location the hit destroyed (`destroyed`) is checked only
-/// when it held explosive slots: criticals striking those explode as normal and every other
-/// critical is discarded without transferring (Total Warfare p. 124, Destroyed Location).
+/// has been applied (Total Warfare p. 123, Step 4). Each entry of `modifiers` is one roll and
+/// the amount added to it, kept between 0 and 12. A location the hit destroyed (`destroyed`)
+/// is checked only when it held explosive slots: criticals striking those explode as normal
+/// and every other critical is discarded without transferring (Total Warfare p. 124,
+/// Destroyed Location).
 /// Otherwise the rolls apply to the location in turn until one of them blows it off or an
 /// explosion destroys it.
 fn resolve_location_criticals(
     context: &mut ImpactContext<'_>,
     section: MechSection,
-    penalties: &[u8],
+    modifiers: &[i16],
     destroyed: Option<DestroyedLocation>,
     vented: bool,
 ) -> Result<()> {
@@ -1850,28 +1889,26 @@ fn resolve_location_criticals(
         if destroyed.explosive.is_empty() {
             return Ok(());
         }
-        for &penalty in penalties {
-            let roll = context
-                .unit_mut()
-                .dice
-                .generic_roll()
-                .saturating_sub(penalty);
+        for &modifier in modifiers {
+            let roll = modified_roll(context, modifier);
             resolve_destroyed_location_roll(context, section, roll, &mut destroyed, vented)?;
         }
         return Ok(());
     }
-    for &penalty in penalties {
+    for &modifier in modifiers {
         if context.unit().sections()[&section].internal == 0 {
             break;
         }
-        let roll = context
-            .unit_mut()
-            .dice
-            .generic_roll()
-            .saturating_sub(penalty);
+        let roll = modified_roll(context, modifier);
         resolve_determining_roll(context, section, roll, vented)?;
     }
     Ok(())
+}
+
+/// One 2d6 Determining Critical Hits roll with `modifier` added, between 0 and 12.
+fn modified_roll(context: &mut ImpactContext<'_>, modifier: i16) -> u8 {
+    let roll = i16::from(context.unit_mut().dice.generic_roll()) + modifier;
+    roll.clamp(0, 12) as u8
 }
 
 /// One Determining Critical Hits roll in a location its hit has just destroyed. A 12 on a limb
@@ -2049,23 +2086,26 @@ mod tests {
         .unwrap();
     }
 
-    /// Hardened armor negates the armor-piercing critical check, so an AP round consumes
-    /// exactly the dice of an ordinary round. Against standard armor the check still rolls.
+    /// Hardened armor negates the armor-piercing critical check and takes the round as a
+    /// standard round on standard armor, point for point (Tactical Operations: AUE p. 93).
+    /// Against standard armor the check still rolls.
     #[test]
     fn hardened_armor_negates_armor_piercing_criticals() {
         let ap = WeaponEffect::ArmorPiercing(super::super::Weapon::Ac10);
-        // Six hardened damage leaves one of four armor points: exposed but not breached.
+        // Three damage remove three of the arm's four hardened points; nothing breaches.
         let (mut piercing, id) = world(true, 3);
+        let mut dice = piercing.btech.constructed_units()[&id].dice.clone();
+        strike(&mut piercing, id, 3, ap);
+        dice.two_d6();
+        let unit = &piercing.btech.constructed_units()[&id];
+        assert_eq!(unit.dice, dice);
+        assert_eq!(unit.sections()[&MechSection::LeftArm].armor, 1);
+        assert!(unit.lost_criticals().is_empty());
+        // The same three ordinary damage complete one hardened point and slash the next.
         let (mut conventional, _) = world(true, 3);
-        strike(&mut piercing, id, 6, ap);
-        strike(&mut conventional, id, 6, WeaponEffect::Conventional);
-        let (piercing, conventional) = (
-            &piercing.btech.constructed_units()[&id],
-            &conventional.btech.constructed_units()[&id],
-        );
-        assert_eq!(piercing.dice, conventional.dice);
-        assert_eq!(piercing.sections(), conventional.sections());
-        assert_eq!(piercing.lost_criticals(), conventional.lost_criticals());
+        strike(&mut conventional, id, 3, WeaponEffect::Conventional);
+        let unit = &conventional.btech.constructed_units()[&id];
+        assert_eq!(unit.sections()[&MechSection::LeftArm].armor, 3);
         let (mut piercing, _) = world(false, 3);
         let (mut conventional, _) = world(false, 3);
         strike(&mut piercing, id, 3, ap);
@@ -2074,6 +2114,59 @@ mod tests {
             piercing.btech.constructed_units()[&id].dice,
             conventional.btech.constructed_units()[&id].dice
         );
+    }
+
+    /// Hardened armor takes two damage per point, so single points of cluster damage
+    /// accumulate on a slashed point instead of each destroying one (Tactical Operations: AUE
+    /// p. 93).
+    #[test]
+    fn hardened_armor_keeps_half_damaged_points_between_hits() {
+        let (mut world, id) = world(true, 5);
+        strike(&mut world, id, 1, WeaponEffect::Conventional);
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.sections()[&MechSection::LeftArm].armor, 4);
+        // The slash is part of the saved unit.
+        let unit: Mech = serde_json::from_value(serde_json::to_value(unit).unwrap()).unwrap();
+        world.btech.constructed.insert(id, unit);
+        strike(&mut world, id, 1, WeaponEffect::Conventional);
+        assert_eq!(
+            world.btech.constructed_units()[&id].sections()[&MechSection::LeftArm].armor,
+            3
+        );
+        // Three more complete one point and slash the next.
+        strike(&mut world, id, 3, WeaponEffect::Conventional);
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.sections()[&MechSection::LeftArm].armor, 2);
+        strike(&mut world, id, 4, WeaponEffect::Conventional);
+        let arm = &world.btech.constructed_units()[&id].sections()[&MechSection::LeftArm];
+        // The two points left, one of them slashed, stop three; one passes through.
+        assert_eq!((arm.armor, arm.internal), (0, 5));
+    }
+
+    /// Laser-reflective armor adds two to armor-piercing critical rolls (Tactical Operations:
+    /// AUE p. 93).
+    #[test]
+    fn reflective_armor_raises_armor_piercing_critical_rolls() {
+        let mut exercised = [false, false];
+        for seed in 0..=63 {
+            let mut dice = super::super::Dice::seeded([seed; 32]);
+            dice.two_d6();
+            let roll = dice.two_d6();
+            let (mut world, id) = armored_world("LaserRefArmor_Tech", seed);
+            let before = world.btech.constructed_units()[&id].lost_criticals().len();
+            strike(
+                &mut world,
+                id,
+                1,
+                WeaponEffect::ArmorPiercing(super::super::Weapon::Ac2),
+            );
+            let unit = &world.btech.constructed_units()[&id];
+            let critical = unit.lost_criticals().len() > before;
+            // The AC/2's four off and the armor's two on need a natural 10.
+            assert_eq!(critical, roll >= 10, "seed {seed} roll {roll}");
+            exercised[usize::from(critical)] = true;
+        }
+        assert_eq!(exercised, [true, true]);
     }
 
     /// Every armor-piercing hit that damages armor rolls once for a critical with the
@@ -2520,7 +2613,8 @@ mod tests {
         assert!(exercised);
     }
 
-    /// Reflective armor halves energy hits, doubles area-effect hits and ignores the rest.
+    /// Reflective armor halves energy hits, doubles area-effect and impact hits and ignores the
+    /// rest.
     #[test]
     fn reflective_armor_depends_on_damage_class() {
         let arm = |effect, damage| {
@@ -2537,6 +2631,13 @@ mod tests {
         assert_eq!(arm(WeaponEffect::Plasma, 6), (1, 6));
         assert_eq!(arm(WeaponEffect::Conventional, 3), (1, 6));
         assert_eq!(arm(WeaponEffect::AreaEffect, 1), (2, 6));
+        // Falls, physical attacks and building walls double too.
+        assert_eq!(arm(WeaponEffect::Impact, 1), (2, 6));
+        assert_eq!(arm(WeaponEffect::Impact, 3), (0, 5));
+        assert_eq!(
+            arm(WeaponEffect::ArmorPiercing(super::super::Weapon::Ac10), 3),
+            (1, 6)
+        );
         // Three area-effect damage: two strip all four points, one passes through.
         assert_eq!(arm(WeaponEffect::AreaEffect, 3), (0, 5));
     }

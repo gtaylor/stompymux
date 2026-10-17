@@ -301,7 +301,7 @@ pub(super) fn resolve_entry_hazard(
                     arc: HitArc::Front,
                     character,
                     attacker: None,
-                    class: super::DamageClass::Ordinary,
+                    class: super::DamageClass::Impact,
                 },
                 false,
                 rules,

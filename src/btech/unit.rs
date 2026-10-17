@@ -220,6 +220,10 @@ pub struct Mech {
     /// Sections disabled by vacuum exposure, independent of flooding.
     #[serde(default)]
     pub(super) breached_sections: std::collections::BTreeSet<MechSection>,
+    /// Hardened armor facings whose outermost point has taken one of its two damage points
+    /// (Tactical Operations: Advanced Units & Equipment p. 93).
+    #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
+    pub(super) hardened_dents: std::collections::BTreeSet<super::ArmorFacing>,
     #[serde(default)]
     pub(super) stagger: super::Stagger,
     #[serde(default)]
@@ -399,6 +403,7 @@ super::saved_parts::saved_parts!(Mech {
         illumination_observed,
         flooded_sections,
         breached_sections,
+        hardened_dents,
         posture,
         building_entry,
         signature,
@@ -609,6 +614,8 @@ impl Mech {
         if let Some(value) = armor {
             original.armor = value;
             current.armor = value;
+            self.hardened_dents
+                .remove(&super::ArmorFacing::front(section));
         }
         if let Some(value) = internal {
             original.internal = value;
@@ -617,6 +624,8 @@ impl Mech {
         if let Some(value) = rear {
             original.rear = value;
             current.rear = value;
+            self.hardened_dents
+                .remove(&super::ArmorFacing::rear(section));
         }
     }
 
@@ -635,9 +644,17 @@ impl Mech {
         }
         let current = self.sections.get_mut(&section).expect("validated section");
         match kind {
-            super::AdministrativeRepairKind::Armor => current.armor = value,
+            super::AdministrativeRepairKind::Armor => {
+                current.armor = value;
+                self.hardened_dents
+                    .remove(&super::ArmorFacing::front(section));
+            }
             super::AdministrativeRepairKind::Internal => current.internal = value,
-            super::AdministrativeRepairKind::RearArmor => current.rear = value,
+            super::AdministrativeRepairKind::RearArmor => {
+                current.rear = value;
+                self.hardened_dents
+                    .remove(&super::ArmorFacing::rear(section));
+            }
             super::AdministrativeRepairKind::Reattach => {
                 // C mech_re_attach (mech_maintenance.c:501-514) restores only
                 // sections reading as destroyed.
@@ -957,6 +974,7 @@ impl Mech {
             transport_destroyed: false,
             flooded_sections: Default::default(),
             breached_sections: Default::default(),
+            hardened_dents: Default::default(),
             stagger: Default::default(),
             tag: Default::default(),
             spotter: None,

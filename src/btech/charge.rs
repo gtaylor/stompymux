@@ -349,7 +349,7 @@ fn packets(
             rules,
             super::impact::AttackImpact {
                 attacker: Some(attacker),
-                weapon_effect: None,
+                weapon_effect: Some(super::impact::WeaponEffect::Impact),
                 character,
                 followup: true,
             },

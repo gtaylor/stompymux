@@ -257,9 +257,17 @@ fn resolve(
                     hit,
                     damage,
                     Some(rules),
+                    Some(super::impact::WeaponEffect::Impact),
                 )?
             } else {
-                resolve_tactical_impact(world, id, hit, damage, rules)?
+                super::pilot_injury::resolve_tactical_impact_in_candidate(
+                    world,
+                    id,
+                    hit,
+                    damage,
+                    rules,
+                    Some(super::impact::WeaponEffect::Impact),
+                )?
             };
             super::piloting::append_feedback(
                 &mut pilot_notices,

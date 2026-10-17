@@ -431,7 +431,7 @@ fn apply_collision(
             fall,
             super::impact::AttackImpact {
                 attacker: Some(mover),
-                weapon_effect: None,
+                weapon_effect: Some(super::impact::WeaponEffect::Impact),
                 character,
                 followup: false,
             },

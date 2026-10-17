@@ -126,18 +126,22 @@ pub(super) fn resolve_rear_followup_in_candidate(
         .get(&hit.section)
         .map_or(0, |section| section.armor);
     let incoming = hit.amount;
-    let hardened = vehicle
+    let hardened_armor = vehicle
         .definition()
         .has_technology(super::Technology::HardenedArmor);
-    let reflective = !hardened
-        && vehicle
-            .definition()
-            .has_technology(super::Technology::LaserReflectiveArmor)
-        && hit.damage_class != DamageClass::Ordinary;
-    // Hardened armor records the armor it could remove: half the hit, rounding up.
-    // Reflective armor halves energy hits, rounding down, and doubles area-effect hits.
+    // Armor-piercing rounds meet hardened armor as standard rounds on standard armor
+    // (Tactical Operations: Advanced Units & Equipment p. 93).
+    let hardened = hardened_armor && hit.armor_piercing.is_none();
+    let dented = hardened && vehicle.hardened_dents.contains(&hit.section);
+    let reflective_armor = vehicle
+        .definition()
+        .has_technology(super::Technology::LaserReflectiveArmor);
+    let reflective = reflective_armor && hit.damage_class != DamageClass::Ordinary;
+    // Hardened armor records the points the hit could complete, two damage each, counting a
+    // slash an earlier hit left. Reflective armor halves energy hits, rounding down, and
+    // doubles area-effect and impact hits.
     let amount = if hardened {
-        hit.amount.div_ceil(2)
+        u32::from(super::Technology::hardened_hit(hit.amount, u16::MAX, dented).removed)
     } else if reflective {
         super::Technology::reflective_hit(hit.damage_class, hit.amount, u16::MAX)
             .map_or(hit.amount, |(removed, _)| u32::from(removed))
@@ -158,7 +162,7 @@ pub(super) fn resolve_rear_followup_in_candidate(
         pilot_notices: Vec::new(),
         broadcasts: Vec::new(),
     };
-    if amount == 0 {
+    if hit.amount == 0 {
         return Ok(result);
     }
     let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
@@ -211,10 +215,15 @@ pub(super) fn resolve_rear_followup_in_candidate(
     let previous_warning =
         super::combat_warnings::armor_severity(original, vehicle.sections()[&hit.section].armor);
     // Each hardened armor point stops two damage; overflow passes at full value.
+    let mut dent = None;
     let (armor_damage, hardened_overflow) = if hardened {
-        let (removed, overflow) =
-            super::Technology::hardened_hit(hit.amount, vehicle.sections()[&hit.section].armor);
-        (u32::from(removed), Some(overflow))
+        let hardened_hit = super::Technology::hardened_hit(
+            hit.amount,
+            vehicle.sections()[&hit.section].armor,
+            dented,
+        );
+        dent = Some(hardened_hit.dented);
+        (u32::from(hardened_hit.removed), Some(hardened_hit.overflow))
     } else if let Some((removed, overflow)) = reflective
         .then(|| {
             super::Technology::reflective_hit(
@@ -236,16 +245,26 @@ pub(super) fn resolve_rear_followup_in_candidate(
             DamagePhase::Armor { rear: false },
         )?
         .absorbed;
+    match dent {
+        Some(true) => {
+            vehicle.hardened_dents.insert(hit.section);
+        }
+        Some(false) => {
+            vehicle.hardened_dents.remove(&hit.section);
+        }
+        None => {}
+    }
     result.overflow = hardened_overflow.unwrap_or(amount - u32::from(result.absorbed));
     let remaining = vehicle.sections()[&hit.section].armor;
     let warning = super::combat_warnings::armor_severity(original, remaining);
     // A hit-location critical result rolls once on the critical hits table (TW p. 193), two
     // lower through hardened armor (TO:AUE p. 93), and every armor-piercing hit that damages
     // armor without reaching the structure rolls once more with the autocannon's modifier
-    // (TW pp. 140 and 192); hardened armor stops the latter. Glancing blows lower every roll.
+    // (TW pp. 140 and 192); hardened armor stops the latter and laser-reflective armor adds
+    // two to it (TO:AUE p. 93). Glancing blows lower every roll.
     let mut table_rolls = Vec::new();
     if hit.through_armor_critical {
-        let penalty = if hardened {
+        let penalty = if hardened_armor {
             i8::try_from(super::Technology::HARDENED_CRITICAL_PENALTY).unwrap_or(i8::MAX)
         } else {
             0
@@ -253,11 +272,21 @@ pub(super) fn resolve_rear_followup_in_candidate(
         table_rolls.push(context.critical_modifier.saturating_sub(penalty));
     }
     if let Some(weapon) = hit.armor_piercing
-        && !hardened
+        && !hardened_armor
         && result.overflow == 0
     {
         let penalty = i8::try_from(weapon.armor_piercing_penalty()).unwrap_or(i8::MAX);
-        table_rolls.push(context.critical_modifier.saturating_sub(penalty));
+        let bonus = if reflective_armor {
+            i8::try_from(super::Technology::REFLECTIVE_ARMOR_PIERCING_BONUS).unwrap_or(i8::MAX)
+        } else {
+            0
+        };
+        table_rolls.push(
+            context
+                .critical_modifier
+                .saturating_sub(penalty)
+                .saturating_add(bonus),
+        );
     }
     for modifier in table_rolls {
         let vehicle = &world.btech.vehicles()[&id];

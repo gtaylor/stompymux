@@ -22,22 +22,29 @@ pub enum Technology {
     LaserHeatSinks,
     /// Clan ECM suite that also works as an active probe.
     Watchdog,
-    /// Armor that reflects part of each energy hit but spalls under area-effect blasts.
-    /// Energy weapons remove half their damage in armor, rounding down; area-effect
-    /// weapons such as artillery remove double.
+    /// Armor that reflects part of each energy hit but is brittle. Energy weapons remove half
+    /// their damage in armor, rounding down; area-effect weapons such as artillery and mines,
+    /// falls, physical attacks and moving through building walls remove double.
     LaserReflectiveArmor,
 }
 
-/// How an attack's damage interacts with specialized armor.
+/// How an attack's damage interacts with specialized armor (Tactical Operations: Advanced
+/// Units & Equipment p. 93).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DamageClass {
-    /// Ballistic, missile, physical and environmental damage.
+    /// Ballistic and missile weapon fire and environmental damage.
     #[default]
     Ordinary,
     /// Lasers, PPCs, flamers and plasma weapons.
     Energy,
-    /// Artillery and other blasts that fill a hex.
+    /// Artillery, minefields and other blasts that fill a hex.
     AreaEffect,
+    /// Falls, physical attacks and moving through building walls, which laser-reflective
+    /// armor takes doubled.
+    Impact,
+    /// Armor-piercing autocannon rounds, which hardened armor takes point for point as a
+    /// standard round on standard armor.
+    ArmorPiercing,
 }
 
 impl DamageClass {
@@ -86,29 +93,46 @@ impl Technology {
         })
     }
 
-    /// Tabletop hardened armor: each remaining point stops two damage, so a hit removes half
-    /// its damage in armor, rounding up. Damage beyond twice the remaining armor passes through
-    /// at full value. Returns the armor points removed and that overflow.
-    pub fn hardened_hit(amount: u32, armor: u16) -> (u16, u32) {
-        let removed = amount.div_ceil(2).min(u32::from(armor)) as u16;
-        (removed, amount.saturating_sub(u32::from(armor) * 2))
+    /// Tabletop hardened armor (Tactical Operations: Advanced Units & Equipment p. 93): each
+    /// point takes two damage, the first slashing it and the second destroying it. `dented`
+    /// says the outermost remaining point already carries one slash. A hit removes the points
+    /// it completes and may leave the next one slashed; damage beyond what the remaining
+    /// points can take passes through at full value.
+    pub fn hardened_hit(amount: u32, armor: u16, dented: bool) -> HardenedHit {
+        let dented = dented && armor > 0;
+        let capacity = u32::from(armor) * 2 - u32::from(dented);
+        if amount >= capacity {
+            return HardenedHit {
+                removed: armor,
+                overflow: amount - capacity,
+                dented: false,
+            };
+        }
+        // Count the earlier slash as damage already marked against the outermost point.
+        let marked = amount + u32::from(dented);
+        HardenedHit {
+            removed: (marked / 2) as u16,
+            overflow: 0,
+            dented: marked % 2 == 1,
+        }
     }
 
-    /// Tabletop laser-reflective armor. Energy damage is halved, rounding down with a minimum
-    /// of one, so each armor point stops two energy damage; damage beyond twice the remaining
-    /// armor passes through at full value. Area-effect damage is doubled against the armor,
-    /// so each damage point strips two armor points and whatever the armor could not absorb
-    /// passes through at its normal value. Other damage is unaffected. Returns the armor
-    /// points removed and the overflow, or `None` when the armor behaves normally.
+    /// Tabletop laser-reflective armor (Tactical Operations: Advanced Units & Equipment p. 93).
+    /// Energy damage is halved, rounding down with a minimum of one, so each armor point stops
+    /// two energy damage; damage beyond twice the remaining armor passes through at full value.
+    /// Area-effect and impact damage are doubled against the armor, so each damage point
+    /// strips two armor points and whatever the armor could not absorb passes through at its
+    /// normal value. Other damage is unaffected. Returns the armor points removed and the
+    /// overflow, or `None` when the armor behaves normally.
     pub fn reflective_hit(class: DamageClass, amount: u32, armor: u16) -> Option<(u16, u32)> {
         let armor = u32::from(armor);
         match class {
-            DamageClass::Ordinary => None,
+            DamageClass::Ordinary | DamageClass::ArmorPiercing => None,
             DamageClass::Energy => {
                 let removed = (amount / 2).max(amount.min(1)).min(armor);
                 Some((removed as u16, amount.saturating_sub(armor * 2)))
             }
-            DamageClass::AreaEffect => {
+            DamageClass::AreaEffect | DamageClass::Impact => {
                 let doubled = amount.saturating_mul(2);
                 if doubled <= armor {
                     return Some((doubled as u16, 0));
@@ -121,6 +145,10 @@ impl Technology {
     /// Critical rolls for damage that penetrates hardened armor are two lower.
     pub const HARDENED_CRITICAL_PENALTY: u8 = 2;
 
+    /// Armor-piercing critical rolls against laser-reflective armor are two higher (Tactical
+    /// Operations: Advanced Units & Equipment p. 93).
+    pub const REFLECTIVE_ARMOR_PIERCING_BONUS: u8 = 2;
+
     /// Internal damage after reinforced or composite structure modifies it.
     pub fn structure_damage(reinforced: bool, composite: bool, amount: u16) -> u16 {
         if reinforced {
@@ -131,6 +159,17 @@ impl Technology {
             amount
         }
     }
+}
+
+/// What one hit does to a location's hardened armor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HardenedHit {
+    /// Armor points destroyed.
+    pub removed: u16,
+    /// Damage passing on to the internal structure at full value.
+    pub overflow: u32,
+    /// Whether the outermost remaining point is left with one slash.
+    pub dented: bool,
 }
 
 /// Critical slots laser-reflective armor claims on a Mech: ten for Inner Sphere armor and five
@@ -209,13 +248,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn damage_modifiers_round_up_and_saturate() {
+    fn damage_modifiers_keep_half_points_and_saturate() {
+        let hit = |removed, overflow, dented| HardenedHit {
+            removed,
+            overflow,
+            dented,
+        };
         // Seven damage on two points: four stopped, three through at full value.
-        assert_eq!(Technology::hardened_hit(7, 2), (2, 3));
-        // Odd damage removes half, rounding up; nothing passes while armor remains.
-        assert_eq!(Technology::hardened_hit(5, 10), (3, 0));
-        assert_eq!(Technology::hardened_hit(4, 2), (2, 0));
-        assert_eq!(Technology::hardened_hit(3, 0), (0, 3));
+        assert_eq!(Technology::hardened_hit(7, 2, false), hit(2, 3, false));
+        // Odd damage completes half its points and slashes the next; nothing passes while
+        // armor remains.
+        assert_eq!(Technology::hardened_hit(5, 10, false), hit(2, 0, true));
+        assert_eq!(Technology::hardened_hit(4, 2, false), hit(2, 0, false));
+        assert_eq!(Technology::hardened_hit(3, 0, false), hit(0, 3, false));
+        // A single point of damage only slashes a point; the next one destroys it.
+        assert_eq!(Technology::hardened_hit(1, 4, false), hit(0, 0, true));
+        assert_eq!(Technology::hardened_hit(1, 4, true), hit(1, 0, false));
+        assert_eq!(Technology::hardened_hit(4, 4, true), hit(2, 0, true));
+        // A slashed last point stops one more damage before the rest passes through.
+        assert_eq!(Technology::hardened_hit(3, 1, true), hit(1, 2, false));
+        assert_eq!(Technology::hardened_hit(2, 0, true), hit(0, 2, false));
         assert_eq!(Technology::structure_damage(true, false, 1), 1);
         assert_eq!(Technology::structure_damage(false, true, 3), 6);
         assert_eq!(
@@ -229,10 +281,12 @@ mod tests {
         assert_eq!(Technology::reflective_hit(Energy, 1, 10), Some((1, 0)));
         assert_eq!(Technology::reflective_hit(Energy, 7, 2), Some((2, 3)));
         assert_eq!(Technology::reflective_hit(Energy, 3, 0), Some((0, 3)));
-        // Area-effect damage doubles until the armor is gone.
+        // Area-effect and impact damage double until the armor is gone.
         assert_eq!(Technology::reflective_hit(AreaEffect, 4, 10), Some((8, 0)));
         assert_eq!(Technology::reflective_hit(AreaEffect, 5, 3), Some((3, 3)));
         assert_eq!(Technology::reflective_hit(AreaEffect, 2, 0), Some((0, 2)));
+        assert_eq!(Technology::reflective_hit(Impact, 5, 9), Some((9, 0)));
+        assert_eq!(Technology::reflective_hit(ArmorPiercing, 5, 9), None);
         assert!(Technology::recognizes("LRARM"));
         assert!(Technology::recognizes("harm"));
         assert!(Technology::recognizes("WatchDog_Tech"));

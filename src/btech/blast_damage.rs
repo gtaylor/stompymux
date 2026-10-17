@@ -95,7 +95,8 @@ pub(super) struct BlastDamage {
     /// turn's fifteen-point cap on outside heat (Total Warfare p. 159); a vehicle's fire check.
     pub heat: i32,
     pub character: bool,
-    /// Artillery is area-effect damage; mines and reactor blasts are ordinary.
+    /// Artillery and minefields are area-effect damage (Tactical Operations: Advanced Rules
+    /// p. 175).
     pub class: DamageClass,
 }
 
@@ -248,8 +249,7 @@ pub(super) fn resolve_packet(
         environment,
         super::impact::AttackImpact {
             attacker: request.attacker,
-            weapon_effect: (request.class == DamageClass::AreaEffect)
-                .then_some(super::impact::WeaponEffect::AreaEffect),
+            weapon_effect: super::impact::WeaponEffect::of_class(request.class),
             character: request.character,
             followup: true,
         },

@@ -88,6 +88,13 @@ impl Mech {
             self.live_mass.invalidate();
         }
         result.remaining -= result.absorbed;
+        if *protection == 0
+            && let DamagePhase::Armor { rear } = phase
+        {
+            // No armor point is left to carry a hardened slash.
+            self.hardened_dents
+                .remove(&super::ArmorFacing::struck(section, rear));
+        }
         if matches!(phase, DamagePhase::Internal) && state.internal == 0 {
             self.clear_destroyed_section(section, &mut result.destroyed_sections);
         }
@@ -110,6 +117,8 @@ impl Mech {
         self.beacons.remove(&section);
         self.flooded_sections.remove(&section);
         self.breached_sections.remove(&section);
+        self.hardened_dents
+            .retain(|facing| facing.section != section);
         destroyed.push(section);
         if self.chassis() == super::MechChassis::Quad && self.chassis().is_leg(section) {
             self.lateral.active = super::LateralMode::None;

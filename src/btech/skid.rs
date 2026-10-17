@@ -527,10 +527,22 @@ fn slide_damage(
         let hit = super::resolve_hit(unit, fall.arc, roll, &mut dice)?;
         world.btech.constructed.get_mut(&id).unwrap().dice = dice;
         let outcome = if character && world.objects[&id].flags.contains(Flag::InCharacter) {
-            super::impact::resolve_character_impact_with_rules(world, id, hit, group, Some(rules))?
+            super::impact::resolve_character_impact_with_rules(
+                world,
+                id,
+                hit,
+                group,
+                Some(rules),
+                Some(super::impact::WeaponEffect::Impact),
+            )?
         } else {
             super::pilot_injury::resolve_tactical_impact_in_candidate(
-                world, id, hit, group, rules, None,
+                world,
+                id,
+                hit,
+                group,
+                rules,
+                Some(super::impact::WeaponEffect::Impact),
             )?
         };
         fall.damage += u32::from(group);
@@ -919,7 +931,7 @@ fn vehicle_charge(
                 arc,
                 character,
                 attacker: Some(id),
-                class: super::DamageClass::Ordinary,
+                class: super::DamageClass::Impact,
             },
             arc == HitArc::Rear,
             rules,

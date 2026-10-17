@@ -236,7 +236,7 @@ pub(super) fn breach(
                     arc,
                     character,
                     attacker: None,
-                    class: super::DamageClass::Ordinary,
+                    class: super::DamageClass::Impact,
                 },
                 arc == HitArc::Rear,
                 rules,
