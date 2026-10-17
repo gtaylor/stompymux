@@ -109,7 +109,7 @@ impl System {
             Self::NullSignature | Self::DualSaw => 7,
             Self::Flail | Self::LargeVibroblade => 4,
             Self::WreckingBall => 5,
-            Self::SmallVibroblade | Self::Spikes | Self::MachineGunArray => 1,
+            Self::SmallVibroblade | Self::Spikes | Self::MachineGunArray | Self::Cargo => 1,
             Self::MediumVibroblade => 2,
             // Talons fill two slots in each leg as one installation.
             Self::Talons => 2 * context.legs.max(2),
@@ -191,6 +191,8 @@ impl System {
             | Self::TripleStrengthMyomer
             | Self::StealthArmor
             | Self::LaserReflective => 0.0,
+            // The standard cargo bay costs nothing (TechManual p. 293).
+            Self::Cargo => 0.0,
             Self::FuelTank => return None,
         })
     }

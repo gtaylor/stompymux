@@ -243,6 +243,11 @@ mass calculated.
 
 ### Cargo and transport bays
 
+A mech's only bay is the standard cargo bay `cargo_tons` states. It weighs its
+capacity and fills one critical slot per ton, rounded up, each listed as a
+`Cargo` entry in any location: `cargo_tons = 1.5` needs two (TechManual p.
+239).
+
 A vehicle carries cargo in two ways (TechManual p. 239, Transport Bays):
 
 - `cargo_tons` is the standard cargo bay, the only bay the game loads stock

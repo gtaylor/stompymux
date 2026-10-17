@@ -254,7 +254,8 @@ pub fn derived_engine_rating(source: &str) -> String {
 /// the installed jets, the declared heat sinks fit the engine and the installed sinks, a
 /// targeting computer fits the direct-fire weapons, weapons of the other technology base mark
 /// the design mixed technology, armor comes off the most heavily armored locations while the
-/// Mech is overweight, and an authored cargo bay takes up spare tonnage while it is underweight.
+/// Mech is overweight, and spare tonnage becomes a cargo bay in the free critical slots, then
+/// armor, while it is underweight.
 pub fn book_legal(template: &mut stompymux_rs::MechTemplate) {
     book_legal_keeping(template, None);
 }
@@ -270,7 +271,8 @@ pub fn book_legal(template: &mut stompymux_rs::MechTemplate) {
 /// ammunition outside `keep` other than the heaviest weapon (the one a scenario adds); with
 /// `keep` it slows down first and sheds weapons before armor. Armor that turns out not to be
 /// needed comes back.
-/// Spare tonnage becomes an authored cargo bay.
+/// Spare tonnage becomes a cargo bay, one free critical slot per ton (TechManual p. 239); what
+/// the free slots cannot take goes on as armor.
 pub fn book_legal_keeping(
     template: &mut stompymux_rs::MechTemplate,
     keep: Option<stompymux_rs::MechSection>,
@@ -377,22 +379,63 @@ pub fn book_legal_keeping(
             }
         }
     }
-    // Whole half tons of spare mass join the cargo bay, which weighs its capacity
-    // (TechManual p. 239); less than half a ton may stay unspent (TechManual p. 57).
-    let spare = tons.saturating_sub(mass(template));
-    if spare >= 512 {
-        let cargo = stompymux_rs::cargo_mass(
-            template
-                .attributes
-                .get(stompymux_rs::CARGO_TONS)
-                .map(String::as_str),
-        )
-        .unwrap_or(0);
-        let halves = (cargo + spare) / 512;
-        template.attributes.insert(
-            stompymux_rs::CARGO_TONS.into(),
-            (f64::from(halves) / 2.0).to_string(),
-        );
+    // Whole half tons of spare mass join the cargo bay, which weighs its capacity and fills a
+    // free critical slot per ton, rounded up (TechManual p. 239); less than half a ton may stay
+    // unspent (TechManual p. 57). A bay larger than the free slots allow shrinks a ton at a
+    // time, and the mass it leaves goes back on as armor.
+    let cargo = stompymux_rs::cargo_mass(
+        template
+            .attributes
+            .get(stompymux_rs::CARGO_TONS)
+            .map(String::as_str),
+    )
+    .unwrap_or(0);
+    let mut capacity = (cargo + tons.saturating_sub(mass(template))) / 512 * 512;
+    while template.install_cargo_bay(capacity).is_err() && capacity > 0 {
+        capacity = capacity.saturating_sub(1024);
+    }
+    add_armor(template, |template| mass(template) <= tons);
+}
+
+/// Whether the design weighs more than half a ton under its tonnage, which construction
+/// refuses (TechManual p. 57).
+fn under_weight(template: &stompymux_rs::MechTemplate) -> bool {
+    stompymux_rs::MechLoadout::resolve(template)
+        .ok()
+        .and_then(|loadout| template.construction_mass(&loadout).ok())
+        .is_some_and(|mass| mass.total + 512 < u32::from(template.tons) * 1024)
+}
+
+/// Add armor points, one at a time to the location with the most room below its maximum
+/// (twice its internal structure, nine on the head; TechManual p. 54), while `fits` holds and
+/// the design is at least half a ton under its weight.
+fn add_armor(
+    template: &mut stompymux_rs::MechTemplate,
+    fits: impl Fn(&stompymux_rs::MechTemplate) -> bool,
+) {
+    while under_weight(template) {
+        let Some(section) = template
+            .sections
+            .iter()
+            .map(|(&section, layout)| {
+                let limit = if section == stompymux_rs::MechSection::Head {
+                    9
+                } else {
+                    layout.internal * 2
+                };
+                (limit.saturating_sub(layout.armor + layout.rear), section)
+            })
+            .filter(|(room, _)| *room > 0)
+            .max_by_key(|(room, _)| *room)
+            .map(|(_, section)| section)
+        else {
+            return;
+        };
+        template.sections.get_mut(&section).unwrap().armor += 1;
+        if !fits(template) {
+            template.sections.get_mut(&section).unwrap().armor -= 1;
+            return;
+        }
     }
 }
 
@@ -643,6 +686,26 @@ pub fn book_legal_record_keeping(
     else {
         return;
     };
+    // A record whose tonnage a scenario changed takes that tonnage's internal structure
+    // (TechManual p. 47), undamaged.
+    for section in stompymux_rs::MechSection::ALL {
+        let Some(internal) =
+            stompymux_rs::btech::inspection_canonical_mech_internal(&definition, section)
+        else {
+            continue;
+        };
+        let Some(layout) = definition.sections.get_mut(&section) else {
+            continue;
+        };
+        if layout.internal == internal {
+            continue;
+        }
+        layout.internal = internal;
+        let key = serde_json::to_value(section).unwrap();
+        if let Some(live) = state["sections"].get_mut(key.as_str().unwrap()) {
+            live["internal"] = internal.into();
+        }
+    }
     book_legal_keeping(&mut definition, keep);
     set_record_definition(state, definition);
 }

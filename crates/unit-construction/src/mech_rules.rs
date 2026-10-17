@@ -237,6 +237,59 @@ impl MechTemplate {
         usize::from((self.tons * percent + 50) / 100).max(1)
     }
 
+    /// State a standard cargo bay of `capacity` (1/1024-ton units, in half-ton steps) and fill
+    /// one free critical slot per ton of it, rounded up, with `Cargo` entries (TM p. 239),
+    /// replacing the cargo slots already placed. Free slots are taken in section order. Fails,
+    /// leaving the template unchanged, when the Mech has too few free slots.
+    pub fn install_cargo_bay(&mut self, capacity: u32) -> Result<()> {
+        ensure!(
+            capacity.is_multiple_of(512),
+            "A cargo bay is built in half-ton steps (TM p. 239)"
+        );
+        let chassis = self.chassis()?;
+        let mut sections = self.sections.clone();
+        for layout in sections.values_mut() {
+            layout
+                .criticals
+                .retain(|_, critical| System::named(&critical.equipment) != Some(System::Cargo));
+        }
+        let mut needed = capacity.div_ceil(1024);
+        for (&section, layout) in sections.iter_mut() {
+            for slot in 0..chassis.critical_slots(section) {
+                if needed == 0 {
+                    break;
+                }
+                if layout.criticals.contains_key(&slot) {
+                    continue;
+                }
+                layout.criticals.insert(
+                    slot,
+                    super::CriticalDefinition {
+                        equipment: "Cargo".into(),
+                        data: "-".into(),
+                        modes: Vec::new(),
+                    },
+                );
+                needed -= 1;
+            }
+        }
+        ensure!(
+            needed == 0,
+            "A cargo bay of {} tons needs {needed} more free critical slots (TM p. 239)",
+            super::format_tons(capacity)
+        );
+        self.sections = sections;
+        if capacity == 0 {
+            self.attributes.remove(super::CARGO_TONS);
+        } else {
+            self.attributes.insert(
+                super::CARGO_TONS.into(),
+                (f64::from(capacity / 512) / 2.0).to_string(),
+            );
+        }
+        Ok(())
+    }
+
     /// Check the TechManual construction rules a template and its resolved loadout must
     /// satisfy beyond the section layout [`MechTemplate::validate_loadout`] checks.
     pub fn validate_construction(&self, loadout: &MechLoadout) -> Result<()> {
@@ -253,6 +306,7 @@ impl MechTemplate {
         self.validate_physical_weapons(loadout, chassis)?;
         validate_talons_and_spikes(loadout, chassis)?;
         validate_machine_gun_arrays(loadout, chassis)?;
+        self.validate_cargo_bay(loadout)?;
         self.validate_weapon_mounting(loadout, chassis)?;
         self.validate_technology_base(loadout)?;
         self.validate_total_mass(loadout)
@@ -622,6 +676,26 @@ impl MechTemplate {
                 "{system:?} replaces the hand actuator in {name}"
             );
         }
+        Ok(())
+    }
+
+    /// A BattleMech's standard cargo bay fills one critical slot per ton of its capacity,
+    /// rounded up (TechManual p. 239, Transport Bay table): `cargo_tons = 1.5` needs two
+    /// `Cargo` slots, which may sit in any locations.
+    fn validate_cargo_bay(&self, loadout: &MechLoadout) -> Result<()> {
+        let capacity =
+            super::cargo_mass(self.attributes.get(super::CARGO_TONS).map(String::as_str))?;
+        let expected = capacity.div_ceil(1024) as usize;
+        let found = loadout
+            .systems
+            .iter()
+            .filter(|part| part.system == System::Cargo)
+            .count();
+        ensure!(
+            found == expected,
+            "A cargo bay of {} tons fills {expected} Cargo critical slots, one per ton rounded up; found {found} (TechManual p. 239)",
+            super::format_tons(capacity)
+        );
         Ok(())
     }
 
@@ -1042,6 +1116,49 @@ mod tests {
                 1,
             ),
             "Inner Sphere CASE may only be mounted in torso locations",
+        );
+    }
+
+    /// A Mech's cargo bay fills a critical slot per ton of capacity, rounded up (TM p. 239).
+    #[test]
+    fn cargo_bays_fill_a_slot_per_ton() {
+        // A ton and a half of cargo in the left leg, paid for by 24 points of arm, leg and
+        // head armor.
+        let cargo = |slots: &str| {
+            JENNER
+                .replace("walk_mp = 7", "walk_mp = 7\ncargo_tons = 1.5")
+                .replace("armor = 4\nomit", "armor = 0\nomit")
+                .replace(
+                    "[sections.left_leg]\narmor = 6\n",
+                    &format!("[sections.left_leg]\narmor = 0\nslots = [{slots}]\n"),
+                )
+                .replace(
+                    "[sections.right_leg]\narmor = 6",
+                    "[sections.right_leg]\narmor = 0",
+                )
+                .replace("[sections.head]\narmor = 7", "[sections.head]\narmor = 3")
+        };
+        refused(
+            &cargo("{ at = 5, item = \"Cargo\" }"),
+            "A cargo bay of 1.5 tons fills 2 Cargo critical slots, one per ton rounded up; found 1",
+        );
+        assert_eq!(
+            rejection(&cargo("{ at = \"5-6\", item = \"Cargo\" }")),
+            None
+        );
+        // Installing the bay places its slots in the first free slots.
+        let mut installed = MechTemplate::parse("JR7-D", &cargo("")).unwrap();
+        installed.install_cargo_bay(3 * 512).unwrap();
+        assert_eq!(check_template(&installed).rejection, None);
+        installed.install_cargo_bay(0).unwrap();
+        assert!(!installed.attributes.contains_key(crate::CARGO_TONS));
+        assert!(installed.install_cargo_bay(100 * 1024).is_err());
+        refused(
+            &JENNER.replace(
+                "[sections.left_leg]\narmor = 6\n",
+                "[sections.left_leg]\narmor = 6\nslots = [{ at = 5, item = \"Cargo\" }]\n",
+            ),
+            "A cargo bay of 0 tons fills 0 Cargo critical slots",
         );
     }
 

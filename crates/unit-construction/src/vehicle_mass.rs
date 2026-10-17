@@ -349,6 +349,7 @@ impl VehicleTemplate {
             | System::NullSignature
             | System::Talons
             | System::Spikes
+            | System::Cargo
             | System::TargetingComputer => 0,
             System::MachineGunArray => {
                 if clan {

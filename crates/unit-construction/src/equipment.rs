@@ -488,6 +488,10 @@ pub enum System {
     /// blunting physical attacks against its location (Tactical Operations: Advanced Units &
     /// Equipment pp. 100, 103).
     Spikes,
+    /// One critical slot of a BattleMech's standard cargo bay, which fills a slot per ton of
+    /// the capacity `cargo_tons` states, rounded up (TechManual p. 239). The bay's mass is
+    /// that capacity; a combat vehicle's bay takes a single item slot and lists no entries.
+    Cargo,
 }
 
 impl System {
@@ -572,6 +576,7 @@ impl System {
             name if name.eq_ignore_ascii_case("Large_Vibroblade") => Some(Self::LargeVibroblade),
             name if name.eq_ignore_ascii_case("Talons") => Some(Self::Talons),
             name if name.eq_ignore_ascii_case("Spikes") => Some(Self::Spikes),
+            name if name.eq_ignore_ascii_case("Cargo") => Some(Self::Cargo),
             name if name.eq_ignore_ascii_case("MGA") => Some(Self::MachineGunArray),
             name if name.eq_ignore_ascii_case("FerroFibrous") => Some(Self::FerroFibrous),
             name if name.eq_ignore_ascii_case("EndoSteel") => Some(Self::EndoSteel),

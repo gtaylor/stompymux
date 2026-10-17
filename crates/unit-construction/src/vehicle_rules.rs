@@ -78,7 +78,8 @@ pub fn occupies_vehicle_slot(system: System, clan: bool) -> bool {
 /// critical-slot entries for actuators, the engine, gyro, cockpit, life support, sensors,
 /// heat sinks and the slot-filling structure and armor types have no vehicle counterpart: a
 /// vehicle records its engine, heat sinks, structure and armor in the template (TechManual
-/// pp. 99-105). Jump jets, MASC and triple-strength myomer are Mech systems (TechManual
+/// pp. 99-105), and its cargo bay in `cargo_tons` (TechManual p. 239). Jump jets, MASC and
+/// triple-strength myomer are Mech systems (TechManual
 /// pp. 102-103); CASE II and the null-signature system are not available to combat vehicles
 /// (Tactical Operations: Advanced Units & Equipment pp. 111, 148); and the hatchet, sword,
 /// retractable blade, claws, flail, lance, mace, chain whip, vibroblades, talons and spikes
@@ -90,6 +91,9 @@ pub fn vehicle_refusal(system: System) -> Option<&'static str> {
         | Cockpit | LifeSupport | Sensors | HeatSink | FerroFibrous | EndoSteel
         | HeavyFerroFibrous | LightFerroFibrous | StealthArmor | LaserReflective => {
             "is a BattleMech critical-slot entry; a combat vehicle states its engine, heat sinks, structure and armor in the template (TechManual pp. 99-105)"
+        }
+        Cargo => {
+            "is a BattleMech cargo-bay slot; a combat vehicle's cargo bay is its cargo_tons alone, in one item slot (TechManual p. 239)"
         }
         JumpJet => "is a jump jet; combat vehicles cannot jump (TechManual p. 102)",
         Masc => "is MASC, which combat vehicles cannot mount (TechManual p. 103)",
