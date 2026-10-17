@@ -56,6 +56,62 @@ fn half(value: u32) -> u32 {
     value.div_ceil(512) * 512
 }
 
+/// Price of the armor the flags `has` names: its tonnage, converted from `points` without
+/// truncating and rounded up to the half ton exactly as its mass is (TechManual pp. 274-275,
+/// 278), times its price per ton. Points per ton follow the armor type (TechManual p. 56),
+/// with eight for hardened armor (Tactical Operations: Advanced Units & Equipment p. 92), and
+/// `clan_armor` picks Clan ferro-fibrous. Hardened and light ferro-fibrous armor cost 15,000
+/// a ton (ibid. p. 217; TechManual p. 279).
+fn armor_price(points: u32, has: impl Fn(&str) -> bool, clan_armor: bool) -> f64 {
+    let denominator = if has("FerroFibrous_Tech") {
+        if clan_armor { 60 } else { 56 }
+    } else if has("HvyFerroFibrous_Tech") {
+        62
+    } else if has("LtFerroFibrous_Tech") {
+        53
+    } else if has("HardenedArmor_Tech") {
+        25
+    } else {
+        50
+    };
+    let per_ton = if has("FerroFibrous_Tech") {
+        20000
+    } else if has("StealthArmor_Tech") {
+        50000
+    } else if has("LaserRefArmor_Tech") {
+        30000
+    } else if has("HardenedArmor_Tech") || has("LtFerroFibrous_Tech") {
+        15000
+    } else if has("HvyFerroFibrous_Tech") {
+        25000
+    } else {
+        10000
+    };
+    f64::from(armor_mass(points, denominator)) / 1024.0 * f64::from(per_ton)
+}
+
+/// The engine's price per point of `rating` per ton of unit, before the division by 75: ICE
+/// 1,250, standard fusion 5,000, compact 10,000, light 15,000, XL 20,000 and XXL 100,000
+/// (TechManual p. 277; Tactical Operations: Advanced Units & Equipment p. 219), doubled for a
+/// large engine rated above 400 (ibid. p. 219). An internal combustion engine is never a
+/// fusion family.
+fn engine_price_factor(has: impl Fn(&str) -> bool, ice: bool, rating: u64) -> u64 {
+    let base = if ice {
+        1250
+    } else if has("CompactEngine_Tech") {
+        10000
+    } else if has("LightEngine_Tech") {
+        15000
+    } else if has("XLEngine_Tech") {
+        20000
+    } else if has("XXL_Tech") {
+        100000
+    } else {
+        5000
+    };
+    if rating > 400 { base * 2 } else { base }
+}
+
 fn raw_flag(template: &RawTemplate, name: &str) -> bool {
     ["specials", "specials2"]
         .iter()
@@ -197,21 +253,8 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
         total += (4000 * tons) as f64;
     }
     let (rating, suspension) = inspect_raw_template_engine(template);
-    // An internal combustion engine is never a fusion family (TechManual p. 277).
-    let engine_base = if ice {
-        1250_u64
-    } else if raw_flag(template, "CompactEngine_Tech") {
-        10000
-    } else if raw_flag(template, "LightEngine_Tech") {
-        15000
-    } else if raw_flag(template, "XLEngine_Tech") {
-        20000
-    } else if raw_flag(template, "XXL_Tech") {
-        100000
-    } else {
-        5000
-    };
     let engine_size = u64::try_from(i64::from(rating) - i64::from(suspension))?;
+    let engine_base = engine_price_factor(|name| raw_flag(template, name), ice, engine_size);
     total += (engine_base * engine_size * tons) as f64 / 75.0;
     let clan = raw_flag(template, "Clan");
     // Vehicles mount single heat sinks whatever their technology base (TechManual p. 104).
@@ -223,30 +266,7 @@ fn raw_vehicle_base_cost(prices: &PartPrices, template: &RawTemplate) -> Result<
         sinks.saturating_sub(10)
     } * if double { 6000 } else { 2000 }) as f64;
     let armor = inspect_raw_template_armor(template, None)?.armor.1;
-    let armor = if raw_flag(template, "FerroFibrous_Tech") {
-        armor * 50 / if clan { 60 } else { 56 }
-    } else if raw_flag(template, "HvyFerroFibrous_Tech") {
-        armor * 50 / 62
-    } else if raw_flag(template, "LtFerroFibrous_Tech") {
-        armor * 50 / 53
-    } else {
-        armor
-    };
-    let armor_cost = if raw_flag(template, "FerroFibrous_Tech") {
-        20000
-    } else if raw_flag(template, "StealthArmor_Tech") {
-        50000
-    } else if raw_flag(template, "LaserRefArmor_Tech") {
-        30000
-    } else if raw_flag(template, "HardenedArmor_Tech") || raw_flag(template, "LtFerroFibrous_Tech")
-    {
-        15000
-    } else if raw_flag(template, "HvyFerroFibrous_Tech") {
-        25000
-    } else {
-        10000
-    };
-    total += f64::from(half(armor * 1024 / 16)) / 1024.0 * f64::from(armor_cost);
+    total += armor_price(armor, |name| raw_flag(template, name), clan);
     for mount in &weapons {
         total += raw_weapon_cost(mount.part.id);
     }
@@ -403,19 +423,11 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
     // inventory suggests: a center torso with fewer than four engine slots infers a compact
     // fusion engine, but an ICE is never one (TechManual p. 277; `Construction::from_flags`
     // resolves the same way).
-    let engine_base = if flag(template, "ICEEngine_Tech") {
-        1250
-    } else if flag(template, "CompactEngine_Tech") {
-        10000
-    } else if flag(template, "LightEngine_Tech") {
-        15000
-    } else if flag(template, "XLEngine_Tech") {
-        20000
-    } else if flag(template, "XXL_Tech") {
-        100000
-    } else {
-        5000
-    };
+    let engine_base = engine_price_factor(
+        |name| flag(template, name),
+        flag(template, "ICEEngine_Tech"),
+        rating,
+    );
     total += (engine_base * rating * tons) as f64 / 75.0;
     // Jump jets cost 200 (improved 500) x jump MP squared x tons (TechManual p. 278); each
     // installed jet gives one MP, and improved jets fill two slots per MP.
@@ -441,33 +453,12 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
     } else {
         2000
     }) as f64;
-    let mut armor: u32 = template
+    let armor: u32 = template
         .sections
         .values()
         .map(|s| u32::from(s.armor) + u32::from(s.rear))
         .sum();
-    if flag(template, "FerroFibrous_Tech") {
-        armor = armor * 50 / if clan { 60 } else { 56 }
-    } else if flag(template, "HvyFerroFibrous_Tech") {
-        armor = armor * 50 / 62
-    } else if flag(template, "LtFerroFibrous_Tech") {
-        armor = armor * 50 / 53
-    }
-    let armor_tons = f64::from(half(armor * 1024 / 16)) / 1024.0;
-    let armor_cost = if flag(template, "FerroFibrous_Tech") {
-        20000
-    } else if flag(template, "StealthArmor_Tech") {
-        50000
-    } else if flag(template, "LaserRefArmor_Tech") {
-        30000
-    } else if flag(template, "HardenedArmor_Tech") || flag(template, "LtFerroFibrous_Tech") {
-        15000
-    } else if flag(template, "HvyFerroFibrous_Tech") {
-        25000
-    } else {
-        10000
-    };
-    total += armor_tons * f64::from(armor_cost);
+    total += armor_price(armor, |name| flag(template, name), template.clan_armor());
     for mount in &loadout.weapons {
         total += weapon_mount_price(mount);
     }
@@ -534,20 +525,12 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
     let mut total = (tons * 1000 + tons * 500) as f64;
     let ice = flag_vehicle(template, "ICEEngine_Tech");
     let movement = administrative_template_movement(&template.attributes, template.movement);
-    let mut turret_mass = 0u64;
-    let mut amplifier_mass = 0u64;
-    for mount in &loadout.weapons {
-        if mount.criticals[0].section == VehicleSection::Turret {
-            turret_mass += u64::from(mount.weapon.mass())
-        }
-        if mount.weapon.gunnery_skill(true) == "Gunnery-Laser" {
-            amplifier_mass += u64::from(mount.weapon.mass())
-        }
-    }
-    if ice {
-        total += 20000.0 * tenth_rounded_to_half_ton(amplifier_mass);
-    }
-    total += 5000.0 * tenth_rounded_to_half_ton(turret_mass);
+    // The turret and power amplifiers are priced on the tonnage construction gives them: the
+    // turret a tenth of every item in it, the amplifiers a tenth of the energy weapons an ICE
+    // vehicle feeds, each rounded up to the half ton (TechManual pp. 106, 279).
+    let mass = compatible.mass()?;
+    total += 20000.0 * f64::from(mass.power_amplifiers) / 1024.0;
+    total += 5000.0 * f64::from(mass.turret) / 1024.0;
     if movement == VehicleMovement::Hover {
         total += (2000 * tons) as f64
     }
@@ -555,21 +538,8 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
         total += (4000 * tons) as f64
     }
     let (rating, suspension) = inspection_vehicle_engine_rating(template)?;
-    // An internal combustion engine is never a fusion family (TechManual p. 277).
-    let base = if ice {
-        1250
-    } else if flag_vehicle(template, "CompactEngine_Tech") {
-        10000
-    } else if flag_vehicle(template, "LightEngine_Tech") {
-        15000
-    } else if flag_vehicle(template, "XLEngine_Tech") {
-        20000
-    } else if flag_vehicle(template, "XXL_Tech") {
-        100000
-    } else {
-        5000
-    };
     let size = u64::try_from((i64::from(rating) - i64::from(suspension)).max(0))?;
+    let base = engine_price_factor(|name| flag_vehicle(template, name), ice, size);
     total += (base * size * tons) as f64 / 75.0;
     // Combat vehicles mount single heat sinks only, whatever their technology base
     // (TechManual p. 104).
@@ -580,35 +550,18 @@ pub fn vehicle_template_base_cost(prices: &PartPrices, template: &VehicleTemplat
     } else {
         sinks.saturating_sub(10)
     } * if double { 6000 } else { 2000 }) as f64;
-    let mut armor: u32 = template
+    let armor: u32 = template
         .sections
         .values()
+        .filter(|section| section.internal > 0)
         .map(|s| u32::from(s.armor) + u32::from(s.rear))
         .sum();
     let clan = flag_vehicle(template, "Clan");
-    if flag_vehicle(template, "FerroFibrous_Tech") {
-        armor = armor * 50 / if clan { 60 } else { 56 };
-    } else if flag_vehicle(template, "HvyFerroFibrous_Tech") {
-        armor = armor * 50 / 62;
-    } else if flag_vehicle(template, "LtFerroFibrous_Tech") {
-        armor = armor * 50 / 53;
-    }
-    let armor_cost = if flag_vehicle(template, "FerroFibrous_Tech") {
-        20000
-    } else if flag_vehicle(template, "StealthArmor_Tech") {
-        50000
-    } else if flag_vehicle(template, "LaserRefArmor_Tech") {
-        30000
-    } else if flag_vehicle(template, "HardenedArmor_Tech")
-        || flag_vehicle(template, "LtFerroFibrous_Tech")
-    {
-        15000
-    } else if flag_vehicle(template, "HvyFerroFibrous_Tech") {
-        25000
-    } else {
-        10000
-    };
-    total += f64::from(half(armor * 1024 / 16)) / 1024.0 * f64::from(armor_cost);
+    total += armor_price(
+        armor,
+        |name| flag_vehicle(template, name),
+        template.clan_armor(),
+    );
     for mount in &loadout.weapons {
         total += weapon_mount_price(mount);
     }
@@ -768,6 +721,121 @@ explicit = true
             template_base_cost(&PartPrices::new(), &template).unwrap()
         };
         assert!(clan(" Clan SingleHS") < clan(" Clan"));
+    }
+
+    /// Armor is priced on the tonnage it weighs: the points convert to tons without
+    /// truncating before the half-ton round-up (TechManual pp. 274-275), and hardened armor
+    /// carries eight points a ton at 15,000 C-bills a ton (Tactical Operations: Advanced Units &
+    /// Equipment pp. 92, 217).
+    #[test]
+    fn armor_is_priced_on_its_mounted_tonnage() {
+        let ferro = |name: &str| name == "FerroFibrous_Tech";
+        // 144 Inner Sphere ferro-fibrous points weigh 8.04 tons, built as 8.5.
+        assert_eq!(armor_price(144, ferro, false), 8.5 * 20_000.0);
+        // 173 points weigh 9.65 tons, 9.5 had the points been truncated first.
+        assert_eq!(armor_price(173, ferro, false), 10.0 * 20_000.0);
+        // 77 Clan points weigh 4.01 tons.
+        assert_eq!(armor_price(77, ferro, true), 4.5 * 20_000.0);
+        let hardened = |name: &str| name == "HardenedArmor_Tech";
+        assert_eq!(armor_price(80, hardened, false), 10.0 * 15_000.0);
+        assert_eq!(armor_price(64, |_| false, false), 4.0 * 10_000.0);
+    }
+
+    /// A large engine, rated above 400, costs twice its family's price (Tactical Operations:
+    /// Advanced Units & Equipment p. 219).
+    #[test]
+    fn large_engines_cost_double() {
+        for (flag, ice, normal) in [
+            ("", true, 1250),
+            ("", false, 5000),
+            ("LightEngine_Tech", false, 15000),
+            ("XLEngine_Tech", false, 20000),
+            ("XXL_Tech", false, 100000),
+        ] {
+            let has = |name: &str| name == flag;
+            assert_eq!(engine_price_factor(has, ice, 400), normal, "{flag}");
+            assert_eq!(engine_price_factor(has, ice, 405), normal * 2, "{flag}");
+        }
+        let mut large = jenner();
+        large.tons = 85;
+        large.walk_mp = 5;
+        let mut standard = large.clone();
+        standard.walk_mp = 4;
+        let difference = template_base_cost(&PartPrices::new(), &large).unwrap() as f64
+            - template_base_cost(&PartPrices::new(), &standard).unwrap() as f64;
+        // 85 x 5 = 425 at 10,000 against 85 x 4 = 340 at 5,000, and a five-ton gyro against a
+        // four-ton one, before the 1.85 multiplier.
+        let engines = (10_000.0 * 425.0 * 85.0 - 5_000.0 * 340.0 * 85.0) / 75.0;
+        let gyro = 300_000.0;
+        assert!(
+            (difference - (engines + gyro) * 1.85).abs() <= 1.0,
+            "{difference}"
+        );
+    }
+
+    /// A 75-ton ICE tank with two turret AC/10s, after the TechManual's Zhukov (pp. 96-107).
+    const TANK: &str = r#"
+name = "Tank"
+class = "vehicle"
+movement = "track"
+tons = 75
+walk_mp = 3
+
+[construction]
+engine = "ice"
+
+[sections.left_side]
+armor = 32
+
+[sections.right_side]
+armor = 32
+
+[sections.front_side]
+armor = 44
+
+[sections.aft_side]
+armor = 24
+
+[sections.turret]
+armor = 44
+slots = [
+    { at = "1-2", item = "IS.AC/10" },
+]
+"#;
+
+    /// The turret is priced on its whole tonnage, a tenth of every item in it, and an ICE
+    /// vehicle's power amplifiers on theirs, a tenth of every weapon they feed, plasma rifles
+    /// included (TechManual pp. 106, 279).
+    #[test]
+    fn vehicle_turrets_and_amplifiers_are_priced_on_their_tonnage() {
+        let cost = |source: &str| {
+            vehicle_template_base_cost(
+                &PartPrices::new(),
+                &VehicleTemplate::parse("Tank", source).unwrap(),
+            )
+            .unwrap() as f64
+        };
+        let with = |section: &str, item: &str| {
+            TANK.replace(
+                &format!("[sections.{section}]\narmor = 44\n"),
+                &format!(
+                    "[sections.{section}]\narmor = 44\nslots = [{{ at = 5, item = \"{item}\" }}]\n"
+                ),
+            )
+        };
+        // A Beagle probe beside the two turret AC/10s raises the turret's items from 24 to 25.5
+        // tons, and its mechanism from 2.5 to 3 tons: 2,500 more, times the tracked
+        // multiplier of 1.75.
+        let turret = TANK.replace(
+            "{ at = \"1-2\", item = \"IS.AC/10\" },",
+            "{ at = \"1-2\", item = \"IS.AC/10\" },\n    { at = 3, item = \"BeagleProbe\" },",
+        );
+        let front = with("front_side", "BeagleProbe");
+        assert!((cost(&turret) - cost(&front) - 2_500.0 * 1.75).abs() <= 1.0);
+        // A plasma rifle's 6 tons need a ton of amplifiers at 20,000 C-bills.
+        let plasma = with("front_side", "IS.PlasmaRifle");
+        let rifle = Weapon::PlasmaRifle.cost() as f64;
+        assert!((cost(&plasma) - cost(TANK) - (rifle + 20_000.0) * 1.75).abs() <= 1.0);
     }
 
     /// One-shot launchers cost half their launcher (TechManual p. 291), and equipment prices
