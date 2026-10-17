@@ -21,7 +21,7 @@ pub struct AutopilotContact {
     pub identified: bool,
     /// Destruction is known only when the existing clear-contact rules reveal it.
     pub known_destroyed: bool,
-    /// Observed range in map units.
+    /// Weapon range in hexes (Total Warfare p. 109); the unit's height does not add to it.
     pub range: f64,
     /// Shared aiming distance from the unit's active C3/C3i network; absent when unnetworked.
     /// It improves the range band only: physical reach and minimum range still use `range`.
@@ -108,7 +108,7 @@ pub fn observe_with_memory(
                 friendly: contact.facts.friendly,
                 identified: contact.facts.identified,
                 known_destroyed: contact.facts.known_destroyed,
-                range: contact.facts.range.spatial,
+                range: contact.facts.range.hexes(),
                 network_range: contact.network_range,
                 relayed: contact.relayed,
                 seen_at: time,

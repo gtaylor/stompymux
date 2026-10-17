@@ -201,7 +201,7 @@ async fn turret_repair_expires_offline_and_cannot_clear_a_second_hit_lock() {
     let (_dir, _config, mut world, id) = fixture().await;
     jam_battle_vehicle_turret(&mut world, id).unwrap();
     begin_battle_turret_repair(&mut world, id, ObjectId(1)).unwrap();
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     for _ in 0..60 {
         assert!(advance_battle_units(&mut world, 0, true).is_empty());
     }
@@ -296,7 +296,7 @@ async fn powered_off_turret_repair_retries_failed_server_ticks() {
         let (_dir,config,mut world,id)=fixture().await;
         jam_battle_vehicle_turret(&mut world,id).unwrap();
         begin_battle_turret_repair(&mut world,id,ObjectId(1)).unwrap();
-        stop_battle_unit(&mut world,id,ObjectId(1),MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world,id,ObjectId(1)).unwrap();
         for _ in 0..58 {advance_battle_units(&mut world, 0, true);}
         persistence::save(&config.database(),&world).await.unwrap();
         let mut sql=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -431,7 +431,7 @@ async fn automatic_turret_tracks_moving_units_and_hexes() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     place_battle_unit(&mut world, id, map, 1, 1).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);

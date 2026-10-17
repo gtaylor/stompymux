@@ -70,6 +70,8 @@ pub struct AimModifiers {
     /// Observer sensor aim replaces the firing unit sensor aim when present.
     pub indirect: Option<IndirectAim>,
     pub gunnery: i16,
+    /// Weapon range in hexes from the shooter's hex to the target's (Total Warfare p. 109);
+    /// elevation does not add to it.
     pub distance: f64,
     /// Active command-network range calculation, independent of physical distance and visibility permission.
     pub network_range: Option<super::NetworkRange>,
@@ -119,7 +121,8 @@ impl AimModifiers {
         self.subtotal_with_terrain(self.perception?.modifier)
     }
 
-    /// Shared arithmetic; terrain targets supply zero instead of a unit sensor contribution.
+    /// Shared arithmetic; hex targets supply their intervening-terrain term in place of a
+    /// unit's perception and cover term.
     pub(super) fn subtotal_with_terrain(&self, perception: i16) -> Option<i32> {
         Some(
             i32::from(self.gunnery)
@@ -284,7 +287,7 @@ impl super::Vehicle {
     /// Cruising is judged against the current cruising speed, so motive damage that lowers it
     /// turns a formerly cruising speed into flank fire (Total Warfare pp. 106 and 193).
     pub fn attacker_movement_modifier(&self) -> u8 {
-        ground_attacker_movement(self.motion(), self.maximum_speed() * 2.0 / 3.0)
+        ground_attacker_movement(self.motion(), self.cruising_speed())
     }
 }
 
@@ -539,7 +542,7 @@ pub(super) fn aim_modifiers_for_source(
         .get(weapon_index)
         .context("Weapon index out of bounds")?;
     let indirect = super::spotter::indirect_aim(world, source, target, weapon_index)?;
-    let distance = super::unit_range(world, shooter, target)?.spatial;
+    let distance = super::unit_range(world, shooter, target)?.hexes();
     let target_terms = target_modifiers(
         world,
         shooter,

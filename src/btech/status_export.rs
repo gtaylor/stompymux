@@ -57,15 +57,18 @@ pub(super) struct Ammunition {
 /// Export chassis and optionally weapons. Armor selections do not change this compact record.
 pub(super) fn render(unit: &Mech, weapons: bool) -> Result<String> {
     let definition = unit.definition();
-    let running = (unit.mobility().maximum_speed / 10.75) as u16;
-    let jumping = (unit.jump_capacity(100)?.speed / 10.75) as u16;
+    // Walking MP and the running MP that damage leaves (Total Warfare pp. 53, 125).
+    let envelope = unit.mobility().envelope();
+    let walking = envelope.walking_mp() as u16;
+    let running = (envelope.running / super::MP_KPH) as u16;
+    let jumping = (unit.jump_capacity(100)?.speed / super::MP_KPH) as u16;
     let sinks = unit.cooling_capacity();
     let record = format!(
         "{} {} {} {}/{}/{} {} ",
         crate::text::escape(&definition.reference),
         crate::text::escape(&definition.name),
         definition.tons,
-        running * 2 / 3,
+        walking,
         running,
         jumping,
         sinks
@@ -100,7 +103,9 @@ pub(super) fn render(unit: &Mech, weapons: bool) -> Result<String> {
 /// Vehicle anatomy supplies rows to the same export grouping and formatting rules.
 pub(super) fn render_vehicle(unit: &super::Vehicle, weapons: bool) -> Result<String> {
     let definition = unit.definition();
-    let running = (unit.maximum_speed() / 10.75) as u16;
+    let envelope = unit.speed_envelope();
+    let cruising = envelope.walking_mp() as u16;
+    let flanking = (envelope.running / super::MP_KPH) as u16;
     let loadout = unit.loadout()?;
     let sinks = unit.cooling_capacity()?;
     let record = format!(
@@ -108,8 +113,8 @@ pub(super) fn render_vehicle(unit: &super::Vehicle, weapons: bool) -> Result<Str
         crate::text::escape(&definition.reference),
         crate::text::escape(&definition.name),
         definition.tons,
-        running * 2 / 3,
-        running,
+        cruising,
+        flanking,
         sinks
     );
     if !weapons {

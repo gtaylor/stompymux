@@ -338,13 +338,7 @@ async fn masc_failure_damages_each_leg_once_and_keeps_masc_working() {
         let envelope = unit.speed_envelope();
         assert!(unit.motion().unwrap().speed.abs() <= envelope.running + 1e-9);
         drop(snapshot);
-        stop_battle_unit(
-            &mut scripts.world_mut(),
-            id,
-            ObjectId(1),
-            MovementRules::STANDARD.fall,
-        )
-        .unwrap();
+        stop_battle_unit(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
         assert_eq!(
             scripts.world().btech.constructed_units()[&id]
                 .masc()

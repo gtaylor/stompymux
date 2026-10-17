@@ -104,6 +104,9 @@ impl Lane {
 enum Observer<'a> {
     /// A Demolisher tank, optionally with one front-mounted item such as a probe.
     Vehicle(Option<&'a str>),
+    /// A mixed-technology Demolisher, built on a Clan chassis when `clan_chassis` is set, with
+    /// one front-mounted `probe` slot such as `CL.BeagleProbe`.
+    MixedProbe { probe: &'a str, clan_chassis: bool },
     /// A Jenner.
     Mech,
 }
@@ -124,12 +127,33 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
     for id in [observer_id, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
-    match observer {
-        Observer::Vehicle(equipment) => {
-            let mut definition = crate::support::templates::fitted(
+    let vehicle = match observer {
+        Observer::Vehicle(equipment) => Some((equipment, "")),
+        Observer::MixedProbe {
+            probe,
+            clan_chassis,
+        } => Some((
+            Some(probe),
+            if clan_chassis {
+                "Clan MixedTech"
+            } else {
+                "MixedTech"
+            },
+        )),
+        Observer::Mech => None,
+    };
+    match vehicle {
+        Some((equipment, specials)) => {
+            let mut source =
                 VehicleTemplate::parse("test", include_str!("../game/units/Demolisher.toml"))
-                    .unwrap(),
-            );
+                    .unwrap();
+            if !specials.is_empty() {
+                let flags = source.attributes.entry("specials".into()).or_default();
+                *flags = format!("{} {specials}", flags.trim_matches('-'))
+                    .trim()
+                    .into();
+            }
+            let mut definition = crate::support::templates::fitted(source);
             if let Some(equipment) = equipment {
                 let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
                 front.criticals.clear();
@@ -149,7 +173,7 @@ async fn lane(rows: &[&str], observer: Observer<'_>) -> Lane {
             )
             .unwrap();
         }
-        Observer::Mech => {
+        None => {
             // The lane's Jenner carries a searchlight so night sight can be exercised.
             let mut definition =
                 MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
@@ -581,4 +605,182 @@ async fn probe_sweeps_with_the_probes_brackets() {
         4
     );
     lane.world.validate(&lane.config).unwrap();
+}
+
+/// Visual range counts hexes (Tactical Operations: Advanced Rules p. 189): a VTOL flying
+/// thirty levels, six hexes, up sees a Jenner directly below it and three hexes off in pitch
+/// black, although the spatial distance to either is over six hexes; four hexes off is
+/// beyond its three-hex reach.
+#[tokio::test]
+async fn a_high_vtol_sees_a_target_below_it_within_its_visual_range_in_hexes() {
+    let kestrel = include_str!("../game/units/Kestrel.toml");
+    let jenner = include_str!("../game/units/JR7-D.toml");
+    for (range, seen) in [(0, true), (3, true), (4, false)] {
+        let (_dir, config, world) = support::isolated_world().await;
+        let (mut world, observer, target, _) = support::btech_firing::lane_fixture_on(
+            world,
+            &config,
+            (kestrel, None, false, None),
+            jenner,
+            range,
+        );
+        support::btech_firing::edit(&mut world, observer, |state| {
+            state["vtol_flight"]["phase"] = serde_json::json!({"kind": "airborne"});
+            state["vtol_flight"]["altitude"] = serde_json::json!(30.0);
+        });
+        let map = world.btech.units()[&observer].map.unwrap();
+        set_battle_map_conditions(&mut world, map, Light::PitchBlack, Weather::Clear).unwrap();
+        let measured = battle_unit_range(&world, observer, target).unwrap();
+        assert_eq!(measured.hex_distance, u64::from(range));
+        assert!(measured.spatial >= 6.0, "{range}: {}", measured.spatial);
+        assert_eq!(
+            battle_perceive(&world, observer, target)
+                .unwrap()
+                .map(|perception| (perception.channel, perception.identified)),
+            seen.then_some((Sight, true)),
+            "{range} hexes"
+        );
+        let position = world.btech.unit(target).unwrap().position().unwrap();
+        let hex = HexCoordinate {
+            x: i32::from(position.x),
+            y: i32::from(position.y),
+        };
+        assert_eq!(
+            battle_hex_visible(&world, observer, hex).unwrap(),
+            seen,
+            "{range} hexes"
+        );
+        world.validate(&config).unwrap();
+    }
+}
+
+/// A Beagle slot's technology base is the probe's own: its `IS.` or `CL.` prefix, or the
+/// chassis's when it states none. A Clan-built one is the Clan active probe, sweeping
+/// 15/30/45 hexes and revealing hidden units within five; an Inner Sphere Beagle sweeps
+/// 12/24/36 and reveals within four, whatever chassis carries either (Tactical Operations:
+/// Advanced Rules p. 190; Total Warfare p. 129).
+#[tokio::test]
+async fn a_probe_sweeps_and_reaches_by_its_own_technology_base() {
+    for (probe, clan_chassis, clan_probe) in [
+        ("CL.BeagleProbe", false, true),
+        ("IS.BeagleProbe", true, false),
+        ("BeagleProbe", false, false),
+        ("BeagleProbe", true, true),
+    ] {
+        let lane = lane(
+            &grass(20),
+            Observer::MixedProbe {
+                probe,
+                clan_chassis,
+            },
+        )
+        .await;
+        let report = battle_perception_report(&lane.world, lane.observer).unwrap();
+        let bands = report
+            .profile
+            .sensor
+            .systems
+            .iter()
+            .find(|system| system.mode == SensorMode::Probe)
+            .unwrap()
+            .bands;
+        let (brackets, reach, name) = if clan_probe {
+            ((15, 30, 45), 5, "Clan Active Probe")
+        } else {
+            ((12, 24, 36), 4, "Beagle Active Probe")
+        };
+        let case = format!("{probe} on a Clan chassis: {clan_chassis}");
+        assert_eq!((bands.short, bands.medium, bands.long), brackets, "{case}");
+        let profile = report.profile.probe.unwrap();
+        assert_eq!((profile.clan, profile.range), (clan_probe, reach), "{case}");
+        assert_eq!(report.profile.sensor.probe_clan, clan_probe, "{case}");
+        assert!(
+            report.text.contains(&format!(
+                "Probe:   {name}, sweeps {}/{}/{} hexes and reveals hidden units within {reach} hexes",
+                brackets.0, brackets.1, brackets.2
+            )),
+            "{case}: {}",
+            report.text
+        );
+        lane.world.validate(&lane.config).unwrap();
+    }
+}
+
+/// Give the lane's hostile Jenner a working Angel ECM suite in ECM mode, so the observer's
+/// sweeps meet its Angel column.
+fn angel_target(lane: &mut Lane) {
+    let mut definition =
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
+    for slot in 5..7 {
+        definition
+            .sections
+            .get_mut(&MechSection::RightTorso)
+            .unwrap()
+            .criticals
+            .insert(
+                slot,
+                CriticalDefinition {
+                    equipment: "AngelEcm".into(),
+                    data: "-".into(),
+                    modes: vec![],
+                },
+            );
+    }
+    lane.world
+        .btech
+        .rewrite_unit_record(lane.target, |record| {
+            crate::support::templates::set_record_definition(record, definition);
+            record["electronics"]["angel"] = serde_json::to_value(ElectronicMode::Ecm).unwrap();
+        })
+        .unwrap();
+    refresh_battle_electronic_fields(&mut lane.world).unwrap();
+    assert!(
+        lane.world.btech.constructed_units()[&lane.target]
+            .electronics()
+            .field
+            .angel_protected
+    );
+}
+
+/// The ECM/Stealth Modifier Table row follows the probe's own technology base too (Tactical
+/// Operations: Advanced Rules p. 191): against an Angel suite the Clan active probe takes +5
+/// and the Beagle +6, whatever the chassis. In pitch black a sweep of 3 finds a Jenner
+/// fourteen hexes off with the Clan probe on an Inner Sphere chassis (8, its short band) but
+/// not with a Beagle on a Clan chassis (9, nothing), and a sweep of 2 finds it twelve hexes
+/// off with the Beagle at +6. The built-in sensors' long bands start at nineteen hexes.
+#[tokio::test]
+async fn a_probe_meets_ecm_on_its_own_technology_base_row() {
+    for (probe, clan_chassis, roll, distance, found) in [
+        ("CL.BeagleProbe", false, 3, 14, Some(5)),
+        ("IS.BeagleProbe", true, 3, 14, None),
+        ("IS.BeagleProbe", true, 2, 12, Some(6)),
+    ] {
+        let mut lane = lane(
+            &grass(20),
+            Observer::MixedProbe {
+                probe,
+                clan_chassis,
+            },
+        )
+        .await;
+        lane.conditions(Light::PitchBlack, Weather::Clear);
+        angel_target(&mut lane);
+        lane.place_target(distance);
+        lane.sweep(roll);
+        let perception = battle_perceive(&lane.world, lane.observer, lane.target).unwrap();
+        let case = format!("{probe} on a Clan chassis: {clan_chassis}, sweep {roll}");
+        assert_eq!(
+            perception.map(|perception| (perception.channel, perception.identified)),
+            found.map(|_| (Probe, false)),
+            "{case}"
+        );
+        assert_eq!(
+            perception
+                .and_then(|perception| perception.sweep)
+                .map(|sweep| sweep.modifier),
+            found,
+            "{case}"
+        );
+        lane.world.validate(&lane.config).unwrap();
+    }
 }

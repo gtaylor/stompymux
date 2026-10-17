@@ -22,21 +22,23 @@ pub fn motion_readout(world: &World, unit: ObjectId, viewer: ObjectId) -> Result
 }
 
 /// Resolve named speeds or clamp a finite numeric request to the current throttle envelope.
+/// A climbing or descending VTOL's named speeds are what its vertical speed leaves of the
+/// cruising and flanking budgets.
 pub(crate) fn speed_request(
     world: &World,
     unit: ObjectId,
     argument: &str,
     policy: super::SpeedPolicy,
 ) -> Result<f64> {
-    let envelope = if world.btech.vehicles().contains_key(&unit) {
-        let maximum = throttle_configured(world, unit, policy)?;
-        super::SpeedEnvelope {
-            walking: maximum * 2.0 / 3.0,
-            running: maximum,
-        }
-    } else {
-        throttle_envelope(world, unit, policy)?
-    };
+    let mut envelope = throttle_envelope(world, unit, policy)?;
+    if let Some(flight) = world
+        .btech
+        .vehicles()
+        .get(&unit)
+        .and_then(|vehicle| vehicle.vtol_flight())
+    {
+        envelope = super::vtol_speed::horizontal_envelope(envelope, flight.vertical_speed)?;
+    }
     let speed = match argument.trim().to_ascii_lowercase().as_str() {
         "walk" | "cruise" => envelope.walking,
         "run" | "flank" => envelope.running,
@@ -80,21 +82,30 @@ pub(crate) fn throttle_configured(
     id: ObjectId,
     policy: super::SpeedPolicy,
 ) -> Result<f64> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        let maximum =
-            super::load::movement_maximum(world, id, unit.maximum_speed(), policy.tsm_tow_bonus)?;
-        return super::speed_bonus::vehicle_on_map(world, unit.position(), maximum);
-    }
     Ok(throttle_envelope(world, id, policy)?.running)
 }
 
-/// A Mech's live walking and running ceilings: damage-only mobility with hot myomer,
-/// heat and boosters applied in whole MP, scaled for towed load, and map gravity last.
+/// A unit's live walking (cruising) and running (flanking) ceilings. A Mech's come from
+/// damage-only mobility with hot myomer, heat and boosters applied in whole MP; a vehicle's
+/// from its damage-adjusted cruising MP less extreme temperature. Either is then scaled for
+/// towed load, and map gravity applies last.
 pub(crate) fn throttle_envelope(
     world: &World,
     id: ObjectId,
     policy: super::SpeedPolicy,
 ) -> Result<super::SpeedEnvelope> {
+    if let Some(vehicle) = world.btech.vehicles().get(&id) {
+        let position = vehicle.position();
+        let base =
+            super::speed_bonus::vehicle_temperature(world, position, vehicle.speed_envelope());
+        let loaded = super::load::movement_maximum(world, id, base.running, policy.tsm_tow_bonus)?;
+        let factor = if base.running > 0.0 {
+            loaded / base.running
+        } else {
+            0.0
+        };
+        return super::speed_bonus::envelope_on_map(world, position, base.scaled(factor));
+    }
     let unit = world
         .btech
         .constructed_units()

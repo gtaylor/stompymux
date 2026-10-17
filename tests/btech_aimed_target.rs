@@ -86,13 +86,7 @@ async fn target_controls_share_anatomy_authority_and_saved_state() {
             assert_eq!(battle_aimed_section(&world, shooter).unwrap(), None);
             select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
             set_battle_aimed_section(&mut world, shooter, ObjectId(1), Some(section)).unwrap();
-            stop_battle_unit(
-                &mut world,
-                shooter,
-                ObjectId(1),
-                MovementRules::STANDARD.fall,
-            )
-            .unwrap();
+            stop_battle_unit(&mut world, shooter, ObjectId(1)).unwrap();
             assert_eq!(
                 battle_aimed_section(&world, shooter).unwrap(),
                 Some(expected)

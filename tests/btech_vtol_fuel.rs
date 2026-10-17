@@ -136,7 +136,8 @@ fn fuel_defaults_and_invalid_snapshots_are_checked_against_the_chassis() {
 fn overspeed_fuel_cost_depends_on_altitude_and_shutdown_does_not_draw_dice() {
     let base = aircraft(true, 5, 21.5, 0);
     let mut saved = serde_json::to_value(base).unwrap();
-    saved["motive_speed_loss"] = 182.75.into();
+    // An administrative one-MP ceiling leaves the aircraft overspeeding.
+    saved["propulsion"]["maximum"] = 10.75.into();
     saved["motion"]["desired_speed"] = 10.75.into();
     let base: Vehicle = serde_json::from_value(saved).unwrap();
     for (altitude, amount) in [(99, 2), (100, 1)] {

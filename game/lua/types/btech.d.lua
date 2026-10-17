@@ -336,7 +336,7 @@ function btech_unit.inspect(dbref) end
 ---@field triple_myomer_active boolean Derived from installed myomer and sampled excess heat.
 ---@field movement_maximum_speed number Current throttle ceiling, including active myomer.
 ---@field charge {target: integer?, elapsed: integer, distance: number} Persistent charge intent and movement counters.
----@field limb_recycle table<string, integer> Remaining physical recovery seconds by limb.
+---@field limb_recycle table<string, integer> Remaining seconds each section is tied up by a physical attack: its weapons cannot fire and no further physical attack can start.
 ---@field stagger Stagger
 ---@field posture "standing"|"prone"
 ---@field flooded_sections string[] Persistent flooded section names.
@@ -355,6 +355,7 @@ function btech_unit.inspect(dbref) end
 ---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 ---@field artillery_adjustment integer Saved correction for the current artillery target.
 ---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
+---@field section_fire table<string, integer> Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 ---@field tag TagState
 ---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
 ---@field scanner_perception integer Perception captured at startup completion.
@@ -492,8 +493,9 @@ function btech_unit.inspect(dbref) end
 ---@field turret_jammed boolean Recoverable turret rotation damage.
 ---@field turret_repairs integer[] Pending 60-second repair attempts.
 ---@field turret_locked boolean Turret damage prevents rotation.
----@field maximum_speed number Current maximum kph after motive damage.
----@field motive_speed_loss number Maximum speed lost to motive damage in kph.
+---@field maximum_speed number Current flanking kph after motive damage, temperature, load and gravity.
+---@field cruising_speed number Current cruising kph: the template cruising MP after the same modifiers; flank is cruising MP x 1.5 rounded up.
+---@field motive_mp_loss integer Cruising MP lost to motive damage, rotor hits and an engine hit.
 ---@field immobilized boolean Motive-system destruction prevents ground motion.
 ---@field under_bridge boolean Hovercraft beneath a bridge span.
 ---@field elevation integer|nil Ground support height; hovercraft float at water level.
@@ -682,7 +684,7 @@ function btech_unit.release(dbref, player) end
 ---@return boolean
 function btech_unit.start(dbref, player, fast) end
 
----Abort startup or shut down the assigned pilot's unit, releasing the cockpit.
+---Abort startup or shut down the assigned pilot's unit, releasing the cockpit. A Mech or vehicle must be stopped on the ground; it is refused while moving or in the air.
 ---@param dbref integer
 ---@param player integer
 ---@return boolean
@@ -692,7 +694,7 @@ function btech_unit.stop(dbref, player) end
 ---@field horizontal number Horizontal Euclidean range in hex heights.
 ---@field spatial number Euclidean range including signed ground elevation/depth.
 ---@field bearing number|nil Degrees clockwise from north; nil for coincident centers.
----@field hex_distance integer Minimum adjacent hex steps, without terrain costs.
+---@field hex_distance integer Minimum adjacent hex steps, without terrain costs; the weapon range, which elevation never adds to.
 
 ---Measure placed units on the same map. Does not check visibility or weapon eligibility.
 ---@param first integer
@@ -1220,8 +1222,8 @@ function btech_unit.perception(dbref) end
 ---@field weather string Current battlefield weather, as btech.map.weather_conditions names it.
 ---@field sight_range integer How far the unit sees under the light and weather, stretched to 30 by its own searchlight at night.
 ---@field lit_sight_range integer How far it sees a target lit by another source at night.
----@field sensor {systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil} Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep.
----@field probe {kind: ProbeKind, range: integer, status: PerceptionStatus}|nil Best installed active probe and how far it reveals hidden units.
+---@field sensor {systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil, probe_clan: boolean} Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep; probe_clan marks a probe that is Clan technology by its own slots.
+---@field probe {kind: ProbeKind, clan: boolean, range: integer, status: PerceptionStatus}|nil Best installed active probe, whether it is Clan technology by its own slots (a Clan-built Beagle is the Clan active probe), and how far it reveals hidden units.
 ---@field running boolean Stopped units perceive nothing.
 ---@field text string The report printed by the sensor command.
 
@@ -1397,8 +1399,8 @@ function btech_unit.autoturret(dbref, pilot) end
 ---@class AimModifiers
 ---@field indirect {spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
 ---@field gunnery integer
----@field distance number
----@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range; physical limits and firing visibility remain separate.
+---@field distance number Weapon range in hexes from the shooter's hex to the target's; elevation does not add to it.
+---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range in hexes; physical limits and firing visibility remain separate.
 ---@field range {bracket: string, modifier: integer}|nil
 ---@field attacker_movement integer
 ---@field spotting integer +1 while this unit spots for another unit's indirect fire.
@@ -2485,7 +2487,8 @@ function btech_unit.lock_hex(dbref, pilot, x, y, mode) end
 ---@field hex {x: integer, y: integer}
 ---@field mode 'unit_at_hex'|'hex'|'building'|'ignite'|'clear'
 ---@field visible boolean Current terrain visibility, separate from numeric aim.
----@field hex_bonus integer Zero for unit-at-hex, otherwise -4.
+---@field hex_bonus integer -4: every hex target is immobile.
+---@field terrain integer Woods, smoke and crops between the attacker (or the indirect-fire spotter) and the hex.
 ---@field subtotal integer|nil Nil beyond weapon range; numeric aim alone does not authorize firing.
 
 ---Inspect empty-terrain aim without dice, expenditure, or a fictitious target unit.
@@ -3076,7 +3079,7 @@ function btech_unit.fireswarm1(dbref, pilot, weapon) end
 ---@class SwarmReport
 ---@field launched integer
 ---@field remaining integer
----@field traveled number Cumulative distance, including a terminal leg that falls short.
+---@field traveled number Cumulative hexes flown, including a terminal leg that falls short.
 ---@field hops SwarmHop[] Ordered attacks, at most eleven.
 ---@field notices Notice[]
 ---@field broadcasts Notice[]
@@ -3937,7 +3940,7 @@ function btech_system.units_in_zone(zone) end
 ---@field friendly boolean Whether the contact is allied.
 ---@field identified boolean Whether sensors identified the contact well enough to determine allegiance.
 ---@field known_destroyed boolean Whether the visible contact status reports destruction.
----@field range number Observed range in map units.
+---@field range number Weapon range in hexes; the contact's height does not add to it.
 ---@field network_range number|nil Shared C3/C3i aiming distance; nil without an active network.
 ---@field relayed boolean Seen only by network peers; the unit cannot lock or fire on it yet.
 ---@field seen_at integer Simulation time of the observation.

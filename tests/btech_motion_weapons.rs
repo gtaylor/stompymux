@@ -1623,7 +1623,7 @@ async fn unjam_native_lua_countdown_outcomes_and_restart() {
             world.btech.set_unit_ammunition_bin(id, 0, 0).unwrap();
         }
         if outcome == "shutdown" {
-            stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         }
         let supply = world.btech.constructed_units()[&id].ammunition()[0];
         persistence::save(&config.database(), &world).await.unwrap();
@@ -4722,7 +4722,7 @@ async fn firing_observers_hide_unseen_participants_and_replay_transactionally() 
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn power_observers_receive_completion_and_moving_shutdown_only() {
+async fn power_observers_receive_completion_and_never_a_shutdown_fall() {
     use stompymux_rs::*;
     let (_dir, config, mut base, subject, observer) = lock_fixture().await;
     let witness = base.create(&config, "Power witness".into(), Kind::Player);
@@ -4752,7 +4752,7 @@ async fn power_observers_receive_completion_and_moving_shutdown_only() {
             serde_json::json!({"state":"starting","remaining":remaining});
         world.btech = serde_json::from_value(state).unwrap();
         let mut abort = world.clone();
-        let notices = stop_battle_unit(&mut abort, subject, ObjectId(1), fall_rules()).unwrap();
+        let notices = stop_battle_unit(&mut abort, subject, ObjectId(1)).unwrap();
         assert!(notices.iter().all(|notice| notice.unit == subject));
         assert!(advance_battle_units(&mut abort, 0, true).is_empty());
         for _ in 1..remaining {
@@ -4797,9 +4797,16 @@ async fn power_observers_receive_completion_and_moving_shutdown_only() {
         assert_eq!(lua.world().btech, world.btech);
         assert!(lua.drain_outbox().is_empty());
         commands::run(&native, &config, ObjectId(1), 1, "shutdown").unwrap();
-        lua.eval_callback::<()>(&format!("btech.unit.stop({},1)", subject.0))
-            .unwrap();
+        // A moving Mech refuses to shut down (Total Warfare p. 160), so it never falls.
+        assert_eq!(
+            lua.eval_callback::<()>(&format!("btech.unit.stop({},1)", subject.0))
+                .is_ok(),
+            speed == 0.0
+        );
         assert_eq!(native.world().btech, lua.world().btech);
+        if speed != 0.0 {
+            assert_eq!(native.world().btech, world.btech);
+        }
         let observed = |scripts: &Scripts| {
             scripts
                 .drain_outbox()
@@ -4810,12 +4817,9 @@ async fn power_observers_receive_completion_and_moving_shutdown_only() {
         };
         let messages = observed(&native);
         assert_eq!(messages, observed(&lua));
-        assert_eq!(
-            messages
-                .iter()
-                .filter(|text| text.ends_with("stops in mid-motion, and falls!"))
-                .count(),
-            usize::from(speed > 10.75)
+        assert!(
+            !messages.iter().any(|text| text.contains("mid-motion")),
+            "{messages:?}"
         );
     }
 }
@@ -7254,7 +7258,7 @@ async fn cockpit_status_native_lua_sections_damage_and_restart() {
             .unwrap()
             .contains(&format!("{:2}[reset]", old - 1))
     );
-    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     let after = battle_unit_status(&world, id, "").unwrap();
     assert!(after.contains("SHUTDOWN"));
     persistence::save(&config.database(), &world).await.unwrap();
@@ -7266,6 +7270,31 @@ async fn cockpit_status_native_lua_sections_damage_and_restart() {
             .unwrap()
             .contains("X, Y, Z:  0,  0,  0")
     );
+}
+
+/// The compact export's walking figure is the damaged walking MP, not two thirds of the
+/// running MP: a Jenner that has lost a leg walks at 1 MP and cannot run (Total Warfare
+/// pp. 60, 122), so it exports 1/1 where two thirds of its 1 MP would have read 0.
+#[tokio::test]
+async fn compact_status_export_reports_the_damaged_walking_mp() {
+    use stompymux_rs::*;
+    let (_dir, _config, mut world, id) = fixture('.').await;
+    let mut unit = world.btech.constructed_units()[&id].clone();
+    let _ = unit.damage_phase(MechSection::LeftLeg, u16::MAX, DamagePhase::Internal);
+    assert_eq!(
+        unit.mobility().envelope(),
+        SpeedEnvelope {
+            walking: 10.75,
+            running: 10.75
+        }
+    );
+    let unit = serde_json::to_value(unit).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| *record = unit)
+        .unwrap();
+    let header = battle_unit_status(&world, id, "N").unwrap();
+    assert!(header.starts_with("JR7-D Jenner 35 1/1/"), "{header}");
 }
 
 /// Compact status preserves row-order ammunition pairing, empty pruning and option precedence.
@@ -7362,7 +7391,7 @@ async fn cockpit_status_reports_airborne_and_pending_state_without_advancing() {
     persistence::save(&config.database(), &world).await.unwrap();
     let loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(battle_unit_status(&loaded, id, "info").unwrap(), status);
-    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+    power_down_battle_unit(&mut world, id).unwrap();
     assert!(world.btech.constructed_units()[&id].free_fall().is_some());
     assert!(
         battle_unit_status(&world, id, "info")
@@ -7485,7 +7514,7 @@ async fn kick_native_lua_hit_miss_rollback_and_saved_recovery() {
         let mut world = lua.world().clone();
         assert_eq!(
             world.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
-            60
+            30
         );
         let before = world.btech.clone();
         assert!(
@@ -7500,9 +7529,9 @@ async fn kick_native_lua_hit_miss_rollback_and_saved_recovery() {
         let mut loaded = persistence::load(&config.database()).await.unwrap();
         assert_eq!(
             loaded.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
-            43
+            13
         );
-        for _ in 0..42 {
+        for _ in 0..12 {
             advance_battle_recycle(&mut loaded);
         }
         assert!(
@@ -7592,13 +7621,13 @@ async fn kick_roll_matrix(target_seeds: std::ops::Range<u8>) {
             );
             world.validate(&config).unwrap();
             if hit {
-                stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
                 for _ in 0..61 {
                     advance_battle_recycle(&mut world);
                 }
                 assert_eq!(
                     world.btech.constructed_units()[&id].limb_recycle()[&MechSection::RightLeg],
-                    60
+                    30
                 );
                 assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
                 support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -8157,7 +8186,7 @@ async fn trip_rolls_balance_and_glancing_have_no_direct_impact() {
         }
         assert_eq!(
             world.btech.constructed_units()[&id].limb_recycle()[&MechSection::LeftLeg],
-            60
+            30
         );
         world.validate(&config).unwrap();
     }

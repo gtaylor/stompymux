@@ -120,7 +120,7 @@ fn probe_line(profile: &PerceptionProfile) -> String {
         .unwrap_or_default();
     format!(
         "Probe:   {}, {sweeps}reveals hidden units within {} hexes{}",
-        probe.kind.name(),
+        probe.kind.installed_name(probe.clan),
         probe.range,
         status_suffix(probe.status)
     )
@@ -173,10 +173,11 @@ mod tests {
                 sweep: Some(6),
                 band: Some(super::super::SensorBand::Medium),
                 probe: Some(ActiveProbe::Beagle),
-                clan: false,
+                probe_clan: false,
             },
             probe: Some(ProbeProfile {
                 kind: ActiveProbe::Beagle,
+                clan: false,
                 range: 4,
                 status: PerceptionStatus::Ready,
             }),
@@ -219,6 +220,7 @@ mod tests {
             },
             probe: Some(ProbeProfile {
                 kind: ActiveProbe::Beagle,
+                clan: false,
                 range: 4,
                 status: PerceptionStatus::Damaged,
             }),
@@ -252,6 +254,7 @@ mod tests {
             },
             probe: Some(ProbeProfile {
                 kind: ActiveProbe::Beagle,
+                clan: false,
                 range: 4,
                 status: PerceptionStatus::Interference,
             }),

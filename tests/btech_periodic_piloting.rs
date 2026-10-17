@@ -338,7 +338,7 @@ async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
     for template in firing::templates() {
         let (_dir, config, mut base, unit, _, _) =
             firing::fixture_with_target(&template, None, &template).await;
-        stop_battle_unit(&mut base, unit, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut base, unit, ObjectId(1)).unwrap();
         let recovery_seed = (0..=255)
             .find(|&seed| Dice::seeded([seed; 32]).two_d6() < 7)
             .unwrap();

@@ -1028,10 +1028,61 @@ slots = [
         );
         let ice = parse(&lasers);
         assert_eq!(ice.mass().unwrap().power_amplifiers, 512);
-        assert_eq!(ice.fixed_system_mass(System::Case), 512);
+        assert_eq!(
+            ice.fixed_system_mass(System::Case, ice.has_special("Clan")),
+            512
+        );
         let fusion = parse(&lasers.replace("engine = \"ice\"", "tech_base = \"clan\""));
         assert_eq!(fusion.mass().unwrap().power_amplifiers, 0);
-        assert_eq!(fusion.fixed_system_mass(System::Case), 0);
+        assert_eq!(
+            fusion.fixed_system_mass(System::Case, fusion.has_special("Clan")),
+            0
+        );
+    }
+
+    /// Beagle, ECM, CASE II and machine gun array masses follow each slot's own `IS.` or `CL.`
+    /// prefix, and the chassis's base only when the slot states none, as Mech mass does: a
+    /// Clan active probe weighs a ton on an Inner Sphere tank and a Beagle a ton and a half on
+    /// a Clan one (TechManual pp. 204-238).
+    #[test]
+    fn either_base_systems_weigh_by_their_own_slot() {
+        let inner_sphere = parse(ZHUKOV);
+        let clan = parse(&ZHUKOV.replace("engine = \"ice\"", "tech_base = \"clan\""));
+        assert!(clan.has_special("Clan") && !inner_sphere.has_special("Clan"));
+        let mass = |template: &VehicleTemplate, system, tech_base| {
+            let loadout = VehicleLoadout::resolve(template).unwrap();
+            let part = super::super::SystemCritical {
+                location: super::super::CriticalLocation {
+                    section: VehicleSection::Front,
+                    slot: 0,
+                },
+                system,
+                tech_base,
+                links: Vec::new(),
+            };
+            template.system_mass(&loadout, &part)
+        };
+        let (is, cl) = (
+            Some(super::super::TechBase::InnerSphere),
+            Some(super::super::TechBase::Clan),
+        );
+        for (system, inner_sphere_mass, clan_mass) in [
+            (System::BeagleProbe, 1536, 1024),
+            (System::Ecm, 1536, 1024),
+            (System::CaseIi, 1024, 512),
+            (System::MachineGunArray, 512, 256),
+        ] {
+            for template in [&inner_sphere, &clan] {
+                assert_eq!(mass(template, system, is), inner_sphere_mass, "{system:?}");
+                assert_eq!(mass(template, system, cl), clan_mass, "{system:?}");
+            }
+            assert_eq!(
+                mass(&inner_sphere, system, None),
+                inner_sphere_mass,
+                "{system:?}"
+            );
+            assert_eq!(mass(&clan, system, None), clan_mass, "{system:?}");
+        }
     }
 
     /// A vehicle flamer needs no heat sinks, though it counts as an energy weapon in play

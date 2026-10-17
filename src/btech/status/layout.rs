@@ -334,7 +334,7 @@ fn targeting(lines: &mut Vec<String>, world: &World, source: TargetSource) -> Re
                 lines.push(format!(
                     "Target: {}\t   Range: {:.1} hexes   Bearing: {} deg",
                     display_id(world, lock.target),
-                    range.spatial,
+                    range.hexes(),
                     range.bearing.unwrap_or(0.0) as i32
                 ));
                 let observer = btech::scanner::scanner_unit(world, source.unit)

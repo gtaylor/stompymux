@@ -50,23 +50,15 @@ async fn acceleration_crosses_hexes_and_restart_preserves_fractional_motion() {
             .abs()
             < 1e-10
     );
+    // A moving Mech cannot shut down (Total Warfare p. 160), so it cannot fall that way.
     let mut moving_shutdown = world.clone();
-    stop_battle_unit(&mut moving_shutdown, id, ObjectId(1), RULES.fall).unwrap();
-    assert_eq!(
-        moving_shutdown.btech.constructed_units()[&id].posture(),
-        stompymux_rs::Posture::Prone
-    );
+    assert!(stop_battle_unit(&mut moving_shutdown, id, ObjectId(1)).is_err());
+    assert_eq!(moving_shutdown.btech, world.btech);
     set_battle_speed(&mut world, id, ObjectId(1), 0.0).unwrap();
     for _ in 0..21 {
         advance_battle_motion(&mut world, RULES).unwrap();
     }
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert_eq!(world.btech.constructed_units()[&id].power(), Power::Off);
     persistence::save(&config.database(), &world).await.unwrap();
 }
@@ -293,13 +285,7 @@ async fn weapon_expenditure_is_atomic_and_recycle_pauses_through_shutdown_and_re
     assert_eq!(world.btech, before.btech);
     let laser = spend_battle_weapon(&mut world, id, ObjectId(1), 0).unwrap();
     assert!(laser.ammunition.is_empty());
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     for _ in 0..20 {
         assert!(advance_battle_recycle(&mut world).is_empty());
     }
@@ -377,13 +363,7 @@ async fn weapon_heat_survives_restart_and_cools_after_shutdown() {
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
     assert_eq!(world.btech.constructed_units()[&id].heat(), heat);
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     for _ in 0..10 {
         advance_battle_heat(&mut world);
     }
@@ -446,13 +426,7 @@ async fn shutdown_unit_receives_server_cooling_without_active_recycle() {
         .run_until(async {
             let (_dir, config, mut world, id) = fixture('.').await;
             stompymux_rs::spend_battle_weapon(&mut world, id, ObjectId(1), 0).unwrap();
-            stop_battle_unit(
-                &mut world,
-                id,
-                ObjectId(1),
-                stompymux_rs::MovementRules::STANDARD.fall,
-            )
-            .unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
             persistence::save(&config.database(), &world).await.unwrap();
             let (_address, shutdown, task, _lua, mut heartbeats) =
                 support::start(&config, std::rc::Rc::new(std::cell::Cell::new(1))).await;
@@ -646,13 +620,7 @@ async fn environmental_heat_wakes_stationary_server_simulation() {
             stompymux_rs::destroy_battle_critical(&mut world, id, engine).unwrap();
             assert_eq!(world.btech.constructed_units()[&id].heat().stored, 0.0);
             let mut off = world.clone();
-            stop_battle_unit(
-                &mut off,
-                id,
-                ObjectId(1),
-                stompymux_rs::MovementRules::STANDARD.fall,
-            )
-            .unwrap();
+            stop_battle_unit(&mut off, id, ObjectId(1)).unwrap();
             assert!(!off.btech.constructed_units()[&id].heat_active(&off));
             persistence::save(&config.database(), &world).await.unwrap();
             let (_address, shutdown, task, _lua, mut heartbeats) =
@@ -847,13 +815,7 @@ async fn stun_preserves_reverse_throttle_and_expires_silently_after_shutdown() {
     );
     let (_dir, _config, mut world, id) = fixture('.').await;
     stompymux_rs::stun_battle_unit(&mut world, id).unwrap();
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     for _ in 0..10 {
         assert!(stompymux_rs::advance_battle_stun(&mut world).is_empty());
     }
@@ -1077,13 +1039,7 @@ async fn torso_and_arm_facing_are_guarded_and_persistent() {
     assert_eq!(world.btech.constructed_units()[&id].facing(), facing);
     assert!(facing.arms_flipped);
     assert_eq!(facing.torso, Torso::Center);
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     let before = world.btech.clone();
     assert!(flip_battle_arms(&mut world, id, ObjectId(1)).is_err());
@@ -1199,13 +1155,7 @@ async fn perception_query_composes_live_terrain_and_spatial_range_without_acquir
     assert_eq!(battle_perceive(&dark, id, target).unwrap(), None);
     assert!(dark.btech.constructed_units()[&id].contacts().is_empty());
     assert_eq!(world.btech, before);
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     for unit in [id, target] {
         stompymux_rs::remove_battle_unit(&mut world, unit, ObjectId(config.start())).unwrap();
     }
@@ -1562,13 +1512,7 @@ async fn tactical_scanners_use_saved_signatures_and_startup_perception() {
         world.btech.constructed_units()[&id].scanner_perception(),
         18
     );
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -1795,13 +1739,7 @@ async fn contact_display_filters_unacquired_and_stale_targets_without_rerolls() 
             .len(),
         2
     );
-    stop_battle_unit(
-        &mut scripts.world_mut(),
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
     assert!(
         support::run_text(&scripts, &config, ObjectId(1), 1, "contacts")
             .contains("Start the unit first")
@@ -1905,13 +1843,7 @@ async fn target_selection_survives_light_changes_and_clears_on_shutdown_and_expl
     select_battle_target(&mut world, id, ObjectId(1), None).unwrap();
     assert!(world.btech.constructed_units()[&id].target_lock().is_none());
     select_battle_target(&mut world, id, ObjectId(1), Some(target)).unwrap();
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert!(world.btech.constructed_units()[&id].target_lock().is_none());
     world.validate(&config).unwrap();
 }
@@ -2800,13 +2732,7 @@ async fn stopped_and_unconscious_piloting_checks_fail_without_consuming_dice() {
     use stompymux_rs::roll_battle_piloting;
     let (_dir, _config, world, id) = fixture('.').await;
     let mut stopped = world.clone();
-    stop_battle_unit(
-        &mut stopped,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut stopped, id, ObjectId(1)).unwrap();
     let before = stopped.btech.clone();
     let check = roll_battle_piloting(&mut stopped, id, -100, true).unwrap();
     assert!(!check.success);
@@ -3824,13 +3750,7 @@ async fn damage_balance_ammunition_fall_precedes_explosion_pilot_injury() {
     let (_dir, config, mut world, id) = fixture_assets(&source, template).await;
     // This scenario needs depleted live ammunition, independently of template initialization.
     world.btech.set_unit_ammunition_bin(id, 0, 1).unwrap();
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     let _injury = stompymux_rs::injure_battle_tactical_pilot(&mut world, id, 3, false).unwrap();
@@ -4179,13 +4099,7 @@ async fn prone_fire_cannot_cross_the_waterline_before_expenditure() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     place_battle_unit(&mut world, id, map, 5, 5).unwrap();
     place_battle_unit(&mut world, target, map, 5, 4).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
@@ -4636,13 +4550,7 @@ async fn water_flooded_equipment_stays_disabled_after_restart_and_leaving_water(
     persistence::save(&config.database(), &world).await.unwrap();
     let mut loaded = persistence::load(&config.database()).await.unwrap();
     assert_eq!(loaded.btech, world.btech);
-    stop_battle_unit(
-        &mut loaded,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut loaded, id, ObjectId(1)).unwrap();
     let map = loaded.create(&config, "Dry repair field".into(), Kind::Room);
     let source = format!("12 12\n{}", format!("{}\n", ".0".repeat(12)).repeat(12));
     create_battle_map(
@@ -6541,7 +6449,8 @@ async fn pulse_accuracy_changes_a_miss_to_a_glancing_hit() {
     }
 }
 
-/// Snub damage follows live fractional range through native/Lua fire and restart.
+/// Snub damage follows the hex range through native/Lua fire and restart: a target offset
+/// inside its hex is still at that hex's range (Total Warfare p. 109).
 #[tokio::test]
 async fn snub_ppc_range_damage_native_lua_and_restart() {
     use stompymux_rs::*;
@@ -6557,7 +6466,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
     )
     .unwrap();
     support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
-    stop_battle_unit(&mut base, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut base, id, ObjectId(1)).unwrap();
     place_battle_unit(&mut base, id, map, 1, 25).unwrap();
     assign_battle_pilot(&mut base, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -6578,12 +6487,13 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
     // Fix scanner and damage streams so range assertions cannot fail on random contact loss.
     shot_seed(&mut base, id, 1);
     shot_seed(&mut base, target, 1);
-    for (distance, damage) in [
-        (9.0_f64, 10_u16),
-        (9.001, 8),
-        (13.0, 8),
-        (13.001, 5),
-        (15.0, 5),
+    for (distance, hexes, damage) in [
+        (9.0_f64, 9.0, 10_u16),
+        (9.3, 9.0, 10),
+        (10.0, 10.0, 8),
+        (13.0, 13.0, 8),
+        (14.0, 14.0, 5),
+        (15.0, 15.0, 5),
     ] {
         let mut world = base.clone();
         place_battle_unit(&mut world, target, map, 1, (25.0 - distance).round() as i64).unwrap();
@@ -6623,7 +6533,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
             ))
             .unwrap();
         let aim: mlua::Table = report.get("aim").unwrap();
-        assert!((aim.get::<f64>("distance").unwrap() - distance).abs() < 1e-9);
+        assert_eq!(aim.get::<f64>("distance").unwrap(), hexes, "{distance}");
         let salvo: mlua::Table = report
             .get::<mlua::Table>("salvo")
             .unwrap()
@@ -7624,7 +7534,8 @@ async fn heavy_gauss_recoil_weight_classes_misses_and_atomic_replay_80_tons() {
     heavy_gauss_recoil_matrix(&[(80, -1)]).await;
 }
 
-/// Heavy Gauss damage uses unrounded range through native/Lua firing and restart.
+/// Heavy Gauss damage follows the hex range through native/Lua firing and restart: a target
+/// offset inside its hex is still at that hex's range (Total Warfare p. 109).
 #[tokio::test]
 async fn heavy_gauss_range_damage_native_lua_and_restart() {
     use stompymux_rs::*;
@@ -7640,7 +7551,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
     )
     .unwrap();
     support::seed_object_dice(&mut base, map, support::FIXTURE_DICE_SEED);
-    stop_battle_unit(&mut base, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut base, id, ObjectId(1)).unwrap();
     place_battle_unit(&mut base, id, map, 1, 25).unwrap();
     assign_battle_pilot(&mut base, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut base, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -7693,12 +7604,13 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
     // Fix scanner and damage streams so range assertions cannot fail on random contact loss.
     shot_seed(&mut base, id, 1);
     shot_seed(&mut base, target, 1);
-    for (distance, damage) in [
-        (6.0_f64, 25_u16),
-        (6.001, 20),
-        (13.0, 20),
-        (13.001, 10),
-        (20.0, 10),
+    for (distance, hexes, damage) in [
+        (6.0_f64, 6.0, 25_u16),
+        (6.3, 6.0, 25),
+        (7.0, 7.0, 20),
+        (13.0, 13.0, 20),
+        (14.0, 14.0, 10),
+        (20.0, 20.0, 10),
     ] {
         let mut world = base.clone();
         place_battle_unit(&mut world, target, map, 1, (25.0 - distance).round() as i64).unwrap();
@@ -7738,7 +7650,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
             ))
             .unwrap();
         let aim: mlua::Table = report.get("aim").unwrap();
-        assert!((aim.get::<f64>("distance").unwrap() - distance).abs() < 1e-9);
+        assert_eq!(aim.get::<f64>("distance").unwrap(), hexes, "{distance}");
         let salvo: mlua::Table = report
             .get::<mlua::Table>("salvo")
             .unwrap()

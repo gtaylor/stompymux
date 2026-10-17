@@ -103,7 +103,9 @@ pub struct Vehicle {
     pub(super) live_mass: super::live_mass::LiveMass,
     #[serde(default)]
     pub(super) critical_conditions: super::critical_conditions::CriticalConditions,
-    motive_speed_loss: f64,
+    /// Cruising MP lost to motive damage, rotor hits and an engine hit (Total Warfare pp. 193,
+    /// 195, 197), taken from the template's own cruising MP.
+    motive_mp_loss: u32,
     immobilized: bool,
     pub(super) turret_offset: f64,
     pub(super) automatic_turret: bool,
@@ -298,7 +300,7 @@ struct VehicleRecord {
     pub(super) live_mass: super::live_mass::LiveMass,
     #[serde(default)]
     pub(super) critical_conditions: super::critical_conditions::CriticalConditions,
-    motive_speed_loss: f64,
+    motive_mp_loss: u32,
     immobilized: bool,
     turret_offset: f64,
     #[serde(default)]
@@ -442,7 +444,7 @@ super::saved_parts::saved_parts!(Vehicle {
         propulsion,
         live_mass,
         critical_conditions,
-        motive_speed_loss,
+        motive_mp_loss,
         immobilized,
         automatic_turret,
         turret_locked,
@@ -545,7 +547,9 @@ impl Vehicle {
         let Some(motion) = self.motion() else {
             return Ok(());
         };
-        motion.validate(super::speed_bonus::saved_limit(self.maximum_speed()) + 10.75)?;
+        motion.validate_within(super::vehicle_speed::paved_headroom(
+            self.retained_envelope(),
+        ))?;
         ensure!(
             self.power() == super::Power::Running
                 || !motion.translating()
@@ -932,7 +936,7 @@ impl Vehicle {
             propulsion: Default::default(),
             live_mass: Default::default(),
             critical_conditions: Default::default(),
-            motive_speed_loss: 0.0,
+            motive_mp_loss: 0,
             immobilized: false,
             turret_offset: 0.0,
             automatic_turret: false,
@@ -1053,7 +1057,7 @@ impl Vehicle {
     /// working and a surviving turret locks in place.
     pub(super) fn disable_engine(&mut self) {
         self.engine_destroyed = true;
-        self.motive_speed_loss = self.definition.max_speed;
+        self.motive_mp_loss = self.definition.walk_mp;
         self.immobilized = true;
         if self.turret_heading().is_some() {
             self.turret_locked = true;
@@ -1137,9 +1141,9 @@ impl Vehicle {
         true
     }
 
-    /// Current motive damage, expressed as lost maximum speed in kph.
-    pub fn motive_speed_loss(&self) -> f64 {
-        self.motive_speed_loss
+    /// Cruising MP lost to motive damage, rotor hits and an engine hit.
+    pub fn motive_mp_loss(&self) -> u32 {
+        self.motive_mp_loss
     }
 
     /// Whether a motive-system hit has stopped all ground motion.
@@ -1147,20 +1151,10 @@ impl Vehicle {
         self.immobilized
     }
 
-    /// Available throttle after motive damage, independently of the owned construction definition.
-    pub fn maximum_speed(&self) -> f64 {
-        if self.immobilized
-            || self.rotor_destroyed()
-            || self.is_destroyed()
-            || self.definition.movement == super::VehicleMovement::Stationary
-        {
-            return 0.0;
-        }
-        self.propulsion
-            .maximum((self.definition.max_speed - self.motive_speed_loss).max(0.0))
-    }
-
     /// Apply an explicit motive consequence; damage adapters own notices and the enclosing transaction.
+    /// Moderate and heavy motive damage and rotor hits take Cruising MP away, and the flank
+    /// speed refigured from what is left is the new top speed (Total Warfare pp. 53, 193, 197).
+    /// Both throttle and actual speed are cut back into the reduced envelope at once.
     pub fn apply_motive_hit(&mut self, hit: super::VehicleMotiveHit) {
         if self.immobilized
             || matches!(
@@ -1173,29 +1167,21 @@ impl Vehicle {
         if hit == super::VehicleMotiveHit::Immobilize {
             self.immobilized = true;
         } else {
-            let remaining = (self.definition.max_speed - self.motive_speed_loss).max(0.0);
-            let lost = super::vehicle_motive_effects::flank_speed_lost(remaining, hit);
-            self.propulsion.lower(lost);
-            self.motive_speed_loss = (self.motive_speed_loss + lost).min(self.definition.max_speed);
+            let cruising = self.cruising_mp();
+            let reduced = super::vehicle_motive_effects::cruising_mp_after(cruising, hit);
+            let flank = |mp: u32| super::SpeedEnvelope::from_walking_mp(f64::from(mp)).running;
+            // An administrative ceiling loses the same flank speed the derived one does.
+            self.propulsion.lower(flank(cruising) - flank(reduced));
+            self.motive_mp_loss += cruising - reduced;
         }
-        let maximum = self.maximum_speed();
-        if maximum == 0.0 {
+        let envelope = self.speed_envelope();
+        if envelope.is_stopped() {
             self.halt();
             return;
         }
         if let Some(motion) = &mut self.motion {
-            let direction = if motion.desired_speed < -0.1 {
-                -1.0
-            } else {
-                1.0
-            };
-            let limit = maximum * if direction < 0.0 { 2.0 / 3.0 } else { 1.0 };
-            if motion.desired_speed.abs() > limit {
-                motion.desired_speed = limit * direction;
-            }
-            if motion.speed.abs() > limit {
-                motion.speed = limit * direction;
-            }
+            motion.desired_speed = envelope.clamp(motion.desired_speed);
+            motion.speed = envelope.clamp(motion.speed);
         }
     }
 
@@ -1700,7 +1686,7 @@ impl Vehicle {
             propulsion: record.propulsion,
             live_mass: record.live_mass,
             critical_conditions: record.critical_conditions,
-            motive_speed_loss: record.motive_speed_loss,
+            motive_mp_loss: record.motive_mp_loss,
             immobilized: record.immobilized,
             turret_offset: record.turret_offset,
             automatic_turret: record.automatic_turret,
@@ -1952,10 +1938,8 @@ impl Vehicle {
             "Vehicle motion and position must agree"
         );
         ensure!(
-            self.motive_speed_loss.is_finite()
-                && self.motive_speed_loss >= 0.0
-                && self.motive_speed_loss <= self.definition.max_speed,
-            "Invalid vehicle motive speed loss"
+            self.motive_mp_loss <= self.definition.walk_mp,
+            "Invalid vehicle motive damage"
         );
         self.critical_conditions.validate(None)?;
         self.live_mass.validate()?;
@@ -1969,16 +1953,17 @@ impl Vehicle {
                     .is_none_or(|motion| !motion.active()),
             "Rotorless aircraft retains horizontal motion"
         );
-        let maximum = super::speed_bonus::saved_limit(self.maximum_speed());
+        let retained = self.retained_envelope();
         if let Some(motion) = self.motion {
             let propelled = motion.propelled(self.power)?;
-            propelled.validate(maximum + 10.75)?;
+            propelled.validate_within(super::vehicle_speed::paved_headroom(retained))?;
             ensure!(
                 self.maximum_speed() > 0.0 || !propelled.active(),
                 "Immobile vehicle retains motion"
             );
             ensure!(
-                motion.desired_speed >= -maximum * 2.0 / 3.0 && motion.desired_speed <= maximum,
+                motion.desired_speed >= -retained.walking
+                    && motion.desired_speed <= retained.running,
                 "Invalid vehicle throttle"
             );
             let position = self.position.expect("validated placement");

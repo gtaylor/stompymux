@@ -43,8 +43,9 @@ pub(super) fn on_map(
     }
 }
 
-/// Apply map gravity to both ceilings of a Mech's envelope. Gravity is the last movement
-/// modifier (Tactical Operations p. 53), so it scales what equipment and heat left.
+/// Apply map gravity to both ceilings of a unit's envelope. Gravity is the last movement
+/// modifier (Tactical Operations p. 53), so it scales what equipment, heat, temperature
+/// and load left.
 pub(super) fn envelope_on_map(
     world: &crate::World,
     position: Option<super::Position>,
@@ -56,30 +57,32 @@ pub(super) fn envelope_on_map(
     })
 }
 
-/// Apply map gravity and then extreme temperature to a vehicle's speed: beyond −30 °C or
-/// 50 °C a vehicle loses a cruising MP for every started ten degrees, and its flank speed is
-/// recomputed from the cruising speed left.
-pub(super) fn vehicle_on_map(
+/// Apply extreme temperature to a vehicle's damage-adjusted envelope: beyond −30 °C or 50 °C
+/// a vehicle loses a cruising MP for every started ten degrees, and its flank speed is
+/// recomputed from the cruising speed left (Tactical Operations: Advanced Rules p. 60). The
+/// loss is in whole MP, before towed load and gravity scale the result.
+pub(super) fn vehicle_temperature(
     world: &crate::World,
     position: Option<super::Position>,
-    speed: f64,
-) -> Result<f64> {
-    let speed = on_map(world, position, speed)?;
+    envelope: super::SpeedEnvelope,
+) -> super::SpeedEnvelope {
     let Some(map) = position.and_then(|position| world.btech.maps().get(&position.map)) else {
-        return Ok(speed);
+        return envelope;
     };
-    Ok(temperature_limited(speed, map.temperature()))
+    temperature_limited(envelope, map.temperature())
 }
 
-/// A vehicle's top speed in km/h at `temperature`, starting from `speed`.
-fn temperature_limited(speed: f64, temperature: i8) -> f64 {
+/// A vehicle's envelope at `temperature`, starting from `envelope`.
+fn temperature_limited(envelope: super::SpeedEnvelope, temperature: i8) -> super::SpeedEnvelope {
     let steps = super::extreme_temperature_steps(temperature).unsigned_abs();
-    if steps == 0 || speed <= 0.0 {
-        return speed;
+    if steps == 0 || envelope.is_stopped() {
+        return envelope;
     }
-    let cruising = (speed / 1.5 / 10.75).round_ties_even();
-    let remaining = (cruising - f64::from(steps)).max(0.0);
-    ((remaining * 1.5).ceil() * 10.75).min(speed)
+    let limited = envelope.with_walking_mp_delta(-f64::from(steps));
+    if limited.walking <= 0.0 {
+        return super::SpeedEnvelope::STOPPED;
+    }
+    limited
 }
 
 /// Environmental rules operate last and retain single-precision arithmetic.
@@ -102,14 +105,24 @@ mod tests {
     /// with flank speed recomputed from what is left.
     #[test]
     fn extreme_temperatures_cost_vehicles_cruising_mp() {
-        // A 5/8 vehicle: 86 km/h flank.
-        assert_eq!(temperature_limited(86.0, 20), 86.0);
-        assert_eq!(temperature_limited(86.0, 50), 86.0);
-        assert_eq!(temperature_limited(86.0, 55), 64.5);
-        assert_eq!(temperature_limited(86.0, -40), 64.5);
-        assert_eq!(temperature_limited(86.0, -41), 53.75);
-        assert_eq!(temperature_limited(86.0, i8::MIN), 0.0);
-        assert_eq!(temperature_limited(0.0, i8::MIN), 0.0);
+        let mp = |envelope: super::super::SpeedEnvelope| {
+            (envelope.walking / 10.75, envelope.running / 10.75)
+        };
+        // A 5/8 vehicle: 53.75 km/h cruising, 86 km/h flank.
+        let tank = super::super::SpeedEnvelope::from_walking_mp(5.0);
+        assert_eq!(mp(temperature_limited(tank, 20)), (5.0, 8.0));
+        assert_eq!(mp(temperature_limited(tank, 50)), (5.0, 8.0));
+        assert_eq!(mp(temperature_limited(tank, 55)), (4.0, 6.0));
+        assert_eq!(mp(temperature_limited(tank, -40)), (4.0, 6.0));
+        assert_eq!(mp(temperature_limited(tank, -41)), (3.0, 5.0));
+        assert_eq!(
+            temperature_limited(tank, i8::MIN),
+            super::super::SpeedEnvelope::STOPPED
+        );
+        assert_eq!(
+            temperature_limited(super::super::SpeedEnvelope::STOPPED, i8::MIN),
+            super::super::SpeedEnvelope::STOPPED
+        );
     }
 
     /// Gravity scales speed inversely, no lighter than half a G; invalid gravity is rejected.

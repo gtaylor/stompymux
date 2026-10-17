@@ -201,104 +201,49 @@ async fn vehicle_fall_fractures_ice_before_outer_damage_and_replays_nested_falls
     world.validate(&config).unwrap();
 }
 
-/// A shutdown tumble preserves vehicle and neighboring Mech checks through nested ice breakage.
+/// A moving tank on ice cannot be shut down by its pilot, so shutting down never tumbles it
+/// through the ice: the command and Lua refuse and change nothing, and the ice holds.
 #[tokio::test]
-async fn vehicle_shutdown_ice_cascade_keeps_each_pilots_feedback_private() {
+async fn moving_vehicle_shutdown_on_ice_is_refused_without_breaking_it() {
     let (_dir, config, mut world, map, ids) = fixture(Terrain::Ice, 3).await;
     let tank = ids[1];
-    for (unit, pilot) in [(tank, ObjectId(1)), (ids[0], ObjectId(2))] {
-        world.objects.get_mut(&pilot).unwrap().location = Some(unit);
-        world
-            .objects
-            .get_mut(&pilot)
-            .unwrap()
-            .flags
-            .insert(Flag::Connected);
-        assign_battle_pilot(&mut world, unit, pilot).unwrap();
-        support::seed_object_dice(&mut world, pilot, support::FIXTURE_DICE_SEED);
-        start_battle_unit(&mut world, unit, pilot, true).unwrap();
-        for _ in 0..5 {
-            advance_battle_units(&mut world, 0, true);
-        }
-    }
-    let passenger = world.create(&config, "Crash passenger".into(), Kind::Player);
-    world.objects.get_mut(&passenger).unwrap().location = Some(tank);
+    world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(tank);
     world
         .objects
-        .get_mut(&passenger)
+        .get_mut(&ObjectId(1))
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    let dice = (0..=u16::MAX)
-        .find_map(|seed| {
-            let mut bytes = [0; 32];
-            bytes[..2].copy_from_slice(&seed.to_le_bytes());
-            let dice = Dice::seeded(bytes);
-            let mut probe = dice.clone();
-            (probe.d6() == 1).then_some(dice)
-        })
-        .unwrap();
+    assign_battle_pilot(&mut world, tank, ObjectId(1)).unwrap();
+    support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
+    start_battle_unit(&mut world, tank, ObjectId(1), true).unwrap();
+    for _ in 0..5 {
+        advance_battle_units(&mut world, 0, true);
+    }
     world
         .btech
         .rewrite_unit_record(tank, |record| {
-            record["dice"] = serde_json::to_value(dice).unwrap();
             record["motion"]["speed"] = 21.5.into();
             record["motion"]["desired_speed"] = 21.5.into();
         })
         .unwrap();
-    let before = world.clone();
-    let native = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-    let lua = Scripts::new(
-        &config,
-        std::rc::Rc::new(std::cell::RefCell::new(before.clone())),
-    )
-    .unwrap();
-    let call = format!("btech.unit.stop({},1)", tank.0);
+    let before = world.btech.clone();
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    let error = stop_battle_unit_action(&scripts, &config, tank, ObjectId(1)).unwrap_err();
     assert!(
-        lua.eval_callback::<()>(&format!("{call}; error('abort cascade')"))
-            .is_err()
+        format!("{error:#}").contains("You must come to a stop before you can shut down."),
+        "{error:#}"
     );
-    assert_eq!(lua.world().btech, before.btech);
-    assert!(lua.drain_outbox().is_empty());
-    stop_battle_unit_action(&native, &config, tank, ObjectId(1)).unwrap();
-    lua.eval_callback::<()>(&call).unwrap();
-    assert_eq!(lua.world().btech, native.world().btech);
+    let call = format!("return btech.unit.stop({},1)", tank.0);
+    let error = scripts.eval_callback::<bool>(&call).unwrap_err();
+    assert!(format!("{error:#}").contains("come to a stop"), "{error:#}");
+    assert_eq!(scripts.world().btech, before);
+    assert!(scripts.drain_outbox().is_empty());
     assert_eq!(
-        native.world().btech.maps()[&map]
+        scripts.world().btech.maps()[&map]
             .base_hex(0, 0)
             .unwrap()
             .terrain(),
-        Terrain::Water
+        Terrain::Ice
     );
-    let output = native.drain_outbox();
-    let replay = lua.drain_outbox();
-    assert_eq!(
-        output
-            .iter()
-            .map(|(who, message)| (*who, message.source()))
-            .collect::<Vec<_>>(),
-        replay
-            .iter()
-            .map(|(who, message)| (*who, message.source()))
-            .collect::<Vec<_>>()
-    );
-    // Only the Mech's pilot rolls: a falling vehicle's crew makes no avoidance roll (Total
-    // Warfare p. 152), and each pilot sees only their own roll.
-    let messages: Vec<_> = output
-        .iter()
-        .filter(|(who, _)| *who == ObjectId(2))
-        .map(|(_, message)| message.source())
-        .collect();
-    let index = messages
-        .iter()
-        .position(|message| *message == "You make a piloting skill roll!")
-        .unwrap();
-    assert!(messages[index + 1].starts_with("Modified Pilot Skill: BTH "));
-    assert!(!output.iter().any(|(who, message)| *who == ObjectId(1)
-        && (message.source().starts_with("Modified Pilot Skill:")
-            || message.source() == "You make a piloting skill roll!")));
-    assert!(output.iter().any(|(who, _)| *who == passenger));
-    assert!(!output.iter().any(|(who, message)| *who == passenger
-        && (message.source().starts_with("Modified Pilot Skill:")
-            || message.source() == "You make a piloting skill roll!")));
 }

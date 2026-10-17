@@ -178,13 +178,7 @@ async fn setxy_preserves_jump_progress_and_forced_descent_clock() {
     advance_battle_jumps(&mut original, MovementRules::STANDARD).unwrap();
     advance_battle_jumps(&mut restored, MovementRules::STANDARD).unwrap();
     assert_eq!(original.btech, restored.btech);
-    stop_battle_unit(
-        &mut restored,
-        unit,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    power_down_battle_unit(&mut restored, unit).unwrap();
     let before = restored.btech.constructed_units()[&unit]
         .free_fall()
         .unwrap();
@@ -240,13 +234,7 @@ async fn setxy_vtol_flight_and_atomic_notification_failure() {
     assert_eq!(flight.phase, VtolFlightPhase::Airborne);
     assert_eq!(flight.altitude, 30.0);
     let mut falling = scripts.world().clone();
-    stop_battle_unit(
-        &mut falling,
-        unit,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    power_down_battle_unit(&mut falling, unit).unwrap();
     let before_fall = falling.btech.vehicles()[&unit]
         .vtol_flight()
         .unwrap()

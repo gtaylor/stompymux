@@ -10,7 +10,7 @@ impl Mech {
     }
 }
 
-/// Check the arm, shoulder, hand and ranged weapon recovery used when grabbing a tree.
+/// Check the arm, shoulder and hand used when grabbing a tree.
 fn usable(unit: &Mech, arm: Arm) -> Result<bool> {
     let section = arm.section();
     if unit.sections()[&section].internal == 0 {
@@ -28,10 +28,7 @@ fn usable(unit: &Mech, arm: Arm) -> Result<bool> {
             return Ok(false);
         }
     }
-    Ok(!loadout.weapons.iter().enumerate().any(|(index, mount)| {
-        unit.weapon_recycle().contains_key(&index)
-            && mount.criticals.iter().any(|part| part.section == section)
-    }))
+    Ok(true)
 }
 
 /// Messages for a carried tree released by the pilot or by a shutdown/damage transition.
@@ -49,7 +46,9 @@ pub(super) fn dropped_notices(world: &World, id: ObjectId) -> Vec<Notice> {
 }
 
 /// Grab a tree in a selected arm (left first by default), or release it with `-`.
-/// Acquisition resets that arm's recovery to sixty seconds without consuming dice or terrain.
+/// A 'Mech may not fire weapons or make physical attacks in the turn it picks up a club
+/// (Total Warfare p. 146): a pickup is refused within thirty seconds of either, and ties up
+/// every section for the next thirty. It consumes no dice or terrain.
 pub fn grab_club(
     world: &mut World,
     id: ObjectId,
@@ -85,6 +84,14 @@ pub fn grab_club(
     ensure!(
         unit.unjam().is_none(),
         "You are too busy unjamming a weapon!"
+    );
+    ensure!(
+        !unit.fired_this_turn(world.btech.simulation_time()),
+        "You fired weapons this turn and cannot also pick up a club."
+    );
+    ensure!(
+        unit.limb_recycle().is_empty(),
+        "Your limbs are still recovering from another attack"
     );
     for kind in ArmAttack::HAND_WEAPONS
         .into_iter()
@@ -123,7 +130,7 @@ pub fn grab_club(
     world.attempt(|world| {
         let unit = world.btech.constructed.get_mut(&id).unwrap();
         unit.carried_club = Some(arm);
-        unit.limb_recycle.insert(arm.section(), 60);
+        unit.tie_up_every_section();
         world.btech.validate_action(world)?;
         let mut notices = super::broadcast::observer_notices(
             world,

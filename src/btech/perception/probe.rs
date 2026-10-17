@@ -1,4 +1,5 @@
-//! Active probe families and their installed-equipment checks.
+//! Active probe families, their installed-equipment checks, and the technology base each
+//! fitted probe is built from.
 use crate::btech::{Mech, MechLoadout, System, Vehicle, VehicleLoadout};
 use anyhow::Result;
 use serde::Serialize;
@@ -18,10 +19,10 @@ impl ActiveProbe {
     /// Every family, longest reach first.
     pub const BY_REACH: [Self; 4] = [Self::Bloodhound, Self::Beagle, Self::Watchdog, Self::Light];
 
-    /// Hardware reach before the stationary-installation bonus. A Clan Beagle slot (a Clan
-    /// chassis's, or one stated `CL.BeagleProbe`) is the Clan active probe, which reaches five
-    /// hexes. The Watchdog CEWS carries a light active probe and reaches three, like the Light
-    /// Active Probe (Tactical Operations: Advanced Units & Equipment, Watchdog CEWS rules and
+    /// Hardware reach before the stationary-installation bonus. A Beagle slot built from Clan
+    /// technology (`clan`: one stated `CL.BeagleProbe`, or an unprefixed one on a Clan
+    /// chassis) is the Clan active probe, which reaches five hexes. The Watchdog CEWS carries a
+    /// light active probe and reaches three, like the Light Active Probe (Tactical Operations: Advanced Units & Equipment, Watchdog CEWS rules and
     /// equipment table, range —/—/—/3).
     pub fn range(self, clan: bool) -> u8 {
         match self {
@@ -47,6 +48,15 @@ impl ActiveProbe {
         }
     }
 
+    /// Player-facing name of an installed probe: a Beagle slot built from Clan technology is
+    /// the Clan active probe.
+    pub fn installed_name(self, clan: bool) -> &'static str {
+        if self == Self::Beagle && clan {
+            return "Clan Active Probe";
+        }
+        self.name()
+    }
+
     /// Probe critical identity and minimum installation size.
     pub(crate) fn equipment(self) -> (System, usize) {
         match self {
@@ -63,6 +73,10 @@ impl ActiveProbe {
 pub(crate) struct ProbeFitting {
     pub installed: bool,
     pub available: bool,
+    /// The fitted probe is Clan technology by its own slots (see
+    /// [`SystemCritical::is_clan`](crate::btech::SystemCritical::is_clan)):
+    /// the Beagle and the Clan active probe share one slot name, so this tells them apart.
+    pub clan: bool,
 }
 
 impl Mech {
@@ -90,6 +104,7 @@ impl Mech {
             return ProbeFitting {
                 installed: false,
                 available: false,
+                clan: false,
             };
         }
         let available = if probe == ActiveProbe::Light
@@ -103,9 +118,11 @@ impl Mech {
         } else {
             parts().all(|part| !self.critical_unavailable(part.location))
         };
+        let clan_chassis = self.definition().has_special("Clan");
         ProbeFitting {
             installed: true,
             available,
+            clan: parts().any(|part| part.is_clan(clan_chassis)),
         }
     }
 }
@@ -129,7 +146,7 @@ impl Vehicle {
         probe: ActiveProbe,
     ) -> ProbeFitting {
         let system = probe.equipment().0;
-        let mut parts = loadout.systems.iter().filter(|part| part.system == system);
+        let parts = || loadout.systems.iter().filter(|part| part.system == system);
         let installed = loadout.systems.iter().any(|part| part.system == system)
             && (probe != ActiveProbe::Watchdog
                 || self
@@ -139,16 +156,18 @@ impl Vehicle {
             && let Some(failed) = self.critical_conditions.light_probe_failure
         {
             !failed
-                && parts.any(|part| {
+                && parts().any(|part| {
                     self.sections()[&part.location.section].internal > 0
                         && !self.breached_sections().contains(&part.location.section)
                 })
         } else {
-            parts.any(|part| !self.critical_unavailable(part.location))
+            parts().any(|part| !self.critical_unavailable(part.location))
         };
+        let clan_chassis = self.definition().has_special("Clan");
         ProbeFitting {
             installed,
             available,
+            clan: installed && parts().any(|part| part.is_clan(clan_chassis)),
         }
     }
 }
@@ -173,6 +192,23 @@ mod tests {
         assert_eq!(
             serde_json::to_value(ActiveProbe::Bloodhound).unwrap(),
             "bloodhound"
+        );
+    }
+
+    /// Only a Clan-built Beagle is the Clan active probe.
+    #[test]
+    fn only_a_clan_built_beagle_is_named_the_clan_active_probe() {
+        assert_eq!(
+            ActiveProbe::Beagle.installed_name(true),
+            "Clan Active Probe"
+        );
+        assert_eq!(
+            ActiveProbe::Beagle.installed_name(false),
+            "Beagle Active Probe"
+        );
+        assert_eq!(
+            ActiveProbe::Light.installed_name(true),
+            "Light Active Probe"
         );
     }
 }

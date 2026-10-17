@@ -91,7 +91,7 @@ async fn gauss_power_down_adapters_state_and_restart() {
             assert!(output.contains("destroyed"), "{output}");
             assert_eq!(native.world().btech, disabled);
             let mut world = native.world().clone();
-            stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config)).unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
             assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
             support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
             start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -141,12 +141,10 @@ async fn gauss_power_down_guards_and_validation() {
                     state["weapon_recycle"] = serde_json::json!({index.to_string(): 3})
                 }),
                 "off" => {
-                    stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config))
-                        .unwrap();
+                    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
                 }
                 _ => {
-                    stop_battle_unit(&mut world, id, ObjectId(1), FallRules::configured(&config))
-                        .unwrap();
+                    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
                     remove_battle_unit(&mut world, id, ObjectId(config.home())).unwrap();
                 }
             }

@@ -316,7 +316,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `triple_myomer_active`: `boolean` — Derived from installed myomer and sampled excess heat.
 - `movement_maximum_speed`: `number` — Current throttle ceiling, including active myomer.
 - `charge`: `{target: integer?, elapsed: integer, distance: number}` — Persistent charge intent and movement counters.
-- `limb_recycle`: `table<string, integer>` — Remaining physical recovery seconds by limb.
+- `limb_recycle`: `table<string, integer>` — Remaining seconds each section is tied up by a physical attack: its weapons cannot fire and no further physical attack can start.
 - `stagger`: `Stagger`
 - `posture`: `"standing"|"prone"`
 - `flooded_sections`: `string[]` — Persistent flooded section names.
@@ -335,6 +335,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `spotter`: `integer?` — Self ID while spotting, otherwise the selected observer.
 - `artillery_adjustment`: `integer` — Saved correction for the current artillery target.
 - `last_weapon_fire`: `integer|nil` — Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
+- `section_fire`: `table<string, integer>` — Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 - `tag`: `TagState`
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
 - `scanner_perception`: `integer` — Perception captured at startup completion.
@@ -474,8 +475,9 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `turret_jammed`: `boolean` — Recoverable turret rotation damage.
 - `turret_repairs`: `integer[]` — Pending 60-second repair attempts.
 - `turret_locked`: `boolean` — Turret damage prevents rotation.
-- `maximum_speed`: `number` — Current maximum kph after motive damage.
-- `motive_speed_loss`: `number` — Maximum speed lost to motive damage in kph.
+- `maximum_speed`: `number` — Current flanking kph after motive damage, temperature, load and gravity.
+- `cruising_speed`: `number` — Current cruising kph: the template cruising MP after the same modifiers; flank is cruising MP x 1.5 rounded up.
+- `motive_mp_loss`: `integer` — Cruising MP lost to motive damage, rotor hits and an engine hit.
 - `immobilized`: `boolean` — Motive-system destruction prevents ground motion.
 - `under_bridge`: `boolean` — Hovercraft beneath a bridge span.
 - `elevation`: `integer|nil` — Ground support height; hovercraft float at water level.
@@ -496,7 +498,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `horizontal`: `number` — Horizontal Euclidean range in hex heights.
 - `spatial`: `number` — Euclidean range including signed ground elevation/depth.
 - `bearing`: `number|nil` — Degrees clockwise from north; nil for coincident centers.
-- `hex_distance`: `integer` — Minimum adjacent hex steps, without terrain costs.
+- `hex_distance`: `integer` — Minimum adjacent hex steps, without terrain costs; the weapon range, which elevation never adds to.
 
 ## Character
 
@@ -750,8 +752,8 @@ Alias: `{x: integer, y: integer, z?: integer}`
 - `weather`: `string` — Current battlefield weather, as btech.map.weather_conditions names it.
 - `sight_range`: `integer` — How far the unit sees under the light and weather, stretched to 30 by its own searchlight at night.
 - `lit_sight_range`: `integer` — How far it sees a target lit by another source at night.
-- `sensor`: `{systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil}` — Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep.
-- `probe`: `{kind: ProbeKind, range: integer, status: PerceptionStatus}|nil` — Best installed active probe and how far it reveals hidden units.
+- `sensor`: `{systems: {mode: SensorMode, bands: {short: integer, medium: integer, long: integer}}[], status: PerceptionStatus, jammed: boolean, sweep: integer|nil, band: SensorBand|nil, probe: ProbeKind|nil, probe_clan: boolean}` — Every sensor system the unit sweeps with, the built-in sensors' condition and this turn's sweep; probe_clan marks a probe that is Clan technology by its own slots.
+- `probe`: `{kind: ProbeKind, clan: boolean, range: integer, status: PerceptionStatus}|nil` — Best installed active probe, whether it is Clan technology by its own slots (a Clan-built Beagle is the Clan active probe), and how far it reveals hidden units.
 - `running`: `boolean` — Stopped units perceive nothing.
 - `text`: `string` — The report printed by the sensor command.
 
@@ -819,8 +821,8 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `indirect`: `{spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil` — Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
 - `gunnery`: `integer`
-- `distance`: `number`
-- `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}|nil` — Active command-network range; physical limits and firing visibility remain separate.
+- `distance`: `number` — Weapon range in hexes from the shooter's hex to the target's; elevation does not add to it.
+- `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}|nil` — Active command-network range in hexes; physical limits and firing visibility remain separate.
 - `range`: `{bracket: string, modifier: integer}|nil`
 - `attacker_movement`: `integer`
 - `spotting`: `integer` — +1 while this unit spots for another unit's indirect fire.
@@ -1332,7 +1334,8 @@ Alias: `"off"|"ecm"|"eccm"`
 - `hex`: `{x: integer, y: integer}`
 - `mode`: `'unit_at_hex'|'hex'|'building'|'ignite'|'clear'`
 - `visible`: `boolean` — Current terrain visibility, separate from numeric aim.
-- `hex_bonus`: `integer` — Zero for unit-at-hex, otherwise -4.
+- `hex_bonus`: `integer` — -4: every hex target is immobile.
+- `terrain`: `integer` — Woods, smoke and crops between the attacker (or the indirect-fire spotter) and the hex.
 - `subtotal`: `integer|nil` — Nil beyond weapon range; numeric aim alone does not authorize firing.
 
 ## RadioReception
@@ -1542,7 +1545,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 
 - `launched`: `integer`
 - `remaining`: `integer`
-- `traveled`: `number` — Cumulative distance, including a terminal leg that falls short.
+- `traveled`: `number` — Cumulative hexes flown, including a terminal leg that falls short.
 - `hops`: `SwarmHop[]` — Ordered attacks, at most eleven.
 - `notices`: `Notice[]`
 - `broadcasts`: `Notice[]`
@@ -1908,7 +1911,7 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 - `friendly`: `boolean` — Whether the contact is allied.
 - `identified`: `boolean` — Whether sensors identified the contact well enough to determine allegiance.
 - `known_destroyed`: `boolean` — Whether the visible contact status reports destruction.
-- `range`: `number` — Observed range in map units.
+- `range`: `number` — Weapon range in hexes; the contact's height does not add to it.
 - `network_range`: `number|nil` — Shared C3/C3i aiming distance; nil without an active network.
 - `relayed`: `boolean` — Seen only by network peers; the unit cannot lock or fire on it yet.
 - `seen_at`: `integer` — Simulation time of the observation.

@@ -188,9 +188,14 @@ impl<L> SystemCritical<L> {
 }
 
 impl<L> SystemCritical<L> {
-    /// Whether this slot is Clan technology on a chassis of the given base.
+    /// Whether this slot is Clan technology on a chassis of the given base: the one base that
+    /// builds the system, when only one does (the light active probe is Clan, the Bloodhound
+    /// Inner Sphere), else the base the slot's `IS.` or `CL.` prefix states, else the
+    /// chassis's own (TechManual p. 46).
     pub fn is_clan(&self, clan_chassis: bool) -> bool {
-        self.tech_base
+        self.system
+            .technology_base()
+            .or(self.tech_base)
             .map_or(clan_chassis, |base| base == super::TechBase::Clan)
     }
 }
@@ -1024,5 +1029,26 @@ mod tests {
         assert!(!Weapon::Lrm10.supports_targeting_computer());
         assert!(!Weapon::Flamer.supports_targeting_computer());
         assert!(AmmunitionBin::configuration(Weapon::Ac10, &["OnTC".into()]).is_err());
+    }
+
+    /// A slot is Clan technology by the one base that builds its system, else by its own
+    /// prefix, else by the chassis: a prefixed Beagle follows its prefix on either chassis, an
+    /// unprefixed one the chassis, and the light probe and Bloodhound their only base.
+    #[test]
+    fn slots_carry_their_own_technology_base() {
+        let slot = |system, tech_base| SystemCritical {
+            location: (),
+            system,
+            tech_base,
+            links: Vec::new(),
+        };
+        for clan_chassis in [false, true] {
+            let beagle = |base| slot(System::BeagleProbe, base).is_clan(clan_chassis);
+            assert!(beagle(Some(super::super::TechBase::Clan)));
+            assert!(!beagle(Some(super::super::TechBase::InnerSphere)));
+            assert_eq!(beagle(None), clan_chassis);
+            assert!(slot(System::LightProbe, None).is_clan(clan_chassis));
+            assert!(!slot(System::BloodhoundProbe, None).is_clan(clan_chassis));
+        }
     }
 }

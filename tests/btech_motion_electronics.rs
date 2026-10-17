@@ -5,8 +5,8 @@
 
 use crate::btech_motion_common::{
     RULES, balance_hit, balance_skill, fall_rules, fixture, fixture_assets, kick_fixture,
-    kick_rules, optical_aim_rules, overheat_due, overheat_rules, prepare_test_charge, shot_fixture,
-    shot_rules, shot_seed, shot_skill, water_fixture, without_xp_timestamps,
+    kick_rules, optical_aim_rules, overheat_due, overheat_rules, pass_seconds, prepare_test_charge,
+    shot_fixture, shot_rules, shot_seed, shot_skill, water_fixture, without_xp_timestamps,
 };
 use crate::support;
 use crate::support::{restore_database, snapshot_database};
@@ -197,7 +197,7 @@ async fn ams_interception_matrix(entries: &[(stompymux_rs::Weapon, f64, u16)]) {
                 set_battle_ams(&mut world, target, ObjectId(2), false).unwrap();
             }
             if case == "shutdown" {
-                stop_battle_unit(&mut world, target, ObjectId(2), fall_rules()).unwrap();
+                stop_battle_unit(&mut world, target, ObjectId(2)).unwrap();
             }
             if case == "destroyed" {
                 destroy_battle_critical(
@@ -1206,7 +1206,7 @@ async fn electronics_modes_fields_damage_and_restart() {
                     .unwrap();
                 }
                 _ => {
-                    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
                 }
             }
             assert!(
@@ -2160,7 +2160,9 @@ fn prepare_test_pod_removal(
         .unwrap();
 }
 
-/// Swatting chooses the less impaired available arm, requires the opposite arm for arm pods, and recovers on hits or misses.
+/// Swatting chooses the less impaired available arm, requires the opposite arm for arm pods, and
+/// recovers on hits or misses. An arm that fired this turn cannot swat (Total Warfare pp. 141,
+/// 220).
 #[tokio::test]
 async fn pod_removal_arm_selection_damage_and_restart() {
     use stompymux_rs::*;
@@ -2175,6 +2177,8 @@ async fn pod_removal_arm_selection_damage_and_restart() {
         "both_recycle",
         "left_pod",
         "blocked_left_pod",
+        "left_fired",
+        "left_fired_last_turn",
     ] {
         let (_dir, config, mut world, id, _) = shot_fixture().await;
         let section = if case.contains("left_pod") {
@@ -2195,9 +2199,13 @@ async fn pod_removal_arm_selection_damage_and_restart() {
             },
         )
         .unwrap();
+        let now = world.btech.simulation_time();
         world
             .btech
             .rewrite_unit_record(id, |record| {
+                if case.starts_with("left_fired") {
+                    record["section_fire"] = serde_json::json!({"LeftArm": now});
+                }
                 if matches!(case, "upper" | "lower" | "hand" | "right_better") {
                     let slot = match case {
                         "upper" => 1,
@@ -2221,6 +2229,9 @@ async fn pod_removal_arm_selection_damage_and_restart() {
                 }
             })
             .unwrap();
+        if case == "left_fired_last_turn" {
+            pass_seconds(&mut world, 30);
+        }
         let seed = (0..=255)
             .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
             .unwrap();
@@ -2244,7 +2255,10 @@ async fn pod_removal_arm_selection_damage_and_restart() {
         assert_eq!(report.removed, removed);
         assert_eq!(
             report.arm,
-            if matches!(case, "right_better" | "left_recycle" | "left_pod") {
+            if matches!(
+                case,
+                "right_better" | "left_recycle" | "left_pod" | "left_fired"
+            ) {
                 Arm::Right
             } else {
                 Arm::Left
@@ -2262,7 +2276,7 @@ async fn pod_removal_arm_selection_damage_and_restart() {
         );
         assert_eq!(
             world.btech.constructed_units()[&id].limb_recycle()[&report.arm.section()],
-            60
+            30
         );
         assert_eq!(
             world.btech.constructed_units()[&id].has_beacon(BeaconKind::Homing),
@@ -2496,7 +2510,7 @@ async fn stealth_switch_effects_damage_and_restart() {
             world.btech
         );
         if case == "interrupted" {
-            stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
             assert!(advance_battle_stealth(&mut world).is_empty());
             assert_eq!(
                 world.btech.constructed_units()[&id].stealth(),
@@ -2534,7 +2548,7 @@ async fn stealth_switch_effects_damage_and_restart() {
                 .unwrap();
             }
             _ => {
-                stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
             }
         }
         assert!(!world.btech.constructed_units()[&id].stealth().enabled);
@@ -2828,7 +2842,7 @@ async fn nss_switch_damage_accounting_and_restart() {
                 .unwrap();
             }
             _ => {
-                stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
             }
         }
         assert!(
@@ -3259,7 +3273,7 @@ async fn tag_loss_geometry_damage_shutdown_and_validation() {
                 .unwrap();
             }
             "shutdown" => {
-                let notices = stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+                let notices = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
                 assert!(
                     notices
                         .iter()
@@ -4552,14 +4566,14 @@ async fn hex_target_selection_lifecycle_and_validation() {
     let mut moved = world.clone();
     place_battle_unit(&mut moved, target, map, 7, 7).unwrap();
     assert!(moved.btech.constructed_units()[&id].hex_lock().is_some());
-    stop_battle_unit(&mut moved, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut moved, id, ObjectId(1)).unwrap();
     place_battle_unit(&mut moved, id, map, 6, 6).unwrap();
     assert!(
         moved.btech.constructed_units()[&id]
             .target_selection()
             .is_none()
     );
-    stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert!(
         world.btech.constructed_units()[&id]
             .target_selection()
@@ -4743,7 +4757,8 @@ async fn hex_occupant_fire_routing_aim_and_rollback() {
     loaded.validate(&config).unwrap();
 }
 
-/// Empty terrain shares weapon modifiers without inheriting an occupant's motion, lock or sensor aim.
+/// Empty terrain shares weapon modifiers without inheriting an occupant's motion, lock or sensor
+/// aim, and every hex mode is an immobile target at -4 (Total Warfare p. 110).
 #[tokio::test]
 async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     use stompymux_rs::*;
@@ -4767,12 +4782,14 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     assert_eq!(world.btech, before);
     assert!(base.visible);
     assert_eq!(base.modifiers.range, unit.range);
+    assert_eq!(base.terrain, 0);
     assert_eq!(
         base.subtotal().unwrap(),
         unit.subtotal().unwrap()
             - i32::from(unit.target_movement)
             - i32::from(unit.target_lock)
             - i32::from(unit.perception.unwrap().modifier)
+            - 4
     );
     for mode in [
         HexTargetMode::UnitAtHex,
@@ -4783,16 +4800,8 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     ] {
         select_battle_hex_target(&mut world, shooter, ObjectId(1), point, mode).unwrap();
         let report = battle_hex_aim_modifiers(&world, shooter, point, 0, 6).unwrap();
-        let bonus = if mode == HexTargetMode::UnitAtHex {
-            0
-        } else {
-            -4
-        };
-        assert_eq!(report.hex_bonus, bonus);
-        assert_eq!(
-            report.subtotal().unwrap(),
-            base.subtotal().unwrap() + i32::from(bonus)
-        );
+        assert_eq!(report.hex_bonus, -4);
+        assert_eq!(report.subtotal().unwrap(), base.subtotal().unwrap());
         assert_eq!(report.modifiers.target_movement, 0);
         assert_eq!(report.modifiers.target_lock, 0);
         assert!(report.modifiers.perception.is_none());
@@ -6704,7 +6713,7 @@ async fn quad_live_weapon_and_front_leg_combat() {
         assert_eq!(
             candidate.btech.constructed_units()[&id].limb_recycle()
                 [&leg.section(MechChassis::Quad)],
-            60
+            30
         );
         candidate.validate(&config).unwrap();
         persistence::save(&config.database(), &candidate)

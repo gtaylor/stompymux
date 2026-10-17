@@ -207,13 +207,7 @@ async fn vehicle_locks_clear_on_visibility_sensor_placement_and_power_changes() 
             .is_none()
     );
     let mut world = initial.clone();
-    stop_battle_unit(
-        &mut world,
-        observer,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, observer, ObjectId(1)).unwrap();
     assert!(
         world.btech.vehicles()[&observer]
             .target_selection()

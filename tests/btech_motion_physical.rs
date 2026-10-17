@@ -3,9 +3,9 @@
 
 use crate::btech_motion_common::{
     RULES, balance_hit, balance_skill, fall_rules, fixture, fixture_source, kick_fixture,
-    kick_rules, overheat_due, overheat_rules, prepare_test_charge, shot_fixture, shot_rules,
-    shot_seed, shot_skill, single_critical_seed, stagger_fixture, stagger_hit, stagger_rules,
-    stand_fixture, water_fixture, without_xp_timestamps,
+    kick_rules, overheat_due, overheat_rules, pass_seconds, prepare_test_charge, shot_fixture,
+    shot_rules, shot_seed, shot_skill, single_critical_seed, stagger_fixture, stagger_hit,
+    stagger_rules, stand_fixture, tied_up_for_a_turn, water_fixture, without_xp_timestamps,
 };
 use crate::support;
 use crate::support::{install, restore_database, snapshot_database};
@@ -669,11 +669,11 @@ async fn handweapon_native_lua_recovery_and_restart() {
             );
             assert_eq!(
                 world.btech.constructed_units()[&id].limb_recycle()[&MechSection::LeftArm],
-                60
+                30
             );
             persistence::save(&config.database(), &world).await.unwrap();
             let mut loaded = persistence::load(&config.database()).await.unwrap();
-            for _ in 0..60 {
+            for _ in 0..30 {
                 assert_eq!(
                     advance_battle_recycle(&mut world),
                     advance_battle_recycle(&mut loaded)
@@ -1743,18 +1743,35 @@ async fn club_carry_lifecycle_and_guards() {
     assert!(grab_battle_club(&mut world, id, ObjectId(1), None).is_err());
     assert_eq!(world.btech, before);
     prepare_test_club(&mut world, id);
+    // A 'Mech may not fire weapons or make physical attacks in the turn it picks up a club
+    // (Total Warfare p. 146): a weapon fired in the last thirty seconds bars the pickup.
+    let mut fired = world.clone();
+    pass_seconds(&mut fired, 30);
+    let now = fired.btech.simulation_time();
+    fired
+        .btech
+        .rewrite_unit_record(id, |record| {
+            record["section_fire"] = serde_json::json!({"CenterTorso": now - 29});
+        })
+        .unwrap();
+    let before = fired.btech.clone();
+    let error = grab_battle_club(&mut fired, id, ObjectId(1), None).unwrap_err();
+    assert!(format!("{error:#}").contains("fired weapons this turn"));
+    assert_eq!(fired.btech, before);
+    pass_seconds(&mut fired, 1);
+    grab_battle_club(&mut fired, id, ObjectId(1), None).unwrap();
     grab_battle_club(&mut world, id, ObjectId(1), None).unwrap();
     assert_eq!(
         world.btech.constructed_units()[&id].carried_club(),
         Some(Arm::Left)
     );
-    assert_eq!(
-        world.btech.constructed_units()[&id].limb_recycle()[&MechSection::LeftArm],
-        60
-    );
-    for _ in 0..60 {
-        advance_battle_recycle(&mut world);
-    }
+    // The pickup then ties up every section for the turn.
+    assert!(tied_up_for_a_turn(&world.btech.constructed_units()[&id]));
+    pass_seconds(&mut world, 29);
+    let error = battle_punch_profile(&world, id, ObjectId(1), target, Arm::Right, kick_rules())
+        .unwrap_err();
+    assert!(format!("{error:#}").contains("still recovering"));
+    pass_seconds(&mut world, 1);
     assert!(
         battle_punch_profile(&world, id, ObjectId(1), target, Arm::Left, kick_rules()).is_err()
     );
@@ -1805,7 +1822,7 @@ async fn club_carry_lifecycle_and_guards() {
             .is_none()
     );
     world = base;
-    let notices = stop_battle_unit(&mut world, id, ObjectId(1), fall_rules()).unwrap();
+    let notices = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert!(
         notices
             .iter()
@@ -1843,9 +1860,7 @@ async fn club_attacks_damage_breakage_and_recovery() {
         assert_eq!(profile.hit_table, HitTable::Weapon);
     }
     grab_battle_club(&mut base, id, ObjectId(1), Some("right")).unwrap();
-    for _ in 0..60 {
-        advance_battle_recycle(&mut base);
-    }
+    pass_seconds(&mut base, 30);
     for roll in [2, 12] {
         let mut world = base.clone();
         let seed = (0..=255)
@@ -1868,7 +1883,14 @@ async fn club_attacks_damage_breakage_and_recovery() {
                 .is_none(),
             roll == 12
         );
-        assert_eq!(world.btech.constructed_units()[&id].limb_recycle().len(), 2);
+        // A club ties up both arms for the turn (Total Warfare p. 145).
+        assert_eq!(
+            world.btech.constructed_units()[&id].limb_recycle(),
+            &std::collections::BTreeMap::from([
+                (MechSection::LeftArm, 30),
+                (MechSection::RightArm, 30)
+            ])
+        );
         world.validate(&config).unwrap();
     }
 }
@@ -1883,9 +1905,7 @@ async fn club_native_lua_rollback_and_saved_carry() {
         let mut world = base.clone();
         if !grabbing {
             grab_battle_club(&mut world, id, ObjectId(1), None).unwrap();
-            for _ in 0..60 {
-                advance_battle_recycle(&mut world);
-            }
+            pass_seconds(&mut world, 30);
         }
         let native = Scripts::new(
             &config,
@@ -1929,7 +1949,7 @@ async fn club_native_lua_rollback_and_saved_carry() {
         let mut world = lua.world().clone();
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
-        for _ in 0..60 {
+        for _ in 0..30 {
             assert_eq!(
                 advance_battle_recycle(&mut world),
                 advance_battle_recycle(&mut loaded)
@@ -2023,7 +2043,7 @@ async fn charge_collision_hit_miss_and_saved_recovery() {
         };
         let report = resolve_battle_charge(&mut world, id, target, rules).unwrap();
         assert_eq!(report.hit, roll == 12);
-        assert_eq!(world.btech.constructed_units()[&id].limb_recycle().len(), 6);
+        assert!(tied_up_for_a_turn(&world.btech.constructed_units()[&id]));
         if roll == 2 {
             assert_eq!(report.received_damage, 0);
             assert!(report.recoil_arc.is_none());
@@ -2062,7 +2082,7 @@ async fn charge_collision_hit_miss_and_saved_recovery() {
         }
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
-        for _ in 0..60 {
+        for _ in 0..30 {
             assert_eq!(
                 advance_battle_recycle(&mut world),
                 advance_battle_recycle(&mut loaded)
@@ -2111,7 +2131,7 @@ async fn mutual_charge_rolls_damage_and_saved_recovery() {
             assert_eq!(attempt.roll, Some(roll));
             let collision = attempt.collision.as_ref().unwrap();
             assert_eq!(collision.hit, roll == 12);
-            assert_eq!(world.btech.constructed_units()[&id].limb_recycle().len(), 6);
+            assert!(tied_up_for_a_turn(&world.btech.constructed_units()[&id]));
             if roll == 2 {
                 assert!(collision.target_impacts.is_empty());
                 let mut expected = Dice::seeded([seed; 32]);
@@ -2163,7 +2183,7 @@ async fn mutual_charge_rolls_damage_and_saved_recovery() {
         );
         persistence::save(&config.database(), &world).await.unwrap();
         let mut restored = persistence::load(&config.database()).await.unwrap();
-        for _ in 0..60 {
+        for _ in 0..30 {
             assert_eq!(
                 advance_battle_recycle(&mut world),
                 advance_battle_recycle(&mut restored)
@@ -2202,12 +2222,9 @@ async fn mutual_charge_rejections_and_torso_merge() {
     assert!(report.attempts[1].rejection.is_some());
     assert!(report.attempts[1].collision.is_none());
     assert_eq!(report.attempts[1].roll, Some(2));
-    assert_eq!(
-        world.btech.constructed_units()[&second]
-            .limb_recycle()
-            .len(),
-        6
-    );
+    assert!(tied_up_for_a_turn(
+        &world.btech.constructed_units()[&second]
+    ));
     assert_eq!(
         world.btech.constructed_units()[&first].facing().torso,
         Torso::Both
@@ -2441,7 +2458,11 @@ async fn charge_tracking_timeout_and_distance() {
     let state = world.btech.constructed_units()[&id].charge();
     assert!(state.distance > 1.9 && state.distance < 2.1, "{state:?}");
     let mut stopped = world.clone();
-    stop_battle_unit(&mut stopped, id, ObjectId(1), fall_rules()).unwrap();
+    stopped
+        .btech
+        .edit_unit_motion(id, |motion| motion.speed = 0.0)
+        .unwrap();
+    stop_battle_unit(&mut stopped, id, ObjectId(1)).unwrap();
     assert_eq!(
         stopped.btech.constructed_units()[&id].charge(),
         ChargeState {
@@ -2493,7 +2514,7 @@ async fn charge_tracking_collision_and_replay() {
             world.btech.constructed_units()[&id].charge(),
             ChargeState::default()
         );
-        assert_eq!(world.btech.constructed_units()[&id].limb_recycle().len(), 6);
+        assert!(tied_up_for_a_turn(&world.btech.constructed_units()[&id]));
         world.validate(&config).unwrap();
     }
 }
@@ -2538,7 +2559,7 @@ async fn charge_tracking_mutual_dispatch() {
     for id in [first, second] {
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.charge(), ChargeState::default());
-        assert_eq!(unit.limb_recycle().len(), 6);
+        assert!(tied_up_for_a_turn(unit));
         let mut dice = Dice::seeded([seed; 32]);
         dice.two_d6();
         assert_eq!(
@@ -2629,54 +2650,54 @@ async fn dfa_profile_movement_posture_and_specialist() {
 #[tokio::test]
 async fn dfa_profile_recovery_and_moved_target() {
     use stompymux_rs::*;
-    let (_dir, config, base, id, target) = kick_fixture().await;
-    for section in [
-        MechSection::LeftArm,
-        MechSection::RightArm,
-        MechSection::LeftLeg,
-        MechSection::RightLeg,
-        MechSection::LeftTorso,
-        MechSection::RightTorso,
-    ] {
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    pass_seconds(&mut base, 30);
+    let now = base.btech.simulation_time();
+    let edited = |change: &dyn Fn(&mut serde_json::Value)| {
         let mut world = base.clone();
+        world.btech.rewrite_unit_record(id, change).unwrap();
         world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["limb_recycle"] =
-                    serde_json::to_value(std::collections::BTreeMap::from([(section, 60_u16)]))
-                        .unwrap();
-            })
-            .unwrap();
+    };
+    // One physical attack a turn and no weapon fire in the turn of the attack, from any
+    // section (Total Warfare pp. 144, 149).
+    for section in MechSection::ALL {
+        let world = edited(&|record| {
+            record["limb_recycle"] =
+                serde_json::to_value(std::collections::BTreeMap::from([(section, 30_u16)]))
+                    .unwrap();
+        });
         let before = world.btech.clone();
-        assert_eq!(
-            battle_dfa_profile(&world, id, target, kick_rules()).is_ok(),
-            matches!(section, MechSection::LeftTorso | MechSection::RightTorso)
+        let error = battle_dfa_profile(&world, id, target, kick_rules()).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("still recovering"),
+            "{section:?}: {error:#}"
         );
         assert_eq!(world.btech, before);
+        for (fired, allowed) in [(now, false), (now - 29, false), (now - 30, true)] {
+            let world = edited(&|record| {
+                record["section_fire"] =
+                    serde_json::to_value(std::collections::BTreeMap::from([(section, fired)]))
+                        .unwrap();
+            });
+            let result = battle_dfa_profile(&world, id, target, kick_rules());
+            assert_eq!(result.is_ok(), allowed, "{section:?} {fired}");
+            if let Err(error) = result {
+                assert!(format!("{error:#}").contains("fired weapons this turn"));
+            }
+        }
     }
-    for (index, mount) in base.btech.constructed_units()[&id]
+    // A weapon still recycling from an earlier turn does not matter.
+    for index in 0..base.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
         .weapons
-        .iter()
-        .enumerate()
+        .len()
     {
-        let mut world = base.clone();
-        world
-            .btech
-            .rewrite_unit_record(id, |record| {
-                record["weapon_recycle"] =
-                    serde_json::to_value(std::collections::BTreeMap::from([(index, 1_u16)]))
-                        .unwrap();
-            })
-            .unwrap();
-        assert_eq!(
-            battle_dfa_profile(&world, id, target, kick_rules()).is_ok(),
-            mount
-                .criticals
-                .iter()
-                .all(|part| matches!(part.section, MechSection::CenterTorso | MechSection::Head))
-        );
+        let world = edited(&|record| {
+            record["weapon_recycle"] =
+                serde_json::to_value(std::collections::BTreeMap::from([(index, 1_u16)])).unwrap();
+        });
+        battle_dfa_profile(&world, id, target, kick_rules()).unwrap();
     }
     let mut world = base;
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
@@ -2879,7 +2900,7 @@ async fn dfa_damage_hit_miss_and_saved_recovery() {
         assert_eq!(report.roll, roll);
         assert_eq!(report.hit, roll == 12);
         assert!(world.btech.constructed_units()[&id].flight().is_none());
-        assert_eq!(world.btech.constructed_units()[&id].limb_recycle().len(), 6);
+        assert!(tied_up_for_a_turn(&world.btech.constructed_units()[&id]));
         let sum = |impacts: &[TacticalImpact]| {
             impacts
                 .iter()
@@ -2923,7 +2944,7 @@ async fn dfa_damage_hit_miss_and_saved_recovery() {
         }
         persistence::save(&config.database(), &world).await.unwrap();
         let mut loaded = persistence::load(&config.database()).await.unwrap();
-        for _ in 0..60 {
+        for _ in 0..30 {
             assert_eq!(
                 advance_battle_recycle(&mut world),
                 advance_battle_recycle(&mut loaded)
@@ -3575,7 +3596,7 @@ async fn character_physical_action_replays_and_rolls_back() {
         );
         assert_eq!(
             candidate.btech.constructed_units()[&id].limb_recycle()[&MechSection::LeftArm],
-            60
+            30
         );
         candidate.validate(&config).unwrap();
         persistence::save(&config.database(), &candidate)
@@ -4598,12 +4619,9 @@ async fn character_mutual_charge_keeps_accepted_second_attack() {
     let candidate = scripts.world().clone();
     assert_eq!(candidate.objects[&pilot].location, Some(afterlife));
     for id in [first, second] {
-        assert_eq!(
-            candidate.btech.constructed_units()[&id]
-                .limb_recycle()
-                .len(),
-            6
-        );
+        assert!(tied_up_for_a_turn(
+            &candidate.btech.constructed_units()[&id]
+        ));
     }
     candidate.validate(&config).unwrap();
     persistence::save(&config.database(), &candidate)
@@ -4784,19 +4802,13 @@ async fn character_charge_movement_dispatch_replays_and_rolls_back() {
         }
         assert!(candidate.btech.constructed_units()[&second].is_destroyed());
         assert_eq!(candidate.objects[&pilot].location, Some(afterlife));
-        assert_eq!(
-            candidate.btech.constructed_units()[&first]
-                .limb_recycle()
-                .len(),
-            6
-        );
+        assert!(tied_up_for_a_turn(
+            &candidate.btech.constructed_units()[&first]
+        ));
         if mutual {
-            assert_eq!(
-                candidate.btech.constructed_units()[&second]
-                    .limb_recycle()
-                    .len(),
-                6
-            );
+            assert!(tied_up_for_a_turn(
+                &candidate.btech.constructed_units()[&second]
+            ));
         }
         let count = scripts
             .drain_outbox()
@@ -5058,12 +5070,9 @@ async fn character_dfa_action_hit_miss_and_casualty_rollback() {
                 assert!(report.experience.is_empty());
             }
 
-            assert_eq!(
-                candidate.btech.constructed_units()[&attacker]
-                    .limb_recycle()
-                    .len(),
-                6
-            );
+            assert!(tied_up_for_a_turn(
+                &candidate.btech.constructed_units()[&attacker]
+            ));
             candidate.validate(&config).unwrap();
             persistence::save(&config.database(), &candidate)
                 .await
@@ -7367,7 +7376,7 @@ async fn movement_experience_cadence_and_restart() {
         let source = format!("12 60\n{}", format!("{}\n", ".0".repeat(12)).repeat(60));
         let (_dir, config, mut world, id) = fixture_source(&source).await;
         let map = world.btech.constructed_units()[&id].position().unwrap().map;
-        let _ = stop_battle_unit(&mut world, id, ObjectId(1), RULES.fall).unwrap();
+        let _ = stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         place_battle_unit(&mut world, id, map, 5, 45).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
@@ -9276,4 +9285,302 @@ async fn unjam_character_server_tick_retries_failed_commit() {
         shutdown.send(ShutdownRequest::Sigterm).unwrap();
         task.await.unwrap().unwrap();
     }).await;
+}
+
+/// Zero-based weapon indices of the Jenner's left arm laser, right arm laser and torso SRM.
+fn jenner_weapons(world: &stompymux_rs::World, id: ObjectId) -> (usize, usize, usize) {
+    use stompymux_rs::*;
+    let loadout = world.btech.constructed_units()[&id].loadout().unwrap();
+    let mounted = |accept: &dyn Fn(MechSection) -> bool| {
+        loadout
+            .weapons
+            .iter()
+            .position(|mount| accept(mount.criticals[0].section))
+            .unwrap()
+    };
+    (
+        mounted(&|section| section == MechSection::LeftArm),
+        mounted(&|section| section == MechSection::RightArm),
+        mounted(&|section| !matches!(section, MechSection::LeftArm | MechSection::RightArm)),
+    )
+}
+
+/// Fire one weapon at the target from the next hex, where weapon arcs apply, and bring the
+/// target back into the attacker's hex for the physical attacks that follow.
+fn shoot(world: &mut stompymux_rs::World, id: ObjectId, target: ObjectId, index: usize) {
+    use stompymux_rs::*;
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    place_battle_unit(world, target, map, 5, 4).unwrap();
+    refresh_battle_contacts(world, &[id]).unwrap();
+    let report = resolve_battle_shot(world, id, ObjectId(1), target, index, shot_rules()).unwrap();
+    assert!(report.launched);
+    place_battle_unit(world, target, map, 5, 5).unwrap();
+    refresh_battle_contacts(world, &[id]).unwrap();
+}
+
+/// A punch is the turn's one physical attack. For thirty seconds it bars a kick and the
+/// punching arm's weapons, and both are free once the turn is out; the other arm may fire
+/// throughout (Total Warfare pp. 144-145).
+#[tokio::test]
+async fn punch_ties_up_physical_attacks_and_the_arm_for_one_turn() {
+    use stompymux_rs::*;
+    let (_dir, config, mut world, id, target) = kick_fixture().await;
+    let (left, right, _) = jenner_weapons(&world, id);
+    resolve_battle_punch(
+        &mut world,
+        id,
+        ObjectId(1),
+        target,
+        ArmSelection::Right,
+        kick_rules(),
+    )
+    .unwrap();
+    assert_eq!(
+        world.btech.constructed_units()[&id].limb_recycle(),
+        &std::collections::BTreeMap::from([(MechSection::RightArm, 30)])
+    );
+    for elapsed in 0..=30 {
+        let free = elapsed == 30;
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(
+            unit.weapon_readiness(right).unwrap().ready,
+            free,
+            "{elapsed}"
+        );
+        assert!(unit.weapon_readiness(left).unwrap().ready, "{elapsed}");
+        let kick = battle_kick_profile(&world, id, ObjectId(1), target, Leg::Right, kick_rules());
+        assert_eq!(kick.is_ok(), free, "{elapsed}");
+        if let Err(error) = kick {
+            assert!(
+                format!("{error:#}").contains("still recovering"),
+                "{error:#}"
+            );
+        }
+        if !free {
+            pass_seconds(&mut world, 1);
+        }
+    }
+    shoot(&mut world, id, target, right);
+    world.validate(&config).unwrap();
+}
+
+/// An arm that fired cannot punch in that turn, however short its weapon's recycle: a
+/// seven-second recycle is long over twenty seconds after the shot, yet the arm may not punch
+/// until thirty seconds have passed. The limbs that did not fire may attack at once (Total
+/// Warfare pp. 145-147).
+#[tokio::test]
+async fn fired_arm_cannot_punch_until_the_turn_is_out() {
+    use stompymux_rs::*;
+    let (_dir, config, mut world, id, target) = kick_fixture().await;
+    let (_, right, _) = jenner_weapons(&world, id);
+    shoot(&mut world, id, target, right);
+    world
+        .btech
+        .edit_unit(id, |unit| unit.set_weapon_recycle(right, 7))
+        .unwrap();
+    pass_seconds(&mut world, 20);
+    let unit = &world.btech.constructed_units()[&id];
+    assert!(unit.weapon_recycle().is_empty());
+    assert!(unit.weapon_readiness(right).unwrap().ready);
+    let punch = |world: &World, arm| {
+        battle_punch_profile(world, id, ObjectId(1), target, arm, kick_rules())
+    };
+    for elapsed in 20..=30 {
+        let result = punch(&world, Arm::Right);
+        assert_eq!(result.is_ok(), elapsed == 30, "{elapsed}");
+        if let Err(error) = result {
+            assert!(
+                format!("{error:#}").contains("Right Arm fired weapons this turn"),
+                "{error:#}"
+            );
+        }
+        punch(&world, Arm::Left).unwrap();
+        battle_kick_profile(&world, id, ObjectId(1), target, Leg::Right, kick_rules()).unwrap();
+        if elapsed < 30 {
+            pass_seconds(&mut world, 1);
+        }
+    }
+    resolve_battle_punch(
+        &mut world,
+        id,
+        ObjectId(1),
+        target,
+        ArmSelection::Right,
+        kick_rules(),
+    )
+    .unwrap();
+    world.validate(&config).unwrap();
+}
+
+/// A charge is the turn's only attack: a weapon fired anywhere on the Mech in the last thirty
+/// seconds bars it, and the charge then bars every weapon and any other physical attack for
+/// thirty seconds (Total Warfare pp. 144, 148).
+#[tokio::test]
+async fn charge_excludes_weapon_fire_and_physical_attacks_for_one_turn() {
+    use stompymux_rs::*;
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    prepare_test_charge(&mut base, id);
+    let rules = ChargeRules {
+        distance: 2.0,
+        physical: kick_rules(),
+    };
+    let (left, _, _) = jenner_weapons(&base, id);
+    let mut fired = base.clone();
+    shoot(&mut fired, id, target, left);
+    // A running target, so a low roll is a plain miss that leaves both units standing.
+    for world in [&mut base, &mut fired] {
+        world.btech.set_unit_power(target, Power::Running).unwrap();
+    }
+    pass_seconds(&mut fired, 29);
+    let error = battle_charge_profile(&fired, id, target, rules).unwrap_err();
+    assert!(
+        format!("{error:#}").contains("fired weapons this turn"),
+        "{error:#}"
+    );
+    pass_seconds(&mut fired, 1);
+    battle_charge_profile(&fired, id, target, rules).unwrap();
+
+    let mut world = base.clone();
+    let seed = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+        .unwrap();
+    shot_seed(&mut world, id, seed);
+    assert!(
+        !resolve_battle_charge(&mut world, id, target, rules)
+            .unwrap()
+            .hit
+    );
+    assert!(tied_up_for_a_turn(&world.btech.constructed_units()[&id]));
+    let weapons = world.btech.constructed_units()[&id]
+        .loadout()
+        .unwrap()
+        .weapons
+        .len();
+    for elapsed in 0..=30 {
+        let free = elapsed == 30;
+        let unit = &world.btech.constructed_units()[&id];
+        for index in 0..weapons {
+            assert_eq!(
+                unit.weapon_readiness(index).unwrap().ready,
+                free,
+                "{elapsed} {index}"
+            );
+        }
+        let punch = battle_punch_profile(&world, id, ObjectId(1), target, Arm::Left, kick_rules());
+        assert_eq!(punch.is_ok(), free, "{elapsed}");
+        if !free {
+            pass_seconds(&mut world, 1);
+        }
+    }
+    world.validate(&config).unwrap();
+}
+
+/// A death from above attack likewise needs a turn without weapon fire, torso weapons
+/// included, and ties up every section for one turn (Total Warfare pp. 144, 149).
+#[tokio::test]
+async fn dfa_excludes_weapon_fire_and_physical_attacks_for_one_turn() {
+    use stompymux_rs::*;
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    dfa_piloting(&mut base);
+    shot_seed(&mut base, target, 0);
+    let (_, _, torso) = jenner_weapons(&base, id);
+    let mut fired = base.clone();
+    shoot(&mut fired, id, target, torso);
+    pass_seconds(&mut fired, 29);
+    launch_battle_jump(&mut fired, id, ObjectId(1), 0, 2.0).unwrap();
+    let error = battle_dfa_profile(&fired, id, target, kick_rules()).unwrap_err();
+    assert!(
+        format!("{error:#}").contains("fired weapons this turn"),
+        "{error:#}"
+    );
+    pass_seconds(&mut fired, 1);
+    battle_dfa_profile(&fired, id, target, kick_rules()).unwrap();
+
+    let mut world = base.clone();
+    launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
+    let dice = clean_dfa_dice(&world, id, target, 12);
+    world.btech.set_unit_dice(id, dice).unwrap();
+    assert!(
+        resolve_battle_dfa(&mut world, id, target, kick_rules())
+            .unwrap()
+            .hit
+    );
+    assert!(tied_up_for_a_turn(&world.btech.constructed_units()[&id]));
+    let weapons = world.btech.constructed_units()[&id]
+        .loadout()
+        .unwrap()
+        .weapons
+        .len();
+    for elapsed in 0..=30 {
+        let free = elapsed == 30;
+        let unit = &world.btech.constructed_units()[&id];
+        for index in 0..weapons {
+            assert_eq!(
+                unit.weapon_readiness(index).unwrap().ready,
+                free,
+                "{elapsed} {index}"
+            );
+        }
+        if !free {
+            pass_seconds(&mut world, 1);
+        }
+    }
+    world.validate(&config).unwrap();
+}
+
+/// Physical attacks reach the attacker's own hex and the six around it, counted in hexes as
+/// weapon range is (Total Warfare p. 144): the adjacent hex is in reach though its centre is a
+/// full hex away, and the next one out is not. A level difference never adds to the reach;
+/// the book's level rules decide instead, so a target one level up an adjacent hill can be
+/// punched but not kicked, and one two levels up cannot be attacked at all (Total Warfare
+/// p. 150).
+#[tokio::test]
+async fn physical_reach_counts_hexes_and_leaves_levels_to_the_level_rules() {
+    use stompymux_rs::*;
+    let (_dir, _config, base, id, target) = kick_fixture().await;
+    let map = base.btech.constructed_units()[&id].position().unwrap().map;
+    let width = base.btech.maps()[&map].width as usize;
+    let attempt = |level: u8, y: u16| {
+        let mut world = base.clone();
+        world
+            .btech
+            .rewrite_map_record(map, |record| {
+                support::set_hex_elevation(
+                    &mut record["terrain"][usize::from(y) * width + 5],
+                    level,
+                );
+            })
+            .unwrap();
+        place_battle_unit(&mut world, target, map, 5, i64::from(y)).unwrap();
+        refresh_battle_contacts(&mut world, &[id]).unwrap();
+        let range = battle_unit_range(&world, id, target).unwrap();
+        let punch = battle_punch_profile(&world, id, ObjectId(1), target, Arm::Right, kick_rules())
+            .map_err(|error| format!("{error:#}"));
+        let kick = battle_kick_profile(&world, id, ObjectId(1), target, Leg::Right, kick_rules())
+            .map_err(|error| format!("{error:#}"));
+        (range, punch, kick)
+    };
+    let (range, punch, kick) = attempt(0, 4);
+    assert_eq!(range.hexes(), 1.0);
+    assert!(range.spatial >= 1.0, "{range:?}");
+    punch.unwrap();
+    kick.unwrap();
+    let (range, punch, kick) = attempt(0, 3);
+    assert_eq!(range.hexes(), 2.0);
+    assert_eq!(punch.unwrap_err(), "Target out of range!");
+    assert_eq!(kick.unwrap_err(), "Target out of range!");
+    let (range, punch, kick) = attempt(1, 4);
+    assert!(range.spatial > 1.0, "{range:?}");
+    punch.unwrap();
+    assert!(kick.unwrap_err().contains("too high in elevation"));
+    let (_, punch, kick) = attempt(2, 4);
+    assert!(
+        punch
+            .unwrap_err()
+            .contains("elevation difference is too large")
+    );
+    assert!(
+        kick.unwrap_err()
+            .contains("elevation difference is too large")
+    );
 }

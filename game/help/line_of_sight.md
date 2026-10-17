@@ -49,7 +49,8 @@ grouping fired at a unit inside it. See `help piloting` for entering buildings.
 ## Sight
 
 Sight is automatic. A target with a clear line is seen when it is within the
-visual range the light and the weather allow, whichever is shorter:
+visual range the light and the weather allow, whichever is shorter. Visual range
+counts hexes on the map, so height above or below the target never adds to it:
 
 | Light | Range | Weather | Range |
 | --- | --- | --- | --- |
@@ -86,9 +87,12 @@ The surface of water stops every sensor but magscan. Guardian ECM, Angel ECM,
 stealth armor and null signature systems add to the sweep roll of radars and
 probes, often beyond the band that would have found the target; infrared, magscan
 and seismic sensors ignore them. Stealth and null signature systems are found only
-by the Bloodhound probe. Damaged sensors leave you with sight alone. Electromagnetic
-interference renders active probes useless but leaves the built-in sensors working
-(Tactical Operations: Advanced Rules p. 53).
+by the Bloodhound probe. A Beagle slot is the Clan probe when the probe itself is
+Clan-built: its slot says `CL.`, or it says neither `IS.` nor `CL.` on a Clan design. The
+probe's own technology, not the chassis's, sets its brackets, reveal range and ECM
+penalties. Damaged sensors leave you with sight alone. Electromagnetic interference
+renders active probes useless but leaves the built-in sensors working (Tactical
+Operations: Advanced Rules p. 53).
 
 ## Light
 
@@ -140,7 +144,9 @@ line of fire. C3 and C3i networks add their shared aiming range on top of that.
 
 Aim at a target includes woods and smoke between you and in its hex, crops along
 the line, partial cover and the darkness penalty when it applies. A working active
-probe within its reveal range lets you ignore one point of woods.
+probe within its reveal range lets you ignore one point of woods. A shot at a hex
+pays for the woods, smoke and crops between you and it, not for its own, and takes
+-4 because a hex never moves.
 
 ## Ice
 

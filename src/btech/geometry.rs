@@ -8,10 +8,24 @@ use serde::Serialize;
 /// Geometric measurement between placed units; it does not imply visibility or weapon reach.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Range {
+    /// Euclidean distance between the two continuous map positions, in hex heights.
     pub horizontal: f64,
+    /// Euclidean distance including the height difference, five levels to a hex. Line of
+    /// sight and its cutoff use it; weapon and visual ranges do not.
     pub spatial: f64,
     pub bearing: Option<f64>,
+    /// Hexes from the first unit's hex to the second's, counting the second's hex.
     pub hex_distance: u64,
+}
+
+impl Range {
+    /// The range every weapon, ECM, searchlight and scanner rule counts: the hexes from the
+    /// attacker's hex to the target's, counting the target's hex but not the attacker's
+    /// (Total Warfare p. 109). Elevation never adds to it, so a VTOL ten levels above an
+    /// adjacent unit is at range 1.
+    pub fn hexes(&self) -> f64 {
+        self.hex_distance as f64
+    }
 }
 
 /// Measure continuous unit positions on the same battlefield, including signed ground elevation.
@@ -77,6 +91,27 @@ pub fn unit_range(world: &World, first: ObjectId, second: ObjectId) -> Result<Ra
         bearing: first_point.bearing_after_range(second_point),
         hex_distance: a.distance(b),
     })
+}
+
+/// Weapon range from a placed unit to a hex on its map: the hexes from the unit's hex to that
+/// hex, counting the target hex (Total Warfare p. 109). Elevation and the unit's offset inside
+/// its own hex never enter it.
+pub(super) fn unit_hex_range(world: &World, id: ObjectId, hex: HexCoordinate) -> Result<f64> {
+    let position = super::scanner::scanner_unit(world, id)
+        .context("Unit construction state is unavailable")?
+        .position
+        .context("Unit is not on a battlefield")?;
+    world
+        .btech
+        .maps()
+        .get(&position.map)
+        .context("Map not found")?
+        .base_hex(i64::from(hex.x), i64::from(hex.y))?;
+    let own = HexCoordinate {
+        x: i32::from(position.x),
+        y: i32::from(position.y),
+    };
+    Ok(own.distance(hex) as f64)
 }
 
 /// Current signed integer altitude used by terrain effects, or None when unplaced.
@@ -169,4 +204,22 @@ pub fn unit_altitude(world: &World, id: ObjectId) -> Result<Option<f64>> {
         || world.btech.constructed_units()[&id].altitude(tile),
         |unit| unit.altitude(tile),
     )))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Weapon range is the hex count alone: a unit ten levels above an adjacent hex is at
+    /// range 1, though the spatial distance to it is the square root of five.
+    #[test]
+    fn hexes_ignore_height() {
+        let range = Range {
+            horizontal: 1.0,
+            spatial: 5.0_f64.sqrt(),
+            bearing: Some(0.0),
+            hex_distance: 1,
+        };
+        assert_eq!(range.hexes(), 1.0);
+    }
 }

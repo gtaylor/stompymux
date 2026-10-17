@@ -49,7 +49,7 @@ pub fn tag_aim_modifiers(
         );
     }
     let source = super::fire_target::TargetSource::from(shooter);
-    let distance = super::unit_range(world, shooter, target)?.spatial;
+    let distance = super::unit_range(world, shooter, target)?.hexes();
     let defender = super::scanner::scanner_unit(world, target).context("Target is unavailable")?;
     let movement = super::aim::unit_target_movement(world, target, distance)?;
     let (attacker_movement, heat, sensors, control_damage, haywire) =

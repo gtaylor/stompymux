@@ -135,12 +135,14 @@ async fn changed_environment_reaches_live_movement_heat_and_flight() {
                     < hot.btech.constructed_units()[&unit].heat().stored
             );
         } else {
-            // Half gravity doubles the speed, then -40 °C costs one cruising MP.
+            // -40 °C costs one of the template's cruising MP and flank is refigured from what is
+            // left (TO:AR p. 60); half gravity then doubles the result, since gravity applies
+            // after every other movement modifier (TO:AR p. 53).
             let doubled = original_speed * 2.0;
-            let cruising = (doubled / 1.5 / 10.75).round_ties_even();
+            let cruising = world.btech.vehicles()[&unit].definition().walk_mp;
             assert_eq!(
                 battle_effective_maximum_speed(&world, unit, false).unwrap(),
-                (((cruising - 1.0).max(0.0) * 1.5).ceil() * 10.75).min(doubled)
+                SpeedEnvelope::from_walking_mp(f64::from(cruising.saturating_sub(1))).running * 2.0
             );
             set_battle_map_environment(&mut world, ObjectId(1), map, conditions(50, 20, false))
                 .unwrap();

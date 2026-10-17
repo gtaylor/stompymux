@@ -72,13 +72,7 @@ async fn startup_emits_six_stages_and_resumes_only_committed_seconds() {
     assert_eq!(world.btech.constructed_units()[&id].power(), Power::Running);
     assert!(advance_battle_units(&mut world, 0, true).is_empty());
     assert!(remove_battle_unit(&mut world, id, ObjectId(config.start())).is_err());
-    stop_battle_unit(
-        &mut world,
-        id,
-        ObjectId(1),
-        stompymux_rs::MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assert_eq!(world.btech.constructed_units()[&id].power(), Power::Off);
     assert_eq!(world.btech.constructed_units()[&id].pilot(), None);
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();

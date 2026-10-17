@@ -57,16 +57,6 @@ pub struct ChargeReport {
     pub notices: Vec<Notice>,
 }
 
-/// Charge recovery includes side torsos as well as arms and legs.
-const RECOVERY: [MechSection; 6] = [
-    MechSection::LeftArm,
-    MechSection::RightArm,
-    MechSection::LeftLeg,
-    MechSection::RightLeg,
-    MechSection::LeftTorso,
-    MechSection::RightTorso,
-];
-
 /// Charge damage: the attacker's tonnage over ten for every hex it moved, rounded up (Total
 /// Warfare p. 148). The realtime engine counts whole hexes of tracked travel.
 pub(super) fn charge_damage(tons: u16, hexes: u32) -> Result<u16> {
@@ -156,12 +146,15 @@ fn charge_profile_for(
         victim.posture() != Posture::Prone,
         "Your target's too low for you to charge it!"
     );
+    // One physical attack a turn, and none in a turn the charger fires (Total Warfare
+    // pp. 144, 148).
     ensure!(
-        source
-            .limb_recycle()
-            .keys()
-            .all(|section| matches!(section, MechSection::LeftTorso | MechSection::RightTorso)),
+        source.limb_recycle().is_empty(),
         "Your sections are still recovering from your last attack"
+    );
+    ensure!(
+        !source.fired_this_turn(world.btech.simulation_time()),
+        "You fired weapons this turn and cannot also charge."
     );
     if role != ChargeRole::OneWay {
         ensure!(
@@ -172,34 +165,6 @@ fn charge_profile_for(
             "You are unable to charge while unconscious or stunned"
         );
     }
-    let loadout = source.loadout()?;
-    // The one-way reference checks native indices zero through five, including center torso but not right leg.
-    let checked = if role != ChargeRole::OneWay {
-        RECOVERY
-    } else {
-        [
-            MechSection::LeftArm,
-            MechSection::RightArm,
-            MechSection::LeftTorso,
-            MechSection::RightTorso,
-            MechSection::CenterTorso,
-            MechSection::LeftLeg,
-        ]
-    };
-    ensure!(
-        !loadout
-            .weapons
-            .iter()
-            .enumerate()
-            .any(
-                |(index, mount)| source.weapon_recycle().contains_key(&index)
-                    && mount
-                        .criticals
-                        .iter()
-                        .any(|part| checked.contains(&part.section))
-            ),
-        "You have weapons recycling in a charge section"
-    );
     let motion = source.motion().context("Unit is not placed")?;
     let opponent = victim.motion().context("Target is not placed")?;
     ensure!(
@@ -776,12 +741,15 @@ fn stop_motion(world: &mut World, id: ObjectId) {
     }
 }
 
-/// Apply the common six-section recovery at the appropriate transaction boundary.
+/// The charger may not fire or make another physical attack for the rest of the turn (Total
+/// Warfare pp. 144, 148); applied at the appropriate transaction boundary.
 fn start_recovery(world: &mut World, id: ObjectId) {
-    let unit = world.btech.constructed.get_mut(&id).unwrap();
-    for section in RECOVERY {
-        unit.limb_recycle.insert(section, 60);
-    }
+    world
+        .btech
+        .constructed
+        .get_mut(&id)
+        .unwrap()
+        .tie_up_every_section();
 }
 
 /// One mutual participant, including a pre-collision rejection and its consumed roll.

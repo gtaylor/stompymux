@@ -401,6 +401,26 @@ pub(crate) async fn kick_fixture() -> (
     (dir, config, world, id, target)
 }
 
+/// Let `seconds` of simulation time pass as that many heartbeats would for an idle unit: the
+/// committed clock and every weapon and limb recovery countdown advance, and nothing moves.
+pub(crate) fn pass_seconds(world: &mut stompymux_rs::World, seconds: i64) {
+    for _ in 0..seconds {
+        stompymux_rs::advance_battle_recycle(world);
+    }
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["simulation_seconds"] = (world.btech.simulation_time() + seconds).into();
+    world.btech = serde_json::from_value(state).unwrap();
+}
+
+/// Whether every surviving section is tied up for one full turn, as a charge, a death from
+/// above attack or a club pickup leaves a Mech (Total Warfare pp. 146, 148-149).
+pub(crate) fn tied_up_for_a_turn(unit: &stompymux_rs::Mech) -> bool {
+    stompymux_rs::MechSection::ALL.into_iter().all(|section| {
+        unit.limb_recycle().get(&section).copied()
+            == (unit.sections()[&section].internal > 0).then_some(30)
+    })
+}
+
 /// Explicit physical rules keep direct tests independent of local configuration defaults.
 pub(crate) fn kick_rules() -> stompymux_rs::PhysicalRules {
     stompymux_rs::PhysicalRules { fall: fall_rules() }

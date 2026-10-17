@@ -206,6 +206,7 @@ pub use vehicle_motion::VehicleMotionRules;
 pub use vehicle_motion::VehicleTemplateMotion;
 mod vehicle_placement;
 mod vehicle_power;
+mod vehicle_speed;
 pub use vehicle::{Vehicle, create_vehicle, damage_vehicle_motive, damage_vehicle_phase};
 mod engine_sink_capacity;
 mod mode_feedback;
@@ -218,7 +219,7 @@ pub use unit::{Mech, Position, SectionState};
 pub(crate) use crew::player_moved;
 pub use crew::{assign_pilot, release_pilot};
 
-pub use power::{Notice, Power, advance_units, start_unit, stop_unit};
+pub use power::{Notice, Power, advance_units, power_down_unit, start_unit, stop_unit};
 
 /// Render a domain notice through ordinary container notification, staging it until commit.
 pub(crate) fn notify_unit(scripts: &crate::Scripts, notice: Notice) -> anyhow::Result<()> {

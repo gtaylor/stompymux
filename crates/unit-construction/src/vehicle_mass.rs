@@ -259,16 +259,19 @@ impl VehicleTemplate {
         loadout: &VehicleLoadout,
         part: &SystemCritical<VehicleCriticalLocation>,
     ) -> u32 {
-        if part.system != System::TargetingComputer {
-            return self.fixed_system_mass(part.system);
-        }
         let clan = part.is_clan(self.has_special("Clan"));
+        if part.system != System::TargetingComputer {
+            return self.fixed_system_mass(part.system, clan);
+        }
         targeting_computer_tons(loadout.weapons.iter().map(|mount| mount.weapon), clan) * 1024
     }
 
-    /// Mass of a vehicle system whose weight does not depend on the rest of the loadout. The
-    /// targeting computer is sized by [`Self::system_mass`] and weighs nothing here.
-    pub(crate) fn fixed_system_mass(&self, system: System) -> u32 {
+    /// Mass of a vehicle system whose weight does not depend on the rest of the loadout, built
+    /// from Clan technology when `clan` is set (see [`SystemCritical::is_clan`]): the Beagle
+    /// and Clan active probes, the Guardian and Clan ECM suites, CASE II and the machine gun
+    /// array each weigh by their own base (TechManual pp. 204-238). The targeting computer is
+    /// sized by [`Self::system_mass`] and weighs nothing here.
+    pub(crate) fn fixed_system_mass(&self, system: System, clan: bool) -> u32 {
         match system {
             System::Axe
             | System::Claw
@@ -285,7 +288,7 @@ impl VehicleTemplate {
             }
             // A Clan active probe weighs a ton; the Beagle a ton and a half.
             System::BeagleProbe => {
-                if self.has_special("Clan") {
+                if clan {
                     1024
                 } else {
                     1536
@@ -302,17 +305,17 @@ impl VehicleTemplate {
             System::Flail | System::MediumVibroblade => 5120,
             System::LargeVibroblade => 7168,
             System::Ecm => {
-                if self.has_special("Clan") && !self.has_technology(super::Technology::Watchdog) {
+                if clan && !self.has_technology(super::Technology::Watchdog) {
                     1024
                 } else {
                     1536
                 }
             }
             // Clan CASE weighs nothing (TechManual p. 210).
-            System::Case if self.has_special("Clan") => 0,
+            System::Case if clan => 0,
             System::Case | System::LightProbe | System::LightTag => 512,
             System::CaseIi => {
-                if self.has_special("Clan") {
+                if clan {
                     512
                 } else {
                     1024
@@ -347,7 +350,7 @@ impl VehicleTemplate {
             | System::Spikes
             | System::TargetingComputer => 0,
             System::MachineGunArray => {
-                if self.has_special("Clan") {
+                if clan {
                     256
                 } else {
                     512

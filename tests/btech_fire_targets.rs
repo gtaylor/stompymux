@@ -73,7 +73,8 @@ fn scripts(config: &Config, world: &World) -> Scripts {
     Scripts::new(config, Rc::new(RefCell::new(world.clone()))).unwrap()
 }
 
-/// Occupants take unit damage even with a terrain lock; empty hexes keep the saved mode's bonus.
+/// Occupants take unit damage even with a terrain lock; an empty hex is an immobile target in
+/// every lock mode (Total Warfare p. 110).
 #[tokio::test]
 async fn coordinates_share_all_chassis_single_tic_and_restart() {
     let tracked = include_str!("../game/units/Demolisher.toml");
@@ -108,7 +109,7 @@ async fn coordinates_share_all_chassis_single_tic_and_restart() {
                 assert_eq!((x, actual_y), (1, y));
                 assert_eq!(recipient, (y == 1).then_some(target.0));
                 if y == 0 {
-                    assert_eq!(bonus, Some(if mode == HexTargetMode::Hex { -4 } else { 0 }));
+                    assert_eq!(bonus, Some(-4));
                 }
                 for command in ["fire", "firetic"] {
                     let native = scripts(&config, &world);

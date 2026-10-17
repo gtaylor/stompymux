@@ -12,7 +12,9 @@ use serde::Serialize;
 pub struct NetworkRange {
     /// Network family selected for this calculation; classic C3 takes priority over C3i.
     pub kind: CommandNetwork,
-    /// Closest usable sighting, or the shooter's physical distance if no peer improves it.
+    /// Hexes from the closest usable sighting to the target, or the shooter's own weapon
+    /// range if no peer improves it. Like any weapon range, it is a hex count (Total Warfare
+    /// p. 109).
     pub distance: f64,
     /// Peer supplying a strictly shorter sighting; None means the shooter remains closest.
     pub source: Option<ObjectId>,
@@ -136,14 +138,15 @@ pub(super) fn select(
             NetworkTarget::Unit(target) => super::contacts::ContactReader::new(world, peer)?
                 .facts(target)?
                 .filter(|facts| facts.detection.is_some() && facts.line_of_fire)
-                .map(|facts| facts.range.spatial),
+                .map(|facts| facts.range.hexes()),
             NetworkTarget::Hex(hex) => {
                 // The network's coordinate targeting path requires positive map coordinates.
                 if hex.x <= 0 || hex.y <= 0 {
                     continue;
                 }
-                let (_, distance) = super::los::unit_hex_los(world, peer, hex)?;
-                super::visibility::hex_unblocked(world, peer, hex)?.then_some(distance)
+                super::visibility::hex_unblocked(world, peer, hex)?
+                    .then(|| super::geometry::unit_hex_range(world, peer, hex))
+                    .transpose()?
             }
         };
         if let Some(distance) = distance.filter(|distance| *distance < selected.distance) {

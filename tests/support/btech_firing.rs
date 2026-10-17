@@ -74,7 +74,7 @@ pub async fn fixture_with_supply(
 
 /// Construct the sighting lane, shooter and target on a supplied base world.
 pub fn supply_fixture_on(
-    mut world: World,
+    world: World,
     config: &Config,
     source: &str,
     weapon: Option<Weapon>,
@@ -82,12 +82,31 @@ pub fn supply_fixture_on(
     computer: bool,
     ammunition_flag: Option<&str>,
 ) -> (World, ObjectId, ObjectId, usize) {
+    lane_fixture_on(
+        world,
+        config,
+        (source, weapon, computer, ammunition_flag),
+        target_source,
+        1,
+    )
+}
+
+/// Construct a clear north/south lane with the target `range` hexes due north of the shooter,
+/// so every hex between them shares one column.
+pub fn lane_fixture_on(
+    mut world: World,
+    config: &Config,
+    (source, weapon, computer, ammunition_flag): (&str, Option<Weapon>, bool, Option<&str>),
+    target_source: &str,
+    range: u16,
+) -> (World, ObjectId, ObjectId, usize) {
+    let length = usize::from(range).max(11) + 1;
     let map = world.create(config, "Sight lane".into(), Kind::Room);
     create_battle_map(
         &mut world,
         map,
         "sight",
-        MapAsset::from_cells(&format!("1 12\n{}", ".0\n".repeat(12))).unwrap(),
+        MapAsset::from_cells(&format!("1 {length}\n{}", ".0\n".repeat(length))).unwrap(),
     )
     .unwrap();
     crate::seed_object_dice(&mut world, map, crate::FIXTURE_DICE_SEED);
@@ -160,8 +179,9 @@ pub fn supply_fixture_on(
     for id in [shooter, target] {
         crate::seed_object_dice(&mut world, id, crate::FIXTURE_DICE_SEED);
     }
-    place_battle_unit(&mut world, shooter, map, 0, 11).unwrap();
-    place_battle_unit(&mut world, target, map, 0, 10).unwrap();
+    let shooter_row = i64::try_from(length).unwrap() - 1;
+    place_battle_unit(&mut world, shooter, map, 0, shooter_row).unwrap();
+    place_battle_unit(&mut world, target, map, 0, shooter_row - i64::from(range)).unwrap();
     for id in [shooter, target] {
         edit(&mut world, id, |state| {
             state["power"] = serde_json::to_value(Power::Running).unwrap();

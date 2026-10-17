@@ -61,6 +61,14 @@ impl TerrainLos {
     pub fn building_hexes(self) -> u8 {
         self.buildings.saturating_add(self.hardened_buildings)
     }
+
+    /// The to-hit cost of the terrain between attacker and target: a point per light woods or
+    /// light smoke hex, two per heavy (Total Warfare p. 107), three per ultra-heavy woods, and
+    /// one for every two hexes of planted fields (Tactical Operations). The target's own hex
+    /// and partial cover are not part of it.
+    pub fn intervening_modifier(self) -> i16 {
+        i16::from(self.obscuring_points()) + i16::from(self.fields / 2)
+    }
 }
 
 /// Trace hex centers at standing-mech eye height, excluding the observer's own hex.
@@ -483,6 +491,23 @@ mod tests {
     use super::*;
     use crate::{Hex, Terrain};
     use std::sync::Arc;
+
+    /// Woods and smoke on the line cost their points and crops one per two hexes; the
+    /// target's own hex and partial cover stay out of the intervening term.
+    #[test]
+    fn intervening_modifier_counts_only_the_line() {
+        let terrain = TerrainLos {
+            woods: 2,
+            smoke: 1,
+            fields: 3,
+            target_woods: 2,
+            target_smoke: 1,
+            partial_cover: true,
+            ..TerrainLos::default()
+        };
+        assert_eq!(terrain.intervening_modifier(), 4);
+        assert_eq!(TerrainLos::default().intervening_modifier(), 0);
+    }
 
     /// Empty-hex LOS stops at daylight's sixty hexes and still reports the range beyond it.
     #[test]

@@ -375,13 +375,7 @@ async fn self_destruct_admission_stop_and_atomic_cancel() {
         ObjectId(1),
         support::FIXTURE_DICE_SEED,
     );
-    stop_battle_unit(
-        &mut scripts.world_mut(),
-        id,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
     assert!(matches!(
         &advance_battle_self_destructs_action(&scripts, &config).unwrap()[..],
         [SelfDestructOutcome::Cancelled { .. }]

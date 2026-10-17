@@ -75,11 +75,7 @@ pub(super) fn pickup(
     if candidate.btech.tows().contains_key(&target) {
         notices.extend(super::release_tow(&mut candidate, target)?);
     }
-    notices.extend(super::pickup::prepare_target(
-        &mut candidate,
-        target,
-        rules,
-    )?);
+    notices.extend(super::pickup::prepare_target(&mut candidate, target)?);
     notices.extend(super::broadcast::interaction_notices(
         world, carrier, target, "picks up",
     ));
@@ -154,13 +150,17 @@ pub(super) fn pickup(
     } else {
         None
     };
-    let maximum = super::throttle_maximum(&candidate, carrier, tsm_tow_bonus)?;
+    let envelope = super::motion_controls::throttle_envelope(
+        &candidate,
+        carrier,
+        super::SpeedPolicy { tsm_tow_bonus },
+    )?;
     let motion = candidate
         .btech
         .unit_mut(carrier)
         .and_then(|unit| super::with_unit_mut!(unit, |unit| unit.motion.as_mut()));
     if let Some(motion) = motion {
-        motion.limit_load(maximum, maximum);
+        motion.limit_load(envelope, envelope);
     }
     super::towing::synchronize_pair(&mut candidate, carrier, target)?;
     candidate.btech.validate_action(&candidate)?;

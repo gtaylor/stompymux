@@ -233,7 +233,8 @@ fn link_valid(world: &World, source: ObjectId, target: ObjectId) -> bool {
         && !unit.destroyed
         && unit_hardware(world, source).is_ok_and(|(_, available)| available)
         && unit_ranges(world, source).is_ok_and(|[_, _, long]| {
-            unit_range(world, source, target).is_ok_and(|range| range.spatial <= f64::from(long))
+            unit_range(world, source, target)
+                .is_ok_and(|range| range.hex_distance <= u64::from(long))
         })
         && visible_contact(world, source, target).is_ok_and(|contact| contact.is_some())
         && super::visibility::unit_unblocked(world, source, target).unwrap_or(false)

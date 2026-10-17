@@ -222,7 +222,7 @@ fn unit_summary(
         "That target isn't seen well enough by the scanners for scanning!"
     );
     ensure!(
-        !enforce_range || source.observer || view.range.spatial.trunc() <= f64::from(maximum),
+        !enforce_range || source.observer || view.range.hex_distance <= u64::from(maximum),
         "Target is out of scanner range."
     );
     super::scan_summary::render(world, observer, &view)
@@ -356,9 +356,9 @@ pub(super) fn check_coordinate(
 ) -> Result<ObjectId> {
     let (unit, maximum) = scanner(world, observer, pilot)?;
     let map = unit.position.context("Scanner is not placed")?.map;
-    let (_, distance) = super::los::unit_hex_los(world, observer, coordinate)?;
+    let distance = super::geometry::unit_hex_range(world, observer, coordinate)?;
     ensure!(
-        (observer_range && unit.observer) || distance.trunc() <= f64::from(maximum),
+        (observer_range && unit.observer) || distance <= f64::from(maximum),
         "Those coordinates are out of scanner range."
     );
     ensure!(

@@ -302,6 +302,11 @@ pub(super) fn use_weapon(
     unit.fired_recently |= launched;
     if launched {
         unit.last_weapon_fire = Some(now);
+        // Every section the mount occupies has fired this turn, for the physical attack limb
+        // rules (Total Warfare pp. 145-149).
+        for slot in &mount.criticals {
+            unit.section_fire.insert(slot.section, now);
+        }
     }
     unit.heat.stored += f64::from(heat);
     unit.weapon_recycle.insert(index, u16::from(recycle));

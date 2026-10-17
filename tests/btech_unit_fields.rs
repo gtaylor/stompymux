@@ -323,7 +323,7 @@ async fn special_field_commands_scenario(f: &UnitFields) {
         .position()
         .unwrap()
         .map;
-    stop_battle_unit(&mut world, unit, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, unit, ObjectId(1)).unwrap();
     for (id, set, view, assignment) in [
         (map, "@setmap", "@viewmap", "mapname A field with spaces"),
         (unit, "@setunit", "@viewunit", "team 7"),
@@ -1129,7 +1129,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
                 .as_i64()
                 .unwrap()
         };
-        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
         support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
         start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -1137,7 +1137,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
             advance_battle_units(&mut world, now, true);
         }
         assert_eq!(history(&world), -50);
-        stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+        stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         advance_battle_units(&mut world, 102, true);
         assert_eq!(history(&world), -50);
         for (fast, duration, start) in [(true, 5, 1_800_000_000_i64), (false, 30, 1_900_000_000)] {
@@ -1164,7 +1164,7 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
             }
             advance_battle_units(&mut world, start + 100, true);
             assert_eq!(history(&world), start + duration);
-            stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+            stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
         }
         let scripts = &f.native;
         support::install(scripts, world.clone());
@@ -2412,12 +2412,12 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
         } else {
             let mut unit = loaded.btech.vehicles()[&id].clone();
             unit.apply_motive_hit(VehicleMotiveHit::SpeedLoss { movement_points: 1 });
-            // One Cruising MP off the construction refigures its flank (Total Warfare p. 193):
+            // One Cruising MP off the template's refigures its flank (Total Warfare pp. 53, 193):
             // a 3/5 Demolisher drops to 2/3. The edited live maximum drops by the same amount.
-            let flank = unit.definition().max_speed / 10.75;
-            let refigured = (((flank / 1.5).round() - 1.0) * 1.5).ceil();
-            let lost = unit.motive_speed_loss();
-            assert_eq!(lost, (flank - refigured) * 10.75);
+            assert_eq!(unit.motive_mp_loss(), 1);
+            let cruising = unit.definition().walk_mp;
+            let flank = |mp: u32| SpeedEnvelope::from_walking_mp(f64::from(mp)).running;
+            let lost = flank(cruising) - flank(cruising - 1);
             let value = serde_json::to_value(unit).unwrap();
             firing::edit(&mut loaded, id, |unit| *unit = value);
             40.0 - lost

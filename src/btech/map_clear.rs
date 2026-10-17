@@ -55,26 +55,12 @@ fn clear(
                     id.0
                 ),
             )?;
-            let unit_before = scripts.world().clone();
-            let mut effects = super::shutdown::ShutdownEffects::default();
-            if super::scanner::scanner_unit(&unit_before, id)
+            let power = super::scanner::scanner_unit(&scripts.world(), id)
                 .context("Unit is unavailable")?
-                .power
-                != super::Power::Off
-            {
-                let notices = super::power::stop_admitted_in_action(
-                    &mut scripts.world_mut(),
-                    id,
-                    super::FallRules::configured(config),
-                    &mut effects,
-                )?;
-                super::piloting::publish_ordered_notices(
-                    scripts,
-                    &notices,
-                    &effects.pilot_notices,
-                )?;
-                super::shutdown::publish(scripts, config, &effects)?;
-                super::evacuation::publish_new_casualties(scripts, config, &unit_before)?;
+                .power;
+            if power != super::Power::Off {
+                let notices = super::power::power_down_unit(&mut scripts.world_mut(), id)?;
+                super::piloting::publish_ordered_notices(scripts, &notices, &[])?;
             }
             let mut world = scripts.world_mut();
             let carrier = world.btech.towed_by(id).unwrap_or(id);

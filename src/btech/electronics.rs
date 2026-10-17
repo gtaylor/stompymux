@@ -257,7 +257,7 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
         {
             continue;
         }
-        let distance = super::unit_range(world, id, other)?.spatial;
+        let distance = super::unit_range(world, id, other)?.hexes();
         if distance > reach {
             continue;
         }

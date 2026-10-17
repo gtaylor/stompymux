@@ -70,13 +70,19 @@ pub fn set_vtol_vertical_speed(
 ) -> Result<Notice> {
     super::vehicle_power::controlled(world, id, pilot)?;
     super::fortification::require_mobile(world, id)?;
-    let maximum = super::motion_controls::throttle_maximum(world, id, true)?;
+    let envelope = super::motion_controls::throttle_envelope(
+        world,
+        id,
+        super::SpeedPolicy {
+            tsm_tow_bonus: true,
+        },
+    )?;
     world
         .btech
         .vehicles
         .get_mut(&id)
         .unwrap()
-        .set_vtol_vertical_at(speed, maximum)?;
+        .set_vtol_vertical_at(speed, envelope)?;
     Ok(Notice {
         unit: id,
         text: format!("Vertical speed set to {speed:.2} KPH."),

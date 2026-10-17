@@ -106,15 +106,21 @@ pub(super) fn apply_in_world(
     let vertical = unit
         .vtol_flight()
         .map_or(0.0, |flight| flight.vertical_speed);
-    let maximum = if effect == RotorHit::FlightStabilizer && !unit.tail_rotor_destroyed() {
-        Some(super::motion_controls::throttle_maximum(world, id, true)?)
+    let envelope = if effect == RotorHit::FlightStabilizer && !unit.tail_rotor_destroyed() {
+        Some(super::motion_controls::throttle_envelope(
+            world,
+            id,
+            super::SpeedPolicy {
+                tsm_tow_bonus: true,
+            },
+        )?)
     } else {
         None
     };
     let unit = world.btech.vehicles.get_mut(&id).unwrap();
     let mut report = unit.apply_rotor_hit(effect, fallen)?;
-    if let Some(maximum) = maximum {
-        unit.constrain_vtol_cruise_at(vertical, maximum)?;
+    if let Some(envelope) = envelope {
+        unit.constrain_vtol_cruise_at(vertical, envelope)?;
     }
     let grounded = effect == RotorHit::Damage
         && !fallen

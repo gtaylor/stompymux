@@ -41,7 +41,8 @@ impl Mech {
 
 /// Effective transfer speed includes live external load without caching chassis state.
 /// Mechs retain their mass, booster, myomer and environmental conversions; vehicles
-/// use the damage-adjusted movement ceiling with the shared external-load penalty.
+/// use their live flanking ceiling after motive damage, extreme temperature and the shared
+/// external-load penalty.
 /// Both chassis families apply map gravity after load.
 pub fn unit_effective_maximum_speed(
     world: &crate::World,
@@ -57,10 +58,8 @@ pub(crate) fn configured(
     id: crate::ObjectId,
     policy: super::speed_bonus::SpeedPolicy,
 ) -> Result<f64> {
-    if let Some(unit) = world.btech.vehicles().get(&id) {
-        let base =
-            super::load::movement_maximum(world, id, unit.maximum_speed(), policy.tsm_tow_bonus)?;
-        return super::speed_bonus::vehicle_on_map(world, unit.position(), f64::from(base as f32));
+    if world.btech.vehicles().contains_key(&id) {
+        return super::motion_controls::throttle_configured(world, id, policy);
     }
     let unit = world
         .btech

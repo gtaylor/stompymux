@@ -42,8 +42,69 @@ async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {
     (dir, config, world, id, map)
 }
 
+/// The 5/8 truck cruises at exactly its template's 5 MP, 53.75 km/h, and flanks at 8 MP,
+/// 86 km/h (Total Warfare p. 53); moderate motive damage takes one cruising MP and leaves it
+/// at 4/6 (TW p. 193). The named speeds, the reverse limit and the Lua state follow.
+#[tokio::test]
+async fn template_cruising_mp_sets_the_envelope_and_moderate_damage_refigures_it() {
+    let (_dir, config, mut world, id, _) = fixture().await;
+    let vehicle = &world.btech.vehicles()[&id];
+    assert_eq!(vehicle.definition().walk_mp, 5);
+    assert_eq!(vehicle.cruising_mp(), 5);
+    assert_eq!(vehicle.cruising_speed(), 53.75);
+    assert_eq!(vehicle.maximum_speed(), 86.0);
+    assert_eq!(
+        vehicle.speed_envelope(),
+        SpeedEnvelope {
+            walking: 53.75,
+            running: 86.0
+        }
+    );
+    // Backing away is held to cruising speed, not two thirds of flank (57.33 km/h).
+    assert!(set_battle_speed(&mut world, id, ObjectId(1), -57.0).is_err());
+    set_battle_speed(&mut world, id, ObjectId(1), -53.75).unwrap();
+    damage_battle_vehicle_motive(
+        &mut world,
+        id,
+        VehicleMotiveHit::SpeedLoss { movement_points: 1 },
+    )
+    .unwrap();
+    let vehicle = &world.btech.vehicles()[&id];
+    assert_eq!(vehicle.motive_mp_loss(), 1);
+    assert_eq!(vehicle.cruising_mp(), 4);
+    assert_eq!(vehicle.cruising_speed(), 43.0);
+    assert_eq!(vehicle.maximum_speed(), 64.5);
+    assert_eq!(vehicle.motion().unwrap().desired_speed, -43.0);
+    let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
+    for (name, speed) in [
+        ("cruise", 43.0),
+        ("walk", 43.0),
+        ("flank", 64.5),
+        ("back", -43.0),
+    ] {
+        scripts
+            .eval_callback::<()>(&format!("btech.unit.speed({},1,'{name}')", id.0))
+            .unwrap();
+        assert_eq!(
+            scripts.world().btech.vehicles()[&id]
+                .motion()
+                .unwrap()
+                .desired_speed,
+            speed,
+            "{name}"
+        );
+    }
+    let state: (f64, f64, u32) = scripts
+        .eval_callback(&format!(
+            "local u=btech.unit.state({}); return u.cruising_speed,u.maximum_speed,u.motive_mp_loss",
+            id.0
+        ))
+        .unwrap();
+    assert_eq!(state, (43.0, 64.5, 1));
+}
+
 /// Two Cruising MP of motive damage leave the 5/8 truck at 3/5 (Total Warfare pp. 53, 193):
-/// flank, and the reverse limit derived from it, drop to the refigured 5 MP.
+/// flank drops to the refigured 5 MP and the reverse limit to the 3 cruising MP left.
 #[tokio::test]
 async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
     for reverse in [false, true] {
@@ -52,7 +113,7 @@ async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
         for _ in 0..10 {
             advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
         }
-        let desired = if reverse { -86.0 * 2.0 / 3.0 } else { 86.0 };
+        let desired = if reverse { -53.75 } else { 86.0 };
         set_battle_speed(&mut world, id, ObjectId(1), desired).unwrap();
         for _ in 0..20 {
             advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
@@ -67,8 +128,9 @@ async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
         let vehicle = &world.btech.vehicles()[&id];
         assert_eq!(vehicle.definition(), original.definition());
         assert_eq!(vehicle.sections(), original.sections());
-        let limit = if reverse { -53.75 * 2.0 / 3.0 } else { 53.75 };
-        assert_eq!(vehicle.motive_speed_loss(), 32.25);
+        let limit = if reverse { -32.25 } else { 53.75 };
+        assert_eq!(vehicle.motive_mp_loss(), 2);
+        assert_eq!(vehicle.cruising_speed(), 32.25);
         assert_eq!(vehicle.maximum_speed(), 53.75);
         assert!((vehicle.motion().unwrap().speed - limit).abs() < 1e-9);
         assert!((vehicle.motion().unwrap().desired_speed - limit).abs() < 1e-9);
@@ -96,8 +158,13 @@ async fn motive_speed_loss_clamps_controls_and_replays_damaged_movement() {
                 .desired_speed,
             53.75
         );
-        let state: (f64,f64,bool) = scripts.eval_callback(&format!("local u=btech.unit.state({}); return u.maximum_speed,u.motive_speed_loss,u.immobilized",id.0)).unwrap();
-        assert_eq!(state, (53.75, 32.25, false));
+        let state: (f64, f64, u32, bool) = scripts
+            .eval_callback(&format!(
+                "local u=btech.unit.state({}); return u.maximum_speed,u.cruising_speed,u.motive_mp_loss,u.immobilized",
+                id.0
+            ))
+            .unwrap();
+        assert_eq!(state, (53.75, 32.25, 2, false));
     }
 }
 
@@ -146,16 +213,21 @@ async fn motive_snapshots_reject_impossible_limits_and_immobile_motion() {
     let (_dir, _config, mut world, id, _) = fixture().await;
     set_battle_speed(&mut world, id, ObjectId(1), 86.0).unwrap();
     let original = serde_json::to_value(&world.btech.vehicles()[&id]).unwrap();
-    for loss in [-1.0, 87.0] {
+    // Motive damage cannot take more cruising MP than the template states.
+    for loss in [
+        serde_json::json!(-1),
+        serde_json::json!(6),
+        serde_json::json!(1.5),
+    ] {
         let mut bad = original.clone();
-        bad["motive_speed_loss"] = loss.into();
+        bad["motive_mp_loss"] = loss;
         assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     }
     let mut bad = original.clone();
     bad["immobilized"] = true.into();
     assert!(serde_json::from_value::<Vehicle>(bad).is_err());
     let mut bad = original;
-    bad["motive_speed_loss"] = 10.75.into();
+    bad["motive_mp_loss"] = 1.into();
     // A saved throttle can retain the prior environmental ceiling until the next tick.
     let retained = serde_json::from_value::<Vehicle>(bad.clone()).unwrap();
     assert_eq!(retained.motion().unwrap().desired_speed, 86.0);

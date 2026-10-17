@@ -91,7 +91,8 @@ impl SensorBands {
     }
 
     /// Range brackets from the Tactical Operations Sensor Range Table (p. 190) for one mode
-    /// on a 'Mech or a combat vehicle; a probe mode uses the installed probe's brackets.
+    /// on a 'Mech or a combat vehicle; a probe mode uses the installed probe's brackets, and a
+    /// Beagle that is itself Clan technology (`clan`, from its own slots) the Clan active probe's.
     pub fn of(mode: SensorMode, vehicle: bool, probe: Option<ActiveProbe>, clan: bool) -> Self {
         match (mode, vehicle) {
             (SensorMode::Infrared | SensorMode::Magscan, false) => Self::new(10, 20, 30),
@@ -194,8 +195,9 @@ impl TargetSystems {
 }
 
 /// What a sweep of `mode` adds to its result for each of the target's systems: the Tactical
-/// Operations ECM/Stealth Modifier Table (p. 191). A Beagle slot on Clan equipment (`clan`)
-/// is the Clan active probe and takes that row. Passive infrared, magscan and seismic sensors
+/// Operations ECM/Stealth Modifier Table (p. 191). A Beagle probe that is itself Clan technology
+/// (`clan`, from its own slots rather than the chassis) is the Clan active probe and takes
+/// that row. Passive infrared, magscan and seismic sensors
 /// are not fooled by any of them.
 pub fn ecm_modifier(
     mode: SensorMode,
@@ -270,8 +272,8 @@ pub struct SweepResult {
     pub jammed: bool,
 }
 
-/// Resolve one sensor sweep against one target. `clan` marks Clan sensors, whose Beagle slot
-/// is the Clan active probe.
+/// Resolve one sensor sweep against one target. `clan` marks a probe that is itself Clan
+/// technology, whose Beagle slot is the Clan active probe.
 pub fn sweep(
     mode: SensorMode,
     bands: SensorBands,

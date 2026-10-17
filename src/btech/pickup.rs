@@ -206,15 +206,11 @@ pub fn pickup_admission(
 /// The enclosing action must release any tow owned by the target, then attach,
 /// synchronize height, apply terrain consequences and publish returned notices.
 /// This helper deliberately does not establish or release tow ownership.
-pub(super) fn prepare_target(
-    world: &mut World,
-    target: ObjectId,
-    rules: super::FallRules,
-) -> Result<Vec<super::Notice>> {
+pub(super) fn prepare_target(world: &mut World, target: ObjectId) -> Result<Vec<super::Notice>> {
     let power = super::scanner::scanner_unit(world, target)
         .context("Target is unavailable")?
         .power;
-    // Pickup arrests translation before shutdown, avoiding a shutdown-induced moving fall.
+    // A picked-up unit stops moving and is laid out for towing before its power is cut.
     if let Some(unit) = world.btech.vehicles.get_mut(&target) {
         unit.halt();
         unit.building_entry = None;
@@ -244,7 +240,7 @@ pub(super) fn prepare_target(
     if power == Power::Off {
         return Ok(Vec::new());
     }
-    super::power::stop_admitted(world, target, rules)
+    super::power::power_down_unit(world, target)
 }
 
 /// Admit and prepare a pickup target atomically, without attaching tow cables.
@@ -255,11 +251,10 @@ pub fn prepare_pickup(
     carrier: ObjectId,
     pilot: ObjectId,
     target: ObjectId,
-    rules: super::FallRules,
 ) -> Result<Vec<super::Notice>> {
     pickup_admission(world, carrier, pilot, target)?;
     world.attempt(|world| {
-        let notices = prepare_target(world, target, rules)?;
+        let notices = prepare_target(world, target)?;
         world.btech.validate_action(world)?;
         Ok(notices)
     })

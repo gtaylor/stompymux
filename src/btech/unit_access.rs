@@ -447,6 +447,20 @@ impl UnitEdit {
         }
     }
 
+    /// Set the seconds left before one weapon, by its zero-based loadout index, finishes
+    /// recycling; zero clears the countdown.
+    pub fn set_weapon_recycle(&mut self, index: usize, seconds: u16) {
+        let recycle = match &mut self.draft {
+            Draft::Mech(unit) => &mut unit.weapon_recycle,
+            Draft::Vehicle(vehicle) => &mut vehicle.weapon_recycle,
+        };
+        if seconds == 0 {
+            recycle.remove(&index);
+            return;
+        }
+        recycle.insert(index, seconds);
+    }
+
     /// Edit a placed unit's motion, such as its speed or heading.
     pub fn edit_motion(&mut self, edit: impl FnOnce(&mut Motion)) {
         let motion = match &mut self.draft {

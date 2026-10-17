@@ -186,19 +186,20 @@ pub(super) fn set_cargo_capacity(
             unit.set_cargo_tons(tons);
         }
     );
-    // Evaluate construction even when zero capacity bypasses ordinary load penalties.
+    // Evaluate the resized construction even when the unit carries nothing.
     unit_load(world, id, tsm_bonus)?;
     reconcile(world, id, tsm_bonus)
 }
 
-/// Whether cargo installations, loose stock or towing require live propulsion limits.
+/// Whether loose stock, auxiliary fuel or a tow loads the unit, so live propulsion limits apply.
+/// A cargo bay is construction mass, not load (TechManual p. 239): it holds nothing until
+/// stock is loaded into it, so an empty bay leaves movement exactly as it is without one.
 pub(super) fn carries_load(world: &World, id: ObjectId) -> bool {
-    cargo_capacity(world, id) > 0
-        || world
-            .btech
-            .vehicles()
-            .get(&id)
-            .is_some_and(|unit| unit.auxiliary_fuel_mass() > 0)
+    world
+        .btech
+        .vehicles()
+        .get(&id)
+        .is_some_and(|unit| unit.auxiliary_fuel_mass() > 0)
         || world.btech.tows().contains_key(&id)
         || world.btech.inventories.get(&id).is_some_and(|entries| {
             entries
@@ -224,8 +225,14 @@ pub(super) fn movement_maximum(
 
 /// Reconcile a changed external load immediately without advancing position, time or dice.
 pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Result<()> {
-    let maximum = super::throttle_maximum(world, id, tsm_bonus)?;
-    let road = super::scanner::scanner_unit(world, id)
+    let envelope = super::motion_controls::throttle_envelope(
+        world,
+        id,
+        super::SpeedPolicy {
+            tsm_tow_bonus: tsm_bonus,
+        },
+    )?;
+    let tile = super::scanner::scanner_unit(world, id)
         .and_then(|unit| unit.position)
         .and_then(|position| {
             world
@@ -233,17 +240,15 @@ pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Res
                 .maps()
                 .get(&position.map)
                 .and_then(|map| map.hex(i64::from(position.x), i64::from(position.y)).ok())
-        })
-        .is_some_and(|hex| hex.is_road() || hex.has_bridge());
+        });
     if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         if let Some(mut motion) = unit.motion() {
+            let movement = unit.definition().movement;
             motion.limit_load(
-                maximum,
-                if road && maximum > 0.0 && !unit.definition().is_vtol() {
-                    maximum + 10.75
-                } else {
-                    maximum
-                },
+                envelope,
+                tile.map_or(envelope, |tile| {
+                    super::vehicle_speed::actual_speed_bounds(tile, movement, envelope)
+                }),
             );
             unit.motion = Some(motion);
         }
@@ -255,7 +260,7 @@ pub(super) fn reconcile(world: &mut World, id: ObjectId, tsm_bonus: bool) -> Res
         .get_mut(&id)
         .context("Unit is unavailable")?;
     if let Some(mut motion) = unit.motion() {
-        motion.limit_load(maximum, maximum);
+        motion.limit_to(envelope);
         unit.motion = Some(motion);
     }
     Ok(())
@@ -279,6 +284,35 @@ mod tests {
             towing_mass(u32::MAX, false, false, false),
             u64::from(u32::MAX) * 2
         );
+    }
+
+    /// A cargo bay is construction, not load (TechManual p. 239): the Flatbed Truck's empty
+    /// 6-ton bay carries nothing and leaves its movement unlimited by load until stock is
+    /// loaded into it.
+    #[test]
+    fn an_empty_cargo_bay_is_not_load() {
+        let config = crate::Config::load("tests/fixtures/game").unwrap();
+        let mut world = World::default();
+        let id = world.create(&config, "Truck".into(), crate::Kind::Thing);
+        crate::create_battle_vehicle(
+            &mut world,
+            id,
+            crate::VehicleTemplate::parse(
+                "Flatbed_Truck",
+                include_str!("../../game/units/Flatbed_Truck.toml"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(cargo_capacity(&world, id), 600);
+        assert!(!carries_load(&world, id));
+        assert_eq!(unit_load(&world, id, true).unwrap().carried_mass, 0);
+        assert_eq!(movement_maximum(&world, id, 86.0, true).unwrap(), 86.0);
+        let gold = super::super::Part::parse("Gold").unwrap().part_id;
+        super::super::set_part_store_quantity(&mut world, id, gold, 30).unwrap();
+        assert!(carries_load(&world, id));
+        assert!(unit_load(&world, id, true).unwrap().carried_mass > 0);
+        assert!(movement_maximum(&world, id, 86.0, true).unwrap() < 86.0);
     }
 
     #[test]

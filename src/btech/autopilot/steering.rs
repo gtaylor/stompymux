@@ -203,7 +203,8 @@ fn direction(
                 target_point.y - current.point.y,
             );
             let radial = (velocity.0 * delta.0 + velocity.1 * delta.1) / range.max(1e-9);
-            if radial > map_speed * (2.0 / 3.0) {
+            // A target opening faster than this unit can back away is chased forward.
+            if radial > map_speed * reverse_share(world, id) {
                 reverse = false;
             }
         }
@@ -214,13 +215,38 @@ fn direction(
     Ok(reverse)
 }
 
-/// Brake before changing physical direction, then apply the ordinary reverse cap.
-fn direction_speed(speed: f64, reverse: bool, cap: f64) -> f64 {
+/// Brake before changing physical direction, then apply the ordinary reverse cap: the
+/// forward cap scaled by the unit's `reverse_share`.
+fn direction_speed(speed: f64, reverse: bool, cap: f64, reverse_share: f64) -> f64 {
     if speed.abs() > 0.1 && (speed < 0.0) != reverse {
         0.0
+    } else if reverse {
+        -cap * reverse_share
     } else {
-        cap * if reverse { -2.0 / 3.0 } else { 1.0 }
+        cap
     }
+}
+
+/// Share of its forward ceiling a unit may reverse at: its walking or cruising ceiling over
+/// its running or flanking one, since no unit moves backward at running or flank speed
+/// (Total Warfare p. 53). A 5/8 unit reverses at five eighths of its top speed.
+fn reverse_share(world: &World, id: ObjectId) -> f64 {
+    let envelope = world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .map(|unit| unit.mobility().envelope())
+        .or_else(|| {
+            world
+                .btech
+                .vehicles()
+                .get(&id)
+                .map(|vehicle| vehicle.speed_envelope())
+        });
+    let Some(envelope) = envelope.filter(|envelope| envelope.running > 0.0) else {
+        return 0.0;
+    };
+    envelope.walking / envelope.running
 }
 
 /// Evaluate mount bearing at a supplied own motion without reading target capabilities.
@@ -309,7 +335,7 @@ pub(crate) fn drive(
     }
     let heading = (bearing + if reverse { 180.0 } else { 0.0 }).rem_euclid(360.0);
     let error = angle(current.heading, heading);
-    let maximum = direction_speed(current.speed, reverse, cap);
+    let maximum = direction_speed(current.speed, reverse, cap, reverse_share(world, id));
     let mut desired = 0.0;
     {
         let _loadouts =
@@ -434,6 +460,7 @@ pub(crate) fn pursuit_score(
     }
     let mut simulated = motion(world, id)?;
     let mut state = context.map_or_else(SteeringState::default, |c| c.1.clone());
+    let share = reverse_share(world, id);
     let goal = center(GridHex::new(aim.x, aim.y));
     let target = center(GridHex::new(observed.x, observed.y));
     let mut elapsed = 0.0;
@@ -476,9 +503,9 @@ pub(crate) fn pursuit_score(
             if range <= f64::from(radius) || angle(simulated.heading, heading) >= 45.0 {
                 0.0
             } else if range - f64::from(radius) < speed * 2.0 {
-                direction_speed(simulated.speed, reverse, cap) * 0.25
+                direction_speed(simulated.speed, reverse, cap, share) * 0.25
             } else {
-                direction_speed(simulated.speed, reverse, cap)
+                direction_speed(simulated.speed, reverse, cap, share)
             };
         let previous_heading = simulated.heading;
         simulated = {
@@ -667,11 +694,14 @@ mod pursuit_estimate_tests {
     }
     #[test]
     fn physical_direction_change_brakes_and_reverse_speed_is_bounded() {
-        assert_eq!(direction_speed(-1.0, false, 90.0), 0.0);
-        assert_eq!(direction_speed(1.0, true, 90.0), 0.0);
-        assert_eq!(direction_speed(0.0, true, 90.0), -60.0);
-        assert_eq!(direction_speed(-1.0, true, 90.0), -60.0);
-        assert_eq!(direction_speed(0.0, false, 90.0), 90.0);
+        // A 5/8 unit backs away at its 53.75 km/h walking or cruising ceiling, not two
+        // thirds of its 86 km/h top speed.
+        let share = 5.0 / 8.0;
+        assert_eq!(direction_speed(-1.0, false, 86.0, share), 0.0);
+        assert_eq!(direction_speed(1.0, true, 86.0, share), 0.0);
+        assert_eq!(direction_speed(0.0, true, 86.0, share), -53.75);
+        assert_eq!(direction_speed(-1.0, true, 86.0, share), -53.75);
+        assert_eq!(direction_speed(0.0, false, 86.0, share), 86.0);
     }
     #[test]
     fn stationary_region_entry_stops_before_a_farther_navigation_goal() {

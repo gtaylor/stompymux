@@ -18,7 +18,10 @@ releases it. Pilot assignments survive a server restart.
 After taking the cockpit on a battlefield, use `startup`. The startup cycle
 runs for 30 simulation seconds and reports six stages. Wizards can use
 `startup override` for a five-second cycle. `shutdown` stops the engine or aborts
-startup, and releases the cockpit. Use `pilot` again before restarting.
+startup, and releases the cockpit. Use `pilot` again before restarting. A Mech or vehicle
+shuts down only once it has come to a stop on the ground: `shutdown` is refused while it
+has any forward or reverse speed or is in the air, so stop, or land a VTOL, first.
+Shutting down takes no piloting roll and never tumbles a vehicle (Total Warfare p. 160).
 A reactor cannot restart at 30 or more heat, the operator override included.
 From 14 to 29 heat, `startup` rolls 2d6 against the highest current shutdown
 avoid number (4 at 14, 6 at 18, 8 at 22, 10 at 26); a failed roll keeps the
@@ -35,9 +38,7 @@ MP, and MASC doubles the walking figure that is left, running refigured each tim
 hip or gyro makes one piloting roll at the turn's end (TW p. 53), and one that
 exceeds its normal running MP under light gravity rolls once a turn against a point
 of leg damage per MP over (Tactical Operations p. 53). Turns and speed changes are
-gradual. Shutting down above 10.75 kph forward
-causes a fall, which can land you on another unit. Reverse or slower motion stops
-without that shutdown fall. Each hex costs movement for its ground, foliage, route, water and any ice,
+gradual. Each hex costs movement for its ground, foliage, route, water and any ice,
 snow or mud, and your speed is divided by that cost, following the Total Warfare and
 Tactical Operations movement cost tables. A road or rail line replaces the
 ground and foliage it crosses. Rough ground, rubble, light woods and rail cost one
@@ -198,10 +199,12 @@ Use `land` to attempt an early landing at your current location. A failed
 control check causes a fall; a successful abort still requires any damaged-leg
 or gyro landing check. Ground speed changes are unavailable in flight. Use `heading <degrees>` to turn
 while jumping; facing changes do not steer the jump away from its landing hex.
-Voluntary `shutdown` stops your horizontal travel and starts free fall. You drop
-every three seconds, accelerating until impact. Restarting the engine does not
-arrest this fall. After restarting, you can attempt `land`, but the pending fall
-event still causes an impact when due.
+You cannot `shutdown` during a jump; land first. A Mech that loses power in the air
+some other way, such as a carrier releasing it aloft or an administrative shutdown,
+stops its horizontal travel and starts free fall. It drops every three seconds,
+accelerating until impact. Restarting the engine does not arrest this fall. After
+restarting, you can attempt `land`, but the pending fall event still causes an
+impact when due.
 You can fire during a jump: jumping adds three to your firing difficulty, and
 a jumping target adds one plus its current jump-speed movement modifier.
 Losing both legs or hips leaves you unable to stand while your jets finish the
@@ -316,6 +319,12 @@ selected coordinate or currently acquired unit contact. Firing spends ammunition
 an out-of-range attempt. Your cockpit sees the target number, roll and outcome.
 Glancing hits use the configured rule. Failed saves discard the shot and its
 messages together. `fire` and `weapons` take no switches.
+
+Weapon range is the number of hexes from your hex to the target's, counting the
+target's hex (Total Warfare p. 109). Height never adds to it: a VTOL hovering ten
+levels above an adjacent unit fires at range 1, minimum-range penalty and all.
+Range brackets, minimum range, maximum reach, C3 sharing and artillery reach all
+count hexes this way, and the `r:` column of `contacts` shows that count.
 
 Stun, temporarily disabled weapons, recycling, prone support and vehicle cover
 can prevent firing before the target is checked. A weapon in the arm carrying a
@@ -670,6 +679,29 @@ Info shows coordinates, movement, Mech heat or VTOL fuel, turret facing,
 targeting and towing. The header includes power and condition banners.
 
 
+### Physical attacks and the turn
+
+Punches, kicks, trips, clubs and physical weapons reach a target in your own hex or
+any of the six adjacent hexes, counted in hexes as weapon range is (Total Warfare
+p. 144). Height does not count against that reach; instead the level rules decide:
+a standing Mech one level up can be punched, clubbed or struck with a weapon but not
+kicked, one a level down can be kicked, clubbed or struck with a weapon but not
+punched, and nothing reaches a target two or more levels away (Total Warfare p. 150).
+
+A Mech makes one physical attack in a thirty-second turn (Total Warfare p. 144).
+Punching with both arms, or striking with both claws, in one command is a single
+attack; a second physical weapon is not. After a punch, kick, trip, club or weapon
+swing no other physical attack can start for thirty seconds, and the weapons in the
+attacking limbs cannot fire until then: the punching or swinging arm, both arms for
+a club, the kicking leg, or both rear legs when a four-legged Mech kicks behind
+itself. A limb that fired a weapon in the last thirty seconds cannot punch, kick,
+club or swing, even after that weapon has finished recycling; weapons elsewhere on
+the Mech do not matter (Total Warfare pp. 145-147). A charge or death from above
+attack needs thirty seconds without any weapon fire, and afterwards no weapon can
+fire and no other physical attack can start for thirty seconds (Total Warfare
+pp. 148-149). Picking up a club works the same way (Total Warfare p. 146). `status`
+shows how long each limb stays tied up.
+
 Use `charge` to select your current target for a ground charge, or `charge #unit`
 to select a visible unit. `charge -` cancels. Selection does not start movement:
 set your heading and speed to approach the target. A charge is attempted when
@@ -688,8 +720,8 @@ selected DFA target during flight.
 
 A successful attack damages the target and your legs. A miss is a two-level fall
 onto your back: every hit strikes your rear and your pilot makes the fall's
-piloting check at +1. Both outcomes impose
-physical recovery on your arms, legs and side torsos. An accepted DFA uses this
+piloting check at +1. Both outcomes tie up every section for thirty seconds, as
+described above. An accepted DFA uses this
 physical recovery instead of ordinary jump stabilization. `land` can trigger the
 attack early if you are already in the target's hex.
 
@@ -794,7 +826,7 @@ that suite off. Guardian and Angel suites operate independently; each requires
 working equipment and a running unit. Shutdown and equipment loss disable them.
 
 ECM protects friendly units and disturbs enemies within six hexes, twelve under
-electromagnetic interference. Enemy ECCM
+electromagnetic interference, however high either unit is. Enemy ECCM
 cancels protection, and friendly ECCM cancels disturbance; equal strength cancels.
 Angel suites count twice. Team identifiers determine which units are friendly.
 
@@ -833,9 +865,10 @@ For example, `removepod CT E` attempts to remove an ECM pod from the center tors
 
 You must be the conscious pilot of a running, placed unit. An arm pod requires
 the opposite arm; other locations use your best available arm. The arm must be
-intact and free of weapon or physical recovery. Actuator damage makes the attempt
+intact, free of physical recovery, and must not have fired a weapon in the last
+thirty seconds (Total Warfare pp. 141, 220). Actuator damage makes the attempt
 harder. A failed attempt damages the selected location, and either outcome leaves
-the arm recovering for 60 seconds. Conventional Narc pods cannot be swatted off.
+the arm recovering for 30 seconds. Conventional Narc pods cannot be swatted off.
 
 Lua provides `btech.unit.pods(unit, pilot)` and
 `btech.unit.removepod(unit, pilot, location, type)`.
@@ -974,8 +1007,13 @@ Use `lock x y` to select coordinates, or append H (hex), B (building), I (ignite
 or C (clear). Coordinate locks take effect at once, even outside visibility.
 `lock -` clears the selection. With a plain coordinate lock, `fire <weapon>`
 attacks its current unit occupant under ordinary firing rules. The lock stays at
-the coordinates when that unit moves. Artillery always fires at the selected hex
-and arrives after a flight delay, applying its ammunition payload to the area.
+the coordinates when that unit moves. A shot at the hex itself (a plain lock on an
+empty hex, or an H, B, I or C lock) treats it as an immobile target at -4 (Total
+Warfare p. 110) and pays for the woods, smoke and crops between you and it, or
+between your spotter and it for indirect fire (pp. 107, 111). The hex's own woods and
+smoke add nothing, since a hex does not stand in itself. Artillery always fires
+at the selected hex and arrives after a flight delay, applying its ammunition
+payload to the area.
 Without a spotter, artillery may still fire at a hex you cannot see (Tactical
 Operations p. 148), but that fire cannot be adjusted: a miss earns trajectory
 correction only while a friendly unit can see the target hex. Underground,
@@ -1237,7 +1275,8 @@ contacts appear in your list, and never suppresses weapon-lock loss warnings.
 
 
 Compact unit rows use battlefield labels such as [ab], followed by B for a biped.
-The columns show x/y/z position, r range, b bearing, s speed, h heading, and S status.
+The columns show x/y/z position, r weapon range in hexes, b bearing, s speed,
+h heading, and S status.
 Names are shortened to fit the row; friendly labels use lowercase letters.
 
 
@@ -1279,7 +1318,8 @@ targets must still be visible. The answer is private to the requesting occupant.
 
 Use `range`, `range x y`, or `range x0 y0 x1 y1` for distance to a target,
 coordinate, or between two coordinates. Spatial distance includes elevation;
-ground distance appears alongside it when different. Dark maps hide terrain
+ground distance appears alongside it when different. Weapons do not use either:
+they count whole hexes, as `contacts` shows. Dark maps hide terrain
 height differences from coordinate measurements. Unit targets must be visible.
 
 Use `vector` to combine range and bearing to your selected target. You can also
@@ -1289,8 +1329,11 @@ angle marked + for above or - for below. Vector retains terrain elevations even
 on dark maps.
 
 Use `heading` or `speed` without a value to read your current motion.
-`speed cruise` equals `speed walk`; `speed flank` equals `speed run`. Numeric
-speed requests are limited to your current forward/reverse throttle range.
+`speed cruise` equals `speed walk`; `speed flank` equals `speed run`. Walking or
+cruising speed is your template's walking or cruising MP after damage, and running or
+flanking speed is that figure x 1.5, rounded up; you may not back up faster than walking
+or cruising speed. Numeric speed requests are limited to your current forward/reverse
+throttle range.
 Movement restrictions such as water and weapon unjamming still apply.
 
 Use `dump all`, `dump <weapon number>`, `dump <section>`, or
@@ -1514,7 +1557,7 @@ LRM launchers and MMLs loaded with long-range rounds can use these modes.
 After an initial hit, unused missiles can attack nearby units in map order.
 Ordinary Swarm can hit friends and return to its launcher. Swarm-1 excludes
 friendly secondary targets. Retargeting requires the previous target to see the
-next unit within 1.9 hexes. Combat-safe units are skipped as secondary targets.
+next unit in its own hex or an adjacent one. Combat-safe units are skipped as secondary targets.
 The flight stops when its missiles are spent, its cumulative range runs out, or
 it has attacked eleven distinct targets. AMS engages the initial attack like
 any other LRM flight (Tactical Operations: AUE p. 181).
@@ -1588,8 +1631,9 @@ shut down or off-map.
 selected arm. Arms default to both, and each arm uses its own weapon, so a Mech
 with a sword in one arm and a claw in the other needs no separate command for
 either. Arms without a physical weapon are skipped when both are selected. Claws
-may strike with both arms in one action; any other weapon's swing leaves the
-second arm recovering. Use `punch` for bare fists.
+may strike with both arms in one action, as punches do; any other weapon swings
+once, and that swing is the turn's physical attack, so the second arm does not
+swing. Use `punch` for bare fists.
 
 | Weapon | Template name | Damage | To-hit | Hand needed |
 |---|---|---|---|---|

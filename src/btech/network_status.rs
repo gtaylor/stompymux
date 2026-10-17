@@ -74,7 +74,7 @@ fn report(
                 y: i32::from(position.y),
             },
             elevation: super::unit_elevation(world, peer)?.context("Peer has no elevation")?,
-            range: range.spatial,
+            range: range.hexes(),
             bearing: range.bearing.unwrap_or(180.0).round().rem_euclid(360.0) as u16,
             speed: motion.speed,
             heading: motion.heading.trunc().rem_euclid(360.0) as u16,

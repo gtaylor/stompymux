@@ -39,7 +39,7 @@ fn motion(world: &mut World, id: ObjectId, speed: f64, turning: bool) {
         .rewrite_unit_record(id, |record| {
             let motion = &mut record["motion"];
             motion["speed"] = serde_json::json!(speed);
-            motion["desired_speed"] = serde_json::json!(speed.clamp(-86.0 * 2.0 / 3.0, 86.0));
+            motion["desired_speed"] = serde_json::json!(speed.clamp(-53.75, 86.0));
             motion["desired_heading"] = serde_json::json!(if turning { 90.0 } else { 0.0 });
         })
         .unwrap();
@@ -55,14 +55,18 @@ async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
         (21.501, 1, 1),
         (43.0, 1, 1),
         (43.001, 2, 1),
-        (86.0 * 2.0 / 3.0 + 0.1, 2, 1),
-        (57.434, 2, 2),
+        // The template's 5 cruising MP, 53.75 km/h, separates cruising from flank fire
+        // (Total Warfare pp. 53, 106), not two thirds of the 86 km/h flank speed.
+        (53.75, 2, 1),
+        (53.84, 2, 1),
+        (53.851, 2, 2),
+        (57.0, 2, 2),
         (64.5, 2, 2),
         (64.501, 3, 2),
         (86.0, 3, 2),
         (96.75, 3, 2),
         (-43.001, 2, 1),
-        (-86.0 * 2.0 / 3.0, 2, 1),
+        (-53.75, 2, 1),
     ] {
         for turning in [false, true] {
             motion(&mut world, id, speed, turning);
@@ -87,9 +91,9 @@ async fn vehicle_attack_and_target_movement_follow_speed_turning_and_replay() {
     // cruising speed separates cruising from flank fire (p. 106): a speed that was cruising
     // before the hit may now be flank.
     assert_eq!(world.btech.vehicles()[&id].maximum_speed(), 53.75);
-    let cruise = world.btech.vehicles()[&id].maximum_speed() * 2.0 / 3.0;
-    assert!(cruise < 86.0 * 2.0 / 3.0 - 1.0);
-    for (speed, attack) in [(cruise - 1.0, 1), (cruise + 1.0, 2)] {
+    let cruise = world.btech.vehicles()[&id].cruising_speed();
+    assert_eq!(cruise, 32.25);
+    for (speed, attack) in [(cruise, 1), (cruise + 0.101, 2), (50.0, 2)] {
         let mut probe = world.clone();
         motion(&mut probe, id, speed, false);
         assert_eq!(
@@ -146,7 +150,7 @@ async fn vehicle_immobility_stacks_with_speed_without_treating_stopped_as_disabl
         0
     );
     world = moving;
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    power_down_battle_unit(&mut world, id).unwrap();
     assert_eq!(
         battle_unit_target_movement_modifier(&world, id, 10.0).unwrap(),
         -4

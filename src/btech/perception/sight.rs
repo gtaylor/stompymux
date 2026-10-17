@@ -22,6 +22,9 @@ pub(super) const PARTIAL_COVER: i16 = 1;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct SightFacts {
     pub terrain: TerrainLos,
+    /// Hexes from the observer's hex to the target's, counting the target's: the Visual
+    /// Range Table gives its reach in hexes (Tactical Operations: Advanced Rules p. 189), so
+    /// height above or below never adds to it.
     pub distance: f64,
     pub target_underwater: bool,
     pub crosses_clouds: bool,

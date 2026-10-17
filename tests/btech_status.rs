@@ -230,7 +230,7 @@ async fn coordinate_target_labels_keep_reference_spacing() {
 #[tokio::test]
 async fn limb_recycling_uses_cockpit_ticks_without_advancing_time() {
     let (_dir, _config, mut world, id, _) = fixture(include_str!("../game/units/JR7-D.toml")).await;
-    for (seconds, ticks) in [(1, 1), (2, 1), (3, 2), (60, 30)] {
+    for (seconds, ticks) in [(1, 1), (2, 1), (3, 2), (30, 15)] {
         world
             .btech
             .rewrite_unit_record(id, |record| {

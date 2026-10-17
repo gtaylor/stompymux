@@ -33,7 +33,7 @@ pub(super) fn modifiers(
         .get(weapon_index)
         .context("Weapon index out of bounds")?;
     let indirect = super::spotter::indirect_aim(world, source, target, weapon_index)?;
-    let distance = super::unit_range(world, shooter, target)?.spatial;
+    let distance = super::unit_range(world, shooter, target)?.hexes();
     let ammunition = attacker.ammunition_mode(weapon_index)?;
     let target_terms =
         super::aim::target_modifiers(world, shooter, target, mount.weapon, ammunition, distance)?;

@@ -58,12 +58,14 @@ async fn vehicle_probe_profile_follows_critical_and_section_loss() {
     let ready = |kind: ActiveProbe| {
         Some(ProbeProfile {
             kind,
+            clan: false,
             range: u16::from(kind.range(false)),
             status: PerceptionStatus::Ready,
         })
     };
     let destroyed = Some(ProbeProfile {
         kind: ActiveProbe::Bloodhound,
+        clan: false,
         range: 8,
         status: PerceptionStatus::Damaged,
     });
@@ -177,13 +179,7 @@ async fn vehicle_sensor_command_and_lua_share_the_perception_report() {
         "{}",
         swept.text
     );
-    stop_battle_unit(
-        &mut scripts.world_mut(),
-        id,
-        ObjectId(1),
-        MovementRules::STANDARD.fall,
-    )
-    .unwrap();
+    stop_battle_unit(&mut scripts.world_mut(), id, ObjectId(1)).unwrap();
     let stopped = battle_perception_report(&scripts.world(), id).unwrap();
     assert!(!stopped.running);
     assert!(

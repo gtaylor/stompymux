@@ -39,7 +39,7 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     let (_dir, config, mut world, id) =
         fixture(include_str!("../game/units/Demolisher.toml")).await;
     assert_eq!(world.btech.vehicles()[&id].scanner_perception(), 18);
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut world, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
@@ -82,12 +82,12 @@ async fn vehicle_perception_captures_completion_and_replays_until_next_startup()
     persistence::save(&config.database(), &world).await.unwrap();
     let mut restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(world.btech, restored.btech);
-    stop_battle_unit(&mut restored, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut restored, id, ObjectId(1)).unwrap();
     assign_battle_pilot(&mut restored, id, ObjectId(1)).unwrap();
     support::seed_object_dice(&mut restored, ObjectId(1), support::FIXTURE_DICE_SEED);
     start_battle_unit(&mut restored, id, ObjectId(1), true).unwrap();
     advance_battle_units(&mut restored, 0, true);
-    stop_battle_unit(&mut restored, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut restored, id, ObjectId(1)).unwrap();
     assert_eq!(
         restored.btech.vehicles()[&id].scanner_perception(),
         expected

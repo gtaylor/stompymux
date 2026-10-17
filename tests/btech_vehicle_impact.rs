@@ -131,7 +131,7 @@ async fn hull_impacts_preserve_occupants_and_combat_safety_preserves_material() 
     assert!(report.damage.is_none());
     assert!(report.notices.is_empty());
     assert_eq!(world.btech.vehicles()[&id].sections(), &sections);
-    assert_eq!(world.btech.vehicles()[&id].motive_speed_loss(), 0.0);
+    assert_eq!(world.btech.vehicles()[&id].motive_mp_loss(), 0);
     let mut dice = Dice::seeded(stream);
     dice.two_d6();
     dice.two_d6();
@@ -240,7 +240,7 @@ async fn driving_penalties_apply_once_per_tier_and_an_immobilized_hovercraft_sin
         MapAsset::from_cells("1 1\n~1\n").unwrap(),
     )
     .unwrap();
-    stop_battle_unit(&mut world, id, ObjectId(1), MovementRules::STANDARD.fall).unwrap();
+    stop_battle_unit(&mut world, id, ObjectId(1)).unwrap();
     place_battle_unit(&mut world, id, deep, 0, 0).unwrap();
     set_seed(
         &mut world,

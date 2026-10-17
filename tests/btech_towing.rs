@@ -631,17 +631,23 @@ async fn native_and_lua_tow_speed_limits_and_reports_agree() {
         } else {
             maximum
         };
-        // The towed Jenner keeps its 7/11 walking share of the loaded ceiling; vehicles cruise
-        // at two thirds of flank.
-        let walking_share = if index == 0 { 7.0 / 11.0 } else { 2.0 / 3.0 };
+        // Walking and cruising MP are the templates' own figures (TW p. 53): the towed Jenner
+        // keeps its 7/11 walking share of the loaded ceiling and the Demolisher its 3/5
+        // cruising share, while the Kestrel's climb comes out of its 12/18 cruising budget
+        // as well as its flank one (TW p. 54).
+        let walking = match index {
+            0 => maximum * 7.0 / 11.0,
+            1 => maximum * 3.0 / 5.0,
+            _ => maximum * 12.0 / 18.0 - maximum * 0.6,
+        };
         for (argument, expected) in [
             ("run", horizontal),
             ("flank", horizontal),
-            ("walk", (maximum * walking_share).min(horizontal)),
-            ("cruise", (maximum * walking_share).min(horizontal)),
-            ("back", -horizontal * walking_share),
+            ("walk", walking),
+            ("cruise", walking),
+            ("back", -walking),
             ("99999", horizontal),
-            ("-99999", -horizontal * walking_share),
+            ("-99999", -walking),
         ] {
             let native = Scripts::new(
                 &config,
@@ -1192,14 +1198,8 @@ async fn pickup_preparation_shares_shutdown_for_all_chassis_without_target_pilot
                 }
                 world.btech = serde_json::from_value(saved).unwrap();
                 let before = state(&world, target);
-                let notices = prepare_battle_pickup(
-                    &mut world,
-                    carrier,
-                    ObjectId(1),
-                    target,
-                    MovementRules::STANDARD.fall,
-                )
-                .unwrap();
+                let notices =
+                    prepare_battle_pickup(&mut world, carrier, ObjectId(1), target).unwrap();
                 let after = state(&world, target);
                 assert_eq!(after["power"]["state"], "off");
                 assert_eq!(after["motion"]["speed"], 0.0);
@@ -1247,16 +1247,7 @@ async fn rejected_pickup_preparation_preserves_motion_power_and_relationships() 
         prepare_pickup(&mut world, carrier, target);
         set_battle_towable(&mut world, target, false).unwrap();
         let before = world.btech.clone();
-        assert!(
-            prepare_battle_pickup(
-                &mut world,
-                carrier,
-                ObjectId(1),
-                target,
-                MovementRules::STANDARD.fall
-            )
-            .is_err()
-        );
+        assert!(prepare_battle_pickup(&mut world, carrier, ObjectId(1), target).is_err());
         assert_eq!(world.btech, before);
     }
 }
@@ -2091,7 +2082,8 @@ async fn vtol_vertical_towing_preserves_continuous_height_each_tick() {
     }
 }
 
-/// A carrier loses lift on shutdown without silently releasing its external load.
+/// A pilot cannot shut down an airborne carrier until it lands; an administrative power-down
+/// cuts its lift without silently releasing its external load.
 #[tokio::test]
 async fn airborne_carrier_shutdown_retains_tow_and_saved_descent() {
     for target in CHASSIS {
@@ -2115,7 +2107,11 @@ async fn airborne_carrier_shutdown_retains_tow_and_saved_descent() {
         world.validate(&config).unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
-        stop_battle_unit_action(&scripts, &config, carrier, ObjectId(1)).unwrap();
+        let before = scripts.world().btech.clone();
+        let error = stop_battle_unit_action(&scripts, &config, carrier, ObjectId(1)).unwrap_err();
+        assert!(format!("{error:#}").contains("land before"), "{error:#}");
+        assert_eq!(scripts.world().btech, before);
+        power_down_battle_unit(&mut scripts.world_mut(), carrier).unwrap();
         let mut saved = scripts.world().clone();
         assert_eq!(saved.btech.tows().get(&carrier), Some(&load));
         let flight = saved.btech.vehicles()[&carrier].vtol_flight().unwrap();
