@@ -229,7 +229,7 @@ pub(super) fn check_target_safety_for_source(
             .btech
             .constructed_units()
             .get(&target)
-            .is_some_and(|unit| unit.stealth().enabled)
+            .is_some_and(|unit| unit.stealth_active())
             || lock.is_some_and(|lock| lock.target == target),
         "You need a stable lock to fire on that target!"
     );

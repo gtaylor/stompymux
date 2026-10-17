@@ -301,7 +301,7 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
                 unit.position(),
                 unit.electronics.field,
                 unit.signature().team,
-                unit.stealth().enabled || unit.has_beacon(super::BeaconKind::Ecm),
+                unit.stealth_active() || unit.has_beacon(super::BeaconKind::Ecm),
             )
         };
     let Some(position) = position else {
@@ -340,16 +340,26 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
         if distance > reach {
             continue;
         }
+        // Engaged stealth armor takes over its ECM suite, which then makes no field; an Angel
+        // suite may still generate ECCM (Total Warfare p. 142; Tactical Operations: Advanced
+        // Rules p. 98).
+        let stealth = world
+            .btech
+            .constructed_units()
+            .get(&other)
+            .is_some_and(|mech| mech.stealth().enabled);
         sources.push(ElectronicSource {
             team: emitter.signature.team,
             distance,
             range: reach,
-            guardian: if available(world, other, ElectronicSuite::Guardian)? {
+            guardian: if !stealth && available(world, other, ElectronicSuite::Guardian)? {
                 state.guardian
             } else {
                 Mode::Off
             },
-            angel: if available(world, other, ElectronicSuite::Angel)? {
+            angel: if (!stealth || state.angel == Mode::Eccm)
+                && available(world, other, ElectronicSuite::Angel)?
+            {
                 state.angel
             } else {
                 Mode::Off

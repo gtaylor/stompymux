@@ -288,7 +288,7 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
             .btech
             .constructed_units()
             .get(&observer)
-            .is_some_and(|mech| mech.stealth().enabled),
+            .is_some_and(|mech| mech.stealth_active()),
     };
     let probe = probe_profile(world, observer, map.electromagnetic_interference(), jamming)?;
     let sensor = sensor_profile(world, observer, &unit, probe, field.disturbed)?;
@@ -596,7 +596,7 @@ fn sweep_suite(
                 u32::from(mech.definition().tons),
                 mech.airborne(),
                 false,
-                mech.stealth().enabled,
+                mech.stealth_active(),
                 mech.null_signature().enabled,
             ),
             None => {

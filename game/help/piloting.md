@@ -968,7 +968,10 @@ guidance. Enemy radar and probe sweeps take +4 to +7 against you (Tactical
 Operations ECM/Stealth table), so enemies mostly rely on sight, infrared,
 magscan and seismic sensors, or a Bloodhound probe. Enemies firing at you take
 range penalties of 3 at medium range and 6 at long range. Short and minimum
-range are unchanged.
+range are unchanged. While the armor is engaged its ECM suite powers it and makes
+no ECM or ECCM field, and your own active probe is jammed. An Angel suite set to
+ECCM (`angeleccm`) keeps its ECCM field, but then the armor loses every effect
+but its ten heat (Tactical Operations: Advanced Rules p. 98).
 Shutdown or ECM damage disables active armor. A pending switch only completes
 if the unit is running and its ECM works when the delay expires.
 

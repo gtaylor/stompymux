@@ -9,6 +9,18 @@ impl Mech {
         self.stealth
     }
 
+    /// Whether engaged stealth armor is in effect. Its ECM suite powers it and makes no field
+    /// of its own (Total Warfare p. 142), except that an Angel suite may still generate ECCM:
+    /// then only the ECCM field works, and the armor loses every effect but its heat (Tactical
+    /// Operations: Advanced Rules p. 98).
+    pub fn stealth_active(&self) -> bool {
+        self.stealth.enabled
+            && !(self.electronics.angel == ElectronicMode::Eccm
+                && self
+                    .electronic_suite_available(ElectronicSuite::Angel)
+                    .unwrap_or(false))
+    }
+
     /// Stealth armor draws on any working ECM suite, Guardian or Angel.
     pub(super) fn stealth_ecm_available(&self) -> Result<bool> {
         Ok(self.electronic_suite_available(ElectronicSuite::Guardian)?
