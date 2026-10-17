@@ -4,7 +4,6 @@ movement = "biped"
 tons = 95
 walk_mp = 4
 heat_sinks = 16
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"

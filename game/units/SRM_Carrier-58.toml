@@ -3,33 +3,27 @@ class = "vehicle"
 movement = "track"
 tons = 60
 walk_mp = 3
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 180
+armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 12
-slots = [
-    { at = 1, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
-]
+armor = 14
 
 [sections.right_side]
-armor = 12
-slots = [
-    { at = 1, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
-]
+armor = 14
 
 [sections.front_side]
-armor = 12
+armor = 14
 slots = [
-    { at = 1, item = "IS.NarcBeacon" },
-    { at = "2-10", item = "IS.SRM-6" },
-    { at = 11, item = "Ammo_IS.NarcBeacon", rounds = 6 },
-    { at = 12, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+    { at = "1-9", item = "IS.SRM-6", modes = ["Narc/Smoke"] },
+    { at = 10, item = "IS.NarcBeacon" },
+    { at = "11-13", item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+    { at = 14, item = "Ammo_IS.NarcBeacon", rounds = 6 },
 ]
 
 [sections.aft_side]
-armor = 12
+armor = 11

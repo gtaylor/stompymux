@@ -5,6 +5,7 @@ tons = 75
 walk_mp = 4
 heat_sinks = 12
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,8 +18,8 @@ heat_sinks = "double"
 armor = 21
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.LRM-20" },
-    { at = 8, item = "ArtemisIV", link = 3 },
+    { at = "3-7", item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 8, item = "IS.ArtemisIV", link = 3 },
     { at = 9, item = "IS.MediumPulseLaser" },
     { at = "10-12", item = "EndoSteel" },
 ]
@@ -54,8 +55,8 @@ slots = [
 armor = 36
 rear = 9
 slots = [
-    { at = 11, item = "IS.SRM-4" },
-    { at = 12, item = "ArtemisIV", link = 11 },
+    { at = 11, item = "IS.SRM-4", modes = ["Artemis/Mine"] },
+    { at = 12, item = "IS.ArtemisIV", link = 11 },
 ]
 
 [sections.left_leg]

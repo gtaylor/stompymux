@@ -4,9 +4,7 @@ movement = "biped"
 tons = 50
 walk_mp = 5
 jump_mp = 5
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -18,8 +16,7 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 10
 slots = [
-    { at = 5, item = "IS.LRM-15", modes = ["Narc/Smoke"] },
-    { at = "6-7", item = "IS.LRM-15" },
+    { at = "5-7", item = "IS.LRM-15", modes = ["Narc/Smoke"] },
     { at = 8, item = "IS.MediumLaser" },
     { at = "9-12", item = "EndoSteel" },
 ]
@@ -47,8 +44,7 @@ slots = [
 armor = 11
 rear = 5
 slots = [
-    { at = 4, item = "IS.LRM-15", modes = ["Narc/Smoke"] },
-    { at = "5-6", item = "IS.LRM-15" },
+    { at = "4-6", item = "IS.LRM-15", modes = ["Narc/Smoke"] },
     { at = 7, item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Narc/Smoke"] },
     { at = 8, item = "Case" },
     { at = "9-11", item = "EndoSteel" },
@@ -58,19 +54,19 @@ slots = [
 armor = 22
 rear = 7
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 15
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 15
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

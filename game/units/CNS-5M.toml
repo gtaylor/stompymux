@@ -6,7 +6,6 @@ walk_mp = 6
 jump_mp = 6
 heat_sinks = 14
 radio = 4
-specials = ["C3SlaveTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -18,7 +17,7 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 16
 slots = [
-    { at = "5-12", item = "EndoSteel" },
+    { at = "5-10", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
@@ -31,10 +30,10 @@ slots = [
 armor = 21
 rear = 5
 slots = [
-    { at = "4-6", item = "JumpJet" },
-    { at = 7, item = "IS.ERSmallLaser" },
-    { at = 8, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
-    { at = "9-11", item = "HeatSink" },
+    { at = 4, item = "IS.ERSmallLaser" },
+    { at = 5, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
+    { at = "6-8", item = "HeatSink" },
+    { at = "9-11", item = "IS.JumpJet" },
     { at = 12, item = "Case" },
 ]
 
@@ -42,9 +41,10 @@ slots = [
 armor = 21
 rear = 5
 slots = [
-    { at = "4-6", item = "JumpJet" },
-    { at = "7-8", item = "IS.ERMediumLaser" },
-    { at = "9-10", item = "EndoSteel" },
+    { at = "4-5", item = "IS.ERMediumLaser" },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-11", item = "IS.JumpJet" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.center_torso]

@@ -6,7 +6,6 @@ walk_mp = 3
 jump_mp = 3
 heat_sinks = 21
 radio = 4
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -50,20 +49,20 @@ slots = [
 armor = 46
 rear = 16
 slots = [
-    { at = 11, item = "JumpJet" },
-    { at = 12, item = "HeatSink" },
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 42
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 42
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
 ]
 
 [sections.head]

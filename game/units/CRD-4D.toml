@@ -42,22 +42,22 @@ slots = [
 armor = 33
 rear = 8
 slots = [
-    { at = 11, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = 12, item = "HeatSink" },
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.left_leg]
 armor = 21
 slots = [
-    { at = 5, item = "IS.StreakSRM-2" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "IS.StreakSRM-2" },
 ]
 
 [sections.right_leg]
 armor = 21
 slots = [
-    { at = 5, item = "IS.StreakSRM-2" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "IS.StreakSRM-2" },
 ]
 
 [sections.head]

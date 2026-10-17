@@ -14,6 +14,7 @@ engine_rating = 180
 armor = 13
 slots = [
     { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
 [sections.right_side]
@@ -32,5 +33,4 @@ armor = 14
 armor = 18
 slots = [
     { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]

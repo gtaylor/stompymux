@@ -3,7 +3,7 @@ class = "vehicle"
 movement = "wheel"
 tons = 80
 walk_mp = 3
-specials = ["ArtemisIV"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -20,28 +20,25 @@ armor = 34
 [sections.front_side]
 armor = 46
 slots = [
-    { at = 1, item = "IS.LRM-15" },
-    { at = 2, item = "ArtemisIV", link = 1 },
-    { at = 3, item = "IS.LRM-15" },
-    { at = 4, item = "ArtemisIV", link = 3 },
-    { at = "5-8", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 1, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 2, item = "IS.ArtemisIV", link = 1 },
+    { at = 3, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 4, item = "IS.ArtemisIV", link = 3 },
+    { at = "5-12", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 13, item = "C3Master" },
+    { at = 14, item = "IS.Ecm" },
 ]
 
 [sections.aft_side]
 armor = 25
-slots = [
-    { at = 1, item = "C3Master" },
-    { at = 2, item = "Ecm" },
-]
 
 [sections.turret]
 armor = 40
 slots = [
-    { at = 1, item = "IS.LRM-15" },
-    { at = 2, item = "ArtemisIV", link = 1 },
-    { at = 3, item = "IS.LRM-15" },
-    { at = 4, item = "ArtemisIV", link = 3 },
-    { at = "5-8", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 9, item = "IS.MediumLaser" },
-    { at = "10-11", item = "IS.SmallLaser" },
+    { at = 1, item = "IS.MediumLaser" },
+    { at = "2-3", item = "IS.SmallLaser" },
+    { at = 4, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 5, item = "IS.ArtemisIV", link = 4 },
+    { at = 6, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 7, item = "IS.ArtemisIV", link = 6 },
 ]

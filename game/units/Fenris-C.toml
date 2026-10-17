@@ -4,7 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 8
 heat_sinks = 12
-specials = ["OmniMech_Tech", "SearchLight", "ArtemisIV"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,8 +16,8 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 14
 slots = [
-    { at = 5, item = "CL.LRM-5" },
-    { at = 6, item = "ArtemisIV", link = 5 },
+    { at = 5, item = "CL.LRM-5", modes = ["Artemis/Mine"] },
+    { at = 6, item = "CL.ArtemisIV", link = 5 },
     { at = 7, item = "Ammo_CL.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
     { at = 8, item = "FerroFibrous" },
 ]
@@ -25,8 +25,8 @@ slots = [
 [sections.right_arm]
 armor = 14
 slots = [
-    { at = 5, item = "CL.LRM-5" },
-    { at = 6, item = "ArtemisIV", link = 5 },
+    { at = 5, item = "CL.LRM-5", modes = ["Artemis/Mine"] },
+    { at = 6, item = "CL.ArtemisIV", link = 5 },
     { at = 7, item = "Ammo_CL.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
     { at = 8, item = "FerroFibrous" },
 ]
@@ -35,8 +35,8 @@ slots = [
 armor = 14
 rear = 7
 slots = [
-    { at = 3, item = "CL.LRM-5" },
-    { at = 4, item = "ArtemisIV", link = 3 },
+    { at = 3, item = "CL.LRM-5", modes = ["Artemis/Mine"] },
+    { at = 4, item = "CL.ArtemisIV", link = 3 },
     { at = 5, item = "Ammo_CL.LRM-5", rounds = 24, modes = ["Artemis/Mine"] },
     { at = 6, item = "EndoSteel" },
     { at = "7-8", item = "FerroFibrous" },

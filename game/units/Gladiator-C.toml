@@ -5,7 +5,7 @@ tons = 95
 walk_mp = 4
 jump_mp = 4
 heat_sinks = 16
-specials = ["ArtemisIV"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -17,8 +17,8 @@ armor = "ferro_fibrous"
 armor = 32
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.LRM-20" },
-    { at = 8, item = "ArtemisIV", link = 4 },
+    { at = "4-7", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 8, item = "CL.ArtemisIV", link = 4 },
     { at = "9-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 11, item = "FerroFibrous" },
 ]
@@ -35,8 +35,8 @@ slots = [
 armor = 20
 rear = 10
 slots = [
-    { at = "3-6", item = "Masc" },
-    { at = 7, item = "CL.ERSmallLaser" },
+    { at = 3, item = "CL.ERSmallLaser" },
+    { at = "4-7", item = "CL.Masc" },
 ]
 
 [sections.right_torso]
@@ -44,8 +44,8 @@ armor = 20
 rear = 10
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-7", item = "TargetingComputer" },
-    { at = "8-10", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = "5-7", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = "8-10", item = "CL.TargetingComputer" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 
@@ -59,13 +59,13 @@ slots = [
 [sections.left_leg]
 armor = 40
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 40
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

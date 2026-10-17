@@ -4,6 +4,7 @@ movement = "biped"
 tons = 100
 walk_mp = 3
 heat_sinks = 15
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -12,18 +13,19 @@ engine_rating = 300
 
 [sections.left_arm]
 armor = 34
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-7", item = "CL.ERPPC" },
-    { at = "8-9", item = "CL.MediumPulseLaser" },
+    { at = "3-6", item = "CL.ERPPC" },
+    { at = "7-8", item = "CL.MediumPulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 34
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-8", item = "CL.LB10-XAC" },
-    { at = "9-10", item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = "3-7", item = "CL.LB10-XAC" },
+    { at = 8, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 9, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
 ]
 
 [sections.left_torso]

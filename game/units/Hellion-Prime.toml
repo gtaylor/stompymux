@@ -3,8 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 30
 walk_mp = 7
-heat_sinks = 10
-specials = ["OmniMech_Tech", "Masc"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -42,7 +41,7 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = 3, item = "Masc" },
+    { at = 3, item = "CL.Masc" },
     { at = 4, item = "CL.LRM-10" },
     { at = 5, item = "CL.StreakSRM-2" },
     { at = 6, item = "Ammo_CL.LRM-10", rounds = 12 },

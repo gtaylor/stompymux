@@ -4,7 +4,6 @@ movement = "biped"
 tons = 85
 walk_mp = 3
 jump_mp = 2
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -40,28 +39,28 @@ armor = 25
 rear = 11
 slots = [
     { at = "4-5", item = "IS.MediumLaser" },
-    { at = "6-7", item = "Ecm" },
-    { at = "8-10", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "6-8", item = "Ammo_IS.GaussRifle", rounds = 8 },
+    { at = "9-10", item = "IS.Ecm" },
 ]
 
 [sections.center_torso]
 armor = 34
 rear = 19
 slots = [
-    { at = "11-12", item = "BeagleProbe" },
+    { at = "11-12", item = "IS.BeagleProbe" },
 ]
 
 [sections.left_leg]
 armor = 32
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
 ]
 
 [sections.right_leg]
 armor = 32
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
 ]
 

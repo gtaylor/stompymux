@@ -18,7 +18,6 @@ slots = [
 
 [sections.right_arm]
 armor = 22
-omit = ["hand_actuator"]
 
 [sections.left_torso]
 armor = 25

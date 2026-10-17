@@ -17,18 +17,18 @@ heat_sinks = "double"
 armor = 15
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser" },
-    { at = "5-7", item = "IS.ERPPC" },
-    { at = "8-10", item = "HeatSink" },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-8", item = "IS.ERPPC" },
+    { at = "9-10", item = "IS.LargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 15
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser" },
-    { at = "5-7", item = "IS.ERPPC" },
-    { at = "8-10", item = "HeatSink" },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-8", item = "IS.ERPPC" },
+    { at = "9-10", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]

@@ -43,8 +43,8 @@ rear = 9
 slots = [
     { at = "1-7", item = "IS.UltraAC/10" },
     { at = "8-9", item = "Ammo_IS.UltraAC/10", rounds = 10 },
-    { at = "10-11", item = "FerroFibrous" },
-    { at = 12, item = "Case" },
+    { at = 10, item = "Case" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

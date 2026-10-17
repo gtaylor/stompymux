@@ -15,16 +15,16 @@ engine_rating = 240
 armor = 15
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser" },
-    { at = "5-7", item = "IS.PPC" },
+    { at = "3-5", item = "IS.PPC" },
+    { at = "6-7", item = "IS.LargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 15
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.LargeLaser" },
-    { at = "5-7", item = "IS.PPC" },
+    { at = "3-5", item = "IS.PPC" },
+    { at = "6-7", item = "IS.LargeLaser" },
 ]
 
 [sections.left_torso]

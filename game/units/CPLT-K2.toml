@@ -27,26 +27,26 @@ slots = [
 armor = 20
 rear = 8
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "IS.MachineGun" },
-    { at = "3-4", item = "HeatSink" },
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "IS.MediumLaser" },
+    { at = 4, item = "IS.MachineGun" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 8
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "IS.MachineGun" },
-    { at = "3-5", item = "HeatSink" },
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.MachineGun" },
 ]
 
 [sections.center_torso]
 armor = 24
 rear = 11
 slots = [
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = 12, item = "HeatSink" },
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
 [sections.left_leg]

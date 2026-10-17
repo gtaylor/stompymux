@@ -3,7 +3,6 @@ class = "mech"
 movement = "quad"
 tons = 45
 walk_mp = 5
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -21,6 +20,9 @@ slots = [
 
 [sections.front_right_leg]
 armor = 22
+slots = [
+    { at = "5-6", item = "EndoSteel" },
+]
 
 [sections.left_torso]
 armor = 15
@@ -28,7 +30,7 @@ rear = 7
 slots = [
     { at = "3-4", item = "IS.ERLargeLaser" },
     { at = 5, item = "IS.StreakSRM-2" },
-    { at = "6-12", item = "EndoSteel" },
+    { at = "6-11", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -39,7 +41,6 @@ slots = [
     { at = "6-7", item = "IS.ERLargeLaser" },
     { at = 8, item = "IS.StreakSRM-2" },
     { at = 9, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = 10, item = "EndoSteel" },
 ]
 
 [sections.center_torso]

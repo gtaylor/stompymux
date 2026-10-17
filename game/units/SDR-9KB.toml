@@ -30,7 +30,7 @@ armor = 11
 rear = 2
 slots = [
     { at = 4, item = "HeatSink" },
-    { at = "5-7", item = "JumpJet" },
+    { at = "5-7", item = "IS.JumpJet" },
     { at = "8-9", item = "IS.MediumPulseLaser" },
     { at = "10-12", item = "FerroFibrous" },
 ]
@@ -39,7 +39,7 @@ slots = [
 armor = 11
 rear = 2
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = 7, item = "IS.MediumPulseLaser" },
     { at = 8, item = "IS.MachineGun" },
     { at = 9, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },

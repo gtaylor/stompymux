@@ -30,8 +30,8 @@ armor = 12
 rear = 1
 slots = [
     { at = "1-2", item = "HeatSink" },
-    { at = "3-4", item = "IS.LRM-10" },
-    { at = 5, item = "ArtemisIV", link = 3 },
+    { at = "3-4", item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 5, item = "IS.ArtemisIV", link = 3 },
     { at = 6, item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
     { at = "7-12", item = "FerroFibrous" },
 ]
@@ -50,19 +50,19 @@ armor = 14
 rear = 2
 slots = [
     { at = 11, item = "HeatSink" },
-    { at = 12, item = "JumpJet" },
+    { at = 12, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 8
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 8
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

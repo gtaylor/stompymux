@@ -4,7 +4,7 @@ movement = "biped"
 tons = 30
 walk_mp = 7
 heat_sinks = 13
-specials = ["Masc"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,8 +16,7 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 10
 slots = [
-    { at = "5-6", item = "EndoSteel" },
-    { at = "7-8", item = "FerroFibrous" },
+    { at = "5-9", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -25,7 +24,8 @@ armor = 10
 omit = ["hand_actuator"]
 slots = [
     { at = "4-6", item = "CL.HeavyLargeLaser" },
-    { at = "7-11", item = "FerroFibrous" },
+    { at = "7-8", item = "FerroFibrous" },
+    { at = "9-10", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -41,10 +41,10 @@ slots = [
 armor = 10
 rear = 4
 slots = [
-    { at = "3-4", item = "HeatSink" },
-    { at = "5-8", item = "CL.HeavyMediumLaser" },
-    { at = "9-10", item = "EndoSteel" },
-    { at = 11, item = "Masc" },
+    { at = 3, item = "CL.Masc" },
+    { at = "4-5", item = "HeatSink" },
+    { at = "6-9", item = "CL.HeavyMediumLaser" },
+    { at = "10-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

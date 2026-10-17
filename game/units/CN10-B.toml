@@ -29,8 +29,8 @@ armor = 20
 rear = 6
 slots = [
     { at = 1, item = "HeatSink" },
-    { at = "2-3", item = "IS.LRM-10" },
-    { at = 4, item = "ArtemisIV", link = 2 },
+    { at = "2-3", item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 4, item = "IS.ArtemisIV", link = 2 },
     { at = "5-8", item = "EndoSteel" },
 ]
 
@@ -39,11 +39,11 @@ armor = 20
 rear = 6
 slots = [
     { at = 1, item = "HeatSink" },
-    { at = "2-3", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
-    { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "6-9", item = "EndoSteel" },
-    { at = 10, item = "Case" },
+    { at = 2, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 3, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "4-5", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = 6, item = "Case" },
+    { at = "7-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

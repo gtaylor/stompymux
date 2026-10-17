@@ -2,11 +2,11 @@ name = "Mithras"
 class = "vehicle"
 movement = "track"
 tons = 25
-walk_mp = 4
+walk_mp = 6
 
 [construction]
 tech_base = "clan"
-engine_rating = 100
+engine_rating = 150
 armor = "ferro_fibrous"
 
 [sections.left_side]
@@ -19,6 +19,7 @@ armor = 14
 armor = 16
 slots = [
     { at = 1, item = "CL.ERMediumLaser" },
+    { at = 2, item = "Case" },
 ]
 
 [sections.aft_side]

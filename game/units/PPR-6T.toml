@@ -17,8 +17,8 @@ heat_sinks = "double"
 armor = 26
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.LargePulseLaser" },
-    { at = "6-11", item = "HeatSink" },
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-11", item = "IS.LargePulseLaser" },
     { at = 12, item = "EndoSteel" },
 ]
 

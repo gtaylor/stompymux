@@ -14,47 +14,56 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 13
 slots = [
-    { at = "5-12", item = "FerroFibrous" },
+    { at = "5-7", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 13
+slots = [
+    { at = "5-7", item = "FerroFibrous" },
+]
 
 [sections.left_torso]
 armor = 22
 rear = 4
 slots = [
-    { at = "1-2", item = "IS.RL-15", modes = ["OneShot"] },
-    { at = 3, item = "IS.RL-10", modes = ["OneShot"] },
-    { at = "4-5", item = "IS.LargeLaser" },
-    { at = 6, item = "IS.MediumLaser" },
-    { at = "7-12", item = "FerroFibrous" },
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = 3, item = "IS.MediumLaser" },
+    { at = "4-5", item = "IS.RL-15", modes = ["OneShot"] },
+    { at = 6, item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "7-8", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 4
 slots = [
-    { at = "1-2", item = "IS.RL-15", modes = ["OneShot"] },
-    { at = 3, item = "IS.RL-10", modes = ["OneShot"] },
-    { at = "4-5", item = "IS.LargeLaser" },
-    { at = 6, item = "IS.MediumLaser" },
+    { at = "1-2", item = "IS.LargeLaser" },
+    { at = 3, item = "IS.MediumLaser" },
+    { at = "4-5", item = "IS.RL-15", modes = ["OneShot"] },
+    { at = 6, item = "IS.RL-10", modes = ["OneShot"] },
+    { at = "7-8", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 24
-rear = 6
+rear = 7
+slots = [
+    { at = "11-12", item = "FerroFibrous" },
+]
 
 [sections.left_leg]
 armor = 22
 slots = [
     { at = 5, item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
     { at = 5, item = "HeatSink" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.head]

@@ -4,9 +4,7 @@ movement = "biped"
 tons = 80
 walk_mp = 4
 jump_mp = 4
-heat_sinks = 10
 radio = 4
-specials = ["ECM"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -36,8 +34,8 @@ slots = [
 armor = 26
 rear = 8
 slots = [
-    { at = "1-2", item = "JumpJet" },
-    { at = "3-4", item = "Ecm" },
+    { at = "1-2", item = "IS.JumpJet" },
+    { at = "3-4", item = "IS.Ecm" },
     { at = "5-10", item = "EndoSteel" },
     { at = "11-12", item = "StealthArmor" },
 ]
@@ -46,12 +44,12 @@ slots = [
 armor = 26
 rear = 8
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = "3-4", item = "IS.SRM-6" },
     { at = 5, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = "6-8", item = "Ammo_IS.GaussRifle", rounds = 8 },
-    { at = 9, item = "EndoSteel" },
-    { at = 10, item = "Case" },
+    { at = 9, item = "Case" },
+    { at = 10, item = "EndoSteel" },
     { at = "11-12", item = "StealthArmor" },
 ]
 

@@ -13,51 +13,50 @@ engine_rating = 180
 [sections.left_arm]
 armor = 8
 slots = [
-    { at = 7, item = "IS.SmallLaser" },
+    { at = 5, item = "IS.SmallLaser" },
 ]
 
 [sections.right_arm]
 armor = 8
 slots = [
-    { at = 7, item = "IS.MediumLaser" },
-    { at = 8, item = "IS.SmallLaser" },
+    { at = 5, item = "IS.MediumLaser" },
+    { at = 6, item = "IS.SmallLaser" },
 ]
 
 [sections.left_torso]
 armor = 12
 rear = 2
 slots = [
-    { at = 1, item = "IS.MachineGun", modes = ["RearMount"] },
-    { at = "2-4", item = "JumpJet" },
-    { at = "5-6", item = "HeatSink" },
+    { at = "1-3", item = "IS.JumpJet" },
+    { at = 4, item = "IS.MachineGun", modes = ["RearMount"] },
 ]
 
 [sections.right_torso]
 armor = 12
 rear = 2
 slots = [
-    { at = 1, item = "IS.MachineGun", modes = ["RearMount"] },
-    { at = "2-4", item = "JumpJet" },
-    { at = 5, item = "HeatSink" },
+    { at = "1-3", item = "IS.JumpJet" },
+    { at = 4, item = "IS.MachineGun", modes = ["RearMount"] },
 ]
 
 [sections.center_torso]
 armor = 14
 rear = 3
 slots = [
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 200 },
+    { at = 11, item = "HeatSink" },
+    { at = 12, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
 [sections.left_leg]
 armor = 13
 slots = [
-    { at = 5, item = "HeatSink" },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 13
 slots = [
-    { at = 5, item = "HeatSink" },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]

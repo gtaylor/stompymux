@@ -4,6 +4,7 @@ movement = "biped"
 tons = 90
 walk_mp = 4
 heat_sinks = 17
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -32,20 +33,20 @@ rear = 10
 slots = [
     { at = 1, item = "CL.SRM-6" },
     { at = 2, item = "Ammo_CL.SRM-6", rounds = 15 },
-    { at = "4-6", item = "FerroFibrous" },
-    { at = "7-10", item = "EndoSteel" },
+    { at = "3-6", item = "EndoSteel" },
+    { at = "7-9", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 28
 rear = 10
 slots = [
-    { at = 1, item = "CL.ERSmallLaser" },
-    { at = "2-3", item = "HeatSink" },
-    { at = "4-6", item = "EndoSteel" },
-    { at = "7-9", item = "FerroFibrous" },
-    { at = 10, item = "Ammo_CL.LB10-XAC", rounds = 10 },
-    { at = 11, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "CL.ERSmallLaser" },
+    { at = 4, item = "Ammo_CL.LB10-XAC", rounds = 10 },
+    { at = 5, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "6-8", item = "EndoSteel" },
+    { at = "9-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

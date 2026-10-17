@@ -12,6 +12,8 @@ fn kestrel(proof: bool, turret: bool) -> Vehicle {
             .insert("specials".into(), "CritProof_Tech".into());
     }
     if turret {
+        // The turret's copied front weapons take the mass of the troop compartment.
+        template.attributes.remove("transport_bays");
         template.sections.insert(
             VehicleSection::Turret,
             template.sections[&VehicleSection::Front].clone(),

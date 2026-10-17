@@ -371,6 +371,11 @@ pub fn parse_for(raw: &str, chassis: TechBase) -> Result<Critical> {
             "armored" => bail!("armored components are unsupported: {raw}"),
             "t" => bail!("mech turrets are unsupported: {raw}"),
             "i-os" | "ios" => bail!("improved one-shot launchers are unsupported: {raw}"),
+            // MegaMek names the vehicle flamer (TechManual p. 218) `Flamer (Vehicle)`.
+            "vehicle" if name[..open].trim_end().eq_ignore_ascii_case("flamer") => {
+                name = "VehicleFlamer";
+                continue;
+            }
             _ => bail!("unsupported mounting ({marker}) on {raw}"),
         }
         name = name[..open].trim_end();
@@ -801,8 +806,19 @@ mod tests {
             ("ISBPod", "IS.B-Pod"),
             ("CLBPod", "CL.B-Pod"),
             ("Anti-BattleArmor Pod", "IS.B-Pod"),
+            // MegaMek's vehicle flamer is `Flamer (Vehicle)`, not a mounting marker.
+            ("Flamer (Vehicle)", "IS.VehicleFlamer"),
+            ("flamer (vehicle) (OMNIPOD)", "IS.VehicleFlamer"),
         ] {
             assert_eq!(weapon(name).0.name(), expected, "{name}");
+        }
+        assert_eq!(
+            weapon("Flamer (Vehicle) (R)"),
+            (Weapon::parse("IS.VehicleFlamer").unwrap(), true, false)
+        );
+        assert_eq!(ammo("IS Vehicle Flamer Ammo").0, "Ammo_IS.VehicleFlamer");
+        for name in ["Medium Laser (Vehicle)", "Flamer (Vehicle)(ST)"] {
+            assert!(parse(name).is_err(), "{name}");
         }
     }
 

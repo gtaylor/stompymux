@@ -4,7 +4,6 @@ movement = "track"
 tons = 30
 walk_mp = 4
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,11 +20,9 @@ armor = 29
 slots = [
     { at = 1, item = "IS.LightGaussRifle" },
     { at = 2, item = "IS.ERSmallLaser" },
+    { at = 3, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
+    { at = 4, item = "C3Slave" },
 ]
 
 [sections.aft_side]
 armor = 13
-slots = [
-    { at = 1, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
-    { at = 12, item = "C3Slave" },
-]

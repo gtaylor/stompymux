@@ -6,7 +6,6 @@ walk_mp = 6
 jump_mp = 5
 heat_sinks = 12
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -29,7 +28,7 @@ slots = [
 armor = 12
 rear = 2
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = 3, item = "IS.Anti-MissileSystem" },
 ]
 
@@ -37,7 +36,7 @@ slots = [
 armor = 12
 rear = 2
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = 3, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
 ]
 
@@ -45,7 +44,7 @@ slots = [
 armor = 14
 rear = 3
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]

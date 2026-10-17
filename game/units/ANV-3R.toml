@@ -37,7 +37,7 @@ armor = 21
 rear = 7
 slots = [
     { at = "1-2", item = "IS.LargePulseLaser" },
-    { at = "3-4", item = "Ecm" },
+    { at = "3-4", item = "IS.Ecm" },
     { at = "5-8", item = "EndoSteel" },
 ]
 

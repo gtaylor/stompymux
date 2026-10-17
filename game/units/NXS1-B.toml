@@ -4,9 +4,7 @@ movement = "biped"
 tons = 25
 walk_mp = 7
 jump_mp = 5
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -38,7 +36,7 @@ armor = 8
 rear = 2
 slots = [
     { at = "1-3", item = "HeatSink" },
-    { at = "4-5", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
     { at = "6-7", item = "C3i" },
     { at = "8-9", item = "EndoSteel" },
     { at = "10-12", item = "FerroFibrous" },
@@ -49,7 +47,7 @@ armor = 8
 rear = 2
 slots = [
     { at = "1-6", item = "HeatSink" },
-    { at = "7-8", item = "JumpJet" },
+    { at = "7-8", item = "IS.JumpJet" },
     { at = "9-10", item = "EndoSteel" },
     { at = "11-12", item = "FerroFibrous" },
 ]
@@ -58,7 +56,7 @@ slots = [
 armor = 10
 rear = 2
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.ERSmallLaser" },
 ]
 

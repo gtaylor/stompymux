@@ -48,7 +48,7 @@ slots = [
 armor = 16
 rear = 6
 slots = [
-    { at = 12, item = "IS.MediumLaser", modes = ["RearMount"] },
+    { at = 11, item = "IS.MediumLaser", modes = ["RearMount"] },
 ]
 
 [sections.left_leg]

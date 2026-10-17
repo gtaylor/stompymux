@@ -7,29 +7,30 @@ walk_mp = 4
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 260
+armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 32
+armor = 33
 
 [sections.right_side]
-armor = 32
+armor = 33
 
 [sections.front_side]
-armor = 32
+armor = 40
 slots = [
     { at = "1-2", item = "IS.MediumPulseLaser" },
 ]
 
 [sections.aft_side]
-armor = 32
+armor = 33
 
 [sections.turret]
-armor = 32
+armor = 40
 slots = [
-    { at = 1, item = "IS.LRM-15" },
-    { at = 2, item = "ArtemisIV", link = 1 },
-    { at = 3, item = "IS.LRM-15" },
-    { at = 4, item = "ArtemisIV", link = 3 },
+    { at = 1, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 2, item = "IS.ArtemisIV", link = 1 },
+    { at = 3, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 4, item = "IS.ArtemisIV", link = 3 },
     { at = "5-6", item = "IS.StreakSRM-2" },
     { at = "7-9", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = 10, item = "Ammo_IS.StreakSRM-2", rounds = 50 },

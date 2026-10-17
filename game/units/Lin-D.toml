@@ -4,6 +4,7 @@ movement = "biped"
 tons = 65
 walk_mp = 6
 heat_sinks = 14
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,61 +15,57 @@ armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 20
-omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "EndoSteel" },
-    { at = 5, item = "FerroFibrous" },
-    { at = "6-9", item = "CL.StreakSRM-6" },
-    { at = "10-11", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "5-8", item = "CL.StreakSRM-6" },
+    { at = "9-10", item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = 11, item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 20
-omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "EndoSteel" },
-    { at = 5, item = "FerroFibrous" },
-    { at = "6-9", item = "CL.StreakSRM-6" },
-    { at = 10, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "5-8", item = "CL.StreakSRM-6" },
+    { at = 9, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = 10, item = "EndoSteel" },
+    { at = 11, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 22
 rear = 8
-engine_at = 3
 slots = [
-    { at = 1, item = "EndoSteel" },
-    { at = 2, item = "FerroFibrous" },
-    { at = 5, item = "CL.ERMediumLaser" },
-    { at = 6, item = "CL.ERSmallLaser", modes = ["RearMount"] },
+    { at = 3, item = "CL.ERMediumLaser" },
+    { at = 4, item = "CL.ERSmallLaser", modes = ["RearMount"] },
+    { at = 5, item = "EndoSteel" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 8
-engine_at = 3
 slots = [
-    { at = 1, item = "EndoSteel" },
-    { at = 2, item = "FerroFibrous" },
-    { at = 5, item = "CL.ERMediumLaser" },
+    { at = 3, item = "CL.ERMediumLaser" },
+    { at = 4, item = "EndoSteel" },
+    { at = 5, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
-armor = 23
+armor = 25
 rear = 10
 slots = [
     { at = 11, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
-armor = 25
+armor = 24
 slots = [
     { at = 5, item = "EndoSteel" },
     { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.right_leg]
-armor = 25
+armor = 24
 slots = [
     { at = 5, item = "EndoSteel" },
     { at = 6, item = "FerroFibrous" },

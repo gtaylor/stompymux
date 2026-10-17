@@ -5,7 +5,6 @@ tons = 35
 walk_mp = 6
 heat_sinks = 11
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,7 +34,7 @@ rear = 3
 slots = [
     { at = 4, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
     { at = "5-6", item = "Ammo_IS.NarcBeacon", rounds = 6 },
-    { at = "7-8", item = "Ecm" },
+    { at = "7-8", item = "IS.Ecm" },
     { at = 9, item = "Case" },
 ]
 
@@ -43,7 +42,7 @@ slots = [
 armor = 11
 rear = 3
 slots = [
-    { at = "4-5", item = "IS.SRM-6" },
+    { at = "4-5", item = "IS.SRM-6", modes = ["Narc/Smoke"] },
     { at = 6, item = "TAG" },
 ]
 
@@ -51,7 +50,7 @@ slots = [
 armor = 11
 rear = 3
 slots = [
-    { at = "11-12", item = "BeagleProbe" },
+    { at = "11-12", item = "IS.BeagleProbe" },
 ]
 
 [sections.left_leg]

@@ -39,8 +39,9 @@ fn vehicle_slots_are_complete_weapons_and_independent_bins() {
     let loadout = VehicleLoadout::resolve(&hover).unwrap();
     assert_eq!(loadout.weapons.len(), 3);
     assert_eq!(loadout.systems.len(), 2);
+    // TAG and the body-mounted ECM suite both sit in the front.
     assert_eq!(loadout.systems[0].location.section, VehicleSection::Front);
-    assert_eq!(loadout.systems[1].location.section, VehicleSection::Rear);
+    assert_eq!(loadout.systems[1].location.section, VehicleSection::Front);
 }
 
 /// Every known weapon fits one vehicle slot, including artillery and disposable launchers.

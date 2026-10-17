@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 25
 walk_mp = 8
-heat_sinks = 10
 specials = ["OmniMech_Tech"]
 
 [construction]
@@ -67,5 +66,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "BeagleProbe" },
+    { at = 4, item = "CL.BeagleProbe" },
 ]

@@ -5,7 +5,6 @@ tons = 80
 walk_mp = 4
 heat_sinks = 17
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -26,8 +25,8 @@ slots = [
 armor = 25
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.LRM-15" },
-    { at = 7, item = "ArtemisIV", link = 4 },
+    { at = "4-6", item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 7, item = "IS.ArtemisIV", link = 4 },
     { at = "8-10", item = "HeatSink" },
     { at = "11-12", item = "FerroFibrous" },
 ]

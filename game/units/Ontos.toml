@@ -4,7 +4,6 @@ movement = "track"
 tons = 95
 walk_mp = 3
 heat_sinks = 24
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -12,21 +11,21 @@ engine = "ice"
 engine_rating = 285
 
 [sections.left_side]
-armor = 25
+armor = 24
 
 [sections.right_side]
-armor = 25
+armor = 24
 
 [sections.front_side]
-armor = 26
+armor = 28
 
 [sections.aft_side]
-armor = 26
+armor = 24
 
 [sections.turret]
-armor = 26
+armor = 28
 slots = [
-    { at = "1-8", item = "IS.MediumLaser" },
-    { at = "9-10", item = "IS.LRM-5" },
+    { at = "1-2", item = "IS.LRM-5" },
+    { at = "3-10", item = "IS.MediumLaser" },
     { at = 11, item = "Ammo_IS.LRM-5", rounds = 24 },
 ]

@@ -39,7 +39,7 @@ armor = 7
 rear = 3
 slots = [
     { at = 11, item = "IS.SmallLaser" },
-    { at = 12, item = "Masc" },
+    { at = 12, item = "IS.Masc" },
 ]
 
 [sections.left_leg]

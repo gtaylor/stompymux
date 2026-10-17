@@ -5,7 +5,6 @@ tons = 65
 walk_mp = 5
 heat_sinks = 13
 radio = 4
-specials = ["ECM"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,40 +16,40 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 18
 slots = [
-    { at = "5-12", item = "EndoSteel" },
+    { at = "5-7", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 18
 slots = [
     { at = "5-10", item = "IS.RotaryAC/5" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 7
 slots = [
-    { at = "4-7", item = "TargetingComputer" },
-    { at = "8-9", item = "IS.StreakSRM-6" },
-    { at = "10-12", item = "IS.ERMediumLaser" },
+    { at = "4-5", item = "IS.StreakSRM-6" },
+    { at = "6-8", item = "IS.ERMediumLaser" },
+    { at = "9-12", item = "IS.TargetingComputer" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 7
 slots = [
-    { at = 4, item = "Ammo_IS.RotaryAC/5", rounds = 20 },
-    { at = 5, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
-    { at = "6-7", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
-    { at = "8-9", item = "EndoSteel" },
-    { at = 12, item = "Case" },
+    { at = "4-6", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
+    { at = 7, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = 8, item = "Case" },
+    { at = "9-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 29
 rear = 10
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]
@@ -67,3 +66,6 @@ slots = [
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "EndoSteel" },
+]

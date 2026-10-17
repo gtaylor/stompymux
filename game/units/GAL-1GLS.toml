@@ -50,21 +50,21 @@ slots = [
 armor = 30
 rear = 9
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "EndoSteel" },
 ]
 

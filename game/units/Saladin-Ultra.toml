@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 8
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"

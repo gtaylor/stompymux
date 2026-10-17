@@ -4,7 +4,6 @@ movement = "biped"
 tons = 55
 walk_mp = 5
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -15,14 +14,15 @@ armor = "ferro_fibrous"
 armor = 18
 slots = [
     { at = 5, item = "IS.LRM-5", modes = ["Narc/Smoke"] },
-    { at = 6, item = "IS.SRM-6", modes = ["Narc/Smoke"] },
-    { at = 7, item = "IS.SRM-6" },
+    { at = "6-7", item = "IS.SRM-6", modes = ["Narc/Smoke"] },
+    { at = "8-10", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 18
 slots = [
     { at = "5-6", item = "IS.MediumLaser" },
+    { at = "7-8", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -31,18 +31,17 @@ rear = 8
 slots = [
     { at = 1, item = "Ammo_IS.LRM-5", rounds = 24, modes = ["Narc/Smoke"] },
     { at = 2, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
-    { at = "3-9", item = "FerroFibrous" },
+    { at = "3-4", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 18
 rear = 8
 slots = [
-    { at = "1-2", item = "Ammo_IS.NarcBeacon", rounds = 6 },
-    { at = 3, item = "IS.SRM-6", modes = ["Narc/Smoke"] },
-    { at = 4, item = "IS.SRM-6" },
-    { at = 5, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
-    { at = "6-12", item = "FerroFibrous" },
+    { at = "1-2", item = "IS.SRM-6", modes = ["Narc/Smoke"] },
+    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+    { at = "4-5", item = "Ammo_IS.NarcBeacon", rounds = 6 },
+    { at = "6-7", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
@@ -54,9 +53,18 @@ slots = [
 
 [sections.left_leg]
 armor = 23
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
 
 [sections.right_leg]
 armor = 23
+slots = [
+    { at = "5-6", item = "FerroFibrous" },
+]
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

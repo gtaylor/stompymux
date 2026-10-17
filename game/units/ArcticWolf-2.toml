@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 40
 walk_mp = 7
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"
@@ -14,32 +13,30 @@ structure = "endo_steel"
 [sections.left_arm]
 armor = 8
 slots = [
-    { at = 5, item = "CL.SRM-6" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "CL.SRM-6", modes = ["Narc/Smoke"] },
 ]
 
 [sections.right_arm]
 armor = 8
 slots = [
-    { at = 5, item = "CL.SRM-6" },
-    { at = 6, item = "EndoSteel" },
+    { at = 5, item = "CL.SRM-6", modes = ["Narc/Smoke"] },
 ]
 
 [sections.left_torso]
 armor = 14
 rear = 3
 slots = [
-    { at = 3, item = "CL.SRM-6" },
-    { at = "4-6", item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
-    { at = "7-8", item = "CL.LargePulseLaser" },
+    { at = "3-4", item = "CL.LargePulseLaser" },
+    { at = "5-7", item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
+    { at = "8-9", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 14
 rear = 3
 slots = [
-    { at = 3, item = "CL.SRM-6" },
-    { at = 4, item = "Ammo_CL.NarcBeacon", rounds = 6 },
+    { at = "3-4", item = "CL.SRM-6", modes = ["Narc/Smoke"] },
+    { at = 5, item = "Ammo_CL.NarcBeacon", rounds = 6 },
 ]
 
 [sections.center_torso]
@@ -47,6 +44,7 @@ armor = 13
 rear = 4
 slots = [
     { at = 11, item = "CL.NarcBeacon" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
@@ -63,6 +61,3 @@ slots = [
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "EndoSteel" },
-]

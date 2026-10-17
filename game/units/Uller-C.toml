@@ -3,8 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 30
 walk_mp = 6
-heat_sinks = 10
-specials = ["OmniMech_Tech", "SearchLight"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -27,9 +26,9 @@ slots = [
 armor = 7
 slots = [
     { at = "5-7", item = "CL.Anti-MissileSystem" },
-    { at = 8, item = "Ecm" },
+    { at = 8, item = "CL.Ecm" },
     { at = 9, item = "TAG" },
-    { at = 10, item = "BeagleProbe" },
+    { at = 10, item = "CL.BeagleProbe" },
     { at = 11, item = "EndoSteel" },
     { at = 12, item = "FerroFibrous" },
 ]

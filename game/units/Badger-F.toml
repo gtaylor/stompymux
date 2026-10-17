@@ -3,12 +3,14 @@ class = "vehicle"
 movement = "track"
 tons = 30
 walk_mp = 6
-cargo_tons = 8
-specials = ["CargoTech"]
+specials = ["OmniMech_Tech", "CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 180
+
+[transport_bays]
+infantry_compartment = 8
 
 [sections.left_side]
 armor = 18
@@ -20,11 +22,10 @@ armor = 18
 armor = 20
 
 [sections.aft_side]
-armor = 16
+armor = 14
 
 [sections.turret]
-armor = 8
+armor = 18
 slots = [
     { at = 1, item = "IS.ERMediumLaser" },
-    { at = 2, item = "IS.ERSmallLaser" },
 ]

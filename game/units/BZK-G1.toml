@@ -45,21 +45,21 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 16
-rear = 6
+armor = 15
+rear = 5
 slots = [
     { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 12, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
 ]
 
 [sections.left_leg]
-armor = 12
+armor = 13
 slots = [
     { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.right_leg]
-armor = 12
+armor = 13
 slots = [
     { at = "5-6", item = "EndoSteel" },
 ]

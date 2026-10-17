@@ -4,6 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 8
 heat_sinks = 12
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,11 +15,11 @@ armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 14
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-6", item = "CL.LB2-XAC" },
-    { at = 7, item = "Ammo_CL.LB2-XAC", rounds = 45 },
-    { at = 12, item = "FerroFibrous" },
+    { at = "3-5", item = "CL.LB2-XAC" },
+    { at = 6, item = "Ammo_CL.LB2-XAC", rounds = 45 },
+    { at = 7, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -27,23 +28,23 @@ slots = [
     { at = 5, item = "CL.ERMediumLaser" },
     { at = 6, item = "CL.Anti-MissileSystem" },
     { at = 7, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
-    { at = 12, item = "FerroFibrous" },
+    { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 14
 rear = 7
 slots = [
-    { at = 10, item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = 3, item = "EndoSteel" },
+    { at = "4-5", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 14
 rear = 7
 slots = [
-    { at = 10, item = "EndoSteel" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = 3, item = "EndoSteel" },
+    { at = "4-5", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

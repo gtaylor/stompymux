@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 60
 walk_mp = 4
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -31,7 +29,7 @@ armor = 19
 rear = 7
 slots = [
     { at = "1-3", item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
-    { at = "4-6", item = "Masc" },
+    { at = "4-6", item = "IS.Masc" },
     { at = 7, item = "Case" },
     { at = "8-12", item = "EndoSteel" },
 ]
@@ -47,7 +45,7 @@ slots = [
 armor = 24
 rear = 7
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

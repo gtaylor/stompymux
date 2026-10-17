@@ -15,10 +15,10 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 11
-omit = ["lower_actuator", "hand_actuator"]
+omit = ["hand_actuator"]
 slots = [
-    { at = 3, item = "IS.SRM-4" },
-    { at = 4, item = "FerroFibrous" },
+    { at = 4, item = "IS.SRM-4" },
+    { at = 5, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
@@ -32,11 +32,11 @@ slots = [
 armor = 22
 rear = 4
 slots = [
-    { at = 4, item = "IS.Anti-MissileSystem" },
-    { at = 5, item = "IS.SRM-4" },
+    { at = 4, item = "IS.SRM-4" },
+    { at = 5, item = "IS.Anti-MissileSystem" },
     { at = 6, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = "7-11", item = "FerroFibrous" },
-    { at = 12, item = "Case" },
+    { at = 7, item = "Case" },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -46,8 +46,8 @@ slots = [
     { at = 4, item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
     { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = "7-11", item = "FerroFibrous" },
-    { at = 12, item = "Case" },
+    { at = 7, item = "Case" },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

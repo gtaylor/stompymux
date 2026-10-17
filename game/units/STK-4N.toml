@@ -20,8 +20,8 @@ slots = [
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.MediumLaser" },
-    { at = "5-6", item = "IS.LRM-10" },
+    { at = "3-4", item = "IS.LRM-10" },
+    { at = "5-6", item = "IS.MediumLaser" },
     { at = 7, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
@@ -39,10 +39,10 @@ slots = [
 armor = 25
 rear = 5
 slots = [
-    { at = "1-4", item = "HeatSink" },
-    { at = "5-6", item = "IS.LargeLaser" },
-    { at = "7-8", item = "IS.SRM-6" },
-    { at = 9, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "1-5", item = "HeatSink" },
+    { at = "6-7", item = "IS.LargeLaser" },
+    { at = "8-9", item = "IS.SRM-6" },
+    { at = 10, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 
 [sections.center_torso]
@@ -66,6 +66,3 @@ slots = [
 
 [sections.head]
 armor = 9
-slots = [
-    { at = 4, item = "HeatSink" },
-]

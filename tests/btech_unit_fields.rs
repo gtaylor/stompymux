@@ -1722,10 +1722,12 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &
             });
         }
         let original_load = battle_unit_load(&world, id, true).unwrap();
+        // CARGOSPACE sets the standard cargo bay; a vehicle's other transport bays stay.
         let original_cargo = if let Some(unit) = world.btech.constructed_units().get(&id) {
             unit.mass().unwrap().cargo
         } else {
-            world.btech.vehicles()[&id].mass().unwrap().cargo
+            let vehicle = &world.btech.vehicles()[&id];
+            vehicle.mass().unwrap().cargo - vehicle.definition().transport_bays().unwrap().mass()
         };
         let stock = battle_inventory(&world, id).unwrap().to_vec();
         let native = &f.native;

@@ -5,7 +5,6 @@ tons = 85
 walk_mp = 3
 heat_sinks = 17
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,8 +16,7 @@ armor = 25
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "HeatSink" },
-    { at = 6, item = "IS.LRM-10", modes = ["Narc/Smoke"] },
-    { at = 7, item = "IS.LRM-10" },
+    { at = "6-7", item = "IS.LRM-10", modes = ["Narc/Smoke"] },
     { at = "8-9", item = "IS.MediumLaser" },
     { at = "10-11", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Narc/Smoke"] },
 ]
@@ -28,8 +26,7 @@ armor = 25
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-5", item = "HeatSink" },
-    { at = 6, item = "IS.LRM-10", modes = ["Narc/Smoke"] },
-    { at = 7, item = "IS.LRM-10" },
+    { at = "6-7", item = "IS.LRM-10", modes = ["Narc/Smoke"] },
     { at = "8-9", item = "IS.MediumLaser" },
     { at = "10-11", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Narc/Smoke"] },
 ]
@@ -39,8 +36,7 @@ armor = 27
 rear = 9
 slots = [
     { at = "1-6", item = "HeatSink" },
-    { at = 7, item = "IS.SRM-6", modes = ["Narc/Smoke"] },
-    { at = 8, item = "IS.SRM-6" },
+    { at = "7-8", item = "IS.SRM-6", modes = ["Narc/Smoke"] },
     { at = "9-10", item = "IS.NarcBeacon" },
     { at = 11, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
 ]
@@ -50,8 +46,7 @@ armor = 27
 rear = 9
 slots = [
     { at = "1-9", item = "HeatSink" },
-    { at = 10, item = "IS.SRM-6", modes = ["Narc/Smoke"] },
-    { at = 11, item = "IS.SRM-6" },
+    { at = "10-11", item = "IS.SRM-6", modes = ["Narc/Smoke"] },
     { at = 12, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Narc/Smoke"] },
 ]
 

@@ -6,6 +6,7 @@ walk_mp = 7
 jump_mp = 7
 heat_sinks = 13
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -26,9 +27,8 @@ slots = [
 armor = 5
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink" },
-    { at = 6, item = "IS.ERMediumLaser" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "3-8", item = "HeatSink" },
+    { at = 9, item = "IS.ERMediumLaser" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -36,8 +36,8 @@ slots = [
 armor = 7
 rear = 2
 slots = [
-    { at = "4-6", item = "JumpJet" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.JumpJet" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -45,8 +45,8 @@ slots = [
 armor = 7
 rear = 2
 slots = [
-    { at = "4-6", item = "JumpJet" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.JumpJet" },
     { at = "10-12", item = "EndoSteel" },
 ]
 
@@ -54,7 +54,7 @@ slots = [
 armor = 8
 rear = 2
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.ERMediumLaser" },
 ]
 

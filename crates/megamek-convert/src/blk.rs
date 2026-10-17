@@ -10,7 +10,7 @@ use crate::equipment::{self, Critical, TechBase};
 use crate::layout::{self, WeaponSpan};
 use anyhow::{Context, Result, bail, ensure};
 use std::collections::BTreeMap;
-use stompymux_unit_construction::VehicleMovement;
+use stompymux_unit_construction::{VehicleMovement, VehicleTemplate};
 
 /// MegaMek equipment blocks with a stompymux location, and the template heading each fills.
 const LOCATIONS: [(&str, &str); 6] = [
@@ -230,6 +230,11 @@ pub fn convert(source: &str) -> Result<Converted> {
         );
     }
     let mut specials = Vec::new();
+    // An OmniVehicle carries the Omni technology its conversion cost multiplies by
+    // (TechManual p. 285).
+    if omni(&file)? {
+        push_special(&mut specials, "OmniMech_Tech");
+    }
     let mut located: BTreeMap<&str, Vec<Critical>> = BTreeMap::new();
     for (tag, heading) in LOCATIONS {
         let lines = file.lines(tag);
@@ -288,7 +293,7 @@ pub fn convert(source: &str) -> Result<Converted> {
         .values()
         .flatten()
         .filter_map(|critical| match critical {
-            Critical::Weapon { weapon, .. } if weapon.is_energy() => {
+            Critical::Weapon { weapon, .. } if VehicleTemplate::needs_heat_sinks(*weapon) => {
                 Some(u32::from(weapon.profile().heat))
             }
             _ => None,
@@ -327,25 +332,27 @@ pub fn convert(source: &str) -> Result<Converted> {
     } else {
         format!("{name} {model}")
     };
+    let mut draft = Draft {
+        name,
+        class,
+        movement,
+        tons,
+        walk_mp: cruise,
+        jump_mp: 0,
+        engine_rating,
+        heat_sinks: (heat_sinks != free).then_some(heat_sinks),
+        construction,
+        specials,
+        cargo_tons: transport.cargo_tons,
+        transport_bays: transport.bays,
+        sections,
+        split_mounts: Vec::new(),
+    };
+    draft.load_launchers();
     Ok(Converted {
         full_reference: reference.clone(),
         reference,
-        draft: Draft {
-            name,
-            class,
-            movement,
-            tons,
-            walk_mp: cruise,
-            jump_mp: 0,
-            engine_rating,
-            heat_sinks: (heat_sinks != free).then_some(heat_sinks),
-            construction,
-            specials,
-            cargo_tons: transport.cargo_tons,
-            transport_bays: transport.bays,
-            sections,
-            split_mounts: Vec::new(),
-        },
+        draft,
         warnings,
     })
 }
@@ -476,6 +483,19 @@ fn tech_from_rules(rules: &str) -> Result<TechBase> {
     bail!("unsupported technology base {rules}")
 }
 
+/// Whether the `<omni>` block marks an OmniVehicle: `1` or `true` does, an absent block, `0`
+/// or `false` does not, and anything else is refused.
+fn omni(file: &BlockFile) -> Result<bool> {
+    let Some(value) = file.value("omni") else {
+        return Ok(false);
+    };
+    Ok(match value.to_ascii_lowercase().as_str() {
+        "1" | "true" => true,
+        "0" | "false" => false,
+        _ => bail!("<omni> {value} is neither 1 nor 0"),
+    })
+}
+
 /// Record a chassis special once.
 fn push_special(specials: &mut Vec<&'static str>, special: &'static str) {
     if !specials.contains(&special) {
@@ -536,6 +556,73 @@ mod tests {
             template.contains("[construction]\ntech_base = \"inner_sphere\"\nengine_rating = 10\n"),
             "{template}"
         );
+    }
+
+    /// A vehicle flamer (`Flamer (Vehicle)`) mounts as the vehicle flamer and adds no heat sinks,
+    /// whatever its heat (TechManual p. 218).
+    #[test]
+    fn vehicle_flamers_need_no_heat_sinks() {
+        // A ton of flamer fuel in place of the half ton of machine gun rounds, and one ton of
+        // SRM ammunition less to carry it.
+        let source = BULLDOG
+            .replace("Machine Gun\n</Front", "Flamer (Vehicle)\n</Front")
+            .replace("IS Machine Gun Ammo - Half\n", "IS Vehicle Flamer Ammo\n")
+            .replacen("IS Ammo SRM-4\n", "", 1);
+        let draft = convert(&source).unwrap().draft;
+        let front = draft
+            .sections
+            .iter()
+            .find(|section| section.heading == "front_side")
+            .unwrap();
+        let items: Vec<_> = front
+            .slots
+            .iter()
+            .flatten()
+            .map(|slot| slot.item.as_str())
+            .collect();
+        assert_eq!(items, ["IS.VehicleFlamer", "Ammo_IS.VehicleFlamer"]);
+        // The large laser's 8 heat alone sets the ICE tank's heat sinks.
+        assert_eq!(draft.heat_sinks, Some(8));
+        // The vehicle check agrees, so the tank constructs with the laser's sinks alone.
+        let (_, template) = template(&source).unwrap();
+        assert!(template.contains("heat_sinks = 8\n"), "{template}");
+    }
+
+    /// An `<omni>` block marks an OmniVehicle, whose template carries the Omni technology that
+    /// multiplies its cost by 1.25 (TechManual p. 285).
+    #[test]
+    fn omnivehicles_carry_omni_technology() {
+        let with = |value: &str| {
+            BULLDOG.replacen(
+                "<armor>",
+                &format!("<omni>\n{value}\n</omni>\n\n<armor>"),
+                1,
+            )
+        };
+        let (_, omni) = template(&with("1")).unwrap();
+        assert!(
+            omni.contains("walk_mp = 4\nheat_sinks = 8\nspecials = [\"OmniMech_Tech\"]\n"),
+            "{omni}"
+        );
+        let (_, standard) = template(BULLDOG).unwrap();
+        assert!(!standard.contains("specials"), "{standard}");
+        let cost = |source: &str| {
+            let vehicle =
+                stompymux_unit_construction::VehicleTemplate::parse("test", source).unwrap();
+            stompymux_unit_construction::vehicle_template_base_cost(
+                &stompymux_unit_construction::PartPrices::new(),
+                &vehicle,
+            )
+            .unwrap() as f64
+        };
+        let ratio = cost(&omni) / cost(&standard);
+        assert!((ratio - 1.25).abs() < 0.001, "{ratio}");
+        for value in ["0", "false"] {
+            assert!(convert(&with(value)).unwrap().draft.specials.is_empty());
+        }
+        assert!(convert(&with("TRUE")).unwrap().draft.specials == ["OmniMech_Tech"]);
+        let error = format!("{:#}", convert(&with("2")).err().unwrap());
+        assert!(error.contains("<omni> 2 is neither 1 nor 0"), "{error}");
     }
 
     /// The rules line names the chassis technology base, and a mixed design declares mixed

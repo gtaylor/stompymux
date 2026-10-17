@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 100
 walk_mp = 3
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -20,21 +19,21 @@ armor = 50
 armor = 60
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 4, item = "Case" },
 ]
 
 [sections.aft_side]
 armor = 40
-slots = [
-    { at = "1-4", item = "Ammo_IS.UltraAC/20", rounds = 5 },
-    { at = "5-6", item = "Ammo_IS.LB20-XAC", rounds = 5 },
-    { at = "7-8", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
-    { at = 9, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
-    { at = 10, item = "Case" },
-]
 
 [sections.turret]
 armor = 59
 slots = [
-    { at = 1, item = "IS.LB20-XAC" },
-    { at = 2, item = "IS.UltraAC/20" },
+    { at = 1, item = "IS.UltraAC/20" },
+    { at = 2, item = "IS.LB20-XAC" },
+    { at = "3-6", item = "Ammo_IS.UltraAC/20", rounds = 5 },
+    { at = 7, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 8, item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 9, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 10, item = "Ammo_IS.LB20-XAC", rounds = 5 },
 ]

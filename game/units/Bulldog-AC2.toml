@@ -6,6 +6,7 @@ walk_mp = 4
 
 [construction]
 tech_base = "inner_sphere"
+engine = "ice"
 engine_rating = 240
 
 [sections.left_side]
@@ -17,8 +18,8 @@ armor = 20
 [sections.front_side]
 armor = 24
 slots = [
-    { at = 1, item = "IS.MachineGun" },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = "1-2", item = "IS.MachineGun" },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]
 
 [sections.aft_side]
@@ -29,6 +30,6 @@ armor = 20
 slots = [
     { at = "1-2", item = "IS.SRM-4" },
     { at = "3-4", item = "IS.AC/2" },
-    { at = "5-6", item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = "7-8", item = "Ammo_IS.AC/2", rounds = 45 },
+    { at = 5, item = "Ammo_IS.SRM-4", rounds = 25 },
+    { at = 6, item = "Ammo_IS.AC/2", rounds = 45 },
 ]

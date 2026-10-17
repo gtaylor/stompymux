@@ -18,6 +18,8 @@ armor = 8
 armor = 14
 slots = [
     { at = "1-5", item = "IS.ERSmallLaser" },
+    { at = 6, item = "IS.Ecm" },
+    { at = 7, item = "IS.BeagleProbe" },
 ]
 
 [sections.aft_side]

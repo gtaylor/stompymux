@@ -8,25 +8,26 @@ walk_mp = 2
 tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 120
+armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 12
+armor = 14
 
 [sections.right_side]
-armor = 12
+armor = 14
 
 [sections.front_side]
-armor = 12
+armor = 14
 slots = [
-    { at = "1-3", item = "IS.LRM-20" },
-    { at = 4, item = "ArtemisIV", link = 1 },
-    { at = 5, item = "ArtemisIV", link = 2 },
-    { at = 6, item = "ArtemisIV", link = 3 },
+    { at = 1, item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 2, item = "IS.ArtemisIV", link = 1 },
+    { at = 3, item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 4, item = "IS.ArtemisIV", link = 3 },
+    { at = 5, item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 5 },
     { at = "7-12", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = 13, item = "C3Slave" },
 ]
 
 [sections.aft_side]
-armor = 12
-slots = [
-    { at = 1, item = "C3Slave" },
-]
+armor = 11

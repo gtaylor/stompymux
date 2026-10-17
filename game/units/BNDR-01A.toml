@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 75
 walk_mp = 4
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -16,16 +15,16 @@ heat_sinks = "double"
 armor = 18
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.MediumLaser" },
-    { at = "6-11", item = "IS.LB10-XAC" },
+    { at = "4-9", item = "IS.LB10-XAC" },
+    { at = "10-11", item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 18
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-5", item = "IS.MediumLaser" },
-    { at = "6-11", item = "IS.LB10-XAC" },
+    { at = "4-9", item = "IS.LB10-XAC" },
+    { at = "10-11", item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
@@ -33,9 +32,9 @@ armor = 23
 rear = 8
 slots = [
     { at = 4, item = "IS.LRM-5" },
-    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = 7, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 5, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
     { at = 8, item = "Case" },
 ]
 
@@ -44,9 +43,9 @@ armor = 23
 rear = 8
 slots = [
     { at = 4, item = "IS.LRM-5" },
-    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = 7, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 5, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 6, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 7, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
     { at = 8, item = "Case" },
 ]
 

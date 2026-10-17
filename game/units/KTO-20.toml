@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 55
 walk_mp = 5
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -16,8 +14,7 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 18
 slots = [
-    { at = 5, item = "IS.LRM-5" },
-    { at = "6-7", item = "IS.SRM-6" },
+    { at = "5-6", item = "IS.SRM-6" },
 ]
 
 [sections.right_arm]
@@ -39,9 +36,10 @@ slots = [
 armor = 18
 rear = 8
 slots = [
-    { at = "1-2", item = "IS.SRM-6" },
-    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = "4-10", item = "FerroFibrous" },
+    { at = 1, item = "IS.LRM-5" },
+    { at = "2-3", item = "IS.SRM-6" },
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "5-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

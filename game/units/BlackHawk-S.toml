@@ -5,6 +5,7 @@ tons = 50
 walk_mp = 5
 jump_mp = 5
 heat_sinks = 14
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -24,7 +25,7 @@ slots = [
 ]
 
 [sections.left_torso]
-armor = 15
+armor = 16
 rear = 8
 slots = [
     { at = "3-6", item = "HeatSink" },
@@ -33,7 +34,7 @@ slots = [
 ]
 
 [sections.right_torso]
-armor = 15
+armor = 16
 rear = 8
 slots = [
     { at = "3-6", item = "HeatSink" },
@@ -45,24 +46,24 @@ slots = [
 armor = 23
 rear = 8
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
     { at = 12, item = "CL.Anti-MissileSystem" },
 ]
 
 [sections.left_leg]
 armor = 20
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 20
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "BeagleProbe" },
+    { at = 4, item = "CL.BeagleProbe" },
 ]

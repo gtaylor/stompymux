@@ -8,6 +8,7 @@ walk_mp = 4
 tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 100
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 13
@@ -16,7 +17,7 @@ armor = 13
 armor = 13
 
 [sections.front_side]
-armor = 14
+armor = 18
 slots = [
     { at = 1, item = "IS.MachineGun" },
     { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
@@ -26,7 +27,7 @@ slots = [
 armor = 11
 
 [sections.turret]
-armor = 13
+armor = 16
 slots = [
     { at = 1, item = "IS.MRM-20" },
     { at = "2-3", item = "Ammo_IS.MRM-20", rounds = 12 },

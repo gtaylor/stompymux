@@ -62,7 +62,8 @@ fn intact_vehicle_mass_separates_design_bins_from_loaded_rounds() {
     .unwrap()
     .mass()
     .unwrap();
-    assert_eq!((truck.total, truck.turret), (4 * 1024, 0));
+    // The 6-ton cargo bay fills the flatbed's 10 tons.
+    assert_eq!((truck.total, truck.turret), (10 * 1024, 0));
     let hover = VehicleTemplate::parse("Fulcrum", include_str!("../game/units/Fulcrum.toml"))
         .unwrap()
         .mass()

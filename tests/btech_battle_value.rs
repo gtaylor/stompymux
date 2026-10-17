@@ -81,8 +81,9 @@ fn published_battle_values() {
     assert_eq!(vehicle(ONTOS).battle_value().unwrap().total, 1242);
 }
 
-/// The TRO 3058 Upgrade Ontos turret holds thirteen entries: three Artemis IV beside the
-/// LRM-15, SRM-6 and SRM-4 they guide, which construction places at exactly 95 tons.
+/// The TRO 3058 Upgrade Ontos turret holds seventeen entries: three Artemis IV beside the
+/// LRM-15, SRM-4 and SRM-6 they guide and the ammunition that feeds them, which construction
+/// places at exactly 95 tons.
 #[test]
 fn ontos_book_loadout() {
     let template = VehicleTemplate::parse("Ontos-58", ONTOS).unwrap();

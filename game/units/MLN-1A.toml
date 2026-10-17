@@ -5,7 +5,6 @@ tons = 60
 walk_mp = 4
 jump_mp = 4
 heat_sinks = 18
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -30,8 +29,8 @@ armor = 18
 rear = 8
 slots = [
     { at = "1-5", item = "HeatSink" },
-    { at = 6, item = "IS.MachineGun" },
-    { at = 7, item = "IS.Flamer" },
+    { at = 6, item = "IS.Flamer" },
+    { at = 7, item = "IS.MachineGun" },
 ]
 
 [sections.right_torso]
@@ -54,13 +53,13 @@ slots = [
 [sections.left_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

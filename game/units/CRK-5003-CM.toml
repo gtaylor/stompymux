@@ -41,29 +41,29 @@ slots = [
     { at = "1-4", item = "HeatSink" },
     { at = "5-9", item = "C3Master" },
     { at = 10, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 12, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 12, item = "Ammo_IS.LB10-XAC", rounds = 10 },
 ]
 
 [sections.center_torso]
 armor = 31
 rear = 12
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 24
 slots = [
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "JumpJet" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "JumpJet" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.head]

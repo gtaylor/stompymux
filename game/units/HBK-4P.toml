@@ -4,7 +4,6 @@ movement = "biped"
 tons = 50
 walk_mp = 4
 heat_sinks = 23
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -33,8 +32,8 @@ slots = [
 armor = 20
 rear = 4
 slots = [
-    { at = "1-6", item = "IS.MediumLaser" },
-    { at = "7-8", item = "HeatSink" },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-8", item = "IS.MediumLaser" },
 ]
 
 [sections.center_torso]

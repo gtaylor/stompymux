@@ -28,16 +28,16 @@ omit = ["hand_actuator"]
 slots = [
     { at = "4-6", item = "IS.ERPPC" },
     { at = 7, item = "IS.MediumPulseLaser" },
-    { at = "8-9", item = "EndoSteel" },
-    { at = "10-12", item = "FerroFibrous" },
+    { at = "8-10", item = "FerroFibrous" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 18
 rear = 6
 slots = [
-    { at = "4-11", item = "EndoSteel" },
-    { at = 12, item = "Case" },
+    { at = 4, item = "Case" },
+    { at = "5-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]

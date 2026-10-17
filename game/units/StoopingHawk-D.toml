@@ -3,7 +3,8 @@ class = "mech"
 movement = "biped"
 tons = 55
 walk_mp = 5
-heat_sinks = 21
+heat_sinks = 22
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,8 +15,9 @@ armor = "ferro_fibrous"
 [sections.left_arm]
 armor = 18
 slots = [
-    { at = "5-6", item = "CL.ERMediumLaser" },
-    { at = 7, item = "CL.ERSmallLaser" },
+    { at = "5-6", item = "HeatSink" },
+    { at = "7-8", item = "CL.ERMediumLaser" },
+    { at = 9, item = "CL.ERSmallLaser" },
     { at = "10-12", item = "FerroFibrous" },
 ]
 
@@ -39,12 +41,12 @@ slots = [
 armor = 21
 rear = 5
 slots = [
-    { at = "1-8", item = "HeatSink" },
+    { at = "1-10", item = "HeatSink" },
     { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
-armor = 29
+armor = 28
 rear = 7
 slots = [
     { at = "11-12", item = "HeatSink" },

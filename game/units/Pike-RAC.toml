@@ -4,11 +4,11 @@ movement = "track"
 tons = 60
 walk_mp = 3
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 180
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 30
@@ -17,19 +17,17 @@ armor = 30
 armor = 30
 
 [sections.front_side]
-armor = 32
+armor = 42
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.aft_side]
 armor = 28
-slots = [
-    { at = "1-4", item = "Ammo_IS.RotaryAC/2", rounds = 45 },
-]
 
 [sections.turret]
-armor = 32
+armor = 40
 slots = [
     { at = "1-3", item = "IS.RotaryAC/2" },
+    { at = "4-7", item = "Ammo_IS.RotaryAC/2", rounds = 45 },
 ]

@@ -3,8 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 55
 walk_mp = 5
-heat_sinks = 10
-specials = ["OmniMech_Tech", "ArtemisIV"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -21,8 +20,8 @@ slots = [
 [sections.right_arm]
 armor = 18
 slots = [
-    { at = "5-6", item = "CL.LRM-15" },
-    { at = 7, item = "ArtemisIV", link = 5 },
+    { at = "5-6", item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 7, item = "CL.ArtemisIV", link = 5 },
     { at = "8-10", item = "EndoSteel" },
 ]
 
@@ -30,8 +29,8 @@ slots = [
 armor = 21
 rear = 5
 slots = [
-    { at = "1-2", item = "CL.LRM-15" },
-    { at = 3, item = "ArtemisIV", link = 1 },
+    { at = "1-2", item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 3, item = "CL.ArtemisIV", link = 1 },
     { at = "4-5", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = "6-7", item = "FerroFibrous" },
 ]
@@ -40,8 +39,8 @@ slots = [
 armor = 21
 rear = 5
 slots = [
-    { at = "1-2", item = "CL.LRM-15" },
-    { at = 3, item = "ArtemisIV", link = 1 },
+    { at = "1-2", item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 3, item = "CL.ArtemisIV", link = 1 },
     { at = "4-5", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
     { at = "6-7", item = "EndoSteel" },
 ]

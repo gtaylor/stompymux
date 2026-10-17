@@ -4,7 +4,7 @@ movement = "biped"
 tons = 65
 walk_mp = 5
 heat_sinks = 13
-specials = ["SearchLight", "ArtemisIV"]
+specials = ["OmniMech_Tech", "SearchLight"]
 
 [construction]
 tech_base = "clan"
@@ -38,10 +38,10 @@ slots = [
 armor = 14
 rear = 7
 slots = [
-    { at = 3, item = "CL.SRM-6" },
-    { at = 4, item = "ArtemisIV", link = 3 },
-    { at = 5, item = "CL.SRM-6" },
-    { at = 6, item = "ArtemisIV", link = 5 },
+    { at = 3, item = "CL.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 4, item = "CL.ArtemisIV", link = 3 },
+    { at = 5, item = "CL.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 6, item = "CL.ArtemisIV", link = 5 },
     { at = "7-8", item = "Ammo_CL.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
 ]
 

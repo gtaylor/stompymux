@@ -15,15 +15,15 @@ structure = "endo_steel"
 [sections.left_arm]
 armor = 6
 slots = [
-    { at = "5-7", item = "EndoSteel" },
-    { at = "8-11", item = "HeatSink" },
+    { at = "5-8", item = "HeatSink" },
+    { at = "9-10", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 6
 slots = [
-    { at = "5-7", item = "EndoSteel" },
-    { at = "8-11", item = "HeatSink" },
+    { at = "5-8", item = "HeatSink" },
+    { at = "9-10", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -32,6 +32,7 @@ rear = 3
 slots = [
     { at = "3-10", item = "CL.UltraAC/20" },
     { at = 11, item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -40,6 +41,7 @@ rear = 3
 slots = [
     { at = "3-10", item = "CL.UltraAC/20" },
     { at = 11, item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.center_torso]
@@ -52,13 +54,13 @@ slots = [
 [sections.left_leg]
 armor = 12
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 12
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

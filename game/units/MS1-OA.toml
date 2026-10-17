@@ -3,9 +3,8 @@ class = "mech"
 movement = "biped"
 tons = 55
 walk_mp = 6
-heat_sinks = 10
 radio = 4
-specials = ["Masc", "BeagleProbe"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -33,7 +32,7 @@ slots = [
 armor = 20
 rear = 6
 slots = [
-    { at = "4-6", item = "Masc" },
+    { at = "4-6", item = "IS.Masc" },
 ]
 
 [sections.right_torso]
@@ -49,7 +48,7 @@ slots = [
 armor = 26
 rear = 7
 slots = [
-    { at = "11-12", item = "BeagleProbe" },
+    { at = "11-12", item = "IS.BeagleProbe" },
 ]
 
 [sections.left_leg]

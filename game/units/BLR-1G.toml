@@ -5,7 +5,6 @@ tons = 85
 walk_mp = 4
 heat_sinks = 18
 radio = 4
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -27,11 +26,11 @@ slots = [
 armor = 28
 rear = 8
 slots = [
-    { at = "1-2", item = "IS.MediumLaser" },
-    { at = 3, item = "IS.MediumLaser", modes = ["RearMount"] },
-    { at = "4-5", item = "IS.SRM-6" },
-    { at = 6, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "7-8", item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = "3-4", item = "IS.MediumLaser" },
+    { at = 5, item = "IS.MediumLaser", modes = ["RearMount"] },
+    { at = "6-7", item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 8, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
 [sections.right_torso]

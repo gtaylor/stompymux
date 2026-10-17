@@ -6,7 +6,7 @@ walk_mp = 4
 jump_mp = 4
 heat_sinks = 14
 radio = 4
-max_suits = 0
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,8 +19,8 @@ heat_sinks = "double"
 armor = 28
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "IS.ERPPC" },
-    { at = "6-8", item = "HeatSink" },
+    { at = "3-5", item = "HeatSink" },
+    { at = "6-8", item = "IS.ERPPC" },
     { at = "9-12", item = "EndoSteel" },
 ]
 
@@ -37,8 +37,8 @@ slots = [
 armor = 26
 rear = 10
 slots = [
-    { at = "4-8", item = "TargetingComputer" },
-    { at = "9-10", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
+    { at = "6-10", item = "IS.TargetingComputer" },
     { at = "11-12", item = "EndoSteel" },
 ]
 
@@ -46,18 +46,18 @@ slots = [
 armor = 26
 rear = 10
 slots = [
-    { at = "4-6", item = "Ammo_IS.UltraAC/10", rounds = 10 },
-    { at = 7, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
-    { at = "8-9", item = "JumpJet" },
-    { at = "10-11", item = "EndoSteel" },
-    { at = 12, item = "Case" },
+    { at = "4-5", item = "IS.JumpJet" },
+    { at = "6-8", item = "Ammo_IS.UltraAC/10", rounds = 10 },
+    { at = 9, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
+    { at = 10, item = "Case" },
+    { at = "11-12", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 44
 rear = 10
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

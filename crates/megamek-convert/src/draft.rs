@@ -1,6 +1,7 @@
 //! A converted unit before stompymux validation: the facts read from a MegaMek file, written
 //! out in the template document syntax with every slot spelled out. The game's own template
 //! parser then checks the draft and renders it in canonical, compressed form.
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 /// One item in one slot.
@@ -78,7 +79,59 @@ pub struct Draft {
     pub split_mounts: Vec<SplitMount>,
 }
 
+/// The ammunition slot mode marking a half-ton lot, which names no munition.
+const HALF_TON: &str = "Halfton";
+
 impl Draft {
+    /// Load every launcher the way MegaMek does, from one of its own bins. A stompymux weapon
+    /// fires only the bins of the munition it has selected, so a weapon none of whose bins
+    /// holds standard rounds (only Artemis-capable missiles, say, or MML long-range missiles)
+    /// starts with the munition of its first bin in template order instead of with none.
+    pub fn load_launchers(&mut self) {
+        let mut first: BTreeMap<String, Vec<&'static str>> = BTreeMap::new();
+        let mut standard = BTreeSet::new();
+        for slot in self
+            .sections
+            .iter()
+            .flat_map(|section| section.slots.iter().flatten())
+        {
+            let Some(weapon) = slot.item.strip_prefix("Ammo_") else {
+                continue;
+            };
+            let munition: Vec<_> = slot
+                .modes
+                .iter()
+                .copied()
+                .filter(|mode| *mode != HALF_TON)
+                .collect();
+            if munition.is_empty() {
+                standard.insert(weapon.to_owned());
+            }
+            first.entry(weapon.to_owned()).or_insert(munition);
+        }
+        let load = |item: &str, modes: &mut Vec<&'static str>| {
+            if standard.contains(item) {
+                return;
+            }
+            for mode in first.get(item).into_iter().flatten() {
+                if !modes.contains(mode) {
+                    modes.push(mode);
+                }
+            }
+        };
+        for slot in self
+            .sections
+            .iter_mut()
+            .flat_map(|section| section.slots.iter_mut().flatten())
+            .filter(|slot| !slot.item.starts_with("Ammo_"))
+        {
+            load(&slot.item, &mut slot.modes);
+        }
+        for mount in &mut self.split_mounts {
+            load(&mount.item, &mut mount.modes);
+        }
+    }
+
     /// Write the draft as a template document.
     pub fn render(&self) -> String {
         let mut out = String::new();
@@ -197,6 +250,72 @@ fn list(values: &[&str]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A slot holding `item` with `modes` and no rounds or links.
+    fn slot(item: &str, modes: &[&'static str]) -> Option<Slot> {
+        Some(Slot {
+            item: item.into(),
+            rounds: None,
+            link: None,
+            links: vec![],
+            modes: modes.to_vec(),
+        })
+    }
+
+    /// A launcher whose bins are all of one special munition starts loaded with it; one with
+    /// a standard bin, or with no bins, keeps the standard selection.
+    #[test]
+    fn launchers_start_with_the_munition_of_their_bins() {
+        let mut front = Section::new("front_side", 10, 0, false);
+        front.slots[0] = slot("IS.LRM-10", &[]);
+        front.slots[1] = slot("Ammo_IS.LRM-10", &["Artemis/Mine"]);
+        front.slots[2] = slot("IS.SRM-4", &[]);
+        front.slots[3] = slot("Ammo_IS.SRM-4", &["Artemis/Mine"]);
+        front.slots[4] = slot("IS.MML-5", &[]);
+        front.slots[5] = slot("Ammo_IS.MML-5", &["MML_LRM", "Halfton"]);
+        let mut rear = Section::new("aft_side", 10, 0, false);
+        rear.slots[0] = slot("Ammo_IS.SRM-4", &[]);
+        rear.slots[1] = slot("IS.MediumLaser", &[]);
+        rear.slots[2] = slot("IS.LRM-10", &["RearMount"]);
+        let mut draft = Draft {
+            name: "Carrier".into(),
+            class: "vehicle",
+            movement: "track",
+            tons: 50,
+            walk_mp: 3,
+            jump_mp: 0,
+            heat_sinks: None,
+            engine_rating: 100,
+            construction: vec![],
+            specials: vec![],
+            cargo_tons: None,
+            transport_bays: vec![],
+            sections: vec![front, rear],
+            split_mounts: vec![SplitMount {
+                item: "IS.LRM-10".into(),
+                modes: vec![],
+                placements: [("left_torso", 0, 1), ("left_arm", 0, 2)],
+            }],
+        };
+        draft.load_launchers();
+        let modes = |section: usize, index: usize| {
+            draft.sections[section].slots[index]
+                .as_ref()
+                .unwrap()
+                .modes
+                .clone()
+        };
+        assert_eq!(modes(0, 0), ["Artemis/Mine"]);
+        // The SRM-4 has a standard bin in the rear as well.
+        assert!(modes(0, 2).is_empty());
+        // The half-ton lot names no munition.
+        assert_eq!(modes(0, 4), ["MML_LRM"]);
+        assert!(modes(1, 1).is_empty());
+        assert_eq!(modes(1, 2), ["RearMount", "Artemis/Mine"]);
+        // Bins keep their own modes.
+        assert_eq!(modes(0, 5), ["MML_LRM", "Halfton"]);
+        assert_eq!(draft.split_mounts[0].modes, ["Artemis/Mine"]);
+    }
 
     #[test]
     fn drafts_spell_out_every_slot() {

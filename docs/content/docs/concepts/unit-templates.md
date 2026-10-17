@@ -404,14 +404,19 @@ use their name. When two units in one run would share a reference, the second
 takes the chassis-qualified one instead. Pass `--reference` to choose one for a
 single file.
 
-OmniMechs get the `OmniMech_Tech` special and a searchlight design quirk the
-`SearchLight` special; other quirks have no stompymux counterpart and are not
-converted. Mixed-technology units set `mixed_tech = true` and keep a Clan or
-Inner Sphere engine, structure or armor through the `[construction]` technology
-keys. A CASE II, ECM suite, active probe, MASC, targeting computer, Artemis IV
+OmniMechs (a `Config:` line naming an OmniMek) and OmniVehicles (an `<omni>`
+block) get the `OmniMech_Tech` special, whose conversion cost is multiplied by
+1.25 (TechManual p. 285), and a searchlight design quirk the `SearchLight`
+special; other quirks have no stompymux counterpart and are not converted.
+Mixed-technology units set `mixed_tech = true` and keep a Clan or Inner Sphere
+engine, structure or armor through the `[construction]` technology keys. A CASE II, ECM suite, active probe, MASC, targeting computer, Artemis IV
 or jump jet of the other technology base keeps its base as an `IS.` or `CL.`
 prefix on its item. A machine gun array lists in `links` up to four machine
 guns of the size class its MegaMek name gives, in its location, nearest first.
+MegaMek loads every weapon from one of its own bins, while a stompymux weapon
+fires only the bins of the munition it has selected, so a launcher none of
+whose bins holds standard rounds (only Artemis-capable missiles, say) starts
+with the munition of its first bin selected.
 
 Every converted unit must load and construct exactly as the game would, so the
 tool refuses anything stompymux cannot field instead of dropping it: other unit
@@ -424,7 +429,8 @@ other files still convert, and the exit status is non-zero.
 MegaMek's vehicle body location has no counterpart, so body ammunition is
 placed beside a weapon it feeds and other body equipment in the first location
 with room. Vehicle heat sinks are set to cover energy weapon heat with single heat
-sinks, and vehicles with endo steel, composite or reinforced structure are
+sinks (vehicle flamers, written `Flamer (Vehicle)`, need none: TechManual
+p. 218), and vehicles with endo steel, composite or reinforced structure are
 refused. A `cargobay` becomes the standard cargo bay (`cargo_tons`, with
 `CargoTech` so the unit can load stock); `troopspace` becomes an
 `infantry_compartment`, `infantrybay` lines become infantry bays counted in

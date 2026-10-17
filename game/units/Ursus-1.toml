@@ -41,7 +41,7 @@ rear = 5
 slots = [
     { at = "1-6", item = "HeatSink" },
     { at = 7, item = "CL.ERMediumLaser" },
-    { at = 8, item = "Ecm" },
+    { at = 8, item = "CL.Ecm" },
     { at = "9-10", item = "FerroFibrous" },
 ]
 

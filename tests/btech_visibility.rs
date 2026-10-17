@@ -296,12 +296,14 @@ async fn clairvoyance_preserves_physical_los_and_unacquired_aim() {
 /// Every perception channel rejects invisible targets, even for a clairvoyant operator with working hardware.
 #[tokio::test]
 async fn invisibility_suppresses_all_perception_channels_without_acquisition() {
-    let source = include_str!("../game/units/JR7-D.toml").replace(
-        r#"{ at = "1-2", item = "JumpJet" },"#,
-        r#"{ at = "1-2", item = "JumpJet" },
+    // The probes join the left torso's jump jets.
+    let source = include_str!("../game/units/JR7-D.toml").replacen(
+        r#"{ at = "1-2", item = "IS.JumpJet" },"#,
+        r#"{ at = "1-2", item = "IS.JumpJet" },
     { at = "3-4", item = "BeagleProbe" },
     { at = 5, item = "Light_BAP" },
     { at = "6-8", item = "BloodhoundProbe" },"#,
+        1,
     );
     let plain = include_str!("../game/units/JR7-D.toml");
     for channel in DetectionChannel::ALL {

@@ -9,6 +9,9 @@ tech_base = "inner_sphere"
 engine_rating = 110
 armor = "ferro_fibrous"
 
+[transport_bays]
+infantry_compartment = 3.5
+
 [sections.left_side]
 armor = 20
 
@@ -24,7 +27,7 @@ slots = [
 ]
 
 [sections.aft_side]
-armor = 13
+armor = 12
 
 [sections.rotor]
 armor = 2

@@ -4,7 +4,7 @@ movement = "biped"
 tons = 65
 walk_mp = 3
 jump_mp = 3
-heat_sinks = 20
+heat_sinks = 19
 
 [construction]
 tech_base = "clan"
@@ -16,48 +16,48 @@ armor = "ferro_fibrous"
 armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "CL.LargePulseLaser" },
-    { at = "7-10", item = "HeatSink" },
-    { at = 11, item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-8", item = "CL.LargePulseLaser" },
+    { at = "9-10", item = "EndoSteel" },
+    { at = "11-12", item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 20
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-6", item = "CL.LargePulseLaser" },
-    { at = "7-8", item = "HeatSink" },
-    { at = "9-11", item = "FerroFibrous" },
-    { at = 12, item = "EndoSteel" },
+    { at = "3-4", item = "HeatSink" },
+    { at = "5-8", item = "CL.LargePulseLaser" },
+    { at = 9, item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = 1, item = "JumpJet" },
-    { at = "2-9", item = "HeatSink" },
-    { at = 10, item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "1-8", item = "HeatSink" },
+    { at = 9, item = "CL.JumpJet" },
+    { at = "10-11", item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = 1, item = "JumpJet" },
-    { at = "2-9", item = "HeatSink" },
-    { at = 10, item = "FerroFibrous" },
-    { at = "11-12", item = "EndoSteel" },
+    { at = "1-8", item = "HeatSink" },
+    { at = 9, item = "CL.JumpJet" },
+    { at = "10-11", item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 30
 rear = 12
 slots = [
-    { at = 11, item = "JumpJet" },
-    { at = 12, item = "EndoSteel" },
+    { at = 11, item = "CL.JumpJet" },
+    { at = 12, item = "CL.BeagleProbe" },
 ]
 
 [sections.left_leg]
@@ -75,5 +75,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "FerroFibrous" },
+    { at = 4, item = "CL.ERSmallLaser" },
 ]

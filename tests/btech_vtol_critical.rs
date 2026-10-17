@@ -494,10 +494,13 @@ async fn fuel_tank_explosions_settle_at_the_surface_and_destroy_the_vtol() {
     let id = world.create(&config, "Exploding aircraft".into(), Kind::Thing);
     for case in [false, true] {
         let source = if case {
-            include_str!("../game/units/Kestrel.toml").replace(
-                "[sections.aft_side]\n",
-                "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
-            )
+            // CASE takes the half ton the troop compartment would otherwise hold.
+            include_str!("../game/units/Kestrel.toml")
+                .replace("[transport_bays]\ninfantry_compartment = 3.5\n\n", "")
+                .replace(
+                    "[sections.aft_side]\n",
+                    "[sections.aft_side]\nslots = [{ at = 1, item = \"CASE\" }]\n",
+                )
         } else {
             include_str!("../game/units/Kestrel.toml").into()
         };

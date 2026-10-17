@@ -49,7 +49,7 @@ slots = [
 armor = 15
 rear = 6
 slots = [
-    { at = "11-12", item = "BeagleProbe" },
+    { at = "11-12", item = "IS.BeagleProbe" },
 ]
 
 [sections.left_leg]

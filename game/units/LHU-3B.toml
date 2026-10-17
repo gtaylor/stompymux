@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 75
 walk_mp = 5
-heat_sinks = 10
 radio = 4
-specials = ["ArtemisIV", "C3MasterTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,7 +17,7 @@ armor = 21
 omit = ["hand_actuator"]
 slots = [
     { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = "6-12", item = "EndoSteel" },
+    { at = "6-8", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
@@ -33,24 +31,28 @@ slots = [
 armor = 21
 rear = 7
 slots = [
-    { at = "4-5", item = "IS.LRM-10" },
-    { at = "6-7", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
-    { at = "8-11", item = "EndoSteel" },
-    { at = 12, item = "ArtemisIV", link = 4 },
+    { at = "4-5", item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 4 },
+    { at = "7-8", item = "Ammo_IS.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = "9-12", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 21
 rear = 7
 slots = [
-    { at = "4-8", item = "C3Master" },
-    { at = "9-10", item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 4, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = "5-6", item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = "7-11", item = "C3Master" },
+    { at = 12, item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 28
 rear = 9
+slots = [
+    { at = "11-12", item = "EndoSteel" },
+]
 
 [sections.left_leg]
 armor = 28
@@ -61,7 +63,7 @@ slots = [
 [sections.right_leg]
 armor = 28
 slots = [
-    { at = 5, item = "EndoSteel" },
+    { at = "5-6", item = "EndoSteel" },
 ]
 
 [sections.head]

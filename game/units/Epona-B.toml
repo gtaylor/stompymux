@@ -3,7 +3,7 @@ class = "vehicle"
 movement = "hover"
 tons = 50
 walk_mp = 9
-heat_sinks = 10
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -21,6 +21,7 @@ armor = 21
 slots = [
     { at = "1-2", item = "CL.StreakSRM-4" },
     { at = 3, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
+    { at = 4, item = "Case" },
 ]
 
 [sections.aft_side]

@@ -44,7 +44,7 @@ slots = [
     { at = "1-6", item = "HeatSink" },
     { at = 7, item = "Ammo_IS.LRM-15", rounds = 8 },
     { at = 8, item = "Case" },
-    { at = "9-10", item = "FerroFibrous" },
+    { at = 9, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
@@ -62,3 +62,6 @@ armor = 24
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

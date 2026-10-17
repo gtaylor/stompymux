@@ -23,8 +23,8 @@ armor = 8
 armor = 8
 rear = 5
 slots = [
-    { at = 1, item = "Ammo_IS.UltraAC/5", rounds = 20 },
-    { at = 2, item = "HeatSink" },
+    { at = 1, item = "HeatSink" },
+    { at = 2, item = "Ammo_IS.UltraAC/5", rounds = 20 },
 ]
 
 [sections.right_torso]
@@ -32,8 +32,8 @@ armor = 8
 rear = 5
 slots = [
     { at = 1, item = "IS.StreakSRM-2" },
-    { at = 2, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = 3, item = "IS.SmallLaser" },
+    { at = 2, item = "IS.SmallLaser" },
+    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.center_torso]

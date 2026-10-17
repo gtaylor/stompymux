@@ -10,14 +10,13 @@ engine_rating = 255
 armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 25
+armor = 23
 
 [sections.right_side]
-armor = 25
+armor = 23
 
 [sections.front_side]
-armor = 26
-config = "Case"
+armor = 29
 slots = [
     { at = 1, item = "IS.Thumper" },
     { at = "2-3", item = "Ammo_IS.Thumper", rounds = 20 },
@@ -25,10 +24,10 @@ slots = [
 ]
 
 [sections.aft_side]
-armor = 24
+armor = 22
 
 [sections.turret]
-armor = 25
+armor = 28
 slots = [
     { at = "1-2", item = "IS.MediumLaser" },
 ]

@@ -5,7 +5,7 @@ tons = 60
 walk_mp = 4
 heat_sinks = 11
 radio = 4
-specials = ["ECM", "SearchLight"]
+specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -29,6 +29,7 @@ omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-7", item = "IS.LightGaussRifle" },
     { at = "8-9", item = "IS.ERMediumLaser" },
+    { at = "10-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
@@ -38,7 +39,7 @@ slots = [
     { at = "4-6", item = "HeatSink" },
     { at = 7, item = "IS.ERMediumLaser" },
     { at = 8, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
-    { at = "9-12", item = "EndoSteel" },
+    { at = "9-10", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
@@ -48,14 +49,14 @@ slots = [
     { at = "4-6", item = "HeatSink" },
     { at = 7, item = "IS.ERMediumLaser" },
     { at = 8, item = "Ammo_IS.LightGaussRifle", rounds = 16 },
-    { at = "9-11", item = "EndoSteel" },
+    { at = "9-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]
 armor = 27
 rear = 10
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

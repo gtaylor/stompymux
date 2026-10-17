@@ -3,12 +3,14 @@ class = "vehicle"
 movement = "hover"
 tons = 50
 walk_mp = 9
-cargo_tons = 8
-specials = ["CargoTech"]
+specials = ["OmniMech_Tech", "CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 215
+
+[transport_bays]
+infantry_compartment = 8
 
 [sections.left_side]
 armor = 40
@@ -26,6 +28,6 @@ armor = 32
 armor = 22
 slots = [
     { at = 1, item = "IS.ERMediumLaser" },
-    { at = 2, item = "IS.StreakSRM-2" },
-    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 2, item = "IS.SRM-2" },
+    { at = 3, item = "Ammo_IS.SRM-2", rounds = 50 },
 ]

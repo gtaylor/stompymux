@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "wheel"
 tons = 65
 walk_mp = 3
-specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
@@ -21,10 +20,11 @@ armor = 32
 slots = [
     { at = "1-2", item = "CL.ERMediumLaser" },
     { at = 3, item = "CL.Anti-MissileSystem" },
-    { at = 4, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
-    { at = 5, item = "CL.LRM-15" },
-    { at = 6, item = "ArtemisIV", link = 5 },
-    { at = "7-8", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 4, item = "CL.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 5, item = "CL.ArtemisIV", link = 4 },
+    { at = "6-7", item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
+    { at = "8-9", item = "Ammo_CL.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 10, item = "Case" },
 ]
 
 [sections.aft_side]
@@ -34,8 +34,8 @@ armor = 24
 armor = 28
 slots = [
     { at = 1, item = "CL.LB10-XAC" },
-    { at = 2, item = "Ammo_CL.LB10-XAC", rounds = 10 },
-    { at = 3, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
-    { at = 4, item = "CL.UltraAC/10" },
-    { at = "5-6", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+    { at = 2, item = "CL.UltraAC/10" },
+    { at = "3-4", item = "Ammo_CL.UltraAC/10", rounds = 10 },
+    { at = 5, item = "Ammo_CL.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 6, item = "Ammo_CL.LB10-XAC", rounds = 10 },
 ]

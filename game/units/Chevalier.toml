@@ -26,7 +26,7 @@ slots = [
 armor = 16
 
 [sections.turret]
-armor = 21
+armor = 22
 slots = [
     { at = 1, item = "IS.ERLargeLaser" },
 ]

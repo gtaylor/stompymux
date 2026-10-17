@@ -4,7 +4,7 @@ movement = "biped"
 tons = 60
 walk_mp = 5
 heat_sinks = 12
-specials = ["ArtemisIV"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,36 +16,33 @@ armor = "ferro_fibrous"
 armor = 16
 slots = [
     { at = "5-6", item = "CL.ERLargeLaser" },
-    { at = 12, item = "FerroFibrous" },
+    { at = 7, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 16
 slots = [
     { at = "5-7", item = "CL.MediumPulseLaser" },
-    { at = 12, item = "FerroFibrous" },
+    { at = 8, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 16
 rear = 7
-engine_at = 7
 slots = [
-    { at = "1-4", item = "CL.LRM-20" },
-    { at = 5, item = "ArtemisIV", link = 1 },
-    { at = 6, item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-6", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 7, item = "CL.ArtemisIV", link = 3 },
+    { at = 8, item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
+    { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 16
 rear = 7
-engine_at = 4
 slots = [
-    { at = "1-2", item = "CL.StreakSRM-6" },
-    { at = 3, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
-    { at = "7-8", item = "CL.StreakSRM-6" },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-6", item = "CL.StreakSRM-6" },
+    { at = 7, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
+    { at = "8-9", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

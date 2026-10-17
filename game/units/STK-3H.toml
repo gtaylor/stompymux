@@ -13,38 +13,38 @@ engine_rating = 255
 armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.LRM-20" },
-    { at = 8, item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 3, item = "HeatSink" },
+    { at = "4-8", item = "IS.LRM-20" },
     { at = "9-10", item = "IS.MediumLaser" },
-    { at = 11, item = "HeatSink" },
+    { at = 11, item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
 
 [sections.right_arm]
 armor = 23
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-7", item = "IS.LRM-20" },
-    { at = 8, item = "Ammo_IS.LRM-20", rounds = 6 },
+    { at = 3, item = "HeatSink" },
+    { at = "4-8", item = "IS.LRM-20" },
     { at = "9-10", item = "IS.MediumLaser" },
-    { at = 11, item = "HeatSink" },
+    { at = 11, item = "Ammo_IS.LRM-20", rounds = 6 },
 ]
 
 [sections.left_torso]
 armor = 25
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.SRM-6" },
-    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 4, item = "HeatSink" },
+    { at = 1, item = "HeatSink" },
+    { at = "2-3", item = "IS.SRM-6" },
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 
 [sections.right_torso]
 armor = 25
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.SRM-6" },
-    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 4, item = "HeatSink" },
+    { at = 1, item = "HeatSink" },
+    { at = "2-3", item = "IS.SRM-6" },
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15 },
 ]
 
 [sections.center_torso]

@@ -5,6 +5,7 @@ tons = 70
 walk_mp = 4
 jump_mp = 4
 heat_sinks = 25
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -16,33 +17,33 @@ structure = "endo_steel"
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERLargeLaser" },
-    { at = "5-12", item = "HeatSink" },
+    { at = "3-10", item = "HeatSink" },
+    { at = "11-12", item = "CL.ERLargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 22
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERLargeLaser" },
-    { at = "5-12", item = "HeatSink" },
+    { at = "3-10", item = "HeatSink" },
+    { at = "11-12", item = "CL.ERLargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 23
 rear = 7
 slots = [
-    { at = "3-4", item = "JumpJet" },
-    { at = "5-12", item = "HeatSink" },
+    { at = "3-10", item = "HeatSink" },
+    { at = "11-12", item = "CL.JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 23
 rear = 7
 slots = [
-    { at = "3-4", item = "JumpJet" },
-    { at = "5-8", item = "TargetingComputer" },
-    { at = "9-12", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-8", item = "CL.JumpJet" },
+    { at = "9-12", item = "CL.TargetingComputer" },
 ]
 
 [sections.center_torso]

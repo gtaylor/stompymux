@@ -4,8 +4,7 @@ movement = "biped"
 tons = 25
 walk_mp = 7
 jump_mp = 6
-heat_sinks = 10
-specials = ["SearchLight"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -39,7 +38,7 @@ armor = 7
 rear = 5
 slots = [
     { at = "3-6", item = "HeatSink" },
-    { at = "7-9", item = "JumpJet" },
+    { at = "7-9", item = "CL.JumpJet" },
     { at = 10, item = "EndoSteel" },
     { at = "11-12", item = "FerroFibrous" },
 ]
@@ -49,14 +48,14 @@ armor = 7
 rear = 5
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-7", item = "JumpJet" },
+    { at = "5-7", item = "CL.JumpJet" },
     { at = 8, item = "EndoSteel" },
     { at = "9-10", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 10
-rear = 5
+rear = 6
 slots = [
     { at = 11, item = "EndoSteel" },
     { at = 12, item = "FerroFibrous" },
@@ -77,5 +76,5 @@ slots = [
 [sections.head]
 armor = 9
 slots = [
-    { at = 4, item = "BeagleProbe" },
+    { at = 4, item = "CL.BeagleProbe" },
 ]

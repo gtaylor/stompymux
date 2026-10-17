@@ -14,15 +14,15 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 34
 slots = [
-    { at = "5-7", item = "HeatSink" },
+    { at = "5-10", item = "HeatSink" },
     { at = 11, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 34
 slots = [
-    { at = "5-10", item = "HeatSink" },
-    { at = 11, item = "IS.MediumLaser" },
+    { at = "5-7", item = "HeatSink" },
+    { at = 8, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]

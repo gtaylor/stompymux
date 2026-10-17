@@ -3,12 +3,14 @@ class = "vehicle"
 movement = "wheel"
 tons = 30
 walk_mp = 4
-heat_sinks = 6
 
 [construction]
 tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 100
+
+[transport_bays]
+insulated_cargo = 9
 
 [sections.left_side]
 armor = 28
@@ -25,5 +27,6 @@ armor = 20
 [sections.turret]
 armor = 12
 slots = [
-    { at = "1-2", item = "IS.Flamer" },
+    { at = "1-2", item = "IS.VehicleFlamer" },
+    { at = "3-4", item = "Ammo_IS.VehicleFlamer", rounds = 20 },
 ]

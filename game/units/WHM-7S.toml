@@ -23,28 +23,28 @@ slots = [
 armor = 20
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "IS.ERPPC" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "4-6", item = "HeatSink" },
+    { at = "7-9", item = "IS.ERPPC" },
 ]
 
 [sections.left_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = 1, item = "IS.StreakSRM-2" },
-    { at = 2, item = "IS.MediumPulseLaser" },
-    { at = 3, item = "IS.SmallLaser" },
-    { at = "4-12", item = "HeatSink" },
+    { at = "1-9", item = "HeatSink" },
+    { at = 10, item = "IS.MediumPulseLaser" },
+    { at = 11, item = "IS.StreakSRM-2" },
+    { at = 12, item = "IS.SmallLaser" },
 ]
 
 [sections.right_torso]
 armor = 17
 rear = 8
 slots = [
-    { at = 1, item = "IS.StreakSRM-2" },
-    { at = 2, item = "IS.MediumPulseLaser" },
-    { at = 3, item = "IS.SmallLaser" },
-    { at = "4-12", item = "HeatSink" },
+    { at = "1-9", item = "HeatSink" },
+    { at = 10, item = "IS.MediumPulseLaser" },
+    { at = 11, item = "IS.StreakSRM-2" },
+    { at = 12, item = "IS.SmallLaser" },
 ]
 
 [sections.center_torso]

@@ -14,18 +14,17 @@ armor = 5
 
 [sections.right_arm]
 armor = 5
-omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 7
 rear = 2
 slots = [
-    { at = 1, item = "IS.MachineGun" },
-    { at = "2-3", item = "HeatSink" },
-    { at = 4, item = "JumpJet" },
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "IS.JumpJet" },
+    { at = 4, item = "IS.MachineGun" },
     { at = 5, item = "Ammo_IS.MachineGun", rounds = 200 },
 ]
 
@@ -33,29 +32,29 @@ slots = [
 armor = 7
 rear = 2
 slots = [
-    { at = 1, item = "JumpJet" },
-    { at = "2-3", item = "HeatSink" },
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "IS.JumpJet" },
 ]
 
 [sections.center_torso]
 armor = 7
 rear = 4
 slots = [
-    { at = "11-12", item = "JumpJet" },
+    { at = "11-12", item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 6
 slots = [
-    { at = 5, item = "JumpJet" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 6
 slots = [
-    { at = 5, item = "JumpJet" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.head]

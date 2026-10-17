@@ -25,7 +25,9 @@ fn templates() -> Vec<String> {
         ground
             .replace("movement = \"track\"", "movement = \"none\"")
             .replace("walk_mp = 3", "walk_mp = 0"),
-        include_str!("../game/units/Kestrel.toml").into(),
+        // The Kestrel's troop compartment would leave no mass for the cargo bay.
+        include_str!("../game/units/Kestrel.toml")
+            .replace("[transport_bays]\ninfantry_compartment = 3.5\n\n", ""),
     ]
 }
 

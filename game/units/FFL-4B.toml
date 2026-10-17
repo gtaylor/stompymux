@@ -5,7 +5,6 @@ tons = 30
 walk_mp = 5
 jump_mp = 4
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -52,13 +51,13 @@ slots = [
 [sections.left_leg]
 armor = 14
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 14
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

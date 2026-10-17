@@ -44,8 +44,8 @@ armor = 26
 rear = 10
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-6", item = "CL.SRM-6" },
-    { at = "7-10", item = "TargetingComputer" },
+    { at = "5-6", item = "CL.SRM-6", modes = ["Narc/Smoke"] },
+    { at = "7-10", item = "CL.TargetingComputer" },
     { at = "11-12", item = "FerroFibrous" },
 ]
 

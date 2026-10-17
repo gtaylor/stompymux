@@ -4,7 +4,6 @@ movement = "biped"
 tons = 55
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"
@@ -35,7 +34,7 @@ slots = [
 armor = 20
 rear = 5
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "CL.JumpJet" },
     { at = "4-7", item = "CL.UltraAC/10" },
     { at = 8, item = "CL.MachineGun" },
     { at = "9-10", item = "EndoSteel" },
@@ -46,10 +45,10 @@ slots = [
 armor = 20
 rear = 5
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "CL.JumpJet" },
     { at = 4, item = "CL.MediumPulseLaser" },
     { at = "5-6", item = "Ammo_CL.UltraAC/10", rounds = 10 },
-    { at = "7-9", item = "TargetingComputer" },
+    { at = "7-9", item = "CL.TargetingComputer" },
     { at = "10-11", item = "EndoSteel" },
     { at = 12, item = "FerroFibrous" },
 ]
@@ -65,13 +64,13 @@ slots = [
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

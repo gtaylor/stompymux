@@ -4,9 +4,7 @@ movement = "biped"
 tons = 20
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
 radio = 4
-specials = ["ECM"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -16,10 +14,9 @@ armor = "stealth"
 
 [sections.left_arm]
 armor = 6
-omit = ["hand_actuator"]
 slots = [
-    { at = "4-9", item = "EndoSteel" },
-    { at = "10-11", item = "StealthArmor" },
+    { at = "5-10", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.right_arm]
@@ -37,8 +34,8 @@ armor = 7
 rear = 2
 slots = [
     { at = "1-2", item = "HeatSink" },
-    { at = "3-4", item = "JumpJet" },
-    { at = "5-6", item = "Ecm" },
+    { at = "3-4", item = "IS.JumpJet" },
+    { at = "5-6", item = "IS.Ecm" },
     { at = "7-9", item = "EndoSteel" },
     { at = "10-11", item = "StealthArmor" },
 ]
@@ -48,7 +45,7 @@ armor = 7
 rear = 2
 slots = [
     { at = "1-2", item = "HeatSink" },
-    { at = "3-4", item = "JumpJet" },
+    { at = "3-4", item = "IS.JumpJet" },
     { at = 5, item = "IS.RL-10", modes = ["OneShot"] },
     { at = "6-8", item = "EndoSteel" },
     { at = "9-10", item = "StealthArmor" },
@@ -58,7 +55,7 @@ slots = [
 armor = 8
 rear = 3
 slots = [
-    { at = "11-12", item = "JumpJet" },
+    { at = "11-12", item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]

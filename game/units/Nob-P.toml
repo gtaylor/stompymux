@@ -4,8 +4,7 @@ movement = "biped"
 tons = 50
 walk_mp = 5
 jump_mp = 5
-heat_sinks = 10
-specials = ["OmniMech_Tech", "ArtemisIV", "BeagleProbe"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -39,7 +38,7 @@ slots = [
 armor = 18
 rear = 6
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "CL.JumpJet" },
     { at = 4, item = "CL.Anti-MissileSystem" },
     { at = 5, item = "Ammo_CL.Anti-MissileSystem", rounds = 24 },
     { at = 6, item = "CL.Flamer" },
@@ -52,11 +51,11 @@ slots = [
 armor = 18
 rear = 6
 slots = [
-    { at = 3, item = "JumpJet" },
-    { at = 4, item = "CL.LRM-10" },
-    { at = 5, item = "ArtemisIV", link = 4 },
+    { at = 3, item = "CL.JumpJet" },
+    { at = 4, item = "CL.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 5, item = "CL.ArtemisIV", link = 4 },
     { at = 6, item = "Ammo_CL.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
-    { at = 7, item = "BeagleProbe" },
+    { at = 7, item = "CL.BeagleProbe" },
     { at = 8, item = "EndoSteel" },
     { at = "9-10", item = "FerroFibrous" },
 ]
@@ -65,21 +64,21 @@ slots = [
 armor = 25
 rear = 7
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = 6, item = "IS.A-Pod" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = 6, item = "IS.A-Pod" },
 ]
 

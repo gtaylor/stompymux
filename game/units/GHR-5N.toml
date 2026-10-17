@@ -5,7 +5,6 @@ tons = 70
 walk_mp = 4
 jump_mp = 4
 heat_sinks = 22
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -14,32 +13,32 @@ engine_rating = 280
 [sections.left_arm]
 armor = 22
 slots = [
-    { at = 5, item = "IS.MediumLaser" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 22
 slots = [
-    { at = 5, item = "IS.MediumLaser" },
-    { at = 6, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = 6, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
-    { at = "2-6", item = "HeatSink" },
+    { at = "1-5", item = "HeatSink" },
+    { at = 6, item = "IS.MediumLaser" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 10
 slots = [
-    { at = 1, item = "IS.MediumLaser" },
-    { at = "2-4", item = "IS.PPC" },
-    { at = "5-6", item = "HeatSink" },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-5", item = "IS.PPC" },
+    { at = 6, item = "IS.MediumLaser" },
 ]
 
 [sections.center_torso]
@@ -52,13 +51,13 @@ slots = [
 [sections.left_leg]
 armor = 26
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 26
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

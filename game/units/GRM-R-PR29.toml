@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 55
 walk_mp = 5
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -33,8 +32,8 @@ armor = 18
 rear = 8
 slots = [
     { at = 4, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = "5-7", item = "FerroFibrous" },
-    { at = 8, item = "Case" },
+    { at = 5, item = "Case" },
+    { at = "6-8", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]

@@ -17,16 +17,16 @@ armor = 14
 armor = 14
 
 [sections.front_side]
-armor = 15
+armor = 16
 slots = [
     { at = 1, item = "CL.ERLargeLaser" },
-    { at = 2, item = "Ecm" },
-    { at = 3, item = "BeagleProbe" },
-    { at = 4, item = "TAG" },
+    { at = 2, item = "TAG" },
+    { at = 3, item = "CL.BeagleProbe" },
+    { at = 4, item = "CL.Ecm" },
 ]
 
 [sections.aft_side]
-armor = 12
+armor = 11
 
 [sections.rotor]
 armor = 2

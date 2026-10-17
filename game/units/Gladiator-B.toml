@@ -5,6 +5,7 @@ tons = 95
 walk_mp = 4
 jump_mp = 4
 heat_sinks = 19
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -33,8 +34,8 @@ slots = [
 armor = 20
 rear = 10
 slots = [
-    { at = "3-6", item = "Masc" },
-    { at = "7-9", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = "3-5", item = "Ammo_CL.UltraAC/20", rounds = 5 },
+    { at = "6-9", item = "CL.Masc" },
 ]
 
 [sections.right_torso]
@@ -58,13 +59,13 @@ slots = [
 [sections.left_leg]
 armor = 40
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 40
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]

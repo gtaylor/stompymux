@@ -17,24 +17,24 @@ myomer = "triple_strength"
 [sections.left_arm]
 armor = 20
 slots = [
-    { at = 5, item = "TripleStrengthMyomer" },
-    { at = "6-12", item = "FerroFibrous" },
+    { at = "5-11", item = "FerroFibrous" },
+    { at = 12, item = "TripleStrengthMyomer" },
 ]
 
 [sections.right_arm]
 armor = 20
 slots = [
-    { at = 5, item = "TripleStrengthMyomer" },
-    { at = "6-12", item = "FerroFibrous" },
+    { at = "5-11", item = "FerroFibrous" },
+    { at = 12, item = "TripleStrengthMyomer" },
 ]
 
 [sections.left_torso]
 armor = 21
 rear = 7
 slots = [
-    { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = 6, item = "IS.ERMediumLaser" },
-    { at = "7-12", item = "HeatSink" },
+    { at = "4-9", item = "HeatSink" },
+    { at = "10-11", item = "IS.ERLargeLaser" },
+    { at = 12, item = "IS.ERMediumLaser" },
 ]
 
 [sections.right_torso]
@@ -42,9 +42,9 @@ armor = 21
 rear = 7
 slots = [
     { at = "4-5", item = "IS.ERLargeLaser" },
-    { at = 6, item = "IS.ERMediumLaser" },
-    { at = 7, item = "IS.MediumPulseLaser" },
-    { at = "8-12", item = "TargetingComputer" },
+    { at = 6, item = "IS.MediumPulseLaser" },
+    { at = 7, item = "IS.ERMediumLaser" },
+    { at = "8-12", item = "IS.TargetingComputer" },
 ]
 
 [sections.center_torso]

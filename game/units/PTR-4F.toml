@@ -6,7 +6,6 @@ walk_mp = 4
 jump_mp = 4
 heat_sinks = 12
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,18 +16,16 @@ heat_sinks = "double"
 armor = 21
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
-    { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV", link = 4 },
+    { at = "4-5", item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 4 },
 ]
 
 [sections.right_arm]
 armor = 21
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.LRM-10", modes = ["Artemis/Mine"] },
-    { at = 5, item = "IS.LRM-10" },
-    { at = 6, item = "ArtemisIV", link = 4 },
+    { at = "4-5", item = "IS.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 4 },
 ]
 
 [sections.left_torso]
@@ -58,13 +55,13 @@ slots = [
 [sections.left_leg]
 armor = 26
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 26
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

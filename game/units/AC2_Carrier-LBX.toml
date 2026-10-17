@@ -20,10 +20,8 @@ slots = [
     { at = "1-5", item = "IS.LB2-XAC" },
     { at = "6-7", item = "Ammo_IS.LB2-XAC", rounds = 45 },
     { at = "8-9", item = "Ammo_IS.LB2-XAC", rounds = 45, modes = ["LBX/Cluster"] },
+    { at = 10, item = "C3Slave" },
 ]
 
 [sections.aft_side]
 armor = 22
-slots = [
-    { at = 1, item = "C3Slave" },
-]

@@ -4,6 +4,7 @@ movement = "biped"
 tons = 40
 walk_mp = 6
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -14,42 +15,42 @@ structure = "endo_steel"
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "IS.StreakSRM-2" },
-    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = 3, item = "IS.MediumPulseLaser" },
+    { at = 4, item = "IS.StreakSRM-2" },
 ]
 
 [sections.right_arm]
 armor = 12
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = 3, item = "IS.StreakSRM-2" },
-    { at = 4, item = "IS.MediumPulseLaser" },
+    { at = 3, item = "IS.MediumPulseLaser" },
+    { at = 4, item = "IS.StreakSRM-2" },
 ]
 
 [sections.left_torso]
 armor = 14
 rear = 5
 slots = [
-    { at = 1, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
-    { at = "2-7", item = "EndoSteel" },
-    { at = 8, item = "Case" },
+    { at = 1, item = "TAG" },
+    { at = 2, item = "C3Slave" },
+    { at = 3, item = "Case" },
+    { at = "4-9", item = "EndoSteel" },
 ]
 
 [sections.right_torso]
 armor = 14
 rear = 5
 slots = [
-    { at = 1, item = "TAG" },
-    { at = 2, item = "C3Slave" },
+    { at = 1, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 2, item = "Case" },
     { at = "3-8", item = "EndoSteel" },
-    { at = 9, item = "Case" },
 ]
 
 [sections.center_torso]
 armor = 15
 rear = 6
 slots = [
-    { at = "11-12", item = "BeagleProbe" },
+    { at = "11-12", item = "IS.BeagleProbe" },
 ]
 
 [sections.left_leg]

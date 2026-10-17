@@ -11,20 +11,20 @@ engine_rating = 220
 armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 2
+armor = 4
 
 [sections.right_side]
-armor = 2
+armor = 4
 
 [sections.front_side]
 armor = 5
 slots = [
     { at = 1, item = "IS.LargeLaser" },
-    { at = 2, item = "BeagleProbe" },
+    { at = 2, item = "IS.BeagleProbe" },
 ]
 
 [sections.aft_side]
-armor = 3
+armor = 2
 
 [sections.rotor]
-armor = 1
+armor = 2

@@ -5,6 +5,7 @@ tons = 85
 walk_mp = 4
 heat_sinks = 13
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,7 +36,7 @@ slots = [
 armor = 26
 rear = 10
 slots = [
-    { at = "4-10", item = "TargetingComputer" },
+    { at = "4-10", item = "IS.TargetingComputer" },
     { at = "11-12", item = "EndoSteel" },
 ]
 
@@ -44,8 +45,8 @@ armor = 26
 rear = 10
 slots = [
     { at = "4-8", item = "Ammo_IS.RotaryAC/5", rounds = 20 },
-    { at = "9-10", item = "EndoSteel" },
-    { at = 12, item = "Case" },
+    { at = 9, item = "Case" },
+    { at = "10-11", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

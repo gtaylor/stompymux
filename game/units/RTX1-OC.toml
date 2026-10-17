@@ -5,6 +5,7 @@ tons = 25
 walk_mp = 7
 heat_sinks = 12
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,18 +18,16 @@ heat_sinks = "double"
 armor = 5
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-8", item = "HeatSink" },
-    { at = 9, item = "IS.SmallPulseLaser" },
-    { at = "10-12", item = "HeatSink" },
+    { at = "3-11", item = "HeatSink" },
+    { at = 12, item = "IS.SmallPulseLaser" },
 ]
 
 [sections.right_arm]
 armor = 5
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-5", item = "HeatSink" },
-    { at = 6, item = "IS.SmallPulseLaser" },
-    { at = "7-9", item = "HeatSink" },
+    { at = "3-8", item = "HeatSink" },
+    { at = 9, item = "IS.SmallPulseLaser" },
     { at = "10-12", item = "EndoSteel" },
 ]
 

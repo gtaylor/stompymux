@@ -6,6 +6,7 @@ walk_mp = 3
 jump_mp = 3
 heat_sinks = 15
 radio = 5
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -35,7 +36,7 @@ armor = 30
 rear = 10
 slots = [
     { at = "3-6", item = "HeatSink" },
-    { at = 7, item = "JumpJet" },
+    { at = 7, item = "CL.JumpJet" },
     { at = "8-11", item = "CL.LRM-20" },
     { at = 12, item = "Ammo_CL.LRM-20", rounds = 6 },
 ]
@@ -45,7 +46,7 @@ armor = 30
 rear = 10
 slots = [
     { at = "3-6", item = "HeatSink" },
-    { at = 7, item = "JumpJet" },
+    { at = 7, item = "CL.JumpJet" },
     { at = "8-11", item = "CL.LRM-20" },
     { at = 12, item = "Ammo_CL.LRM-20", rounds = 6 },
 ]
@@ -54,7 +55,7 @@ slots = [
 armor = 45
 rear = 10
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]

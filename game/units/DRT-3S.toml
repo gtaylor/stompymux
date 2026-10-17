@@ -22,9 +22,6 @@ rear = 3
 [sections.right_torso]
 armor = 7
 rear = 3
-slots = [
-    { at = 1, item = "HeatSink" },
-]
 
 [sections.center_torso]
 armor = 7
@@ -38,6 +35,9 @@ armor = 5
 
 [sections.right_leg]
 armor = 5
+slots = [
+    { at = 5, item = "HeatSink" },
+]
 
 [sections.head]
 armor = 6

@@ -14,49 +14,51 @@ engine_rating = 270
 armor = 26
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "CL.ERLargeLaser" },
-    { at = "7-10", item = "HeatSink" },
+    { at = "4-7", item = "HeatSink" },
+    { at = "8-10", item = "CL.ERLargeLaser" },
 ]
 
 [sections.right_arm]
 armor = 26
 omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "CL.ERLargeLaser" },
-    { at = "7-10", item = "HeatSink" },
+    { at = "4-7", item = "HeatSink" },
+    { at = "8-10", item = "CL.ERLargeLaser" },
 ]
 
 [sections.left_torso]
 armor = 26
 rear = 8
 slots = [
-    { at = "1-12", item = "HeatSink" },
+    { at = "1-10", item = "HeatSink" },
+    { at = 11, item = "CL.JumpJet" },
 ]
 
 [sections.right_torso]
 armor = 26
 rear = 8
 slots = [
-    { at = "1-12", item = "HeatSink" },
+    { at = "1-10", item = "HeatSink" },
+    { at = 11, item = "CL.JumpJet" },
 ]
 
 [sections.center_torso]
 armor = 33
 rear = 10
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 30
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.right_leg]
 armor = 30
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = "5-6", item = "HeatSink" },
 ]
 
 [sections.head]

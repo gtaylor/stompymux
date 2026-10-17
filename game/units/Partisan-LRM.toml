@@ -17,6 +17,10 @@ armor = 18
 
 [sections.front_side]
 armor = 22
+slots = [
+    { at = "1-2", item = "IS.MachineGun" },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
+]
 
 [sections.aft_side]
 armor = 16

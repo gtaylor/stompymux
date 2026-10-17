@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 20
 walk_mp = 8
-heat_sinks = 10
 radio = 4
-specials = ["ECM"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,8 +33,8 @@ armor = 8
 rear = 2
 slots = [
     { at = "1-3", item = "HeatSink" },
-    { at = "4-5", item = "StealthArmor" },
-    { at = "6-12", item = "EndoSteel" },
+    { at = "4-10", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.right_torso]
@@ -44,15 +42,15 @@ armor = 8
 rear = 2
 slots = [
     { at = "1-3", item = "HeatSink" },
-    { at = "4-5", item = "StealthArmor" },
-    { at = "6-12", item = "EndoSteel" },
+    { at = "4-10", item = "EndoSteel" },
+    { at = "11-12", item = "StealthArmor" },
 ]
 
 [sections.center_torso]
 armor = 9
 rear = 3
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

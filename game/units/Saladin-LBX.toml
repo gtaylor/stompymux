@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 8
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,8 +20,8 @@ armor = 8
 armor = 14
 slots = [
     { at = 1, item = "IS.LB20-XAC" },
-    { at = 2, item = "Ammo_IS.LB20-XAC", rounds = 5 },
-    { at = "3-4", item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = "2-3", item = "Ammo_IS.LB20-XAC", rounds = 5 },
+    { at = 4, item = "Ammo_IS.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
 ]
 
 [sections.aft_side]

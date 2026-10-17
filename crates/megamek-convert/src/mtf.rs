@@ -320,23 +320,25 @@ pub fn convert(source: &str) -> Result<Converted> {
     } else {
         full_reference.clone()
     };
+    let mut draft = Draft {
+        name: chassis,
+        class: "mech",
+        movement,
+        tons,
+        walk_mp: walk,
+        jump_mp: jump,
+        engine_rating,
+        heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
+        construction,
+        specials,
+        cargo_tons: None,
+        transport_bays: Vec::new(),
+        sections,
+        split_mounts,
+    };
+    draft.load_launchers();
     Ok(Converted {
-        draft: Draft {
-            name: chassis,
-            class: "mech",
-            movement,
-            tons,
-            walk_mp: walk,
-            jump_mp: jump,
-            engine_rating,
-            heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
-            construction,
-            specials,
-            cargo_tons: None,
-            transport_bays: Vec::new(),
-            sections,
-            split_mounts,
-        },
+        draft,
         reference,
         full_reference,
         warnings: Vec::new(),
@@ -796,6 +798,51 @@ mod tests {
             );
         let draft = convert(&source).unwrap().draft;
         assert_eq!(draft.specials, ["OmniMech_Tech", "SearchLight"]);
+    }
+
+    /// MegaMek loads a launcher from its own bins, so one whose only bins hold Artemis-capable
+    /// missiles starts with them selected.
+    #[test]
+    fn launchers_start_with_the_munition_of_their_only_bins() {
+        let artemis = ATLAS.replace("IS Ammo LRM-20\n", "IS Ammo LRM-20 Artemis-capable\n");
+        let (_, loaded) = template(&artemis).unwrap();
+        assert!(
+            loaded.contains("{ at = \"2-6\", item = \"IS.LRM-20\", modes = [\"Artemis/Mine\"] },"),
+            "{loaded}"
+        );
+        let (_, standard) = template(ATLAS).unwrap();
+        assert!(
+            standard.contains("{ at = \"2-6\", item = \"IS.LRM-20\" },"),
+            "{standard}"
+        );
+    }
+
+    /// Either spelling of an OmniMech's `Config:` line marks the template with the Omni
+    /// technology that multiplies its cost by 1.25 (TechManual p. 285).
+    #[test]
+    fn omnimech_templates_carry_omni_technology() {
+        let (_, standard) = template(ATLAS).unwrap();
+        assert!(!standard.contains("specials"), "{standard}");
+        let cost = |source: &str| {
+            let mech = stompymux_unit_construction::MechTemplate::parse("test", source).unwrap();
+            stompymux_unit_construction::template_base_cost(
+                &stompymux_unit_construction::PartPrices::new(),
+                &mech,
+            )
+            .unwrap() as f64
+        };
+        for config in ["Biped OmniMek", "Biped Omnimech", "biped OMNIMECH"] {
+            let source = ATLAS.replace("Config:Biped", &format!("Config:{config}"));
+            let (_, omni) = template(&source).unwrap();
+            assert!(
+                omni.contains("specials = [\"OmniMech_Tech\"]\n"),
+                "{config}: {omni}"
+            );
+            let ratio = cost(&omni) / cost(&standard);
+            assert!((ratio - 1.25).abs() < 0.001, "{config}: {ratio}");
+        }
+        let error = template_error(&ATLAS.replace("Config:Biped", "Config:Biped FrankenMek"));
+        assert!(error.contains("unsupported unit type"), "{error}");
     }
 
     /// The TechBase line becomes `tech_base`; a mixed design keeps its chassis base and

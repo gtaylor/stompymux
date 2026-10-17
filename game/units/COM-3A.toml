@@ -12,7 +12,7 @@ engine_rating = 150
 [sections.left_arm]
 armor = 4
 slots = [
-    { at = 7, item = "IS.MediumLaser" },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.right_arm]

@@ -5,7 +5,6 @@ tons = 45
 walk_mp = 5
 heat_sinks = 12
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -18,22 +17,20 @@ armor = 17
 armor = 17
 
 [sections.front_side]
-armor = 19
+armor = 27
 slots = [
-    { at = 1, item = "IS.LRM-15" },
-    { at = 2, item = "ArtemisIV", link = 1 },
+    { at = 1, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 2, item = "IS.ArtemisIV", link = 1 },
+    { at = "3-4", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
 ]
 
 [sections.aft_side]
 armor = 12
-slots = [
-    { at = 1, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = "2-3", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-]
 
 [sections.turret]
 armor = 15
 slots = [
     { at = 1, item = "IS.ERLargeLaser" },
     { at = "2-3", item = "IS.MachineGun" },
+    { at = 4, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
 ]

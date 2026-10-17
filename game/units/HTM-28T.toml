@@ -6,7 +6,6 @@ walk_mp = 3
 jump_mp = 3
 heat_sinks = 17
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -36,7 +35,7 @@ armor = 25
 rear = 9
 slots = [
     { at = "1-6", item = "HeatSink" },
-    { at = 7, item = "JumpJet" },
+    { at = 7, item = "IS.JumpJet" },
     { at = "8-9", item = "IS.StreakSRM-6" },
     { at = 10, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
     { at = 11, item = "Case" },
@@ -47,7 +46,7 @@ armor = 25
 rear = 9
 slots = [
     { at = "1-6", item = "HeatSink" },
-    { at = 7, item = "JumpJet" },
+    { at = 7, item = "IS.JumpJet" },
     { at = "8-9", item = "IS.StreakSRM-6" },
     { at = 10, item = "Ammo_IS.StreakSRM-6", rounds = 15 },
     { at = 11, item = "Case" },
@@ -57,7 +56,7 @@ slots = [
 armor = 34
 rear = 16
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "C3Slave" },
 ]
 

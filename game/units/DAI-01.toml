@@ -16,8 +16,8 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 19
 slots = [
-    { at = "5-7", item = "IS.ERPPC" },
-    { at = "8-12", item = "IS.UltraAC/5" },
+    { at = "5-9", item = "IS.UltraAC/5" },
+    { at = "10-12", item = "IS.ERPPC" },
 ]
 
 [sections.right_arm]
@@ -42,8 +42,8 @@ rear = 8
 slots = [
     { at = "4-5", item = "Ammo_IS.UltraAC/5", rounds = 20 },
     { at = 6, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = "7-9", item = "EndoSteel" },
-    { at = 10, item = "Case" },
+    { at = 7, item = "Case" },
+    { at = "8-10", item = "EndoSteel" },
 ]
 
 [sections.center_torso]

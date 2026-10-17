@@ -10,23 +10,23 @@ engine_rating = 260
 armor = "ferro_fibrous"
 
 [sections.left_side]
-armor = 20
+armor = 19
 
 [sections.right_side]
-armor = 20
+armor = 19
 
 [sections.front_side]
-armor = 45
+armor = 49
 slots = [
     { at = 1, item = "IS.Sniper" },
     { at = "2-3", item = "Ammo_IS.Sniper", rounds = 10 },
 ]
 
 [sections.aft_side]
-armor = 20
+armor = 19
 
 [sections.turret]
-armor = 20
+armor = 19
 slots = [
     { at = 1, item = "IS.LargeLaser" },
 ]

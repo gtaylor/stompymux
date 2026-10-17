@@ -6,7 +6,6 @@ walk_mp = 6
 jump_mp = 6
 heat_sinks = 12
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,7 +34,7 @@ slots = [
 armor = 14
 rear = 5
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "IS.JumpJet" },
     { at = "4-5", item = "IS.ERMediumLaser" },
     { at = 6, item = "C3Slave" },
     { at = "7-9", item = "EndoSteel" },
@@ -45,7 +44,7 @@ slots = [
 armor = 14
 rear = 5
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "IS.JumpJet" },
     { at = "4-6", item = "HeatSink" },
     { at = "7-9", item = "EndoSteel" },
 ]
@@ -61,13 +60,13 @@ slots = [
 [sections.left_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 19
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

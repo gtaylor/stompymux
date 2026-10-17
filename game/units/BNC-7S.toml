@@ -5,7 +5,6 @@ tons = 95
 walk_mp = 4
 heat_sinks = 14
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -30,7 +29,7 @@ slots = [
 ]
 
 [sections.left_torso]
-armor = 26
+armor = 27
 rear = 8
 slots = [
     { at = "3-9", item = "IS.GaussRifle" },
@@ -40,7 +39,7 @@ slots = [
 ]
 
 [sections.right_torso]
-armor = 26
+armor = 27
 rear = 8
 slots = [
     { at = "3-4", item = "IS.SRM-6" },
@@ -49,8 +48,8 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 37
-rear = 12
+armor = 38
+rear = 13
 slots = [
     { at = "11-12", item = "Ammo_IS.GaussRifle", rounds = 8 },
 ]

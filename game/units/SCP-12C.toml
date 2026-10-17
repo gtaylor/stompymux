@@ -3,7 +3,6 @@ class = "mech"
 movement = "quad"
 tons = 55
 walk_mp = 6
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -22,7 +21,7 @@ slots = [
 [sections.front_right_leg]
 armor = 26
 slots = [
-    { at = 5, item = "FerroFibrous" },
+    { at = "5-6", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
@@ -30,11 +29,8 @@ armor = 20
 rear = 6
 slots = [
     { at = 4, item = "IS.ERSmallLaser" },
-    { at = 5, item = "Ammo_IS.iNarcBeacon", rounds = 4 },
-    { at = 6, item = "Ammo_IS.iNarcBeacon", rounds = 4, modes = ["iNarc_Explosive"] },
-    { at = 7, item = "Ammo_IS.iNarcBeacon", rounds = 4 },
-    { at = 8, item = "Ammo_IS.iNarcBeacon", rounds = 4, modes = ["iNarc_Explosive"] },
-    { at = "9-12", item = "FerroFibrous" },
+    { at = "5-8", item = "Ammo_IS.iNarcBeacon", rounds = 4 },
+    { at = "9-11", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
@@ -43,7 +39,7 @@ rear = 6
 slots = [
     { at = "4-6", item = "IS.ERPPC" },
     { at = "7-9", item = "IS.iNarcBeacon" },
-    { at = "10-12", item = "FerroFibrous" },
+    { at = "10-11", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
@@ -67,3 +63,6 @@ slots = [
 
 [sections.head]
 armor = 9
+slots = [
+    { at = 4, item = "FerroFibrous" },
+]

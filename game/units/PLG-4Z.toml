@@ -4,9 +4,7 @@ movement = "biped"
 tons = 100
 walk_mp = 3
 jump_mp = 3
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,7 +15,7 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 34
 slots = [
-    { at = "5-6", item = "Ecm" },
+    { at = "5-6", item = "IS.Ecm" },
     { at = "7-8", item = "StealthArmor" },
 ]
 
@@ -32,7 +30,7 @@ slots = [
 armor = 32
 rear = 10
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
     { at = "2-8", item = "IS.GaussRifle" },
     { at = 9, item = "Ammo_IS.GaussRifle", rounds = 8 },
     { at = 10, item = "Case" },
@@ -43,7 +41,7 @@ slots = [
 armor = 32
 rear = 10
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
     { at = "2-8", item = "IS.GaussRifle" },
     { at = 9, item = "Ammo_IS.GaussRifle", rounds = 8 },
     { at = 10, item = "Case" },
@@ -54,7 +52,7 @@ slots = [
 armor = 52
 rear = 10
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.ERMediumLaser" },
 ]
 

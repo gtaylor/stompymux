@@ -6,6 +6,7 @@ walk_mp = 8
 
 [construction]
 tech_base = "inner_sphere"
+engine = "ice"
 engine_rating = 60
 armor = "ferro_fibrous"
 
@@ -23,7 +24,7 @@ slots = [
 ]
 
 [sections.aft_side]
-armor = 4
+armor = 3
 
 [sections.rotor]
 armor = 2

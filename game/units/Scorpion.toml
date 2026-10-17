@@ -17,10 +17,6 @@ armor = 11
 
 [sections.front_side]
 armor = 16
-slots = [
-    { at = 1, item = "IS.MachineGun" },
-    { at = 2, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
-]
 
 [sections.aft_side]
 armor = 10
@@ -28,6 +24,8 @@ armor = 10
 [sections.turret]
 armor = 16
 slots = [
-    { at = 1, item = "IS.AC/5" },
-    { at = 2, item = "Ammo_IS.AC/5", rounds = 20 },
+    { at = 1, item = "IS.MachineGun" },
+    { at = 2, item = "IS.AC/5" },
+    { at = 3, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 4, item = "Ammo_IS.AC/5", rounds = 20 },
 ]

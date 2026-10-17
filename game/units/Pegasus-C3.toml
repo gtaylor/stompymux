@@ -3,8 +3,6 @@ class = "vehicle"
 movement = "hover"
 tons = 35
 walk_mp = 9
-max_suits = 0
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,17 +17,17 @@ armor = 17
 
 [sections.front_side]
 armor = 29
-
-[sections.aft_side]
-armor = 10
 slots = [
     { at = 1, item = "C3Slave" },
 ]
 
+[sections.aft_side]
+armor = 10
+
 [sections.turret]
 armor = 25
 slots = [
-    { at = "1-2", item = "IS.StreakSRM-4" },
-    { at = "3-4", item = "IS.MediumPulseLaser" },
+    { at = "1-2", item = "IS.MediumPulseLaser" },
+    { at = "3-4", item = "IS.StreakSRM-4" },
     { at = 5, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
 ]

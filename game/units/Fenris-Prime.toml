@@ -4,7 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 8
 heat_sinks = 12
-specials = ["SearchLight"]
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -50,7 +50,7 @@ slots = [
 armor = 19
 rear = 8
 slots = [
-    { at = 11, item = "BeagleProbe" },
+    { at = 11, item = "CL.BeagleProbe" },
     { at = 12, item = "EndoSteel" },
 ]
 

@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 100
 walk_mp = 3
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"
@@ -35,9 +34,9 @@ slots = [
 armor = 32
 rear = 10
 slots = [
-    { at = "3-4", item = "Ammo_CL.UltraAC/2", rounds = 45 },
-    { at = "5-8", item = "CL.MachineGun" },
-    { at = 9, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = "3-6", item = "CL.MachineGun" },
+    { at = 7, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = "8-9", item = "Ammo_CL.UltraAC/2", rounds = 45 },
 ]
 
 [sections.center_torso]

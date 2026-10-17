@@ -4,8 +4,8 @@ movement = "biped"
 tons = 50
 walk_mp = 4
 jump_mp = 4
-heat_sinks = 10
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,7 +35,7 @@ armor = 18
 rear = 6
 slots = [
     { at = 4, item = "IS.MediumLaser" },
-    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
     { at = "6-11", item = "EndoSteel" },
 ]
 
@@ -44,7 +44,7 @@ armor = 18
 rear = 6
 slots = [
     { at = 4, item = "IS.MediumLaser" },
-    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = 5, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
     { at = "6-11", item = "EndoSteel" },
 ]
 
@@ -59,13 +59,13 @@ slots = [
 [sections.left_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 18
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

@@ -30,16 +30,16 @@ slots = [
 armor = 23
 rear = 6
 slots = [
-    { at = "1-2", item = "IS.MediumPulseLaser" },
-    { at = "3-8", item = "HeatSink" },
+    { at = "1-6", item = "HeatSink" },
+    { at = "7-8", item = "IS.MediumPulseLaser" },
 ]
 
 [sections.right_torso]
 armor = 23
 rear = 6
 slots = [
-    { at = "1-2", item = "IS.MediumPulseLaser" },
-    { at = "3-11", item = "HeatSink" },
+    { at = "1-9", item = "HeatSink" },
+    { at = "10-11", item = "IS.MediumPulseLaser" },
 ]
 
 [sections.center_torso]
@@ -53,13 +53,13 @@ slots = [
 [sections.left_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 24
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

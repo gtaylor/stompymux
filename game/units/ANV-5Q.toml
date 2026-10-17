@@ -29,8 +29,8 @@ slots = [
 armor = 18
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.LargePulseLaser" },
-    { at = "3-5", item = "HeatSink" },
+    { at = "1-3", item = "HeatSink" },
+    { at = "4-5", item = "IS.LargePulseLaser" },
     { at = "6-9", item = "EndoSteel" },
 ]
 
@@ -38,8 +38,8 @@ slots = [
 armor = 18
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.LargePulseLaser" },
-    { at = "3-5", item = "HeatSink" },
+    { at = "1-3", item = "HeatSink" },
+    { at = "4-5", item = "IS.LargePulseLaser" },
     { at = "6-9", item = "EndoSteel" },
 ]
 
@@ -47,21 +47,21 @@ slots = [
 armor = 22
 rear = 7
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.MediumLaser" },
 ]
 
 [sections.left_leg]
 armor = 15
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "EndoSteel" },
 ]
 
 [sections.right_leg]
 armor = 15
 slots = [
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "IS.JumpJet" },
     { at = 6, item = "EndoSteel" },
 ]
 

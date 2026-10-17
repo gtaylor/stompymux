@@ -5,6 +5,7 @@ tons = 100
 walk_mp = 3
 jump_mp = 3
 heat_sinks = 20
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -24,7 +25,7 @@ armor = 34
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
     { at = "3-11", item = "CL.LB20-XAC" },
-    { at = 12, item = "Ammo_CL.LB20-XAC", rounds = 5 },
+    { at = 12, item = "Ammo_CL.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
 ]
 
 [sections.left_torso]
@@ -32,10 +33,10 @@ armor = 32
 rear = 10
 slots = [
     { at = "3-6", item = "HeatSink" },
-    { at = 7, item = "JumpJet" },
-    { at = "8-9", item = "CL.MediumPulseLaser" },
-    { at = 10, item = "CL.MachineGun" },
-    { at = 11, item = "CL.StreakSRM-4" },
+    { at = 7, item = "CL.JumpJet" },
+    { at = 8, item = "CL.StreakSRM-4" },
+    { at = "9-10", item = "CL.MediumPulseLaser" },
+    { at = 11, item = "CL.MachineGun" },
     { at = 12, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
 ]
 
@@ -44,11 +45,12 @@ armor = 32
 rear = 10
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = 5, item = "JumpJet" },
-    { at = 6, item = "CL.MachineGun" },
-    { at = "7-8", item = "CL.MediumPulseLaser" },
+    { at = 5, item = "CL.JumpJet" },
+    { at = "6-7", item = "CL.MediumPulseLaser" },
+    { at = 8, item = "CL.MachineGun" },
     { at = 9, item = "Ammo_CL.LB20-XAC", rounds = 5 },
-    { at = "10-11", item = "Ammo_CL.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 10, item = "Ammo_CL.LB20-XAC", rounds = 5, modes = ["LBX/Cluster"] },
+    { at = 11, item = "Ammo_CL.LB20-XAC", rounds = 5 },
     { at = 12, item = "Ammo_CL.MachineGun", rounds = 200 },
 ]
 
@@ -56,8 +58,8 @@ slots = [
 armor = 47
 rear = 14
 slots = [
-    { at = 11, item = "JumpJet" },
-    { at = 12, item = "CL.StreakSRM-4" },
+    { at = 11, item = "CL.StreakSRM-4" },
+    { at = 12, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]
@@ -69,7 +71,7 @@ slots = [
 [sections.right_leg]
 armor = 41
 slots = [
-    { at = "5-6", item = "CL.A-Pod" },
+    { at = "5-6", item = "IS.A-Pod" },
 ]
 
 [sections.head]

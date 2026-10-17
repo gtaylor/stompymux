@@ -12,6 +12,7 @@ engine_rating = 220
 armor = 2
 slots = [
     { at = 1, item = "IS.SRM-4" },
+    { at = 2, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 
 [sections.right_side]
@@ -25,7 +26,6 @@ armor = 2
 slots = [
     { at = "1-2", item = "IS.MachineGun" },
     { at = 3, item = "Ammo_IS.MachineGun", rounds = 200 },
-    { at = 4, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 
 [sections.aft_side]

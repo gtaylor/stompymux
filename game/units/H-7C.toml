@@ -2,12 +2,12 @@ name = "Warrior"
 class = "vtol"
 movement = "vtol"
 tons = 21
-walk_mp = 10
-specials = ["SearchLight"]
+walk_mp = 9
 
 [construction]
 tech_base = "inner_sphere"
-engine_rating = 70
+engine = "ice"
+engine_rating = 50
 
 [sections.left_side]
 armor = 5
@@ -18,8 +18,8 @@ armor = 5
 [sections.front_side]
 armor = 6
 slots = [
-    { at = 1, item = "IS.LRM-10" },
-    { at = 2, item = "IS.SRM-4" },
+    { at = 1, item = "IS.SRM-4" },
+    { at = 2, item = "IS.LRM-10" },
     { at = "3-4", item = "Ammo_IS.LRM-10", rounds = 12 },
     { at = 5, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]

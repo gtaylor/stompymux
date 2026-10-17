@@ -23,8 +23,8 @@ slots = [
 armor = 10
 rear = 5
 slots = [
-    { at = 1, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = "2-5", item = "HeatSink" },
+    { at = "1-4", item = "HeatSink" },
+    { at = 5, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 
 [sections.right_torso]
@@ -44,13 +44,13 @@ slots = [
 [sections.left_leg]
 armor = 12
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 12
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

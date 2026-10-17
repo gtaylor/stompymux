@@ -3,9 +3,7 @@ class = "mech"
 movement = "biped"
 tons = 70
 walk_mp = 4
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -17,23 +15,22 @@ heat_sinks = "double"
 armor = 22
 slots = [
     { at = 5, item = "IS.MediumLaser" },
-    { at = "8-12", item = "EndoSteel" },
+    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.right_arm]
 armor = 22
 slots = [
     { at = 5, item = "IS.MediumLaser" },
-    { at = "8-12", item = "EndoSteel" },
+    { at = "6-12", item = "EndoSteel" },
 ]
 
 [sections.left_torso]
 armor = 24
 rear = 6
 slots = [
-    { at = 1, item = "IS.LRM-20", modes = ["Artemis/Mine"] },
-    { at = "2-5", item = "IS.LRM-20" },
-    { at = 6, item = "ArtemisIV", link = 1 },
+    { at = "1-5", item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 1 },
     { at = "7-8", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 9, item = "Case" },
 ]
@@ -42,9 +39,8 @@ slots = [
 armor = 24
 rear = 6
 slots = [
-    { at = 1, item = "IS.LRM-20", modes = ["Artemis/Mine"] },
-    { at = "2-5", item = "IS.LRM-20" },
-    { at = 6, item = "ArtemisIV", link = 1 },
+    { at = "1-5", item = "IS.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 6, item = "IS.ArtemisIV", link = 1 },
     { at = "7-8", item = "Ammo_IS.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 9, item = "Case" },
 ]
@@ -58,15 +54,9 @@ slots = [
 
 [sections.left_leg]
 armor = 30
-slots = [
-    { at = "5-6", item = "EndoSteel" },
-]
 
 [sections.right_leg]
 armor = 30
-slots = [
-    { at = "5-6", item = "EndoSteel" },
-]
 
 [sections.head]
 armor = 9

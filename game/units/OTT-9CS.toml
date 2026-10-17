@@ -4,9 +4,7 @@ movement = "biped"
 tons = 35
 walk_mp = 8
 jump_mp = 8
-heat_sinks = 10
 radio = 4
-specials = ["ECM", "BeagleProbe"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -34,9 +32,9 @@ slots = [
 armor = 12
 rear = 3
 slots = [
-    { at = "4-7", item = "JumpJet" },
-    { at = "8-9", item = "Ecm" },
-    { at = "10-11", item = "BeagleProbe" },
+    { at = "4-7", item = "IS.JumpJet" },
+    { at = "8-9", item = "IS.BeagleProbe" },
+    { at = "10-11", item = "IS.Ecm" },
     { at = 12, item = "EndoSteel" },
 ]
 
@@ -44,7 +42,7 @@ slots = [
 armor = 12
 rear = 3
 slots = [
-    { at = "4-7", item = "JumpJet" },
+    { at = "4-7", item = "IS.JumpJet" },
     { at = "8-9", item = "C3i" },
     { at = "10-11", item = "EndoSteel" },
 ]

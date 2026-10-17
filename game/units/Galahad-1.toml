@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 60
 walk_mp = 4
-heat_sinks = 10
 
 [construction]
 tech_base = "clan"

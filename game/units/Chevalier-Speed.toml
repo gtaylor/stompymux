@@ -3,6 +3,7 @@ class = "vehicle"
 movement = "wheel"
 tons = 35
 walk_mp = 7
+heat_sinks = 12
 
 [construction]
 tech_base = "inner_sphere"
@@ -16,6 +17,10 @@ armor = 14
 
 [sections.front_side]
 armor = 18
+slots = [
+    { at = 1, item = "IS.StreakSRM-2" },
+    { at = 2, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+]
 
 [sections.aft_side]
 armor = 10
@@ -23,6 +28,5 @@ armor = 10
 [sections.turret]
 armor = 16
 slots = [
-    { at = 1, item = "IS.StreakSRM-2" },
-    { at = 2, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = 1, item = "IS.ERLargeLaser" },
 ]

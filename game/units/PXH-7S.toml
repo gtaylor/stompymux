@@ -4,9 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
 radio = 4
-specials = ["Masc"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -27,44 +25,46 @@ slots = [
 armor = 14
 slots = [
     { at = "5-6", item = "IS.LargePulseLaser" },
-    { at = "7-12", item = "EndoSteel" },
+    { at = "7-12", item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 16
 rear = 6
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "IS.JumpJet" },
     { at = 4, item = "IS.MediumLaser" },
-    { at = "5-12", item = "FerroFibrous" },
+    { at = "5-11", item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 16
 rear = 6
 slots = [
-    { at = 3, item = "JumpJet" },
+    { at = 3, item = "IS.JumpJet" },
     { at = 4, item = "IS.MediumLaser" },
-    { at = "5-12", item = "EndoSteel" },
+    { at = "5-11", item = "EndoSteel" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 21
 rear = 7
 slots = [
-    { at = "11-12", item = "Masc" },
+    { at = "11-12", item = "IS.Masc" },
 ]
 
 [sections.left_leg]
 armor = 22
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "IS.JumpJet" },
 ]
 
 [sections.head]

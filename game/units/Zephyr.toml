@@ -7,6 +7,7 @@ walk_mp = 9
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 185
+armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 24
@@ -18,8 +19,8 @@ armor = 24
 armor = 29
 slots = [
     { at = 1, item = "IS.SRM-6" },
-    { at = 2, item = "Ecm" },
-    { at = "3-4", item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = "2-3", item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 4, item = "IS.Ecm" },
 ]
 
 [sections.aft_side]
@@ -32,4 +33,5 @@ slots = [
 armor = 29
 slots = [
     { at = "1-3", item = "IS.MediumLaser" },
+    { at = 4, item = "TAG" },
 ]

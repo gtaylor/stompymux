@@ -4,8 +4,7 @@ movement = "vtol"
 tons = 25
 walk_mp = 14
 cargo_tons = 0.5
-max_suits = 0
-max_ton = 1
+specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,7 +20,7 @@ armor = 6
 armor = 10
 slots = [
     { at = 1, item = "IS.MediumLaser" },
-    { at = 2, item = "Ecm" },
+    { at = 2, item = "IS.Ecm" },
 ]
 
 [sections.aft_side]

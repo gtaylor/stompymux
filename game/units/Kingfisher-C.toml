@@ -4,6 +4,7 @@ movement = "biped"
 tons = 90
 walk_mp = 4
 heat_sinks = 25
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -15,37 +16,36 @@ armor = "ferro_fibrous"
 armor = 30
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC" },
-    { at = 5, item = "CL.ERMediumLaser" },
-    { at = "6-11", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-8", item = "CL.ERPPC" },
+    { at = 9, item = "CL.ERMediumLaser" },
 ]
 
 [sections.right_arm]
 armor = 30
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "CL.ERPPC" },
-    { at = 5, item = "CL.ERMediumLaser" },
-    { at = "6-11", item = "HeatSink" },
+    { at = "3-6", item = "HeatSink" },
+    { at = "7-8", item = "CL.ERPPC" },
+    { at = 9, item = "CL.ERMediumLaser" },
 ]
 
 [sections.left_torso]
 armor = 28
 rear = 10
 slots = [
-    { at = "4-6", item = "FerroFibrous" },
-    { at = "7-10", item = "EndoSteel" },
-    { at = "11-12", item = "HeatSink" },
+    { at = "1-4", item = "HeatSink" },
+    { at = "5-8", item = "EndoSteel" },
+    { at = "9-11", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 28
 rear = 10
 slots = [
-    { at = "2-3", item = "HeatSink" },
-    { at = "4-6", item = "EndoSteel" },
-    { at = "7-9", item = "FerroFibrous" },
-    { at = "10-11", item = "HeatSink" },
+    { at = "1-6", item = "HeatSink" },
+    { at = "7-9", item = "EndoSteel" },
+    { at = "10-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

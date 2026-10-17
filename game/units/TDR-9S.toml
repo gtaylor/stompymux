@@ -20,10 +20,9 @@ slots = [
 
 [sections.right_arm]
 armor = 20
-omit = ["hand_actuator"]
 slots = [
-    { at = "4-6", item = "HeatSink" },
-    { at = "7-9", item = "IS.ERPPC" },
+    { at = "5-7", item = "HeatSink" },
+    { at = "8-10", item = "IS.ERPPC" },
 ]
 
 [sections.left_torso]

@@ -30,7 +30,7 @@ slots = [
 armor = 28
 rear = 10
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "CL.JumpJet" },
     { at = "2-4", item = "CL.MediumPulseLaser" },
     { at = "5-8", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
     { at = 9, item = "Ammo_CL.StreakSRM-6", rounds = 15 },
@@ -40,9 +40,9 @@ slots = [
 armor = 28
 rear = 10
 slots = [
-    { at = 1, item = "JumpJet" },
-    { at = "2-5", item = "CL.LRM-20" },
-    { at = 6, item = "ArtemisIV", link = 2 },
+    { at = 1, item = "CL.JumpJet" },
+    { at = "2-5", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 6, item = "CL.ArtemisIV", link = 2 },
     { at = "7-9", item = "Ammo_CL.GaussRifle", rounds = 8 },
     { at = "10-12", item = "FerroFibrous" },
 ]
@@ -51,7 +51,7 @@ slots = [
 armor = 40
 rear = 17
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]

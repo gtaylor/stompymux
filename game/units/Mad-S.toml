@@ -41,7 +41,7 @@ slots = [
     { at = "3-4", item = "CL.SRM-6" },
     { at = 5, item = "CL.MachineGun" },
     { at = 6, item = "Ammo_CL.MachineGun", rounds = 100, modes = ["Halfton"] },
-    { at = "7-8", item = "JumpJet" },
+    { at = "7-8", item = "CL.JumpJet" },
     { at = 9, item = "EndoSteel" },
     { at = "10-11", item = "FerroFibrous" },
 ]
@@ -53,7 +53,7 @@ slots = [
     { at = "3-4", item = "CL.SRM-6" },
     { at = 5, item = "CL.ERSmallLaser" },
     { at = 6, item = "CL.MachineGun" },
-    { at = "7-8", item = "JumpJet" },
+    { at = "7-8", item = "CL.JumpJet" },
     { at = 9, item = "EndoSteel" },
     { at = "10-11", item = "FerroFibrous" },
 ]
@@ -62,7 +62,7 @@ slots = [
 armor = 36
 rear = 9
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 

@@ -3,6 +3,7 @@ class = "vehicle"
 movement = "wheel"
 tons = 80
 walk_mp = 3
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,14 +22,12 @@ armor = 46
 slots = [
     { at = "1-2", item = "IS.MRM-40" },
     { at = "3-8", item = "Ammo_IS.MRM-40", rounds = 6 },
+    { at = 9, item = "C3Master" },
+    { at = 10, item = "IS.Ecm" },
 ]
 
 [sections.aft_side]
 armor = 25
-slots = [
-    { at = 1, item = "C3Master" },
-    { at = 2, item = "Ecm" },
-]
 
 [sections.turret]
 armor = 40

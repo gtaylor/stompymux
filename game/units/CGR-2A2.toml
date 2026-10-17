@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 80
 walk_mp = 5
-heat_sinks = 10
 radio = 4
 
 [construction]
@@ -41,7 +40,7 @@ slots = [
 ]
 
 [sections.center_torso]
-armor = 25
+armor = 26
 rear = 6
 slots = [
     { at = "11-12", item = "FerroFibrous" },

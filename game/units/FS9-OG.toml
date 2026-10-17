@@ -36,7 +36,7 @@ armor = 16
 rear = 6
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-9", item = "JumpJet" },
+    { at = "7-9", item = "IS.JumpJet" },
     { at = "10-11", item = "EndoSteel" },
 ]
 
@@ -45,7 +45,7 @@ armor = 16
 rear = 6
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-9", item = "JumpJet" },
+    { at = "7-9", item = "IS.JumpJet" },
     { at = 10, item = "Ammo_IS.LB5-XAC", rounds = 20 },
     { at = 11, item = "Ammo_IS.LB5-XAC", rounds = 20, modes = ["LBX/Cluster"] },
     { at = 12, item = "Case" },

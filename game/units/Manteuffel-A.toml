@@ -4,7 +4,7 @@ movement = "track"
 tons = 70
 walk_mp = 5
 radio = 4
-max_suits = 0
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -23,18 +23,16 @@ armor = 56
 slots = [
     { at = "1-2", item = "IS.MediumLaser" },
     { at = 3, item = "IS.ERSmallLaser" },
+    { at = 4, item = "C3Slave" },
+    { at = 5, item = "Case" },
 ]
 
 [sections.aft_side]
 armor = 25
-slots = [
-    { at = "1-5", item = "Ammo_IS.UltraAC/20", rounds = 5 },
-    { at = 11, item = "C3Slave" },
-    { at = 12, item = "Case" },
-]
 
 [sections.turret]
 armor = 45
 slots = [
     { at = 1, item = "IS.UltraAC/20" },
+    { at = "2-6", item = "Ammo_IS.UltraAC/20", rounds = 5 },
 ]

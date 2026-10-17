@@ -51,7 +51,7 @@ slots = [
 armor = 12
 rear = 8
 slots = [
-    { at = 11, item = "TargetingComputer" },
+    { at = 11, item = "CL.TargetingComputer" },
     { at = 12, item = "EndoSteel" },
 ]
 

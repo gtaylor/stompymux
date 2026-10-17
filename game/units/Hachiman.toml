@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 50
 walk_mp = 4
-specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
@@ -21,6 +20,7 @@ armor = 30
 slots = [
     { at = 1, item = "CL.StreakSRM-4" },
     { at = 2, item = "Ammo_CL.StreakSRM-4", rounds = 25 },
+    { at = 3, item = "Case" },
 ]
 
 [sections.aft_side]
@@ -30,9 +30,9 @@ armor = 19
 armor = 27
 slots = [
     { at = "1-2", item = "CL.ERMediumLaser" },
-    { at = 3, item = "CL.LRM-20" },
-    { at = 4, item = "ArtemisIV", link = 3 },
-    { at = 5, item = "CL.LRM-20" },
-    { at = 6, item = "ArtemisIV", link = 5 },
+    { at = 3, item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 4, item = "CL.ArtemisIV", link = 3 },
+    { at = 5, item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 6, item = "CL.ArtemisIV", link = 5 },
     { at = "7-10", item = "Ammo_CL.LRM-20", rounds = 6, modes = ["Artemis/Mine"] },
 ]

@@ -6,7 +6,6 @@ walk_mp = 3
 jump_mp = 3
 heat_sinks = 11
 radio = 4
-specials = ["ECM"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -34,10 +33,10 @@ slots = [
 armor = 22
 rear = 7
 slots = [
-    { at = 1, item = "JumpJet" },
-    { at = 2, item = "IS.StreakSRM-4" },
-    { at = "3-8", item = "HeatSink" },
-    { at = "9-10", item = "Ecm" },
+    { at = "1-6", item = "HeatSink" },
+    { at = 7, item = "IS.JumpJet" },
+    { at = 8, item = "IS.StreakSRM-4" },
+    { at = "9-10", item = "IS.Ecm" },
     { at = "11-12", item = "StealthArmor" },
 ]
 
@@ -45,19 +44,19 @@ slots = [
 armor = 22
 rear = 7
 slots = [
-    { at = 1, item = "JumpJet" },
+    { at = 1, item = "IS.JumpJet" },
     { at = 2, item = "IS.StreakSRM-4" },
     { at = 3, item = "Ammo_IS.StreakSRM-4", rounds = 25 },
     { at = "4-7", item = "Ammo_IS.LRM-15", rounds = 8 },
-    { at = 10, item = "Case" },
-    { at = "11-12", item = "StealthArmor" },
+    { at = 8, item = "Case" },
+    { at = "9-10", item = "StealthArmor" },
 ]
 
 [sections.center_torso]
 armor = 28
 rear = 9
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.ERMediumLaser" },
 ]
 

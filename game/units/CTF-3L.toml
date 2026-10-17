@@ -15,8 +15,8 @@ heat_sinks = "double"
 [sections.left_arm]
 armor = 22
 slots = [
-    { at = 5, item = "IS.MediumPulseLaser" },
-    { at = "6-11", item = "HeatSink" },
+    { at = "5-10", item = "HeatSink" },
+    { at = 11, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.right_arm]
@@ -33,7 +33,7 @@ armor = 16
 rear = 9
 slots = [
     { at = "4-6", item = "HeatSink" },
-    { at = "7-10", item = "Masc" },
+    { at = "7-10", item = "IS.Masc" },
     { at = 11, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
 ]
 
@@ -43,8 +43,8 @@ rear = 9
 slots = [
     { at = "4-9", item = "IS.LB10-XAC" },
     { at = 10, item = "IS.MediumPulseLaser", modes = ["RearMount"] },
-    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10 },
-    { at = 12, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 11, item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
+    { at = 12, item = "Ammo_IS.LB10-XAC", rounds = 10 },
 ]
 
 [sections.center_torso]

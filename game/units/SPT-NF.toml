@@ -5,7 +5,6 @@ tons = 80
 walk_mp = 5
 heat_sinks = 13
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,8 +34,8 @@ slots = [
 armor = 26
 rear = 8
 slots = [
-    { at = 4, item = "IS.Anti-MissileSystem" },
-    { at = "5-6", item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+    { at = "4-5", item = "Ammo_IS.Anti-MissileSystem", rounds = 12 },
+    { at = 6, item = "IS.Anti-MissileSystem" },
     { at = 7, item = "Case" },
 ]
 

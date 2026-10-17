@@ -40,7 +40,7 @@ slots = [
     { at = "3-6", item = "CL.MachineGun" },
     { at = 7, item = "Ammo_CL.MachineGun", rounds = 200 },
     { at = "8-9", item = "Ammo_CL.LRM-10", rounds = 12 },
-    { at = 10, item = "BeagleProbe" },
+    { at = 10, item = "CL.BeagleProbe" },
 ]
 
 [sections.center_torso]

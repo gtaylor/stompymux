@@ -4,6 +4,7 @@ movement = "biped"
 tons = 35
 walk_mp = 8
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -29,16 +30,16 @@ slots = [
 armor = 12
 rear = 4
 slots = [
-    { at = "4-5", item = "BeagleProbe" },
+    { at = "4-5", item = "IS.BeagleProbe" },
 ]
 
 [sections.right_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = 4, item = "TAG" },
-    { at = 5, item = "C3Slave" },
-    { at = 6, item = "Ammo_IS.MRM-10", rounds = 24 },
+    { at = 4, item = "Ammo_IS.MRM-10", rounds = 24 },
+    { at = 5, item = "TAG" },
+    { at = 6, item = "C3Slave" },
 ]
 
 [sections.center_torso]

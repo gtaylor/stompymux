@@ -3,13 +3,11 @@ class = "vehicle"
 movement = "track"
 tons = 35
 walk_mp = 4
-specials = ["ArtemisIV"]
 
 [construction]
 tech_base = "clan"
 engine = "ice"
 engine_rating = 140
-armor = "ferro_fibrous"
 
 [sections.left_side]
 armor = 9
@@ -20,7 +18,8 @@ armor = 9
 [sections.front_side]
 armor = 15
 slots = [
-    { at = 1, item = "Ecm" },
+    { at = 1, item = "CL.Ecm" },
+    { at = 2, item = "Case" },
 ]
 
 [sections.aft_side]
@@ -30,9 +29,9 @@ armor = 9
 armor = 14
 slots = [
     { at = 1, item = "CL.LB5-XAC" },
-    { at = 2, item = "CL.LRM-10" },
-    { at = 3, item = "ArtemisIV", link = 2 },
-    { at = 4, item = "Ammo_CL.LB5-XAC", rounds = 20 },
+    { at = 2, item = "CL.LRM-10", modes = ["Artemis/Mine"] },
+    { at = 3, item = "CL.ArtemisIV", link = 2 },
+    { at = 4, item = "Ammo_CL.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
     { at = 5, item = "Ammo_CL.LB5-XAC", rounds = 20, modes = ["LBX/Cluster"] },
-    { at = 6, item = "Ammo_CL.LRM-10", rounds = 12, modes = ["Artemis/Mine"] },
+    { at = 6, item = "Ammo_CL.LB5-XAC", rounds = 20 },
 ]

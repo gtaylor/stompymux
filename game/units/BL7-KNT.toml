@@ -4,7 +4,6 @@ movement = "biped"
 tons = 75
 walk_mp = 4
 heat_sinks = 20
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -27,18 +26,18 @@ slots = [
 armor = 20
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.LargeLaser" },
-    { at = 3, item = "IS.MediumLaser" },
-    { at = "4-5", item = "HeatSink" },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "IS.LargeLaser" },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.right_torso]
 armor = 20
 rear = 7
 slots = [
-    { at = "1-2", item = "IS.LargeLaser" },
-    { at = 3, item = "IS.MediumLaser" },
-    { at = "4-5", item = "HeatSink" },
+    { at = "1-2", item = "HeatSink" },
+    { at = "3-4", item = "IS.LargeLaser" },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.center_torso]

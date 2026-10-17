@@ -15,40 +15,39 @@ heat_sinks = "double"
 
 [sections.left_arm]
 armor = 11
-omit = ["lower_actuator", "hand_actuator"]
+omit = ["hand_actuator"]
 slots = [
-    { at = 3, item = "IS.LRM-5" },
-    { at = 4, item = "FerroFibrous" },
+    { at = 4, item = "IS.LRM-5" },
+    { at = 5, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 11
-omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-9", item = "IS.AC/10" },
-    { at = 10, item = "FerroFibrous" },
+    { at = "5-11", item = "IS.AC/10" },
+    { at = 12, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 22
 rear = 4
 slots = [
-    { at = 4, item = "Ammo_IS.LRM-5", rounds = 24 },
-    { at = 5, item = "IS.LRM-5" },
-    { at = 6, item = "IS.MachineGun" },
-    { at = "7-11", item = "FerroFibrous" },
-    { at = 12, item = "Case" },
+    { at = 4, item = "IS.LRM-5" },
+    { at = 5, item = "IS.MachineGun" },
+    { at = 6, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 7, item = "Case" },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 4
 slots = [
-    { at = 4, item = "Ammo_IS.AC/10", rounds = 10 },
-    { at = 5, item = "IS.MachineGun" },
-    { at = 6, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
-    { at = "7-11", item = "FerroFibrous" },
-    { at = 12, item = "Case" },
+    { at = 4, item = "IS.MachineGun" },
+    { at = 5, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 6, item = "Ammo_IS.AC/10", rounds = 10 },
+    { at = 7, item = "Case" },
+    { at = "8-12", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]

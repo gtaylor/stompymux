@@ -3,7 +3,6 @@ class = "mech"
 movement = "biped"
 tons = 35
 walk_mp = 5
-heat_sinks = 10
 radio = 5
 specials = ["OmniMech_Tech"]
 
@@ -36,8 +35,8 @@ slots = [
 armor = 12
 rear = 4
 slots = [
-    { at = "3-6", item = "CL.LRM-20" },
-    { at = 7, item = "ArtemisIV", link = 3 },
+    { at = "3-6", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 7, item = "CL.ArtemisIV", link = 3 },
     { at = "8-12", item = "EndoSteel" },
 ]
 
@@ -46,8 +45,8 @@ armor = 12
 rear = 4
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = "5-8", item = "CL.LRM-20" },
-    { at = 9, item = "ArtemisIV", link = 5 },
+    { at = "5-8", item = "CL.LRM-20", modes = ["Artemis/Mine"] },
+    { at = 9, item = "CL.ArtemisIV", link = 5 },
     { at = "10-12", item = "FerroFibrous" },
 ]
 

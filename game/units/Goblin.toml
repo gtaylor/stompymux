@@ -4,15 +4,15 @@ movement = "track"
 tons = 45
 walk_mp = 4
 heat_sinks = 8
-cargo_tons = 1
-max_suits = 0
-max_ton = 1
 specials = ["CargoTech"]
 
 [construction]
 tech_base = "inner_sphere"
 engine = "ice"
 engine_rating = 180
+
+[transport_bays]
+infantry_compartment = 1
 
 [sections.left_side]
 armor = 24

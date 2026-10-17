@@ -156,15 +156,22 @@ impl VehicleTemplate {
         u16::try_from(total).unwrap_or(u16::MAX)
     }
 
-    /// Heat of every energy weapon firing at once: the fewest heat sinks the vehicle may carry
-    /// (TechManual p. 104).
+    /// Heat of every energy weapon firing at once that needs heat sinks: the fewest heat sinks
+    /// the vehicle may carry (TechManual p. 104).
     pub fn energy_heat(loadout: &VehicleLoadout) -> u32 {
         loadout
             .weapons
             .iter()
-            .filter(|mount| mount.weapon.is_energy())
+            .filter(|mount| Self::needs_heat_sinks(mount.weapon))
             .map(|mount| u32::from(mount.weapon.profile().heat))
             .sum()
+    }
+
+    /// Whether a weapon's heat needs heat sinks on a combat vehicle: every energy weapon but
+    /// the vehicle flamer, which burns chemical fuel and needs none, though it counts as an
+    /// energy weapon in play (TechManual pp. 104, 218).
+    pub fn needs_heat_sinks(weapon: Weapon) -> bool {
+        weapon.is_energy() && weapon != Weapon::VehicleFlamer
     }
 
     /// The fusion engine family, or `None` for an internal combustion engine.
@@ -1025,6 +1032,37 @@ slots = [
         let fusion = parse(&lasers.replace("engine = \"ice\"", "tech_base = \"clan\""));
         assert_eq!(fusion.mass().unwrap().power_amplifiers, 0);
         assert_eq!(fusion.fixed_system_mass(System::Case), 0);
+    }
+
+    /// A vehicle flamer needs no heat sinks, though it counts as an energy weapon in play
+    /// (TechManual p. 218): an ICE vehicle mounts one with none, while a standard or heavy
+    /// flamer's heat still calls for them.
+    #[test]
+    fn vehicle_flamers_need_no_heat_sinks() {
+        let flamer = YELLOW_JACKET.replace(
+            "{ at = 1, item = \"IS.GaussRifle\" },\n    { at = \"2-3\", item = \"Ammo_IS.GaussRifle\", rounds = 8 },",
+            "{ at = 1, item = \"IS.VehicleFlamer\" },\n    { at = 2, item = \"Ammo_IS.VehicleFlamer\", rounds = 20 },",
+        );
+        assert_ne!(flamer, YELLOW_JACKET);
+        let template = parse(&flamer);
+        assert_eq!(template.heat_sink_capacity(), 0);
+        let loadout = VehicleLoadout::resolve(&template).unwrap();
+        assert_eq!(loadout.weapons[0].weapon, Weapon::VehicleFlamer);
+        assert_eq!(VehicleTemplate::energy_heat(&loadout), 0);
+        assert_eq!(template.construction_rules().unwrap().energy_heat, 0);
+        assert!(!VehicleTemplate::needs_heat_sinks(Weapon::VehicleFlamer));
+        for weapon in [Weapon::Flamer, Weapon::HeavyFlamer, Weapon::MediumLaser] {
+            assert!(VehicleTemplate::needs_heat_sinks(weapon), "{weapon:?}");
+        }
+        assert!(!VehicleTemplate::needs_heat_sinks(Weapon::GaussRifle));
+        // The heavy flamer is a vehicle weapon too, and its heat needs sinks.
+        let heavy = flamer
+            .replace("IS.VehicleFlamer\" }", "IS.HeavyFlamer\" }")
+            .replace(
+                "Ammo_IS.VehicleFlamer\", rounds = 20",
+                "Ammo_IS.HeavyFlamer\", rounds = 10",
+            );
+        assert!(rejection(&parse(&heavy)).contains("heat sinks cannot vent"));
     }
 
     /// A vehicle mounts its own technology base's weapons unless it declares mixed

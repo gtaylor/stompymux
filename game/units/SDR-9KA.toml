@@ -29,7 +29,7 @@ slots = [
 armor = 13
 rear = 3
 slots = [
-    { at = "4-7", item = "JumpJet" },
+    { at = "4-7", item = "IS.JumpJet" },
     { at = "8-9", item = "IS.MediumPulseLaser" },
     { at = "10-12", item = "FerroFibrous" },
 ]
@@ -38,7 +38,7 @@ slots = [
 armor = 13
 rear = 3
 slots = [
-    { at = "4-7", item = "JumpJet" },
+    { at = "4-7", item = "IS.JumpJet" },
     { at = 8, item = "IS.MediumPulseLaser" },
     { at = "9-11", item = "FerroFibrous" },
 ]

@@ -34,7 +34,7 @@ armor = 22
 rear = 8
 slots = [
     { at = "1-7", item = "HeatSink" },
-    { at = 8, item = "JumpJet" },
+    { at = 8, item = "IS.JumpJet" },
     { at = 9, item = "IS.MediumLaser" },
     { at = "10-12", item = "EndoSteel" },
 ]
@@ -44,7 +44,7 @@ armor = 22
 rear = 8
 slots = [
     { at = "1-5", item = "HeatSink" },
-    { at = 6, item = "JumpJet" },
+    { at = 6, item = "IS.JumpJet" },
     { at = 7, item = "IS.MediumLaser" },
     { at = 8, item = "Ammo_IS.SRM-6", rounds = 15 },
     { at = 9, item = "Case" },
@@ -62,14 +62,14 @@ slots = [
 armor = 22
 slots = [
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "JumpJet" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 22
 slots = [
     { at = 5, item = "HeatSink" },
-    { at = 6, item = "JumpJet" },
+    { at = 6, item = "IS.JumpJet" },
 ]
 
 [sections.head]

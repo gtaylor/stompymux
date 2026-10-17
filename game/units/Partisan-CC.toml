@@ -17,16 +17,17 @@ armor = 26
 
 [sections.front_side]
 armor = 35
-
-[sections.aft_side]
-armor = 21
 slots = [
     { at = "1-2", item = "C3Master" },
 ]
+
+[sections.aft_side]
+armor = 21
 
 [sections.turret]
 armor = 35
 slots = [
     { at = "1-2", item = "IS.LB10-XAC" },
-    { at = "3-9", item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = "3-6", item = "Ammo_IS.LB10-XAC", rounds = 10 },
+    { at = "7-9", item = "Ammo_IS.LB10-XAC", rounds = 10, modes = ["LBX/Cluster"] },
 ]

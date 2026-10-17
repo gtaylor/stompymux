@@ -6,7 +6,6 @@ walk_mp = 5
 jump_mp = 5
 heat_sinks = 12
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -35,7 +34,7 @@ slots = [
 armor = 16
 rear = 5
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = "3-4", item = "IS.ERMediumLaser" },
     { at = "5-10", item = "EndoSteel" },
     { at = "11-12", item = "FerroFibrous" },
@@ -45,7 +44,7 @@ slots = [
 armor = 16
 rear = 5
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = "3-7", item = "IS.MRM-30" },
     { at = "8-9", item = "Ammo_IS.MRM-30", rounds = 8 },
     { at = 10, item = "Case" },
@@ -57,7 +56,7 @@ slots = [
 armor = 22
 rear = 7
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "EndoSteel" },
 ]
 

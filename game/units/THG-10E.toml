@@ -12,32 +12,32 @@ engine_rating = 320
 [sections.left_arm]
 armor = 25
 slots = [
-    { at = "5-7", item = "IS.PPC" },
-    { at = 8, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = "6-8", item = "IS.PPC" },
 ]
 
 [sections.right_arm]
 armor = 25
 slots = [
-    { at = "5-7", item = "IS.PPC" },
-    { at = 8, item = "HeatSink" },
+    { at = 5, item = "HeatSink" },
+    { at = "6-8", item = "IS.PPC" },
 ]
 
 [sections.left_torso]
 armor = 24
 rear = 8
 slots = [
-    { at = 1, item = "IS.SRM-4" },
-    { at = "2-4", item = "HeatSink" },
+    { at = "1-3", item = "HeatSink" },
+    { at = 4, item = "IS.SRM-4" },
 ]
 
 [sections.right_torso]
 armor = 24
 rear = 8
 slots = [
-    { at = 1, item = "IS.SRM-4" },
-    { at = 2, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = "3-4", item = "HeatSink" },
+    { at = "1-2", item = "HeatSink" },
+    { at = 3, item = "IS.SRM-4" },
+    { at = 4, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]
 
 [sections.center_torso]

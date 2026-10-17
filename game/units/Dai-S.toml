@@ -34,7 +34,7 @@ armor = 32
 rear = 10
 slots = [
     { at = "3-6", item = "HeatSink" },
-    { at = 7, item = "JumpJet" },
+    { at = 7, item = "CL.JumpJet" },
     { at = 8, item = "CL.StreakSRM-4" },
     { at = "9-10", item = "CL.MediumPulseLaser" },
     { at = 11, item = "CL.MachineGun" },
@@ -46,7 +46,7 @@ armor = 32
 rear = 10
 slots = [
     { at = "3-4", item = "HeatSink" },
-    { at = 5, item = "JumpJet" },
+    { at = 5, item = "CL.JumpJet" },
     { at = "6-7", item = "CL.MediumPulseLaser" },
     { at = 8, item = "CL.MachineGun" },
     { at = 9, item = "Ammo_CL.LB20-XAC", rounds = 5 },
@@ -60,7 +60,7 @@ armor = 47
 rear = 14
 slots = [
     { at = 11, item = "CL.StreakSRM-4" },
-    { at = 12, item = "JumpJet" },
+    { at = 12, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]

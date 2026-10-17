@@ -4,6 +4,7 @@ movement = "biped"
 tons = 35
 walk_mp = 8
 radio = 4
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -21,24 +22,24 @@ slots = [
 armor = 10
 omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "3-4", item = "IS.SRM-6" },
-    { at = 5, item = "ArtemisIV", link = 3 },
+    { at = "3-4", item = "IS.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 5, item = "IS.ArtemisIV", link = 3 },
 ]
 
 [sections.left_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = "4-5", item = "BeagleProbe" },
+    { at = "4-5", item = "IS.BeagleProbe" },
 ]
 
 [sections.right_torso]
 armor = 12
 rear = 4
 slots = [
-    { at = 4, item = "TAG" },
-    { at = 5, item = "C3Slave" },
-    { at = 6, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+    { at = 4, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+    { at = 5, item = "TAG" },
+    { at = 6, item = "C3Slave" },
 ]
 
 [sections.center_torso]

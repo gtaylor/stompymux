@@ -32,7 +32,7 @@ slots = [
 armor = 17
 rear = 8
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = "3-8", item = "HeatSink" },
     { at = "9-10", item = "IS.MediumLaser" },
     { at = "11-12", item = "FerroFibrous" },
@@ -42,11 +42,11 @@ slots = [
 armor = 17
 rear = 8
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = "3-8", item = "HeatSink" },
-    { at = 9, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = 10, item = "IS.MediumLaser", modes = ["RearMount"] },
-    { at = 11, item = "C3Slave" },
+    { at = 9, item = "IS.MediumLaser", modes = ["RearMount"] },
+    { at = 10, item = "C3Slave" },
+    { at = 11, item = "Ammo_IS.SRM-4", rounds = 25 },
     { at = 12, item = "FerroFibrous" },
 ]
 
@@ -54,8 +54,8 @@ slots = [
 armor = 18
 rear = 8
 slots = [
-    { at = 11, item = "JumpJet" },
-    { at = 12, item = "IS.SRM-4" },
+    { at = 11, item = "IS.SRM-4" },
+    { at = 12, item = "IS.JumpJet" },
 ]
 
 [sections.left_leg]

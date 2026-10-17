@@ -11,14 +11,15 @@ engine_rating = 275
 [sections.left_arm]
 armor = 18
 slots = [
-    { at = 5, item = "IS.LRM-5" },
-    { at = "6-7", item = "IS.SRM-6" },
+    { at = "5-6", item = "IS.SRM-6" },
+    { at = 7, item = "IS.MediumLaser" },
+    { at = 8, item = "IS.LRM-5" },
 ]
 
 [sections.right_arm]
 armor = 18
 slots = [
-    { at = "5-6", item = "IS.MediumLaser" },
+    { at = 5, item = "IS.MediumLaser" },
 ]
 
 [sections.left_torso]

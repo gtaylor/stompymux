@@ -3,32 +3,31 @@ class = "vehicle"
 movement = "track"
 tons = 65
 walk_mp = 4
-heat_sinks = 11
 
 [construction]
 tech_base = "inner_sphere"
 engine_rating = 260
 
 [sections.left_side]
-armor = 33
+armor = 38
 
 [sections.right_side]
-armor = 33
+armor = 38
 
 [sections.front_side]
-armor = 34
+armor = 38
 slots = [
     { at = 1, item = "IS.SmallLaser" },
 ]
 
 [sections.aft_side]
-armor = 26
+armor = 24
 
 [sections.turret]
-armor = 34
+armor = 38
 slots = [
-    { at = 1, item = "IS.AC/20" },
-    { at = "2-5", item = "Ammo_IS.AC/20", rounds = 5 },
-    { at = 6, item = "IS.LRM-5" },
-    { at = 7, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = 1, item = "IS.LRM-5" },
+    { at = 2, item = "IS.AC/20" },
+    { at = 3, item = "Ammo_IS.LRM-5", rounds = 24 },
+    { at = "4-7", item = "Ammo_IS.AC/20", rounds = 5 },
 ]

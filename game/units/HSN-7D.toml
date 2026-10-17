@@ -4,9 +4,7 @@ movement = "biped"
 tons = 45
 walk_mp = 6
 jump_mp = 6
-heat_sinks = 10
 radio = 4
-max_suits = 0
 
 [construction]
 tech_base = "inner_sphere"
@@ -27,15 +25,15 @@ slots = [
 armor = 9
 omit = ["hand_actuator"]
 slots = [
-    { at = 4, item = "IS.MediumPulseLaser" },
-    { at = "5-6", item = "IS.LRM-10" },
+    { at = "4-5", item = "IS.LRM-10" },
+    { at = 6, item = "IS.MediumPulseLaser" },
 ]
 
 [sections.left_torso]
 armor = 11
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = "7-8", item = "IS.LRM-10" },
     { at = "9-10", item = "Ammo_IS.LRM-10", rounds = 12 },
     { at = "11-12", item = "EndoSteel" },
@@ -45,7 +43,7 @@ slots = [
 armor = 11
 rear = 4
 slots = [
-    { at = "4-6", item = "JumpJet" },
+    { at = "4-6", item = "IS.JumpJet" },
     { at = 7, item = "IS.MediumPulseLaser" },
     { at = "8-12", item = "EndoSteel" },
 ]
@@ -54,7 +52,7 @@ slots = [
 armor = 14
 rear = 4
 slots = [
-    { at = "11-12", item = "Ecm" },
+    { at = "11-12", item = "IS.Ecm" },
 ]
 
 [sections.left_leg]

@@ -3,7 +3,6 @@ class = "vehicle"
 movement = "track"
 tons = 75
 walk_mp = 3
-heat_sinks = 10
 
 [construction]
 tech_base = "inner_sphere"
@@ -24,19 +23,19 @@ slots = [
 [sections.aft_side]
 armor = 30
 slots = [
-    { at = 4, item = "IS.LRM-10" },
-    { at = 5, item = "Ammo_IS.LRM-10", rounds = 12 },
+    { at = 1, item = "IS.LRM-10" },
+    { at = 2, item = "Ammo_IS.LRM-10", rounds = 12 },
 ]
 
 [sections.turret]
 armor = 45
 slots = [
-    { at = 1, item = "IS.AC/20" },
-    { at = "2-3", item = "IS.SRM-6" },
-    { at = 4, item = "IS.SRM-4" },
-    { at = 5, item = "IS.MachineGun" },
+    { at = "1-2", item = "IS.SRM-6" },
+    { at = 3, item = "IS.AC/20" },
+    { at = 4, item = "IS.MachineGun" },
+    { at = 5, item = "IS.SRM-4" },
     { at = "6-8", item = "Ammo_IS.AC/20", rounds = 5 },
-    { at = 9, item = "Ammo_IS.SRM-6", rounds = 15 },
-    { at = 10, item = "Ammo_IS.SRM-4", rounds = 25 },
-    { at = 11, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 9, item = "Ammo_IS.MachineGun", rounds = 100, modes = ["Halfton"] },
+    { at = 10, item = "Ammo_IS.SRM-6", rounds = 15 },
+    { at = 11, item = "Ammo_IS.SRM-4", rounds = 25 },
 ]

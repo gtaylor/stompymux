@@ -32,7 +32,7 @@ armor = 17
 rear = 8
 slots = [
     { at = "1-3", item = "HeatSink" },
-    { at = "4-5", item = "JumpJet" },
+    { at = "4-5", item = "IS.JumpJet" },
     { at = "6-7", item = "IS.LRM-10" },
     { at = 8, item = "Ammo_IS.LRM-10", rounds = 12 },
     { at = 9, item = "Case" },
@@ -42,7 +42,7 @@ slots = [
 armor = 17
 rear = 8
 slots = [
-    { at = "1-2", item = "JumpJet" },
+    { at = "1-2", item = "IS.JumpJet" },
     { at = "3-4", item = "IS.MediumLaser", modes = ["RearMount"] },
 ]
 
@@ -50,7 +50,7 @@ slots = [
 armor = 18
 rear = 8
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "IS.JumpJet" },
     { at = 12, item = "IS.SRM-4", modes = ["OneShot"] },
 ]
 

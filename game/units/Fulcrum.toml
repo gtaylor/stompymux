@@ -20,13 +20,11 @@ armor = 27
 armor = 46
 slots = [
     { at = 1, item = "TAG" },
+    { at = 2, item = "IS.Ecm" },
 ]
 
 [sections.aft_side]
 armor = 20
-slots = [
-    { at = 1, item = "Ecm" },
-]
 
 [sections.turret]
 armor = 40

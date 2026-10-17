@@ -4,7 +4,6 @@ movement = "track"
 tons = 95
 walk_mp = 3
 heat_sinks = 24
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -19,25 +18,25 @@ armor = 32
 
 [sections.front_side]
 armor = 40
+slots = [
+    { at = 1, item = "Case" },
+]
 
 [sections.aft_side]
 armor = 30
-slots = [
-    { at = "1-2", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
-    { at = 3, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
-    { at = 4, item = "Ammo_IS.SRM-4", rounds = 25, modes = ["Artemis/Mine"] },
-    { at = 5, item = "Case" },
-]
 
 [sections.turret]
 armor = 36
 slots = [
     { at = "1-4", item = "IS.MediumLaser" },
     { at = "5-7", item = "IS.MediumPulseLaser" },
-    { at = 8, item = "IS.LRM-15" },
-    { at = 9, item = "ArtemisIV", link = 8 },
-    { at = 10, item = "IS.SRM-6" },
-    { at = 11, item = "ArtemisIV", link = 10 },
-    { at = 12, item = "IS.SRM-4" },
-    { at = 13, item = "ArtemisIV", link = 12 },
+    { at = 8, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 9, item = "IS.ArtemisIV", link = 8 },
+    { at = 10, item = "IS.SRM-4", modes = ["Artemis/Mine"] },
+    { at = 11, item = "IS.ArtemisIV", link = 10 },
+    { at = 12, item = "IS.SRM-6", modes = ["Artemis/Mine"] },
+    { at = 13, item = "IS.ArtemisIV", link = 12 },
+    { at = "14-15", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 16, item = "Ammo_IS.SRM-6", rounds = 15, modes = ["Artemis/Mine"] },
+    { at = 17, item = "Ammo_IS.SRM-4", rounds = 25, modes = ["Artemis/Mine"] },
 ]

@@ -18,7 +18,7 @@ armor = 21
 armor = 25
 slots = [
     { at = "1-2", item = "IS.StreakSRM-2" },
-    { at = 3, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
+    { at = "3-4", item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]
 
 [sections.aft_side]
@@ -29,5 +29,4 @@ armor = 25
 slots = [
     { at = 1, item = "IS.LargePulseLaser" },
     { at = "2-3", item = "IS.StreakSRM-2" },
-    { at = 4, item = "Ammo_IS.StreakSRM-2", rounds = 50 },
 ]

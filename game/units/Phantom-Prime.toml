@@ -46,7 +46,7 @@ slots = [
 armor = 11
 rear = 7
 slots = [
-    { at = 3, item = "Ecm" },
+    { at = 3, item = "CL.Ecm" },
     { at = 4, item = "EndoSteel" },
     { at = 5, item = "FerroFibrous" },
 ]
@@ -55,7 +55,7 @@ slots = [
 armor = 12
 rear = 8
 slots = [
-    { at = 11, item = "BeagleProbe" },
+    { at = 11, item = "CL.BeagleProbe" },
     { at = 12, item = "EndoSteel" },
 ]
 

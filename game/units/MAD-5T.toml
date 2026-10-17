@@ -5,7 +5,6 @@ tons = 75
 walk_mp = 4
 heat_sinks = 14
 radio = 4
-specials = ["SearchLight"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -38,7 +37,7 @@ slots = [
 armor = 24
 rear = 8
 slots = [
-    { at = "4-10", item = "TargetingComputer" },
+    { at = "4-10", item = "IS.TargetingComputer" },
     { at = "11-12", item = "EndoSteel" },
 ]
 

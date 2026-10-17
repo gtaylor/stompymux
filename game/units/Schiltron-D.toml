@@ -3,7 +3,7 @@ class = "vehicle"
 movement = "wheel"
 tons = 80
 walk_mp = 3
-max_suits = 0
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "inner_sphere"
@@ -20,18 +20,16 @@ armor = 34
 [sections.front_side]
 armor = 46
 slots = [
-    { at = 1, item = "IS.LRM-15" },
-    { at = 2, item = "ArtemisIV", link = 1 },
+    { at = 1, item = "IS.LRM-15", modes = ["Artemis/Mine"] },
+    { at = 2, item = "IS.ArtemisIV", link = 1 },
     { at = "3-5", item = "Ammo_IS.LRM-15", rounds = 8, modes = ["Artemis/Mine"] },
+    { at = 6, item = "C3Master" },
+    { at = 7, item = "IS.Ecm" },
+    { at = 8, item = "IS.TargetingComputer" },
 ]
 
 [sections.aft_side]
 armor = 25
-slots = [
-    { at = 1, item = "C3Master" },
-    { at = 2, item = "Ecm" },
-    { at = 3, item = "TargetingComputer" },
-]
 
 [sections.turret]
 armor = 40

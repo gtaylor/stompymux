@@ -5,6 +5,7 @@ tons = 70
 walk_mp = 5
 jump_mp = 5
 heat_sinks = 14
+specials = ["OmniMech_Tech"]
 
 [construction]
 tech_base = "clan"
@@ -14,55 +15,54 @@ armor = "ferro_fibrous"
 
 [sections.left_arm]
 armor = 17
-omit = ["hand_actuator"]
+omit = ["lower_actuator", "hand_actuator"]
 slots = [
-    { at = "4-9", item = "CL.GaussRifle" },
-    { at = 10, item = "Ammo_CL.GaussRifle", rounds = 8 },
-    { at = 12, item = "FerroFibrous" },
+    { at = "3-8", item = "CL.GaussRifle" },
+    { at = 9, item = "Ammo_CL.GaussRifle", rounds = 8 },
+    { at = 10, item = "FerroFibrous" },
 ]
 
 [sections.right_arm]
 armor = 17
+omit = ["hand_actuator"]
 slots = [
-    { at = "5-6", item = "CL.LargePulseLaser" },
-    { at = 12, item = "FerroFibrous" },
+    { at = "4-5", item = "CL.LargePulseLaser" },
+    { at = 6, item = "FerroFibrous" },
 ]
 
 [sections.left_torso]
 armor = 22
 rear = 7
-engine_at = 7
 slots = [
-    { at = 1, item = "CL.SRM-6" },
-    { at = "2-3", item = "Ammo_CL.SRM-6", rounds = 15 },
-    { at = "11-12", item = "FerroFibrous" },
+    { at = 3, item = "CL.SRM-6" },
+    { at = "4-5", item = "Ammo_CL.SRM-6", rounds = 15 },
+    { at = "6-7", item = "FerroFibrous" },
 ]
 
 [sections.right_torso]
 armor = 22
 rear = 7
-engine_at = 7
 slots = [
-    { at = "11-12", item = "FerroFibrous" },
+    { at = "3-4", item = "FerroFibrous" },
 ]
 
 [sections.center_torso]
 armor = 27
 rear = 8
 slots = [
-    { at = 11, item = "JumpJet" },
+    { at = 11, item = "CL.JumpJet" },
 ]
 
 [sections.left_leg]
 armor = 23
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.right_leg]
 armor = 23
 slots = [
-    { at = "5-6", item = "JumpJet" },
+    { at = "5-6", item = "CL.JumpJet" },
 ]
 
 [sections.head]
