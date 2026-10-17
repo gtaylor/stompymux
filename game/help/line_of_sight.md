@@ -85,7 +85,8 @@ sensor contact tells you where something is, not what it is.
 
 The surface of water stops every sensor but magscan. Guardian ECM, Angel ECM,
 stealth armor and null signature systems add to the sweep roll of radars and
-probes, often beyond the band that would have found the target; infrared, magscan
+probes, often beyond the band that would have found the target, and every hostile
+ECM suite around you or the target adds its own penalty; infrared, magscan
 and seismic sensors ignore them. A Beagle slot is the Clan probe when the probe itself is
 Clan-built: its slot says `CL.`, or it says neither `IS.` nor `CL.` on a Clan design. The
 probe's own technology, not the chassis's, sets its brackets, reach and ECM

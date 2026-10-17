@@ -226,9 +226,6 @@ pub struct PerceptionProfile {
     vehicle: bool,
     #[serde(skip)]
     underwater: bool,
-    /// Hostile ECM covers the observer: any suite, and an Angel suite.
-    #[serde(skip)]
-    disturbed: (bool, bool),
 }
 
 impl PerceptionProfile {
@@ -291,7 +288,13 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
             .is_some_and(|mech| mech.stealth_active()),
     };
     let probe = probe_profile(world, observer, map.electromagnetic_interference(), jamming)?;
-    let sensor = sensor_profile(world, observer, &unit, probe, field.disturbed)?;
+    let sensor = sensor_profile(
+        world,
+        observer,
+        &unit,
+        probe,
+        field.blocks_outgoing_guidance(),
+    )?;
     let point = crate::btech::los::unit_sight_point(world, observer)?;
     Ok(PerceptionProfile {
         light,
@@ -306,7 +309,6 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         team: unit.signature.team,
         vehicle: unit.vehicle,
         underwater: point.below_waterline(),
-        disturbed: (field.disturbed, field.angel_disturbed),
     })
 }
 
@@ -536,6 +538,7 @@ pub(crate) fn perceive_prepared(
     } else if let Some(roll) = profile.sensor.sweep {
         sweep = sweep_suite(
             world,
+            observer,
             profile,
             target,
             &other,
@@ -568,6 +571,7 @@ pub(crate) fn perceive_prepared(
 #[allow(clippy::too_many_arguments)]
 fn sweep_suite(
     world: &World,
+    observer: ObjectId,
     profile: &PerceptionProfile,
     target: ObjectId,
     other: &crate::btech::scanner::ScannerUnit<'_>,
@@ -588,7 +592,9 @@ fn sweep_suite(
             y: i32::from(position.y),
         })?
         .is_some_and(|effect| effect.kind == crate::btech::DecorationKind::Fire);
-    let field = crate::btech::electronic_field(world, target)?;
+    // Every hostile ECM suite at the observer's hex or the target's adds its column (Tactical
+    // Operations: Advanced Rules p. 191).
+    let ecm = crate::btech::hostile_ecm_against(world, observer, target)?;
     let (heat_penalties, tons, airborne, inferno, stealth, null_signature) =
         match world.btech.constructed_units().get(&target) {
             Some(mech) => (
@@ -615,9 +621,8 @@ fn sweep_suite(
             }
         };
     let systems = TargetSystems {
-        angel: profile.disturbed.1 || field.angel_protected,
-        guardian: (profile.disturbed.0 && !profile.disturbed.1)
-            || (field.protected && !field.angel_protected),
+        angel: ecm.angel,
+        guardian: ecm.guardian,
         null_signature,
         stealth,
     };

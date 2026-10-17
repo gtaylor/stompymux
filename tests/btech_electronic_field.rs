@@ -1,4 +1,4 @@
-//! Electronic field boundaries, opposing strength, retained disturbance and guided-weapon policy.
+//! Electronic field boundaries, opposing strength, Angel countering and guided-weapon policy.
 use stompymux_rs::*;
 
 /// One emitter with independent ordinary, Angel and personal modes, reaching the ordinary six
@@ -21,9 +21,9 @@ fn source(
     }
 }
 
-/// Resolve a newly observed field without previous disturbance flags.
+/// Resolve the field team 1 observes.
 fn fresh(sources: Vec<ElectronicSource>) -> ElectronicField {
-    resolve_battle_electronic_field(ElectronicField::default(), 1, sources, false).unwrap()
+    resolve_battle_electronic_field(1, sources, false).unwrap()
 }
 
 /// Exact range boundaries include six hexes for suites and half a hex for personal emissions.
@@ -56,20 +56,17 @@ fn field_range_boundaries_and_invalid_distances() {
     }
     for distance in [-0.01, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
         assert!(
-            resolve_battle_electronic_field(
-                ElectronicField::default(),
-                1,
-                [source(1, distance, Ecm, Off, Off)],
-                false
-            )
-            .is_err()
+            resolve_battle_electronic_field(1, [source(1, distance, Ecm, Off, Off)], false)
+                .is_err()
         );
     }
 }
 
-/// Only opposing ECCM cancels protection; equal strength cancels, and Angel contributes two.
+/// Only opposing ECCM cancels protection, and equal strength cancels; only Angel ECCM touches
+/// Angel ECM, and any Angel ECCM counters the other suites (Tactical Operations: Advanced
+/// Rules p. 98).
 #[test]
-fn field_opposing_strength_and_angel_weight() {
+fn field_opposing_strength_and_angel_countering() {
     use ElectronicMode::{Eccm, Ecm, Off};
     let ordinary = source(1, 0.0, Ecm, Off, Off);
     let enemy_counter = source(2, 1.0, Eccm, Off, Off);
@@ -80,14 +77,18 @@ fn field_opposing_strength_and_angel_weight() {
     assert!(fresh(vec![ordinary, ordinary, enemy_counter]).protected);
     let angel = source(1, 0.0, Off, Ecm, Off);
     assert!(fresh(vec![angel, enemy_counter]).angel_protected);
-    assert!(!fresh(vec![angel, enemy_counter, enemy_counter]).angel_protected);
+    assert!(fresh(vec![angel, enemy_counter, enemy_counter]).angel_protected);
+    assert!(!fresh(vec![angel, source(2, 1.0, Off, Eccm, Off)]).angel_protected);
+    assert!(!fresh(vec![ordinary, ordinary, source(2, 1.0, Off, Eccm, Off)]).protected);
     // Friendly ECCM neither counters friendly ECM nor protects against hostile ECCM.
     assert!(fresh(vec![ordinary, source(1, 0.0, Eccm, Off, Off)]).protected);
     assert!(fresh(vec![enemy_counter]).countered);
     let hostile = source(2, 0.0, Off, Ecm, Off);
     let counter = source(1, 0.0, Eccm, Off, Off);
     assert!(fresh(vec![hostile, counter]).angel_disturbed);
-    assert!(!fresh(vec![hostile, counter, counter]).blocks_outgoing_guidance());
+    assert!(fresh(vec![hostile, counter, counter]).angel_disturbed);
+    let angel_counter = source(1, 0.0, Off, Eccm, Off);
+    assert!(!fresh(vec![hostile, angel_counter]).blocks_outgoing_guidance());
 }
 
 /// Protection and disturbance are independent: opposing ECM does not cancel friendly ECM.
@@ -101,53 +102,40 @@ fn field_simultaneous_effects_and_guidance() {
     assert!(field.protected && field.angel_protected && field.disturbed && field.angel_disturbed);
     assert!(!field.countered);
     assert!(field.blocks_incoming_guidance() && field.blocks_outgoing_guidance());
-    let reversed = resolve_battle_electronic_field(
-        ElectronicField::default(),
-        2,
-        [source(1, 0.0, Ecm, Off, Off)],
-        false,
-    )
-    .unwrap();
+    let reversed =
+        resolve_battle_electronic_field(2, [source(1, 0.0, Ecm, Off, Off)], false).unwrap();
     assert!(reversed.disturbed && !reversed.protected);
     let saved: ElectronicField =
         serde_json::from_value(serde_json::to_value(field).unwrap()).unwrap();
     assert_eq!(saved, field);
 }
 
-/// A continuing disturbance retains its family until clearance; a later disturbance is classified anew.
+/// Each family of disturbance is classified anew on every update, so an Angel suite that
+/// outlasts a Guardian leaves an Angel disturbance alone.
 #[test]
-fn field_disturbance_transition_and_clearance() {
+fn field_disturbance_families_and_clearance() {
     use ElectronicMode::{Eccm, Ecm, Off};
-    let old = fresh(vec![source(2, 1.0, Ecm, Off, Off)]);
+    let guardian = source(2, 1.0, Ecm, Off, Off);
     let angel = source(2, 1.0, Off, Ecm, Off);
-    let continued = resolve_battle_electronic_field(old, 1, [angel], false).unwrap();
-    assert!(continued.disturbed && !continued.angel_disturbed);
-    let cleared = resolve_battle_electronic_field(
-        continued,
-        1,
-        [angel, source(1, 0.0, Off, Eccm, Off)],
-        false,
-    )
-    .unwrap();
-    assert!(!cleared.blocks_outgoing_guidance());
-    let renewed = resolve_battle_electronic_field(cleared, 1, [angel], false).unwrap();
-    assert!(renewed.angel_disturbed && !renewed.disturbed);
-    assert_eq!(
-        resolve_battle_electronic_field(renewed, 1, [], false).unwrap(),
-        ElectronicField::default()
-    );
+    let both = fresh(vec![guardian, angel]);
+    assert!(both.disturbed && both.angel_disturbed);
+    let remaining = fresh(vec![angel]);
+    assert!(remaining.angel_disturbed && !remaining.disturbed);
+    assert!(!fresh(vec![angel, source(1, 0.0, Off, Eccm, Off)]).blocks_outgoing_guidance());
+    assert_eq!(fresh(vec![]), ElectronicField::default());
 }
 
-/// Self-interference is a large ordinary contribution, rather than an uncancellable special case.
+/// Self-interference from stealth armor or an iNarc ECM pod is never countered: ECCM has no
+/// effect on stealth armor, and the pod has no field of its own (Total Warfare pp. 141-142;
+/// Tactical Operations: Advanced Rules p. 98).
 #[test]
 fn field_self_interference_and_personal_contributions() {
     use ElectronicMode::{Eccm, Ecm, Off};
-    let affected =
-        resolve_battle_electronic_field(ElectronicField::default(), 1, [], true).unwrap();
+    let affected = resolve_battle_electronic_field(1, [], true).unwrap();
     assert!(affected.disturbed && !affected.protected);
-    let counters = vec![source(1, 0.0, Off, Eccm, Off); 500];
+    let counters = vec![source(1, 0.0, Eccm, Eccm, Off); 500];
     assert!(
-        !resolve_battle_electronic_field(affected, 1, counters, true)
+        resolve_battle_electronic_field(1, counters, true)
             .unwrap()
             .disturbed
     );

@@ -168,13 +168,15 @@ impl SensorBand {
 }
 
 /// ECM and stealth systems around or on a target that make it harder for a sweep to find
-/// (Tactical Operations ECM/Stealth Modifier Table, p. 190).
+/// (Tactical Operations ECM/Stealth Modifier Table, p. 191). When the spotter or its target
+/// is inside several hostile ECM systems, their effects combine, so each suite counts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TargetSystems {
-    /// A hostile Angel ECM suite covers the spotter or the target.
-    pub angel: bool,
-    /// A hostile Guardian, Clan or Watchdog ECM suite covers the spotter or the target.
-    pub guardian: bool,
+    /// Hostile Angel ECM suites working at the spotter's hex or the target's.
+    pub angel: u16,
+    /// Hostile Guardian, Clan or Watchdog ECM suites working at the spotter's hex or the
+    /// target's, counting the spotter's own engaged stealth armor or iNarc ECM pod.
+    pub guardian: u16,
     /// The target's null signature system is engaged.
     pub null_signature: bool,
     /// The target's stealth armor is engaged.
@@ -184,21 +186,21 @@ pub struct TargetSystems {
 impl TargetSystems {
     /// Whether any system is active, which is when a failed sweep reports jamming.
     pub const fn any(self) -> bool {
-        self.angel || self.guardian || self.null_signature || self.stealth
+        self.angel > 0 || self.guardian > 0 || self.null_signature || self.stealth
     }
 
     /// Whether any system that announces itself through jamming is active: every ECM suite
     /// and stealth armor, which needs one; a null signature stays silent.
     pub const fn jams(self) -> bool {
-        self.angel || self.guardian || self.stealth
+        self.angel > 0 || self.guardian > 0 || self.stealth
     }
 }
 
 /// What a sweep of `mode` adds to its result for each of the target's systems: the Tactical
 /// Operations ECM/Stealth Modifier Table (p. 191). A Beagle probe that is itself Clan technology
 /// (`clan`, from its own slots rather than the chassis) is the Clan active probe and takes
-/// that row. Passive infrared, magscan and seismic sensors
-/// are not fooled by any of them.
+/// that row. Each hostile ECM suite adds its column. Passive infrared, magscan and seismic
+/// sensors are not fooled by any of them.
 pub fn ecm_modifier(
     mode: SensorMode,
     vehicle: bool,
@@ -223,18 +225,12 @@ pub fn ecm_modifier(
     let Some(row) = row else {
         return 0;
     };
-    let mut modifier = 0;
-    for (active, penalty) in [
-        (systems.angel, row[0]),
-        (systems.null_signature, row[1]),
-        (systems.guardian, row[2]),
-        (systems.stealth, row[3]),
-    ] {
-        if active {
-            modifier += penalty;
-        }
-    }
-    modifier
+    let suites = |count: u16| i16::try_from(count).unwrap_or(i16::MAX);
+    row[0]
+        .saturating_mul(suites(systems.angel))
+        .saturating_add(row[1] * i16::from(systems.null_signature))
+        .saturating_add(row[2].saturating_mul(suites(systems.guardian)))
+        .saturating_add(row[3] * i16::from(systems.stealth))
 }
 
 /// Everything about one target a sweep needs besides the sensor itself.
@@ -284,7 +280,7 @@ pub fn sweep(
     target: SweepTarget<'_>,
 ) -> SweepResult {
     let modifier = ecm_modifier(mode, vehicle, probe, clan, target.systems);
-    let band = SensorBand::of_result(i16::from(roll) + modifier);
+    let band = SensorBand::of_result(i16::from(roll).saturating_add(modifier));
     let unmodified = SensorBand::of_result(i16::from(roll));
     let reaches = |band: Option<SensorBand>| {
         let Some(band) = band else {
@@ -557,7 +553,7 @@ mod tests {
         let row = |probe, clan| {
             [
                 TargetSystems {
-                    angel: true,
+                    angel: 1,
                     ..TargetSystems::default()
                 },
                 TargetSystems {
@@ -565,7 +561,7 @@ mod tests {
                     ..TargetSystems::default()
                 },
                 TargetSystems {
-                    guardian: true,
+                    guardian: 1,
                     ..TargetSystems::default()
                 },
                 TargetSystems {
@@ -587,7 +583,7 @@ mod tests {
     #[test]
     fn ecm_and_stealth_follow_the_modifier_table() {
         let guardian = TargetSystems {
-            guardian: true,
+            guardian: 1,
             ..TargetSystems::default()
         };
         assert_eq!(
@@ -615,12 +611,55 @@ mod tests {
                 Some(ActiveProbe::Bloodhound),
                 false,
                 TargetSystems {
-                    angel: true,
+                    angel: 1,
                     stealth: true,
                     ..TargetSystems::default()
                 }
             ),
             5
+        );
+        // Several hostile suites combine (TO:AR p. 191): two Guardians against a Beagle add
+        // eight, past any band; an Angel and a Guardian against 'Mech radar twelve.
+        let two = TargetSystems {
+            guardian: 2,
+            ..TargetSystems::default()
+        };
+        assert_eq!(
+            ecm_modifier(
+                SensorMode::Probe,
+                false,
+                Some(ActiveProbe::Beagle),
+                false,
+                two
+            ),
+            8
+        );
+        assert_eq!(
+            ecm_modifier(
+                SensorMode::Radar,
+                false,
+                None,
+                false,
+                TargetSystems {
+                    angel: 1,
+                    guardian: 1,
+                    ..TargetSystems::default()
+                }
+            ),
+            12
+        );
+        assert_eq!(
+            ecm_modifier(
+                SensorMode::Radar,
+                false,
+                None,
+                false,
+                TargetSystems {
+                    guardian: u16::MAX,
+                    ..TargetSystems::default()
+                }
+            ),
+            i16::MAX
         );
         assert_eq!(
             ecm_modifier(SensorMode::Infrared, false, None, false, guardian),

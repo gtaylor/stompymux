@@ -191,7 +191,6 @@ mod tests {
             team: 0,
             vehicle: false,
             underwater: false,
-            disturbed: (false, false),
         }
     }
 

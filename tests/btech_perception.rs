@@ -67,6 +67,53 @@ impl Lane {
             .unwrap();
     }
 
+    /// Place a running radio tower of `team` at row `y` whose only item, a Guardian ECM suite,
+    /// is switched to ECM mode.
+    fn ecm_tower(&mut self, team: i32, y: i64) -> ObjectId {
+        let id = self
+            .world
+            .create(&self.config, "ECM tower".into(), Kind::Thing);
+        self.world.objects.get_mut(&id).unwrap().home = Some(ObjectId(self.config.home()));
+        let mut definition = crate::support::templates::fitted(
+            VehicleTemplate::parse("test", include_str!("../game/units/RadioTower.toml")).unwrap(),
+        );
+        let front = definition.sections.get_mut(&VehicleSection::Front).unwrap();
+        front.criticals.clear();
+        front.criticals.insert(
+            0,
+            CriticalDefinition {
+                equipment: "IS.Ecm".into(),
+                data: "-".into(),
+                modes: vec![],
+            },
+        );
+        create_battle_vehicle(
+            &mut self.world,
+            id,
+            crate::support::templates::fitted(definition),
+        )
+        .unwrap();
+        place_battle_unit(&mut self.world, id, self.map, 0, y).unwrap();
+        set_power(&mut self.world, id, Power::Running);
+        set_battle_unit_signature(
+            &mut self.world,
+            id,
+            UnitSignature {
+                team,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        self.world
+            .btech
+            .rewrite_unit_record(id, |record| {
+                record["electronics"]["guardian"] =
+                    serde_json::to_value(ElectronicMode::Ecm).unwrap();
+            })
+            .unwrap();
+        id
+    }
+
     /// Give the observer a fixed sweep result for the turn.
     fn sweep(&mut self, roll: u8) {
         self.world
@@ -521,8 +568,8 @@ async fn probe_sweeps_with_the_probes_brackets() {
             Some(ActiveProbe::Beagle),
             false,
             TargetSystems {
-                angel: false,
-                guardian: true,
+                angel: 0,
+                guardian: 1,
                 null_signature: false,
                 stealth: false,
             }
@@ -708,4 +755,51 @@ async fn a_probe_meets_ecm_on_its_own_technology_base_row() {
         );
         lane.world.validate(&lane.config).unwrap();
     }
+}
+
+/// Every hostile ECM suite around the spotter or its target adds its column to the sweep
+/// (Tactical Operations: Advanced Rules p. 191). In pitch black a Beagle's sweep of 3 meets a
+/// Jenner ten hexes off: one Guardian tower by the Jenner adds 4, bringing the roll into the
+/// Beagle's short band; a second adds 4 more, past every band. ECM friendly to the spotter
+/// adds nothing, even around a target it protects.
+#[tokio::test]
+async fn hostile_ecm_suites_combine_against_a_sweep() {
+    let mut lane = lane(&grass(20), Observer::Vehicle(Some("BeagleProbe"))).await;
+    lane.conditions(Light::PitchBlack, Weather::Clear);
+    lane.place_target(10);
+    lane.sweep(3);
+    assert_eq!(lane.perceived(), None, "the long band starts at 25 hexes");
+    lane.ecm_tower(2, 12);
+    assert_eq!(lane.perceived(), Some((Probe, false)));
+    lane.ecm_tower(2, 13);
+    assert_eq!(lane.perceived(), None);
+    let ecm = battle_hostile_ecm_against(&lane.world, lane.observer, lane.target).unwrap();
+    assert_eq!(
+        ecm,
+        EcmSystems {
+            guardian: 2,
+            angel: 0
+        }
+    );
+    lane.world.validate(&lane.config).unwrap();
+    // A sweep of 7 finds the Jenner in the short band, and the same towers on the spotter's
+    // own side, protecting a friendly Jenner, leave it found.
+    let mut friendly = self::lane(&grass(20), Observer::Vehicle(Some("BeagleProbe"))).await;
+    friendly.conditions(Light::PitchBlack, Weather::Clear);
+    friendly.place_target(10);
+    set_battle_unit_signature(
+        &mut friendly.world,
+        friendly.target,
+        UnitSignature::default(),
+    )
+    .unwrap();
+    friendly.ecm_tower(0, 12);
+    friendly.ecm_tower(0, 13);
+    friendly.sweep(7);
+    assert_eq!(
+        battle_hostile_ecm_against(&friendly.world, friendly.observer, friendly.target).unwrap(),
+        EcmSystems::default()
+    );
+    assert_eq!(friendly.perceived(), Some((Probe, false)));
+    friendly.world.validate(&friendly.config).unwrap();
 }

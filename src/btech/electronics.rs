@@ -281,41 +281,36 @@ pub fn toggle_electronics(
     Ok(mode)
 }
 
-/// Compute current effects from same-map emitters without consuming dice or changing observations.
-pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> {
-    let (position, previous, team, self_interference) =
-        if let Some(vehicle) = world.btech.vehicles().get(&id) {
-            (
-                vehicle.position(),
-                vehicle.electronics.field,
-                vehicle.signature().team,
-                vehicle.has_beacon(super::BeaconKind::Ecm),
-            )
-        } else {
-            let unit = world
-                .btech
-                .constructed_units()
-                .get(&id)
-                .context("Unit construction state is unavailable")?;
-            (
-                unit.position(),
-                unit.electronics.field,
-                unit.signature().team,
-                unit.stealth_active() || unit.has_beacon(super::BeaconKind::Ecm),
-            )
-        };
-    let Some(position) = position else {
-        return Ok(ElectronicField::default());
-    };
-    // Every emitter shares the subject's map, so one battlefield condition sets their reach.
-    let reach = super::ecm_range(
-        world
-            .btech
-            .maps()
-            .get(&position.map)
-            .is_some_and(super::StoredMap::electromagnetic_interference),
-    );
-    let mut sources = Vec::new();
+/// One unit's working emissions on its map, before they are measured from a subject.
+#[derive(Debug, Clone, Copy)]
+struct Emitter {
+    id: ObjectId,
+    team: i32,
+    guardian: Mode,
+    angel: Mode,
+    /// Half-suites of communications ECCM, or zero.
+    communications_eccm: u8,
+}
+
+impl Emitter {
+    /// The emissions as they reach a subject `distance` hexes away, given the suites' `reach`.
+    fn source(self, distance: f64, reach: f64) -> ElectronicSource {
+        ElectronicSource {
+            team: self.team,
+            distance,
+            range: reach,
+            guardian: self.guardian,
+            angel: self.angel,
+            personal: Mode::Off,
+            communications_eccm: self.communications_eccm,
+        }
+    }
+}
+
+/// Every running, placed unit on `map` with a suite switched on, and what its working
+/// equipment emits.
+fn emitters(world: &World, map: ObjectId) -> Result<Vec<Emitter>> {
+    let mut emitters = Vec::new();
     for other in identities(world) {
         // Most units carry no active suite; reading the switch first keeps this scan cheap.
         let state = state(world, other)?;
@@ -326,7 +321,7 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
             continue;
         }
         let emitter = super::scanner::scanner_unit(world, other).unwrap();
-        if emitter.position.is_none_or(|p| p.map != position.map)
+        if emitter.position.is_none_or(|p| p.map != map)
             || emitter.power != Power::Running
             || emitter.destroyed
             || world
@@ -334,10 +329,6 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
                 .get(&other)
                 .is_none_or(|object| object.flags.contains(Flag::Going))
         {
-            continue;
-        }
-        let distance = super::unit_range(world, id, other)?.hexes();
-        if distance > reach {
             continue;
         }
         // Engaged stealth armor takes over its ECM suite, which then makes no field; an Angel
@@ -348,10 +339,9 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
             .constructed_units()
             .get(&other)
             .is_some_and(|mech| mech.stealth().enabled);
-        sources.push(ElectronicSource {
+        emitters.push(Emitter {
+            id: other,
             team: emitter.signature.team,
-            distance,
-            range: reach,
             guardian: if !stealth && available(world, other, ElectronicSuite::Guardian)? {
                 state.guardian
             } else {
@@ -364,7 +354,6 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
             } else {
                 Mode::Off
             },
-            personal: Mode::Off,
             communications_eccm: if state.communications == Mode::Eccm
                 && available(world, other, ElectronicSuite::Communications)?
             {
@@ -374,7 +363,92 @@ pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> 
             },
         });
     }
-    super::resolve_electronic_field(previous, team, sources, self_interference)
+    Ok(emitters)
+}
+
+/// A subject's placement and team, and whether it suffers self-interference: engaged stealth
+/// armor or an attached iNarc ECM pod leaves it as if inside hostile ECM (Total Warfare
+/// pp. 141-142).
+fn subject(world: &World, id: ObjectId) -> Result<(Option<super::Position>, i32, bool)> {
+    if let Some(vehicle) = world.btech.vehicles().get(&id) {
+        return Ok((
+            vehicle.position(),
+            vehicle.signature().team,
+            vehicle.has_beacon(super::BeaconKind::Ecm),
+        ));
+    }
+    let unit = world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .context("Unit construction state is unavailable")?;
+    Ok((
+        unit.position(),
+        unit.signature().team,
+        unit.stealth_active() || unit.has_beacon(super::BeaconKind::Ecm),
+    ))
+}
+
+/// How far ECM suites reach on `map`: every emitter shares the subject's map, so one
+/// battlefield condition sets their reach.
+fn map_reach(world: &World, map: ObjectId) -> f64 {
+    super::ecm_range(
+        world
+            .btech
+            .maps()
+            .get(&map)
+            .is_some_and(super::StoredMap::electromagnetic_interference),
+    )
+}
+
+/// Compute current effects from same-map emitters without consuming dice or changing observations.
+pub fn electronic_field(world: &World, id: ObjectId) -> Result<ElectronicField> {
+    let (position, team, self_interference) = subject(world, id)?;
+    let Some(position) = position else {
+        return Ok(ElectronicField::default());
+    };
+    let reach = map_reach(world, position.map);
+    let mut sources = Vec::new();
+    for emitter in emitters(world, position.map)? {
+        let distance = super::unit_range(world, id, emitter.id)?.hexes();
+        if distance > reach {
+            continue;
+        }
+        sources.push(emitter.source(distance, reach));
+    }
+    super::resolve_electronic_field(team, sources, self_interference)
+}
+
+/// The ECM suites hostile to `spotter` that a sensor sweep of `target` meets: every one
+/// working at either unit's hex, each counted once, and the spotter's own self-interference
+/// as one more (Tactical Operations: Advanced Rules p. 191; Total Warfare p. 142).
+pub fn hostile_ecm_against(
+    world: &World,
+    spotter: ObjectId,
+    target: ObjectId,
+) -> Result<super::EcmSystems> {
+    let (position, team, self_interference) = subject(world, spotter)?;
+    let Some(position) = position else {
+        return Ok(super::EcmSystems::default());
+    };
+    let reach = map_reach(world, position.map);
+    let mut views = Vec::new();
+    for emitter in emitters(world, position.map)? {
+        let from_spotter = super::unit_range(world, spotter, emitter.id)?.hexes();
+        let from_target = super::unit_range(world, target, emitter.id)?.hexes();
+        if from_spotter > reach && from_target > reach {
+            continue;
+        }
+        views.push([
+            emitter.source(from_spotter, reach),
+            emitter.source(from_target, reach),
+        ]);
+    }
+    let mut systems = super::hostile_ecm_systems(team, &views)?;
+    if self_interference {
+        systems.guardian = systems.guardian.saturating_add(1);
+    }
+    Ok(systems)
 }
 
 /// Tons of communications equipment a unit of either store carries.

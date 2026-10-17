@@ -901,9 +901,16 @@ cockpit is damaged (TechManual p. 212; Tactical Operations: Advanced Rules
 p. 98).
 
 ECM protects friendly units and disturbs enemies within six hexes, twelve under
-electromagnetic interference, however high either unit is. Enemy ECCM
-cancels protection, and friendly ECCM cancels disturbance; equal strength cancels.
-Angel suites count twice. Team identifiers determine which units are friendly.
+electromagnetic interference, however high either unit is. Enemy ECCM cancels
+protection, and friendly ECCM cancels disturbance: ECCM equal to or greater than
+the ECM in a hex cancels it there, a Guardian, Clan or Watchdog suite counting as
+one and communications equipment as half or one. Only Angel ECCM counters Angel
+ECM, one suite for one, and a single Angel ECCM counters any number of other
+suites (Tactical Operations: Advanced Rules p. 98). Engaged stealth armor and an
+attached iNarc ECM pod disturb their own unit whatever ECCM is near. Team
+identifiers determine which units are friendly. Against a radar or probe sweep,
+every hostile suite working around the spotter or its target adds its own
+penalty (Tactical Operations: Advanced Rules p. 191).
 
 Protection on a target or disturbance on a shooter suppresses Narc and Artemis
 guidance bonuses. Angel interference also negates Streak locks: a failed roll
