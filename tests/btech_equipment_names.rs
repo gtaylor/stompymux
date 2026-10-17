@@ -31,7 +31,7 @@ async fn mixed_case_equipment_shares_construction_mass_and_saved_identity() {
         include_str!("../game/units/JR7-D.toml"),
         include_str!("../game/units/AS7-D.toml"),
         include_str!("../game/units/SCP-1N.toml"),
-        include_str!("../game/units/BJ-TSM.toml"),
+        include_str!("../game/units/BJ-3.toml"),
     ] {
         // Exercise source decoding as well as typed construction.
         let source = source.replace("Ammo_IS.SRM-4 25 -", "Ammo_IS.SRM-4 12 Hotload Halfton -");
