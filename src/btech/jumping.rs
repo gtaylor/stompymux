@@ -1385,6 +1385,8 @@ fn finish_landing_inner(
                 character,
             )?)
         } else {
+            // Only a swamp sticks a 'Mech that jumps into it outright (Tactical Operations
+            // p. 49); other soft ground takes the ordinary roll.
             let swamp = tile.ground() == super::Ground::Swamp;
             super::bog_down::enter(world, id, rules.extended_piloting, character, swamp)?
         };

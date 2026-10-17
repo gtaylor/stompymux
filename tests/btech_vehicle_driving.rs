@@ -853,17 +853,9 @@ async fn prohibited_terrain_stops_vehicles_at_its_edge_without_dice() {
             entered = true;
             assert_eq!(stopped, stops, "{movement:?} into {terrain:?}: {notices:?}");
             assert_eq!(unit.sections(), before.btech.vehicles()[&id].sections());
-            if terrain == Terrain::Sand {
-                // Sand is soft ground: entering it rolls against bogging down.
-                let mut expected: Dice = serde_json::from_value(dice.clone()).unwrap();
-                expected.two_d6();
-                assert_eq!(
-                    serde_json::to_value(unit).unwrap()["dice"],
-                    serde_json::to_value(expected).unwrap()
-                );
-            } else {
-                assert_eq!(serde_json::to_value(unit).unwrap()["dice"], dice);
-            }
+            // Sand traps only Large Vehicles (Tactical Operations p. 37), so no entry here
+            // rolls against bogging down.
+            assert_eq!(serde_json::to_value(unit).unwrap()["dice"], dice);
             if stops {
                 assert!(!unit.motion().unwrap().active());
                 assert_eq!(unit.position().unwrap().x, 2);
@@ -872,7 +864,7 @@ async fn prohibited_terrain_stops_vehicles_at_its_edge_without_dice() {
                     before.btech.vehicles()[&id].motion().unwrap().point
                 );
             } else {
-                assert!(unit.motion().unwrap().active() || terrain == Terrain::Sand);
+                assert!(unit.motion().unwrap().active());
                 assert_eq!(unit.position().unwrap().x, 3);
             }
             persistence::save(&config.database(), &before)
