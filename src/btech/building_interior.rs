@@ -83,6 +83,23 @@ pub const fn entry_modifier(class: ConstructionClass) -> i16 {
     }
 }
 
+/// Piloting or driving modifier for the hexes a unit has moved in the turn as it enters a
+/// building (Building Movement Modifiers Table, Total Warfare p. 167): none for one or two,
+/// rising to +6 for twenty-five or more. The realtime game reads the hexes moved in a turn
+/// from the unit's speed in movement points, as the skid modifiers do.
+pub(super) fn hexes_moved_modifier(speed: f64) -> i16 {
+    let hexes = speed.abs() / super::MP_KPH;
+    match hexes {
+        h if h < 2.1 => 0,
+        h if h < 4.1 => 1,
+        h if h < 6.1 => 2,
+        h if h < 9.1 => 3,
+        h if h < 17.1 => 4,
+        h if h < 24.1 => 5,
+        _ => 6,
+    }
+}
+
 /// Damage a building hex absorbs from each hit grouping on a unit inside it, and the damage
 /// a failed entry roll does to the unit: a tenth of the construction factor, rounded up.
 pub const fn absorption(cf: u16) -> u16 {
@@ -197,7 +214,7 @@ impl WallBreach {
 }
 
 /// Resolve `id` having just moved into a building hex below its roof (Total Warfare p. 167):
-/// the pilot rolls against the building's class, taking a tenth of the construction factor
+/// the pilot rolls against the building's class and the hexes moved this turn, taking a tenth of the construction factor
 /// from the front (the rear when `reverse`) on a failure, a vehicle also rolling for motive
 /// damage; the hex loses a tenth of the unit's tonnage either way, and collapses when that
 /// exhausts it or when the units sharing a level above the ground outweigh what is left.
@@ -209,6 +226,30 @@ pub(super) fn breach(
     rules: FallRules,
     character: bool,
 ) -> Result<Option<WallBreach>> {
+    breach_with(world, id, reverse, rules, character, false)
+}
+
+/// Resolve `id` having just been displaced into a building hex below its roof: the building
+/// and the unit are damaged as if it had moved in and failed its roll, so no roll is made
+/// (Total Warfare pp. 151 and 167).
+pub(super) fn breach_displaced(
+    world: &mut World,
+    id: ObjectId,
+    rules: FallRules,
+    character: bool,
+) -> Result<Option<WallBreach>> {
+    breach_with(world, id, false, rules, character, true)
+}
+
+/// Shared wall breach, with the entry roll either made or automatically failed.
+fn breach_with(
+    world: &mut World,
+    id: ObjectId,
+    reverse: bool,
+    rules: FallRules,
+    character: bool,
+    automatic_failure: bool,
+) -> Result<Option<WallBreach>> {
     let Some(interior) = unit_inside(world, id)? else {
         return Ok(None);
     };
@@ -218,22 +259,37 @@ pub(super) fn breach(
     breach.notices.push(Notice {
         unit: id,
         text: format!(
-            "You push through the walls of the {} building.",
+            "You {} the walls of the {} building.",
+            if automatic_failure {
+                "are thrown through"
+            } else {
+                "push through"
+            },
             class.label().to_ascii_lowercase()
         ),
     });
-    let control = super::terrain_control::check(
-        world,
-        id,
-        entry_modifier(class),
-        rules.extended_piloting,
-        character,
-    )?;
-    control.capture_feedback(id, &mut breach.notices, &mut breach.pilot_notices);
-    breach
-        .experience_messages
-        .extend(control.experience_messages);
-    if !control.success && cf > 0 {
+    let success = if automatic_failure {
+        false
+    } else {
+        // The building's class and the hexes moved this turn both count (Total Warfare
+        // p. 167).
+        let speed = super::with_unit!(world.btech.unit(id).unwrap(), |unit| unit
+            .motion()
+            .map_or(0.0, |motion| motion.speed));
+        let control = super::terrain_control::check(
+            world,
+            id,
+            entry_modifier(class) + hexes_moved_modifier(speed),
+            rules.extended_piloting,
+            character,
+        )?;
+        control.capture_feedback(id, &mut breach.notices, &mut breach.pilot_notices);
+        breach
+            .experience_messages
+            .extend(control.experience_messages);
+        control.success
+    };
+    if !success && cf > 0 {
         let damage = absorption(cf);
         breach.notices.push(Notice {
             unit: id,
@@ -766,6 +822,30 @@ mod tests {
             height,
             class,
         )))
+    }
+
+    /// The Building Movement Modifiers Table's hexes-moved column, read from speed in MP
+    /// (Total Warfare p. 167): a Locust that moved four hexes adds one.
+    #[test]
+    fn hexes_moved_add_to_building_entry_rolls() {
+        for (mp, modifier) in [
+            (1.0, 0),
+            (2.0, 0),
+            (3.0, 1),
+            (4.0, 1),
+            (6.0, 2),
+            (9.0, 3),
+            (12.0, 4),
+            (20.0, 5),
+            (30.0, 6),
+        ] {
+            assert_eq!(
+                hexes_moved_modifier(mp * super::super::MP_KPH),
+                modifier,
+                "{mp}"
+            );
+        }
+        assert_eq!(hexes_moved_modifier(-4.0 * super::super::MP_KPH), 1);
     }
 
     /// A unit enters at the level it comes from, clamped to the building's floors, and takes

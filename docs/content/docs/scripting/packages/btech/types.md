@@ -335,6 +335,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `spotter`: `integer?` — Self ID while spotting, otherwise the selected observer.
 - `artillery_adjustment`: `integer` — Saved correction for the current artillery target.
 - `last_weapon_fire`: `integer|nil` — Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
+- `physical_assault_time`: `integer|nil` — Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
 - `section_fire`: `table<string, integer>` — Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 - `tag`: `TagState`
 - `signature`: `{team: integer, hidden: boolean, illuminated: boolean}` — Team, hiding and scenario lighting.
@@ -462,7 +463,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `electronics`: `Electronics` — Selected suite modes and last committed field.
 - `spotter`: `integer|nil` — Self declares spotting; another unit selects a forward observer.
 - `last_weapon_fire`: `integer|nil` — Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
-- `physical_assault_time`: `integer|nil` — Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
+- `physical_assault_time`: `integer|nil` — Simulation time of the last ram; the vehicle may not spot for the rest of that turn.
 - `tag`: `TagState` — Shared TAG selection and lock/recycle countdown.
 - `character_pilot`: `{injuries: integer, killed: boolean}?` — Saved RPG pilot status, independent of tactical injury count.
 - `friendly_fire_safety`: `boolean` — Pilot-selected teammate protection.
@@ -547,7 +548,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `coordinate`: `HexCoordinate`
 - `before`: `Hex`
 - `after`: `Hex`
-- `fall_levels`: `integer`
+- `fall_levels`: `integer` — Fall damage multiplier: the levels fallen plus one, or 0 when nobody falls.
 - `falls`: `table[]` — Ordered pairs of unit dbref and Mech fall report.
 - `vehicle_falls`: `table[]` — Ordered pairs of unit dbref and vehicle fall report.
 - `flooded_vehicles`: `integer[]`

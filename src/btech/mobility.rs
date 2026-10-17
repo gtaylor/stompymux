@@ -23,6 +23,17 @@ impl Mobility {
 }
 
 impl Mech {
+    /// Whether a lost leg holds the 'Mech to a walk of 1 MP: a biped missing one leg, or a
+    /// quad missing two. Nothing raises that figure and the 'Mech cannot run (Total Warfare
+    /// pp. 122-123); with more legs gone it cannot move at all.
+    pub(super) fn leg_loss_fixes_walking(&self) -> bool {
+        let missing = self.unavailable_legs();
+        match self.chassis() {
+            MechChassis::Biped => missing == 1,
+            MechChassis::Quad => missing == 2,
+        }
+    }
+
     /// Inherent chassis control bonus: a quad's -2 to Piloting Skill Rolls lasts only while
     /// none of its four legs is destroyed (Total Warfare p. 59, p. 123).
     pub fn chassis_piloting_modifier(&self) -> i16 {

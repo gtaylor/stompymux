@@ -45,20 +45,6 @@ impl TerrainControl {
     }
 }
 
-/// A roll made to step onto a hex, which takes the hex's entry modifier instead of the modifier
-/// the hex adds to rolls forced on units already in it: ice is +0 to step onto and +4 to keep
-/// your feet on (Tactical Operations p. 48).
-pub(super) fn check_entry(
-    world: &mut World,
-    id: ObjectId,
-    modifier: i16,
-    extended: bool,
-    character: bool,
-) -> Result<TerrainControl> {
-    let standing = super::planetary_conditions::terrain_piloting_modifier(world, id);
-    check(world, id, modifier - standing, extended, character)
-}
-
 /// Terrain avoidance succeeds without dice when no pilot is assigned.
 pub(super) fn check(
     world: &mut World,

@@ -27,6 +27,12 @@ impl LateralMode {
         }
     }
 
+    /// Whether this shift carries the 'Mech into one of its rear side hexes, which is
+    /// backward movement (Total Warfare p. 50).
+    pub fn rearward(self) -> bool {
+        matches!(self, Self::RearLeft | Self::RearRight)
+    }
+
     /// Player-facing direction name.
     pub fn description(self) -> &'static str {
         match self {
@@ -79,6 +85,13 @@ impl super::Mech {
     /// Current direction and pending transition, independent of chassis heading.
     pub fn lateral(&self) -> LateralState {
         self.lateral
+    }
+
+    /// Whether travel at `speed` takes the 'Mech backward: reversing, or shifting into a rear
+    /// side hex, which counts as backward movement (Total Warfare p. 50). Reversing a rear
+    /// shift carries it forward.
+    pub fn moving_backward(&self, speed: f64) -> bool {
+        speed != 0.0 && (speed < 0.0) != self.lateral.active.rearward()
     }
 
     /// Signed-speed travel axis; reverse movement follows the opposite direction.

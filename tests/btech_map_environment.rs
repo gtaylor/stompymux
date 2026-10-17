@@ -116,10 +116,14 @@ async fn changed_environment_reaches_live_movement_heat_and_flight() {
                     .dissipation,
                 cooling + 1.0
             );
+            // Half a G doubles the walking MP, and running is figured afresh from it
+            // (Tactical Operations: Advanced Rules p. 53).
+            let doubled = SpeedEnvelope::from_walking_mp(
+                SpeedEnvelope::from_running(original_speed).walking_mp() * 2.0,
+            )
+            .running;
             assert!(
-                (battle_effective_maximum_speed(&world, unit, false).unwrap()
-                    - original_speed * 2.0)
-                    .abs()
+                (battle_effective_maximum_speed(&world, unit, false).unwrap() - doubled).abs()
                     < 0.001
             );
             firing::edit(&mut world, unit, |state| {
@@ -135,14 +139,14 @@ async fn changed_environment_reaches_live_movement_heat_and_flight() {
                     < hot.btech.constructed_units()[&unit].heat().stored
             );
         } else {
-            // -40 °C costs one of the template's cruising MP and flank is refigured from what is
-            // left (TO:AR p. 60); half gravity then doubles the result, since gravity applies
-            // after every other movement modifier (TO:AR p. 53).
-            let doubled = original_speed * 2.0;
-            let cruising = world.btech.vehicles()[&unit].definition().walk_mp;
+            // -40 °C costs one of the template's cruising MP (TO:AR p. 60); half gravity then
+            // doubles the cruising MP left, since gravity applies after every other movement
+            // modifier, and flank is refigured from it (TO:AR p. 53).
+            let cruising = f64::from(world.btech.vehicles()[&unit].definition().walk_mp);
+            let doubled = SpeedEnvelope::from_walking_mp(cruising * 2.0).running;
             assert_eq!(
                 battle_effective_maximum_speed(&world, unit, false).unwrap(),
-                SpeedEnvelope::from_walking_mp(f64::from(cruising.saturating_sub(1))).running * 2.0
+                SpeedEnvelope::from_walking_mp((cruising - 1.0).max(0.0) * 2.0).running
             );
             set_battle_map_environment(&mut world, ObjectId(1), map, conditions(50, 20, false))
                 .unwrap();

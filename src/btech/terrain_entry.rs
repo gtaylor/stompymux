@@ -1,6 +1,7 @@
 //! Terrain hazards a 'Mech meets as it steps into a hex, inside a movement transaction: the
-//! piloting rolls rubble and ice take to cross, soft ground that can bog it down and magma
-//! crust that may break beneath it. Water has its own entry rules in `water_movement.rs`;
+//! piloting roll rubble takes to cross, soft ground that can bog it down and magma crust that
+//! may break beneath it. Ice takes no entry roll: its extra movement point buys Careful
+//! Movement (Tactical Operations: Advanced Rules pp. 48, 63). Water has its own entry rules in `water_movement.rs`;
 //! magma heat is charged on leaving the hex (`motion.rs`) and while standing in it (`heat.rs`).
 use super::{FallRules, Notice, Posture};
 use crate::{Flag, ObjectId, World};
@@ -35,37 +36,20 @@ pub(super) fn enter(
     let falls_pending = falls.is_some();
     let mut report = TerrainEntryReport::default();
     if let Some(modifier) = tile.entry_piloting_modifier(super::GroundMovement::Legged)
-        && (tile.touches_ground(level) || (tile.is_ice() && level >= i32::from(tile.water_line())))
+        && tile.touches_ground(level)
         && unit.posture() != Posture::Prone
     {
-        let ice = tile.is_icy();
         report.notices.push(Notice {
             unit: id,
-            text: if ice {
-                "You step carefully onto the ice.".into()
-            } else {
-                "You pick your way across the rubble.".into()
-            },
+            text: "You pick your way across the rubble.".into(),
         });
-        // Rubble takes a plain roll; ice takes a roll without the bonus it gives rolls forced
-        // on units already standing on it.
-        let control = if ice {
-            super::terrain_control::check_entry(
-                world,
-                id,
-                modifier,
-                rules.extended_piloting,
-                falls.is_some(),
-            )?
-        } else {
-            super::terrain_control::check(
-                world,
-                id,
-                modifier,
-                rules.extended_piloting,
-                falls.is_some(),
-            )?
-        };
+        let control = super::terrain_control::check(
+            world,
+            id,
+            modifier,
+            rules.extended_piloting,
+            falls.is_some(),
+        )?;
         control.capture_feedback(id, &mut report.notices, &mut report.pilot_notices);
         report
             .experience_messages
@@ -73,20 +57,12 @@ pub(super) fn enter(
         if !control.success {
             report.notices.push(Notice {
                 unit: id,
-                text: if ice {
-                    "Your feet go out from under you on the ice!".into()
-                } else {
-                    "You lose your footing in the rubble and fall!".into()
-                },
+                text: "You lose your footing in the rubble and fall!".into(),
             });
             report.notices.extend(super::broadcast::observer_notices(
                 world,
                 id,
-                if ice {
-                    "slips on the ice and falls down!"
-                } else {
-                    "stumbles in the rubble and falls down!"
-                },
+                "stumbles in the rubble and falls down!",
             ));
             let fall = if falls.is_some() && world.objects[&id].flags.contains(Flag::InCharacter) {
                 super::fall::resolve_character_fall(world, id, 1, rules)?

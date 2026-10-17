@@ -324,7 +324,7 @@ fn arm_with_weapon(
 }
 
 /// Equip both hands while preserving the fixture's identity and ammunition layout.
-fn install_test_handweapons(
+pub(crate) fn install_test_handweapons(
     world: &mut stompymux_rs::World,
     id: ObjectId,
     kind: stompymux_rs::ArmAttack,
@@ -1606,8 +1606,23 @@ async fn claw_parts_actuators_damage_and_dice() {
             myomer_test_heat(&mut world, id, 20.0, 9.0);
         }
         // Claws replace the hand actuator (Tactical Operations: Advanced Units & Equipment),
-        // so the arm's actuators are the shoulder, upper and lower arm.
-        for slot in 0..=2 {
+        // so the arm's actuators are the shoulder, upper and lower arm. Claws strike as
+        // punches, which a damaged shoulder bars outright (Total Warfare p. 145).
+        let mut shoulderless = world.clone();
+        destroy_battle_critical(
+            &mut shoulderless,
+            id,
+            CriticalLocation {
+                section: MechSection::LeftArm,
+                slot: 0,
+            },
+        )
+        .unwrap();
+        assert!(
+            format!("{:#}", profile(&shoulderless, kick_rules()).unwrap_err())
+                .contains("hip or shoulder is destroyed")
+        );
+        for slot in 1..=2 {
             destroy_battle_critical(
                 &mut world,
                 id,
@@ -1724,7 +1739,7 @@ async fn claw_parts_actuators_damage_and_dice() {
 }
 
 /// Give the fixture working hands and trees without installing a manufactured physical weapon.
-fn prepare_test_club(world: &mut stompymux_rs::World, id: ObjectId) {
+pub(crate) fn prepare_test_club(world: &mut stompymux_rs::World, id: ObjectId) {
     use stompymux_rs::*;
     install_test_handweapons(world, id, ArmAttack::Axe);
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -1855,8 +1870,19 @@ async fn club_attacks_damage_breakage_and_recovery() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
     prepare_test_club(&mut base, id);
+    // Standing among trees is not enough: the club must be picked up first, in a turn of its
+    // own (Total Warfare p. 146).
+    assert!(
+        format!(
+            "{:#}",
+            battle_club_profile(&base, id, ObjectId(1), target, kick_rules()).unwrap_err()
+        )
+        .contains("Pick one up first")
+    );
     for hot in [false, true] {
         let mut world = base.clone();
+        grab_battle_club(&mut world, id, ObjectId(1), Some("right")).unwrap();
+        pass_seconds(&mut world, 30);
         if hot {
             install_test_myomer(&mut world, id);
             myomer_test_heat(&mut world, id, 20.0, 9.0);
@@ -2063,7 +2089,12 @@ async fn charge_collision_hit_miss_and_saved_recovery() {
             assert!(report.target_impacts.is_empty());
             assert!(report.attacker_impacts.is_empty());
             assert!(report.balance.is_empty());
-            assert_eq!(world.btech.constructed_units()[&target], before);
+            // A miss leaves the target untouched but for having been charged this turn
+            // (Total Warfare p. 148).
+            assert_eq!(
+                unassaulted(&world, target),
+                serde_json::to_value(&before).unwrap()
+            );
             assert_eq!(
                 world.btech.constructed_units()[&id].motion().unwrap().speed,
                 21.5
@@ -2832,8 +2863,17 @@ async fn charge_immobility_includes_unconscious_pilots() {
     world.validate(&config).unwrap();
 }
 
+/// A unit's saved state with the mark of having been charged, pushed or landed on this turn
+/// checked and cleared: a missed attack changes nothing else about its target.
+fn unassaulted(world: &stompymux_rs::World, id: ObjectId) -> serde_json::Value {
+    let mut state = serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap();
+    assert_eq!(state["assaulted_at"], world.btech.simulation_time());
+    state["assaulted_at"] = serde_json::Value::Null;
+    state
+}
+
 /// Piloting five aims a DFA at five against an immobile target: a two misses and a twelve hits.
-fn dfa_piloting(world: &mut stompymux_rs::World) {
+pub(crate) fn dfa_piloting(world: &mut stompymux_rs::World) {
     stompymux_rs::set_battle_character_value(
         world,
         ObjectId(1),
@@ -2850,7 +2890,7 @@ fn dfa_piloting(world: &mut stompymux_rs::World) {
 /// Attacker dice whose resolved DFA satisfies `accept`, which inspects the report and the world
 /// it left behind. Sixteen seed bits keep rare combinations of attack, landing and injury rolls
 /// reachable.
-fn dfa_dice(
+pub(crate) fn dfa_dice(
     world: &stompymux_rs::World,
     id: ObjectId,
     target: ObjectId,
@@ -2943,7 +2983,10 @@ async fn dfa_damage_hit_miss_and_saved_recovery() {
             // A miss is a two-level fall onto the back: three times tonnage over ten.
             assert!(report.target_impacts.is_empty());
             assert!(report.attacker_impacts.is_empty());
-            assert_eq!(world.btech.constructed_units()[&target], before);
+            assert_eq!(
+                unassaulted(&world, target),
+                serde_json::to_value(&before).unwrap()
+            );
             assert_eq!(
                 world.btech.constructed_units()[&id].posture(),
                 Posture::Prone
@@ -7050,14 +7093,18 @@ async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
     let (_dir, config, mut world, id) = fixture('.').await;
     install_test_myomer(&mut world, id);
     let map_id = world.btech.constructed_units()[&id].position().unwrap().map;
+    // Away from standard gravity the walking MP is divided by the G-rating and rounded to the
+    // nearest whole MP, halves down, and running is figured from it; a map of no gravity counts
+    // as a hundredth of a G (Tactical Operations: Advanced Rules p. 53). The Jenner walks 7,
+    // 6 at heat 5 and 8 with hot myomer.
     for (heat, gravity, expected) in [
         (4.999, 100, 118.25),
         (8.999, 100, 96.75),
         (9.0, 100, 129.0),
         (9.0, 50, 258.0),
-        (9.0, 0, 258.0),
+        (9.0, 0, 12900.0),
         (9.0, 200, 64.5),
-        (4.999, 200, 59.125),
+        (4.999, 200, 53.75),
     ] {
         myomer_test_heat(&mut world, id, 30.0, heat);
         world

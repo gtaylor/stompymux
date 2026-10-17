@@ -41,6 +41,9 @@ pub struct ChargeReport {
     pub profile: ChargeProfile,
     pub roll: u8,
     pub hit: bool,
+    /// The roll met the target number exactly: the target takes half damage, less likely to
+    /// find a critical (Tactical Operations: Advanced Rules p. 78).
+    pub glancing: bool,
     pub target_impacts: Vec<TacticalImpact>,
     /// Eligible per-packet piloting awards; recoil never awards attack XP.
     pub experience: Vec<ExperienceAward>,
@@ -156,15 +159,22 @@ fn charge_profile_for(
         !source.fired_this_turn(world.btech.simulation_time()),
         "You fired weapons this turn and cannot also charge."
     );
-    if role != ChargeRole::OneWay {
-        ensure!(
-            !source
-                .pilot()
-                .is_some_and(|pilot| world.btech.unconscious(pilot))
-                && source.stun_remaining() == 0,
-            "You are unable to charge while unconscious or stunned"
-        );
-    }
+    super::recent_fire::require_unassaulted(world, target)?;
+    // A unit that jumped this turn may not charge (Total Warfare p. 148).
+    ensure!(
+        !source.jumped_this_turn(world.btech.simulation_time()),
+        "You jumped this turn and cannot also charge."
+    );
+    // A charge automatically misses if the attacking pilot is unconscious (Total Warfare
+    // p. 148); the realtime charge is refused instead, leaving the unit free to act once the
+    // pilot comes round.
+    ensure!(
+        !source
+            .pilot()
+            .is_some_and(|pilot| world.btech.unconscious(pilot))
+            && source.stun_remaining() == 0,
+        "You are unable to charge while unconscious or stunned"
+    );
     let motion = source.motion().context("Unit is not placed")?;
     let opponent = victim.motion().context("Target is not placed")?;
     ensure!(
@@ -186,6 +196,11 @@ fn charge_profile_for(
                     victim.elevation_level(target_tile)
                 )),
             "You cannot reach a target under the water from where you stand."
+        );
+        // A 'Mech charges another only within one level of its own (Total Warfare p. 150).
+        ensure!(
+            (source.elevation_level(tile) - victim.elevation_level(target_tile)).abs() <= 1,
+            "Your target is more than one level away; you cannot charge it."
         );
     }
     let range = unit_range(world, attacker, target)?;
@@ -291,7 +306,9 @@ struct ChargePackets {
 
 /// Apply independently located packets in order, including normal damage/crew/fall cascades.
 /// `table` is the Hit Location Table for a standing target; a prone one always uses the
-/// ordinary table.
+/// ordinary table. `critical_penalty` comes off every Determining Critical Hits roll, as for
+/// a glancing blow.
+#[allow(clippy::too_many_arguments)]
 fn packets(
     world: &mut World,
     id: ObjectId,
@@ -300,6 +317,7 @@ fn packets(
     table: HitTable,
     rules: FallRules,
     attack: (ObjectId, bool),
+    critical_penalty: u8,
 ) -> Result<ChargePackets> {
     let (attacker, character) = attack;
     let mut reports = Vec::new();
@@ -341,7 +359,7 @@ fn packets(
             experience.push(award.award);
             experience_messages.extend(award.message);
         }
-        let report = super::impact::resolve_attack_in_candidate(
+        let report = super::impact::resolve_attack_in_candidate_with_penalty(
             world,
             id,
             hit,
@@ -353,6 +371,7 @@ fn packets(
                 character,
                 followup: true,
             },
+            critical_penalty,
         )?;
         reports.push(report);
         damage -= group;
@@ -420,6 +439,7 @@ fn resolve_charge_inner(
             target_table: HitTable::Weapon,
         },
     )?;
+    super::recent_fire::mark_assaulted(&mut candidate, target);
     *world = candidate;
     Ok(report)
 }
@@ -554,6 +574,9 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
             profile.target_arc = HitArc::from_bearing(range.bearing.unwrap_or(180.0), heading)?;
         }
         let hit = i32::from(roll) >= profile.target_number;
+        // Tactical Operations glancing blows: meeting the target number exactly halves the
+        // damage the target takes (Tactical Operations: Advanced Rules p. 78).
+        let glancing = hit && i32::from(roll) == profile.target_number;
         let target_number = profile.target_number;
         let mut report = ChargeReport {
             attacker,
@@ -561,6 +584,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
             profile,
             roll,
             hit,
+            glancing,
             target_impacts: vec![],
             experience: vec![],
             experience_messages: vec![],
@@ -603,14 +627,34 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
             // A charger with torso spikes drives them home, and risks losing them.
             let charged_with_spikes =
                 world.btech.constructed_units()[&attacker].torso_spike_clusters()? > 0;
+            if glancing {
+                report.notices.extend(super::broadcast::observer_notices(
+                    world,
+                    target,
+                    "is nicked by a glancing blow!",
+                ));
+                report.notices.push(Notice {
+                    unit: target,
+                    text: "You are nicked by a glancing blow!".into(),
+                });
+            }
+            let (inflicted, penalty) = if glancing {
+                (
+                    report.profile.inflicted_damage / 2,
+                    super::impact::GLANCING_CRITICAL_PENALTY,
+                )
+            } else {
+                (report.profile.inflicted_damage, 0)
+            };
             let target_packets = packets(
                 world,
                 target,
-                report.profile.inflicted_damage,
+                inflicted,
                 report.profile.target_arc,
                 target_table,
                 target_rules,
                 (attacker, character),
+                penalty,
             )?;
             report.target_impacts = target_packets.impacts;
             // The target's spikes wound the charger's center torso.
@@ -648,6 +692,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
                 HitTable::Weapon,
                 attacker_rules,
                 (attacker, character),
+                0,
             )?;
             if charged_with_spikes {
                 super::spikes::tear_away(world, attacker, &recoil.spiked, &mut report.notices)?;
@@ -871,6 +916,7 @@ fn resolve_mutual_charge_inner(
         .restored_after_forward_arc()
         .merge(other_torso);
     let accepted = profiles.iter().any(Result::is_ok);
+    let charged = [profiles[1].is_ok(), profiles[0].is_ok()];
     for (index, profile) in profiles.iter().enumerate() {
         if let Err(error) = profile {
             let reason = format!("{error:#}");
@@ -940,6 +986,11 @@ fn resolve_mutual_charge_inner(
         }
         start_recovery(&mut candidate, first);
         start_recovery(&mut candidate, second);
+        for (unit, charged) in [first, second].into_iter().zip(charged) {
+            if charged {
+                super::recent_fire::mark_assaulted(&mut candidate, unit);
+            }
+        }
     }
     candidate.btech.validate_action(&candidate)?;
     *world = candidate;

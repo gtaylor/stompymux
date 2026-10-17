@@ -309,7 +309,8 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
 }
 
 /// Hot myomer raises the walking ceiling by two MP (Total Warfare p. 139), so a speed that
-/// is a run just under nine heat is a walk at nine and records no run for the turn's check.
+/// is a run just under nine heat is a walk at nine and records no run for the turn's check;
+/// a shut-down unit, its crew awake or not, makes no recurring roll.
 #[tokio::test]
 async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
     let template = include_str!("../game/units/OTL-6D.toml");
@@ -357,21 +358,13 @@ async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
                         .conscious
                 );
             }
+            // Neither a shutdown nor an unconscious crew forces a roll by itself, on any
+            // tick of the turn (Total Warfare pp. 59-60); a vehicle never rolls at all (p. 68).
             for tick in [28, 29, 0, 1] {
                 let mut world = ready.clone();
                 phase(&mut world, tick);
                 let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
-                // A vehicle neither rolls nor falls (Total Warfare p. 68); only a 'Mech does.
-                let expected = unconscious
-                    && [29, 0].contains(&tick)
-                    && world.btech.constructed_units().contains_key(&unit);
-                assert_eq!(reports.len(), usize::from(expected));
-                if expected {
-                    assert_eq!(reports[0].check.roll, None);
-                    assert_eq!(reports[0].check.situational, 3);
-                    assert!(!reports[0].check.success);
-                    assert!(reports[0].fall.is_some());
-                }
+                assert!(reports.is_empty(), "{tick} {unconscious}");
             }
         }
     }
@@ -573,4 +566,53 @@ async fn idle_clock_wraps_is_stored_at_shutdown_and_resumes_from_saved_phase() {
             sql.close().await.unwrap();
         })
         .await;
+}
+
+/// A vehicle that outran its standard-gravity flank speed on a light world rolls at the turn's
+/// end; a failure costs a point of front internal structure for every MP over and one roll on
+/// the Motive System Damage Table (Tactical Operations: Advanced Rules p. 53). Standard gravity
+/// and the other ticks of the turn roll nothing.
+#[tokio::test]
+async fn vehicle_gravity_strain_damages_the_front_and_rolls_motive_damage() {
+    let template = include_str!("../game/units/Demolisher.toml");
+    let (_dir, config, mut base, unit, _, _) =
+        firing::fixture_with_target(template, None, template).await;
+    let map = base.btech.units()[&unit].map.unwrap();
+    // Two MP over normal flank speed, a fraction counting as a whole point.
+    firing::edit(&mut base, unit, |s| {
+        s["turn_movement"]["gravity_excess"] = 12.0.into();
+    });
+    let fail = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+        .unwrap();
+    firing::edit(&mut base, unit, |s| {
+        s["dice"] = serde_json::to_value(Dice::seeded([fail; 32])).unwrap();
+    });
+    for (gravity, tick) in [(50, 0), (100, 0), (50, 1)] {
+        let mut world = base.clone();
+        world
+            .btech
+            .rewrite_map_record(map, |record| record["gravity"] = gravity.into())
+            .unwrap();
+        phase(&mut world, tick);
+        let front = world.btech.vehicles()[&unit].sections()[&VehicleSection::Front].internal;
+        let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
+        if gravity == 100 || tick != 0 {
+            assert!(reports.is_empty(), "{gravity} {tick}");
+            continue;
+        }
+        assert_eq!(reports.len(), 1);
+        let report = &reports[0];
+        assert_eq!(report.unit, unit);
+        assert_eq!(report.gravity_damage, 2);
+        assert!(!report.check.success);
+        let damage = report.vehicle_damage.as_ref().unwrap();
+        assert_eq!(damage.section, VehicleSection::Front);
+        assert_eq!(damage.incoming, 2);
+        let after = &world.btech.vehicles()[&unit];
+        assert!(after.sections()[&VehicleSection::Front].internal < front);
+        // The turn record starts afresh.
+        assert_eq!(after.turn_movement().gravity_excess, 0.0);
+        world.validate(&config).unwrap();
+    }
 }

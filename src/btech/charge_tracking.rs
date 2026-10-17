@@ -56,6 +56,10 @@ pub fn select_charge(
     pilot: ObjectId,
     selection: ChargeSelection,
 ) -> Result<Vec<Notice>> {
+    // A vehicle's charge is a ram (Total Warfare p. 148).
+    if world.btech.vehicles().contains_key(&id) {
+        return super::ram::select(world, id, pilot, selection);
+    }
     super::power::controlled_unit(world, id, pilot)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(
@@ -80,6 +84,11 @@ pub fn select_charge(
         ChargeSelection::Cancel => unreachable!("cancellation handled above"),
     };
     ensure!(target != id, "Cannot charge yourself");
+    // Vehicles may be charged only by other vehicles (Total Warfare p. 148).
+    ensure!(
+        !world.btech.vehicles().contains_key(&target),
+        "A 'Mech cannot charge a vehicle."
+    );
     let victim = world
         .btech
         .constructed_units()

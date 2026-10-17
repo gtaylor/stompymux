@@ -901,13 +901,9 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         (VehicleMovement::Tracked, true, 0, false),
     ] {
         let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
-        // The fracture die comes first; a vehicle that stays on the ice then rolls at +0 to keep
-        // its grip, and these seeds keep it.
+        // The fracture die is the only roll entering the ice takes.
         let seed = (0..=255)
-            .find(|seed| {
-                let mut dice = Dice::seeded([*seed; 32]);
-                (dice.d6() == 1) == fracture && (fracture || dice.two_d6() >= 11)
-            })
+            .find(|seed| (Dice::seeded([*seed; 32]).d6() == 1) == fracture)
             .unwrap();
         let neighbor = world.create(&config, "Waterproof neighbor".into(), Kind::Thing);
         world.objects.get_mut(&neighbor).unwrap().home = Some(ObjectId(config.home()));
@@ -984,11 +980,10 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             );
             assert_eq!(unit.motion().unwrap().active(), !(fracture && depth > 0));
             if !fracture || depth == 0 {
+                // Only the fracture die: crossing ice carefully takes no driving roll
+                // (Tactical Operations: Advanced Rules pp. 48, 63).
                 let mut dice = Dice::seeded([seed; 32]);
                 dice.d6();
-                if !fracture {
-                    dice.two_d6();
-                }
                 assert_eq!(
                     serde_json::to_value(unit).unwrap()["dice"],
                     serde_json::to_value(dice).unwrap()
@@ -1086,10 +1081,11 @@ async fn amphibious_vehicle_rides_the_water_surface_at_half_speed() {
             continue;
         }
         entered = true;
-        // Stepping from the surface onto the ice sheet takes the ordinary fracture and
-        // driving rolls, so the dice have moved on.
+        // Stepping from the surface onto the ice sheet takes the ordinary fracture roll, so
+        // the dice have moved on; careful movement needs no driving roll (Tactical
+        // Operations: Advanced Rules pp. 48, 63).
         assert_ne!(serde_json::to_value(unit).unwrap()["dice"], dice);
-        assert!(notices.iter().any(|n| n.text.contains("ease onto the ice")));
+        assert!(!notices.iter().any(|n| n.text.contains("ease onto the ice")));
         persistence::save(&config.database(), &world).await.unwrap();
         assert_eq!(
             persistence::load(&config.database()).await.unwrap().btech,
@@ -1413,10 +1409,15 @@ async fn hovercraft_sideslips_after_a_flank_speed_turn_on_clear_ground() {
                         .iter()
                         .any(|n| n.text == "You lose your line and sideslip!")
                 );
-                assert!(notices.iter().any(|n| n.text.starts_with("You drift into")));
-                // The drift carries it on along its old eastward course, undamaged.
+                // The drift carries it on along its old eastward course, undamaged, for one
+                // hex fewer than the four it had entered at its speed, the most the margin of
+                // failure allows (Total Warfare p. 67).
+                let drifts = notices
+                    .iter()
+                    .filter(|n| n.text.starts_with("You drift into"))
+                    .count();
+                assert_eq!(drifts, 3);
                 assert!(unit.position().unwrap().x > start.x);
-                assert_eq!(unit.position().unwrap().y, start.y);
                 assert_eq!(unit.motion().unwrap().speed, 0.0);
                 assert_eq!(unit.sections(), before.btech.vehicles()[&id].sections());
                 assert!(!unit.immobilized());
@@ -1673,4 +1674,56 @@ async fn a_skidding_vehicle_charges_units_and_is_stuck_by_prohibited_terrain() {
         assert!(skidded, "{obstacle}");
         world.validate(&config).unwrap();
     }
+}
+
+/// A hovercraft that sideslips off a drop deeper than the one level it may change falls into
+/// the lower hex and takes falling damage, as any skidding unit does (Total Warfare pp. 62-63,
+/// 67).
+#[tokio::test]
+async fn hovercraft_sideslipping_off_a_cliff_falls() {
+    let (_dir, config, mut world, id, map) = fixture_movement(VehicleMovement::Hover).await;
+    // A three-level shelf under the first four columns, open ground beyond.
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            for y in 0..3 {
+                for x in 0..4 {
+                    support::set_hex_elevation(&mut record["terrain"][y * 20 + x], 3);
+                }
+            }
+        })
+        .unwrap();
+    let speed = world.btech.vehicles()[&id].maximum_speed();
+    let seed = (0..=255)
+        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+        .unwrap();
+    let mut saved = serde_json::to_value(&world.btech).unwrap();
+    let unit = &mut saved["vehicles"][id.0.to_string()];
+    unit["motion"]["heading"] = 90.0.into();
+    unit["motion"]["desired_heading"] = 150.0.into();
+    unit["motion"]["speed"] = speed.into();
+    unit["motion"]["desired_speed"] = speed.into();
+    unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+    world.btech = serde_json::from_value(saved).unwrap();
+    for _ in 0..40 {
+        let before = world.btech.vehicles()[&id].sections().clone();
+        let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        if !notices.iter().any(|n| n.text.contains("sideslip!")) {
+            continue;
+        }
+        assert!(
+            notices.iter().any(|n| n.text.contains("tumble down")),
+            "{notices:?}"
+        );
+        let unit = &world.btech.vehicles()[&id];
+        assert_eq!(battle_unit_elevation(&world, id).unwrap(), Some(0));
+        assert_ne!(unit.sections(), &before);
+        // A three-level drop multiplies the tonnage over ten by four (Total Warfare p. 68).
+        let damage = u32::from(unit.definition().tons).div_ceil(10) * 4;
+        let hit = format!("hit for {damage} points");
+        assert!(notices.iter().any(|n| n.text.contains(&hit)), "{notices:?}");
+        world.validate(&config).unwrap();
+        return;
+    }
+    panic!("the hovercraft never sideslipped");
 }

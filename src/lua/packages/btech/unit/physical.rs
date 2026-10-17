@@ -1,4 +1,5 @@
-//! Mech physical attack commands: club swings, grab-club, charges, kicks, trips, arm weapons, and arm flips.
+//! Mech physical attack commands: club swings, grab-club, charges, kicks, trips, pushes, arm
+//! weapons, and arm flips.
 
 use super::super::*;
 
@@ -100,6 +101,25 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         )?;
         native.set(name, error::wrap(lua, callback, "btech.operation.failed")?)?;
     }
+    let push = lua.create_function(|lua, (id, pilot, target): (i64, i64, Option<i64>)| {
+        crate::lua::transactions::require(lua)?;
+        let scripts = crate::Scripts::services(lua)?;
+        crate::lua::transactions::run(lua, &scripts.world, || {
+            let report = crate::btech::push::configured_push(
+                &scripts,
+                &crate::lua::configuration(lua),
+                ObjectId(id),
+                ObjectId(pilot),
+                target.map(ObjectId),
+            )
+            .map_err(mlua::Error::external)?;
+            detached(lua, &report)
+        })
+    })?;
+    native.set(
+        "unit_push",
+        error::wrap(lua, push, "btech.operation.failed")?,
+    )?;
     for (name, kind) in [
         ("unit_punch", crate::ArmAttack::Punch.into()),
         ("unit_axe", crate::ArmAttack::Axe.into()),
@@ -110,7 +130,14 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
         ("unit_melee", crate::ArmWeapon::Installed),
     ] {
         let callback = lua.create_function(
-            move |lua, (id, pilot, leg, target): (i64, i64, Option<String>, Option<i64>)| {
+            move |lua,
+                  (id, pilot, leg, target, second): (
+                i64,
+                i64,
+                Option<String>,
+                Option<i64>,
+                Option<i64>,
+            )| {
                 crate::lua::transactions::require(lua)?;
                 let scripts = crate::Scripts::services(lua)?;
                 crate::lua::transactions::run(lua, &scripts.world, || {
@@ -122,6 +149,7 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
                         ObjectId(pilot),
                         leg.as_deref(),
                         target.map(ObjectId),
+                        second.map(ObjectId),
                         kind,
                     )
                     .map_err(mlua::Error::external)?;

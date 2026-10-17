@@ -24,10 +24,6 @@ impl TurnClock {
     pub(crate) fn advance(&mut self) {
         self.0 = (self.0 + 1) % 30;
     }
-    /// Both the last odd tick and the following even tick belong to the turn boundary.
-    pub(super) fn due(self) -> bool {
-        self.0 == 29 || self.0 == 0
-    }
     /// Whether this is the first phase of a turn, for effects that happen once a turn.
     pub(super) fn starts_turn(self) -> bool {
         self.0 == 0
@@ -43,13 +39,13 @@ impl TurnClock {
 mod tests {
     use super::*;
 
-    /// Odd/even turn boundaries recur together, and saved phases cannot exceed one turn.
+    /// A turn starts every thirty phases, and saved phases cannot exceed one turn.
     #[test]
     fn phase_wrap_and_rounding_are_bounded() {
         let mut clock = TurnClock::default();
         for elapsed in 1..=90 {
             clock.advance();
-            assert_eq!(clock.due(), matches!(elapsed % 30, 0 | 29));
+            assert_eq!(clock.starts_turn(), elapsed % 30 == 0);
             assert_eq!(
                 serde_json::from_value::<TurnClock>(serde_json::to_value(clock).unwrap()).unwrap(),
                 clock

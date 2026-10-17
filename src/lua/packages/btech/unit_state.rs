@@ -166,6 +166,7 @@ pub(super) fn register(lua: &Lua, native: &Table, world: &SharedWorld) -> mlua::
             state.set("artillery_adjustment", vehicle.artillery_adjustment())?;
             state.set("spotter", vehicle.spotter().map(|id| id.0))?;
             state.set("last_weapon_fire", vehicle.last_weapon_fire())?;
+            state.set("physical_assault_time", vehicle.physical_assault_time())?;
             state.set("electronics", detached(lua, &vehicle.electronics())?)?;
             state.set("flooded", vehicle.flooded())?;
             state.set("crew_killed", vehicle.crew_killed())?;

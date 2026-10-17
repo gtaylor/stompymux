@@ -258,16 +258,15 @@ impl Hex {
 
     /// Modifier for the piloting or driving roll a ground unit must make just to enter this
     /// hex, or `None` when entering takes no roll. 'Mechs roll at +0 to cross rubble and at +1
-    /// to cross ultra rubble (Total Warfare p. 52, Tactical Operations p. 32). Every ground
-    /// unit but a hovercraft rolls at +0 when it steps onto ice (Tactical Operations p. 48);
-    /// that roll does not take the +4 ice gives rolls forced in the hex. A road cleared through
-    /// the terrain takes no roll, and neither does a structure crossed on its roof or deck.
+    /// to cross ultra rubble (Total Warfare p. 52, Tactical Operations p. 32). Ice takes no
+    /// entry roll: its extra movement point is the price of Careful Movement, which crosses
+    /// it without mishap (Tactical Operations: Advanced Rules pp. 48, 63). The realtime game
+    /// has no announcement of full-speed movement, so every unit moves carefully. A road
+    /// cleared through the terrain takes no roll, and neither does a structure crossed on its
+    /// roof or deck.
     pub fn entry_piloting_modifier(self, movement: GroundMovement) -> Option<i16> {
-        if self.is_road() || self.structure().is_some() {
+        if self.is_road() || self.structure().is_some() || self.is_icy() {
             return None;
-        }
-        if self.is_icy() {
-            return (movement != GroundMovement::Hover).then_some(0);
         }
         if movement != GroundMovement::Legged || !self.is_bare() {
             return None;
@@ -592,13 +591,13 @@ mod tests {
         assert_eq!(snowy_road.piloting_modifier(Tracked, 0), 1);
     }
 
-    /// 'Mechs roll to cross rubble and ultra rubble, everything but a hovercraft rolls to step
-    /// onto ice, and a road or structure takes no roll.
+    /// 'Mechs roll to cross rubble and ultra rubble; ice, crossed carefully, takes no roll,
+    /// and neither does a road or structure.
     #[test]
-    fn rubble_and_ice_take_entry_rolls() {
+    fn rubble_takes_entry_rolls_and_ice_does_not() {
         for terrain in Terrain::ALL {
             let expected = match terrain {
-                Terrain::Rubble | Terrain::Ice => Some(0),
+                Terrain::Rubble => Some(0),
                 Terrain::UltraRubble => Some(1),
                 _ => None,
             };
@@ -607,10 +606,9 @@ mod tests {
                 expected,
                 "{terrain:?}"
             );
-            let vehicle = (terrain == Terrain::Ice).then_some(0);
             assert_eq!(
                 Hex::new(terrain, 0).entry_piloting_modifier(Tracked),
-                vehicle,
+                None,
                 "{terrain:?}"
             );
             assert_eq!(
@@ -622,7 +620,8 @@ mod tests {
         let cleared = Hex::new(Terrain::UltraRubble, 0).with_route(Some(Route::PavedRoad));
         assert_eq!(cleared.entry_piloting_modifier(Legged), None);
         let icy_field = Hex::new(Terrain::Clear, 0).with_condition(Some(Condition::Ice));
-        assert_eq!(icy_field.entry_piloting_modifier(Wheeled), Some(0));
+        assert_eq!(icy_field.entry_piloting_modifier(Wheeled), None);
+        assert_eq!(icy_field.entry_piloting_modifier(Legged), None);
         let icy_road = icy_field.with_route(Some(Route::DirtRoad));
         assert_eq!(icy_road.entry_piloting_modifier(Wheeled), None);
     }

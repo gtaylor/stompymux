@@ -102,22 +102,33 @@ pub(super) fn attacked_this_turn(world: &World, id: ObjectId) -> bool {
         .is_some_and(|time| now.saturating_sub(time) < TURN_SECONDS)
 }
 
-/// Record a charge or death-from-above attack, which bars the unit from spotting for a turn.
+/// Record a charge, ram or death-from-above attack, which bars the unit from spotting for a
+/// turn.
 pub(super) fn record_physical_assault(world: &mut World, id: ObjectId) {
     let now = world.btech.simulation_time();
     if let Some(unit) = world.btech.constructed.get_mut(&id) {
         unit.physical_assault_time = Some(now);
+    } else if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
+        vehicle.physical_assault_time = Some(now);
     }
 }
 
 /// Why a unit may not spot right now (TW p. 111, p. 141), or `None` when it may: a Haywire
-/// pod attached, or a charge or death-from-above attack under way or made within the turn.
+/// pod attached, or a charge, ram or death-from-above attack under way or made within the
+/// turn (TW p. 112).
 pub(super) fn spotting_prohibited(world: &World, id: ObjectId) -> Option<&'static str> {
     if super::narc::has_beacon(world, id, BeaconKind::Haywire) {
         return Some("cannot spot with an iNarc Haywire pod attached");
     }
-    let unit = world.btech.constructed_units().get(&id)?;
     let now = world.btech.simulation_time();
+    if let Some(vehicle) = world.btech.vehicles().get(&id) {
+        let ramming = vehicle.charge.target.is_some()
+            || vehicle
+                .physical_assault_time()
+                .is_some_and(|time| now.saturating_sub(time) < TURN_SECONDS);
+        return ramming.then_some("cannot spot in the turn of a charge or death from above attack");
+    }
+    let unit = world.btech.constructed_units().get(&id)?;
     let assaulting = unit.charge().target.is_some()
         || unit
             .flight()

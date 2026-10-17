@@ -80,7 +80,8 @@ async fn ice_falls_damage_then_flood_ground_vehicles_and_leave_hovercraft_unchan
     assert_eq!(report.falls.len(), 1);
     assert_eq!(report.vehicle_falls.len(), 1);
     assert_eq!(report.vehicle_falls[0].0, ids[1]);
-    assert_eq!(report.vehicle_falls[0].1.damage, 12);
+    // Three levels down through the ice: the levels fallen plus one (Total Warfare p. 68).
+    assert_eq!(report.vehicle_falls[0].1.damage, 16);
     assert_eq!(report.flooded_vehicles, [ids[1]]);
     assert!(world.btech.vehicles()[&ids[1]].flooded());
     assert_eq!(world.btech.vehicles()[&ids[2]], hover);
@@ -194,7 +195,8 @@ async fn vehicle_fall_fractures_ice_before_outer_damage_and_replays_nested_falls
     );
     assert_eq!(world.btech, restored.btech);
     let fracture = fall.ice_break.as_ref().unwrap();
-    assert_eq!(fracture.vehicle_falls[0].1.damage, 12);
+    // Three levels down through the ice: the levels fallen plus one (Total Warfare p. 68).
+    assert_eq!(fracture.vehicle_falls[0].1.damage, 16);
     assert_eq!(fall.damage, 4);
     assert!(world.btech.vehicles()[&id].flooded());
     assert!(!fall.groups.is_empty());

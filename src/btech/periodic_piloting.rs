@@ -1,6 +1,8 @@
 //! Heartbeat stability checks share piloting, fall, internal-damage and transaction services.
-//! Only 'Mechs make them: a vehicle neither falls nor rolls to keep its footing (Total Warfare
-//! p. 68), so a shut-down vehicle with an unconscious crew simply sits where it is.
+//! 'Mechs roll to keep their footing; a vehicle neither falls nor rolls to keep its footing
+//! (Total Warfare p. 68), so a shut-down vehicle with an unconscious crew simply sits where it
+//! is. Both chassis roll at the end of a turn they outran their standard-gravity speed on a
+//! light world (Tactical Operations: Advanced Rules p. 53).
 use super::{MechFallReport, MechSection, Notice, PilotingCheck, Power, TacticalImpact};
 use crate::{Config, Flag, ObjectId, Scripts, World};
 use anyhow::Result;
@@ -49,6 +51,13 @@ impl super::Mech {
     }
 }
 
+impl super::Vehicle {
+    /// What the vehicle has done since the last turn-clock boundary.
+    pub fn turn_movement(&self) -> TurnMovement {
+        self.turn_movement
+    }
+}
+
 /// Completed heartbeat check and all immediate consequences, suitable for deterministic replay.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PeriodicPiloting {
@@ -59,6 +68,8 @@ pub struct PeriodicPiloting {
     pub gravity_damage: u16,
     pub fall: Option<MechFallReport>,
     pub impacts: Vec<TacticalImpact>,
+    /// The front internal damage a vehicle's failed gravity strain roll did.
+    pub vehicle_damage: Option<super::VehicleInternalDamage>,
     /// Private feedback from nested falls and gravity impacts.
     pub pilot_notices: Vec<super::PilotNotice>,
     pub notices: Vec<Notice>,
@@ -77,13 +88,9 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
     let _ = config;
     let mut modifier = None;
     let mut gravity_damage = 0;
-    if world.btech.turn_clock.due()
-        && unit.power() != Power::Running
-        && unit.posture() != super::Posture::Prone
-        && !unit.airborne()
-    {
-        modifier = Some(3);
-    }
+    // Being shut down, or having an unconscious MechWarrior, forces no roll of its own: the
+    // +3 for a shutdown is made only in the phase the reactor shuts down, and a roll the
+    // 'Mech must make then fails automatically (Total Warfare pp. 59-60).
     if !world.btech.turn_clock.starts_turn()
         || unit.posture() == super::Posture::Prone
         || unit.airborne()
@@ -158,6 +165,7 @@ pub fn advance_periodic_piloting(
             gravity_damage,
             fall: None,
             impacts: Vec::new(),
+            vehicle_damage: None,
             pilot_notices: Vec::new(),
             notices: Vec::new(),
             experience_messages,
@@ -214,6 +222,115 @@ pub fn advance_periodic_piloting(
                 fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
                 report.fall = Some(fall);
             }
+        }
+        reports.push(report);
+    }
+    reports.extend(advance_vehicle_strain(world, config, boundary)?);
+    Ok(reports)
+}
+
+/// MP by which a vehicle outran its standard-gravity flank speed this turn on a map of
+/// non-standard gravity, rounded up, if it did; checked once a turn.
+fn vehicle_strain(world: &World, id: ObjectId) -> Option<u16> {
+    let vehicle = &world.btech.vehicles()[&id];
+    if vehicle.is_destroyed() || vehicle.power() != Power::Running {
+        return None;
+    }
+    let map = world.btech.maps().get(&vehicle.position()?.map)?;
+    let excess = vehicle.turn_movement.gravity_excess;
+    if map.gravity == 100 || excess <= 0.0 {
+        return None;
+    }
+    Some(
+        (excess / super::MP_KPH)
+            .ceil()
+            .clamp(1.0, f64::from(u16::MAX)) as u16,
+    )
+}
+
+/// Moving faster than its normal flanking speed under light gravity strains a vehicle: one
+/// driving roll at the turn's end, and on a failure one point of front internal structure
+/// damage for every MP over that speed, with the critical roll that damage takes, and a
+/// single roll on the Motive System Damage Table (Tactical Operations: Advanced Rules p. 53).
+fn advance_vehicle_strain(
+    world: &mut World,
+    config: &Config,
+    boundary: bool,
+) -> Result<Vec<PeriodicPiloting>> {
+    let ids: Vec<_> = world
+        .btech
+        .vehicles()
+        .keys()
+        .copied()
+        .filter(|id| {
+            world
+                .objects
+                .get(id)
+                .is_some_and(|o| !o.flags.contains(Flag::Going))
+        })
+        .collect();
+    let mut reports = Vec::new();
+    for id in ids {
+        let strain = if boundary {
+            vehicle_strain(world, id)
+        } else {
+            None
+        };
+        if boundary {
+            world.btech.vehicles.get_mut(&id).unwrap().turn_movement = TurnMovement::default();
+        }
+        let Some(over) = strain else {
+            continue;
+        };
+        let rules = super::FallRules::configured(config);
+        let check = super::roll_piloting(world, id, 0, rules.extended_piloting)?;
+        let pilot = world.btech.vehicles()[&id].pilot();
+        let mut report = PeriodicPiloting {
+            unit: id,
+            check,
+            pilot,
+            gravity_damage: over,
+            fall: None,
+            impacts: Vec::new(),
+            vehicle_damage: None,
+            pilot_notices: Vec::new(),
+            notices: Vec::new(),
+            experience_messages: Vec::new(),
+        };
+        if !check.success {
+            report.notices.push(Notice {
+                unit: id,
+                text: "Your drive train strains under the light gravity!".into(),
+            });
+            let front = world.btech.vehicles()[&id]
+                .sections()
+                .get(&super::VehicleSection::Front)
+                .is_some_and(|state| state.internal > 0);
+            if front {
+                let damage = super::vehicle_internal_damage::resolve_in_candidate(
+                    world,
+                    id,
+                    super::VehicleSection::Front,
+                    u32::from(over),
+                    rules.vehicle_impact.criticals,
+                    Default::default(),
+                )?;
+                report.notices.extend(damage.notices.iter().cloned());
+                for broadcast in &damage.broadcasts {
+                    report.notices.extend(super::broadcast::observer_notices(
+                        world,
+                        id,
+                        &broadcast.text,
+                    ));
+                }
+                super::piloting::append_feedback(
+                    &mut report.pilot_notices,
+                    damage.pilot_notices.iter().cloned(),
+                    report.notices.len(),
+                );
+                report.vehicle_damage = Some(damage);
+            }
+            report.notices.extend(super::ram::motive_roll(world, id)?);
         }
         reports.push(report);
     }

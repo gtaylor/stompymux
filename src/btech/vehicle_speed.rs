@@ -147,7 +147,10 @@ mod tests {
             (truck.cruising_speed(), truck.maximum_speed()),
             (21.5, 32.25)
         );
-        assert_eq!(truck.retained_envelope().walking, 43.0);
+        assert_eq!(
+            truck.retained_envelope().walking,
+            super::super::speed_bonus::saved_limit(21.5)
+        );
         truck.apply_motive_hit(VehicleMotiveHit::Immobilize);
         assert_eq!(truck.speed_envelope(), SpeedEnvelope::STOPPED);
         let mut wrecked = flatbed();

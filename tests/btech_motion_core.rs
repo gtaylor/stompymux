@@ -3016,7 +3016,9 @@ async fn successful_stand_is_upright_immediately_and_finishes_after_durable_dela
     let attempt = begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, fall_rules()).unwrap();
     assert!(attempt.check.success);
     assert!(attempt.fall.is_none());
-    assert_eq!(attempt.timer, Some(T::Rising { remaining: 5 }));
+    // Standing costs 2 MP (Total Warfare p. 50): at the Jenner's 11 running MP, a hex every
+    // sixty seconds each, ten whole seconds.
+    assert_eq!(attempt.timer, Some(T::Rising { remaining: 10 }));
     assert_eq!(
         world.btech.constructed_units()[&id].posture(),
         Posture::Standing
@@ -3029,12 +3031,12 @@ async fn successful_stand_is_upright_immediately_and_finishes_after_durable_dela
     assert!(set_battle_speed(&mut world, id, ObjectId(1), 10.0).is_err());
     assert!(begin_battle_stand(&mut world, id, ObjectId(1), M::Normal, fall_rules()).is_err());
     assert_eq!(world.btech, before);
-    for _ in 0..2 {
+    for _ in 0..4 {
         assert!(advance_battle_standing(&mut world).is_empty());
     }
     persistence::save(&config.database(), &world).await.unwrap();
     world = persistence::load(&config.database()).await.unwrap();
-    for _ in 0..2 {
+    for _ in 0..5 {
         assert!(advance_battle_standing(&mut world).is_empty());
     }
     assert_eq!(advance_battle_standing(&mut world).len(), 1);
@@ -3100,10 +3102,11 @@ async fn stand_command_inspection_and_impossible_target_guards_are_atomic() {
         .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() >= 6)
         .unwrap();
     shot_seed(&mut scripts.world_mut(), id, seed);
+    // A careful stand spends the whole turn (Tactical Operations: Advanced Rules p. 21).
     support::run_text(&scripts, &config, ObjectId(1), 1, "stand careful");
     assert_eq!(
         scripts.world().btech.constructed_units()[&id].stand_timer(),
-        Some(stompymux_rs::StandTimer::Rising { remaining: 10 })
+        Some(stompymux_rs::StandTimer::Rising { remaining: 30 })
     );
     let state: String = scripts
         .eval_callback(&format!(
@@ -3158,7 +3161,7 @@ async fn stand_completion_retries_failed_server_save_without_losing_timer() {
         let seed = (0..=255).find(|seed| stompymux_rs::Dice::seeded([*seed;32]).two_d6() >= 6).unwrap();
         shot_seed(&mut world, id, seed);
         let _attempt = stompymux_rs::begin_battle_stand(&mut world, id, ObjectId(1), stompymux_rs::StandMode::Normal, fall_rules()).unwrap();
-        for _ in 0..4 { stompymux_rs::advance_battle_standing(&mut world); }
+        for _ in 0..9 { stompymux_rs::advance_battle_standing(&mut world); }
         persistence::save(&config.database(), &world).await.unwrap();
         let before = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -7996,6 +7999,85 @@ async fn heat_slowed_mechs_fire_as_running_above_their_reduced_walking_speed() {
             "excess {excess}, speed {speed}"
         );
     }
+}
+
+/// Taking a whole turn to stand gives -2 only to a 'Mech with more than two walking MP
+/// (Tactical Operations: Advanced Rules pp. 21-22): a Jenner with a frozen hip and a damaged
+/// leg walking 2 MP gains nothing by it.
+#[tokio::test]
+async fn careful_stands_help_only_mechs_with_more_than_two_walking_mp() {
+    use stompymux_rs::{CriticalLocation, MechSection, StandMode as M, begin_battle_stand};
+    let (_dir, _config, mut intact, id) = stand_fixture().await;
+    let seed = (0..=255)
+        .find(|seed| stompymux_rs::Dice::seeded([*seed; 32]).two_d6() == 12)
+        .unwrap();
+    shot_seed(&mut intact, id, seed);
+    let mut lame = intact.clone();
+    for (section, slot) in [
+        (MechSection::LeftLeg, 0),
+        (MechSection::RightLeg, 1),
+        (MechSection::RightLeg, 2),
+    ] {
+        stompymux_rs::destroy_battle_critical(&mut lame, id, CriticalLocation { section, slot })
+            .unwrap();
+    }
+    assert_eq!(lame.btech.constructed_units()[&id].walking_speed(), 21.5);
+    for (world, bonus) in [(&intact, 2), (&lame, 0)] {
+        let target = |mode| {
+            let mut attempt = world.clone();
+            begin_battle_stand(&mut attempt, id, ObjectId(1), mode, fall_rules())
+                .unwrap()
+                .check
+                .target
+        };
+        assert_eq!(target(M::Careful), target(M::Normal) - bonus);
+    }
+}
+
+/// A quad's lateral shift costs a movement point more in every hex, and a shift into a rear
+/// side hex is backward movement, held to walking speed (Total Warfare pp. 50, 53).
+#[tokio::test]
+async fn rear_lateral_shifts_are_backward_and_cost_a_point_a_hex() {
+    use stompymux_rs::{LateralMode, LateralState, MechTemplate, advance_battle_motion};
+    let source = format!("30 30\n{}", format!("{}\n", ".0".repeat(30)).repeat(30));
+    let template =
+        MechTemplate::parse("SCP-1N", include_str!("../game/units/SCP-1N.toml")).unwrap();
+    let speeds = |mode: LateralMode| {
+        let source = source.clone();
+        let template = template.clone();
+        async move {
+            let (_dir, _config, mut world, id) = fixture_assets(&source, template).await;
+            // Face so that the shift carries the quad due south, into open ground.
+            let heading = (540 - mode.offset() % 360) % 360;
+            world
+                .btech
+                .rewrite_unit_record(id, |record| {
+                    record["lateral"] = serde_json::to_value(LateralState {
+                        active: mode,
+                        ..Default::default()
+                    })
+                    .unwrap();
+                    record["motion"]["heading"] = f64::from(heading).into();
+                    record["motion"]["desired_heading"] = f64::from(heading).into();
+                })
+                .unwrap();
+            let unit = &world.btech.constructed_units()[&id];
+            let (walking, running) = (unit.walking_speed(), unit.movement_maximum_speed());
+            set_battle_speed(&mut world, id, ObjectId(1), running).unwrap();
+            for _ in 0..90 {
+                advance_battle_motion(&mut world, RULES).unwrap();
+            }
+            let speed = world.btech.constructed_units()[&id].motion().unwrap().speed;
+            (speed, walking, running)
+        }
+    };
+    let (straight, _, running) = speeds(LateralMode::None).await;
+    assert!((straight - running).abs() < 1e-6, "{straight}");
+    // Clear ground costs one MP a hex; a lateral shift two, halving the speed reached.
+    let (front, _, _) = speeds(LateralMode::FrontLeft).await;
+    assert!((front - running / 2.0).abs() < 1e-6, "{front}");
+    let (rear, walking, _) = speeds(LateralMode::RearRight).await;
+    assert!((rear - walking / 2.0).abs() < 1e-6, "{rear}");
 }
 
 /// An XXL engine runs hotter: two heat a turn standing still where a standard engine makes

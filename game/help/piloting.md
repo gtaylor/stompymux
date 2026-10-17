@@ -1,7 +1,7 @@
 +++
 title = "Piloting BattleMechs"
 description = "Enter a unit and take or release its cockpit"
-keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firehoming", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
+keywords = ["status", "view", "markings", "ap", "safety", "mwsafety", "mml", "hide", "explode", "self-destruct", "usebin", "heatcutoff", "addtic", "deltic", "cleartic", "listtic", "firetic", "hulldown", "dig", "pickup", "dropoff", "enterbase", "pilot", "unpilot", "piloting", "cockpit", "startup", "shutdown", "heading", "speed", "rottorso", "fliparms", "slite", "searchlight", "sensor", "contacts", "lock", "stand", "prone", "lrs", "lrsmap", "fire", "sight", "target", "weapons", "weaponstatus", "weaponspecs", "critstatus", "flamerheat", "heat", "inferno", "lbx", "cluster", "firecluster", "firehoming", "firesmoke", "firemine", "fireswarm", "fireswarm1", "artemis", "apollo", "unjam", "hotload", "ultra", "rapidfire", "rac", "gattling", "armorpiercing", "caseless", "precision", "flechette", "jump", "dfa", "death from above", "push", "ram", "land", "unitprefs", "autofall", "ams", "a-pod", "b-pod", "talons", "spikes", "torso cockpit", "mga", "machine gun array", "pods", "removepod", "removepods", "melee", "axe", "sword", "mace", "saw", "claw", "lance", "flail", "wrecking ball", "chain whip", "vibroblade", "retractable blade", "magma", "lava", "wind", "gravity", "temperature", "emi", "electromagnetic interference"]
 article_tags = ["show_in_index"]
 +++
 
@@ -34,10 +34,17 @@ kph per point and running is walking x 1.5 rounded up (Total Warfare p. 53); you
 may back up no faster than walking. Heat takes one walking MP per five points and
 caps the throttle rather than scaling it, hot triple-strength myomer adds two walking
 MP, and MASC doubles the walking figure that is left, running refigured each time
-(TW pp. 137, 139, 159). A Mech that runs during a thirty-second turn with a damaged
-hip or gyro makes one piloting roll at the turn's end (TW p. 53), and one that
-exceeds its normal running MP under light gravity rolls once a turn against a point
-of leg damage per MP over (Tactical Operations p. 53). Turns and speed changes are
+(TW pp. 137, 139, 159). A Mech that has lost a leg walks at 1 MP whatever would raise
+it, myomer and MASC included, and cannot run (TW p. 122). Away from standard gravity
+your walking MP is divided by the G-rating and rounded to the nearest whole MP, halves
+down, after every other modifier, and running is figured afresh from it; a unit left
+with no MP cannot move (Tactical Operations: Advanced Rules p. 53). A Mech that runs
+during a thirty-second turn with a damaged hip or gyro makes one piloting roll at the
+turn's end (TW p. 53), and one that exceeds its normal running MP under light gravity
+rolls once a turn against a point of leg damage per MP over; a vehicle that exceeds its
+normal flank speed rolls the same way against a point of front internal damage per MP
+over and a motive damage roll (Tactical Operations p. 53). Being shut down or having
+an unconscious MechWarrior forces no roll of its own. Turns and speed changes are
 gradual. Each hex costs movement for its ground, foliage, route, water and any ice,
 snow or mud, and your speed is divided by that cost, following the Total Warfare and
 Tactical Operations movement cost tables. A road or rail line replaces the
@@ -79,7 +86,9 @@ roll against your piloting or driving skill, harder the farther you have moved
 this turn. Failure drops a Mech and slides it along its old course for half the
 hexes it had moved, taking half a fall's damage in every hex it slides through,
 stopping against higher ground and tumbling over any drop too steep to walk
-down. A skidding unit that reaches another unit charges it with the +3 modifier
+down. Every hex the skid crosses uses up the movement points its terrain costs, so
+woods or rough ground cut it short; a building the skid brings down lets it go on,
+less the building's movement cost (Total Warfare pp. 62-63). A skidding unit that reaches another unit charges it with the +3 modifier
 for an unintentional charge (Total Warfare p. 63); a hit ends the skid, a miss
 slides on through. A vehicle slides the same way and rolls once for motive
 system damage, and a vehicle that skids into terrain its drive could never
@@ -87,7 +96,8 @@ enter takes a point of damage per five tons and is immobile there for good. A
 hovercraft does not skid but sideslips: whenever it changes facing at flank
 speed on any ground and then moves on, it rolls against its driving skill, and
 on a failure it drifts along its old course one hex for every point it missed
-by, without damage unless it drifts into something.
+by, without damage unless it drifts into something or off a drop deeper than one
+level, which is a fall.
 
 Swamp, mud, deep snow, tundra and sand can bog you down. Entering such a hex
 takes a piloting or driving roll, one easier on tundra, deep snow and mud, and a
@@ -98,11 +108,14 @@ start of every turn. Jumping out always works. Hovercraft never bog down.
 Stacking follows Total Warfare p. 57: a hex may hold at most two units a side and
 four in all, only one of them a Mech. You may drive or walk through a hex your
 friends hold, but you cannot stop in one that is already full, and you stop at the
-edge of any hex an enemy holds (a charge at that enemy goes through). A Mech that
-lands or falls into a hex another Mech holds makes an accidental fall from above
-(TW p. 152): roll 7 or better, modified for the target's movement and cover, to
-come down on it for your tonnage over ten per level fallen, then take your own
-fall onto your back; a miss leaves everyone standing.
+edge of any hex an enemy holds (a charge at that enemy goes through). You may not aim
+a jump at a full hex. A Mech brought down out of the air into a hex another Mech holds
+falls no levels, so it shoves that Mech out of the hex in the direction it was
+travelling, and the shoved Mech must make a piloting roll or fall (the domino effect,
+TW pp. 152-153). A Mech whose jump lands in a hex that filled while it flew makes an
+accidental fall from above (TW p. 152): roll 7 or better, modified for the target's
+movement and cover, to come down on it for your tonnage over ten per level fallen, then
+take your own fall onto your back; a miss leaves everyone standing.
 
 Water depth affects piloting checks. Entering water a level or more deep requires a
 piloting check, one easier at depth one, unmodified at depth two and one harder
@@ -119,9 +132,9 @@ Bridge travel selects the deck or a lower surface at elevation -1 according to
 your current height. Beneath a bridge you stand on the river bed: water checks
 still apply, and the deck overhead plays no part in slope checks.
 
-Stepping onto ice, over water or on land, takes a piloting or driving roll at +0
-for everything but a hovercraft; a Mech that fails falls, and a vehicle slews to a
-halt and rolls for motive damage. Each new hex of frozen water entered from
+Stepping onto ice takes no roll: the extra movement point it costs is the price of
+moving carefully across it (Tactical Operations: Advanced Rules pp. 48, 63). Each new
+hex of frozen water entered from
 elevation zero also has a one-in-six chance of breaking, and landing a jump on it
 breaks it half the time. A break can drop everyone on that hex into the water.
 Below intact ice, you follow the bottom and make water checks; falls and standing
@@ -285,9 +298,11 @@ Saved timers keep their remaining seconds; offline time does not advance repairs
 
 
 Use `stand check` to inspect your piloting target while prone. `stand` attempts to
-get up. `stand careful` spends the whole turn standing for a -2 modifier (Tactical
-Operations p. 20): it takes twice as long, and a failed careful attempt takes at least
-thirty seconds to recover. If your base target exceeds twelve, use `stand anyway` to
+get up. An attempt costs 2 MP (Total Warfare p. 50): at your running pace, a hex every
+sixty seconds per MP, it takes 120 seconds divided by your running MP, never more than
+a thirty-second turn. `stand careful` spends the whole thirty-second turn standing, for
+a -2 modifier if you have more than two walking MP (Tactical Operations: Advanced Rules
+pp. 21-22). If your base target exceeds twelve, use `stand anyway` to
 attempt it despite certain failure. Every attempt adds one point of heat (Total Warfare
 p. 159). Failed attempts cause another fall. Successful attempts make you upright but
 block forward or reverse movement until the stand timer finishes. You can use `heading`
@@ -700,6 +715,38 @@ p. 144). Height does not count against that reach; instead the level rules decid
 a standing Mech one level up can be punched, clubbed or struck with a weapon but not
 kicked, one a level down can be kicked, clubbed or struck with a weapon but not
 punched, and nothing reaches a target two or more levels away (Total Warfare p. 150).
+A ground vehicle, or a landed VTOL, can be kicked, clubbed or struck with a weapon on
+your own level and punched, clubbed or struck one level up, and takes the blow on a
+random side. A flying VTOL is reached by the difference between its elevation and your
+hex's level: level with you anything but a punch, one or two levels up anything but a
+kick, three levels up only a club or physical weapon, and nothing else. Any physical
+blow that lands destroys a VTOL's rotor (Total Warfare pp. 147, 150 and 198).
+
+`punch both #first #second` punches two targets, the left arm at the first and the
+right at the second, each rolled on its own (Total Warfare p. 145). A prone Mech can punch only a ground
+vehicle in its own hex, propping itself up on the other arm, and both arms are then
+tied up (Total Warfare p. 151).
+
+`push [#unit]` shoves the standing Mech in the hex directly ahead of your feet
+with both arms, at Piloting -1 and +2 for each damaged shoulder. No arm may have
+fired this turn, and the target must be on your level and not charging. A hit does
+no damage: the target is driven one hex onward and you step into the hex it left,
+and it must make a piloting roll or fall. If it cannot be driven there (the map
+edge, terrain it cannot enter, or more than two levels up) neither of you moves,
+but it still rolls. Pushed off a drop of more than two levels it falls; a Mech
+already in the hex beyond is shoved out of its far side and rolls too, or is
+struck by a Mech falling two or more levels onto it (Total Warfare pp. 147,
+151-153). A unit can be the target of only one charge, death from above or push
+in a turn (Total Warfare pp. 148-149).
+
+A four-legged Mech can kick into its rear arc at +1 with the rear leg on the chosen
+side; that leg's actuators count (Total Warfare p. 147). Only two-legged Mechs trip,
+and only two-legged Mechs can be tripped; a trip takes Piloting -1 (Tactical
+Operations: Advanced Rules p. 89). A club must be picked up with `grabclub` before
+you can swing it (Total Warfare p. 146). A charge or death from above that meets its
+target number exactly is a glancing blow and deals the target half damage, as other
+physical attacks and rams do, with two off every critical roll it causes on a 'Mech or a
+vehicle (Tactical Operations: Advanced Rules p. 78).
 
 A Mech makes one physical attack in a thirty-second turn (Total Warfare p. 144).
 Punching with both arms, or striking with both claws, in one command is a single
@@ -723,13 +770,30 @@ Travel toward the target accumulates the charge distance that sets its damage, a
 selection expires after 61 movement updates. Retargeting keeps accumulated time
 and distance; cancelling clears them. Jumping ages the timer without increasing charge distance. An in-range airborne
 charge attempt clears the selection without attacking. The charging unit takes
-one point of damage per ten tons of its target, as in Total Warfare.
+one point of damage per ten tons of its target, as in Total Warfare. You cannot
+charge within thirty seconds of launching a jump, at a target more than one level
+above or below you, or while your pilot is unconscious or stunned (Total Warfare
+pp. 148 and 150). A Mech cannot charge a vehicle.
+
+Ground vehicles charge (ram) with the same `charge` command; VTOLs cannot. A ram
+can strike a Mech, standing or prone, or another vehicle: tonnage over ten per hex
+travelled to the target, on the Kick Location Table against a standing Mech, and the
+target's tonnage over ten to the vehicle. After a hit each vehicle involved rolls on
+the Motive System Damage Table and a rammed Mech rolls at +2 to stay standing. A
+vehicle cannot ram in a turn it fired, and its weapons are held for thirty seconds
+afterwards (Total Warfare p. 148). Its anti-missile systems stay ready to defend.
 
 
 Use `jump #unit` for a death-from-above attack, or `jump` with no arguments to
 use your current target. You jump toward the hex occupied by the target when
 you launch. If it moves out of that hex, you land normally. Status shows the
-selected DFA target during flight.
+selected DFA target during flight. Your Jumping MP must clear the target: the
+level of its hex above yours, plus two over a standing Mech, or a VTOL's elevation
+(Total Warfare p. 149). A vehicle takes the landing on the Front column of its hit
+location table, and a VTOL loses its rotor (Total Warfare pp. 150 and 198).
+After a hit you roll at +4 and the target at +2 to stay standing; each roll stands
+alone, so a target still rolls when your landing damage has already knocked you
+down (Total Warfare p. 150).
 
 A successful attack damages the target and your legs. A miss is a two-level fall
 onto your back: every hit strikes your rear and your pilot makes the fall's
@@ -1355,7 +1419,10 @@ match. C3 displays only contact rows; an empty list produces no output.
 
 Use `lateral ne` or `lateral fr` for Front/Right travel, `nw`/`fl` for Front/Left,
 `se`/`rr` for Rear/Right, and `sw`/`rl` for Rear/Left. `lateral -` restores straight
-travel. Only quads with all four legs intact can move laterally. A change takes six seconds; requesting
+travel. Only quads with all four legs intact can move laterally. A lateral shift costs
+one movement point more in every hex, and a shift into a rear side hex is backward
+movement, held to walking speed and taking the backward level-change check (Total
+Warfare p. 50). A change takes six seconds; requesting
 your current direction cancels a pending change. The chassis and weapon facing
 stay unchanged. Reverse speed travels opposite the chosen direction. Changes
 complete only if the unit is running when the timer expires.
@@ -1720,7 +1787,7 @@ swing. Use `punch` for bare fists.
 | Dual saw | `Dual_Saw` | 7 | 0 | no |
 | Claw | `Claw` | tons / 7, rounded up | +1 | no |
 | Retractable blade | `Retractable_Blade` | tons / 10, rounded up | -2 | yes |
-| Lance | `Lance` | tons / 5 | +1 | no |
+| Lance | `Lance` | tons / 5, rounded up | +1 | no |
 | Flail | `Flail` | 9 | 0 | no |
 | Wrecking ball | `Wrecking_Ball` | 8 | +1 | no |
 | Chain whip | `Chain_Whip` | 3 | -2 | yes |
@@ -1729,9 +1796,10 @@ swing. Use `punch` for bare fists.
 Triple-strength myomer doubles axe, sword, mace, claw, retractable blade and
 lance damage only. A missed mace swing forces a piloting check at +2. A roll of
 2 with a flail or wrecking ball swings it back into your own front for 5 or 4
-damage, followed by a piloting check. A wrecking ball hit forces the target to
-make a piloting check at +2, as a charge does. Each vibroblade swing adds 3, 5
-or 7 heat.
+damage, followed by a piloting check. A wrecking ball reaches only your forward
+arc; every other weapon also reaches its arm's side arc (Total Warfare p. 146).
+Claws strike as punches, so a damaged shoulder stops them. Each vibroblade swing
+adds 3, 5 or 7 heat.
 
 When a lance hits and armor still covers the struck location, roll 2d6: on 10 or
 more, one point of damage goes straight to internal structure, and its critical

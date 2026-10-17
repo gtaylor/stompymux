@@ -177,6 +177,8 @@ pub(super) fn advance(
         }
         let position = vehicle.position().context("Vehicle is not placed")?;
         let old = vehicle.motion().context("Vehicle lacks motion")?;
+        report.notices.extend(super::ram::begin_update(world, id));
+        let vehicle = &world.btech.vehicles()[&id];
         let map = world
             .btech
             .maps()
@@ -214,7 +216,15 @@ pub(super) fn advance(
         let hover = movement == VehicleMovement::Hover;
         let ground = super::vehicle_motion::ground_movement(movement);
         let waterproof = vehicle.definition().has_special("Waterproof_Tech");
+        // Flank speed at standard gravity, with the point pavement adds, against which low
+        // gravity's strain is judged (Tactical Operations: Advanced Rules p. 53).
+        let normal_flank =
+            super::vehicle_speed::actual_speed_bounds(current, movement, vehicle.speed_envelope())
+                .running;
         let vehicle = world.btech.vehicles.get_mut(&id).unwrap();
+        vehicle
+            .turn_movement
+            .observe(next.speed, cruise_ceiling, normal_flank);
         vehicle
             .slick
             .observe(current.is_slick() || hover, next.speed != 0.0, next.heading);
@@ -248,6 +258,7 @@ pub(super) fn advance(
                 continue;
             }
         }
+        super::ram::record_distance(world, id, old.point, next.point);
         let vehicle = &world.btech.vehicles()[&id];
         let map = world
             .btech
@@ -537,31 +548,6 @@ pub(super) fn advance(
                 }
                 continue;
             }
-            let tile =
-                world.btech.maps()[&position.map].base_hex(i64::from(hex.x), i64::from(hex.y))?;
-            // Stepping onto ice takes a driving roll; failure is a loss of control.
-            if let Some(modifier) = tile.entry_piloting_modifier(ground)
-                && i32::from(support_height) >= i32::from(tile.water_line())
-            {
-                let entry = super::skid::vehicle_entry_check(
-                    world, id, tile, modifier, rules.fall, character,
-                )?;
-                super::piloting::append_feedback(
-                    &mut report.pilot_notices,
-                    entry.pilot_notices,
-                    report.notices.len(),
-                );
-                report.notices.extend(entry.notices);
-                report.experience_messages.extend(entry.experience_messages);
-                report.character_injuries.extend(entry.character_injuries);
-                if entry.skidded {
-                    let unit = &world.btech.vehicles()[&id];
-                    next = unit.motion().unwrap();
-                    under_bridge = unit.under_bridge();
-                    interrupted = true;
-                    break;
-                }
-            }
             if let Some(breach) = super::building_interior::breach(
                 world,
                 id,
@@ -673,6 +659,10 @@ pub(super) fn advance(
         let (notice, experience) = super::building_step::entered(world, id, position)?;
         report.notices.extend(notice);
         report.experience_messages.extend(experience);
+        let vehicle = &world.btech.vehicles()[&id];
+        if !vehicle.is_destroyed() && vehicle.motion().is_some_and(|motion| motion.speed != 0.0) {
+            super::ram::finish_update(world, id, rules, character, &mut report)?;
+        }
     }
     Ok(report)
 }

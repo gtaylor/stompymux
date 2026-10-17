@@ -402,3 +402,37 @@ fn limited_output_config(directory: &std::path::Path) -> Config {
     std::fs::write(&path, toml::to_string(&table).unwrap()).unwrap();
     Config::load(directory).unwrap()
 }
+
+/// A 'Mech dropping through broken ice into two-deep water falls two levels: its tonnage over
+/// ten times the levels fallen plus one (Total Warfare p. 68), halved for landing in water
+/// (TW p. 57; Tactical Operations: Advanced Rules p. 48).
+#[tokio::test]
+async fn ice_falls_multiply_by_the_levels_fallen_plus_one() {
+    let (_dir, config, mut world, unit, _, _) = firing::fixture_with_target(
+        include_str!("../game/units/JR7-D.toml"),
+        None,
+        include_str!("../game/units/AS7-D.toml"),
+    )
+    .await;
+    let map = world.btech.units()[&unit].map.unwrap();
+    tile(&mut world, map, 0, 11, "ice", 2);
+    firing::edit(&mut world, unit, |record| {
+        record["ground_elevation"] = serde_json::Value::Null;
+    });
+    world.validate(&config).unwrap();
+    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    let fracture = break_battle_surface_action(
+        &scripts,
+        &config,
+        map,
+        HexCoordinate { x: 0, y: 11 },
+        Surface::Ice,
+        FallRules::configured(&config),
+    )
+    .unwrap();
+    assert_eq!(fracture.fall_levels, 3);
+    let (id, fall) = &fracture.falls[0];
+    assert_eq!(*id, unit);
+    assert_eq!(fall.damage, 35_u32.div_ceil(10) * 3 / 2);
+    scripts.world().validate(&config).unwrap();
+}

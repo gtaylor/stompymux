@@ -234,6 +234,7 @@ pub use btech::{
 pub use btech::{
     Arm, ArmAttackReport, ArmRejection, ArmSelection, PhysicalAttack,
     punch_profile as battle_punch_profile, resolve_punch as resolve_battle_punch,
+    resolve_split_punch as resolve_battle_split_punch,
 };
 
 // Leg trips use shared physical rules and reports.
@@ -266,6 +267,13 @@ pub use btech::{
 };
 
 pub use btech::launch_dfa as launch_battle_dfa;
+pub use btech::{
+    PushBalance, PushProfile, PushReport, push_profile as battle_push_profile,
+    resolve_push as resolve_battle_push,
+};
+pub use btech::{
+    RamProfile, RamReport, ram_profile as battle_ram_profile, resolve_ram as resolve_battle_ram,
+};
 
 pub use btech::{
     ExperienceAward, ExperienceRules,

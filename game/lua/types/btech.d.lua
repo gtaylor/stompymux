@@ -355,6 +355,7 @@ function btech_unit.inspect(dbref) end
 ---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 ---@field artillery_adjustment integer Saved correction for the current artillery target.
 ---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
+---@field physical_assault_time integer|nil Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
 ---@field section_fire table<string, integer> Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 ---@field tag TagState
 ---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
@@ -480,7 +481,7 @@ function btech_unit.inspect(dbref) end
 ---@field electronics Electronics Selected suite modes and last committed field.
 ---@field spotter integer|nil Self declares spotting; another unit selects a forward observer.
 ---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
----@field physical_assault_time integer|nil Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
+---@field physical_assault_time integer|nil Simulation time of the last ram; the vehicle may not spot for the rest of that turn.
 ---@field tag TagState Shared TAG selection and lock/recycle countdown.
 ---@field character_pilot {injuries: integer, killed: boolean}? Saved RPG pilot status, independent of tactical injury count.
 ---@field friendly_fire_safety boolean Pilot-selected teammate protection.
@@ -820,7 +821,7 @@ function btech_map.cloud_base(actor, dbref, altitude) end
 ---@field coordinate HexCoordinate
 ---@field before Hex
 ---@field after Hex
----@field fall_levels integer
+---@field fall_levels integer Fall damage multiplier: the levels fallen plus one, or 0 when nobody falls.
 ---@field falls table[] Ordered pairs of unit dbref and Mech fall report.
 ---@field vehicle_falls table[] Ordered pairs of unit dbref and vehicle fall report.
 ---@field flooded_vehicles integer[]
@@ -1828,6 +1829,14 @@ function btech_unit.prone(dbref, pilot) end
 ---@return boolean accepted Timer and cockpit feedback commit with the callback.
 function btech_unit.hide(dbref, pilot) end
 
+---Push the standing Mech directly ahead with both arms. A hit displaces it one hex onward, the
+---attacker follows into the hex it left, and the target must keep its footing; no damage is dealt.
+---@param dbref integer
+---@param pilot integer
+---@param target? integer Defaults to the selected target; explicit targets require acquisition.
+---@return table report Push profile, roll, hit, displacement, balance checks and notices.
+function btech_unit.push(dbref, pilot, target) end
+
 ---@class InventoryEntry
 ---@field part_id integer Stable game-directory part identifier.
 ---@field quantity integer Positive stock quantity, at most 2147483647.
@@ -2245,12 +2254,14 @@ function btech_unit.kick(dbref, pilot, leg, target) end
 ---Attempt one or both arms in left-to-right order. Default selection is both.
 ---Unavailable arms are reported separately when another arm attacks; an entirely rejected action raises an error.
 ---Impact failures and callback aborts roll back the complete action and staged messages.
+---A second target splits a two-armed punch: the left arm punches target and the right arm second_target.
 ---@param dbref integer
 ---@param pilot integer
 ---@param arms? 'left'|'right'|'both'
 ---@param target? integer Defaults to the selected target; explicit targets require acquisition.
+---@param second_target? integer The right arm's target; requires both arms and an explicit first target.
 ---@return table report Ordered attacks, per-arm rejections and notices. Each attack includes its profile and optional impact.
-function btech_unit.punch(dbref, pilot, arms, target) end
+function btech_unit.punch(dbref, pilot, arms, target, second_target) end
 
 ---Attempt a leg trip. A hit forces target balance; a miss has no balance check. No direct impact damage.
 ---Both legs and hips must be usable; the target must be standing and not rising.
@@ -2318,7 +2329,7 @@ function btech_unit.melee(dbref, pilot, arms, target) end
 ---@return table notices
 function btech_unit.grabclub(dbref, pilot, arm) end
 
----Swing a club using both arms; a carried tree shatters on a hit. Forest terrain supplies an immediate tree.
+---Swing a carried club using both arms; a carried tree shatters on a hit. Pick a club up with grabclub first.
 ---@param dbref integer
 ---@param pilot integer
 ---@param target? integer

@@ -118,10 +118,16 @@ pub(crate) fn throttle_envelope(
     } else {
         0.0
     };
-    // Equipment and heat work in whole MP on the damaged figure; towed load and gravity
-    // then scale the result continuously.
-    let envelope = unit.equip_envelope(base).scaled(factor);
-    super::speed_bonus::envelope_on_map(world, unit.position(), envelope)
+    // Equipment and heat work in whole MP on the damaged figure; towed load then scales the
+    // result, and map gravity rounds the walking MP left and refigures running from it.
+    let envelope = unit.live_envelope(
+        base,
+        unit.heat().walking_mp_penalty(),
+        factor,
+        super::speed_bonus::map_gravity(world, unit.position()),
+    );
+    envelope.validate()?;
+    Ok(envelope)
 }
 
 /// Cut the throttle target while a heading change is under way: 80 % of the request with
@@ -155,6 +161,11 @@ pub(crate) fn acceleration_ceiling(
     } else {
         0.0
     };
-    let envelope = unit.equip_envelope_without_heat(base).scaled(factor);
-    Ok(super::speed_bonus::envelope_on_map(world, unit.position(), envelope)?.running)
+    let envelope = unit.live_envelope(
+        base,
+        0.0,
+        factor,
+        super::speed_bonus::map_gravity(world, unit.position()),
+    );
+    Ok(envelope.running)
 }

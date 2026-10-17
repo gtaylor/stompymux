@@ -262,7 +262,7 @@ async fn quad_shallow_water_counts_front_leg_sinks_and_excludes_flooded_equipmen
     assert_eq!(flooded.mobility().maximum_speed, 86.0);
 }
 
-/// Quad acceleration and lateral speed are derived separately from throttle and facing.
+/// Quad acceleration and lateral costs are derived separately from throttle and facing.
 #[test]
 fn quad_acceleration_lateral_speed_and_leg_loss_cancel_active_offset() {
     use stompymux_rs::*;
@@ -277,9 +277,21 @@ fn quad_acceleration_lateral_speed_and_leg_loss_cancel_active_offset() {
     })
     .unwrap();
     let moving: Mech = serde_json::from_value(encoded.clone()).unwrap();
-    assert_eq!(moving.lateral_speed(96.75), 86.0);
-    assert!((moving.lateral_speed(-64.5) + 64.5 * 86.0 / 96.75).abs() < 1e-10);
-    assert_eq!(unit().lateral_speed(-64.5), -64.5);
+    // A lateral shift costs one MP more in every hex, a biped's travel nothing (Total
+    // Warfare p. 50); a shift into a rear side hex is backward movement, and reversing it
+    // carries the quad forward.
+    assert_eq!(moving.lateral_cost(), 1.0);
+    assert_eq!(base.lateral_cost(), 0.0);
+    assert_eq!(unit().lateral_cost(), 0.0);
+    assert!(!moving.moving_backward(64.5) && moving.moving_backward(-64.5));
+    let mut rear = encoded.clone();
+    rear["lateral"] = serde_json::to_value(LateralState {
+        active: LateralMode::RearLeft,
+        ..Default::default()
+    })
+    .unwrap();
+    let rear: Mech = serde_json::from_value(rear).unwrap();
+    assert!(rear.moving_backward(64.5) && !rear.moving_backward(-64.5));
     for pending in [None, Some(LateralMode::None), Some(LateralMode::FrontRight)] {
         encoded["lateral"] = serde_json::to_value(LateralState {
             active: LateralMode::FrontLeft,
@@ -336,16 +348,32 @@ fn biped_support_and_quad_gyro_standing_rules() {
     assert!(!damaged.stand_requires_roll().unwrap());
 }
 
-/// Quad kicks use front legs, allow one missing support and reject hip damage or arm attacks.
+/// Quad kicks use front legs, allow one missing support and reject hip damage, arm attacks
+/// and trips, which only bipeds make (Tactical Operations: Advanced Rules p. 89).
 #[test]
 fn quad_physical_support_uses_selected_front_leg_and_surviving_hips() {
     use stompymux_rs::{Arm, ArmAttack, Leg, PhysicalAttack as Attack};
     let base = quad();
+    for leg in [Leg::Left, Leg::Right] {
+        let error = Attack::Trip { leg }
+            .validate_chassis_support(&base)
+            .unwrap_err();
+        assert!(
+            format!("{error:#}").contains("Only two-legged"),
+            "{error:#}"
+        );
+        assert!(
+            Attack::Trip { leg }
+                .validate_chassis_support(&unit())
+                .is_ok()
+        );
+    }
     for (leg, section) in [
         (Leg::Left, Section::LeftArm),
         (Leg::Right, Section::RightArm),
     ] {
-        for attack in [Attack::Kick { leg }, Attack::Trip { leg }] {
+        {
+            let attack = Attack::Kick { leg };
             assert_eq!(attack.section(base.chassis()), section);
             assert!(attack.validate_chassis_support(&base).is_ok());
             for mask in 0u8..16 {

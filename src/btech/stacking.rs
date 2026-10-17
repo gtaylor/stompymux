@@ -1,10 +1,14 @@
 //! Stacking (Total Warfare p. 57): a hex holds at most two units a side and four in all, of
 //! which only one may be a 'Mech. A unit may pass through hexes its friends hold but may not
 //! end its movement in a hex that would exceed the limit, and entering a hex an enemy holds
-//! ends its movement, which here stops it at that hex's edge. A 'Mech that lands or falls
-//! into a hex the limit forbids makes an accidental fall from above (TW p. 152): a to-hit
-//! roll of 7 modified for the target's movement and terrain, tonnage over ten per level
-//! fallen on the Punch Location Table, and its own fall onto its back.
+//! ends its movement, which here stops it at that hex's edge; a jump may not be aimed at a
+//! full hex. A 'Mech brought down out of the air into a hex the limit forbids falls no
+//! levels (TW p. 68), so it shoves the 'Mech already there out of the hex (the domino effect,
+//! TW pp. 152-153). A 'Mech whose jump lands in a hex that filled while it flew, which the
+//! turn-based rules never allow, comes down on a 'Mech there as an accidental fall from
+//! above (TW p. 152): a to-hit roll of 7 modified for the target's movement and terrain,
+//! tonnage over ten per level fallen on the Punch Location Table, and its own fall onto its
+//! back.
 use super::{FallRules, Hit, HitArc, HitTable, Notice, Posture};
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
@@ -273,7 +277,112 @@ fn resolve_in_candidate(
         .dice
         .die(count)?;
     let target = candidates[usize::from(choice - 1)];
+    if input.entry == StackingEntry::Fall {
+        return domino(world, id, target, fall, effects, private);
+    }
     accidental_fall(world, id, target, input, fall, effects, private)
+}
+
+/// The domino effect (Total Warfare pp. 152-153): a 'Mech falling no levels into a hex the
+/// stacking limit forbids shoves the 'Mech there out of the hex, onward in the direction the
+/// faller was travelling, and that 'Mech must make a Piloting Skill Roll or fall; the faller
+/// is already down. Where the shoved 'Mech cannot go, it stays and still rolls.
+fn domino(
+    world: &mut World,
+    id: ObjectId,
+    target: ObjectId,
+    fall: FallRules,
+    mut effects: Option<&mut StackingEffects>,
+    private: &mut Vec<super::PilotNotice>,
+) -> Result<Vec<Notice>> {
+    let heading = world.btech.constructed_units()[&id]
+        .motion()
+        .context("Collision requires motion")?
+        .heading;
+    let mut notices = vec![
+        Notice {
+            unit: id,
+            text: "You crash into the unit beside you!".to_owned(),
+        },
+        Notice {
+            unit: target,
+            text: "A falling unit crashes into you!".to_owned(),
+        },
+    ];
+    notices.extend(super::broadcast::interaction_notices(
+        world,
+        id,
+        target,
+        "crashes into",
+    ));
+    let character = effects.is_some();
+    let shoved = super::displacement::displace(
+        world,
+        target,
+        super::displacement::hexside_ahead(heading),
+        fall,
+        character,
+    )?;
+    notices.extend(shoved.notices);
+    super::piloting::append_feedback(private, shoved.pilot_notices, notices.len());
+    if let Some(effects) = effects.as_deref_mut() {
+        effects
+            .experience_messages
+            .extend(shoved.experience_messages);
+        effects.falls.extend(shoved.falls);
+    }
+    let mut rolls = Vec::new();
+    if !shoved.fallen {
+        rolls.push(target);
+    }
+    rolls.extend(shoved.dominoes);
+    for unit in rolls {
+        let mech = &world.btech.constructed_units()[&unit];
+        if mech.is_destroyed() || mech.posture() == Posture::Prone {
+            continue;
+        }
+        let mut check = super::roll_piloting(world, unit, 0, fall.extended_piloting)?;
+        super::piloting::capture_feedback(
+            unit,
+            world.btech.constructed_units()[&unit].pilot(),
+            &check,
+            &mut notices,
+            private,
+        );
+        if let Some(effects) = effects.as_deref_mut() {
+            effects
+                .experience_messages
+                .extend(super::piloting::award_control_check(
+                    world,
+                    unit,
+                    &mut check,
+                    fall.extended_piloting,
+                )?);
+        }
+        if check.success {
+            continue;
+        }
+        notices.extend(super::broadcast::observer_notices(
+            world,
+            unit,
+            "falls down!",
+        ));
+        let rules = with_toughness(world, unit, fall);
+        let report = if character
+            && world.objects[&unit]
+                .flags
+                .contains(crate::Flag::InCharacter)
+        {
+            super::fall::resolve_character_fall(world, unit, 1, rules)?
+        } else {
+            super::resolve_fall(world, unit, 1, rules)?
+        };
+        report.append_notices(unit, &mut notices, private);
+        if let Some(effects) = effects.as_deref_mut() {
+            effects.falls.push(report);
+        }
+    }
+    Ok(notices)
 }
 
 /// A 'Mech coming down into a crowded hex (Total Warfare p. 152): roll 7 or better, modified

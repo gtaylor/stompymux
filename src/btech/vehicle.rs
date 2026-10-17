@@ -64,6 +64,10 @@ pub struct Vehicle {
     /// Heading held on the pavement or ice the vehicle is crossing, for the skid rule.
     #[serde(default)]
     pub(super) slick: super::SlickTrack,
+    /// Movement since the last turn-clock boundary, for the gravity strain roll (Tactical
+    /// Operations: Advanced Rules p. 53).
+    #[serde(default)]
+    pub(super) turn_movement: super::TurnMovement,
     /// Levels climbed or descended into the current hex, charged while crossing it.
     #[serde(default)]
     pub(super) level_entry: Option<super::LevelEntry>,
@@ -188,6 +192,14 @@ pub struct Vehicle {
     /// Simulation time of the last weapon this vehicle launched; a spotter that attacked
     /// within the turn makes the indirect fire it spots harder (Total Warfare p. 111).
     pub(super) last_weapon_fire: Option<i64>,
+    /// Simulation time this vehicle was last the target of a charge or death from above; a
+    /// unit may be the target of only one a turn (Total Warfare pp. 148-149).
+    pub(super) assaulted_at: Option<i64>,
+    /// Simulation time of this vehicle's last ram; it may not spot for the rest of that turn
+    /// (Total Warfare p. 112).
+    pub(super) physical_assault_time: Option<i64>,
+    /// Ram selection and the travel that sets its damage (Total Warfare p. 148).
+    pub(super) charge: super::ChargeState,
     pub(super) tag: super::TagState,
     pub(super) contacts: BTreeMap<crate::ObjectId, super::Contact>,
     pub(super) fire_modes: BTreeMap<usize, super::FireMode>,
@@ -274,6 +286,8 @@ struct VehicleRecord {
     bogged_down: bool,
     #[serde(default)]
     slick: super::SlickTrack,
+    #[serde(default)]
+    turn_movement: super::TurnMovement,
     #[serde(default)]
     level_entry: Option<super::LevelEntry>,
     definition: VehicleTemplate,
@@ -391,6 +405,12 @@ struct VehicleRecord {
     spotter: Option<crate::ObjectId>,
     #[serde(default)]
     last_weapon_fire: Option<i64>,
+    #[serde(default)]
+    assaulted_at: Option<i64>,
+    #[serde(default)]
+    physical_assault_time: Option<i64>,
+    #[serde(default)]
+    charge: super::ChargeState,
     #[serde(default)]
     tag: super::TagState,
     contacts: BTreeMap<crate::ObjectId, super::Contact>,
@@ -529,11 +549,15 @@ super::saved_parts::saved_parts!(Vehicle {
         hide_elapsed,
         bogged_down,
         slick,
+        turn_movement,
         level_entry,
         inferno_remaining,
         unjam,
         pod_removal,
         last_weapon_fire,
+        assaulted_at,
+        physical_assault_time,
+        charge,
     ],
     live_always: [
         motion,
@@ -1002,6 +1026,7 @@ impl Vehicle {
             visibility: super::Visibility::default(),
             bogged_down: false,
             slick: Default::default(),
+            turn_movement: Default::default(),
             level_entry: None,
             experience: Default::default(),
             friendly_fire_safety: false,
@@ -1021,6 +1046,9 @@ impl Vehicle {
             electronics: Default::default(),
             spotter: None,
             last_weapon_fire: None,
+            assaulted_at: None,
+            physical_assault_time: None,
+            charge: Default::default(),
             tag: Default::default(),
             contacts: Default::default(),
             fire_modes,
@@ -1688,6 +1716,7 @@ impl Vehicle {
             visibility: record.visibility,
             bogged_down: record.bogged_down,
             slick: record.slick,
+            turn_movement: record.turn_movement,
             level_entry: record.level_entry,
             definition: record.definition,
             sections: record.sections,
@@ -1764,6 +1793,9 @@ impl Vehicle {
             electronics: record.electronics,
             spotter: record.spotter,
             last_weapon_fire: record.last_weapon_fire,
+            assaulted_at: record.assaulted_at,
+            physical_assault_time: record.physical_assault_time,
+            charge: record.charge,
             tag: record.tag,
             contacts: record.contacts,
             fire_modes: record.fire_modes,
@@ -2149,9 +2181,13 @@ impl Vehicle {
             "Invalid spotter identity"
         );
         ensure!(
-            self.last_weapon_fire.is_none_or(|time| time >= 0),
+            self.last_weapon_fire.is_none_or(|time| time >= 0)
+                && self.assaulted_at.is_none_or(|time| time >= 0)
+                && self.physical_assault_time.is_none_or(|time| time >= 0),
             "Invalid attack timestamp"
         );
+        self.charge.validate()?;
+        self.turn_movement.validate()?;
         self.tag.validate()?;
         self.artillery_registration.validate()?;
         ensure!(

@@ -465,8 +465,11 @@ async fn building_exit_shares_placement_and_continues_vtol_flight() {
                     .effective_maximum_speed(candidate.btech.maps().get(&exterior))
                     .unwrap()
             } else {
-                // Destination special gravity halves the shared effective ceiling for vehicles too.
-                maximum * 0.5
+                // Destination gravity of 2 G halves the cruising MP, rounding halves down, and
+                // flank is figured afresh from it, for vehicles too (Tactical Operations:
+                // Advanced Rules p. 53).
+                let cruising = SpeedEnvelope::from_running(maximum).walking_mp() / 2.0;
+                SpeedEnvelope::from_walking_mp((cruising - 0.5).ceil()).running
             };
             assert_eq!(
                 after["motion"]["speed"].as_f64().unwrap(),

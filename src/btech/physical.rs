@@ -23,6 +23,14 @@ impl Leg {
         match self {
             Self::Left if chassis == MechChassis::Quad => MechSection::LeftArm,
             Self::Right if chassis == MechChassis::Quad => MechSection::RightArm,
+            _ => self.rear_section(),
+        }
+    }
+
+    /// The leg on this side of a biped, or the rear leg on this side of a quad, which kicks
+    /// into a quad's rear arc (Total Warfare p. 147).
+    pub fn rear_section(self) -> MechSection {
+        match self {
             Self::Left => MechSection::LeftLeg,
             Self::Right => MechSection::RightLeg,
         }
@@ -78,9 +86,18 @@ impl PhysicalAttack {
         }
     }
 
-    /// Check chassis anatomy and supporting legs before geometric or timing eligibility.
-    /// A `Weapon` carrying `Punch` is malformed and rejected here, before any attack path uses it.
+    /// Check chassis anatomy and supporting legs before geometric or timing eligibility, for an
+    /// attack into the forward arc. A `Weapon` carrying `Punch` is malformed and rejected here,
+    /// before any attack path uses it.
     pub fn validate_chassis_support(self, unit: &Mech) -> Result<()> {
+        self.validate_anatomy(unit)?;
+        self.validate_limb(unit, self.section(unit.chassis()))
+    }
+
+    /// Chassis checks that do not depend on which leg delivers a kick. Only biped 'Mechs trip
+    /// (Tactical Operations: Advanced Rules p. 89); only bipeds have arms to punch, club or
+    /// swing with.
+    fn validate_anatomy(self, unit: &Mech) -> Result<()> {
         ensure!(
             self.hand_weapon() != Some(ArmAttack::Punch),
             "A punch is not a weapon swing"
@@ -94,14 +111,14 @@ impl PhysicalAttack {
             );
             return Ok(());
         }
+        ensure!(
+            !self.is_trip() || chassis == MechChassis::Biped,
+            "Only two-legged 'Mechs can trip."
+        );
         let maximum_missing = usize::from(chassis == MechChassis::Quad);
         ensure!(
             unit.unavailable_legs() <= maximum_missing,
             "Too few supporting legs for this attack"
-        );
-        ensure!(
-            !unit.leg_unavailable(self.section(chassis)),
-            "The attacking leg is unavailable"
         );
         for &leg in chassis.legs() {
             if unit.leg_unavailable(leg) {
@@ -113,6 +130,28 @@ impl PhysicalAttack {
             );
         }
         Ok(())
+    }
+
+    /// The kicking or tripping leg must still be there.
+    fn validate_limb(self, unit: &Mech, limb: MechSection) -> Result<()> {
+        if !self.uses_leg() {
+            return Ok(());
+        }
+        ensure!(
+            !unit.leg_unavailable(limb),
+            "The attacking leg is unavailable"
+        );
+        Ok(())
+    }
+
+    /// The limb that delivers the blow: the selected arm, or the kicking leg, which is a quad's
+    /// rear leg on that side when it kicks into its rear arc (Total Warfare p. 147). Its
+    /// actuators set the to-hit and damage modifiers.
+    fn limb(self, chassis: MechChassis, rear_kick: bool) -> MechSection {
+        match self {
+            Self::Kick { leg } if rear_kick => leg.rear_section(),
+            attack => attack.section(chassis),
+        }
     }
 
     /// Sections the attack ties up for the turn. None of them may have fired a weapon this
@@ -356,7 +395,10 @@ impl ArmAttack {
     pub(super) fn damage(self, tons: u16) -> u16 {
         match self {
             Self::Punch => tons.div_ceil(10),
-            Self::Axe | Self::Lance => tons / 5,
+            Self::Axe => tons / 5,
+            // One point per five tons, rounded up (Tactical Operations: Advanced Units &
+            // Equipment p. 101).
+            Self::Lance => tons.div_ceil(5),
             Self::Sword => (tons + 5) / 10 + 1,
             Self::Mace => tons.div_ceil(4),
             Self::Saw => 7,
@@ -383,6 +425,13 @@ impl ArmAttack {
                 | Self::MediumVibroblade
                 | Self::LargeVibroblade
         )
+    }
+
+    /// Whether the weapon reaches only the forward arc. A wrecking ball swings straight ahead;
+    /// every other physical weapon also reaches the side arc of its arm (Total Warfare p. 146;
+    /// Tactical Operations: Advanced Rules p. 87).
+    fn forward_only(self) -> bool {
+        matches!(self, Self::WreckingBall)
     }
 
     /// Claws strike as a punch does, on the Punch Location Table (TO:AUE p. 101).
@@ -498,7 +547,13 @@ pub struct PhysicalProfile {
     pub hit_table: HitTable,
     /// The target is a combat vehicle rather than a 'Mech.
     pub vehicle_target: bool,
+    /// The target is a VTOL, whose rotor a successful attack destroys (Total Warfare p. 198).
+    pub vtol_target: bool,
     pub hit_arc: HitArc,
+    /// The limb that delivers the blow, whose spikes or talons take part.
+    pub limb: MechSection,
+    /// Every limb the attack ties up for the turn.
+    pub limbs: Vec<MechSection>,
 }
 
 /// Completed attack with already-applied damage, balance and fall consequences.
@@ -516,6 +571,8 @@ pub struct PhysicalReport {
     pub vehicle_impact: Option<VehicleImpact>,
     /// Lance armor-penetration check, made when armor remains where the lance struck.
     pub penetration: Option<LancePenetration>,
+    /// The rotor a successful blow destroyed on a VTOL (Total Warfare p. 198).
+    pub rotor: Option<RotorDamage>,
     /// Damage a flail or wrecking ball dealt its own wielder on a natural 2.
     pub fumble: Option<TacticalImpact>,
     /// Damage the target's spikes dealt the punching arm or kicking leg (Tactical Operations:
@@ -642,35 +699,53 @@ fn attack_profile(
 
 /// What a physical attack reads from its target before the geometry checks, whichever chassis
 /// the target is. Vehicles never lie prone, rise or twist.
-struct TargetFacts {
-    vehicle: bool,
-    position: Position,
-    heading: f64,
-    team: i32,
-    airborne: bool,
-    prone: bool,
-    rising: bool,
-    movement: i8,
+pub(super) struct TargetFacts {
+    pub(super) vehicle: bool,
+    /// A VTOL, whose rotor any successful physical attack by a 'Mech destroys (Total Warfare
+    /// p. 198).
+    pub(super) vtol: bool,
+    /// A VTOL in flight, which the level-difference table for VTOLs governs (Total Warfare
+    /// p. 198). A landed VTOL is attacked as any ground vehicle.
+    pub(super) flying: bool,
+    /// A four-legged 'Mech, which cannot be tripped (Tactical Operations: Advanced Rules p. 89).
+    pub(super) quad: bool,
+    pub(super) position: Position,
+    pub(super) heading: f64,
+    pub(super) team: i32,
+    /// In the air beyond any physical attack's reach: a jumping or falling 'Mech, or a falling
+    /// or dropping vehicle.
+    pub(super) airborne: bool,
+    pub(super) prone: bool,
+    pub(super) rising: bool,
+    pub(super) movement: i8,
 }
 
 /// Sample the target's live facts; vehicles use the shared immobility test and their speed.
-fn target_facts(world: &World, target: ObjectId) -> Result<TargetFacts> {
+pub(super) fn target_facts(world: &World, target: ObjectId) -> Result<TargetFacts> {
     if let Some(vehicle) = world.btech.vehicles().get(&target) {
         vehicle.validate()?;
         ensure!(!vehicle.is_destroyed(), "Unit is destroyed");
         let motion = vehicle.motion();
         let immobile = super::aimed_target::immobile(world, target)?;
+        let phase = vehicle.vtol_flight().map(|flight| flight.phase);
         return Ok(TargetFacts {
             vehicle: true,
+            vtol: vehicle.definition().is_vtol(),
+            flying: phase == Some(VtolFlightPhase::Airborne),
+            quad: false,
             position: vehicle
                 .position()
                 .context("Target is not on a battlefield")?,
             heading: motion.map_or(0.0, |motion| motion.heading),
             team: vehicle.signature().team,
-            airborne: vehicle.vtol_flight().is_some() || vehicle.free_fall().is_some(),
+            airborne: vehicle.free_fall().is_some()
+                || vehicle.orbital_drop().is_some()
+                || phase == Some(VtolFlightPhase::Falling),
             prone: false,
             rising: false,
+            // A VTOL in the air is one harder to hit (Total Warfare p. 117).
             movement: super::aim::target_motion(motion.map_or(0.0, |motion| motion.speed))
+                + i8::from(phase == Some(VtolFlightPhase::Airborne))
                 - if immobile { 4 } else { 0 },
         });
     }
@@ -683,6 +758,9 @@ fn target_facts(world: &World, target: ObjectId) -> Result<TargetFacts> {
     ensure!(!victim.is_destroyed(), "Unit is destroyed");
     Ok(TargetFacts {
         vehicle: false,
+        vtol: false,
+        flying: false,
+        quad: victim.chassis() == MechChassis::Quad,
         position: victim
             .position()
             .context("Target is not on a battlefield")?,
@@ -693,6 +771,35 @@ fn target_facts(world: &World, target: ObjectId) -> Result<TargetFacts> {
         rising: matches!(victim.stand_timer(), Some(StandTimer::Rising { .. })),
         movement: super::aim::ground_physical_target_modifier(world, victim),
     })
+}
+
+/// Which physical attacks reach a vehicle `difference` levels above the attacking 'Mech's own
+/// level. A ground vehicle, or a landed VTOL, can be kicked, clubbed or struck with a physical
+/// weapon on the 'Mech's own level, and punched, clubbed or struck from one level below it
+/// (Total Warfare pp. 147, 150 and 198). A flying VTOL follows the Physical Attacks Against
+/// VTOL Vehicles Table, counting from the 'Mech's hex level to the VTOL's elevation: level
+/// with it everything but a punch, one or two levels up everything but a kick, three levels
+/// up only clubs and physical weapons, and nothing lower or higher (Total Warfare p. 198).
+fn vehicle_reach(attack: PhysicalAttack, difference: i32, flying: bool) -> Result<()> {
+    let punch = matches!(attack, PhysicalAttack::Punch { .. });
+    let kick = attack.uses_leg();
+    let allowed = match (flying, difference) {
+        (false, 0) | (true, 0) => !punch,
+        (false, 1) => !kick,
+        (true, 1 | 2) => !kick,
+        (true, 3) => !punch && !kick,
+        _ => false,
+    };
+    if allowed {
+        return Ok(());
+    }
+    if !flying && difference == 1 {
+        anyhow::bail!("You can only kick a vehicle on your own level.");
+    }
+    if !flying && difference == 0 {
+        anyhow::bail!("The vehicle is too low for this arm attack.");
+    }
+    anyhow::bail!("You can't reach the vehicle with this attack from where you stand.")
 }
 
 /// Whether the unit's cockpit is running, whichever chassis it is.
@@ -733,7 +840,7 @@ fn attack_profile_inner(
     ensure!(!source.is_destroyed(), "Unit is destroyed");
     let victim = target_facts(world, target)?;
     super::building_interior::check_physical(world, attacker, target)?;
-    attack.validate_chassis_support(source)?;
+    attack.validate_anatomy(source)?;
     ensure!(source.power() == Power::Running, "Start the unit first");
     ensure!(
         !source.airborne() && source.free_fall().is_none(),
@@ -753,10 +860,25 @@ fn attack_profile_inner(
                 .contains_key(&attack.section(source.chassis())),
         "Your limbs are still recovering from another attack"
     );
-    ensure!(
-        source.posture() != Posture::Prone,
-        "You cannot attack a mech from a prone position."
-    );
+    // A prone 'Mech may only punch a ground vehicle in its own hex, propping itself up on the
+    // other arm (Total Warfare p. 151); every other physical attack needs it standing.
+    let prone_punch = source.posture() == Posture::Prone;
+    if prone_punch {
+        ensure!(
+            matches!(attack, PhysicalAttack::Punch { .. }) && victim.vehicle && !victim.flying,
+            "You cannot attack a mech from a prone position."
+        );
+        ensure!(
+            [MechSection::LeftArm, MechSection::RightArm]
+                .iter()
+                .all(|arm| source.sections()[arm].internal > 0),
+            "You need both arms to punch from the ground."
+        );
+        ensure!(
+            completed_arm.is_none(),
+            "You need your other arm to prop yourself up."
+        );
+    }
     ensure!(
         source.stun_remaining() == 0,
         "You are still recovering from your stunning experience!"
@@ -768,12 +890,12 @@ fn attack_profile_inner(
         );
     }
     let club = attack == PhysicalAttack::Club;
+    // Claws strike as punches, so a damaged shoulder bars them as it bars a punch (Total
+    // Warfare p. 145; Tactical Operations: Advanced Units & Equipment p. 101).
     let required_sections = if club {
         vec![MechSection::LeftArm, MechSection::RightArm]
     } else if attack.uses_leg() && source.chassis() == MechChassis::Biped {
         vec![MechSection::LeftLeg, MechSection::RightLeg]
-    } else if attack.hand_weapon() == Some(ArmAttack::Claw) {
-        vec![]
     } else {
         vec![attack.section(source.chassis())]
     };
@@ -816,6 +938,8 @@ fn attack_profile_inner(
     );
     if attack.is_trip() {
         ensure!(!victim.vehicle, "You cannot trip a vehicle!");
+        // Only biped 'Mechs can be tripped (Tactical Operations: Advanced Rules p. 89).
+        ensure!(!victim.quad, "You cannot trip a four-legged 'Mech!");
         ensure!(
             !victim.prone && !victim.rising,
             "Your target is already down!"
@@ -826,6 +950,10 @@ fn attack_profile_inner(
     ensure!(
         position.map == target_position.map,
         "Target is on another battlefield"
+    );
+    ensure!(
+        !prone_punch || (position.x, position.y) == (target_position.x, target_position.y),
+        "From the ground you can only punch a vehicle in your own hex."
     );
     let map = &world.btech.maps()[&position.map];
     if source.signature().team == victim.team {
@@ -848,13 +976,11 @@ fn attack_profile_inner(
         "Target is not in line of sight!"
     );
     let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+    // A club must be picked up first, in a turn of its own (Total Warfare p. 146).
     if club {
         ensure!(
-            source.carried_club.is_some()
-                || map
-                    .hex(i64::from(position.x), i64::from(position.y))?
-                    .is_woods(),
-            "You can not seem to find any trees around to club with."
+            source.carried_club.is_some(),
+            "You are not carrying a club. Pick one up first."
         );
     }
     let target_tile = map.base_hex(i64::from(target_position.x), i64::from(target_position.y))?;
@@ -863,8 +989,10 @@ fn attack_profile_inner(
         world.btech.unit(target).context("Unit is unavailable")?,
         |unit| unit.elevation_level(target_tile)
     );
+    // A 'Mech reaches another unit only within one level of its own; a flying VTOL follows
+    // its own table (Total Warfare pp. 150 and 198).
     ensure!(
-        (elevation - target_elevation).abs() <= 1,
+        victim.flying || (elevation - target_elevation).abs() <= 1,
         "You can't attack, the elevation difference is too large."
     );
     // A 'Mech wading in water cannot reach a target under the surface, unless the whole attack
@@ -876,19 +1004,9 @@ fn attack_profile_inner(
         "You cannot reach a target under the water from where you stand."
     );
     if victim.vehicle {
-        // A 'Mech kicks a vehicle on its own level, and punches, clubs or swings a weapon at
-        // one only from a level below it (Total Warfare pp. 147 and 150).
-        if attack.uses_leg() {
-            ensure!(
-                elevation == target_elevation,
-                "You can only kick a vehicle on your own level."
-            );
-        } else {
-            ensure!(
-                target_elevation == elevation + 1,
-                "The vehicle is too low for this arm attack."
-            );
-        }
+        // Lying down puts the 'Mech a level lower than it stands (Total Warfare p. 150).
+        let reach = elevation - i32::from(prone_punch);
+        vehicle_reach(attack, target_elevation - reach, victim.flying)?;
     } else if attack.uses_leg() {
         ensure!(
             elevation >= target_elevation,
@@ -914,6 +1032,7 @@ fn attack_profile_inner(
     let angle = (range.bearing.unwrap_or(heading) - heading - twist).rem_euclid(360.0);
     let forward = angle <= 60.0 || angle >= 300.0;
     let side = match attack.arm() {
+        _ if attack.hand_weapon().is_some_and(ArmAttack::forward_only) => false,
         Some(Arm::Left) => (240.0..300.0).contains(&angle),
         Some(Arm::Right) => angle > 60.0 && angle <= 120.0,
         None => false,
@@ -926,49 +1045,34 @@ fn attack_profile_inner(
         forward || side || rear_kick,
         "Target is outside the attacking limb's arc!"
     );
+    let limb = attack.limb(source.chassis(), rear_kick);
+    attack.validate_limb(source, limb)?;
     // A limb that fired this turn cannot also attack physically, however short its weapons'
     // recycle (Total Warfare pp. 145-147).
     let now = world.btech.simulation_time();
-    for section in attack.limbs(source.chassis(), rear_kick) {
+    // A prone punch ties up the propping arm as well as the punching one.
+    let limbs = if prone_punch {
+        vec![MechSection::LeftArm, MechSection::RightArm]
+    } else {
+        attack.limbs(source.chassis(), rear_kick)
+    };
+    for &section in &limbs {
         ensure!(
             !source.section_fired_this_turn(section, now),
             "Your {} fired weapons this turn and cannot also make a physical attack.",
             source.chassis().section_name(section).replace('_', " ")
         );
     }
-    let upper = actuator(
-        source,
-        attack.section(source.chassis()),
-        1,
-        System::UpperActuator,
-    )?;
-    let lower = actuator(
-        source,
-        attack.section(source.chassis()),
-        2,
-        System::LowerActuator,
-    )?;
-    let foot = actuator(
-        source,
-        attack.section(source.chassis()),
-        3,
-        System::HandOrFootActuator,
-    )?;
+    let upper = actuator(source, limb, 1, System::UpperActuator)?;
+    let lower = actuator(source, limb, 2, System::LowerActuator)?;
+    let foot = actuator(source, limb, 3, System::HandOrFootActuator)?;
+    // A club takes +2 for each damaged or missing upper or lower actuator in either arm
+    // (Total Warfare p. 146).
     let actuators = if club {
         let mut penalty = 0;
         for section in [MechSection::LeftArm, MechSection::RightArm] {
             for (slot, system) in [(1, System::UpperActuator), (2, System::LowerActuator)] {
-                let location = CriticalLocation { section, slot };
-                let right = CriticalLocation {
-                    section: MechSection::RightArm,
-                    slot,
-                };
-                let installed = source
-                    .loadout()?
-                    .systems
-                    .iter()
-                    .any(|part| part.location == right && part.system == system);
-                penalty += 2 * u8::from(source.critical_unavailable(location) || !installed);
+                penalty += 2 * u8::from(!actuator(source, section, slot, system)?);
             }
         }
         penalty
@@ -984,9 +1088,11 @@ fn attack_profile_inner(
         .character_values()
         .get(&pilot)
         .is_some_and(|values| super::advantages::enabled(values, "Melee_Specialist"));
+    // Kick -2, trip and club -1 (Total Warfare p. 144; Tactical Operations: Advanced Rules
+    // p. 89).
     let skill_bonus = match attack {
-        PhysicalAttack::Kick { .. } | PhysicalAttack::Trip { .. } => 2,
-        PhysicalAttack::Club => 1,
+        PhysicalAttack::Kick { .. } => 2,
+        PhysicalAttack::Trip { .. } | PhysicalAttack::Club => 1,
         PhysicalAttack::Punch { .. } => 0,
         PhysicalAttack::Weapon { weapon, .. } => weapon.skill_bonus(),
     };
@@ -1016,9 +1122,7 @@ fn attack_profile_inner(
     }
     // Working talons in the kicking leg raise the kick by half, after any triple strength
     // myomer doubling (Tactical Operations: Advanced Units & Equipment p. 103).
-    if matches!(attack, PhysicalAttack::Kick { .. })
-        && source.talons_working(attack.section(source.chassis()))?
-    {
+    if matches!(attack, PhysicalAttack::Kick { .. }) && source.talons_working(limb)? {
         damage = super::talons::raise(damage);
     }
     damage += u16::from(specialist);
@@ -1077,7 +1181,10 @@ fn attack_profile_inner(
             HitTable::Kick
         },
         vehicle_target: victim.vehicle,
+        vtol_target: victim.vtol,
         hit_arc,
+        limb,
+        limbs,
     })
 }
 
@@ -1093,14 +1200,18 @@ fn submerged_at(prone: bool, tile: Hex, elevation: i32) -> bool {
     tile.holds_water() && elevation + reach < i32::from(tile.water_line())
 }
 
-/// Derive the affected pilot's protection while preserving explicitly supplied fall policy.
+/// Derive the affected pilot's protection while preserving explicitly supplied fall policy,
+/// whichever chassis the participant is.
 pub(super) fn participant_fall_rules(
     world: &World,
     id: ObjectId,
     mut rules: FallRules,
 ) -> FallRules {
-    rules.toughness |= world.btech.constructed_units()[&id]
-        .pilot()
+    let pilot = world
+        .btech
+        .unit(id)
+        .and_then(|unit| super::with_unit!(unit, |unit| unit.pilot()));
+    rules.toughness |= pilot
         .and_then(|pilot| world.btech.character_values().get(&pilot))
         .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
     rules
@@ -1218,7 +1329,7 @@ fn resolve_attack_inner(
     world.attempt(|world| {
         let unit = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = unit.dice.generic_roll();
-        for section in attack.limbs(unit.chassis(), profile.rear_kick > 0) {
+        for &section in &profile.limbs {
             unit.limb_recycle.insert(section, PHYSICAL_RECOVERY_SECONDS);
         }
         let weapon = attack.hand_weapon();
@@ -1262,6 +1373,7 @@ fn resolve_attack_inner(
         let mut vehicle_impact = None;
         let mut penetration = None;
         let mut spike_backlash = Vec::new();
+        let mut rotor = None;
         let mut experience = None;
         let mut experience_messages = Vec::new();
         if glancing {
@@ -1319,7 +1431,8 @@ fn resolve_attack_inner(
                     .context("Vehicle target is unavailable")?
                     .dice
                     .die(4)?;
-                let (result, result_notices) = super::blast_damage::resolve_packet(
+                // A glancing blow is also less likely to find a critical (TO:AR p. 78).
+                let (result, result_notices) = super::blast_damage::resolve_attack_packet(
                     world,
                     target,
                     super::blast_damage::MaterialPacket {
@@ -1332,11 +1445,37 @@ fn resolve_attack_inner(
                     },
                     false,
                     fall_rules,
+                    glancing,
                 )?;
                 result.append_feedback(&mut pilot_notices, notices.len());
                 notices.extend(result_notices);
                 if let super::blast_damage::BlastImpact::Vehicle(result) = result {
                     vehicle_impact = Some(result);
+                }
+                // Any successful physical attack by a 'Mech destroys a VTOL's rotor (Total
+                // Warfare p. 198); a VTOL in the air then loses its lift.
+                let vehicle = &world.btech.vehicles()[&target];
+                if profile.vtol_target && !vehicle.is_destroyed() && !vehicle.rotor_destroyed() {
+                    let damage = super::rotor_damage::apply_in_world(
+                        world,
+                        target,
+                        RotorHit::Destroy,
+                        rules.fall.extended_piloting,
+                    )?;
+                    notices.push(Notice {
+                        unit: attacker,
+                        text: "Your blow tears the rotor apart!".into(),
+                    });
+                    notices.push(Notice {
+                        unit: target,
+                        text: damage.message().into(),
+                    });
+                    notices.extend(super::broadcast::observer_notices(
+                        world,
+                        target,
+                        "'s rotor is torn apart!",
+                    ));
+                    rotor = Some(damage);
                 }
             } else {
                 let victim = &world.btech.constructed_units()[&target];
@@ -1388,13 +1527,11 @@ fn resolve_attack_inner(
                 impact = Some(result);
                 // A bare arm or leg that struck the spikes takes two points itself.
                 if spiked && weapon.is_none() && attack != PhysicalAttack::Club {
-                    let section =
-                        attack.section(world.btech.constructed_units()[&attacker].chassis());
                     let attacker_rules = participant_fall_rules(world, attacker, rules.fall);
                     spike_backlash = super::spikes::backlash(
                         world,
                         attacker,
-                        &[section],
+                        &[profile.limb],
                         attacker_rules,
                         character,
                         &mut notices,
@@ -1564,6 +1701,7 @@ fn resolve_attack_inner(
             impact,
             vehicle_impact,
             penetration,
+            rotor,
             fumble: fumble_impact,
             spike_backlash,
             experience,
@@ -1757,10 +1895,33 @@ pub fn resolve_arm_attack(
         world,
         attacker,
         pilot,
-        target,
+        [target; 2],
         ArmAttackChoice {
             arms,
             kind: kind.into(),
+        },
+        rules,
+        false,
+    )
+}
+
+/// Punch two different targets, the left arm at `left` and the right at `right`; each punch is
+/// rolled on its own (Total Warfare p. 145).
+pub fn resolve_split_punch(
+    world: &mut World,
+    attacker: ObjectId,
+    pilot: ObjectId,
+    [left, right]: [ObjectId; 2],
+    rules: PhysicalRules,
+) -> Result<ArmAttackReport> {
+    resolve_arm_attack_inner(
+        world,
+        attacker,
+        pilot,
+        [left, right],
+        ArmAttackChoice {
+            arms: ArmSelection::Both,
+            kind: ArmAttack::Punch.into(),
         },
         rules,
         false,
@@ -1776,15 +1937,31 @@ pub(super) fn resolve_arm_attack_in_action(
     choice: ArmAttackChoice,
     rules: PhysicalRules,
 ) -> Result<ArmAttackReport> {
-    resolve_arm_attack_inner(world, attacker, pilot, target, choice, rules, true)
+    resolve_arm_attack_inner(world, attacker, pilot, [target; 2], choice, rules, true)
+}
+
+/// Punch two different targets inside a host checkpoint that publishes character casualties.
+pub(super) fn resolve_split_punch_in_action(
+    world: &mut World,
+    attacker: ObjectId,
+    pilot: ObjectId,
+    targets: [ObjectId; 2],
+    rules: PhysicalRules,
+) -> Result<ArmAttackReport> {
+    let choice = ArmAttackChoice {
+        arms: ArmSelection::Both,
+        kind: ArmAttack::Punch.into(),
+    };
+    resolve_arm_attack_inner(world, attacker, pilot, targets, choice, rules, true)
 }
 
 /// Shared availability, rejection and ordered hit processing for both publication modes.
+/// `targets` holds the left arm's target, then the right arm's.
 fn resolve_arm_attack_inner(
     world: &mut World,
     attacker: ObjectId,
     pilot: ObjectId,
-    target: ObjectId,
+    targets: [ObjectId; 2],
     choice: ArmAttackChoice,
     rules: PhysicalRules,
     character: bool,
@@ -1812,6 +1989,10 @@ fn resolve_arm_attack_inner(
         };
         let mut completed_arm = None;
         for &arm in arms {
+            let target = match arm {
+                Arm::Left => targets[0],
+                Arm::Right => targets[1],
+            };
             let unit = &world.btech.constructed_units()[&attacker];
             let kind = match kind {
                 ArmWeapon::Fixed(kind) => kind,
@@ -1916,6 +2097,9 @@ fn selected_arms(value: Option<&str>) -> Result<ArmSelection> {
 }
 
 /// Shared native/Lua arm-attack selection with acquired-contact checks for an explicit target.
+/// A `second` target splits a two-armed punch: the left arm punches `target` and the right arm
+/// `second` (Total Warfare p. 145).
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn configured_arm_attack(
     scripts: &crate::Scripts,
     config: &crate::Config,
@@ -1923,8 +2107,36 @@ pub(crate) fn configured_arm_attack(
     pilot: ObjectId,
     arms: Option<&str>,
     target: Option<ObjectId>,
+    second: Option<ObjectId>,
     kind: ArmWeapon,
 ) -> Result<ArmAttackReport> {
+    if let Some(second) = second {
+        let targets = {
+            let world = scripts.world.borrow();
+            super::power::controlled_unit(&world, id, pilot)?;
+            ensure!(
+                kind == ArmWeapon::Fixed(ArmAttack::Punch),
+                "Only punches can strike two targets."
+            );
+            ensure!(
+                selected_arms(arms)? == ArmSelection::Both,
+                "Punching two targets takes both arms."
+            );
+            let first = target.context("Name the left arm's target first.")?;
+            [
+                selected_target(&world, id, Some(first))?,
+                selected_target(&world, id, Some(second))?,
+            ]
+        };
+        return super::split_punch_action(
+            scripts,
+            config,
+            id,
+            pilot,
+            targets,
+            configured_rules(config),
+        );
+    }
     let (chosen, arms) = {
         let world = scripts.world.borrow();
         super::power::controlled_unit(&world, id, pilot)?;
@@ -1944,7 +2156,11 @@ pub(crate) fn configured_arm_attack(
 }
 
 /// Resolve the selected contact without acquiring one or advancing a lock timer.
-fn selected_target(world: &World, id: ObjectId, target: Option<ObjectId>) -> Result<ObjectId> {
+pub(super) fn selected_target(
+    world: &World,
+    id: ObjectId,
+    target: Option<ObjectId>,
+) -> Result<ObjectId> {
     let chosen = target
         .or_else(|| {
             world.btech.constructed_units()[&id]
@@ -2089,7 +2305,7 @@ fn command_for(
     let usage = match kind {
         PhysicalCommand::Kick => "Usage: kick [left|right] [#unit]",
         PhysicalCommand::Trip => "Usage: trip [left|right] [#unit]",
-        PhysicalCommand::Punch => "Usage: punch [left|right|both] [#unit]",
+        PhysicalCommand::Punch => "Usage: punch [left|right|both] [#unit [#unit]]",
         PhysicalCommand::Melee => "Usage: melee [left|right|both] [#unit]",
         PhysicalCommand::Club => "Usage: club [#unit]",
         PhysicalCommand::GrabClub => "Usage: grabclub [left|right|-]",
@@ -2102,17 +2318,21 @@ fn command_for(
         } else {
             None
         };
-        let target = args
-            .next()
-            .map(|arg| -> Result<ObjectId> {
-                Ok(ObjectId(
-                    arg.strip_prefix('#')
-                        .context(usage)?
-                        .parse()
-                        .context("Invalid target number")?,
-                ))
-            })
-            .transpose()?;
+        let parse_target = |arg: &str| -> Result<ObjectId> {
+            Ok(ObjectId(
+                arg.strip_prefix('#')
+                    .context(usage)?
+                    .parse()
+                    .context("Invalid target number")?,
+            ))
+        };
+        let target = args.next().map(parse_target).transpose()?;
+        // A punch may name a second target for the right arm (Total Warfare p. 145).
+        let second = if matches!(kind, PhysicalCommand::Punch) {
+            args.next().map(parse_target).transpose()?
+        } else {
+            None
+        };
         ensure!(args.next().is_none(), "{usage}");
         let id = ctx
             .scripts
@@ -2166,6 +2386,7 @@ fn command_for(
                     ctx.player,
                     leg,
                     target,
+                    second,
                     attack,
                 )?;
                 Vec::new()
@@ -2291,6 +2512,86 @@ mod tests {
         assert_eq!(kick.limbs(quad, true), [LeftLeg, RightLeg]);
         let trip = PhysicalAttack::Trip { leg: Leg::Left };
         assert_eq!(trip.limbs(biped, false), [LeftLeg]);
+    }
+
+    /// A quad kicking into its rear arc kicks with the rear leg on the chosen side; every
+    /// other attack uses its selected limb (Total Warfare p. 147).
+    #[test]
+    fn rear_kicks_use_the_rear_leg() {
+        use MechSection::*;
+        let quad = MechChassis::Quad;
+        let biped = MechChassis::Biped;
+        let left = PhysicalAttack::Kick { leg: Leg::Left };
+        let right = PhysicalAttack::Kick { leg: Leg::Right };
+        assert_eq!(left.limb(quad, false), LeftArm);
+        assert_eq!(left.limb(quad, true), LeftLeg);
+        assert_eq!(right.limb(quad, false), RightArm);
+        assert_eq!(right.limb(quad, true), RightLeg);
+        assert_eq!(right.limb(biped, false), RightLeg);
+        let punch = PhysicalAttack::Punch { arm: Arm::Left };
+        assert_eq!(punch.limb(biped, true), LeftArm);
+    }
+
+    /// The level-difference rules for vehicles: a ground vehicle or landed VTOL is kicked,
+    /// clubbed or struck on the 'Mech's own level and punched, clubbed or struck one level up
+    /// (Total Warfare pp. 147, 150); a flying VTOL follows the VTOL table (p. 198).
+    #[test]
+    fn vehicle_reach_follows_the_level_tables() {
+        let kick = PhysicalAttack::Kick { leg: Leg::Right };
+        let punch = PhysicalAttack::Punch { arm: Arm::Right };
+        let club = PhysicalAttack::Club;
+        let sword = PhysicalAttack::Weapon {
+            arm: Arm::Right,
+            weapon: ArmAttack::Sword,
+        };
+        let reach = |attack, difference, flying| vehicle_reach(attack, difference, flying).is_ok();
+        // Ground vehicles and landed VTOLs.
+        for (difference, kicks, punches, swings) in [
+            (-1, false, false, false),
+            (0, true, false, true),
+            (1, false, true, true),
+            (2, false, false, false),
+        ] {
+            assert_eq!(reach(kick, difference, false), kicks, "{difference}");
+            assert_eq!(reach(punch, difference, false), punches, "{difference}");
+            assert_eq!(reach(club, difference, false), swings, "{difference}");
+            assert_eq!(reach(sword, difference, false), swings, "{difference}");
+        }
+        // Flying VTOLs.
+        for (difference, kicks, punches, swings) in [
+            (-1, false, false, false),
+            (0, true, false, true),
+            (1, false, true, true),
+            (2, false, true, true),
+            (3, false, false, true),
+            (4, false, false, false),
+        ] {
+            assert_eq!(reach(kick, difference, true), kicks, "{difference}");
+            assert_eq!(reach(punch, difference, true), punches, "{difference}");
+            assert_eq!(reach(club, difference, true), swings, "{difference}");
+            assert_eq!(reach(sword, difference, true), swings, "{difference}");
+        }
+    }
+
+    /// A lance deals one point per five tons, rounded up (Tactical Operations: Advanced Units
+    /// & Equipment p. 101); a hatchet one point per five tons.
+    #[test]
+    fn lance_damage_rounds_up() {
+        assert_eq!(ArmAttack::Lance.damage(55), 11);
+        assert_eq!(ArmAttack::Lance.damage(57), 12);
+        assert_eq!(ArmAttack::Axe.damage(57), 11);
+    }
+
+    /// Only the wrecking ball is limited to the forward arc (Total Warfare p. 146).
+    #[test]
+    fn only_the_wrecking_ball_swings_forward_only() {
+        for weapon in ArmAttack::HAND_WEAPONS {
+            assert_eq!(
+                weapon.forward_only(),
+                weapon == ArmAttack::WreckingBall,
+                "{weapon:?}"
+            );
+        }
     }
 
     /// A charge, a death from above attack or a club pickup ties up every surviving section.

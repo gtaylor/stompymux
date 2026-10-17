@@ -116,7 +116,9 @@ async fn ice_fracture_drops_neighbors_before_trigger_and_replays_after_restart()
         report.falls.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
         [units[1], units[0]]
     );
-    assert!(report.falls.iter().all(|(_, fall)| fall.damage == 6));
+    // Three levels down into the water: four points times the levels fallen plus one, halved
+    // in water (Total Warfare pp. 57, 68).
+    assert!(report.falls.iter().all(|(_, fall)| fall.damage == 8));
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
         Hex::new(Terrain::Water, 3)
@@ -341,7 +343,7 @@ async fn fall_onto_ice_reports_nested_fracture_and_uses_resulting_water_damage()
         if let Some(ice) = &report.ice_break {
             assert_eq!(ice.falls.len(), 2);
             assert_eq!(ice.falls.last().unwrap().0, id);
-            assert_eq!(ice.falls.last().unwrap().1.damage, 6);
+            assert_eq!(ice.falls.last().unwrap().1.damage, 8);
         }
         assert_eq!(
             world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
@@ -471,17 +473,18 @@ async fn bridge_collapse_drops_deck_occupants_to_the_river_bed() {
         assert_eq!(world.btech, restarted.btech);
         assert_eq!(report.before, Hex::new(Terrain::Bridge, height));
         assert_eq!(report.after, Hex::new(Terrain::Water, 1));
-        // Both units stand on the deck and fall past it into the depth-one water below.
-        assert_eq!(report.fall_levels, height + 1);
+        // Both units stand on the deck and fall past it into the depth-one water below: the
+        // damage multiplier is the levels fallen plus one (Total Warfare p. 68).
+        assert_eq!(report.fall_levels, height + 2);
         assert_eq!(
             report.falls.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
             units.to_vec()
         );
         // A 35-ton Jenner falls for 4 a multiplier. A fall that starts above the water's
         // surface takes half for striking the surface and half again, with the depth, for
-        // the bottom (Total Warfare p. 57); one from the surface takes a single halved fall.
-        let multiplier = u32::from(height) + 1;
-        let damage = if multiplier > 2 {
+        // the bottom (Total Warfare p. 57); a deck at the surface takes a single halved fall.
+        let multiplier = u32::from(report.fall_levels);
+        let damage = if height > 0 {
             4 * (multiplier - 1) / 2 + 4 * 2 / 2
         } else {
             4 * multiplier / 2
@@ -661,7 +664,9 @@ async fn ice_surface_contacts_and_fire_match_native_lua_after_restart() {
         }
         world.btech = serde_json::from_value(state).unwrap();
         if airborne {
-            launch_battle_jump(&mut world, shooter, ObjectId(1), 0, 1.0).unwrap();
+            // Away from the target's hex: a jump may not be aimed at a full hex (Total
+            // Warfare p. 57).
+            launch_battle_jump(&mut world, shooter, ObjectId(1), 180, 1.0).unwrap();
             for _ in 0..6 {
                 advance_battle_jumps(
                     &mut world,
@@ -2725,11 +2730,9 @@ async fn ground_ice_entry_fractures_neighbors_and_replays_without_repeated_check
                 }
                 if !fracture || depth == 0 {
                     let mut dice: Dice = serde_json::from_value(serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"].clone()).unwrap();
+                    // The ice held or broke; crossing it carefully takes no roll of its own
+                    // (Tactical Operations: Advanced Rules pp. 48, 63).
                     assert_eq!(dice.d6() == 1, fracture);
-                    if !fracture {
-                        // The ice held, so the 'Mech rolled at +0 to keep its feet on it.
-                        dice.two_d6();
-                    }
                     assert_eq!(
                         serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
                         serde_json::to_value(&dice).unwrap()
@@ -2829,10 +2832,9 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
                     .success
             );
         }
-        if height >= i32::from(tile.water_line()) && tile.is_ice() {
-            // Stepping onto the ice sheet rolls at +0 against slipping.
-            let _footing = roll_battle_piloting(&mut expected, id, 0, true).unwrap();
-        }
+        // Stepping onto the ice sheet takes no roll: its extra movement point pays for
+        // careful movement (Tactical Operations: Advanced Rules pp. 48, 63).
+        let _ = tile;
         assert_eq!(
             serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
             serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]

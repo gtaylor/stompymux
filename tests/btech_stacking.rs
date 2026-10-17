@@ -156,24 +156,16 @@ async fn collision_damage_and_second_unit_failure_commit_together() {
     world.validate(&config).unwrap();
 }
 
+/// A landing onto another 'Mech hits on the Punch Location Table, a prone 'Mech on its
+/// ordinary table (Total Warfare p. 152).
 #[tokio::test]
 async fn collision_tables_use_punch_and_prone_normal_locations() {
-    for entry in [StackingEntry::Jump, StackingEntry::Fall] {
+    {
+        let entry = StackingEntry::Jump;
         for prone in [false, true] {
-            let (_dir, config, mut world, ids) = fixture(if entry == StackingEntry::Jump {
-                &[0, 0, 0, 0]
-            } else {
-                &[0, 0, 0]
-            })
-            .await;
-            // The lander picks among the other three; the fallen 'Mech among the other two.
-            seed(
-                &mut world,
-                ids[0],
-                if entry == StackingEntry::Jump { 3 } else { 2 },
-                1,
-                Some(12),
-            );
+            let (_dir, config, mut world, ids) = fixture(&[0, 0, 0, 0]).await;
+            // The lander picks among the other three.
+            seed(&mut world, ids[0], 3, 1, Some(12));
             let target_seed = (0..=255)
                 .find(|value| {
                     let mut dice = Dice::seeded([*value; 32]);
@@ -303,13 +295,16 @@ async fn ground_entry_passes_friends_and_stops_at_enemy_and_full_hexes() {
     world.validate(&config).unwrap();
 }
 
-/// An airborne Jenner is one tick away from landing beside the supplied number of bipeds.
+/// An airborne Jenner is one tick away from landing beside the supplied number of bipeds. They
+/// walk into its landing hex after it takes off: a jump may not be aimed at a full hex (Total
+/// Warfare p. 57).
 async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World, Vec<ObjectId>) {
     let (dir, config, mut world, ids) = fixture(&vec![0; neighbors + 1]).await;
     let map = world.btech.constructed_units()[&ids[0]]
         .position()
         .unwrap()
         .map;
+    launch_battle_jump(&mut world, ids[0], ObjectId(1), 180, 1.0).unwrap();
     let mut state = serde_json::to_value(&world.btech).unwrap();
     for id in &ids[1..] {
         state["constructed"][id.0.to_string()]["position"]["y"] = 2.into();
@@ -317,7 +312,6 @@ async fn landing_fixture(neighbors: usize) -> (tempfile::TempDir, Config, World,
             serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
     }
     world.btech = serde_json::from_value(state).unwrap();
-    launch_battle_jump(&mut world, ids[0], ObjectId(1), 180, 1.0).unwrap();
     // Fly until the next jump event is the landing.
     loop {
         advance_battle_jumps(&mut world, stompymux_rs::MovementRules::STANDARD).unwrap();
@@ -615,7 +609,7 @@ async fn airborne_shutdown_falls_zero_levels_and_commits_crowding_before_power_d
                 reports[0]
                     .notices
                     .iter()
-                    .any(|notice| notice.text.contains("land on another"))
+                    .any(|notice| notice.text.contains("crash into the unit beside you"))
             })
         });
         prepare(&mut world, &dice);
@@ -645,7 +639,7 @@ async fn airborne_shutdown_falls_zero_levels_and_commits_crowding_before_power_d
             reports[0]
                 .notices
                 .iter()
-                .any(|notice| notice.text.contains("land on another"))
+                .any(|notice| notice.text.contains("crash into the unit beside you"))
         );
         let unit = &world.btech.constructed_units()[&id];
         assert_eq!(unit.power(), Power::Off);
@@ -700,7 +694,7 @@ async fn airborne_critical_falls_apply_collisions_inside_the_impact() {
                 through_armor_critical: true,
             };
             let rules = fall();
-            // The fall into the crowded hex must also pass its accidental-fall roll.
+            // The airborne 'Mech must fall into the crowded hex.
             let chosen = (0..=255)
                 .filter(|value| {
                     let mut dice = Dice::seeded([*value; 32]);
@@ -719,7 +713,7 @@ async fn airborne_critical_falls_apply_collisions_inside_the_impact() {
                         .unwrap()
                         .notices
                         .iter()
-                        .any(|notice| notice.text.contains("land on another"))
+                        .any(|notice| notice.text.contains("crash into the unit beside you"))
                 })
                 .unwrap();
             world
@@ -754,18 +748,22 @@ async fn airborne_critical_falls_apply_collisions_inside_the_impact() {
             assert_eq!(world.btech, loaded.btech);
             assert!(report.balance[0].fall.is_some());
             assert!(world.btech.constructed_units()[&id].flight().is_none());
-            assert_eq!(
+            // Falling no levels into the crowded hex shoves one of the 'Mechs there out of it
+            // (the domino effect, Total Warfare pp. 152-153).
+            assert!(
                 report
                     .notices
                     .iter()
-                    .any(|notice| notice.text.contains("land on another")),
-                !jet
+                    .any(|notice| notice.text.contains("crash into the unit beside you"))
             );
-            if jet {
-                for (target, old) in ids[1..].iter().zip(neighbors) {
-                    assert_eq!(world.btech.constructed_units()[target], old);
-                }
-            }
+            let moved = ids[1..]
+                .iter()
+                .zip(neighbors)
+                .filter(|(target, old)| {
+                    world.btech.constructed_units()[*target].position() != old.position()
+                })
+                .count();
+            assert_eq!(moved, 1);
             persistence::save(&config.database(), &world).await.unwrap();
             assert_eq!(
                 persistence::load(&config.database()).await.unwrap().btech,
@@ -964,7 +962,13 @@ async fn collision_observers_filter_each_participant_and_replay_all_entries() {
                         } else {
                             "someone".to_owned()
                         };
-                        expected.push(format!("{actor_name} lands on {target_name}!"));
+                        // A fall shoves the 'Mech there aside; a landing comes down on it.
+                        let verb = if entry == StackingEntry::Fall {
+                            "crashes into"
+                        } else {
+                            "lands on"
+                        };
+                        expected.push(format!("{actor_name} {verb} {target_name}!"));
                     }
                     assert_eq!(
                         observed, expected,
@@ -974,6 +978,36 @@ async fn collision_observers_filter_each_participant_and_replay_all_entries() {
             }
         }
     }
+}
+
+/// A 'Mech brought down out of the air into a full hex falls no levels, so it shoves the
+/// 'Mech there out of the hex in the direction it was travelling, and that 'Mech must keep its
+/// footing (the domino effect, Total Warfare pp. 152-153). No unit takes collision damage.
+#[tokio::test]
+async fn zero_level_falls_shove_the_occupant_out_of_the_hex() {
+    let (_dir, config, mut world, ids) = fixture(&[0, 0]).await;
+    world
+        .btech
+        .edit_unit_motion(ids[0], |motion| {
+            motion.heading = 180.0;
+            motion.desired_heading = 180.0;
+        })
+        .unwrap();
+    seed(&mut world, ids[0], 1, 1, None);
+    let before = world.btech.constructed_units()[&ids[1]].sections().clone();
+    let notices =
+        resolve_battle_stacking(&mut world, ids[0], input(StackingEntry::Fall), fall()).unwrap();
+    assert!(!notices.is_empty());
+    let shoved = &world.btech.constructed_units()[&ids[1]];
+    let position = shoved.position().unwrap();
+    assert_eq!((position.x, position.y), (1, 2));
+    // The shoved 'Mech made its roll; it took no collision damage.
+    for (section, original) in &before {
+        if shoved.posture() == Posture::Standing {
+            assert_eq!(shoved.sections()[section], *original);
+        }
+    }
+    world.validate(&config).unwrap();
 }
 
 /// Character collision hits apply health at impact and roll back both units on failed evacuation.
@@ -1309,11 +1343,19 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         DamagePhase::Armor { rear: false },
     )
     .unwrap();
-    let head_seed = (0..=255)
-        .find(|byte| Dice::seeded([*byte; 32]).d6() == 6)
+    // The shoved neighbor fails both its roll to stay standing and its fall's roll to spare
+    // its MechWarrior (Total Warfare pp. 68, 153).
+    let falling_seed = (0..=255)
+        .find(|byte| {
+            let mut dice = Dice::seeded([*byte; 32]);
+            dice.two_d6() <= 4 && {
+                dice.d6();
+                dice.two_d6() <= 4
+            }
+        })
         .unwrap();
     base.btech
-        .set_unit_dice(neighbor, Dice::seeded([head_seed; 32]))
+        .set_unit_dice(neighbor, Dice::seeded([falling_seed; 32]))
         .unwrap();
     for byte in 0..=255 {
         let mut world = base.clone();
@@ -1333,12 +1375,24 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
             fall(),
         )
         .unwrap();
+        // Falling no levels into the crowded hex shoves the neighbor out of it; its own fall
+        // injures its MechWarrior (the domino effect, Total Warfare pp. 152-153).
         let injuries: Vec<_> = report
             .groups
             .iter()
             .flat_map(|group| &group.balance)
-            .flat_map(|balance| &balance.collision_impacts)
-            .flat_map(|impact| &impact.impact.character_injuries)
+            .flat_map(|balance| {
+                balance
+                    .collision_impacts
+                    .iter()
+                    .flat_map(|impact| &impact.impact.character_injuries)
+                    .chain(
+                        balance
+                            .collision_falls
+                            .iter()
+                            .filter_map(|fall| fall.character_injury.as_ref()),
+                    )
+            })
             .filter(|injury| injury.player == pilot && injury.consciousness.is_some())
             .collect();
         if injuries.is_empty() {
@@ -1443,4 +1497,22 @@ async fn airborne_critical_collision_publishes_secondary_character_effects() {
         return;
     }
     panic!("seed matrix did not exercise secondary character collision injury");
+}
+
+/// A jump must obey stacking in its destination hex, so it may not be aimed at a hex another
+/// 'Mech holds (Total Warfare p. 57); an empty hex is fine.
+#[tokio::test]
+async fn jumps_may_not_be_aimed_at_a_full_hex() {
+    let (_dir, config, mut world, ids) = fixture(&[0, 0]).await;
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    state["constructed"][ids[1].0.to_string()]["position"]["y"] = 2.into();
+    state["constructed"][ids[1].0.to_string()]["motion"]["point"] =
+        serde_json::to_value(HexCoordinate { x: 1, y: 2 }.center()).unwrap();
+    world.btech = serde_json::from_value(state).unwrap();
+    let before = world.btech.clone();
+    let error = launch_battle_jump(&mut world, ids[0], ObjectId(1), 180, 1.0).unwrap_err();
+    assert!(format!("{error:#}").contains("already full"), "{error:#}");
+    assert_eq!(world.btech, before);
+    launch_battle_jump(&mut world, ids[0], ObjectId(1), 0, 1.0).unwrap();
+    world.validate(&config).unwrap();
 }

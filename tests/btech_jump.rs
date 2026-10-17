@@ -3582,8 +3582,10 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
     let mut state = serde_json::to_value(&world.btech).unwrap();
     state["constructed"][target.0.to_string()]["power"] = serde_json::json!({"state":"off"});
     world.btech = serde_json::from_value(state).unwrap();
-    place_battle_unit(&mut world, target, map, 5, 3).unwrap();
+    // The target walks into the landing hex after the jump begins: a jump may not be aimed at
+    // a full hex (Total Warfare p. 57).
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 2.0).unwrap();
+    place_battle_unit(&mut world, target, map, 5, 3).unwrap();
     // Landing in the target's hex is an accidental fall from above (Total Warfare p. 152);
     // these dice pick the shut-down target (7 less 4 for an immobile target) and miss with a
     // 2, leaving the jumper standing beside it.
@@ -3635,10 +3637,12 @@ async fn airborne_charge_landing_checks_ground_eligibility() {
             .iter()
             .any(|notice| notice.text.contains("airborne"))
     );
+    // On the ground the charge is judged as any other, and a 'Mech that jumped this turn may
+    // not charge (Total Warfare p. 148).
     assert!(
         notices
             .iter()
-            .any(|notice| notice.text.contains("fast enough")),
+            .any(|notice| notice.text.contains("jumped this turn")),
         "{notices:?}"
     );
     select_battle_charge(&mut world, id, ObjectId(1), ChargeSelection::Target(target)).unwrap();
