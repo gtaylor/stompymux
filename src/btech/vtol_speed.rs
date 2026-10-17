@@ -32,11 +32,25 @@ impl Vehicle {
     /// Change climb or descent within the movement budget left by the current horizontal
     /// command. The enclosing action owns operator authority and flight-event scheduling.
     pub fn set_vtol_vertical_speed(&mut self, requested: f64) -> Result<()> {
-        self.set_vtol_vertical_at(requested, self.maximum_speed())
+        self.set_vtol_vertical_at(requested, self.speed_envelope())
     }
 
-    /// Apply the shared additive budget to a world-supplied loaded ceiling.
-    pub(super) fn set_vtol_vertical_at(&mut self, requested: f64, maximum: f64) -> Result<()> {
+    /// The MP a turn of flight may spend on hexes and levels together: the flank budget, or
+    /// only the cruising one once a flight stabilizer hit or a stunned crew holds the VTOL to
+    /// cruising speed (Total Warfare pp. 54, 194, 197).
+    fn flight_budget(&self, envelope: SpeedEnvelope) -> f64 {
+        if self.tail_rotor_destroyed() || self.crew_stunned() {
+            return envelope.walking;
+        }
+        envelope.running
+    }
+
+    /// Apply the shared additive budget to a world-supplied loaded envelope.
+    pub(super) fn set_vtol_vertical_at(
+        &mut self,
+        requested: f64,
+        envelope: SpeedEnvelope,
+    ) -> Result<()> {
         super::fortification::require_unfortified(self.fortified)?;
         ensure!(requested.is_finite(), "Invalid vertical speed");
         ensure!(
@@ -57,7 +71,7 @@ impl Vehicle {
             .motion
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Place the aircraft on a battlefield first"))?;
-        let maximum = remaining_speed(maximum, motion.desired_speed)?;
+        let maximum = remaining_speed(self.flight_budget(envelope), motion.desired_speed)?;
         ensure!(
             requested.abs() <= maximum,
             "Vertical speed exceeds the remaining movement budget"
@@ -69,13 +83,16 @@ impl Vehicle {
     /// Maximum horizontal speed after spending part of the movement budget on climb or descent.
     pub fn vtol_horizontal_limit(&self, vertical_speed: f64) -> Result<f64> {
         ensure!(self.definition().is_vtol(), "Flight speed requires a VTOL");
-        remaining_speed(self.maximum_speed(), vertical_speed)
+        remaining_speed(self.flight_budget(self.speed_envelope()), vertical_speed)
     }
 
     /// Symmetric climb/descent limit based on the commanded horizontal speed.
     pub fn vtol_vertical_limit(&self, horizontal_throttle: f64) -> Result<f64> {
         ensure!(self.definition().is_vtol(), "Flight speed requires a VTOL");
-        remaining_speed(self.maximum_speed(), horizontal_throttle)
+        remaining_speed(
+            self.flight_budget(self.speed_envelope()),
+            horizontal_throttle,
+        )
     }
 
     /// Clamp a horizontal request to forward/reverse limits, then enforce tail-rotor cruise safety.

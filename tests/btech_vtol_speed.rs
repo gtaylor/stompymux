@@ -81,3 +81,34 @@ fn tail_rotor_limits_commands_without_erasing_momentum_or_reverse_motion() {
         assert_eq!(unit, before);
     }
 }
+
+/// A flight stabilizer hit holds the VTOL to cruising speed (Total Warfare p. 197), and climbing
+/// spends the same MP as travel (p. 54), so the climb a 12/18 Kestrel may command is what its
+/// horizontal throttle leaves of its 129 km/h cruise, not of its 193.5 km/h flank.
+#[test]
+fn a_stabilizer_hit_holds_the_climb_to_the_cruising_budget() {
+    let mut saved = serde_json::to_value(aircraft()).unwrap();
+    saved["position"] = serde_json::json!({"map":0,"x":0,"y":0});
+    saved["map_slot"] = 0.into();
+    saved["power"] = serde_json::to_value(Power::Running).unwrap();
+    saved["vtol_flight"]["phase"] = serde_json::json!({"kind": "airborne"});
+    saved["vtol_flight"]["altitude"] = 5.0.into();
+    let mut motion = Motion::stationary(HexCoordinate { x: 0, y: 0 }.center());
+    motion.speed = 43.0;
+    motion.desired_speed = 43.0;
+    saved["motion"] = serde_json::to_value(motion).unwrap();
+    let mut unit: Vehicle = serde_json::from_value(saved).unwrap();
+    assert_eq!(unit.vtol_vertical_limit(43.0).unwrap(), 150.5);
+    unit.set_vtol_vertical_speed(100.0).unwrap();
+    let _ = unit
+        .apply_rotor_hit(RotorHit::FlightStabilizer, false)
+        .unwrap();
+    assert_eq!(unit.vtol_vertical_limit(43.0).unwrap(), 86.0);
+    assert_eq!(unit.vtol_horizontal_limit(0.0).unwrap(), 129.0);
+    let before = unit.clone();
+    assert!(unit.set_vtol_vertical_speed(86.5).is_err());
+    assert!(unit.set_vtol_vertical_speed(-86.5).is_err());
+    assert_eq!(unit, before);
+    unit.set_vtol_vertical_speed(-86.0).unwrap();
+    assert_eq!(unit.vtol_flight().unwrap().vertical_speed, -86.0);
+}

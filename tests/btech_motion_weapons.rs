@@ -7272,6 +7272,31 @@ async fn cockpit_status_native_lua_sections_damage_and_restart() {
     );
 }
 
+/// The compact export's walking figure is the damaged walking MP, not two thirds of the
+/// running MP: a Jenner that has lost a leg walks at 1 MP and cannot run (Total Warfare
+/// pp. 60, 122), so it exports 1/1 where two thirds of its 1 MP would have read 0.
+#[tokio::test]
+async fn compact_status_export_reports_the_damaged_walking_mp() {
+    use stompymux_rs::*;
+    let (_dir, _config, mut world, id) = fixture('.').await;
+    let mut unit = world.btech.constructed_units()[&id].clone();
+    let _ = unit.damage_phase(MechSection::LeftLeg, u16::MAX, DamagePhase::Internal);
+    assert_eq!(
+        unit.mobility().envelope(),
+        SpeedEnvelope {
+            walking: 10.75,
+            running: 10.75
+        }
+    );
+    let unit = serde_json::to_value(unit).unwrap();
+    world
+        .btech
+        .rewrite_unit_record(id, |record| *record = unit)
+        .unwrap();
+    let header = battle_unit_status(&world, id, "N").unwrap();
+    assert!(header.starts_with("JR7-D Jenner 35 1/1/"), "{header}");
+}
+
 /// Compact status preserves row-order ammunition pairing, empty pruning and option precedence.
 #[tokio::test]
 async fn compact_status_export_ammunition_damage_and_option_precedence() {
