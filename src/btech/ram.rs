@@ -22,6 +22,9 @@ pub struct RamProfile {
     pub skill: i32,
     /// Woods and smoke over the target's hex.
     pub terrain: u8,
+    /// One while the rammer spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1 (Tactical Operations: Advanced Rules p. 149).
+    pub spotting: u8,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -322,12 +325,14 @@ fn ram_profile_inner(
         )?);
     let obscured = map.hex(i64::from(target_position.x), i64::from(target_position.y))?;
     let terrain = obscured.woods_density() + obscured.smoke_density();
+    let spotting = super::recent_fire::artillery_spotter_modifier(world, attacker);
     let target_number = i32::from(base)
         + skill
         + i32::from(source.attacker_movement_modifier())
         + i32::from(victim.movement)
         + i32::from(terrain)
-        + i32::from(super::light_aim::modifier(world, target, true)?);
+        + i32::from(super::light_aim::modifier(world, target, true)?)
+        + i32::from(spotting);
     ensure!(
         target_number <= 12,
         "Charge: BTH {target_number}\tYou choose not to charge."
@@ -337,6 +342,7 @@ fn ram_profile_inner(
         target_number,
         skill,
         terrain,
+        spotting,
         inflicted_damage: inflicted,
         received_damage: target_tons.div_ceil(10),
         target_arc: HitArc::from_bearing(reverse.bearing.unwrap_or(180.0), victim.heading)?,
@@ -445,6 +451,7 @@ fn resolve_inner(
     world.attempt(|world| {
         // A unit that charged may not spot for the rest of the turn (Total Warfare p. 112).
         super::spotter::record_physical_assault(world, attacker);
+        super::recent_fire::record_physical_attack(world, attacker);
         let roll = super::dice::unit_dice_mut(world, attacker)?.two_d6();
         let hit = i32::from(roll) >= profile.target_number;
         let glancing = hit && i32::from(roll) == profile.target_number;

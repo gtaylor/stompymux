@@ -939,7 +939,7 @@
 
 // lua-types-begin btech 00293
 //|---Swing the physical weapon installed in each selected arm (axe, sword, mace, dual saw, claw,
-//|---retractable blade, lance, flail, wrecking ball, chain whip or vibroblade). Both arms by
+//|---retractable blade, lance, flail, wrecking ball, chain whip, vibroblade or backhoe). Both arms by
 //|---default, skipping arms without a weapon; only claws let the second arm follow a completed swing.
 //|---@param dbref integer
 //|---@param pilot integer
@@ -950,7 +950,9 @@
 // lua-types-end
 
 // lua-types-begin btech 00294
-//|---Grab a tree in a selected arm (left first by default), or drop it with '-'.
+//|---Take up a club in a selected arm (left first by default): a limb or girder lying in the hex,
+//|---a tree in woods, or a girder searched out of a collapsed building's rubble, once a turn.
+//|---'-' lets the club go; a tree shatters and a limb or girder stays in the hex.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param arm? 'left'|'right'|'-'
@@ -959,7 +961,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00295
-//|---Swing a carried club using both arms; a carried tree shatters on a hit. Pick a club up with grabclub first.
+//|---Swing a carried club using both arms; a tree shatters on a hit, a limb or girder lasts. Pick a club up with grabclub first.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param target? integer
@@ -975,6 +977,18 @@
 //|---@param target? integer Defaults to the selected target; explicit targets require acquisition.
 //|---@return table report Push profile, roll, hit, displacement, balance checks and notices.
 //|function btech_unit.push(dbref, pilot, target) end
+// lua-types-end
+
+// lua-types-begin btech 00222
+//|---Dig a vehicle's backhoe into the adjacent building hex at `x`, `y`, or the hex its coordinate
+//|---lock names. The blow always lands, for six points plus 1D6 against the building's construction
+//|---factor, and may bring it down; a vehicle's backhoe never attacks a unit.
+//|---@param dbref integer
+//|---@param pilot integer
+//|---@param x? integer Both coordinates or neither.
+//|---@param y? integer
+//|---@return table report Roll, damage, construction factor left, any collapse and notices.
+//|function btech_unit.backhoe(dbref, pilot, x, y) end
 // lua-types-end
 
 // lua-types-begin btech 00296

@@ -1065,6 +1065,7 @@
     "punch": "Everyone; running biped, assigned pilot, usable arms and physical targeting checks required",
     "trip": "Everyone; running biped, assigned pilot, usable legs and standing target required",
     "push": "Everyone; running biped, assigned pilot, both arms and a standing Mech directly ahead required",
+    "backhoe": "Everyone; running ground vehicle, assigned crew, a working backhoe facing an adjacent building hex required",
     "kick": "Everyone; running biped, assigned pilot, usable legs and physical targeting checks required",
     "rottorso": "Everyone; running unit and assigned pilot required",
     "gattling": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed machine gun required",

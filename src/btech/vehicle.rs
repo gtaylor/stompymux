@@ -198,6 +198,11 @@ pub struct Vehicle {
     /// Simulation time of this vehicle's last ram; it may not spot for the rest of that turn
     /// (Total Warfare p. 112).
     pub(super) physical_assault_time: Option<i64>,
+    /// Simulation time of this vehicle's last ram, hit or miss, or backhoe attack on a
+    /// building; it makes one physical attack a turn, and an artillery spotter that attacked
+    /// within the turn makes the artillery attack it spots harder (Tactical Operations:
+    /// Advanced Rules p. 149).
+    pub(super) last_physical_attack: Option<i64>,
     /// Ram selection and the travel that sets its damage (Total Warfare p. 148).
     pub(super) charge: super::ChargeState,
     pub(super) tag: super::TagState,
@@ -410,6 +415,8 @@ struct VehicleRecord {
     #[serde(default)]
     physical_assault_time: Option<i64>,
     #[serde(default)]
+    last_physical_attack: Option<i64>,
+    #[serde(default)]
     charge: super::ChargeState,
     #[serde(default)]
     tag: super::TagState,
@@ -557,6 +564,7 @@ super::saved_parts::saved_parts!(Vehicle {
         last_weapon_fire,
         assaulted_at,
         physical_assault_time,
+        last_physical_attack,
         charge,
     ],
     live_always: [
@@ -1048,6 +1056,7 @@ impl Vehicle {
             last_weapon_fire: None,
             assaulted_at: None,
             physical_assault_time: None,
+            last_physical_attack: None,
             charge: Default::default(),
             tag: Default::default(),
             contacts: Default::default(),
@@ -1795,6 +1804,7 @@ impl Vehicle {
             last_weapon_fire: record.last_weapon_fire,
             assaulted_at: record.assaulted_at,
             physical_assault_time: record.physical_assault_time,
+            last_physical_attack: record.last_physical_attack,
             charge: record.charge,
             tag: record.tag,
             contacts: record.contacts,
@@ -2183,7 +2193,8 @@ impl Vehicle {
         ensure!(
             self.last_weapon_fire.is_none_or(|time| time >= 0)
                 && self.assaulted_at.is_none_or(|time| time >= 0)
-                && self.physical_assault_time.is_none_or(|time| time >= 0),
+                && self.physical_assault_time.is_none_or(|time| time >= 0)
+                && self.last_physical_attack.is_none_or(|time| time >= 0),
             "Invalid attack timestamp"
         );
         self.charge.validate()?;

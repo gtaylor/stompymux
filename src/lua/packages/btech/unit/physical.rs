@@ -1,5 +1,5 @@
-//! Mech physical attack commands: club swings, grab-club, charges, kicks, trips, pushes, arm
-//! weapons, and arm flips.
+//! Physical attack commands: club swings, grab-club, charges, kicks, trips, pushes, arm
+//! weapons, arm flips, and a vehicle's backhoe attack on a building.
 
 use super::super::*;
 
@@ -119,6 +119,32 @@ pub(super) fn register(lua: &Lua, native: &Table, _world: &SharedWorld) -> mlua:
     native.set(
         "unit_push",
         error::wrap(lua, push, "btech.operation.failed")?,
+    )?;
+    let backhoe = lua.create_function(
+        |lua, (id, pilot, x, y): (i64, i64, Option<i32>, Option<i32>)| {
+            crate::lua::transactions::require(lua)?;
+            let coordinate = match (x, y) {
+                (Some(x), Some(y)) => Some(crate::HexCoordinate { x, y }),
+                (None, None) => None,
+                _ => return Err(mlua::Error::external("Give both coordinates or neither")),
+            };
+            let scripts = crate::Scripts::services(lua)?;
+            crate::lua::transactions::run(lua, &scripts.world, || {
+                let report = crate::btech::backhoe::backhoe_action(
+                    &scripts,
+                    &crate::lua::configuration(lua),
+                    ObjectId(id),
+                    ObjectId(pilot),
+                    coordinate,
+                )
+                .map_err(mlua::Error::external)?;
+                detached(lua, &report)
+            })
+        },
+    )?;
+    native.set(
+        "unit_backhoe",
+        error::wrap(lua, backhoe, "btech.operation.failed")?,
     )?;
     for (name, kind) in [
         ("unit_punch", crate::ArmAttack::Punch.into()),

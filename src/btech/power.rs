@@ -242,9 +242,8 @@ fn stop_inner(world: &mut World, id: ObjectId) -> Result<Vec<Notice>> {
             }
         }
         let unit = world.btech.constructed.get_mut(&id).unwrap();
-        let dropped = finish_shutdown(unit, id, &mut notices);
-        if dropped {
-            notices.extend(super::club::dropped_notices(world, id));
+        if let Some(club) = finish_shutdown(unit, id, &mut notices) {
+            notices.extend(super::club::dropped(world, id, club)?);
         }
         world.btech.validate_action(world)?;
         Ok(notices)
@@ -256,13 +255,13 @@ pub(super) fn finish_shutdown(
     unit: &mut super::Mech,
     id: ObjectId,
     notices: &mut Vec<Notice>,
-) -> bool {
+) -> Option<super::CarriedClub> {
     if let Some(motion) = &mut unit.motion {
         motion.speed = 0.0;
         motion.desired_speed = 0.0;
         motion.desired_heading = motion.heading;
     }
-    let dropped = unit.carried_club.take().is_some();
+    let dropped = unit.carried_club.take();
     unit.power = Power::Off;
     if unit.searchlight.shutdown() {
         notices.push(Notice {

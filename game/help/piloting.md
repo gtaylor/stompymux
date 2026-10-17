@@ -41,9 +41,9 @@ down, after every other modifier, and running is figured afresh from it; a unit 
 with no MP cannot move (Tactical Operations: Advanced Rules p. 53). A Mech that runs
 during a thirty-second turn with a damaged hip or gyro makes one piloting roll at the
 turn's end (TW p. 53), and one that exceeds its normal running MP under light gravity
-rolls once a turn against a point of leg damage per MP over; a vehicle that exceeds its
-normal flank speed rolls the same way against a point of front internal damage per MP
-over and a motive damage roll (Tactical Operations p. 53). Being shut down or having
+rolls once a turn against a point of leg damage per MP over; a vehicle, a VTOL included,
+that exceeds its normal flank speed rolls the same way against a point of front internal
+damage per MP over and a motive damage roll (Tactical Operations p. 53). Being shut down or having
 an unconscious MechWarrior forces no roll of its own. Turns and speed changes are
 gradual. Each hex costs movement for its ground, foliage, route, water and any ice,
 snow or mud, and your speed is divided by that cost, following the Total Warfare and
@@ -93,6 +93,11 @@ for an unintentional charge (Total Warfare p. 63); a hit ends the skid, a miss
 slides on through. A vehicle slides the same way and rolls once for motive
 system damage, and a vehicle that skids into terrain its drive could never
 enter takes a point of damage per five tons and is immobile there for good. A
+unit that skids or sideslips into a building slides in, takes a tenth of the
+building's construction factor, and charges it for a tenth of its tonnage for
+every hex it moved before the skid; a building that stands ends the slide with
+the unit inside, and one that comes down lets it go on (Total Warfare pp. 63,
+67). A
 hovercraft does not skid but sideslips: whenever it changes facing at flank
 speed on any ground and then moves on, it rolls against its driving skill, and
 on a failure it drifts along its old course one hex for every point it missed
@@ -204,7 +209,8 @@ hexes, still at least three. Gravity does not change the heat.
 Jumping and death-from-above attacks are refused when load-adjusted effective
 speed is more than one MP (10.75 KPH) below the unloaded maximum. CargoTech,
 movement boosters, TSM and special gravity affect that calculation. A loss of
-exactly one MP is allowed. You cannot jump while towing another unit.
+exactly one MP is allowed. You cannot jump while towing another unit, or with
+any cargo in your lift hoists (Total Warfare pp. 137, 261).
 Wait twelve seconds after an ordinary landing before jumping again. Stabilizing adds two
 to firing difficulty. Damaged landing gear or loss of consciousness can cause
 a fall, and losing all jump thrust or overheating can cut the flight short; a
@@ -742,8 +748,14 @@ in a turn (Total Warfare pp. 148-149).
 A four-legged Mech can kick into its rear arc at +1 with the rear leg on the chosen
 side; that leg's actuators count (Total Warfare p. 147). Only two-legged Mechs trip,
 and only two-legged Mechs can be tripped; a trip takes Piloting -1 (Tactical
-Operations: Advanced Rules p. 89). A club must be picked up with `grabclub` before
-you can swing it (Total Warfare p. 146). A charge or death from above that meets its
+Operations: Advanced Rules p. 89). A club must be picked up with `grabclub [left|right]`
+before you can swing it (Total Warfare p. 146). In your hex you pick up, in this order,
+an arm or leg an attack blew off a Mech there, or a club someone let go of there; a tree
+in woods; or a girder from the rubble of a medium, heavy or hardened building that
+collapsed there, which takes a search: 2D6 for 7 or more, 6 or more, or 5 or more, once a
+turn, and a failed search leaves you free to act. A tree breaks on its first hit, while a
+limb or girder lasts. `grabclub -` lets go: a tree shatters, and a limb or girder lies in
+the hex for anyone to pick up. A charge or death from above that meets its
 target number exactly is a glancing blow and deals the target half damage, as other
 physical attacks and rams do, with two off every critical roll it causes on a 'Mech or a
 vehicle (Tactical Operations: Advanced Rules p. 78).
@@ -773,7 +785,12 @@ charge attempt clears the selection without attacking. The charging unit takes
 one point of damage per ten tons of its target, as in Total Warfare. You cannot
 charge within thirty seconds of launching a jump, at a target more than one level
 above or below you, or while your pilot is unconscious or stunned (Total Warfare
-pp. 148 and 150). A Mech cannot charge a vehicle.
+pp. 148 and 150). A Mech cannot charge a vehicle. A hit drives the target one hex on
+in the direction you charged and you follow into the hex it left, unless that hex is
+one it cannot be driven into, when neither of you moves; the target is driven as a
+push drives it, shoving any Mech beyond. A miss stops you in one of the two hexes beside
+the target, the one on the side you were turning toward first (Total Warfare
+pp. 148, 151-153).
 
 Ground vehicles charge (ram) with the same `charge` command; VTOLs cannot. A ram
 can strike a Mech, standing or prone, or another vehicle: tonnage over ten per hex
@@ -782,6 +799,17 @@ target's tonnage over ten to the vehicle. After a hit each vehicle involved roll
 the Motive System Damage Table and a rammed Mech rolls at +2 to stay standing. A
 vehicle cannot ram in a turn it fired, and its weapons are held for thirty seconds
 afterwards (Total Warfare p. 148). Its anti-missile systems stay ready to defend.
+
+`backhoe [<x> <y>]` digs a ground vehicle's backhoe into the building in the adjacent
+hex you name, or in your locked hex. A vehicle's backhoe never attacks a unit. The
+blow always lands, for six points plus 1D6 off the building's construction factor,
+and a building left with none collapses (Total Warfare pp. 130, 171). The backhoe
+must face the building: a front or rear backhoe through its side of the hull, a
+turret backhoe through the turret's arc. Your level must be within one of the
+building's, and a hovercraft must stop first (TechManual p. 241). A vehicle makes one
+physical attack in a thirty-second turn, a ram included; digging does not tie up
+its weapons. Lua uses `btech.unit.backhoe(unit, pilot, x, y)`. A Mech's backhoe is a
+physical weapon it swings at units with `melee`.
 
 
 Use `jump #unit` for a death-from-above attack, or `jump` with no arguments to
@@ -793,7 +821,10 @@ level of its hex above yours, plus two over a standing Mech, or a VTOL's elevati
 location table, and a VTOL loses its rotor (Total Warfare pp. 150 and 198).
 After a hit you roll at +4 and the target at +2 to stay standing; each roll stands
 alone, so a target still rolls when your landing damage has already knocked you
-down (Total Warfare p. 150).
+down (Total Warfare p. 150). You come down in the target's hex, so a Mech target moves
+out of it, hit or miss: on in the direction of your attack, from the hex your jump
+began in, or when that hex is barred into the open hex nearest that side (Total
+Warfare p. 150). Vehicles are not moved.
 
 A successful attack damages the target and your legs. A miss is a two-level fall
 onto your back: every hit strikes your rear and your pilot makes the fall's
@@ -1059,7 +1090,11 @@ rounds are not substituted. Lua uses `btech.unit.sguided(unit, pilot, weapon)`.
 Use `spot #your-unit` to declare yourself a spotter; `spot -` ends that role. A
 spotter keeps firing its own weapons (Total Warfare p. 111). While another unit
 fires through you, your own weapon attacks take +1, and an indirect shot you
-spot takes a further +1 if you launched a weapon within the last thirty seconds.
+spot takes a further +1 if you launched a weapon within the last thirty seconds;
+for missiles only weapon attacks count. While a unit with artillery has you
+selected, your physical attacks take +1 too, and the artillery shot you spot
+takes +1 if you launched a weapon or made any physical attack within the last
+thirty seconds (Tactical Operations: Advanced Rules p. 149).
 A unit carrying an iNarc Haywire pod cannot spot, and neither can one that is
 charging or making a death from above attack, or did so within the last thirty
 seconds. A friendly unit selects you with `spot #your-unit`; it needs no sight
@@ -1093,8 +1128,8 @@ sensor and actuator damage and the woods or smoke you fire through, with no rang
 or target modifiers. Direct fire cannot be made at a hex within six hexes. A
 direct-fire miss scatters 1D6 hexes. Every other artillery shot is indirect
 (pp. 148-150): gunnery +7, plus your observer's spotting modifier and +1 if it also
-attacked within the last thirty seconds, less one for each corrected miss, plus your
-movement when the hex lies within seventeen hexes.
+fired or made a physical attack within the last thirty seconds, less one for each
+corrected miss, plus your movement when the hex lies within seventeen hexes.
 An indirect miss scatters one hex for each point it missed by. A miss scatters in
 a direction rolled on one die, clockwise from north; a round that scatters off the
 map lands harmlessly. Once one of your rounds strikes its target hex, every later
@@ -1786,18 +1821,21 @@ swing. Use `punch` for bare fists.
 | Mace | `Mace` | tons / 4, rounded up | +1 | yes |
 | Dual saw | `Dual_Saw` | 7 | 0 | no |
 | Claw | `Claw` | tons / 7, rounded up | +1 | no |
-| Retractable blade | `Retractable_Blade` | tons / 10, rounded up | -2 | yes |
+| Retractable blade | `Retractable_Blade` | tons / 10, rounded up | -2 | no |
 | Lance | `Lance` | tons / 5, rounded up | +1 | no |
 | Flail | `Flail` | 9 | 0 | no |
 | Wrecking ball | `Wrecking_Ball` | 8 | +1 | no |
 | Chain whip | `Chain_Whip` | 3 | -2 | yes |
 | Small / medium / large vibroblade | `Small_Vibroblade`, `Medium_Vibroblade`, `Large_Vibroblade` | 7 / 10 / 14 | -2 | yes |
+| Backhoe | `Backhoe` | 6 | +1 | no |
 
-Triple-strength myomer doubles axe, sword, mace, claw, retractable blade and
-lance damage only. A missed mace swing forces a piloting check at +2. A roll of
-2 with a flail or wrecking ball swings it back into your own front for 5 or 4
-damage, followed by a piloting check. A wrecking ball reaches only your forward
-arc; every other weapon also reaches its arm's side arc (Total Warfare p. 146).
+Triple-strength myomer doubles axe, sword, mace, claw, retractable blade, lance
+and backhoe damage only, and each damaged arm actuator halves the backhoe's six as
+it halves those weapons' damage. A missed mace swing forces a piloting check at
++2. A roll of 2 with a flail or wrecking ball swings it back into your own front
+for 5 or 4 damage, followed by a piloting check. A wrecking ball reaches only your
+forward arc; every other weapon also reaches its arm's side arc (Total Warfare
+p. 146).
 Claws strike as punches, so a damaged shoulder stops them. Each vibroblade swing
 adds 3, 5 or 7 heat.
 

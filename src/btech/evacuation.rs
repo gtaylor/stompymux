@@ -922,6 +922,9 @@ fn publish_charge_consequences(
     for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
         publish_impact_consequences(scripts, config, impact)?;
     }
+    for fall in &report.displacement_falls {
+        publish_fall_consequences(scripts, config, fall)?;
+    }
     for balance in &report.balance {
         if let Some(fall) = &balance.fall {
             publish_fall_consequences(scripts, config, fall)?;
@@ -991,6 +994,9 @@ fn publish_dfa_consequences(
     super::diagnostics::publish(scripts, &report.experience_messages);
     for impact in report.target_impacts.iter().chain(&report.attacker_impacts) {
         publish_impact_consequences(scripts, config, impact)?;
+    }
+    for fall in &report.displacement_falls {
+        publish_fall_consequences(scripts, config, fall)?;
     }
     for balance in &report.balance {
         if let Some(fall) = &balance.fall {

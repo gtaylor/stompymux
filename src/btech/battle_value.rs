@@ -676,15 +676,15 @@ impl Mech {
                 _ => Arc::Forward,
             },
         );
-        // A biped's physical weapons sit in its arms, one to each; a quad's, the dual saw and
-        // the backhoe, in its side torsos (TechManual pp. 241, 243).
+        // A biped's physical weapons sit in its arms, one to each; construction gives a quad
+        // none.
         let mut physical = 0.0;
-        let mounts = if quad {
-            [MechSection::LeftTorso, MechSection::RightTorso]
+        let mounts: &[MechSection] = if quad {
+            &[]
         } else {
-            [MechSection::LeftArm, MechSection::RightArm]
+            &[MechSection::LeftArm, MechSection::RightArm]
         };
-        for mount in mounts {
+        for &mount in mounts {
             let installed = loadout
                 .systems
                 .iter()

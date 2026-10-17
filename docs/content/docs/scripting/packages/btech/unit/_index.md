@@ -30,6 +30,7 @@ no_list: true
 - [`autocon_shutdown`](autocon-shutdown/)
 - [`autoturret`](autoturret/)
 - [`axe`](axe/)
+- [`backhoe`](backhoe/)
 - [`battle_value`](battle-value/)
 - [`bearing`](bearing/)
 - [`bootlegger`](bootlegger/)

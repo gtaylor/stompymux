@@ -1,6 +1,6 @@
 //! Transient "fired this heartbeat" marks used by status bits and the simulation scheduler,
-//! and the durable times of each unit's last launch, of each Mech section's last launch and
-//! of its last jump, read against the 30-second turn.
+//! and the durable times of each unit's last launch, last physical attack, of each Mech
+//! section's last launch and of its last jump, read against the 30-second turn.
 use super::{Mech, MechSection, Vehicle};
 use crate::{Flag, ObjectId, World};
 
@@ -18,6 +18,12 @@ impl Mech {
     /// Simulation time of this unit's last charge or death-from-above attack, if any.
     pub fn physical_assault_time(&self) -> Option<i64> {
         self.physical_assault_time
+    }
+
+    /// Simulation time of this unit's last physical attack of any kind, hit or miss: a punch,
+    /// kick, trip, club or physical weapon swing, push, charge or death from above.
+    pub fn last_physical_attack(&self) -> Option<i64> {
+        self.last_physical_attack
     }
 
     /// Simulation time a weapon mounted in each section last launched. A weapon with critical
@@ -81,6 +87,63 @@ impl Vehicle {
     pub fn physical_assault_time(&self) -> Option<i64> {
         self.physical_assault_time
     }
+
+    /// Simulation time of this vehicle's last ram, hit or miss, or backhoe attack on a building.
+    pub fn last_physical_attack(&self) -> Option<i64> {
+        self.last_physical_attack
+    }
+}
+
+/// Record that `id` has just made a physical attack, hit or miss.
+pub(super) fn record_physical_attack(world: &mut World, id: ObjectId) {
+    let now = world.btech.simulation_time();
+    if let Some(unit) = world.btech.constructed.get_mut(&id) {
+        unit.last_physical_attack = Some(now);
+    } else if let Some(vehicle) = world.btech.vehicles.get_mut(&id) {
+        vehicle.last_physical_attack = Some(now);
+    }
+}
+
+/// Whether the unit made an attack of its own this turn: launched a weapon or made any
+/// physical attack. An artillery spotter that did makes the artillery attack it spots one
+/// harder (Tactical Operations: Advanced Rules p. 149). A spotter for LRM indirect fire counts
+/// only the Weapon Attack Phase (Total Warfare p. 111), so its physical attacks do not count
+/// there; see [`super::spotter`].
+pub(super) fn attacked_this_turn(world: &World, id: ObjectId) -> bool {
+    let now = world.btech.simulation_time();
+    world.btech.unit(id).is_some_and(|unit| {
+        super::with_unit!(unit, |unit| unit
+            .last_weapon_fire()
+            .into_iter()
+            .chain(unit.last_physical_attack())
+            .any(|time| within_turn(time, now)))
+    })
+}
+
+/// Whether `id` spots for a friendly artillery piece: it has declared itself a spotter and a
+/// unit mounting artillery has selected it. All of an artillery spotter's attacks then take
+/// +1, its physical attacks included (Tactical Operations: Advanced Rules p. 149); a spotter
+/// for LRM indirect fire takes it only on its weapon attacks (Total Warfare p. 111).
+pub(super) fn spots_for_artillery(world: &World, id: ObjectId) -> bool {
+    if super::spotter::selected(world, id) != Some(id) {
+        return false;
+    }
+    super::scanner::scanner_ids(world).into_iter().any(|other| {
+        other != id
+            && super::spotter::selected(world, other) == Some(id)
+            && world.btech.unit(other).is_some_and(|unit| {
+                super::with_unit!(unit, |unit| unit.loadout().is_ok_and(|loadout| loadout
+                    .weapons
+                    .iter()
+                    .any(|mount| mount.weapon.is_artillery())))
+            })
+    })
+}
+
+/// The +1 an artillery spotter adds to each of its own physical attacks (Tactical
+/// Operations: Advanced Rules p. 149).
+pub(super) fn artillery_spotter_modifier(world: &World, id: ObjectId) -> u8 {
+    u8::from(spots_for_artillery(world, id))
 }
 
 /// Refuse a charge, death from above or push at a unit that was already the target of one

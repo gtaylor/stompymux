@@ -85,6 +85,11 @@ pub struct StoredMap {
     /// row-major tile position. Like cleared woods, it lasts as long as the loaded terrain.
     #[serde(default)]
     pub(crate) terrain_damage: Arc<BTreeMap<u32, u16>>,
+    /// Severed limbs, girders set down and collapsed buildings' ruins that 'Mechs may take up
+    /// as clubs, by row-major tile position (Total Warfare p. 146). Like terrain damage, it
+    /// lasts as long as the loaded terrain.
+    #[serde(default)]
+    pub(crate) debris: Arc<BTreeMap<u32, super::HexDebris>>,
     /// Sparse overlays indexed by row-major tile position, independent of source terrain.
     #[serde(default)]
     pub(crate) decorations: Arc<BTreeMap<u32, super::Decoration>>,
@@ -138,6 +143,7 @@ impl StoredMap {
     pub(crate) fn establish_terrain(&mut self, hexes: Arc<Vec<Hex>>) -> Result<()> {
         self.decorations = Default::default();
         self.terrain_damage = Default::default();
+        self.debris = Default::default();
         if hexes.iter().all(|hex| hex.overlay().is_none()) {
             self.terrain = Some(hexes);
             return Ok(());
@@ -306,8 +312,24 @@ impl StoredMap {
                 self.decorations.is_empty(),
                 "Decorations require decoded terrain"
             );
+            ensure!(self.debris.is_empty(), "Debris requires decoded terrain");
             return Ok(());
         };
+        // Debris lies on real tiles, and a building's ruin only under rubble.
+        for (&index, debris) in self.debris.iter() {
+            let hex = terrain
+                .get(index as usize)
+                .context("Debris lies off the map")?;
+            ensure!(!debris.is_empty(), "Empty debris record");
+            ensure!(
+                debris.ruin.is_none()
+                    || matches!(
+                        hex.ground(),
+                        super::Ground::Rubble | super::Ground::UltraRubble
+                    ),
+                "A building's ruin lies under rubble"
+            );
+        }
         ensure!(
             super::Light::from_stored(self.light).is_ok()
                 && super::Weather::from_stored(self.weather).is_ok(),
@@ -1100,6 +1122,7 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         sensor_dice: Some(super::Dice::fresh()),
         terrain: None,
         terrain_damage: Default::default(),
+        debris: Default::default(),
         decorations: Default::default(),
         static_decorations: Default::default(),
         points_of_interest: Arc::new(asset.points_of_interest),

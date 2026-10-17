@@ -153,6 +153,12 @@ pub(super) fn advance_all(
             controlled.speed = 0.0;
         }
         unit.motion = Some(controlled);
+        // Gravity moves a VTOL as it moves any vehicle, so flying faster than its normal
+        // flank speed on a light world strains it the same way (Tactical Operations: Advanced
+        // Rules p. 53); the turn's fastest speed is checked at the turn's end.
+        let normal_flank = unit.speed_envelope().running;
+        unit.turn_movement
+            .observe(controlled.speed.abs(), envelope.walking, normal_flank);
         // A flanking VTOL that turns and then goes on into a new hex may sideslip (TW p. 67).
         unit.slick
             .observe(true, controlled.speed != 0.0, controlled.heading);

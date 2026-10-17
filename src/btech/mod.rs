@@ -478,7 +478,7 @@ mod myomer;
 pub use physical::{ArmAttack, arm_attack_profile, resolve_arm_attack};
 
 mod club;
-pub use club::grab_club;
+pub use club::{CarriedClub, ClubKind, HexDebris, girder_target, grab_club};
 pub use physical::{club_profile, resolve_club};
 
 mod charge;
@@ -499,6 +499,8 @@ mod ram;
 pub use ram::{RamProfile, RamReport, ram_profile, resolve_ram};
 pub(crate) mod push;
 pub use push::{PushBalance, PushProfile, PushReport, push_profile, resolve_push};
+pub(crate) mod backhoe;
+pub use backhoe::{BACKHOE_DAMAGE, BackhoeReport, resolve_backhoe};
 
 pub use jumping::launch_dfa;
 
@@ -1108,7 +1110,7 @@ mod towing;
 pub use towing::set_tow;
 
 mod load;
-pub use load::{UnitLoad, unit_load};
+pub use load::{LoadEffect, UnitLoad, unit_load};
 
 pub use motion_controls::throttle_maximum;
 

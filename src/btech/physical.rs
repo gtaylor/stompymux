@@ -224,11 +224,12 @@ pub enum ArmAttack {
     SmallVibroblade,
     MediumVibroblade,
     LargeVibroblade,
+    Backhoe,
 }
 
 impl ArmAttack {
     /// Hand weapons in the order an arm carrying several would swing them.
-    pub const HAND_WEAPONS: [Self; 13] = [
+    pub const HAND_WEAPONS: [Self; 14] = [
         Self::Axe,
         Self::Sword,
         Self::Mace,
@@ -242,6 +243,7 @@ impl ArmAttack {
         Self::SmallVibroblade,
         Self::MediumVibroblade,
         Self::LargeVibroblade,
+        Self::Backhoe,
     ];
 
     /// Bind one selected arm to the shared physical attack description.
@@ -276,6 +278,7 @@ impl ArmAttack {
             Self::SmallVibroblade => System::SmallVibroblade,
             Self::MediumVibroblade => System::MediumVibroblade,
             Self::LargeVibroblade => System::LargeVibroblade,
+            Self::Backhoe => System::Backhoe,
         })
     }
 
@@ -296,6 +299,7 @@ impl ArmAttack {
             Self::SmallVibroblade => "small vibroblade",
             Self::MediumVibroblade => "medium vibroblade",
             Self::LargeVibroblade => "large vibroblade",
+            Self::Backhoe => "backhoe",
         }
     }
 
@@ -314,6 +318,7 @@ impl ArmAttack {
             Self::WreckingBall => "wreck",
             Self::ChainWhip => "whip",
             Self::SmallVibroblade | Self::MediumVibroblade | Self::LargeVibroblade => "slice",
+            Self::Backhoe => "gouge",
         }
     }
 
@@ -332,11 +337,14 @@ impl ArmAttack {
             Self::SmallVibroblade => 1,
             Self::MediumVibroblade => 2,
             Self::LargeVibroblade => 4,
+            // A backhoe fills six slots (TechManual p. 344).
+            Self::Backhoe => 6,
         }
     }
 
     /// Whether the arm's hand actuator must work to swing this weapon. A retractable blade
-    /// extends from the arm itself, so the hand does not matter (Total Warfare p. 146).
+    /// extends from the arm itself, so the hand does not matter (Total Warfare p. 146), and a
+    /// backhoe replaces the hand (TechManual p. 241).
     pub fn needs_hand(self) -> bool {
         !matches!(
             self,
@@ -346,13 +354,15 @@ impl ArmAttack {
                 | Self::Lance
                 | Self::Flail
                 | Self::WreckingBall
+                | Self::Backhoe
         )
     }
 
     /// Whether damaged or missing arm actuators halve this weapon's damage as they halve a
     /// punch (Total Warfare p. 146 Physical Weapon Attacks Table; TO:AUE pp. 100–103). Weapons
     /// with a fixed damage value, such as industrial saws, flails and active vibroblades, are
-    /// harder to aim with a damaged arm but hit just as hard.
+    /// harder to aim with a damaged arm but hit just as hard; the backhoe's fixed six is the
+    /// exception the table marks.
     pub fn actuators_reduce_damage(self) -> bool {
         matches!(
             self,
@@ -363,13 +373,14 @@ impl ArmAttack {
                 | Self::Claw
                 | Self::RetractableBlade
                 | Self::Lance
+                | Self::Backhoe
         )
     }
 
     /// Reduction applied to the pilot's piloting skill when aiming this attack.
     fn skill_bonus(self) -> i16 {
         match self {
-            Self::Punch | Self::Claw => 0,
+            Self::Punch | Self::Claw | Self::Backhoe => 0,
             Self::Sword
             | Self::RetractableBlade
             | Self::ChainWhip
@@ -382,11 +393,12 @@ impl ArmAttack {
         }
     }
 
-    /// Aim penalty inherent to the weapon, applied after the skill bonus.
+    /// Aim penalty inherent to the weapon, applied after the skill bonus. A backhoe swings at
+    /// +1 (Total Warfare p. 146).
     fn weapon_modifier(self) -> u8 {
         match self {
             Self::Mace | Self::Lance | Self::WreckingBall => 2,
-            Self::Saw | Self::Claw | Self::Flail => 1,
+            Self::Saw | Self::Claw | Self::Flail | Self::Backhoe => 1,
             _ => 0,
         }
     }
@@ -410,6 +422,8 @@ impl ArmAttack {
             Self::SmallVibroblade => 7,
             Self::MediumVibroblade => 10,
             Self::LargeVibroblade => 14,
+            // Six, which triple strength myomer doubles (Total Warfare p. 146).
+            Self::Backhoe => 6,
         }
     }
 
@@ -540,6 +554,10 @@ pub struct PhysicalProfile {
     /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind
     /// (Tactical Operations: Advanced Units & Equipment p. 113).
     pub sensors: u8,
+    /// One while the attacker spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1, physical attacks included (Tactical Operations: Advanced Rules
+    /// p. 149).
+    pub spotting: u8,
     /// Direct material damage; trips always have zero.
     pub damage: u16,
     /// Location table for direct impacts; unused by trips and against vehicles, which take the
@@ -885,7 +903,7 @@ fn attack_profile_inner(
     );
     if matches!(attack, PhysicalAttack::Punch { .. }) {
         ensure!(
-            source.carried_club.map(Arm::section) != Some(attack.section(source.chassis())),
+            source.carried_club().map(Arm::section) != Some(attack.section(source.chassis())),
             "You are carrying a club in this arm and cannot punch with it"
         );
     }
@@ -1111,6 +1129,7 @@ fn attack_profile_inner(
     let terrain = obscured.woods_density() + obscured.smoke_density();
     let light = super::light_aim::modifier(world, target, true)?;
     let sensors = source.blind_cockpit_modifier();
+    let spotting = super::recent_fire::artillery_spotter_modifier(world, attacker);
     let tons = source.definition().tons;
     let mut damage = match attack {
         PhysicalAttack::Punch { .. } => ArmAttack::Punch.damage(tons),
@@ -1160,7 +1179,8 @@ fn attack_profile_inner(
             + i32::from(target_movement)
             + i32::from(terrain)
             + i32::from(light)
-            + i32::from(sensors),
+            + i32::from(sensors)
+            + i32::from(spotting),
         base,
         actuators,
         weapon_modifier,
@@ -1170,6 +1190,7 @@ fn attack_profile_inner(
         terrain,
         light,
         sensors,
+        spotting,
         damage,
         hit_table: if victim.prone || victim.vehicle {
             HitTable::Weapon
@@ -1327,6 +1348,7 @@ fn resolve_attack_inner(
     let character = context.character;
     let profile = attack_profile_inner(world, attacker, pilot, target, attack, rules, context)?;
     world.attempt(|world| {
+        super::recent_fire::record_physical_attack(world, attacker);
         let unit = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = unit.dice.generic_roll();
         for &section in &profile.limbs {
@@ -1387,9 +1409,15 @@ fn resolve_attack_inner(
                 text: "You are nicked by a glancing blow!".into(),
             });
         }
+        // An uprooted tree is good for one successful attack; limbs and girders last (Total
+        // Warfare p. 146).
         if hit && attack == PhysicalAttack::Club {
             let unit = world.btech.constructed.get_mut(&attacker).unwrap();
-            if unit.carried_club.take().is_some() {
+            if unit
+                .carried_club
+                .is_some_and(|club| club.kind.breaks_on_hit())
+            {
+                unit.carried_club = None;
                 notices.push(Notice {
                     unit: attacker,
                     text: "Your club shatters on contact.".into(),
@@ -2580,6 +2608,27 @@ mod tests {
         assert_eq!(ArmAttack::Lance.damage(55), 11);
         assert_eq!(ArmAttack::Lance.damage(57), 12);
         assert_eq!(ArmAttack::Axe.damage(57), 11);
+    }
+
+    /// A backhoe swings at +1 for six points, which hot triple strength myomer doubles and
+    /// damaged arm actuators halve; it replaces the hand, so needs none, and all six of its
+    /// slots must work (Total Warfare p. 146; TechManual pp. 241, 344).
+    #[test]
+    fn backhoes_follow_the_physical_weapon_table() {
+        let backhoe = ArmAttack::from_system(System::Backhoe).unwrap();
+        assert_eq!(backhoe, ArmAttack::Backhoe);
+        assert_eq!(
+            i16::from(backhoe.weapon_modifier()) - backhoe.skill_bonus(),
+            1
+        );
+        assert_eq!(backhoe.damage(35), 6);
+        assert_eq!(backhoe.damage(100), 6);
+        assert!(backhoe.myomer_doubles());
+        assert!(backhoe.actuators_reduce_damage());
+        assert!(!backhoe.needs_hand());
+        assert!(!backhoe.forward_only());
+        assert!(!backhoe.strikes_as_punch());
+        assert_eq!(backhoe.minimum_slots(35), 6);
     }
 
     /// Only the wrecking ball is limited to the forward arc (Total Warfare p. 146).

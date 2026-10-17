@@ -30,6 +30,9 @@ pub struct PushProfile {
     pub light: i16,
     /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind.
     pub sensors: u8,
+    /// One while the attacker spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1 (Tactical Operations: Advanced Rules p. 149).
+    pub spotting: u8,
     /// Hexside, clockwise from north, the push drives the target across.
     pub direction: u8,
 }
@@ -231,6 +234,7 @@ fn profile(
     let terrain = obscured.woods_density() + obscured.smoke_density();
     let light = super::light_aim::modifier(world, target, true)?;
     let sensors = source.blind_cockpit_modifier();
+    let spotting = super::recent_fire::artillery_spotter_modifier(world, attacker);
     Ok(PushProfile {
         target_number: i32::from(base)
             + i32::from(shoulders)
@@ -238,7 +242,8 @@ fn profile(
             + i32::from(target_movement)
             + i32::from(terrain)
             + i32::from(light)
-            + i32::from(sensors),
+            + i32::from(sensors)
+            + i32::from(spotting),
         base,
         shoulders,
         attacker_movement,
@@ -246,6 +251,7 @@ fn profile(
         terrain,
         light,
         sensors,
+        spotting,
         direction: u8::try_from(direction)?,
     })
 }
@@ -272,6 +278,7 @@ fn resolve(
 ) -> Result<PushReport> {
     let profile = profile(world, attacker, pilot, target, rules, character)?;
     world.attempt(|world| {
+        super::recent_fire::record_physical_attack(world, attacker);
         let unit = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = unit.dice.generic_roll();
         for arm in [MechSection::LeftArm, MechSection::RightArm] {
@@ -345,7 +352,9 @@ fn resolve(
             });
         }
         if displacement.moved {
-            advance(world, attacker, vacated)?;
+            // The pusher follows into the hex its target left, spending no movement (Total
+            // Warfare p. 147).
+            super::displacement::step_into(world, attacker, vacated)?;
             report.notices.push(Notice {
                 unit: attacker,
                 text: "You follow through into the hex your target left.".into(),
@@ -412,36 +421,6 @@ fn resolve(
         world.btech.validate_action(world)?;
         Ok(report)
     })
-}
-
-/// Move the pushing 'Mech into the hex its target left; it spends no movement doing so
-/// (Total Warfare p. 147).
-fn advance(world: &mut World, id: ObjectId, position: Position) -> Result<()> {
-    let map = &world.btech.maps()[&position.map];
-    let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let unit = &world.btech.constructed_units()[&id];
-    let old = unit.position().context("Pushing unit is not placed")?;
-    let from = unit.elevation_level(map.base_hex(i64::from(old.x), i64::from(old.y))?);
-    let level = super::building_interior::entry_level(tile, from);
-    let unit = world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Pushing unit is unavailable")?;
-    let motion = unit.motion.as_mut().context("Pushing unit has no motion")?;
-    motion.point = HexCoordinate {
-        x: i32::from(position.x),
-        y: i32::from(position.y),
-    }
-    .center();
-    unit.position = Some(position);
-    unit.hex_sync_pending = false;
-    unit.level_entry = None;
-    unit.ground_elevation =
-        (level != i32::from(tile.standing_height())).then_some(f64::from(level));
-    let identity = unit.identity();
-    world.btech.units.insert(id, identity);
-    Ok(())
 }
 
 /// Resolve a push inside one host checkpoint that publishes notices and character casualties.

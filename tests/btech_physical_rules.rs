@@ -978,3 +978,285 @@ async fn glancing_landings_and_rams_lower_vehicle_critical_rolls() {
         .unwrap();
     assert!(modifiers.iter().all(|&found| found == -2), "{modifiers:?}");
 }
+
+/// An artillery spotter's own physical attacks take +1 (Tactical Operations: Advanced Rules
+/// p. 149), and every attack it makes, hit or miss, marks it as having attacked that turn for
+/// the artillery attack it spots. Spotting for a unit with no artillery, as for LRM indirect
+/// fire, leaves its physical attacks alone: that rule counts only the Weapon Attack Phase
+/// (Total Warfare p. 111).
+#[tokio::test]
+async fn artillery_spotters_take_one_more_on_their_physical_attacks() {
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    let kick = |world: &World| {
+        battle_kick_profile(world, id, ObjectId(1), target, Leg::Right, kick_rules()).unwrap()
+    };
+    let plain = kick(&base);
+    assert_eq!(plain.spotting, 0);
+    select_battle_spotter(&mut base, id, ObjectId(1), Some(id)).unwrap();
+    // A friendly 'Mech without artillery firing through the spotter adds nothing.
+    let lrm = add_mech(&mut base, &config, id, (1, 1));
+    base.btech
+        .rewrite_unit_record(lrm, |record| record["spotter"] = id.0.into())
+        .unwrap();
+    assert_eq!(kick(&base).spotting, 0);
+    let mut world = base.clone();
+    let piece = add_vehicle(
+        &mut world,
+        &config,
+        id,
+        include_str!("../game/units/Demolisher-Arrow.toml"),
+        (1, 2),
+    );
+    world
+        .btech
+        .rewrite_unit_record(piece, |record| record["spotter"] = id.0.into())
+        .unwrap();
+    let spotted = kick(&world);
+    assert_eq!(spotted.spotting, 1);
+    assert_eq!(spotted.target_number, plain.target_number + 1);
+    let mut pushing = world.clone();
+    let map = pushing.btech.constructed_units()[&id]
+        .position()
+        .unwrap()
+        .map;
+    place_battle_unit(&mut pushing, target, map, 5, 4).unwrap();
+    refresh_battle_contacts(&mut pushing, &[id]).unwrap();
+    let push = battle_push_profile(&pushing, id, ObjectId(1), target, kick_rules()).unwrap();
+    assert_eq!(push.spotting, 1);
+    // A missed kick still counts as the spotter's attack this turn.
+    assert_eq!(
+        world.btech.constructed_units()[&id].last_physical_attack(),
+        None
+    );
+    shot_seed(&mut world, id, roll_seed(2));
+    let report = resolve_battle_kick(
+        &mut world,
+        id,
+        ObjectId(1),
+        target,
+        Leg::Right,
+        kick_rules(),
+    )
+    .unwrap();
+    assert!(!report.hit);
+    assert_eq!(
+        world.btech.constructed_units()[&id].last_physical_attack(),
+        Some(world.btech.simulation_time())
+    );
+    world.validate(&config).unwrap();
+}
+
+/// A 'Mech's backhoe is a physical weapon: Piloting +1 for six points on the standard Hit
+/// Location Table, in the forward arc or its arm's side arc, with triple strength myomer
+/// doubling the damage and each damaged arm actuator adding +2 and halving it (Total Warfare
+/// p. 146). It replaces the hand, so the missing hand costs nothing.
+#[tokio::test]
+async fn backhoes_swing_at_plus_one_for_six() {
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    let punch =
+        battle_punch_profile(&base, id, ObjectId(1), target, Arm::Right, kick_rules()).unwrap();
+    install_test_handweapons(&mut base, id, ArmAttack::Backhoe);
+    let swing = |world: &World| {
+        battle_arm_attack_profile(
+            world,
+            id,
+            ObjectId(1),
+            target,
+            Arm::Right,
+            ArmAttack::Backhoe,
+            kick_rules(),
+        )
+        .unwrap()
+    };
+    let profile = swing(&base);
+    assert_eq!(profile.base, punch.base);
+    assert_eq!(profile.weapon_modifier, 1);
+    assert_eq!(profile.actuators, 0);
+    // The fixture's Jenner punches without its lower arm and hand actuators; the backhoe arm
+    // keeps the lower actuator and needs no hand.
+    assert_eq!(
+        profile.target_number,
+        punch.target_number - i32::from(punch.actuators) + 1
+    );
+    assert_eq!(profile.damage, 6);
+    assert_eq!(profile.hit_table, HitTable::Weapon);
+    let mut damaged = base.clone();
+    destroy_battle_critical(
+        &mut damaged,
+        id,
+        CriticalLocation {
+            section: MechSection::RightArm,
+            slot: 2,
+        },
+    )
+    .unwrap();
+    let hurt = swing(&damaged);
+    assert_eq!(hurt.actuators, 2);
+    assert_eq!(hurt.damage, 3);
+
+    let mut world = base.clone();
+    shot_seed(&mut world, id, roll_seed(12));
+    let report = resolve_battle_arm_attack(
+        &mut world,
+        id,
+        ObjectId(1),
+        target,
+        ArmSelection::Right,
+        ArmAttack::Backhoe,
+        kick_rules(),
+    )
+    .unwrap();
+    let attack = &report.attacks[0];
+    assert!(attack.hit);
+    assert_eq!(dealt(attack.impact.as_slice()), 6);
+    world.validate(&config).unwrap();
+}
+
+/// What lies in the hex at `(x, y)` on `id`'s map for a 'Mech to take up as a club.
+fn debris(world: &World, id: ObjectId, (x, y): (i32, i32)) -> HexDebris {
+    let map = world.btech.unit(id).unwrap().position().unwrap().map;
+    world.btech.maps()[&map]
+        .debris_at(HexCoordinate { x, y })
+        .unwrap()
+}
+
+/// An arm blown off a 'Mech lies in the hex where it took the damage, and any 'Mech there may
+/// pick it up as a club; unlike an uprooted tree, a limb survives a successful blow, and one let
+/// go of lies in the hex again (Total Warfare p. 146). The debris is saved with the map.
+#[tokio::test]
+async fn severed_limbs_make_lasting_clubs() {
+    let (_dir, config, mut world, id, target) = kick_fixture().await;
+    prepare_test_club(&mut world, id);
+    let arm = world.btech.constructed_units()[&target].sections()[&MechSection::LeftArm].clone();
+    resolve_battle_tactical_impact(
+        &mut world,
+        target,
+        Hit {
+            section: MechSection::LeftArm,
+            rear_armor: false,
+            through_armor_critical: false,
+        },
+        arm.armor + arm.internal,
+        kick_rules().fall,
+    )
+    .unwrap();
+    assert_eq!(debris(&world, id, (5, 5)).limbs, 1);
+    persistence::save(&config.database(), &world).await.unwrap();
+    assert_eq!(
+        persistence::load(&config.database()).await.unwrap().btech,
+        world.btech
+    );
+    // The limb lying there comes before the woods.
+    let notices = grab_battle_club(&mut world, id, ObjectId(1), None).unwrap();
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text.contains("pick up a severed limb")),
+        "{notices:?}"
+    );
+    assert_eq!(
+        world.btech.constructed_units()[&id].club().unwrap().kind,
+        ClubKind::Limb
+    );
+    assert!(debris(&world, id, (5, 5)).is_empty());
+    pass_seconds(&mut world, 30);
+    shot_seed(&mut world, id, roll_seed(12));
+    let report = resolve_battle_club(&mut world, id, ObjectId(1), target, kick_rules()).unwrap();
+    assert!(report.hit);
+    assert_eq!(
+        world.btech.constructed_units()[&id].club().unwrap().kind,
+        ClubKind::Limb
+    );
+    grab_battle_club(&mut world, id, ObjectId(1), Some("-")).unwrap();
+    assert_eq!(debris(&world, id, (5, 5)).limbs, 1);
+    world.validate(&config).unwrap();
+}
+
+/// A girder lies in the rubble of a collapsed medium building: a search rolls 2D6 for 7 or
+/// more, once a turn, and a girder found may be swung again and again (Total Warfare p. 146).
+#[tokio::test]
+async fn girders_are_searched_out_of_rubble() {
+    let (_dir, config, mut world, id, target) = kick_fixture().await;
+    prepare_test_club(&mut world, id);
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    let width = world.btech.maps()[&map].width as usize;
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            support::set_hex_terrain(&mut record["terrain"][5 * width + 5], Terrain::Rubble);
+            record["debris"][(5 * width + 5).to_string()] = serde_json::json!({ "ruin": "medium" });
+        })
+        .unwrap();
+    shot_seed(&mut world, id, roll_seed(6));
+    let notices = grab_battle_club(&mut world, id, ObjectId(1), None).unwrap();
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text.contains("BTH: 7, Roll: 6")),
+        "{notices:?}"
+    );
+    assert!(world.btech.constructed_units()[&id].club().is_none());
+    assert!(
+        refusal(grab_battle_club(&mut world.clone(), id, ObjectId(1), None))
+            .contains("already searched")
+    );
+    pass_seconds(&mut world, 30);
+    shot_seed(&mut world, id, roll_seed(7));
+    grab_battle_club(&mut world, id, ObjectId(1), None).unwrap();
+    assert_eq!(
+        world.btech.constructed_units()[&id].club().unwrap().kind,
+        ClubKind::Girder
+    );
+    pass_seconds(&mut world, 30);
+    shot_seed(&mut world, id, roll_seed(12));
+    assert!(
+        resolve_battle_club(&mut world, id, ObjectId(1), target, kick_rules())
+            .unwrap()
+            .hit
+    );
+    assert!(world.btech.constructed_units()[&id].club().is_some());
+    world.validate(&config).unwrap();
+}
+
+/// A charge that hits drives its target one hex onward and the charger follows it in; when that
+/// hex is barred neither moves (Total Warfare p. 148). A death from above pushes its target on
+/// in the direction of the attack, or into the open hex nearest that side when it is barred
+/// (TW p. 150). The fixture's units share the hex (5,5) and face north.
+#[tokio::test]
+async fn charges_and_landings_displace_their_targets() {
+    let (_dir, config, base, id, target) = kick_fixture().await;
+    let mut charging = base.clone();
+    prepare_test_charge(&mut charging, id);
+    let rules = ChargeRules {
+        distance: 2.0,
+        physical: kick_rules(),
+    };
+    let mut world = charging.clone();
+    shot_seed(&mut world, id, roll_seed(12));
+    let report = resolve_battle_charge(&mut world, id, target, rules).unwrap();
+    assert!(report.hit && report.displaced);
+    assert_eq!(hex(&world, target), (5, 4));
+    assert_eq!(hex(&world, id), (5, 5));
+    world.validate(&config).unwrap();
+    let mut blocked = charging.clone();
+    raise_hex(&mut blocked, id, (5, 4), 3);
+    shot_seed(&mut blocked, id, roll_seed(12));
+    let report = resolve_battle_charge(&mut blocked, id, target, rules).unwrap();
+    assert!(report.hit && !report.displaced);
+    assert!(report.blocked.is_some());
+    assert_eq!(hex(&blocked, target), (5, 5));
+    blocked.validate(&config).unwrap();
+
+    let mut landing = base.clone();
+    dfa_piloting(&mut landing);
+    shot_seed(&mut landing, target, 0);
+    raise_hex(&mut landing, id, (5, 4), 3);
+    launch_battle_jump(&mut landing, id, ObjectId(1), 0, 2.0).unwrap();
+    let dice = dfa_dice(&landing, id, target, |report, _| report.hit);
+    landing.btech.set_unit_dice(id, dice).unwrap();
+    let report = resolve_battle_dfa(&mut landing, id, target, kick_rules()).unwrap();
+    assert!(report.hit && report.displaced);
+    let beside = HexCoordinate { x: 5, y: 5 }.neighbors().unwrap()[1];
+    assert_eq!(hex(&landing, target), (beside.x as u16, beside.y as u16));
+    landing.validate(&config).unwrap();
+}

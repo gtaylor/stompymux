@@ -60,6 +60,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
             fire_dice: None,
             sensor_dice: None,
             terrain_damage: Default::default(),
+            debris: Default::default(),
             decorations: Default::default(),
             static_decorations: Default::default(),
             points_of_interest: Default::default(),
@@ -93,6 +94,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     let clock = super::btech_deadlines::Clock::at(simulation_seconds);
     super::btech_cargo_bay::load(c, &mut maps).await?;
     super::btech_terrain::load(c, &mut maps).await?;
+    super::btech_debris::load(c, &mut maps).await?;
     super::btech_entrances::load(c, &mut maps).await?;
     super::btech_building_routes::load(c, &mut maps).await?;
     super::btech_map_links::load(c, &mut maps).await?;
@@ -400,7 +402,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         // Mines, building routes and landing exclusions have selective writers.
         // Other map-object records remain outside terrain replacement ownership.
         let objects: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM btech_map_objects WHERE map_dbref=? AND object_type NOT IN (0,1,2,3,4,5,6,9)",
+            "SELECT count(*) FROM btech_map_objects WHERE map_dbref=? AND object_type NOT IN (0,1,2,3,4,5,6,9,11)",
         )
         .bind(id.0)
         .fetch_one(&mut *c)
@@ -460,6 +462,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_building_routes::save(c, before, after).await?;
     changed |= super::btech_map_links::save(c, before, after).await?;
     changed |= super::btech_landing_exclusions::save(c, before, after).await?;
+    changed |= super::btech_debris::save(c, before, after).await?;
     changed |= super::btech_minefields::save(c, before, after).await?;
     changed |= super::btech_building_repair::save(c, before, after).await?;
     changed |= super::btech_artillery::save(c, before, after).await?;

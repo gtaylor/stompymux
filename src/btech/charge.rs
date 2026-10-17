@@ -19,6 +19,9 @@ pub struct ChargeProfile {
     pub skill: i32,
     /// Woods and smoke over the target's hex.
     pub terrain: u8,
+    /// One while the charger spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1 (Tactical Operations: Advanced Rules p. 149).
+    pub spotting: u8,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -55,6 +58,15 @@ pub struct ChargeReport {
     /// Recoil direction sampled after the target damage cascade; absent on a miss.
     pub recoil_arc: Option<HitArc>,
     pub balance: Vec<ChargeBalance>,
+    /// A hit drove the target one hex onward and the charger followed it in (Total Warfare
+    /// p. 148).
+    pub displaced: bool,
+    /// Why a hit target could not be displaced; neither unit then moved.
+    pub blocked: Option<String>,
+    /// Falls the displacement itself caused: off a drop, or onto another unit.
+    pub displacement_falls: Vec<MechFallReport>,
+    /// The hex beside its target a charger that missed stepped into (Total Warfare p. 148).
+    pub sidestep: Option<HexCoordinate>,
     /// Pilot-only checks ordered among the aggregate cockpit notices.
     pub pilot_notices: Vec<super::PilotNotice>,
     pub notices: Vec<Notice>,
@@ -257,11 +269,13 @@ fn charge_profile_for(
         .context("Map not found")?
         .hex(i64::from(target_position.x), i64::from(target_position.y))?;
     let terrain = obscured.woods_density() + obscured.smoke_density();
+    let spotting = super::recent_fire::artillery_spotter_modifier(world, attacker);
     let target_number = i32::from(unit_piloting_target(
         world,
         attacker,
         rules.physical.fall.extended_piloting,
     )?) + skill
+        + i32::from(spotting)
         + i32::from(if specialist {
             (movement - 1).min(0)
         } else {
@@ -282,6 +296,7 @@ fn charge_profile_for(
         target_number,
         skill,
         terrain,
+        spotting,
         inflicted_damage: inflicted,
         received_damage: received,
         target_arc: HitArc::from_bearing(reverse.bearing.unwrap_or(180.0), opponent.heading)?,
@@ -437,9 +452,11 @@ fn resolve_charge_inner(
             character,
             recoil_tons,
             target_table: HitTable::Weapon,
+            displaces: true,
         },
     )?;
     super::recent_fire::mark_assaulted(&mut candidate, target);
+    super::recent_fire::record_physical_attack(&mut candidate, attacker);
     *world = candidate;
     Ok(report)
 }
@@ -501,6 +518,7 @@ pub(super) fn resolve_skid_charge(
         target_number,
         skill: 0,
         terrain,
+        spotting: 0,
         inflicted_damage: inflicted,
         received_damage: recoil_damage(recoil_tons),
         target_arc: HitArc::from_bearing(
@@ -532,6 +550,7 @@ pub(super) fn resolve_skid_charge(
             recoil_tons,
             target_table: HitTable::Kick,
             character,
+            displaces: false,
         },
     )?;
     Ok(Some(report))
@@ -549,6 +568,9 @@ struct PreparedCharge {
     /// Hit Location Table for the target's packets while it stands.
     target_table: HitTable,
     character: bool,
+    /// A deliberate one-way charge, which displaces its target on a hit and steps the charger
+    /// aside on a miss (Total Warfare p. 148). Skids and the mutual charge do not.
+    displaces: bool,
 }
 
 /// Apply a pre-rolled charge without rechecking eligibility after an earlier collision.
@@ -563,6 +585,7 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
         recoil_tons,
         target_table,
         character,
+        displaces,
     } = prepared;
     world.attempt(|world| {
         if role != ChargeRole::OneWay {
@@ -592,6 +615,10 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
             received_damage: 0,
             recoil_arc: None,
             balance: vec![],
+            displaced: false,
+            blocked: None,
+            displacement_falls: Vec::new(),
+            sidestep: None,
             pilot_notices: Vec::new(),
             notices: if role == ChargeRole::OneWay {
                 vec![Notice {
@@ -709,16 +736,35 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
             if role != ChargeRole::OneWay {
                 stop_motion(world, attacker);
             }
+            let dominoes = if displaces {
+                stop_motion(world, attacker);
+                displace_target(world, &mut report, rules.physical.fall, character)?
+            } else {
+                Vec::new()
+            };
             let checks = if role == ChargeRole::Second {
                 [(target, target_rules), (attacker, attacker_rules)]
             } else {
                 [(attacker, attacker_rules), (target, target_rules)]
             };
-            for (id, fall_rules) in checks {
+            // Both units roll at +2 in the hex they now occupy, and each 'Mech the target was
+            // shoved into rolls as the domino effect demands (Total Warfare pp. 148, 153).
+            let checks = checks
+                .into_iter()
+                .map(|(id, fall_rules)| (id, fall_rules, 2))
+                .chain(dominoes.into_iter().map(|id| {
+                    (
+                        id,
+                        super::physical::participant_fall_rules(world, id, rules.physical.fall),
+                        0,
+                    )
+                }));
+            for (id, fall_rules, modifier) in checks.collect::<Vec<_>>() {
                 if world.btech.constructed_units()[&id].is_destroyed() {
                     continue;
                 }
-                let mut check = roll_piloting(world, id, 2, rules.physical.fall.extended_piloting)?;
+                let mut check =
+                    roll_piloting(world, id, modifier, rules.physical.fall.extended_piloting)?;
                 super::piloting::capture_feedback(
                     id,
                     world.btech.constructed_units()[&id].pilot(),
@@ -768,6 +814,11 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
             if role == ChargeRole::OneWay {
                 stop_motion(world, attacker);
             }
+        } else if displaces {
+            // A charger that misses ends beside its target, in the hex to the right or left of
+            // its forward arc (Total Warfare p. 148).
+            stop_motion(world, attacker);
+            sidestep(world, &mut report)?;
         }
         if role == ChargeRole::OneWay {
             start_recovery(world, attacker);
@@ -775,6 +826,132 @@ fn resolve_prepared(world: &mut World, prepared: PreparedCharge) -> Result<Charg
         world.btech.validate_action(world)?;
         Ok(report)
     })
+}
+
+/// The hexside a charge drives its target across: from the charger's hex toward the
+/// target's, or the charger's heading once it has already pushed into the target's hex.
+fn charge_direction(world: &World, attacker: ObjectId, target: ObjectId) -> Result<usize> {
+    let hex = |id| -> Result<HexCoordinate> {
+        let position = world.btech.constructed_units()[&id]
+            .position()
+            .context("Charge participant is not placed")?;
+        Ok(HexCoordinate {
+            x: i32::from(position.x),
+            y: i32::from(position.y),
+        })
+    };
+    let heading = world.btech.constructed_units()[&attacker]
+        .motion()
+        .context("Charging unit has no motion")?
+        .heading;
+    Ok(
+        super::displacement::hexside_toward(hex(attacker)?, hex(target)?)?
+            .unwrap_or_else(|| super::displacement::hexside_ahead(heading)),
+    )
+}
+
+/// After a hit that left the target standing, drive it one hex onward in the charge's
+/// direction and step the charger, if it survived, into the hex it left; a barred hex keeps
+/// both where they are (Total Warfare pp. 148, 151). Returns the 'Mechs the domino effect
+/// shoved, each of which must roll.
+fn displace_target(
+    world: &mut World,
+    report: &mut ChargeReport,
+    rules: FallRules,
+    character: bool,
+) -> Result<Vec<ObjectId>> {
+    let (attacker, target) = (report.attacker, report.target);
+    if world.btech.constructed_units()[&target].is_destroyed() {
+        return Ok(Vec::new());
+    }
+    let direction = charge_direction(world, attacker, target)?;
+    let vacated = world.btech.constructed_units()[&target]
+        .position()
+        .context("Target is not placed")?;
+    let displacement = super::displacement::displace(world, target, direction, rules, character)?;
+    report.notices.extend(displacement.notices);
+    super::piloting::append_feedback(
+        &mut report.pilot_notices,
+        displacement.pilot_notices,
+        report.notices.len(),
+    );
+    report
+        .experience_messages
+        .extend(displacement.experience_messages);
+    report.displacement_falls = displacement.falls;
+    report.displaced = displacement.moved;
+    if let Some(reason) = displacement.blocked {
+        report.blocked = Some(format!("Your target cannot be driven into {reason}."));
+        report.notices.push(Notice {
+            unit: attacker,
+            text: format!("#{} cannot be driven into {reason}.", target.0),
+        });
+    }
+    if displacement.moved && !world.btech.constructed_units()[&attacker].is_destroyed() {
+        super::displacement::step_into(world, attacker, vacated)?;
+        report.notices.push(Notice {
+            unit: attacker,
+            text: "You drive on into the hex your target left.".into(),
+        });
+    }
+    Ok(displacement.dominoes)
+}
+
+/// Step a charger that missed into the hex beside its target: one of the two hexes beside the
+/// target in the charger's forward arc, the side it was turning toward first. When neither can
+/// take it, it stays where it is.
+fn sidestep(world: &mut World, report: &mut ChargeReport) -> Result<()> {
+    let (attacker, target) = (report.attacker, report.target);
+    if world.btech.constructed_units()[&attacker].is_destroyed() {
+        return Ok(());
+    }
+    let direction = charge_direction(world, attacker, target)?;
+    let heading = world.btech.constructed_units()[&attacker]
+        .motion()
+        .context("Charging unit has no motion")?
+        .heading;
+    // The charger's hex is the one before its target's along the charge.
+    let target_position = world.btech.constructed_units()[&target]
+        .position()
+        .context("Target is not placed")?;
+    let approach = HexCoordinate {
+        x: i32::from(target_position.x),
+        y: i32::from(target_position.y),
+    }
+    .neighbors()?[(direction + 3) % 6];
+    let right = (heading - direction as f64 * 60.0).rem_euclid(360.0) < 180.0;
+    let sides = if right {
+        [(direction + 1) % 6, (direction + 5) % 6]
+    } else {
+        [(direction + 5) % 6, (direction + 1) % 6]
+    };
+    let position = world.btech.constructed_units()[&attacker]
+        .position()
+        .context("Charging unit is not placed")?;
+    let here = HexCoordinate {
+        x: i32::from(position.x),
+        y: i32::from(position.y),
+    };
+    for side in sides {
+        let hex = approach.neighbors()?[side];
+        // Measured from the charger's own hex, which may already be its target's.
+        let Some(step) = super::displacement::hexside_toward(here, hex)? else {
+            continue;
+        };
+        if here.distance(hex) > 1 {
+            continue;
+        }
+        if let Some((destination, _)) = super::displacement::placement(world, attacker, step)? {
+            super::displacement::step_into(world, attacker, destination)?;
+            report.sidestep = Some(hex);
+            report.notices.push(Notice {
+                unit: attacker,
+                text: format!("You stumble past your target into {},{}.", hex.x, hex.y),
+            });
+            return Ok(());
+        }
+    }
+    Ok(())
 }
 
 /// Stop a charging unit after its collision, preserving heading.
@@ -974,6 +1151,7 @@ fn resolve_mutual_charge_inner(
                     recoil_tons,
                     target_table: HitTable::Weapon,
                     character,
+                    displaces: false,
                 },
             )?;
             super::piloting::append_feedback(
@@ -989,6 +1167,11 @@ fn resolve_mutual_charge_inner(
         for (unit, charged) in [first, second].into_iter().zip(charged) {
             if charged {
                 super::recent_fire::mark_assaulted(&mut candidate, unit);
+            }
+        }
+        for attempt in &report.attempts {
+            if attempt.rejection.is_none() {
+                super::recent_fire::record_physical_attack(&mut candidate, attempt.unit);
             }
         }
     }

@@ -1,13 +1,16 @@
 //! Unit displacement (Total Warfare pp. 151-153): a 'Mech forced out of its hex moves into the
-//! adjacent hex in the direction it was driven. It cannot be displaced off the map, into
-//! terrain it may not enter, or up more than the two levels it could climb in one hex; then
-//! nothing moves. It may be displaced down any number of levels: more than two levels down it
-//! falls. A 'Mech displaced into a hex that would break the stacking limit shoves the 'Mech
-//! already there out of the far side (the domino effect) when the drop is less than two
-//! levels, and makes an accidental fall from above onto it when the drop is two or more. A
-//! 'Mech displaced into a building is hurt as if it had failed its roll to enter. The
-//! shoved 'Mech in a domino cannot step aside: dodging needs Movement Phase MP the realtime
-//! game does not keep.
+//! adjacent hex in the direction it was driven. It cannot be displaced into terrain it may not
+//! enter, or up more than the two levels it could climb in one hex; then nothing moves. It may
+//! be displaced down any number of levels: more than two levels down it falls. A 'Mech
+//! displaced into a hex that would break the stacking limit shoves the 'Mech already there out
+//! of the far side (the domino effect) when the drop is less than two levels, and makes an
+//! accidental fall from above onto it when the drop is two or more. A 'Mech displaced into a
+//! building is hurt as if it had failed its roll to enter. The shoved 'Mech in a domino cannot
+//! step aside: dodging needs Movement Phase MP the realtime game does not keep.
+//!
+//! The book lets a unit be displaced off the board, destroying it (TW p. 151). A persistent map
+//! has hard edges that every unit is kept within, so the realtime game treats the map edge as
+//! terrain no unit may be displaced into instead.
 use super::{FallRules, HexCoordinate, MechFallReport, Notice, PilotNotice, Position};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result};
@@ -15,6 +18,26 @@ use anyhow::{Context, Result};
 /// The hexside, clockwise from north, a unit facing `heading` has directly ahead of it.
 pub(super) fn hexside_ahead(heading: f64) -> usize {
     ((heading.rem_euclid(360.0) / 60.0).round() as usize) % 6
+}
+
+/// The hexside of `from` that faces `to`: the neighbour's own side when they are adjacent,
+/// otherwise the side nearest the bearing between their centres; `None` for one hex.
+pub(super) fn hexside_toward(from: HexCoordinate, to: HexCoordinate) -> Result<Option<usize>> {
+    if from == to {
+        return Ok(None);
+    }
+    if let Some(side) = from.neighbors()?.iter().position(|hex| *hex == to) {
+        return Ok(Some(side));
+    }
+    Ok(from.center().bearing(to.center())?.map(hexside_ahead))
+}
+
+/// Hexsides in the order a displacement barred from `direction` tries them: the two beside it,
+/// then the two beyond those, then straight back, as close as possible to the side the unit
+/// would have crossed (Total Warfare p. 150). Where the book lets the controlling player choose
+/// between two equally close sides, the realtime game takes the clockwise one first.
+pub(super) fn nearest_hexsides(direction: usize) -> [usize; 6] {
+    [0, 1, 5, 2, 4, 3].map(|offset| (direction + offset) % 6)
 }
 
 /// The longest chain of 'Mechs one displacement may shove in turn.
@@ -55,6 +78,7 @@ fn destination(
         y: i32::from(position.y),
     }
     .neighbors()?[direction % 6];
+    // The map edge stands in for prohibited terrain; see the module documentation.
     let (Ok(x), Ok(y)) = (u16::try_from(hex.x), u16::try_from(hex.y)) else {
         return Ok(Err("the map edge"));
     };
@@ -77,6 +101,65 @@ fn destination(
         level,
         from,
     )))
+}
+
+/// Displace the 'Mech `id` toward `direction`, or when that hex is barred, into the open hex
+/// nearest it (see [`nearest_hexsides`]), as a death from above attack displaces its target
+/// (Total Warfare p. 150). When every hex around is barred nothing moves and the report says
+/// why the last one was. The book then destroys the target of a successful attack, or the
+/// attacker after a miss; that is not modelled, and both stay where they are.
+pub(super) fn displace_nearest(
+    world: &mut World,
+    id: ObjectId,
+    direction: usize,
+    rules: FallRules,
+    character: bool,
+) -> Result<Displacement> {
+    let mut blocked = Displacement::default();
+    for side in nearest_hexsides(direction) {
+        let report = displace(world, id, side, rules, character)?;
+        if report.moved {
+            return Ok(report);
+        }
+        blocked = report;
+    }
+    Ok(blocked)
+}
+
+/// Where the 'Mech `id` could be set down in the hex beside it on `side`: on the map, in
+/// terrain it may enter, no more than two levels up or down, and with room under the stacking
+/// limit. Placing a unit, as after a missed charge, is not displacement: it never shoves or
+/// falls.
+pub(super) fn placement(
+    world: &World,
+    id: ObjectId,
+    side: usize,
+) -> Result<Option<(Position, i32)>> {
+    let Ok((position, level, from)) = destination(world, id, side)? else {
+        return Ok(None);
+    };
+    if from - level > 2 {
+        return Ok(None);
+    }
+    let team = world.btech.constructed_units()[&id].signature().team;
+    let others = super::stacking::occupants(world, position, id);
+    if super::stacking::exceeds_limit(true, team, &others) {
+        return Ok(None);
+    }
+    Ok(Some((position, level)))
+}
+
+/// Set the 'Mech `id` down in `position` at `level`, keeping its heading and speed, without
+/// spending movement: a pusher or charger following its target in, or a missed charger
+/// stepping aside (Total Warfare pp. 147-148).
+pub(super) fn step_into(world: &mut World, id: ObjectId, position: Position) -> Result<()> {
+    let map = &world.btech.maps()[&position.map];
+    let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
+    let unit = &world.btech.constructed_units()[&id];
+    let old = unit.position().context("Moving unit is not placed")?;
+    let from = unit.elevation_level(map.base_hex(i64::from(old.x), i64::from(old.y))?);
+    let level = super::building_interior::entry_level(tile, from);
+    relocate(world, id, position, level)
 }
 
 /// Displace the 'Mech `id` one hex in `direction`, clockwise from north. `character` lets
@@ -225,6 +308,29 @@ fn relocate(world: &mut World, id: ObjectId, position: Position, level: i32) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A barred displacement tries the sides beside it, then beyond, then straight back
+    /// (Total Warfare p. 150).
+    #[test]
+    fn barred_displacements_try_the_nearest_sides() {
+        assert_eq!(nearest_hexsides(0), [0, 1, 5, 2, 4, 3]);
+        assert_eq!(nearest_hexsides(4), [4, 5, 3, 0, 2, 1]);
+    }
+
+    /// The side toward an adjacent hex is the neighbour's own; a far hex takes the side
+    /// nearest the bearing; a hex has no side toward itself.
+    #[test]
+    fn hexsides_face_the_other_hex() {
+        let here = HexCoordinate { x: 5, y: 5 };
+        for (side, hex) in here.neighbors().unwrap().into_iter().enumerate() {
+            assert_eq!(hexside_toward(here, hex).unwrap(), Some(side));
+        }
+        assert_eq!(
+            hexside_toward(here, HexCoordinate { x: 5, y: 1 }).unwrap(),
+            Some(0)
+        );
+        assert_eq!(hexside_toward(here, here).unwrap(), None);
+    }
 
     /// The hexside ahead follows the heading, each covering sixty degrees around its centre.
     #[test]

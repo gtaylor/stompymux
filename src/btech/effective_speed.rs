@@ -15,6 +15,7 @@ impl Mech {
                 nominal_tons: self.definition().tons,
                 material_mass: self.effective_mass()?,
                 carried_mass: 0,
+                hoist_penalty: 0,
                 destroyed: self.is_destroyed(),
             },
             self.definition().max_speed,
@@ -31,7 +32,14 @@ impl Mech {
         let envelope = super::SpeedEnvelope::from_running(maximum);
         let loaded = load.maximum_speed(maximum)?;
         let factor = if maximum > 0.0 { loaded / maximum } else { 0.0 };
-        let envelope = self.template_envelope(envelope, factor, map.map(|map| map.gravity));
+        let envelope = self.template_envelope(
+            envelope,
+            super::LoadEffect {
+                factor,
+                hoist_penalty: load.hoist_penalty,
+            },
+            map.map(|map| map.gravity),
+        );
         envelope.validate()?;
         // The figure keeps single precision, so load scaling's rounding noise never moves it
         // across a speed band.
@@ -84,6 +92,7 @@ mod tests {
             nominal_tons: tons,
             material_mass: mass,
             carried_mass: 0,
+            hoist_penalty: 0,
             destroyed,
         }
         .maximum_speed(maximum)

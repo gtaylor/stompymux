@@ -18,6 +18,9 @@ pub struct DfaProfile {
     /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind
     /// (Tactical Operations: Advanced Units & Equipment p. 113).
     pub sensors: i32,
+    /// One while the attacker spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1 (Tactical Operations: Advanced Rules p. 149).
+    pub spotting: i32,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -139,7 +142,11 @@ fn dfa_profile_inner(
             rules.fall.extended_piloting,
         )?);
     let sensors = i32::from(source.blind_cockpit_modifier());
-    let target_number = base + skill + attacker_movement + target_movement + light + sensors;
+    let spotting = i32::from(super::recent_fire::artillery_spotter_modifier(
+        world, attacker,
+    ));
+    let target_number =
+        base + skill + attacker_movement + target_movement + light + sensors + spotting;
     ensure!(
         target_number <= 12,
         "DFA: BTH {target_number}\tYou choose not to attack and land from your jump."
@@ -159,6 +166,7 @@ fn dfa_profile_inner(
         skill,
         light,
         sensors,
+        spotting,
         inflicted_damage,
         received_damage,
         target_arc: if victim.vehicle {
@@ -176,6 +184,69 @@ fn dfa_profile_inner(
         vehicle_target: victim.vehicle,
         vtol_target: victim.vtol,
     })
+}
+
+/// The hexside a death from above drives its target across: the direction of the attack,
+/// from the hex the jump began in toward the target's, or the attacker's heading when it
+/// jumped within the target's hex (Total Warfare pp. 149-150).
+fn displacement_direction(world: &World, attacker: ObjectId, target: ObjectId) -> Result<usize> {
+    let source = &world.btech.constructed_units()[&attacker];
+    let origin = source
+        .flight()
+        .map(|flight| flight.path())
+        .and_then(|path| path.sample(0.0, path.movement_points()).ok())
+        .and_then(|sample| sample.point.containing_hex().ok());
+    let position = super::with_unit!(
+        world.btech.unit(target).context("Unit is unavailable")?,
+        |unit| unit.position()
+    )
+    .context("Target is not placed")?;
+    let target_hex = HexCoordinate {
+        x: i32::from(position.x),
+        y: i32::from(position.y),
+    };
+    let heading = source.motion().map_or(0.0, |motion| motion.heading);
+    Ok(origin
+        .map(|origin| super::displacement::hexside_toward(origin, target_hex))
+        .transpose()?
+        .flatten()
+        .unwrap_or_else(|| super::displacement::hexside_ahead(heading)))
+}
+
+/// Move a 'Mech target out of the hex the attacker came down in, toward `direction` or the
+/// open side nearest it (Total Warfare p. 150), unless the attack destroyed either of them.
+/// Returns the 'Mechs the domino effect shoved, each of which must roll.
+fn displace_target(
+    world: &mut World,
+    report: &mut DfaReport,
+    direction: usize,
+    rules: FallRules,
+    character: bool,
+) -> Result<Vec<ObjectId>> {
+    let (attacker, target) = (report.attacker, report.target);
+    let Some(unit) = world.btech.constructed_units().get(&target) else {
+        return Ok(Vec::new());
+    };
+    if unit.is_destroyed() || world.btech.constructed_units()[&attacker].is_destroyed() {
+        return Ok(Vec::new());
+    }
+    let displacement =
+        super::displacement::displace_nearest(world, target, direction, rules, character)?;
+    report.notices.extend(displacement.notices);
+    super::piloting::append_feedback(
+        &mut report.pilot_notices,
+        displacement.pilot_notices,
+        report.notices.len(),
+    );
+    report
+        .experience_messages
+        .extend(displacement.experience_messages);
+    report.displacement_falls = displacement.falls;
+    report.displaced = displacement.moved;
+    if let Some(reason) = displacement.blocked {
+        report.blocked = Some(format!("Your target cannot be moved into {reason}."));
+    }
+    Ok(displacement.dominoes)
 }
 
 /// A landing control check and its optional ordinary fall consequences.
@@ -214,6 +285,13 @@ pub struct DfaReport {
     pub experience_messages: Vec<super::DiagnosticMessage>,
     /// Miss immersion can cause further support-loss falls and cockpit casualties.
     pub flooding: Vec<SectionExposureReport>,
+    /// The target 'Mech was moved out of the hex the attacker came down in (Total Warfare
+    /// p. 150).
+    pub displaced: bool,
+    /// Why a 'Mech target could not be moved out of the hex; it stays beside the attacker.
+    pub blocked: Option<String>,
+    /// Falls the displacement itself caused: off a drop, or onto another unit.
+    pub displacement_falls: Vec<MechFallReport>,
     /// Pilot-only checks ordered among the aggregate cockpit notices.
     pub pilot_notices: Vec<super::PilotNotice>,
     pub notices: Vec<Notice>,
@@ -421,7 +499,9 @@ fn resolve_dfa_inner(
     character: bool,
 ) -> Result<DfaReport> {
     let profile = dfa_profile_inner(world, attacker, target, rules, character)?;
+    let direction = displacement_direction(world, attacker, target)?;
     world.attempt(|world| {
+        super::recent_fire::record_physical_attack(world, attacker);
         let source = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = source.dice.generic_roll();
         source.flight = None;
@@ -452,6 +532,9 @@ fn resolve_dfa_inner(
             experience: Vec::new(),
             experience_messages: Vec::new(),
             flooding: Vec::new(),
+            displaced: false,
+            blocked: None,
+            displacement_falls: Vec::new(),
         };
         let attacker_rules = super::physical::participant_fall_rules(world, attacker, rules.fall);
         let target_rules = super::physical::participant_fall_rules(world, target, rules.fall);
@@ -561,66 +644,79 @@ fn resolve_dfa_inner(
             );
             report.notices.extend(impact.notices.iter().cloned());
         }
+        // The attacker comes down in the target's hex, so a 'Mech target moves out of it:
+        // after a hit it is pushed on in the direction of the attack, and after a miss it
+        // steps aside, which the realtime game also takes in that direction; either way a
+        // barred hex gives way to the open one nearest it (Total Warfare p. 150). Vehicles
+        // are not displaced here.
+        let dominoes = displace_target(world, &mut report, direction, rules.fall, character)?;
         // After a hit both 'Mechs roll to stay standing, the attacker at +4 and the target at
-        // +2 (Total Warfare p. 150). Each roll stands alone: a unit already down, such as an
-        // attacker its own landing damage felled, ignores its roll, and the other still makes
-        // its own (Total Warfare p. 151).
+        // +2 (Total Warfare p. 150), and every 'Mech the target was shoved into rolls as the
+        // domino effect demands (TW p. 153). Each roll stands alone: a unit already down,
+        // such as an attacker its own landing damage felled, ignores its roll, and the other
+        // still makes its own (Total Warfare p. 151).
+        let mut checks = Vec::new();
         if hit {
-            for (id, modifier, fall_rules) in
-                [(attacker, 4, attacker_rules), (target, 2, target_rules)]
-            {
-                // Vehicles never fall.
-                let Some(unit) = world.btech.constructed_units().get(&id) else {
-                    continue;
-                };
-                if unit.is_destroyed() || unit.posture() == Posture::Prone {
-                    continue;
-                }
-                let mut check = roll_piloting(world, id, modifier, rules.fall.extended_piloting)?;
-                super::piloting::capture_feedback(
-                    id,
-                    world.btech.constructed_units()[&id].pilot(),
-                    &check,
-                    &mut report.notices,
-                    &mut report.pilot_notices,
-                );
-                if character {
-                    report
-                        .experience_messages
-                        .extend(super::piloting::award_control_check(
-                            world,
-                            id,
-                            &mut check,
-                            rules.fall.extended_piloting,
-                        )?);
-                }
-                let fall = if !check.success {
-                    report.notices.push(Notice {
-                        unit: id,
-                        text: "Your piloting skill fails and you fall over!!".into(),
-                    });
-                    report.notices.extend(super::broadcast::observer_notices(
+            checks.extend([(attacker, 4, attacker_rules), (target, 2, target_rules)]);
+        }
+        checks.extend(dominoes.into_iter().map(|id| {
+            (
+                id,
+                0,
+                super::physical::participant_fall_rules(world, id, rules.fall),
+            )
+        }));
+        for (id, modifier, fall_rules) in checks {
+            // Vehicles never fall.
+            let Some(unit) = world.btech.constructed_units().get(&id) else {
+                continue;
+            };
+            if unit.is_destroyed() || unit.posture() == Posture::Prone {
+                continue;
+            }
+            let mut check = roll_piloting(world, id, modifier, rules.fall.extended_piloting)?;
+            super::piloting::capture_feedback(
+                id,
+                world.btech.constructed_units()[&id].pilot(),
+                &check,
+                &mut report.notices,
+                &mut report.pilot_notices,
+            );
+            if character {
+                report
+                    .experience_messages
+                    .extend(super::piloting::award_control_check(
                         world,
                         id,
-                        "stumbles and falls down!",
-                    ));
-                    let fall = if character && world.objects[&id].flags.contains(Flag::InCharacter)
-                    {
-                        super::fall::resolve_character_fall(world, id, 1, fall_rules)?
-                    } else {
-                        resolve_fall(world, id, 1, fall_rules)?
-                    };
-                    fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
-                    Some(fall)
-                } else {
-                    None
-                };
-                report.balance.push(DfaBalance {
-                    unit: id,
-                    check,
-                    fall,
-                });
+                        &mut check,
+                        rules.fall.extended_piloting,
+                    )?);
             }
+            let fall = if !check.success {
+                report.notices.push(Notice {
+                    unit: id,
+                    text: "Your piloting skill fails and you fall over!!".into(),
+                });
+                report.notices.extend(super::broadcast::observer_notices(
+                    world,
+                    id,
+                    "stumbles and falls down!",
+                ));
+                let fall = if character && world.objects[&id].flags.contains(Flag::InCharacter) {
+                    super::fall::resolve_character_fall(world, id, 1, fall_rules)?
+                } else {
+                    resolve_fall(world, id, 1, fall_rules)?
+                };
+                fall.append_notices(id, &mut report.notices, &mut report.pilot_notices);
+                Some(fall)
+            } else {
+                None
+            };
+            report.balance.push(DfaBalance {
+                unit: id,
+                check,
+                fall,
+            });
         }
         if !hit {
             // The jumping 'Mech crashes as if it had fallen two levels, rolling for its facing

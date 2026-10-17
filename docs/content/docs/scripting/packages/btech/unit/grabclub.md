@@ -5,7 +5,9 @@ linkTitle: "grabclub"
 manualLinkTitle: "grabclub"
 ---
 
-Grab a tree in a selected arm (left first by default), or drop it with '-'.
+Take up a club in a selected arm (left first by default): a limb or girder lying in the hex,
+a tree in woods, or a girder searched out of a collapsed building's rubble, once a turn.
+'-' lets the club go; a tree shatters and a limb or girder stays in the hex.
 
 ## Signature
 

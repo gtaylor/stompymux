@@ -5,7 +5,7 @@ linkTitle: "club"
 manualLinkTitle: "club"
 ---
 
-Swing a carried club using both arms; a carried tree shatters on a hit. Pick a club up with grabclub first.
+Swing a carried club using both arms; a tree shatters on a hit, a limb or girder lasts. Pick a club up with grabclub first.
 
 ## Signature
 

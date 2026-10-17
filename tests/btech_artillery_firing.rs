@@ -760,6 +760,53 @@ async fn artillery_observed_launch_and_link_revalidation() {
     );
 }
 
+/// A spotter that made an attack of its own this turn, a physical attack as much as a weapon
+/// launch, adds +1 to the artillery attack it spots (Tactical Operations: Advanced Rules
+/// p. 149); a turn later it adds nothing.
+#[tokio::test]
+async fn artillery_spotters_that_attacked_physically_add_one() {
+    let (_dir, config, mut world, _map, shooter, index) = fixture(&["Smoke"]).await;
+    let observer = world.objects[&ObjectId(2)].location.unwrap();
+    select_battle_hex_target(
+        &mut world,
+        observer,
+        ObjectId(2),
+        HexCoordinate { x: 1, y: 2 },
+        HexTargetMode::Hex,
+    )
+    .unwrap();
+    select_battle_spotter(&mut world, observer, ObjectId(2), Some(observer)).unwrap();
+    select_battle_spotter(&mut world, shooter, ObjectId(1), Some(observer)).unwrap();
+    let sight = |world: &World| {
+        let scripts = Scripts::new(
+            &config,
+            std::rc::Rc::new(std::cell::RefCell::new(world.clone())),
+        )
+        .unwrap();
+        scripts
+            .eval_callback::<i32>(&format!(
+                "return btech.unit.sight({},1,{index},nil).target_number",
+                shooter.0
+            ))
+            .unwrap()
+    };
+    assert_eq!(sight(&world), 17);
+    let now = world.btech.simulation_time();
+    for field in ["last_physical_attack", "last_weapon_fire"] {
+        let mut attacked = world.clone();
+        attacked
+            .btech
+            .rewrite_unit_record(observer, |record| record[field] = now.into())
+            .unwrap();
+        assert_eq!(sight(&attacked), 18, "{field}");
+        let mut later = attacked.clone();
+        let mut state = serde_json::to_value(&later.btech).unwrap();
+        state["simulation_seconds"] = (now + 30).into();
+        later.btech = serde_json::from_value(state).unwrap();
+        assert_eq!(sight(&later), 17, "{field}");
+    }
+}
+
 /// Indirect artillery may target a hex no friendly unit can see, without a spotter; that fire
 /// cannot be adjusted onto target (Tactical Operations p. 148). Underground, unobserved
 /// indirect fire is still refused.
