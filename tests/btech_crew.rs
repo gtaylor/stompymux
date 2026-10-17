@@ -764,7 +764,7 @@ async fn area_effect_damage_that_destroys_the_center_torso_kills_the_mechwarrior
             HexCoordinate { x: 1, y: 2 },
             Weapon::LongTom,
             ArtilleryMode::Standard,
-            true,
+            ArtilleryOutcome::Hit,
         )
         .unwrap();
         let report = loop {
