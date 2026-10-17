@@ -348,7 +348,7 @@ fn vehicle_packets(
             report.experience.push(award.award);
             report.experience_messages.extend(award.message);
         }
-        let (impact, notices) = super::blast_damage::resolve_packet(
+        let (impact, notices) = super::blast_damage::resolve_attack_packet(
             world,
             target,
             super::blast_damage::MaterialPacket {
@@ -361,6 +361,7 @@ fn vehicle_packets(
             },
             false,
             rules,
+            report.glancing,
         )?;
         impact.append_feedback(&mut report.pilot_notices, report.notices.len());
         report.notices.extend(notices);

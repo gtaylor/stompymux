@@ -1431,7 +1431,8 @@ fn resolve_attack_inner(
                     .context("Vehicle target is unavailable")?
                     .dice
                     .die(4)?;
-                let (result, result_notices) = super::blast_damage::resolve_packet(
+                // A glancing blow is also less likely to find a critical (TO:AR p. 78).
+                let (result, result_notices) = super::blast_damage::resolve_attack_packet(
                     world,
                     target,
                     super::blast_damage::MaterialPacket {
@@ -1444,6 +1445,7 @@ fn resolve_attack_inner(
                     },
                     false,
                     fall_rules,
+                    glancing,
                 )?;
                 result.append_feedback(&mut pilot_notices, notices.len());
                 notices.extend(result_notices);

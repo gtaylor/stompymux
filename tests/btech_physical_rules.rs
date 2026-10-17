@@ -859,3 +859,122 @@ async fn reflective_armor_takes_vehicle_landings_and_rams_doubled() {
     assert_eq!(landings[1], 2 * landings[0], "{landings:?}");
     assert_eq!(rams[1], 2 * rams[0], "{rams:?}");
 }
+
+/// Modifiers of the critical rolls the hit-location results of `impacts` caused.
+fn critical_modifiers<'a>(impacts: impl IntoIterator<Item = &'a VehicleImpact>) -> Vec<i8> {
+    impacts
+        .into_iter()
+        .filter_map(|impact| impact.damage.as_ref())
+        .flat_map(|damage| &damage.criticals)
+        .map(|critical| critical.selection.modifier)
+        .collect()
+}
+
+/// The vehicle impacts among a ram's packets.
+fn vehicle_impacts(impacts: &[BlastImpact]) -> impl Iterator<Item = &VehicleImpact> {
+    impacts.iter().filter_map(|impact| match impact {
+        BlastImpact::Vehicle(impact) => Some(impact),
+        BlastImpact::Mech(_) => None,
+    })
+}
+
+/// A glancing kick, death from above or ram takes two off every critical roll it causes on a
+/// vehicle target, as on a 'Mech (Tactical Operations: Advanced Rules p. 78).
+#[tokio::test]
+async fn glancing_landings_and_rams_lower_vehicle_critical_rolls() {
+    let tank = include_str!("../game/units/Demolisher.toml");
+    let (_dir, config, mut base, id, _) = kick_fixture().await;
+    let vehicle = add_vehicle(&mut base, &config, id, tank, (5, 4));
+    let target_number =
+        battle_kick_profile(&base, id, ObjectId(1), vehicle, Leg::Right, kick_rules())
+            .unwrap()
+            .target_number;
+    for (roll, modifier) in [(u8::try_from(target_number).unwrap(), -2), (12, 0)] {
+        let modifiers = (0..=255)
+            .find_map(|seed| {
+                let mut world = base.clone();
+                shot_seed(&mut world, id, roll_seed(roll));
+                shot_seed(&mut world, vehicle, seed);
+                let report = resolve_battle_kick(
+                    &mut world,
+                    id,
+                    ObjectId(1),
+                    vehicle,
+                    Leg::Right,
+                    kick_rules(),
+                )
+                .unwrap();
+                assert!(report.hit);
+                assert_eq!(report.glancing, modifier != 0);
+                let modifiers = critical_modifiers(&report.vehicle_impact);
+                (!modifiers.is_empty()).then_some(modifiers)
+            })
+            .unwrap();
+        assert!(
+            modifiers.iter().all(|&found| found == modifier),
+            "{modifiers:?}"
+        );
+    }
+
+    let (_dir, config, mut base, id, _) = kick_fixture().await;
+    dfa_piloting(&mut base);
+    let vehicle = add_vehicle(&mut base, &config, id, tank, (5, 5));
+    launch_battle_jump(&mut base, id, ObjectId(1), 0, 2.0).unwrap();
+    let target_number = battle_dfa_profile(&base, id, vehicle, kick_rules())
+        .unwrap()
+        .target_number;
+    for (roll, modifier) in [(u8::try_from(target_number).unwrap(), -2), (12, 0)] {
+        let modifiers = (0..=255)
+            .find_map(|seed| {
+                let mut world = base.clone();
+                shot_seed(&mut world, id, roll_seed(roll));
+                shot_seed(&mut world, vehicle, seed);
+                let report = resolve_battle_dfa(&mut world, id, vehicle, kick_rules()).unwrap();
+                assert_eq!(report.glancing, modifier != 0);
+                let modifiers = critical_modifiers(&report.vehicle_impacts);
+                (!modifiers.is_empty()).then_some(modifiers)
+            })
+            .unwrap();
+        assert!(
+            modifiers.iter().all(|&found| found == modifier),
+            "{modifiers:?}"
+        );
+    }
+
+    let (_dir, _config, mut base, rammer, target, _) =
+        firing::fixture_with_target(tank, None, tank).await;
+    let map = base.btech.unit(rammer).unwrap().position().unwrap().map;
+    base.btech.set_unit_power(target, Power::Off).unwrap();
+    place_battle_unit(&mut base, target, map, 0, 11).unwrap();
+    base.btech.set_unit_power(target, Power::Running).unwrap();
+    refresh_battle_contacts(&mut base, &[rammer]).unwrap();
+    base.btech
+        .edit_unit_motion(rammer, |motion| {
+            motion.speed = 21.5;
+            motion.desired_speed = 21.5;
+        })
+        .unwrap();
+    let rules = ChargeRules {
+        distance: 1.0,
+        physical: kick_rules(),
+    };
+    let target_number = battle_ram_profile(&base, rammer, target, rules)
+        .unwrap()
+        .target_number;
+    let modifiers = (0..=255)
+        .find_map(|seed| {
+            let mut world = base.clone();
+            shot_seed(
+                &mut world,
+                rammer,
+                roll_seed(u8::try_from(target_number).unwrap()),
+            );
+            shot_seed(&mut world, target, seed);
+            let report = resolve_battle_ram(&mut world, rammer, target, rules).unwrap();
+            assert!(report.hit && report.glancing);
+            let modifiers = critical_modifiers(vehicle_impacts(&report.target_impacts));
+            (!modifiers.is_empty()).then_some(modifiers)
+        })
+        .unwrap();
+    assert!(modifiers.iter().all(|&found| found == -2), "{modifiers:?}");
+}

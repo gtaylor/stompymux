@@ -81,7 +81,20 @@ pub(super) fn resolve_followup_in_candidate(
     request: ImpactRequest,
     rules: VehicleImpactRules,
 ) -> Result<VehicleImpact> {
-    resolve_impact(world, id, arc, request, rules, None, false, false)
+    resolve_glancing_followup_in_candidate(world, id, arc, request, rules, false)
+}
+
+/// Continue an admitted non-weapon impact that may be a glancing physical attack, which lowers
+/// every critical roll it causes by two (Tactical Operations: Advanced Rules p. 78).
+pub(super) fn resolve_glancing_followup_in_candidate(
+    world: &mut World,
+    id: ObjectId,
+    arc: HitArc,
+    request: ImpactRequest,
+    rules: VehicleImpactRules,
+    glancing: bool,
+) -> Result<VehicleImpact> {
+    resolve_impact(world, id, arc, request, rules, None, false, glancing)
 }
 
 /// A weapon damage group, optionally aimed at a known section, bypassing random location

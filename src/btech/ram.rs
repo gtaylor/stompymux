@@ -377,7 +377,10 @@ fn groups(
         }
         let group = damage.min(5);
         damage -= group;
-        let (impact, notices) = super::blast_damage::resolve_packet(
+        // A glancing ram is less likely to find a critical on its target, not on the rammer
+        // (Tactical Operations: Advanced Rules p. 78).
+        let glancing = report.glancing && id == report.target;
+        let (impact, notices) = super::blast_damage::resolve_attack_packet(
             world,
             id,
             super::blast_damage::MaterialPacket {
@@ -390,6 +393,7 @@ fn groups(
             },
             arc == HitArc::Rear,
             rules,
+            glancing,
         )?;
         impact.append_feedback(&mut report.pilot_notices, report.notices.len());
         report.notices.extend(notices);

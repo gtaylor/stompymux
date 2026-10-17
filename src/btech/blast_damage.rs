@@ -201,10 +201,24 @@ pub(super) fn resolve_packet(
     rear: bool,
     rules: FallRules,
 ) -> Result<(BlastImpact, Vec<Notice>)> {
+    resolve_attack_packet(world, id, request, rear, rules, false)
+}
+
+/// Resolve a packet of a physical attack, which takes two off every Determining Critical Hits
+/// roll it causes when the attack was a glancing blow (Tactical Operations: Advanced Rules
+/// p. 78).
+pub(super) fn resolve_attack_packet(
+    world: &mut World,
+    id: ObjectId,
+    request: MaterialPacket,
+    rear: bool,
+    rules: FallRules,
+    glancing: bool,
+) -> Result<(BlastImpact, Vec<Notice>)> {
     let vehicle = world.btech.vehicles().contains_key(&id);
     if vehicle {
         let before = world.clone();
-        let impact = super::vehicle_impact::resolve_followup_in_candidate(
+        let impact = super::vehicle_impact::resolve_glancing_followup_in_candidate(
             world,
             id,
             request.arc,
@@ -216,6 +230,7 @@ pub(super) fn resolve_packet(
                 class: request.class,
             },
             rules.vehicle_impact,
+            glancing,
         )?;
         let mut notices = impact.notices.clone();
         append_broadcasts(&before, &mut notices, &impact.broadcasts);
@@ -241,7 +256,7 @@ pub(super) fn resolve_packet(
         .position()
         .is_some()
         .then_some(rules);
-    let impact = super::impact::resolve_attack_in_candidate(
+    let impact = super::impact::resolve_attack_in_candidate_with_penalty(
         world,
         id,
         location,
@@ -252,6 +267,11 @@ pub(super) fn resolve_packet(
             weapon_effect: super::impact::WeaponEffect::of_class(request.class),
             character: request.character,
             followup: true,
+        },
+        if glancing {
+            super::impact::GLANCING_CRITICAL_PENALTY
+        } else {
+            0
         },
     )?;
     let notices = impact.notices.clone();

@@ -745,7 +745,8 @@ and only two-legged Mechs can be tripped; a trip takes Piloting -1 (Tactical
 Operations: Advanced Rules p. 89). A club must be picked up with `grabclub` before
 you can swing it (Total Warfare p. 146). A charge or death from above that meets its
 target number exactly is a glancing blow and deals the target half damage, as other
-physical attacks do (Tactical Operations: Advanced Rules p. 78).
+physical attacks and rams do, with two off every critical roll it causes on a 'Mech or a
+vehicle (Tactical Operations: Advanced Rules p. 78).
 
 A Mech makes one physical attack in a thirty-second turn (Total Warfare p. 144).
 Punching with both arms, or striking with both claws, in one command is a single
