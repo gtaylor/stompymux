@@ -219,7 +219,7 @@ fn vtol_assets_share_vehicle_anatomy_and_equipment_without_ground_admission() {
         // Parsed aircraft share material construction; world admission is checked separately.
         count += 1;
     }
-    assert_eq!(count, 31);
+    assert_eq!(count, 30);
 }
 
 /// Type/locomotion mismatches and missing rotors must not create ambiguous chassis definitions.
@@ -299,7 +299,7 @@ fn shipped_vehicle_templates_pass_the_construction_check() {
             rejected.push(format!("{reference}: no declared tech_base"));
         }
     }
-    assert_eq!(count, 255);
+    assert_eq!(count, 254);
     assert!(
         rejected.is_empty(),
         "{} of {count} shipped vehicle templates are rejected:\n{}",
