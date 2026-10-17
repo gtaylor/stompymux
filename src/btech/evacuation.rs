@@ -390,11 +390,15 @@ pub(super) fn publish_new_casualties(
     before: &crate::World,
 ) -> Result<()> {
     super::transport_loss::publish(scripts, config, before)?;
+    // Losing the location that holds the cockpit kills its MechWarrior: the head, or the
+    // center torso of a torso-mounted cockpit, whose MechWarrior outlives the head (Tactical
+    // Operations: Advanced Units & Equipment p. 113).
     let lethal = |unit: &super::Mech| {
+        let cockpit = unit.cockpit_section();
         unit.character_pilot_status()
             .is_some_and(|status| status.killed)
-            || unit.section_disabled(super::MechSection::Head)
-            || unit.sections()[&super::MechSection::Head].internal == 0
+            || unit.section_disabled(cockpit)
+            || unit.sections()[&cockpit].internal == 0
             || unit.system_hits(super::System::Cockpit) > 0
     };
     let mut casualties: std::collections::BTreeSet<_> = scripts

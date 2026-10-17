@@ -77,6 +77,14 @@ pub struct ImpactReport {
     pub searchlight_destroyed: bool,
     /// An ammunition explosion destroyed the center torso, killing the MechWarrior.
     pub explosion_killed_crew: bool,
+    /// An area-effect weapon destroyed the center torso, killing the MechWarrior (Total
+    /// Warfare p. 128).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub area_effect_killed_crew: bool,
+    /// The Mech's cockpit is in its center torso, so it survives its head (Tactical
+    /// Operations: Advanced Units & Equipment p. 113).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub torso_cockpit: bool,
 }
 
 /// Material damage that kills conventional biped crew, distinct from ordinary unit destruction.
@@ -87,6 +95,8 @@ pub enum CrewCasualty {
     CockpitDestroyed,
     /// The center torso was destroyed by an ammunition explosion (Total Warfare p. 128).
     AmmunitionExplosion,
+    /// The center torso was destroyed by an area-effect weapon (Total Warfare p. 128).
+    AreaEffect,
     CharacterInjury,
     VacuumExposure,
 }
@@ -94,26 +104,38 @@ pub enum CrewCasualty {
 impl ImpactReport {
     /// Identify lethal crew damage in this cascade; the adapter still owns IC policy and evacuation.
     /// Head destruction takes precedence when the same cascade also loses cockpit equipment.
+    /// A torso-mounted cockpit's MechWarrior outlives the head and dies with the center torso
+    /// that holds the cockpit (Tactical Operations: Advanced Units & Equipment p. 113).
     pub fn crew_casualty(&self) -> Option<CrewCasualty> {
-        if self
+        let cockpit = if self.torso_cockpit {
+            MechSection::CenterTorso
+        } else {
+            MechSection::Head
+        };
+        let cockpit_destroyed = self
             .phases
             .iter()
-            .any(|phase| phase.destroyed_sections.contains(&MechSection::Head))
-        {
+            .any(|phase| phase.destroyed_sections.contains(&cockpit));
+        if cockpit_destroyed && !self.torso_cockpit {
             return Some(CrewCasualty::HeadDestroyed);
         }
-        if self.criticals.iter().any(|(_, loss)| {
-            matches!(
-                loss,
-                CriticalLoss::System {
-                    system: super::System::Cockpit
-                }
-            )
-        }) {
+        if cockpit_destroyed
+            || self.criticals.iter().any(|(_, loss)| {
+                matches!(
+                    loss,
+                    CriticalLoss::System {
+                        system: super::System::Cockpit
+                    }
+                )
+            })
+        {
             return Some(CrewCasualty::CockpitDestroyed);
         }
         if self.explosion_killed_crew {
             return Some(CrewCasualty::AmmunitionExplosion);
+        }
+        if self.area_effect_killed_crew {
+            return Some(CrewCasualty::AreaEffect);
         }
         if self
             .character_injuries
@@ -125,12 +147,23 @@ impl ImpactReport {
         if self
             .exposures
             .iter()
-            .any(|report| report.section == MechSection::Head)
+            .any(|report| report.section == cockpit)
         {
             return Some(CrewCasualty::VacuumExposure);
         }
         None
     }
+}
+
+/// What killed the MechWarrior outright (Total Warfare p. 128).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum CrewDeath {
+    /// The location holding the cockpit was destroyed, or the cockpit itself.
+    Cockpit,
+    /// An ammunition explosion destroyed the center torso.
+    AmmunitionExplosion,
+    /// An area-effect weapon destroyed the center torso.
+    AreaEffect,
 }
 
 /// Resolve a known hit in a private unit candidate, publishing only after the whole cascade validates.
@@ -607,6 +640,8 @@ struct ImpactContext<'a> {
     character_toughness: Option<bool>,
     /// The enclosing host can publish injuries and evacuate nested collision casualties.
     character_effects: bool,
+    /// The MechWarrior has been killed outright in this cascade.
+    crew_killed: bool,
     report: super::TacticalImpact,
 }
 
@@ -629,12 +664,13 @@ impl<'a> ImpactContext<'a> {
         id: ObjectId,
         rules: Option<super::FallRules>,
     ) -> Result<Self> {
-        world
+        let unit = world
             .btech
             .constructed_units()
             .get(&id)
-            .context("Unit construction state is unavailable")?
-            .validate()?;
+            .context("Unit construction state is unavailable")?;
+        unit.validate()?;
+        let torso_cockpit = unit.torso_mounted_cockpit();
         Ok(Self {
             attacker: None,
             world,
@@ -643,8 +679,12 @@ impl<'a> ImpactContext<'a> {
             work: 4096,
             character_toughness: None,
             character_effects: false,
+            crew_killed: false,
             report: super::TacticalImpact {
-                impact: ImpactReport::default(),
+                impact: ImpactReport {
+                    torso_cockpit,
+                    ..Default::default()
+                },
                 pilot_injuries: Vec::new(),
                 pilot_notices: Vec::new(),
                 notices: Vec::new(),
@@ -785,6 +825,7 @@ impl<'a> ImpactContext<'a> {
 
     /// Disable selected equipment before resolving nested damage and explosion injury.
     fn lose_critical(&mut self, location: CriticalLocation) -> Result<()> {
+        let had_pilot = self.unit().pilot().is_some();
         let computer_was_operational = self.unit().targeting_computer_operational()?;
         let null_signature_was_enabled = self.unit().null_signature().enabled;
         let stealth_was_enabled = self.unit().stealth().enabled;
@@ -922,6 +963,10 @@ impl<'a> ImpactContext<'a> {
                         text: text.to_owned(),
                     });
                 }
+            }
+            // Total Warfare p. 125: a cockpit critical kills the MechWarrior.
+            if system == super::System::Cockpit {
+                self.kill_crew(had_pilot, CrewDeath::Cockpit)?;
             }
             self.balance(super::BalanceCause::Critical { location, system })?;
         }
@@ -1070,7 +1115,7 @@ impl<'a> ImpactContext<'a> {
             )?;
         }
         if core_before > 0 && self.unit().sections()[&MechSection::CenterTorso].internal == 0 {
-            self.kill_crew(pilot_before.is_some(), true)?;
+            self.kill_crew(pilot_before.is_some(), CrewDeath::AmmunitionExplosion)?;
         }
         if self.rules.is_some() && matches!(loss, CriticalLoss::Weapon { .. }) {
             self.report.notices.push(super::Notice {
@@ -1084,13 +1129,19 @@ impl<'a> ImpactContext<'a> {
         Ok(())
     }
 
-    /// Total Warfare p. 128: the MechWarrior dies when the head is destroyed or an ammunition
-    /// explosion destroys the center torso. The destruction has already released the cockpit,
-    /// so a tactical crew is injured terminally; an in-character pilot is marked killed for
-    /// the host's casualty handling.
-    fn kill_crew(&mut self, had_pilot: bool, explosion: bool) -> Result<()> {
-        if explosion {
-            self.report.impact.explosion_killed_crew = true;
+    /// Total Warfare p. 128: the MechWarrior dies when the head or the cockpit is destroyed,
+    /// or when an ammunition explosion or an area-effect weapon destroys the center torso.
+    /// The destruction has already released the cockpit, so a tactical crew is injured
+    /// terminally; an in-character pilot is marked killed for the host's casualty handling.
+    /// A crew already killed in this cascade dies only once.
+    fn kill_crew(&mut self, had_pilot: bool, death: CrewDeath) -> Result<()> {
+        match death {
+            CrewDeath::AmmunitionExplosion => self.report.impact.explosion_killed_crew = true,
+            CrewDeath::AreaEffect => self.report.impact.area_effect_killed_crew = true,
+            CrewDeath::Cockpit => {}
+        }
+        if std::mem::replace(&mut self.crew_killed, true) {
+            return Ok(());
         }
         if self.world.objects[&self.id]
             .flags
@@ -1650,8 +1701,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             }
         }
         let penetrating = !internal_only && damage > 0;
-        let head_pilot = (section == MechSection::Head && !context.unit().torso_mounted_cockpit())
-            .then(|| context.unit().pilot().is_some());
+        let had_pilot = context.unit().pilot().is_some();
         // Total Warfare pp. 122-124: damage past the armor is marked off the internal structure
         // first (Step 3), and only then does the location roll for critical hits (Step 4). A
         // location the hit destroys keeps a record of the slots it held, since only its
@@ -1712,10 +1762,17 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             rolls.push(-i16::from(critical_penalty));
         }
         resolve_location_criticals(context, section, &rolls, destroyed, vented)?;
-        if let Some(had_pilot) = head_pilot
-            && context.unit().sections()[&MechSection::Head].internal == 0
-        {
-            context.kill_crew(had_pilot, false)?;
+        // Total Warfare p. 128: losing the location that holds the cockpit kills the
+        // MechWarrior, and so does an area-effect weapon destroying the center torso.
+        if context.unit().sections()[&section].internal == 0 {
+            if section == context.unit().cockpit_section() {
+                context.kill_crew(had_pilot, CrewDeath::Cockpit)?;
+            }
+            if section == MechSection::CenterTorso
+                && matches!(weapon_effect, Some(WeaponEffect::AreaEffect))
+            {
+                context.kill_crew(had_pilot, CrewDeath::AreaEffect)?;
+            }
         }
         original = false;
         if internal_only {
