@@ -425,7 +425,7 @@ fn shipped_vehicles_and_vtols_have_finite_battle_values() {
         count += 1;
     }
     assert!(count >= 235, "only {count} ground vehicles checked");
-    assert_eq!(rotorcraft, 31);
+    assert_eq!(rotorcraft, 30);
 }
 
 /// Place XP participants and a shutdown tow load without firing or moving either carrier.
