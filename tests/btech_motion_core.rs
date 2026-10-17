@@ -4351,6 +4351,25 @@ async fn water_falls_scale_damage_and_replay_before_standing() {
     use stompymux_rs::{Posture, StandMode, begin_battle_stand, resolve_battle_fall};
     for depth in [0, 1, 2] {
         let (_dir, config, mut world, id) = water_fixture(depth).await;
+        // Fall damage under water rolls for hull breaches (Total Warfare pp. 57, 121); take a
+        // stream that breaches nothing, so the 'Mech can stand again afterwards.
+        let seed = (0..=255)
+            .find(|seed| {
+                let mut probe = world.clone();
+                probe
+                    .btech
+                    .set_unit_dice(id, stompymux_rs::Dice::seeded([*seed; 32]))
+                    .unwrap();
+                resolve_battle_fall(&mut probe, id, 1, fall_rules()).unwrap();
+                probe.btech.constructed_units()[&id]
+                    .flooded_sections()
+                    .is_empty()
+            })
+            .unwrap();
+        world
+            .btech
+            .set_unit_dice(id, stompymux_rs::Dice::seeded([seed; 32]))
+            .unwrap();
         persistence::save(&config.database(), &world).await.unwrap();
         let fall = resolve_battle_fall(&mut world, id, 1, fall_rules()).unwrap();
         assert_eq!(fall.damage, if depth == 0 { 4 } else { 2 });
@@ -4487,7 +4506,20 @@ async fn water_depth_and_rear_breaches_disable_ammo_and_engine_without_explosion
         assert_eq!(unit.ammunition(), &[0]);
         assert_eq!(unit.sections()[&S::RightTorso].internal, 8);
         assert!(unit.lost_criticals().is_empty());
-        assert_eq!(unit.system_hits(System::JumpJet), 2);
+        // The right torso's two jets are flooded, with those of any location the fall's
+        // damage breached under water (Total Warfare pp. 57, 121).
+        let flooded_jets = unit
+            .loadout()
+            .unwrap()
+            .systems
+            .iter()
+            .filter(|part| {
+                part.system == System::JumpJet
+                    && unit.flooded_sections().contains(&part.location.section)
+            })
+            .count();
+        assert!(unit.flooded_sections().contains(&S::RightTorso));
+        assert_eq!(usize::from(unit.system_hits(System::JumpJet)), flooded_jets);
         assert!(!unit.weapon_readiness(4).unwrap().ready);
         assert!(
             flood_battle_unit(&mut world, id, fall_rules())

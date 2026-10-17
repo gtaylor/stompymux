@@ -1020,6 +1020,9 @@ pub use skid::SlickTrack;
 mod bog_down;
 pub use bog_down::advance_bog_down_action;
 
+mod life_support;
+pub use life_support::advance_life_support_action;
+
 mod vehicle_water;
 
 mod terrain_control;

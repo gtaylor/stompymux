@@ -261,6 +261,18 @@ impl Server {
             self.scripts.effects.rollback();
             return false;
         }
+        if let Err(error) = crate::advance_battle_life_support_action(&self.scripts, &self.config) {
+            tracing::error!(system = "life_support", error = %format_args!("{error:#}"), "BattleTech update failed");
+            *self.scripts.world.borrow_mut() = before;
+            self.scripts
+                .world
+                .borrow_mut()
+                .btech
+                .autopilot_plans
+                .clear();
+            self.scripts.effects.rollback();
+            return false;
+        }
         notices.extend(crate::advance_battle_null_signature(
             &mut self.scripts.world.borrow_mut(),
         ));

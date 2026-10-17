@@ -109,6 +109,30 @@ pub fn unit_inside(world: &World, id: ObjectId) -> Result<Option<Interior>> {
     interior_at(world, id, position)
 }
 
+/// Whether a shot from `shooter` reaches `target` from another level of the building both stand
+/// inside, and if so whether it comes from above. Such a shot hits a 'Mech on the Special 'Mech
+/// Hit Location Table (Total Warfare p. 175). Buildings are kept hex by hex, so only units
+/// sharing a building hex count as inside the same building; a unit on the roof is not inside.
+pub(super) fn shot_between_levels(
+    world: &World,
+    shooter: ObjectId,
+    target: ObjectId,
+) -> Result<Option<bool>> {
+    let Some(target) = unit_inside(world, target)? else {
+        return Ok(None);
+    };
+    let Some(shooter) = unit_inside(world, shooter)? else {
+        return Ok(None);
+    };
+    if shooter.map != target.map
+        || shooter.coordinate != target.coordinate
+        || shooter.level == target.level
+    {
+        return Ok(None);
+    }
+    Ok(Some(shooter.level > target.level))
+}
+
 /// Where a unit at `position` stands inside a building, reading its live level.
 fn interior_at(world: &World, id: ObjectId, position: Position) -> Result<Option<Interior>> {
     let map = world

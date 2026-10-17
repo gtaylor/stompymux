@@ -215,18 +215,66 @@ pub(super) fn resolve_character_impact_with_rules(
                 && !object.flags.contains(Flag::Going)),
         "Character impact requires a live in-character unit"
     );
-    let toughness = rules.is_some_and(|rules| rules.toughness)
-        || world
-            .btech
-            .constructed_units()
-            .get(&id)
-            .and_then(|unit| unit.pilot())
-            .and_then(|pilot| world.btech.character_values().get(&pilot))
-            .is_some_and(|values| super::advantages::enabled(values, "Toughness"));
+    let toughness = rules.is_some_and(|rules| rules.toughness) || pilot_has_toughness(world, id);
     let mut context = ImpactContext::new(world, id, rules)?;
     context.character_effects = true;
     context.character_toughness = Some(toughness);
     resolve_packet(context, hit, damage, weapon_effect, 0)
+}
+
+/// Whether the unit's assigned pilot has the Toughness advantage.
+fn pilot_has_toughness(world: &World, id: ObjectId) -> bool {
+    world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .and_then(|unit| unit.pilot())
+        .and_then(|pilot| world.btech.character_values().get(&pilot))
+        .is_some_and(|values| super::advantages::enabled(values, "Toughness"))
+}
+
+/// One five-point group of a fall's damage (Total Warfare p. 68), which laser-reflective armor
+/// takes doubled (Tactical Operations: Advanced Units & Equipment p. 93). `character` routes
+/// an in-character unit's injuries through its character health. `hull_check` is false for
+/// the blow of a unit falling from above the water striking its surface, which never breaches
+/// the hull; damage from striking the bottom, or any fall below the surface, checks hull
+/// integrity as a weapon hit does (Total Warfare p. 57).
+pub(super) fn resolve_fall_group(
+    world: &mut World,
+    id: ObjectId,
+    hit: Hit,
+    damage: u16,
+    rules: super::FallRules,
+    character: bool,
+    hull_check: bool,
+) -> Result<super::TacticalImpact> {
+    if character {
+        ensure!(
+            world
+                .objects
+                .get(&id)
+                .is_some_and(|object| object.flags.contains(Flag::InCharacter)
+                    && !object.flags.contains(Flag::Going)),
+            "Character impact requires a live in-character unit"
+        );
+    } else {
+        ensure!(
+            world
+                .objects
+                .get(&id)
+                .is_some_and(|object| !object.flags.contains(Flag::InCharacter)
+                    && !object.flags.contains(Flag::Going)),
+            "Tactical impact requires a live non-character unit"
+        );
+    }
+    let toughness = character && (rules.toughness || pilot_has_toughness(world, id));
+    let mut context = ImpactContext::new(world, id, Some(rules))?;
+    if character {
+        context.character_effects = true;
+        context.character_toughness = Some(toughness);
+    }
+    context.hull_check = hull_check;
+    resolve_packet(context, hit, damage, Some(WeaponEffect::Impact), 0)
 }
 
 /// Wizard damage attributes the hit to the damaged unit while retaining ordinary injury policy.
@@ -642,6 +690,8 @@ struct ImpactContext<'a> {
     character_effects: bool,
     /// The MechWarrior has been killed outright in this cascade.
     crew_killed: bool,
+    /// Hits on an underwater location roll for a hull breach (Total Warfare p. 121).
+    hull_check: bool,
     report: super::TacticalImpact,
 }
 
@@ -680,6 +730,7 @@ impl<'a> ImpactContext<'a> {
             character_toughness: None,
             character_effects: false,
             crew_killed: false,
+            hull_check: true,
             report: super::TacticalImpact {
                 impact: ImpactReport {
                     torso_cockpit,
@@ -1453,6 +1504,40 @@ impl<'a> ImpactContext<'a> {
         Ok(())
     }
 
+    /// Roll for a hull breach in an underwater location a hit has damaged (Total Warfare
+    /// p. 121): on 10 or more the location fills with water.
+    fn check_hull_breach(&mut self, section: MechSection) -> Result<()> {
+        let Some(rules) = self.rules else {
+            return Ok(());
+        };
+        if !self.hull_check {
+            return Ok(());
+        }
+        let assisted = self.unit().targeting_computer_operational()?;
+        let breach = if self.character_toughness.is_some() {
+            super::flooding::roll_hull_breach_in_action(self.world, self.id, section, rules)?
+        } else {
+            super::flooding::roll_hull_breach(self.world, self.id, section, rules)?
+        };
+        let Some(mut report) = breach else {
+            return Ok(());
+        };
+        if assisted && !self.unit().targeting_computer_operational()? {
+            report.notices.push(super::Notice {
+                unit: self.id,
+                text: "Your Targeting Computer is Destroyed".to_owned(),
+            });
+        }
+        super::piloting::append_feedback(
+            &mut self.report.pilot_notices,
+            report.pilot_notices.iter().cloned(),
+            self.report.notices.len(),
+        );
+        self.report.notices.extend(report.notices.iter().cloned());
+        self.report.flooding.push(report);
+        Ok(())
+    }
+
     /// Check vacuum at the end of this section's material path, before damage transfers.
     fn check_vacuum(&mut self, section: MechSection, penetrating: bool) -> Result<()> {
         if !super::vacuum::check_mech(self.world, self.id, section, penetrating)? {
@@ -1584,6 +1669,8 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         weapon_effect,
         critical_penalty,
     } = packet;
+    // Only a hit rolls for a hull breach, never an explosion or other internal damage.
+    let hit = direct_hit;
     let damage_class =
         weapon_effect.map_or(super::DamageClass::Ordinary, WeaponEffect::damage_class);
     let mut initial_packet = true;
@@ -1773,6 +1860,9 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             {
                 context.kill_crew(had_pilot, CrewDeath::AreaEffect)?;
             }
+        }
+        if hit && original && context.unit().sections()[&section].internal > 0 {
+            context.check_hull_breach(section)?;
         }
         original = false;
         if internal_only {

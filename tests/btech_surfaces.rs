@@ -477,8 +477,19 @@ async fn bridge_collapse_drops_deck_occupants_to_the_river_bed() {
             report.falls.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
             units.to_vec()
         );
-        let damage = u32::from(height + 1) * (35 + 5) / 20;
-        assert!(report.falls.iter().all(|(_, fall)| fall.damage == damage));
+        // A 35-ton Jenner falls for 4 a multiplier. A fall that starts above the water's
+        // surface takes half for striking the surface and half again, with the depth, for
+        // the bottom (Total Warfare p. 57); one from the surface takes a single halved fall.
+        let multiplier = u32::from(height) + 1;
+        let damage = if multiplier > 2 {
+            4 * (multiplier - 1) / 2 + 4 * 2 / 2
+        } else {
+            4 * multiplier / 2
+        };
+        assert!(
+            report.falls.iter().all(|(_, fall)| fall.damage == damage),
+            "{height}"
+        );
         assert_eq!(world.btech.maps()[&map].hex(1, 1).unwrap(), report.after);
         assert_eq!(world.btech.maps()[&map].hex(0, 0).unwrap(), report.before);
         for id in units {

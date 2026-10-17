@@ -33,6 +33,28 @@ pub(super) fn damage(tons: u32, levels: i32, wet: bool, gravity: Option<i64>) ->
     u32::try_from(damage).context("Fall damage exceeds supported range")
 }
 
+/// Total Warfare p. 57: the damage of a fall into water, as stages resolved one after the other,
+/// each with whether it strikes under the surface and so checks hull integrity. A unit falling
+/// from above the surface takes normal falling damage halved for striking the surface, with the
+/// levels it fell to the surface, and normal falling damage halved again for sinking to the
+/// bottom, with the water's `depth`; a unit already below the surface takes one halved fall.
+/// `levels` is the damage multiplier to the bottom, levels fallen plus one.
+pub(super) fn water_fall_stages(
+    tons: u32,
+    levels: i32,
+    depth: i32,
+    above_surface: bool,
+    gravity: Option<i64>,
+) -> Result<Vec<(u32, bool)>> {
+    if !above_surface {
+        return Ok(vec![(damage(tons, levels, true, gravity)?, true)]);
+    }
+    Ok(vec![
+        (damage(tons, levels - depth, true, gravity)?, false),
+        (damage(tons, depth + 1, true, gravity)?, true),
+    ])
+}
+
 /// One d6 chooses the struck side and rotates heading in sixty-degree steps.
 pub(super) fn direction(roll: u8) -> Result<(HitArc, u16)> {
     ensure!((1..=6).contains(&roll), "Invalid fall direction roll");
@@ -77,6 +99,28 @@ mod tests {
         assert_eq!(damage(21, 1, false, None).unwrap(), 3);
         assert_eq!(damage(8, 1, false, None).unwrap(), 1);
         assert_eq!(damage(21, 0, false, None).unwrap(), 0);
+    }
+
+    /// A fall from above the water strikes the surface and then the bottom, each halved and
+    /// resolved separately; one under the surface takes a single halved fall.
+    #[test]
+    fn water_falls_from_above_the_surface_take_two_halved_stages() {
+        // A 50-ton 'Mech two levels above Depth 2 water falls five levels' worth to the
+        // bottom: 5 x 3 / 2 for the surface, then 5 x 3 / 2 for the bottom.
+        assert_eq!(
+            water_fall_stages(50, 5, 2, true, None).unwrap(),
+            vec![(7, false), (7, true)]
+        );
+        // One level above the surface: 5 x 2 / 2, then 5 x 3 / 2.
+        assert_eq!(
+            water_fall_stages(50, 4, 2, true, None).unwrap(),
+            vec![(5, false), (7, true)]
+        );
+        // Standing on the bottom: one halved fall.
+        assert_eq!(
+            water_fall_stages(50, 1, 2, false, None).unwrap(),
+            vec![(2, true)]
+        );
     }
 
     #[test]

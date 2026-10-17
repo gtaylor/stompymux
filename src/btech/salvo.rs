@@ -888,6 +888,12 @@ fn resolve_salvo_with_effects(
             } => aimed.preferred(world, target, arc, partial_cover)?,
             _ => None,
         };
+        let between_levels = match geometry {
+            HitGeometry::Direct { shooter, .. } => {
+                super::building_interior::shot_between_levels(world, shooter, target)?
+            }
+            HitGeometry::Fixed(_) => None,
+        };
         let unit = &world.btech.constructed_units()[&target];
         let mut dice = unit.dice.clone();
         let hit = if let Some(hit) = shared_hit.filter(|_| packets.single_location) {
@@ -898,6 +904,8 @@ fn resolve_salvo_with_effects(
                 rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
             }
+        } else if let Some(above) = between_levels {
+            super::hit::special_hit(unit, above, arc, &mut dice)?
         } else {
             let roll = dice.generic_roll();
             super::resolve_hit(unit, arc, roll, &mut dice)?

@@ -224,3 +224,108 @@ pub(super) fn d6_location(
         }
     }
 }
+
+/// Resolve a weapon hit on the Special 'Mech Hit Location Table (Total Warfare p. 175), used
+/// for a shot that reaches a 'Mech from a different level inside a building, from the level
+/// above it (`above`) or below it. The table is rolled on 1D6 and has no critical-chance
+/// result; torso hits strike the rear armor when the attack comes from the rear arc and the
+/// front armor otherwise. A quad's arms are its front legs and its legs its rear legs. A prone
+/// 'Mech is hit on the Front/Rear column of the standard table instead. A torso-mounted
+/// cockpit's destroyed head is re-rolled (Tactical Operations: Advanced Units & Equipment
+/// p. 113).
+pub(super) fn special_hit(target: &Mech, above: bool, arc: HitArc, dice: &mut Dice) -> Result<Hit> {
+    use MechSection::*;
+    if target.posture() == super::Posture::Prone {
+        let column = if arc == HitArc::Rear {
+            HitArc::Rear
+        } else {
+            HitArc::Front
+        };
+        let roll = dice.generic_roll();
+        return resolve_hit(target, column, roll, dice);
+    }
+    if target.combat_safe {
+        return Ok(Hit {
+            section: LeftArm,
+            rear_armor: false,
+            through_armor_critical: false,
+        });
+    }
+    let row = match (above, target.chassis()) {
+        (true, _) => [LeftArm, LeftTorso, CenterTorso, RightTorso, RightArm, Head],
+        (false, MechChassis::Quad) => [LeftArm, LeftLeg, LeftTorso, RightTorso, RightLeg, RightArm],
+        (false, _) => [LeftLeg, LeftLeg, LeftTorso, RightTorso, RightLeg, RightLeg],
+    };
+    loop {
+        let section = row[usize::from(dice.d6() - 1)];
+        if section == Head && target.rerolls_head_hits() {
+            continue;
+        }
+        return Ok(Hit {
+            section,
+            rear_armor: arc == HitArc::Rear,
+            through_armor_critical: false,
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A Jenner, as a biped or a quad.
+    fn jenner(quad: bool) -> Mech {
+        let mut encoded = serde_json::to_value(
+            Mech::from_template(
+                super::super::MechTemplate::parse(
+                    "JR7-D",
+                    include_str!("../../tests/fixtures/btech/units/JR7-D.toml"),
+                )
+                .unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        if quad {
+            encoded["definition"]["attributes"]["move_type"] = "Quad".into();
+        }
+        serde_json::from_value(encoded).unwrap()
+    }
+
+    /// Shots from above find the arms, torsos and head; shots from below the legs and torsos,
+    /// and a quad's front legs stand in for its arms. Torso hits take the attack's facing.
+    #[test]
+    fn special_table_rows_follow_the_shot_level() {
+        use MechSection::*;
+        let rows = [
+            (
+                true,
+                false,
+                [LeftArm, LeftTorso, CenterTorso, RightTorso, RightArm, Head],
+            ),
+            (
+                false,
+                false,
+                [LeftLeg, LeftLeg, LeftTorso, RightTorso, RightLeg, RightLeg],
+            ),
+            (
+                false,
+                true,
+                [LeftArm, LeftLeg, LeftTorso, RightTorso, RightLeg, RightArm],
+            ),
+        ];
+        for (above, quad, row) in rows {
+            let unit = jenner(quad);
+            for seed in 0..=31 {
+                let mut dice = Dice::seeded([seed; 32]);
+                let roll = dice.clone().d6();
+                let hit = special_hit(&unit, above, HitArc::Rear, &mut dice).unwrap();
+                assert_eq!(hit.section, row[usize::from(roll - 1)], "{above} {quad}");
+                assert!(hit.rear_armor);
+                assert!(!hit.through_armor_critical);
+                let hit = special_hit(&unit, above, HitArc::Left, &mut dice).unwrap();
+                assert!(!hit.rear_armor);
+            }
+        }
+    }
+}
