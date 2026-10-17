@@ -351,6 +351,7 @@ pub(super) fn prepare(
             },
         "Target is outside weapon arc"
     );
+    let spotter_attacked = observer.is_some_and(|id| super::spotter::attacked_this_turn(world, id));
     let observer = if let Some(id) = observer {
         ArtilleryObserver::Spotting(super::skills::unit_spotting_target(world, id)?)
     } else {
@@ -381,6 +382,7 @@ pub(super) fn prepare(
         attacker_condition,
         intervening: terrain.intervening_modifier(),
         registered: super::artillery_registration::registered(world, shooter, coordinate),
+        spotter_attacked,
     })?;
     Ok(PreparedArtillery {
         map,

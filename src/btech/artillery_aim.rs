@@ -4,9 +4,9 @@
 //! A piece within seventeen hexes of a hex it can see fires directly: Gunnery +4, with the
 //! attacker's movement, its own condition and the terrain it fires through, but no range,
 //! target movement or target-hex terms, and never at a hex within six hexes (p. 153). Every
-//! other shot is indirect: Gunnery +7, plus the spotter's term less one per adjusted shot
-//! (pp. 149-150), plus the attacker's movement when the hex lies within seventeen hexes
-//! (p. 153). Once a piece strikes a hex it hits that hex automatically until it moves (p. 150).
+//! other shot is indirect: Gunnery +7, plus the spotter's term (and +1 when the spotter also
+//! attacked that turn) less one per adjusted shot (pp. 149-150), plus the attacker's movement
+//! when the hex lies within seventeen hexes (p. 153). Once a piece strikes a hex it hits that hex automatically until it moves (p. 150).
 //!
 //! Artillery cannons are ballistic weapons that only deal artillery damage (Tactical
 //! Operations: Advanced Units & Equipment p. 97): a cannon that sees its hex aims as an ordinary
@@ -64,6 +64,9 @@ pub struct ArtilleryAimInput {
     /// The piece has already struck this hex and not moved since, so indirect fire at it hits
     /// automatically (Tactical Operations: Advanced Rules p. 150).
     pub registered: bool,
+    /// The spotter attacked in the turn it spots: +1 to the artillery attack (Tactical
+    /// Operations: Advanced Rules p. 149).
+    pub spotter_attacked: bool,
 }
 
 /// Range admission diagnostics. Only an in-range shot may be fired.
@@ -192,7 +195,9 @@ fn calculate(weapon: Weapon, input: ArtilleryAimInput) -> Result<ArtilleryAim> {
     }
     let spotter = match input.observer {
         ArtilleryObserver::Unassisted | ArtilleryObserver::Unavailable => 0,
-        ArtilleryObserver::Spotting(target) => (i32::from(target) - 4) / 2,
+        ArtilleryObserver::Spotting(target) => {
+            (i32::from(target) - 4) / 2 + i32::from(input.spotter_attacked)
+        }
     };
     // Indirect fire at a hex within seventeen hexes pays for the attacker's movement
     // (Tactical Operations: Advanced Rules p. 153).
@@ -237,6 +242,7 @@ mod tests {
             attacker_condition: 1,
             intervening: 2,
             registered: false,
+            spotter_attacked: false,
         }
     }
 
@@ -262,6 +268,16 @@ mod tests {
             })
             .unwrap();
         assert_eq!(spotted.target_number, 8);
+        // A spotter that also attacks makes the artillery attack one harder (p. 149).
+        let busy = Weapon::ArrowIv
+            .artillery_aim(ArtilleryAimInput {
+                observer: ArtilleryObserver::Spotting(2),
+                adjustment: 2,
+                spotter_attacked: true,
+                ..base()
+            })
+            .unwrap();
+        assert_eq!(busy.target_number, 9);
     }
 
     /// Direct fire within seventeen hexes is Gunnery +4 with movement, condition and

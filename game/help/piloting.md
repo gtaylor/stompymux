@@ -1010,8 +1010,9 @@ Artillery you fire at a hex you can see within seventeen hexes is direct fire
 sensor and actuator damage and the woods or smoke you fire through, with no range
 or target modifiers. Direct fire cannot be made at a hex within six hexes. A
 direct-fire miss scatters 1D6 hexes. Every other artillery shot is indirect
-(pp. 148-150): gunnery +7, plus your observer's spotting modifier, less one for
-each corrected miss, plus your movement when the hex lies within seventeen hexes.
+(pp. 148-150): gunnery +7, plus your observer's spotting modifier and +1 if it also
+attacked within the last thirty seconds, less one for each corrected miss, plus your
+movement when the hex lies within seventeen hexes.
 An indirect miss scatters one hex for each point it missed by. A miss scatters in
 a direction rolled on one die, clockwise from north; a round that scatters off the
 map lands harmlessly. Once one of your rounds strikes its target hex, every later

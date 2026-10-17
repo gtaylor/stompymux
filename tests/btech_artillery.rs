@@ -288,6 +288,7 @@ fn artillery_aim_ranges_observers_and_corrections() {
             attacker_condition: 0,
             intervening: 0,
             registered: false,
+            spotter_attacked: false,
         };
         assert_eq!(
             weapon.artillery_aim(base).unwrap(),
