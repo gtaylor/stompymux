@@ -1260,10 +1260,11 @@ async fn sensor_command_and_lua_report_read_only_perception() {
             line,
         )
     };
-    // A moonless night sees five hexes and blowing sand ten: the night rules. The fixture has
-    // not reached a turn boundary, so no sensor sweep has been rolled yet.
+    // A moonless night sees five hexes and blowing sand ten: the night rules, and a lit target
+    // is seen only as far as the sand allows. The fixture has not reached a turn boundary, so
+    // no sensor sweep has been rolled yet.
     let expected = [
-        "Sight:   5 hexes (moonless night, blowing sand): +3 to hit, +0 if lit; lit targets seen to 45",
+        "Sight:   5 hexes (moonless night, blowing sand): +3 to hit, +0 if lit; lit targets seen to 10",
         "Sensors: infrared 10/20/30, magnetic anomaly 10/20/30, radar 8/16/24, seismic 2/4/6 hexes; sweep pending",
         "Probe:   none",
     ]

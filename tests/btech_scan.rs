@@ -1843,7 +1843,7 @@ async fn explicit_long_range_visibility_modes_filter_ordinary_maps() {
 #[tokio::test]
 async fn terrain_fire_and_inferno_illumination_follow_live_sources_without_acquisition() {
     let (_dir, config, mut world, map, source, _target) = fixture().await;
-    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::HeavyFog).unwrap();
+    set_battle_map_conditions(&mut world, map, Light::MoonlessNight, Weather::Clear).unwrap();
     let coordinate = HexCoordinate { x: 1, y: 7 };
     let fire = HexCoordinate { x: 1, y: 8 };
     assert!(!battle_hex_visible(&world, source, coordinate).unwrap());

@@ -63,7 +63,9 @@ counts hexes on the map, so height above or below the target never adds to it:
 
 Every point of smoke along the line takes a hex off that reach. At night your own
 searchlight lets you see thirty hexes, and a target lit by a searchlight, by fire
-or by scenario lighting is seen out to forty-five. Seeing a unit identifies it.
+or by scenario lighting is seen out to forty-five. These stand in for the light
+only: fog, rain, snow and the like still limit sight, so at night in heavy fog a
+lit target is seen five hexes off. Seeing a unit identifies it.
 
 ## Sensors
 

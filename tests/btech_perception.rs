@@ -365,6 +365,39 @@ async fn searchlights_lit_targets_and_smoke_change_the_reach_of_sight() {
     lane.world.validate(&lane.config).unwrap();
 }
 
+/// The weather still limits sight at night: a searchlight or a lit target stands in for the
+/// light alone, as only the most restrictive condition counts (Tactical Operations: Advanced
+/// Rules p. 189). In heavy fog a lamp and a lit target reach five hexes, as in daylight; in
+/// light fog thirty.
+#[tokio::test]
+async fn weather_limits_searchlights_and_lit_targets() {
+    let mut lane = lane(&grass(50), Observer::Mech).await;
+    lane.sweep(12);
+    lane.conditions(Light::MoonlessNight, Weather::HeavyFog);
+    toggle_battle_searchlight(&mut lane.world, lane.observer, ObjectId(1)).unwrap();
+    for _ in 0..6 {
+        advance_battle_searchlights(&mut lane.world);
+    }
+    assert!(battle_unit_illuminated(&lane.world, lane.observer));
+    lane.place_target(5);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    lane.place_target(6);
+    assert_eq!(lane.perceived(), None);
+    lane.target_signature(true);
+    assert_eq!(lane.perceived(), None);
+    lane.conditions(Light::MoonlessNight, Weather::LightFog);
+    lane.place_target(30);
+    assert_eq!(lane.perceived(), Some((Sight, true)));
+    lane.place_target(31);
+    assert_eq!(lane.perceived(), None);
+    let report = battle_perception_report(&lane.world, lane.observer).unwrap();
+    assert_eq!(
+        (report.profile.sight_range, report.profile.lit_sight_range),
+        (30, 30)
+    );
+    lane.world.validate(&lane.config).unwrap();
+}
+
 /// Sensors find what sight cannot: one sweep per turn is tried against every system of the
 /// suite, the roll picks one range band, 'Mechs and vehicles use their own brackets, hills stop
 /// infrared and radar but not magscan or seismic, seismic sensors need ground movement, and

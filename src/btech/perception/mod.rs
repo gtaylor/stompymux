@@ -3,8 +3,8 @@
 //!
 //! * **Sight** needs a clear line and reaches as far as the light and weather allow: sixty
 //!   hexes in daylight, three in pitch black. At night a unit's own searchlight stretches its
-//!   sight to thirty hexes and a target lit by anything else is seen at forty-five. Smoke
-//!   along the line shortens sight by its density. A sighted unit is identified.
+//!   sight to thirty hexes and a target lit by anything else is seen at forty-five, as far
+//!   as the weather allows. Smoke along the line shortens sight by its density. A sighted unit is identified.
 //! * **Sensors** are one selected system (infrared, magscan, radar, seismic or an active
 //!   probe) swept with 2d6 once a turn; the sweep's result picks the range band that turn's
 //!   sweep finds targets in. Sensors do not need a clear line, though hills stop infrared and
@@ -207,8 +207,8 @@ impl ProbeJamming {
 pub struct PerceptionProfile {
     pub light: Light,
     pub weather: Weather,
-    /// How far the observer sees under the light and weather, stretched to thirty hexes by
-    /// its own searchlight at night.
+    /// How far the observer sees under the light and weather, its own searchlight standing in
+    /// for the light at night (see [`sight_ranges`]).
     pub sight_range: u16,
     /// How far the observer sees a target lit by another source at night.
     pub lit_sight_range: u16,
@@ -265,18 +265,8 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         .context("Map not found")?;
     let light = map.light_level()?;
     let weather = map.weather_condition()?;
-    let visual = u16::from(map.visual_range()?);
     let searchlight_on = crate::btech::searchlight::lamp_on(world, observer);
-    let sight_range = if light.searchlights_help_sight() && searchlight_on {
-        visual.max(u16::from(crate::btech::SEARCHLIGHT_SIGHT))
-    } else {
-        visual
-    };
-    let lit_sight_range = if light.searchlights_help_sight() {
-        sight_range.max(u16::from(crate::btech::LIT_TARGET_SIGHT))
-    } else {
-        sight_range
-    };
+    let (sight_range, lit_sight_range) = sight_ranges(light, weather, searchlight_on);
     let field = crate::btech::electronic_field(world, observer)?;
     let jamming = ProbeJamming {
         guardian: field.disturbed,
@@ -310,6 +300,27 @@ pub fn perception_profile(world: &World, observer: ObjectId) -> Result<Perceptio
         vehicle: unit.vehicle,
         underwater: point.below_waterline(),
     })
+}
+
+/// How far an observer sees ordinary and lit targets under `light` and `weather`, with its own
+/// searchlight on when `searchlight_on` (Tactical Operations: Advanced Rules p. 189). At night
+/// and at dawn or dusk a mounted searchlight's thirty hexes, or forty-five to a target lit by
+/// another source, stand in for the light's row of the Visual Range Table; the weather's row
+/// still applies, since only the most restrictive condition counts.
+fn sight_ranges(light: Light, weather: Weather, searchlight_on: bool) -> (u16, u16) {
+    let by_light = u16::from(light.visual_range());
+    let by_weather = u16::from(weather.visual_range());
+    if !light.searchlights_help_sight() {
+        let range = by_light.min(by_weather);
+        return (range, range);
+    }
+    let own = if searchlight_on {
+        by_light.max(u16::from(crate::btech::SEARCHLIGHT_SIGHT))
+    } else {
+        by_light
+    };
+    let lit = own.max(u16::from(crate::btech::LIT_TARGET_SIGHT));
+    (own.min(by_weather), lit.min(by_weather))
 }
 
 /// Resolve the selected sensor from equipment, damage and jamming.
@@ -788,6 +799,21 @@ mod tests {
         let mut sorted = DetectionChannel::ALL;
         sorted.sort();
         assert_eq!(sorted, DetectionChannel::ALL);
+    }
+
+    /// A searchlight or a lit target stands in for the light, never for the weather: at night
+    /// in heavy fog both are seen five hexes off, the same as in daylight (TO:AR p. 189).
+    #[test]
+    fn searchlights_replace_the_light_but_not_the_weather() {
+        use Weather::{Clear, HeavyFog, LightFog, ModerateRain};
+        assert_eq!(sight_ranges(Light::MoonlessNight, Clear, false), (5, 45));
+        assert_eq!(sight_ranges(Light::MoonlessNight, Clear, true), (30, 45));
+        assert_eq!(sight_ranges(Light::PitchBlack, HeavyFog, true), (5, 5));
+        assert_eq!(sight_ranges(Light::Day, HeavyFog, false), (5, 5));
+        assert_eq!(sight_ranges(Light::FullMoonNight, LightFog, true), (30, 30));
+        assert_eq!(sight_ranges(Light::Dusk, ModerateRain, false), (15, 20));
+        assert_eq!(sight_ranges(Light::Dusk, ModerateRain, true), (20, 20));
+        assert_eq!(sight_ranges(Light::Day, Clear, true), (60, 60));
     }
 
     /// Hostile ECM on the carrier jams every probe but the Bloodhound, an Angel suite jams

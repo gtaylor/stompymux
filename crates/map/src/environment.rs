@@ -204,10 +204,13 @@ pub enum Illumination {
 /// Operations p. 189); no condition lets anything see farther.
 pub const MAX_SIGHT: u8 = 60;
 
-/// How far a ground unit sees at night with its own searchlight on, in hexes.
+/// How far a ground unit sees at night with its own searchlight on, in hexes: it stands in for
+/// the light's row of the Visual Range Table, and the weather still limits it (Tactical
+/// Operations p. 189).
 pub const SEARCHLIGHT_SIGHT: u8 = 30;
 
-/// How far a ground unit sees at night a target that something else lights, in hexes.
+/// How far a ground unit sees at night a target that something else lights, in hexes; like
+/// [`SEARCHLIGHT_SIGHT`], the weather still limits it.
 pub const LIT_TARGET_SIGHT: u8 = 45;
 
 impl Light {

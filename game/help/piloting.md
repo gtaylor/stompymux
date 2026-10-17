@@ -260,7 +260,8 @@ by what means your unit can perceive right now:
 
 - Sight: the light and the weather set how far you see; at night a lit target
   can be seen out to forty-five hexes and your own searchlight lets you see
-  thirty. Darkness also costs to hit; see `help night`.
+  thirty, as far as the weather allows. Darkness also costs to hit; see
+  `help night`.
 - Sensors: your infrared, magnetic anomaly, radar and seismic sensors. Every
   thirty seconds each unit rolls one sweep, and a target sight misses is found
   if any system's range band for that roll covers it; the report lists each
