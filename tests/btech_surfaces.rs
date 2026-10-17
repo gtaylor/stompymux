@@ -116,7 +116,9 @@ async fn ice_fracture_drops_neighbors_before_trigger_and_replays_after_restart()
         report.falls.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
         [units[1], units[0]]
     );
-    assert!(report.falls.iter().all(|(_, fall)| fall.damage == 6));
+    // Three levels down into the water: four points times the levels fallen plus one, halved
+    // in water (Total Warfare pp. 57, 68).
+    assert!(report.falls.iter().all(|(_, fall)| fall.damage == 8));
     assert_eq!(
         world.btech.maps()[&map].hex(1, 1).unwrap(),
         Hex::new(Terrain::Water, 3)
@@ -341,7 +343,7 @@ async fn fall_onto_ice_reports_nested_fracture_and_uses_resulting_water_damage()
         if let Some(ice) = &report.ice_break {
             assert_eq!(ice.falls.len(), 2);
             assert_eq!(ice.falls.last().unwrap().0, id);
-            assert_eq!(ice.falls.last().unwrap().1.damage, 6);
+            assert_eq!(ice.falls.last().unwrap().1.damage, 8);
         }
         assert_eq!(
             world.btech.maps()[&map].hex(1, 1).unwrap().terrain(),
@@ -471,13 +473,14 @@ async fn bridge_collapse_drops_deck_occupants_to_the_river_bed() {
         assert_eq!(world.btech, restarted.btech);
         assert_eq!(report.before, Hex::new(Terrain::Bridge, height));
         assert_eq!(report.after, Hex::new(Terrain::Water, 1));
-        // Both units stand on the deck and fall past it into the depth-one water below.
-        assert_eq!(report.fall_levels, height + 1);
+        // Both units stand on the deck and fall past it into the depth-one water below: the
+        // damage multiplier is the levels fallen plus one (Total Warfare p. 68).
+        assert_eq!(report.fall_levels, height + 2);
         assert_eq!(
             report.falls.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
             units.to_vec()
         );
-        let damage = u32::from(height + 1) * (35 + 5) / 20;
+        let damage = u32::from(height + 2) * (35 + 5) / 20;
         assert!(report.falls.iter().all(|(_, fall)| fall.damage == damage));
         assert_eq!(world.btech.maps()[&map].hex(1, 1).unwrap(), report.after);
         assert_eq!(world.btech.maps()[&map].hex(0, 0).unwrap(), report.before);

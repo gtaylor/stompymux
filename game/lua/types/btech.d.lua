@@ -820,7 +820,7 @@ function btech_map.cloud_base(actor, dbref, altitude) end
 ---@field coordinate HexCoordinate
 ---@field before Hex
 ---@field after Hex
----@field fall_levels integer
+---@field fall_levels integer Fall damage multiplier: the levels fallen plus one, or 0 when nobody falls.
 ---@field falls table[] Ordered pairs of unit dbref and Mech fall report.
 ---@field vehicle_falls table[] Ordered pairs of unit dbref and vehicle fall report.
 ---@field flooded_vehicles integer[]

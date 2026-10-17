@@ -547,7 +547,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `coordinate`: `HexCoordinate`
 - `before`: `Hex`
 - `after`: `Hex`
-- `fall_levels`: `integer`
+- `fall_levels`: `integer` — Fall damage multiplier: the levels fallen plus one, or 0 when nobody falls.
 - `falls`: `table[]` — Ordered pairs of unit dbref and Mech fall report.
 - `vehicle_falls`: `table[]` — Ordered pairs of unit dbref and vehicle fall report.
 - `flooded_vehicles`: `integer[]`

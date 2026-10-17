@@ -13,6 +13,8 @@ pub struct SurfaceBreak {
     pub coordinate: HexCoordinate,
     pub before: Hex,
     pub after: Hex,
+    /// The occupants' fall damage multiplier: the levels fallen plus one, or zero when the
+    /// surface drops nobody.
     pub fall_levels: u8,
     pub falls: Vec<(ObjectId, MechFallReport)>,
     pub vehicle_falls: Vec<(ObjectId, super::VehicleFallReport)>,
@@ -268,13 +270,14 @@ fn break_surface(
     );
     let bridge = expected == Surface::Bridge;
     let roof = expected == Surface::Roof;
-    // Occupants stand on the deck, the ice or the roof. A collapsing deck drops them to the
-    // river bed, and a collapsing building or wall to the rubble at its foot: a fall of the
-    // structure's height in levels, so the damage multiplier is one more (Total Warfare p. 177).
-    let (surface_height, fall_levels, replacement) = match tile.structure() {
+    // Occupants stand on the deck, the ice or the roof. A collapsing deck or broken ice drops
+    // them to the river bed, the deck's clearance plus the water's depth, and a collapsing
+    // building or wall to the rubble at its foot, the structure's height (Total Warfare
+    // p. 177). The damage multiplier is the levels fallen plus one (TW p. 68).
+    let (surface_height, levels_fallen, replacement) = match tile.structure() {
         Some(structure) if roof => (
             i32::from(tile.surface_height()),
-            structure.height.saturating_add(1),
+            structure.height,
             tile.collapsed(),
         ),
         _ => (
@@ -283,6 +286,7 @@ fn break_surface(
             tile.with_surface_broken(),
         ),
     };
+    let fall_levels = fall_multiplier(levels_fallen);
     let collapse_text = match tile.structure() {
         Some(structure) if roof => format!(
             "falls as the {} collapses!",
@@ -499,6 +503,15 @@ fn break_surface(
     Ok(report)
 }
 
+/// Damage multiplier for a fall of `levels` through a broken surface: the levels fallen plus
+/// one (Total Warfare p. 68), or none when the surface drops nobody.
+fn fall_multiplier(levels: u8) -> u8 {
+    if levels == 0 {
+        return 0;
+    }
+    levels.saturating_add(1)
+}
+
 /// One-in-six landing/fall check; the enclosing action owns rollback of the roll and fracture.
 pub(super) fn check_ice_landing(
     world: &mut World,
@@ -599,4 +612,19 @@ pub(super) fn break_surface_in_action(
             character: true,
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A fall through a broken surface multiplies the damage by the levels fallen plus one
+    /// (Total Warfare p. 68); a surface with nothing beneath drops nobody.
+    #[test]
+    fn surface_falls_multiply_by_levels_fallen_plus_one() {
+        assert_eq!(fall_multiplier(0), 0);
+        assert_eq!(fall_multiplier(1), 2);
+        assert_eq!(fall_multiplier(3), 4);
+        assert_eq!(fall_multiplier(u8::MAX), u8::MAX);
+    }
 }
