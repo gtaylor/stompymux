@@ -108,8 +108,13 @@ Water depth affects piloting checks. Entering water a level or more deep require
 piloting check, one easier at depth one, unmodified at depth two and one harder
 beyond; slipping causes a fall. A running Mech stops at the water's edge, and
 entering limits forward throttle to walking speed. Water can flood breached
-sections, disable equipment and cause loss of balance. Running commands are
-rejected while in the water.
+sections, disable equipment and cause loss of balance: a location under water
+floods once its armor is gone, and every hit that damages it, falls included,
+breaches it on 10 or more on 2d6 (Total Warfare p. 121). A fall into water from
+above its surface takes half damage for striking the surface and half again for
+reaching the bottom (p. 57). With life support destroyed, a pilot whose Mech is
+submerged takes a point of damage at the end of every turn (p. 127). Running
+commands are rejected while in the water.
 Bridge travel selects the deck or a lower surface at elevation -1 according to
 your current height. Beneath a bridge you stand on the river bed: water checks
 still apply, and the deck overhead plays no part in slope checks.
@@ -412,8 +417,9 @@ Sustained firing can overheat the reactor. Thermal checks run on saved simulatio
 timers using the Total Warfare heat scale: at high heat, ammunition can explode
 before the reactor attempts to shut down, and each check is a 2d6 avoid roll
 whose target rises with heat. Shutdown at 30 heat cannot be avoided. Carrying
-inferno ammunition adds its own, earlier ammunition avoid rolls. Heat can also
-injure the pilot once life support is destroyed. A heat shutdown clears your
+inferno ammunition adds its own, earlier ammunition avoid rolls; laser heat sinks
+add one to both kinds of ammunition roll. Heat can also injure the pilot once life
+support is destroyed. A heat shutdown clears your
 target and stops the unit, but you keep the cockpit. The involuntary shutdown
 forces a piloting check at +3 whatever your speed, and failing it knocks the unit
 prone (Total Warfare p. 60). The reactor restarts by itself at the next turn
@@ -445,7 +451,10 @@ internal damage points continue to work normally.
 Standard, light, XL, XXL and compact Inner Sphere fusion engines are supported.
 Engine type follows the installed slots. Losing a side torso destroys an XL or
 XXL engine; a light engine can survive one lost side torso but produces ten extra
-heat while running. A third engine hit destroys any of these engine types.
+heat while running. A third engine hit destroys any of these engine types. An XXL
+engine runs hotter: two heat a turn standing still, four walking and six running,
+and double heat per hex jumped with at least six a jump (Tactical Operations:
+Advanced Units & Equipment p. 121).
 
 
 Installed CASE contains an ammunition explosion within its section. It cannot
@@ -600,7 +609,9 @@ with rapid fire. Selecting the mode again returns to normal ammunition.
 autocannons. AP bins hold half the ordinary rounds. Shots take +1 to their target
 number; every hit that damages armor rolls once for a critical hit, with a
 penalty of -1 to -4 that grows as the autocannon gets smaller (Total Warfare
-p. 140). Hardened armor negates the roll. AP can be combined with rapid fire.
+p. 140), and a hit that reaches the internal structure makes only the ordinary
+critical roll. Hardened armor negates the roll and takes AP rounds point for
+point; laser-reflective armor adds 2 to it. AP can be combined with rapid fire.
 
 `caseless <selection>` toggles caseless ammunition for conventional and light IS
 autocannons. Ordinary bins hold twice as many rounds. On a to-hit roll of 2 the
@@ -769,7 +780,7 @@ Warfare p. 137).
 
 A torso-mounted cockpit sits in the center torso. Head hits do not injure you,
 and losing the head neither destroys the Mech nor kills you: later hits there
-are rolled again. You add one to every piloting roll. The extra sensor package
+are rolled again. Losing the center torso, which holds the cockpit, kills you. You add one to every piloting roll. The extra sensor package
 means a second sensor hit only raises the weapon penalty from +2 to +4; a third
 stops weapon attacks. Once both head sensors or three sensors are gone you are
 blind, adding 4 to piloting rolls and physical attacks. With life support
@@ -1408,8 +1419,11 @@ A unit inside a building is seen and shot at by its level; the building's own
 hex never blocks the line. A standing Mech one level below the roof has partial
 cover from every direction. Every hit grouping fired at a unit inside from
 another hex loses a tenth of the hex's construction factor to the building,
-which takes the same, and a miss from the next hex strikes the building. Punches
-and kicks cannot reach a unit inside from outside its hex. When a hex collapses,
+which takes the same, and a miss from the next hex strikes the building. A shot
+from another level of the same building hex hits a Mech on the Special Hit
+Location Table: from above it finds the arms, torsos and head, from below the
+legs and torsos (Total Warfare p. 175). Punches and kicks cannot reach a unit
+inside from outside its hex. When a hex collapses,
 every unit inside takes a tenth of the construction factor for its own level and
 each level above it, in five-point groups from the front, and stands on the
 rubble; units on the roof fall. Aircraft, VTOLs and naval units cannot enter a
