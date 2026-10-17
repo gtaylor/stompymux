@@ -1332,7 +1332,8 @@ Alias: `"off"|"ecm"|"eccm"`
 - `hex`: `{x: integer, y: integer}`
 - `mode`: `'unit_at_hex'|'hex'|'building'|'ignite'|'clear'`
 - `visible`: `boolean` — Current terrain visibility, separate from numeric aim.
-- `hex_bonus`: `integer` — Zero for unit-at-hex, otherwise -4.
+- `hex_bonus`: `integer` — -4: every hex target is immobile.
+- `terrain`: `integer` — Woods, smoke and crops between the attacker (or the indirect-fire spotter) and the hex.
 - `subtotal`: `integer|nil` — Nil beyond weapon range; numeric aim alone does not authorize firing.
 
 ## RadioReception

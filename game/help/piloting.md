@@ -980,8 +980,13 @@ Use `lock x y` to select coordinates, or append H (hex), B (building), I (ignite
 or C (clear). Coordinate locks take effect at once, even outside visibility.
 `lock -` clears the selection. With a plain coordinate lock, `fire <weapon>`
 attacks its current unit occupant under ordinary firing rules. The lock stays at
-the coordinates when that unit moves. Artillery always fires at the selected hex
-and arrives after a flight delay, applying its ammunition payload to the area.
+the coordinates when that unit moves. A shot at the hex itself (a plain lock on an
+empty hex, or an H, B, I or C lock) treats it as an immobile target at -4 (Total
+Warfare p. 110) and pays for the woods, smoke and crops between you and it, or
+between your spotter and it for indirect fire (pp. 107, 111). The hex's own woods and
+smoke add nothing, since a hex does not stand in itself. Artillery always fires
+at the selected hex and arrives after a flight delay, applying its ammunition
+payload to the area.
 Without a spotter, artillery may still fire at a hex you cannot see (Tactical
 Operations p. 148), but that fire cannot be adjusted: a miss earns trajectory
 correction only while a friendly unit can see the target hex. Underground,

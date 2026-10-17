@@ -140,7 +140,9 @@ line of fire. C3 and C3i networks add their shared aiming range on top of that.
 
 Aim at a target includes woods and smoke between you and in its hex, crops along
 the line, partial cover and the darkness penalty when it applies. A working active
-probe within its reveal range lets you ignore one point of woods.
+probe within its reveal range lets you ignore one point of woods. A shot at a hex
+pays for the woods, smoke and crops between you and it, not for its own, and takes
+-4 because a hex never moves.
 
 ## Ice
 

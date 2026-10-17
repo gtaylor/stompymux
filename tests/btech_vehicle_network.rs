@@ -463,14 +463,8 @@ async fn vehicle_hex_aim_reuses_weapon_terms_modes_and_read_only_lua() {
         let aim = battle_hex_aim_modifiers(&world, shooter, hex, index, 4).unwrap();
         assert!(aim.visible);
         assert_eq!(aim.mode, mode);
-        assert_eq!(
-            aim.hex_bonus,
-            if mode == HexTargetMode::UnitAtHex {
-                0
-            } else {
-                -4
-            }
-        );
+        // Every hex mode is an immobile target (Total Warfare p. 110).
+        assert_eq!(aim.hex_bonus, -4);
         assert_eq!(aim.modifiers.range, unit.range);
         assert_eq!(aim.modifiers.attacker_movement, unit.attacker_movement);
         assert_eq!(aim.modifiers.control_damage, 1);

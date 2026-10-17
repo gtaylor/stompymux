@@ -121,7 +121,8 @@ impl AimModifiers {
         self.subtotal_with_terrain(self.perception?.modifier)
     }
 
-    /// Shared arithmetic; terrain targets supply zero instead of a unit sensor contribution.
+    /// Shared arithmetic; hex targets supply their intervening-terrain term in place of a
+    /// unit's perception and cover term.
     pub(super) fn subtotal_with_terrain(&self, perception: i16) -> Option<i32> {
         Some(
             i32::from(self.gunnery)

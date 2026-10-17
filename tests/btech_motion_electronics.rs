@@ -4743,7 +4743,8 @@ async fn hex_occupant_fire_routing_aim_and_rollback() {
     loaded.validate(&config).unwrap();
 }
 
-/// Empty terrain shares weapon modifiers without inheriting an occupant's motion, lock or sensor aim.
+/// Empty terrain shares weapon modifiers without inheriting an occupant's motion, lock or sensor
+/// aim, and every hex mode is an immobile target at -4 (Total Warfare p. 110).
 #[tokio::test]
 async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     use stompymux_rs::*;
@@ -4767,12 +4768,14 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     assert_eq!(world.btech, before);
     assert!(base.visible);
     assert_eq!(base.modifiers.range, unit.range);
+    assert_eq!(base.terrain, 0);
     assert_eq!(
         base.subtotal().unwrap(),
         unit.subtotal().unwrap()
             - i32::from(unit.target_movement)
             - i32::from(unit.target_lock)
             - i32::from(unit.perception.unwrap().modifier)
+            - 4
     );
     for mode in [
         HexTargetMode::UnitAtHex,
@@ -4783,16 +4786,8 @@ async fn hex_aim_modes_visibility_and_neutral_target_terms() {
     ] {
         select_battle_hex_target(&mut world, shooter, ObjectId(1), point, mode).unwrap();
         let report = battle_hex_aim_modifiers(&world, shooter, point, 0, 6).unwrap();
-        let bonus = if mode == HexTargetMode::UnitAtHex {
-            0
-        } else {
-            -4
-        };
-        assert_eq!(report.hex_bonus, bonus);
-        assert_eq!(
-            report.subtotal().unwrap(),
-            base.subtotal().unwrap() + i32::from(bonus)
-        );
+        assert_eq!(report.hex_bonus, -4);
+        assert_eq!(report.subtotal().unwrap(), base.subtotal().unwrap());
         assert_eq!(report.modifiers.target_movement, 0);
         assert_eq!(report.modifiers.target_lock, 0);
         assert!(report.modifiers.perception.is_none());

@@ -1391,7 +1391,8 @@
 //|---@field hex {x: integer, y: integer}
 //|---@field mode 'unit_at_hex'|'hex'|'building'|'ignite'|'clear'
 //|---@field visible boolean Current terrain visibility, separate from numeric aim.
-//|---@field hex_bonus integer Zero for unit-at-hex, otherwise -4.
+//|---@field hex_bonus integer -4: every hex target is immobile.
+//|---@field terrain integer Woods, smoke and crops between the attacker (or the indirect-fire spotter) and the hex.
 //|---@field subtotal integer|nil Nil beyond weapon range; numeric aim alone does not authorize firing.
 // lua-types-end
 

@@ -1,8 +1,19 @@
 //! Read-only conventional aim against terrain, without constructing a fictitious defender.
+//!
+//! A hex is a target in its own right (Total Warfare pp. 42, 106). It is attacked like a unit:
+//! the range is the hex count to it, and the woods, smoke and crops between the attacker and
+//! the hex add their to-hit modifiers (p. 107). A hex never moves, so every hex target is an
+//! immobile target at -4, as building hexes are (p. 110) and as p. 228 calls "the -4 modifier
+//! for attacking a hex". The terrain in the target hex itself adds nothing: Total Warfare
+//! charges it only when the target occupies the hex, and a hex does not occupy itself; partial
+//! cover applies only to standing 'Mechs (p. 107).
 use super::*;
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::Serialize;
+
+/// The immobile-target modifier every hex target takes (Total Warfare p. 110).
+const HEX_TARGET_MODIFIER: i8 = -4;
 
 /// Terrain aim reports visibility separately from arithmetic; firing admission remains caller-owned.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -10,7 +21,11 @@ pub struct HexAimModifiers {
     pub hex: HexCoordinate,
     pub mode: HexTargetMode,
     pub visible: bool,
+    /// -4 for every hex target: a hex is immobile (Total Warfare p. 110).
     pub hex_bonus: i8,
+    /// Woods, smoke and crops between the attacker and the hex (Total Warfare p. 107); for
+    /// indirect fire they are read along the spotter's line of sight instead (p. 111).
+    pub terrain: i16,
     /// Shared weapon contributions; unit-specific movement, lock and sensor terms remain neutral.
     #[serde(flatten)]
     pub modifiers: AimModifiers,
@@ -20,7 +35,7 @@ impl HexAimModifiers {
     /// Numeric aim exists within weapon range even when another firing rule forbids the attack.
     pub fn subtotal(&self) -> Option<i32> {
         self.modifiers
-            .subtotal_with_terrain(0)
+            .subtotal_with_terrain(self.terrain)
             .map(|value| value + i32::from(self.hex_bonus))
     }
 }
@@ -113,19 +128,16 @@ pub(super) fn modifiers_for_source(
     )?;
     modifiers.environment = super::planetary_conditions::aim_modifier(world, shooter, weapon);
     modifiers.interference = super::planetary_conditions::interference_aim_modifier(world, shooter);
+    // Indirect fire takes its terrain modifiers from the spotter's line of sight (Total
+    // Warfare p. 111).
+    let viewer = indirect.map_or(shooter, |(observer, _)| observer);
+    let (terrain, _) = super::los::unit_hex_los(world, viewer, hex)?;
     Ok(HexAimModifiers {
         hex,
         mode,
-        visible: hex_visible(
-            world,
-            indirect.map_or(shooter, |(observer, _)| observer),
-            hex,
-        )?,
-        hex_bonus: if mode == HexTargetMode::UnitAtHex {
-            0
-        } else {
-            -4
-        },
+        visible: hex_visible(world, viewer, hex)?,
+        hex_bonus: HEX_TARGET_MODIFIER,
+        terrain: terrain.intervening_modifier(),
         modifiers,
     })
 }

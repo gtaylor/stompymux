@@ -29,6 +29,9 @@ mod btech_critical_fields;
 #[path = "../btech_fire_targets.rs"]
 mod btech_fire_targets;
 
+#[path = "../btech_hex_aim.rs"]
+mod btech_hex_aim;
+
 #[path = "../btech_hit_routing.rs"]
 mod btech_hit_routing;
 
