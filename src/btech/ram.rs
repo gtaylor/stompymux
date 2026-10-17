@@ -439,6 +439,8 @@ fn resolve_inner(
 ) -> Result<RamReport> {
     let profile = ram_profile_inner(world, attacker, target, rules, character)?;
     world.attempt(|world| {
+        // A unit that charged may not spot for the rest of the turn (Total Warfare p. 112).
+        super::spotter::record_physical_assault(world, attacker);
         let roll = super::dice::unit_dice_mut(world, attacker)?.two_d6();
         let hit = i32::from(roll) >= profile.target_number;
         let glancing = hit && i32::from(roll) == profile.target_number;

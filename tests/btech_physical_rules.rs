@@ -781,6 +781,11 @@ async fn vehicles_ram_mechs_and_vehicles() {
                 .all(|&seconds| seconds >= 30)
         );
         assert!(!vehicle.weapon_recycle().is_empty());
+        // A unit that charged may not spot for the rest of the turn (Total Warfare p. 112),
+        // even once it has dropped the charge.
+        select_battle_charge(&mut world, tank, ObjectId(1), ChargeSelection::Cancel).unwrap();
+        let error = select_battle_spotter(&mut world, tank, ObjectId(1), Some(tank)).unwrap_err();
+        assert!(format!("{error:#}").contains("cannot spot"), "{error:#}");
         world.validate(&config).unwrap();
     }
     // A 'Mech may not charge a vehicle.

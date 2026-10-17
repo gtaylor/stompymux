@@ -355,6 +355,7 @@ function btech_unit.inspect(dbref) end
 ---@field spotter integer? Self ID while spotting, otherwise the selected observer.
 ---@field artillery_adjustment integer Saved correction for the current artillery target.
 ---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
+---@field physical_assault_time integer|nil Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
 ---@field section_fire table<string, integer> Simulation time a weapon in each section last launched; that limb may not make a physical attack for the rest of the turn.
 ---@field tag TagState
 ---@field signature {team: integer, hidden: boolean, illuminated: boolean} Team, hiding and scenario lighting.
@@ -480,7 +481,7 @@ function btech_unit.inspect(dbref) end
 ---@field electronics Electronics Selected suite modes and last committed field.
 ---@field spotter integer|nil Self declares spotting; another unit selects a forward observer.
 ---@field last_weapon_fire integer|nil Simulation time of the last weapon launched; a spotter that attacked within the turn makes the indirect fire it spots harder.
----@field physical_assault_time integer|nil Simulation time of the last charge or death from above attack; the unit may not spot for the rest of that turn.
+---@field physical_assault_time integer|nil Simulation time of the last ram; the vehicle may not spot for the rest of that turn.
 ---@field tag TagState Shared TAG selection and lock/recycle countdown.
 ---@field character_pilot {injuries: integer, killed: boolean}? Saved RPG pilot status, independent of tactical injury count.
 ---@field friendly_fire_safety boolean Pilot-selected teammate protection.

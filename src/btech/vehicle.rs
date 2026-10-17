@@ -191,6 +191,9 @@ pub struct Vehicle {
     /// Simulation time this vehicle was last the target of a charge or death from above; a
     /// unit may be the target of only one a turn (Total Warfare pp. 148-149).
     pub(super) assaulted_at: Option<i64>,
+    /// Simulation time of this vehicle's last ram; it may not spot for the rest of that turn
+    /// (Total Warfare p. 112).
+    pub(super) physical_assault_time: Option<i64>,
     /// Ram selection and the travel that sets its damage (Total Warfare p. 148).
     pub(super) charge: super::ChargeState,
     pub(super) tag: super::TagState,
@@ -399,6 +402,8 @@ struct VehicleRecord {
     #[serde(default)]
     assaulted_at: Option<i64>,
     #[serde(default)]
+    physical_assault_time: Option<i64>,
+    #[serde(default)]
     charge: super::ChargeState,
     #[serde(default)]
     tag: super::TagState,
@@ -544,6 +549,7 @@ super::saved_parts::saved_parts!(Vehicle {
         pod_removal,
         last_weapon_fire,
         assaulted_at,
+        physical_assault_time,
         charge,
     ],
     live_always: [
@@ -1029,6 +1035,7 @@ impl Vehicle {
             spotter: None,
             last_weapon_fire: None,
             assaulted_at: None,
+            physical_assault_time: None,
             charge: Default::default(),
             tag: Default::default(),
             contacts: Default::default(),
@@ -1770,6 +1777,7 @@ impl Vehicle {
             spotter: record.spotter,
             last_weapon_fire: record.last_weapon_fire,
             assaulted_at: record.assaulted_at,
+            physical_assault_time: record.physical_assault_time,
             charge: record.charge,
             tag: record.tag,
             contacts: record.contacts,
@@ -2157,7 +2165,8 @@ impl Vehicle {
         );
         ensure!(
             self.last_weapon_fire.is_none_or(|time| time >= 0)
-                && self.assaulted_at.is_none_or(|time| time >= 0),
+                && self.assaulted_at.is_none_or(|time| time >= 0)
+                && self.physical_assault_time.is_none_or(|time| time >= 0),
             "Invalid attack timestamp"
         );
         self.charge.validate()?;

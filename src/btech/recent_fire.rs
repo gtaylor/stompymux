@@ -76,6 +76,11 @@ impl Vehicle {
     pub fn assaulted_at(&self) -> Option<i64> {
         self.assaulted_at
     }
+
+    /// Simulation time of this vehicle's last ram; it may not spot for the rest of that turn.
+    pub fn physical_assault_time(&self) -> Option<i64> {
+        self.physical_assault_time
+    }
 }
 
 /// Refuse a charge, death from above or push at a unit that was already the target of one
