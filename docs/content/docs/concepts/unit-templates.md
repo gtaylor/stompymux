@@ -168,9 +168,10 @@ checks:
   arms with the actuators they need, one per arm, at their tonnage-dependent slot
   counts (TechManual pp. 220, 237; Tactical Operations: Advanced Units &
   Equipment). A retractable blade needs shoulder, upper and lower arm actuators;
-  a dual saw or wrecking ball replaces the arm's hand actuator; a quad mounts a
-  dual saw in a side torso and no other melee weapon (TechManual pp. 237, 243,
-  249).
+  a dual saw or wrecking ball replaces the arm's hand actuator. A quad mounts a
+  backhoe in a side torso and no other melee weapon; TechManual p. 243 would also
+  let it mount a dual saw there, but no rule lets a four-legged mech attack with
+  one, so construction refuses it (TechManual pp. 237, 241, 249).
 - Multi-slot electronics fill their whole slot count in contiguous slots of one
   location: the Guardian ECM suite and Beagle probe two (their Clan counterparts
   one, the Watchdog suite two), the Angel ECM suite and C3i two, the Bloodhound

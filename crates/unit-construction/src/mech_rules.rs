@@ -92,8 +92,10 @@ fn physical_weapon(system: System, tons: u16) -> Option<PhysicalWeapon> {
         full_arm,
         hand,
         replaces_hand,
-        // A quad mounts a dual saw or a backhoe in a side torso (TM pp. 241, 243).
-        quad_side_torso: matches!(system, System::DualSaw | System::Backhoe),
+        // A quad mounts a backhoe in a side torso (TM p. 241). TM p. 243 also lets it mount a
+        // dual saw there, but no Total Warfare or Tactical Operations rule lets a quad attack
+        // with one, so construction refuses it.
+        quad_side_torso: system == System::Backhoe,
     })
 }
 
@@ -634,9 +636,10 @@ impl MechTemplate {
     }
 
     /// Physical weapons sit in biped arms with the actuators they need, one per location,
-    /// each filling its tonnage-dependent slot count; a quad mounts a dual saw or backhoe in a
-    /// side torso and no other physical weapon (TM pp. 220, 237, 241, 243, 249; Tactical
-    /// Operations: Advanced Units & Equipment melee weapons).
+    /// each filling its tonnage-dependent slot count; a quad mounts a backhoe in a side torso
+    /// and no other physical weapon (TM pp. 220, 237, 241, 249; Tactical Operations: Advanced
+    /// Units & Equipment melee weapons). A quad's dual saw is refused: TM p. 243 places one in a
+    /// side torso, but no Total Warfare or Tactical Operations rule lets a quad attack with it.
     fn validate_physical_weapons(&self, loadout: &MechLoadout, chassis: MechChassis) -> Result<()> {
         let mut by_section: BTreeMap<MechSection, Vec<(System, usize)>> = BTreeMap::new();
         for part in &loadout.systems {
@@ -657,9 +660,13 @@ impl MechTemplate {
             let weapon = physical_weapon(*system, self.tons).expect("filtered physical weapon");
             if chassis == MechChassis::Quad {
                 ensure!(
+                    *system != System::DualSaw,
+                    "A quad may not mount a dual saw: no rule lets a four-legged Mech attack with one, so {name}'s dual saw is refused"
+                );
+                ensure!(
                     weapon.quad_side_torso
                         && matches!(section, MechSection::LeftTorso | MechSection::RightTorso),
-                    "A quad mounts a dual saw or backhoe in a side torso and no other physical weapon; {system:?} in {name} is refused (TM pp. 241, 243, 249)"
+                    "A quad mounts a backhoe in a side torso and no other physical weapon; {system:?} in {name} is refused (TM pp. 241, 249)"
                 );
             } else {
                 ensure!(
@@ -1391,10 +1398,11 @@ mod tests {
         }
     }
 
-    /// A quad mounts a dual saw in a side torso and no other physical weapon (TM pp. 243,
-    /// 249).
+    /// A quad mounts a backhoe in a side torso and no other physical weapon (TM pp. 241, 249).
+    /// TM p. 243 would also put a dual saw there, but no rule lets a quad attack with one, so
+    /// construction refuses it.
     #[test]
-    fn quads_mount_dual_saws_in_their_side_torsos() {
+    fn quads_mount_backhoes_but_no_dual_saws_in_their_side_torsos() {
         let quad = JENNER
             .replace("movement = \"biped\"", "movement = \"quad\"")
             .replace("[sections.left_arm]", "[sections.front_left_leg]")
@@ -1406,18 +1414,22 @@ mod tests {
                 "{ at = \"3-4\", item = \"IS.MediumLaser\" }",
                 "{ at = \"5-6\", item = \"IS.MediumLaser\" }",
             );
-        let saw = |item: &str, at: &str| {
+        let mounted = |item: &str, at: &str| {
             quad.replace(
                 "    { at = \"1-2\", item = \"JumpJet\" },\n]",
                 &format!("    {{ at = \"1-2\", item = \"JumpJet\" }},\n    {{ at = {at}, item = \"{item}\" }},\n]"),
             )
         };
-        let rejection = rejection(&saw("Dual_Saw", "\"3-9\"")).unwrap_or_default();
-        assert!(!rejection.contains("physical weapon"), "{rejection}");
-        assert!(rejection.contains("over the 35-ton chassis"), "{rejection}");
+        let backhoe = rejection(&mounted("Backhoe", "\"3-8\"")).unwrap_or_default();
+        assert!(!backhoe.contains("physical weapon"), "{backhoe}");
+        assert!(backhoe.contains("over the 35-ton chassis"), "{backhoe}");
         refused(
-            &saw("Wrecking_Ball", "\"3-7\""),
-            "A quad mounts a dual saw or backhoe in a side torso and no other physical weapon",
+            &mounted("Dual_Saw", "\"3-9\""),
+            "A quad may not mount a dual saw: no rule lets a four-legged Mech attack with one, so Left_Torso's dual saw is refused",
+        );
+        refused(
+            &mounted("Wrecking_Ball", "\"3-7\""),
+            "A quad mounts a backhoe in a side torso and no other physical weapon",
         );
     }
 
