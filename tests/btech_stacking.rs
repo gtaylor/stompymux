@@ -220,7 +220,8 @@ async fn collision_tables_use_punch_and_prone_normal_locations() {
 
 /// Stacking at the hex edge (Total Warfare p. 57): a unit passes through a hex its friends
 /// hold, stops at the edge of a hex an enemy holds, may not enter a full hex it means to
-/// stop in, and a charge at the enemy in the hex goes through; every outcome replays.
+/// stop in, and a charge at the enemy in the hex goes through, the charger ending in that hex
+/// once its hit drives the enemy out; every outcome replays.
 #[tokio::test]
 async fn ground_entry_passes_friends_and_stops_at_enemy_and_full_hexes() {
     for (teams, desired, charging, enters, notice) in [
@@ -248,6 +249,12 @@ async fn ground_entry_passes_friends_and_stops_at_enemy_and_full_hexes() {
                 record["motion"]["desired_speed"] = desired.into();
                 if charging {
                     record["charge"]["target"] = target.0.into();
+                    // The charge hits, so the charger follows its target into the hex it was
+                    // driven out of (Total Warfare p. 148).
+                    let hit = (0..=255)
+                        .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 12)
+                        .unwrap();
+                    record["dice"] = serde_json::to_value(Dice::seeded([hit; 32])).unwrap();
                 }
             })
             .unwrap();

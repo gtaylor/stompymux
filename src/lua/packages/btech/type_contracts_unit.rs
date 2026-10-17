@@ -950,7 +950,9 @@
 // lua-types-end
 
 // lua-types-begin btech 00294
-//|---Grab a tree in a selected arm (left first by default), or drop it with '-'.
+//|---Take up a club in a selected arm (left first by default): a limb or girder lying in the hex,
+//|---a tree in woods, or a girder searched out of a collapsed building's rubble, once a turn.
+//|---'-' lets the club go; a tree shatters and a limb or girder stays in the hex.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param arm? 'left'|'right'|'-'
@@ -959,7 +961,7 @@
 // lua-types-end
 
 // lua-types-begin btech 00295
-//|---Swing a carried club using both arms; a carried tree shatters on a hit. Pick a club up with grabclub first.
+//|---Swing a carried club using both arms; a tree shatters on a hit, a limb or girder lasts. Pick a club up with grabclub first.
 //|---@param dbref integer
 //|---@param pilot integer
 //|---@param target? integer

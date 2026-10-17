@@ -1111,3 +1111,152 @@ async fn backhoes_swing_at_plus_one_for_six() {
     assert_eq!(dealt(attack.impact.as_slice()), 6);
     world.validate(&config).unwrap();
 }
+
+/// What lies in the hex at `(x, y)` on `id`'s map for a 'Mech to take up as a club.
+fn debris(world: &World, id: ObjectId, (x, y): (i32, i32)) -> HexDebris {
+    let map = world.btech.unit(id).unwrap().position().unwrap().map;
+    world.btech.maps()[&map]
+        .debris_at(HexCoordinate { x, y })
+        .unwrap()
+}
+
+/// An arm blown off a 'Mech lies in the hex where it took the damage, and any 'Mech there may
+/// pick it up as a club; unlike an uprooted tree, a limb survives a successful blow, and one let
+/// go of lies in the hex again (Total Warfare p. 146). The debris is saved with the map.
+#[tokio::test]
+async fn severed_limbs_make_lasting_clubs() {
+    let (_dir, config, mut world, id, target) = kick_fixture().await;
+    prepare_test_club(&mut world, id);
+    let arm = world.btech.constructed_units()[&target].sections()[&MechSection::LeftArm].clone();
+    resolve_battle_tactical_impact(
+        &mut world,
+        target,
+        Hit {
+            section: MechSection::LeftArm,
+            rear_armor: false,
+            through_armor_critical: false,
+        },
+        arm.armor + arm.internal,
+        kick_rules().fall,
+    )
+    .unwrap();
+    assert_eq!(debris(&world, id, (5, 5)).limbs, 1);
+    persistence::save(&config.database(), &world).await.unwrap();
+    assert_eq!(
+        persistence::load(&config.database()).await.unwrap().btech,
+        world.btech
+    );
+    // The limb lying there comes before the woods.
+    let notices = grab_battle_club(&mut world, id, ObjectId(1), None).unwrap();
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text.contains("pick up a severed limb")),
+        "{notices:?}"
+    );
+    assert_eq!(
+        world.btech.constructed_units()[&id].club().unwrap().kind,
+        ClubKind::Limb
+    );
+    assert!(debris(&world, id, (5, 5)).is_empty());
+    pass_seconds(&mut world, 30);
+    shot_seed(&mut world, id, roll_seed(12));
+    let report = resolve_battle_club(&mut world, id, ObjectId(1), target, kick_rules()).unwrap();
+    assert!(report.hit);
+    assert_eq!(
+        world.btech.constructed_units()[&id].club().unwrap().kind,
+        ClubKind::Limb
+    );
+    grab_battle_club(&mut world, id, ObjectId(1), Some("-")).unwrap();
+    assert_eq!(debris(&world, id, (5, 5)).limbs, 1);
+    world.validate(&config).unwrap();
+}
+
+/// A girder lies in the rubble of a collapsed medium building: a search rolls 2D6 for 7 or
+/// more, once a turn, and a girder found may be swung again and again (Total Warfare p. 146).
+#[tokio::test]
+async fn girders_are_searched_out_of_rubble() {
+    let (_dir, config, mut world, id, target) = kick_fixture().await;
+    prepare_test_club(&mut world, id);
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    let width = world.btech.maps()[&map].width as usize;
+    world
+        .btech
+        .rewrite_map_record(map, |record| {
+            support::set_hex_terrain(&mut record["terrain"][5 * width + 5], Terrain::Rubble);
+            record["debris"][(5 * width + 5).to_string()] = serde_json::json!({ "ruin": "medium" });
+        })
+        .unwrap();
+    shot_seed(&mut world, id, roll_seed(6));
+    let notices = grab_battle_club(&mut world, id, ObjectId(1), None).unwrap();
+    assert!(
+        notices
+            .iter()
+            .any(|notice| notice.text.contains("BTH: 7, Roll: 6")),
+        "{notices:?}"
+    );
+    assert!(world.btech.constructed_units()[&id].club().is_none());
+    assert!(
+        refusal(grab_battle_club(&mut world.clone(), id, ObjectId(1), None))
+            .contains("already searched")
+    );
+    pass_seconds(&mut world, 30);
+    shot_seed(&mut world, id, roll_seed(7));
+    grab_battle_club(&mut world, id, ObjectId(1), None).unwrap();
+    assert_eq!(
+        world.btech.constructed_units()[&id].club().unwrap().kind,
+        ClubKind::Girder
+    );
+    pass_seconds(&mut world, 30);
+    shot_seed(&mut world, id, roll_seed(12));
+    assert!(
+        resolve_battle_club(&mut world, id, ObjectId(1), target, kick_rules())
+            .unwrap()
+            .hit
+    );
+    assert!(world.btech.constructed_units()[&id].club().is_some());
+    world.validate(&config).unwrap();
+}
+
+/// A charge that hits drives its target one hex onward and the charger follows it in; when that
+/// hex is barred neither moves (Total Warfare p. 148). A death from above pushes its target on
+/// in the direction of the attack, or into the open hex nearest that side when it is barred
+/// (TW p. 150). The fixture's units share the hex (5,5) and face north.
+#[tokio::test]
+async fn charges_and_landings_displace_their_targets() {
+    let (_dir, config, base, id, target) = kick_fixture().await;
+    let mut charging = base.clone();
+    prepare_test_charge(&mut charging, id);
+    let rules = ChargeRules {
+        distance: 2.0,
+        physical: kick_rules(),
+    };
+    let mut world = charging.clone();
+    shot_seed(&mut world, id, roll_seed(12));
+    let report = resolve_battle_charge(&mut world, id, target, rules).unwrap();
+    assert!(report.hit && report.displaced);
+    assert_eq!(hex(&world, target), (5, 4));
+    assert_eq!(hex(&world, id), (5, 5));
+    world.validate(&config).unwrap();
+    let mut blocked = charging.clone();
+    raise_hex(&mut blocked, id, (5, 4), 3);
+    shot_seed(&mut blocked, id, roll_seed(12));
+    let report = resolve_battle_charge(&mut blocked, id, target, rules).unwrap();
+    assert!(report.hit && !report.displaced);
+    assert!(report.blocked.is_some());
+    assert_eq!(hex(&blocked, target), (5, 5));
+    blocked.validate(&config).unwrap();
+
+    let mut landing = base.clone();
+    dfa_piloting(&mut landing);
+    shot_seed(&mut landing, target, 0);
+    raise_hex(&mut landing, id, (5, 4), 3);
+    launch_battle_jump(&mut landing, id, ObjectId(1), 0, 2.0).unwrap();
+    let dice = dfa_dice(&landing, id, target, |report, _| report.hit);
+    landing.btech.set_unit_dice(id, dice).unwrap();
+    let report = resolve_battle_dfa(&mut landing, id, target, kick_rules()).unwrap();
+    assert!(report.hit && report.displaced);
+    let beside = HexCoordinate { x: 5, y: 5 }.neighbors().unwrap()[1];
+    assert_eq!(hex(&landing, target), (beside.x as u16, beside.y as u16));
+    landing.validate(&config).unwrap();
+}

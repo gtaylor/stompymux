@@ -841,3 +841,36 @@ async fn a_flanking_vtol_rolls_against_sideslipping_after_a_turn() {
         world.validate(&config).unwrap();
     }
 }
+
+/// Gravity moves a VTOL as it moves any vehicle, so one flying faster than its normal flank
+/// speed on a light world notes the excess for the turn-end strain roll; at standard gravity
+/// its flank speed is all it has (Tactical Operations: Advanced Rules p. 53).
+#[tokio::test]
+async fn a_vtol_outrunning_its_normal_flank_on_a_light_world_is_strained() {
+    let field = format!("6 6\n{}", format!("{}\n", ".0".repeat(6)).repeat(6));
+    for (gravity, speed) in [(50, 250.0), (100, 193.5)] {
+        let (_dir, config, mut world, id, map) = obstacle_fixture(&field).await;
+        world
+            .btech
+            .rewrite_map_record(map, |record| record["gravity"] = gravity.into())
+            .unwrap();
+        let mut encoded = serde_json::to_value(&world.btech).unwrap();
+        let unit = &mut encoded["vehicles"][id.0.to_string()];
+        unit["motion"]["heading"] = 180.0.into();
+        unit["motion"]["desired_heading"] = 180.0.into();
+        unit["motion"]["speed"] = speed.into();
+        unit["motion"]["desired_speed"] = speed.into();
+        unit["vtol_flight"]["altitude"] = 3.0.into();
+        unit["vtol_flight"]["vertical_speed"] = 0.0.into();
+        world.btech = serde_json::from_value(encoded).unwrap();
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+        let excess = world.btech.vehicles()[&id].turn_movement().gravity_excess;
+        if gravity == 50 {
+            // The 12/18 Kestrel's normal flank is 193.5 km/h.
+            assert!((excess - (250.0 - 193.5)).abs() < 1e-6, "{excess}");
+        } else {
+            assert_eq!(excess, 0.0);
+        }
+        world.validate(&config).unwrap();
+    }
+}

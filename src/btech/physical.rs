@@ -903,7 +903,7 @@ fn attack_profile_inner(
     );
     if matches!(attack, PhysicalAttack::Punch { .. }) {
         ensure!(
-            source.carried_club.map(Arm::section) != Some(attack.section(source.chassis())),
+            source.carried_club().map(Arm::section) != Some(attack.section(source.chassis())),
             "You are carrying a club in this arm and cannot punch with it"
         );
     }
@@ -1409,9 +1409,15 @@ fn resolve_attack_inner(
                 text: "You are nicked by a glancing blow!".into(),
             });
         }
+        // An uprooted tree is good for one successful attack; limbs and girders last (Total
+        // Warfare p. 146).
         if hit && attack == PhysicalAttack::Club {
             let unit = world.btech.constructed.get_mut(&attacker).unwrap();
-            if unit.carried_club.take().is_some() {
+            if unit
+                .carried_club
+                .is_some_and(|club| club.kind.breaks_on_hit())
+            {
+                unit.carried_club = None;
                 notices.push(Notice {
                     unit: attacker,
                     text: "Your club shatters on contact.".into(),

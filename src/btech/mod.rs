@@ -478,7 +478,7 @@ mod myomer;
 pub use physical::{ArmAttack, arm_attack_profile, resolve_arm_attack};
 
 mod club;
-pub use club::grab_club;
+pub use club::{CarriedClub, ClubKind, HexDebris, girder_target, grab_club};
 pub use physical::{club_profile, resolve_club};
 
 mod charge;

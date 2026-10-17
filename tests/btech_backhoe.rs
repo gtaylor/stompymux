@@ -138,6 +138,14 @@ async fn a_backhoe_brings_down_a_worn_building() {
         world.btech.maps()[&map].hex(1, 0).unwrap().ground(),
         Ground::Rubble
     );
+    // The medium building's rubble may be searched for a girder (Total Warfare p. 146).
+    assert_eq!(
+        world.btech.maps()[&map]
+            .debris_at(HexCoordinate { x: 1, y: 0 })
+            .unwrap()
+            .ruin,
+        Some(ConstructionClass::Medium)
+    );
     world.validate(&config).unwrap();
 }
 

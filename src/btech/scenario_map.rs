@@ -283,8 +283,8 @@ pub(super) fn advance_detached(world: &mut World) -> Vec<Notice> {
             unit.ground_elevation = Some(f64::from(fall.elevation()));
         }
         shutdown_notice(&mut notices, id, unit.power);
-        if super::power::finish_shutdown(unit, id, &mut notices) {
-            dropped_clubs.push(id);
+        if let Some(club) = super::power::finish_shutdown(unit, id, &mut notices) {
+            dropped_clubs.push((id, club));
         }
         unit.facing.torso = Torso::Center;
     }
@@ -317,8 +317,9 @@ pub(super) fn advance_detached(world: &mut World) -> Vec<Notice> {
         shutdown_notice(&mut notices, id, unit.power);
         super::vehicle_power::finish_shutdown(unit);
     }
-    for id in dropped_clubs {
-        notices.extend(super::club::dropped_notices(world, id));
+    // Off the map, a club lands on no hex and is lost.
+    for (id, club) in dropped_clubs {
+        notices.extend(super::club::drop_notices(world, id, club.kind));
     }
     notices
 }

@@ -354,7 +354,7 @@ impl Mech {
         if let CriticalLoss::Weapon { index, .. } = loss {
             self.weapon_failures.remove(&index);
         }
-        if self.carried_club.map(super::Arm::section) == Some(location.section)
+        if self.carried_club().map(super::Arm::section) == Some(location.section)
             && matches!(
                 loss,
                 CriticalLoss::System {
@@ -470,7 +470,7 @@ impl Mech {
             self.c3i_network = None;
         }
         if self
-            .carried_club
+            .carried_club()
             .is_some_and(|arm| self.sections()[&arm.section()].internal == 0)
         {
             self.carried_club = None;

@@ -246,8 +246,8 @@ pub use btech::{
 };
 
 pub use btech::{
-    club_profile as battle_club_profile, grab_club as grab_battle_club,
-    resolve_club as resolve_battle_club,
+    CarriedClub, ClubKind, HexDebris, club_profile as battle_club_profile, girder_target,
+    grab_club as grab_battle_club, resolve_club as resolve_battle_club,
 };
 
 pub use btech::{

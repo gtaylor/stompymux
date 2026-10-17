@@ -205,9 +205,13 @@ pub struct Mech {
     /// Remaining committed seconds for physical limb recovery.
     #[serde(default)]
     pub(super) limb_recycle: BTreeMap<MechSection, u16>,
-    /// Arm holding a tree for a later two-handed club attack.
+    /// The club this 'Mech carries for a later two-handed club attack, and the arm holding it.
     #[serde(default)]
-    pub(super) carried_club: Option<super::Arm>,
+    pub(super) carried_club: Option<super::CarriedClub>,
+    /// Simulation time of this 'Mech's last search of rubble for a girder; it searches once a
+    /// turn (Total Warfare p. 146).
+    #[serde(default)]
+    pub(super) girder_search: Option<i64>,
     /// Charge selection and accumulated ground movement.
     #[serde(default)]
     pub(super) charge: super::ChargeState,
@@ -409,6 +413,7 @@ super::saved_parts::saved_parts!(Mech {
         orbital_drop,
         auto_fall,
         carried_club,
+        girder_search,
         friendly_fire_safety,
         no_armor_warning,
         no_ammunition_warning,
@@ -979,6 +984,7 @@ impl Mech {
             auto_fall: false,
             limb_recycle: Default::default(),
             carried_club: None,
+            girder_search: None,
             charge: Default::default(),
             friendly_fire_safety: false,
             no_armor_warning: false,
@@ -1280,6 +1286,7 @@ impl Mech {
             self.last_weapon_fire.is_none_or(|time| time >= 0)
                 && self.physical_assault_time.is_none_or(|time| time >= 0)
                 && self.last_physical_attack.is_none_or(|time| time >= 0)
+                && self.girder_search.is_none_or(|time| time >= 0)
                 && self.assaulted_at.is_none_or(|time| time >= 0)
                 && self.section_fire.values().all(|&time| time >= 0),
             "Invalid attack timestamp"

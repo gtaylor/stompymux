@@ -500,7 +500,11 @@ async fn anatomical_weapon_admission_shares_readiness_and_target_precedence() {
     );
     let mut club = world.clone();
     edit_shooter(&mut club, shooter, |unit| {
-        unit["carried_club"] = serde_json::to_value(Arm::Left).unwrap()
+        unit["carried_club"] = serde_json::to_value(CarriedClub {
+            arm: Arm::Left,
+            kind: ClubKind::Tree,
+        })
+        .unwrap()
     });
     assert!(
         !club.btech.constructed_units()[&shooter]

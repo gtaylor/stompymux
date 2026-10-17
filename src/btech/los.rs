@@ -573,6 +573,7 @@ mod tests {
             fire_dice: None,
             sensor_dice: None,
             terrain_damage: Default::default(),
+            debris: Default::default(),
             decorations: Default::default(),
             static_decorations: Default::default(),
             points_of_interest: Default::default(),

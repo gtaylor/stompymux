@@ -250,6 +250,7 @@ pub(super) fn advance(
             report.notices.extend(skid.notices);
             report.experience_messages.extend(skid.experience_messages);
             report.vehicle_falls.extend(skid.vehicle_falls);
+            report.surface_breaks.extend(skid.collapses);
             report.character_injuries.extend(skid.character_injuries);
             if character {
                 report.falls.extend(skid.falls);

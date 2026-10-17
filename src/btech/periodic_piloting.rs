@@ -248,10 +248,11 @@ fn vehicle_strain(world: &World, id: ObjectId) -> Option<u16> {
     )
 }
 
-/// Moving faster than its normal flanking speed under light gravity strains a vehicle: one
-/// driving roll at the turn's end, and on a failure one point of front internal structure
-/// damage for every MP over that speed, with the critical roll that damage takes, and a
-/// single roll on the Motive System Damage Table (Tactical Operations: Advanced Rules p. 53).
+/// Moving faster than its normal flanking speed under light gravity strains a vehicle, a VTOL
+/// included: one driving roll at the turn's end, and on a failure one point of front internal
+/// structure damage for every MP over that speed, with the critical roll that damage takes,
+/// and a single roll on the Motive System Damage Table (Tactical Operations: Advanced Rules
+/// p. 53).
 fn advance_vehicle_strain(
     world: &mut World,
     config: &Config,
@@ -298,9 +299,14 @@ fn advance_vehicle_strain(
             experience_messages: Vec::new(),
         };
         if !check.success {
+            let vtol = world.btech.vehicles()[&id].definition().is_vtol();
             report.notices.push(Notice {
                 unit: id,
-                text: "Your drive train strains under the light gravity!".into(),
+                text: if vtol {
+                    "Your rotor strains under the light gravity!".into()
+                } else {
+                    "Your drive train strains under the light gravity!".into()
+                },
             });
             let front = world.btech.vehicles()[&id]
                 .sections()

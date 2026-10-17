@@ -3,7 +3,8 @@
 //! and then moves on rolls to keep its footing; when it fails it drops and slides along its old
 //! course, taking half a fall's damage for every hex it slides. The slide ends in water a level
 //! deep, drops it over any edge steeper than it could step down, crashes it into higher ground
-//! or a building, leaves a vehicle immobile in terrain it could never enter, and throws the
+//! or into a building, which takes the skid's charge damage and lets the slide go on if that
+//! brings it down, leaves a vehicle immobile in terrain it could never enter, and throws the
 //! sliding unit into any unit in its path as an unintentional charge. A hovercraft that turns at
 //! flank speed on any ground and fails instead sideslips: it drifts along its old course for as
 //! many hexes as it missed the roll by, without damage unless it drifts into something.
@@ -714,26 +715,28 @@ pub(super) fn resolve_vehicle(
                 }
             }
             Some(Obstacle::Building) => {
-                // A vehicle sliding into a building takes a tenth of its construction factor
-                // and stops there (Total Warfare p. 63).
-                let cf = next.structure().map_or(0, |structure| structure.cf);
-                move_vehicle(world, id, hex, next);
-                report.notices.push(Notice {
-                    unit: id,
-                    text: format!("You skid into the building at {},{}!", hex.x, hex.y),
-                });
-                if per_hex > 0 {
-                    vehicle_damage(world, id, per_hex, rules, character, &mut report)?;
-                }
-                vehicle_damage(
+                let destroyed = vehicle_building_collision(
                     world,
                     id,
-                    u32::from(super::building_interior::absorption(cf)),
+                    hex,
+                    next,
+                    height,
+                    (per_hex, tons, hexes_moved),
                     rules,
                     character,
                     &mut report,
                 )?;
-                break;
+                // A building the slide brings down lets it go on, less the building's movement
+                // cost; one that stands ends it with the vehicle inside (Total Warfare p. 63).
+                left -= 1;
+                let class = next
+                    .construction_class()
+                    .unwrap_or(super::ConstructionClass::Light);
+                left -= i32::from(super::building_interior::floor_cost(class));
+                if !destroyed || left <= 0 || world.btech.vehicles()[&id].is_destroyed() {
+                    break;
+                }
+                continue;
             }
             Some(Obstacle::Collision) => {
                 report.notices.push(Notice {
@@ -1025,6 +1028,80 @@ fn vehicle_charge(
     fall.append_notices(target, &mut report.notices, &mut report.pilot_notices);
     report.falls.push(fall);
     Ok(Some(true))
+}
+
+/// A sliding vehicle crashes into a building hex as a 'Mech does (Total Warfare p. 63): it
+/// slides in and takes its skid damage for the hex, then a tenth of the construction factor,
+/// while the building takes the charge damage of the hexes moved before the skid. The vehicle
+/// stays inside the building, at the level it slid in at, unless that brings the building
+/// down; returns whether it did. A hovercraft's sideslip charges the building the same way
+/// (TW p. 67).
+#[allow(clippy::too_many_arguments)]
+fn vehicle_building_collision(
+    world: &mut World,
+    id: ObjectId,
+    hex: HexCoordinate,
+    tile: Hex,
+    height: i32,
+    (per_hex, tons, hexes_moved): (u32, u32, u32),
+    rules: FallRules,
+    character: bool,
+    report: &mut SkidReport,
+) -> Result<bool> {
+    let map = world.btech.vehicles()[&id].position().unwrap().map;
+    let level = super::building_interior::entry_level(tile, height);
+    move_vehicle(world, id, hex, tile);
+    world.btech.vehicles.get_mut(&id).unwrap().ground_elevation =
+        super::building_interior::inside(tile, level).then_some(f64::from(level));
+    report.notices.push(Notice {
+        unit: id,
+        text: format!("You skid into the building at {},{}!", hex.x, hex.y),
+    });
+    if per_hex > 0 {
+        vehicle_damage(world, id, per_hex, rules, character, report)?;
+    }
+    let cf = tile.structure().map_or(0, |structure| structure.cf);
+    vehicle_damage(
+        world,
+        id,
+        u32::from(super::building_interior::absorption(cf)),
+        rules,
+        character,
+        report,
+    )?;
+    if world.btech.maps()[&map].has_flag(super::MapFlag::IndestructibleStructures) {
+        return Ok(false);
+    }
+    let charge =
+        super::charge::charge_damage(u16::try_from(tons).unwrap_or(u16::MAX), hexes_moved)?;
+    if charge >= cf {
+        report.notices.push(Notice {
+            unit: id,
+            text: "The building comes down around you!".into(),
+        });
+        let collapse = super::collapse_structure(world, map, hex, rules)?;
+        super::piloting::append_feedback(
+            &mut report.pilot_notices,
+            collapse.pilot_notices.iter().cloned(),
+            report.notices.len(),
+        );
+        report.notices.extend(collapse.notices.iter().cloned());
+        report.collapses.push(collapse);
+        return Ok(true);
+    }
+    world.btech.maps.get_mut(&map).unwrap().write_hex(
+        i64::from(hex.x),
+        i64::from(hex.y),
+        tile.with_structure_damage(charge),
+    )?;
+    report.notices.push(Notice {
+        unit: id,
+        text: format!(
+            "The building shudders, losing {charge} points; it stands at {}.",
+            cf - charge
+        ),
+    });
+    Ok(false)
 }
 
 /// Put a sliding vehicle in `hex`, resting on its surface.

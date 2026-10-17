@@ -895,7 +895,7 @@ impl<'a> ImpactContext<'a> {
         } else {
             None
         };
-        let carried_before = self.unit().carried_club();
+        let carried_before = self.unit().club();
         let was_destroyed = self.unit().is_destroyed();
         let Some(loss) = self.unit_mut().destroy_critical(location)? else {
             return Ok(());
@@ -920,10 +920,11 @@ impl<'a> ImpactContext<'a> {
                 text: "Your stealth armor system shuts down!".into(),
             });
         }
-        if carried_before.is_some() && self.unit().carried_club().is_none() {
-            self.report
-                .notices
-                .extend(super::club::dropped_notices(self.world, self.id));
+        if let Some(club) = carried_before
+            && self.unit().club().is_none()
+        {
+            let notices = super::club::dropped(self.world, self.id, club)?;
+            self.report.notices.extend(notices);
         }
         if explosion_damage(&loss) == 0
             && let Some((intact, weapon)) = weapon_before
@@ -1604,6 +1605,9 @@ impl<'a> ImpactContext<'a> {
         let destroyed = phase.destroyed_sections.clone();
         self.report.impact.phases.push(phase);
         for section in destroyed {
+            // An arm or leg blown off lies in the hex for a 'Mech to use as a club (Total
+            // Warfare p. 146).
+            super::club::sever_limb(self.world, self.id, section)?;
             self.effect(ImpactEffect::SectionLost(section))?;
             self.balance(super::BalanceCause::SectionLost(section))?;
         }

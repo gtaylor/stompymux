@@ -1727,3 +1727,99 @@ async fn hovercraft_sideslipping_off_a_cliff_falls() {
     }
     panic!("the hovercraft never sideslipped");
 }
+
+/// A vehicle skidding into a building hex slides in, takes a tenth of its construction factor,
+/// and charges it for its tonnage over ten for every hex it moved before the skid: a hardened
+/// building that stands holds the vehicle inside, and a light one that collapses lets the slide
+/// go on through its rubble, less the building's movement cost (Total Warfare p. 63).
+#[tokio::test]
+async fn a_skidding_vehicle_charges_buildings() {
+    for (class, cf) in [
+        (ConstructionClass::Hardened, 150),
+        (ConstructionClass::Light, 5),
+    ] {
+        let (_dir, config, mut world, id, map) = fixture_movement(VehicleMovement::Wheeled).await;
+        let maximum = world.btech.vehicles()[&id].maximum_speed();
+        let seed = (0..=255)
+            .find(|seed| Dice::seeded([*seed; 32]).two_d6() == 2)
+            .unwrap();
+        let mut saved = serde_json::to_value(&world.btech).unwrap();
+        let unit = &mut saved["vehicles"][id.0.to_string()];
+        unit["motion"]["heading"] = 90.0.into();
+        unit["motion"]["desired_heading"] = 150.0.into();
+        unit["motion"]["speed"] = maximum.into();
+        unit["motion"]["desired_speed"] = maximum.into();
+        unit["dice"] = serde_json::to_value(Dice::seeded([seed; 32])).unwrap();
+        let building = Hex::at_level(0).with_structure(Some(Structure {
+            cf,
+            ..Structure::new(StructureKind::Building, 1, class)
+        }));
+        for row in 0..3 {
+            for x in 0..20 {
+                let tile = &mut saved["maps"][map.0.to_string()]["terrain"][row * 20 + x];
+                if x == 3 {
+                    *tile = serde_json::to_value(building).unwrap();
+                } else {
+                    crate::support::set_hex(
+                        tile,
+                        if x < 3 {
+                            Terrain::Pavement
+                        } else {
+                            Terrain::Clear
+                        },
+                        0,
+                    );
+                }
+            }
+        }
+        world.btech = serde_json::from_value(saved).unwrap();
+        let mut skidded = false;
+        for _ in 0..40 {
+            let notices = advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+            if !notices
+                .iter()
+                .any(|n| n.text == "You lose control and skid!")
+            {
+                continue;
+            }
+            skidded = true;
+            assert!(
+                notices
+                    .iter()
+                    .any(|n| n.text.starts_with("You skid into the building at 3,")),
+                "{notices:?}"
+            );
+            let unit = &world.btech.vehicles()[&id];
+            let position = unit.position().unwrap();
+            let struck = world.btech.maps()[&map]
+                .hex(3, i64::from(position.y))
+                .unwrap();
+            // The 10-ton truck deals a point for every hex it moved before the skid.
+            if class == ConstructionClass::Hardened {
+                let lost = 150 - struck.structure().unwrap().cf;
+                assert!(lost > 0);
+                assert!(
+                    notices.iter().any(|n| n.text
+                        == format!(
+                            "The building shudders, losing {lost} points; it stands at {}.",
+                            150 - lost
+                        )),
+                    "{notices:?}"
+                );
+                assert_eq!(position.x, 3);
+            } else {
+                assert!(
+                    notices
+                        .iter()
+                        .any(|n| n.text == "The building comes down around you!"),
+                    "{notices:?}"
+                );
+                assert!(struck.structure().is_none());
+                assert!(position.x >= 3);
+            }
+            break;
+        }
+        assert!(skidded, "{class:?}");
+        world.validate(&config).unwrap();
+    }
+}

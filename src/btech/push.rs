@@ -352,7 +352,9 @@ fn resolve(
             });
         }
         if displacement.moved {
-            advance(world, attacker, vacated)?;
+            // The pusher follows into the hex its target left, spending no movement (Total
+            // Warfare p. 147).
+            super::displacement::step_into(world, attacker, vacated)?;
             report.notices.push(Notice {
                 unit: attacker,
                 text: "You follow through into the hex your target left.".into(),
@@ -419,36 +421,6 @@ fn resolve(
         world.btech.validate_action(world)?;
         Ok(report)
     })
-}
-
-/// Move the pushing 'Mech into the hex its target left; it spends no movement doing so
-/// (Total Warfare p. 147).
-fn advance(world: &mut World, id: ObjectId, position: Position) -> Result<()> {
-    let map = &world.btech.maps()[&position.map];
-    let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let unit = &world.btech.constructed_units()[&id];
-    let old = unit.position().context("Pushing unit is not placed")?;
-    let from = unit.elevation_level(map.base_hex(i64::from(old.x), i64::from(old.y))?);
-    let level = super::building_interior::entry_level(tile, from);
-    let unit = world
-        .btech
-        .constructed
-        .get_mut(&id)
-        .context("Pushing unit is unavailable")?;
-    let motion = unit.motion.as_mut().context("Pushing unit has no motion")?;
-    motion.point = HexCoordinate {
-        x: i32::from(position.x),
-        y: i32::from(position.y),
-    }
-    .center();
-    unit.position = Some(position);
-    unit.hex_sync_pending = false;
-    unit.level_entry = None;
-    unit.ground_elevation =
-        (level != i32::from(tile.standing_height())).then_some(f64::from(level));
-    let identity = unit.identity();
-    world.btech.units.insert(id, identity);
-    Ok(())
 }
 
 /// Resolve a push inside one host checkpoint that publishes notices and character casualties.

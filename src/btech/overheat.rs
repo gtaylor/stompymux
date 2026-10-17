@@ -496,7 +496,7 @@ fn resolve_shutdown(
         report.balance = Some(balance);
     }
     let unit = unit_mut(world, id);
-    let dropped = unit.carried_club.take().is_some();
+    let dropped = unit.carried_club.take();
     unit.power = Power::Off;
     unit.heat_shutdown = true;
     unit.hide_elapsed = None;
@@ -512,10 +512,10 @@ fn resolve_shutdown(
         motion.desired_speed = 0.0;
         motion.desired_heading = motion.heading;
     }
-    if dropped {
+    if let Some(club) = dropped {
         report
             .notices
-            .extend(super::club::dropped_notices(world, id));
+            .extend(super::club::dropped(world, id, club)?);
     }
     report.shutdown = true;
     Ok(())

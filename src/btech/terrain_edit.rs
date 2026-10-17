@@ -30,6 +30,13 @@ impl super::StoredMap {
                 .as_mut()
                 .context("Map terrain is unavailable")?,
         )[index] = hex;
+        // A hex that is no longer rubble holds no ruin to search for girders.
+        if !matches!(
+            hex.ground(),
+            super::Ground::Rubble | super::Ground::UltraRubble
+        ) {
+            self.clear_ruin(index as u32);
+        }
         Ok(())
     }
 }

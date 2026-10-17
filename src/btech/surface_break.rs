@@ -398,6 +398,13 @@ fn break_surface(
         i64::from(coordinate.y),
         replacement,
     )?;
+    // A collapsed building's rubble may hide girders to use as clubs (Total Warfare p. 146).
+    if roof
+        && let Some(structure) = tile.structure()
+        && structure.kind == super::StructureKind::Building
+    {
+        super::club::record_ruin(&mut candidate, map, coordinate, structure.class)?;
+    }
     let mut report = SurfaceBreak {
         map,
         coordinate,

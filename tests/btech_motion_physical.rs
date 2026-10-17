@@ -2095,16 +2095,21 @@ async fn charge_collision_hit_miss_and_saved_recovery() {
             assert!(report.target_impacts.is_empty());
             assert!(report.attacker_impacts.is_empty());
             assert!(report.balance.is_empty());
-            // A miss leaves the target untouched but for having been charged this turn
-            // (Total Warfare p. 148).
+            // A miss leaves the target untouched but for having been charged this turn, and
+            // the charger stops in a hex beside it (Total Warfare p. 148).
             assert_eq!(
                 unassaulted(&world, target),
                 serde_json::to_value(&before).unwrap()
             );
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.motion().unwrap().speed, 0.0);
+            let side = report.sidestep.unwrap();
+            let position = unit.position().unwrap();
             assert_eq!(
-                world.btech.constructed_units()[&id].motion().unwrap().speed,
-                21.5
+                (side.x, side.y),
+                (i32::from(position.x), i32::from(position.y))
             );
+            assert!(!report.displaced);
         } else {
             let sum = |impacts: &[TacticalImpact]| {
                 impacts
@@ -2128,6 +2133,12 @@ async fn charge_collision_hit_miss_and_saved_recovery() {
             assert_eq!(
                 world.btech.constructed_units()[&id].motion().unwrap().speed,
                 0.0
+            );
+            // The hit drives the target into the next hex (Total Warfare p. 148).
+            assert!(report.displaced);
+            assert_ne!(
+                world.btech.constructed_units()[&target].position(),
+                before.position()
             );
         }
         persistence::save(&config.database(), &world).await.unwrap();
@@ -2986,12 +2997,21 @@ async fn dfa_damage_hit_miss_and_saved_recovery() {
                 vec![(id, 4), (target, 2)]
             );
         } else {
-            // A miss is a two-level fall onto the back: three times tonnage over ten.
+            // A miss is a two-level fall onto the back: three times tonnage over ten. The
+            // target takes no damage but steps out of the hex the attacker came down in (Total
+            // Warfare p. 150).
             assert!(report.target_impacts.is_empty());
             assert!(report.attacker_impacts.is_empty());
+            let after = &world.btech.constructed_units()[&target];
+            assert_eq!(after.sections(), before.sections());
+            assert!(report.displaced);
+            let hex = |position: Position| HexCoordinate {
+                x: i32::from(position.x),
+                y: i32::from(position.y),
+            };
             assert_eq!(
-                unassaulted(&world, target),
-                serde_json::to_value(&before).unwrap()
+                hex(after.position().unwrap()).distance(hex(before.position().unwrap())),
+                1
             );
             assert_eq!(
                 world.btech.constructed_units()[&id].posture(),
