@@ -88,10 +88,11 @@ impl Weapon {
         )
     }
 
-    /// LRM launchers that accept the specialized Thunder rounds: Total Warfare p. 141 limits
-    /// Thunder (FASCAM) rounds to standard LRM launchers.
+    /// LRM launchers that accept the specialized Thunder-Active, -Augmented and -Vibrabomb
+    /// rounds: standard Inner Sphere LRM launchers, since only the Inner Sphere builds them
+    /// (Tactical Operations: Advanced Units & Equipment p. 185).
     pub fn supports_thunder(self) -> bool {
-        self.is_standard_lrm()
+        self.is_standard_lrm() && !self.is_clan()
     }
 
     /// Launchers whose rounds may carry Artemis IV or V guidance: standard LRM and SRM racks, MMLs
@@ -161,6 +162,8 @@ impl Weapon {
     }
 
     /// Internal bin damage uses its contents, independent of the launcher's selected supply.
+    /// iNarc pods explode for 3 points a shot, explosive iNarc pods for 6 (Total Warfare
+    /// pp. 138, 141).
     pub fn ammunition_explosion_damage_for_mode(
         self,
         rounds: u16,
@@ -168,6 +171,14 @@ impl Weapon {
     ) -> u32 {
         if self.weapon_explosion_damage() > 0 || self.is_plasma() {
             return 0;
+        }
+        if self == Self::INarcBeacon {
+            let per_shot = if ammunition == AmmunitionMode::INarcExplosive {
+                6
+            } else {
+                3
+            };
+            return u32::from(rounds) * per_shot;
         }
         let profile = self.profile_for_ammunition(ammunition);
         u32::from(rounds) * u32::from(profile.damage) * u32::from(profile.missiles.max(1))
@@ -190,11 +201,12 @@ impl Weapon {
         matches!(self, Self::NarcBeacon | Self::ClanNarcBeacon)
     }
 
-    /// Standard LRM launchers take semi-guided and Swarm rounds (Total Warfare p. 142;
-    /// Tactical Operations: Advanced Units & Equipment p. 228). MML long-range bins carry their own
-    /// family variants of these rounds instead.
+    /// Standard Inner Sphere LRM launchers take semi-guided and Swarm-I rounds, which only the
+    /// Inner Sphere builds (Total Warfare p. 142; Tactical Operations: Advanced Units &
+    /// Equipment pp. 183, 228). MML long-range bins carry their own family variants of these
+    /// rounds instead.
     pub fn supports_semiguided(self) -> bool {
-        self.is_standard_lrm()
+        self.is_standard_lrm() && !self.is_clan()
     }
 
     /// Weapons whose impacts use delayed artillery area effects rather than conventional salvos.

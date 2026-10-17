@@ -28,5 +28,6 @@ armor = 20
 armor = 38
 slots = [
     { at = "1-2", item = "IS.ArrowIVSystem" },
-    { at = "3-9", item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = "3-6", item = "Ammo_IS.ArrowIVSystem", rounds = 5 },
+    { at = "7-9", item = "Ammo_IS.ArrowIVSystem", rounds = 5, modes = ["Homing"] },
 ]

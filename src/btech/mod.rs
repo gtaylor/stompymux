@@ -25,6 +25,8 @@ mod artemis;
 mod artillery;
 mod artillery_adjustment;
 mod artillery_feedback;
+mod artillery_registration;
+pub use artillery_registration::ArtilleryRegistration;
 mod artillery_firing;
 pub use artillery_firing::ArtilleryLaunchReport;
 mod coordinate_launch;
@@ -32,15 +34,18 @@ pub use coordinate_launch::LaunchMisload;
 mod artillery_aim;
 pub use artillery_aim::ArtilleryAiming;
 pub use artillery_aim::{
-    ArtilleryAim, ArtilleryAimInput, ArtilleryObserver, ArtilleryRange,
-    unit_artillery_gunnery_target,
+    ArtilleryAim, ArtilleryAimInput, ArtilleryFire, ArtilleryObserver, ArtilleryRange,
+    DIRECT_ARTILLERY_MINIMUM_RANGE, DIRECT_ARTILLERY_RANGE, unit_artillery_gunnery_target,
 };
 mod artillery_impact;
 mod artillery_queue;
 pub use artillery::{
     ArtilleryCell, ArtilleryEffect, ArtilleryFlight, ArtilleryImpactPattern, ArtilleryMode,
+    ArtilleryOutcome, HOMING_DAMAGE, HOMING_SPLASH_DAMAGE,
 };
-pub use artillery_impact::{ArtilleryHit, ArtilleryImpactReport, advance_artillery_flight};
+pub use artillery_impact::{
+    ArtilleryHit, ArtilleryImpactReport, ArtilleryStructureHit, advance_artillery_flight,
+};
 pub use artillery_queue::{
     ArtilleryShot, advance_artillery_action, artillery_pending, enqueue_artillery,
 };
@@ -406,7 +411,7 @@ mod section_exposure;
 pub use section_exposure::{SectionExposure, SectionExposureReport};
 
 pub(crate) mod ammunition_mode;
-pub use ammunition_mode::{toggle_artemis, toggle_cluster, toggle_lbx};
+pub use ammunition_mode::{toggle_artemis, toggle_cluster, toggle_homing, toggle_lbx};
 
 pub(crate) mod ultra;
 pub use ultra::toggle_ultra;

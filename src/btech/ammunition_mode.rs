@@ -46,7 +46,12 @@ pub fn toggle_cluster(
     let current = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
         unit.ammunition_mode(index)?
     });
-    ensure!(readiness.weapon.is_artillery(), "Invalid weapon type!");
+    // Artillery cannons fire no cluster rounds (Tactical Operations: Advanced Units &
+    // Equipment p. 97).
+    ensure!(
+        readiness.weapon.is_artillery() && AmmunitionMode::Cluster.supports(readiness.weapon),
+        "Invalid weapon type!"
+    );
     ensure!(
         matches!(current, AmmunitionMode::Normal | AmmunitionMode::Cluster),
         "That weapon has already been set to fire special rounds!"
@@ -57,6 +62,44 @@ pub fn toggle_cluster(
         index,
         AmmunitionMode::Cluster,
     ))
+}
+
+/// Toggle Arrow IV homing missiles (Tactical Operations: Advanced Units & Equipment p. 166),
+/// preserving another selected artillery payload.
+pub fn toggle_homing(
+    world: &mut World,
+    id: ObjectId,
+    pilot: ObjectId,
+    index: usize,
+) -> Result<AmmunitionMode> {
+    let readiness = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
+    let current = crate::btech::with_unit!(world.btech.unit(id).unwrap(), |unit| {
+        unit.ammunition_mode(index)?
+    });
+    ensure!(
+        AmmunitionMode::Homing.supports(readiness.weapon),
+        "Only Arrow IV launchers fire homing missiles!"
+    );
+    ensure!(
+        matches!(current, AmmunitionMode::Normal | AmmunitionMode::Homing),
+        "That weapon has already been set to fire special rounds!"
+    );
+    Ok(super::weapon_controls::toggle_ammunition_mode(
+        world,
+        id,
+        index,
+        AmmunitionMode::Homing,
+    ))
+}
+
+/// Apply ordered cockpit selections of homing missiles through the shared parser.
+pub(crate) fn homing_command(
+    ctx: &crate::CommandContext<'_>,
+    input: &crate::CommandInput,
+) -> Result<crate::CommandAction> {
+    super::fire_mode::selected_command(ctx, input, |world, id, pilot, index| {
+        toggle_homing(world, id, pilot, index).map(|mode| mode.homing_message(index))
+    })
 }
 
 /// Apply ordered cockpit selections through the shared weapon-control parser.

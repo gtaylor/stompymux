@@ -103,7 +103,7 @@ Alias: `"arrow_iv"|"clan_arrow_iv"|"long_tom"|"sniper"|"thumper"|"long_tom_canno
 
 ## AmmunitionMode
 
-Alias: `"smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"`
+Alias: `"smoke"|"mine"|"i_narc_explosive"|"i_narc_haywire"|"i_narc_ecm"|"i_narc_nemesis"|"semi_guided"|"swarm"|"swarm1"|"narc"|"normal"|"cluster"|"artemis"|"precision"|"flechette"|"armor_piercing"|"caseless"|"inferno"|"mml_lrm"|"mml_lrm_artemis"|"mml_lrm_narc"|"mml_lrm_swarm"|"mml_lrm_swarm1"|"mml_lrm_semi_guided"|"extended_range"|"high_explosive"|"thunder_augmented"|"thunder_vibrabomb"|"thunder_active"|"homing"`
 
 ## FireMode
 
@@ -1078,9 +1078,11 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 
 ## ArtilleryAim
 
-- `target_number`: `integer` — Out-of-range and underwater aims keep the reference's impossible target numbers.
+- `target_number`: `integer` — Out-of-range, underwater and too-close aims keep impossible target numbers.
 - `maximum_range`: `integer`
-- `range`: `"in_range"|"out_of_range"|"underwater"`
+- `range`: `"in_range"|"out_of_range"|"underwater"|"inside_minimum"` — Only an in-range shot may be fired.
+- `fire`: `"direct"|"indirect"|"cannon"` — A direct-fire miss scatters 1D6 hexes, an indirect one its margin of failure, a cannon's half of it.
+- `automatic`: `boolean` — The hex is registered, so the shot hits without a roll.
 
 ## VehicleInternalDamage
 
@@ -1141,6 +1143,8 @@ Alias: `"narc"|"homing"|"haywire"|"ecm"`
 - `surfaces`: `table[]` — Structural rolls, optional fracture/falls, and notices.
 - `buildings`: `table[]` — Building identity, actual damage, remaining integrity and notices.
 - `recoil`: `RecoilReport|nil`
+- `thunder`: `{fields: table[]}` — Minefields a Thunder salvo laid or thickened.
+- `smoke`: `{coordinate: HexCoordinate, heavy: boolean, seconds: integer}|nil` — Smoke a Smoke missile salvo laid.
 
 ## AimSelection
 
@@ -1537,16 +1541,16 @@ Alias: `"follow_brief" | "include" | "exclude"`
 
 - `target`: `integer`
 - `incoming`: `integer`
+- `target_number`: `integer` — Each later attack takes its own target's movement and terrain modifiers.
 - `roll`: `integer`
 - `remaining`: `integer`
-- `salvo`: `{kind: 'mech'|'vehicle', report: table}|nil` — Absent for a secondary miss.
+- `salvo`: `{kind: 'mech'|'vehicle', report: table}|nil` — Absent for a miss.
 
 ## SwarmReport
 
 - `launched`: `integer`
 - `remaining`: `integer`
-- `traveled`: `number` — Cumulative hexes flown, including a terminal leg that falls short.
-- `hops`: `SwarmHop[]` — Ordered attacks, at most eleven.
+- `hops`: `SwarmHop[]` — Ordered attacks, each on a different unit.
 - `notices`: `Notice[]`
 - `broadcasts`: `Notice[]`
 

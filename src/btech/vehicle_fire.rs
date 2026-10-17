@@ -268,7 +268,10 @@ fn fire_shot(
     super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Expenditure)?;
     drop(launch_measurement);
     let damage_measurement = super::autopilot::diagnostics::combat("damage_recoil");
-    let salvo = if resolved.hit && launch.expenditure.launched && ammunition.is_swarm() {
+    // A Swarm flight that misses its first target flies on to others (Tactical Operations:
+    // Advanced Units & Equipment p. 183).
+    let salvo = if launch.expenditure.launched && ammunition.is_swarm() {
+        let target_number = aim.subtotal().unwrap_or_default();
         Some(super::TargetSalvo::Swarm(super::swarm::resolve(
             &mut candidate,
             super::swarm::SwarmRequest {
@@ -278,8 +281,9 @@ fn fire_shot(
                 rules: rules.shot,
                 first_hit: resolved.hit,
                 first_roll: launch.roll,
-                target_number: aim.subtotal().unwrap_or_default(),
-                glancing: resolved.glancing,
+                first_glancing: resolved.glancing,
+                target_number,
+                base_target_number: super::swarm::base_target_number(&aim, target_number),
                 character,
                 experience,
                 ams_engaged,

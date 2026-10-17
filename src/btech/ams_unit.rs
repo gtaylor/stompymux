@@ -27,7 +27,8 @@ pub(super) fn set_enabled(world: &mut World, id: ObjectId, enabled: bool) -> Res
     )
 }
 
-/// Critical loss of any installed AMS disables the whole capability for either construction class.
+/// Whether any installed AMS survives intact. Each AMS works on its own (Total Warfare
+/// p. 129), so losing one leaves the others defending.
 pub(super) fn available(world: &World, id: ObjectId) -> Result<bool> {
     if let Some(unit) = world.btech.vehicles().get(&id) {
         return Ok(installed(&unit.loadout()?.weapons, |location| {
@@ -46,15 +47,14 @@ pub(super) fn available(world: &World, id: ObjectId) -> Result<bool> {
 
 /// Shared installed-capability policy, independent of anatomy and temporary readiness.
 fn installed<L: Copy>(weapons: &[WeaponMount<L>], destroyed: impl Fn(L) -> bool) -> bool {
-    let mut installed = false;
-    for mount in weapons.iter().filter(|mount| mount.weapon.is_ams()) {
-        installed = true;
-        if mount.criticals.iter().any(|location| destroyed(*location)) {
-            return false;
-        }
-    }
-    installed
+    weapons.iter().any(|mount| {
+        mount.weapon.is_ams() && !mount.criticals.iter().any(|location| destroyed(*location))
+    })
 }
+
+/// Seconds an AMS waits after an engagement: each AMS engages at most one missile attack a
+/// turn (Total Warfare p. 129), and a turn is thirty seconds.
+const ENGAGEMENT_SECONDS: u16 = 30;
 
 /// Project temporary failure, bin state and arc coverage into the common mount-order selection.
 /// Only a mount whose firing arc covers the attacker may engage (Total Warfare p. 129).
@@ -129,8 +129,9 @@ fn covering_mounts(
         .collect()
 }
 
-/// Select the first ready mount, then a matching bin with local-section preference. Laser AMS
-/// needs no bin. A ready but unloaded mount does not cause another mount to activate in the same attack.
+/// Select the first ready mount that can fire, with a matching bin by local-section preference.
+/// Laser AMS needs no bin; a ballistic AMS whose bins are empty leaves the attack to the next
+/// mount, since each AMS works on its own (Total Warfare p. 129).
 fn first_defense<L: Copy + Ord>(
     weapons: &[WeaponMount<L>],
     bins: &[AmmunitionBin<L>],
@@ -138,40 +139,43 @@ fn first_defense<L: Copy + Ord>(
     supplied: impl Fn(usize, &AmmunitionBin<L>) -> bool,
     same_section: impl Fn(L, L) -> bool,
 ) -> Option<Defense> {
-    let (index, mount) = weapons
+    weapons
         .iter()
         .enumerate()
-        .find(|(index, mount)| mount.weapon.is_ams() && ready(*index, mount))?;
-    if mount.weapon.profile().ammunition_per_ton == 0 {
-        return Some(Defense {
-            index,
-            weapon: mount.weapon,
-            bin: None,
-        });
-    }
-    let (bin, _) = bins
-        .iter()
-        .enumerate()
-        .filter(|(index, bin)| {
-            bin.weapon == mount.weapon
-                && bin.mode == AmmunitionMode::Normal
-                && supplied(*index, bin)
+        .filter(|(index, mount)| mount.weapon.is_ams() && ready(*index, mount))
+        .find_map(|(index, mount)| {
+            if mount.weapon.profile().ammunition_per_ton == 0 {
+                return Some(Defense {
+                    index,
+                    weapon: mount.weapon,
+                    bin: None,
+                });
+            }
+            let (bin, _) = bins
+                .iter()
+                .enumerate()
+                .filter(|(index, bin)| {
+                    bin.weapon == mount.weapon
+                        && bin.mode == AmmunitionMode::Normal
+                        && supplied(*index, bin)
+                })
+                .min_by_key(|(_, bin)| {
+                    (
+                        !same_section(bin.location, mount.criticals[0]),
+                        bin.location,
+                    )
+                })?;
+            Some(Defense {
+                index,
+                weapon: mount.weapon,
+                bin: Some(bin),
+            })
         })
-        .min_by_key(|(_, bin)| {
-            (
-                !same_section(bin.location, mount.criticals[0]),
-                bin.location,
-            )
-        })?;
-    Some(Defense {
-        index,
-        weapon: mount.weapon,
-        bin: Some(bin),
-    })
 }
 
 /// Commit one engagement to its owner: one round from the selected bin (laser AMS none), the
-/// system's heat and the mount's recycle (Total Warfare p. 130). Returns the rounds spent.
+/// system's heat (Total Warfare p. 130) and a turn before the mount may engage again
+/// (p. 129). Returns the rounds spent.
 pub(super) fn expend(
     world: &mut World,
     id: ObjectId,
@@ -179,13 +183,13 @@ pub(super) fn expend(
     weapon: Weapon,
     bin: Option<usize>,
 ) -> Result<u16> {
-    let recycle = weapon.profile().recycle_seconds;
+    let recycle = ENGAGEMENT_SECONDS;
     if let Some(unit) = world.btech.vehicles.get_mut(&id) {
         let spent = bin.map_or(0, |bin| unit.ammunition()[bin].min(1));
         if let Some(bin) = bin {
             unit.expend_reserved_ammunition(bin, spent)?;
         }
-        unit.weapon_recycle.insert(index, u16::from(recycle));
+        unit.weapon_recycle.insert(index, recycle);
         return Ok(spent);
     }
     let unit = world
@@ -199,6 +203,6 @@ pub(super) fn expend(
     }
     unit.live_mass.invalidate();
     unit.heat.stored += f64::from(weapon.profile().heat);
-    unit.weapon_recycle.insert(index, u16::from(recycle));
+    unit.weapon_recycle.insert(index, recycle);
     Ok(spent)
 }

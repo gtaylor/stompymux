@@ -1,8 +1,7 @@
 //! Restartable artillery flight and impact patterns, independent of weapon admission and damage application.
-use super::{AmmunitionMode, Dice, HexCoordinate, HitTable, Weapon};
+use super::{AmmunitionMode, ArtilleryFire, Dice, HexCoordinate, HitTable, Weapon};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 /// Mutually exclusive artillery payloads; launcher controls resolve ammunition into this value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -12,6 +11,8 @@ pub enum ArtilleryMode {
     Cluster,
     Smoke,
     Mine,
+    /// An Arrow IV homing missile (Tactical Operations: Advanced Units & Equipment p. 166).
+    Homing,
 }
 
 impl ArtilleryMode {
@@ -22,8 +23,77 @@ impl ArtilleryMode {
             AmmunitionMode::Cluster => Self::Cluster,
             AmmunitionMode::Smoke => Self::Smoke,
             AmmunitionMode::Mine => Self::Mine,
+            AmmunitionMode::Homing => Self::Homing,
             _ => anyhow::bail!("Ammunition is not an artillery payload"),
         })
+    }
+
+    /// The ammunition that carries this payload.
+    pub fn ammunition(self) -> AmmunitionMode {
+        match self {
+            Self::Standard => AmmunitionMode::Normal,
+            Self::Cluster => AmmunitionMode::Cluster,
+            Self::Smoke => AmmunitionMode::Smoke,
+            Self::Mine => AmmunitionMode::Mine,
+            Self::Homing => AmmunitionMode::Homing,
+        }
+    }
+}
+
+/// Damage an Arrow IV homing missile deals the unit it homes on, in 5-point groups (Tactical
+/// Operations: Advanced Rules p. 152).
+pub const HOMING_DAMAGE: u16 = 20;
+
+/// Area-effect damage a homing missile deals every other unit in its target's hex, and every
+/// unit in a hex it strikes without homing (Tactical Operations: Advanced Units & Equipment
+/// p. 166).
+pub const HOMING_SPLASH_DAMAGE: u16 = 5;
+
+/// Where a launched round is headed: its aim point, or a scatter from it. A miss scatters in a
+/// direction rolled on the Scatter Diagram when the round lands (Tactical Operations: Advanced
+/// Rules p. 150).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArtilleryOutcome {
+    /// The round strikes its aim point.
+    Hit,
+    /// The round missed and lands this many hexes from its aim point: the margin of failure
+    /// for indirect fire (p. 150), half of it for an artillery cannon (Tactical Operations:
+    /// Advanced Units & Equipment p. 97).
+    Scatter { hexes: u16 },
+    /// A direct-fire round missed and lands 1D6 hexes away, rolled on arrival (Tactical
+    /// Operations: Advanced Rules p. 153).
+    DirectMiss,
+}
+
+impl ArtilleryOutcome {
+    /// The outcome of a launch roll. Indirect fire scatters one hex per point it missed by; a
+    /// cannon half that, rounding up, but never farther than its target lay.
+    pub fn of_launch(
+        fire: ArtilleryFire,
+        hit: bool,
+        target_number: i32,
+        roll: u8,
+        hexes_to_target: u64,
+    ) -> Self {
+        if hit {
+            return Self::Hit;
+        }
+        let margin = u16::try_from((target_number - i32::from(roll)).max(1)).unwrap_or(u16::MAX);
+        match fire {
+            ArtilleryFire::Direct => Self::DirectMiss,
+            ArtilleryFire::Indirect => Self::Scatter { hexes: margin },
+            ArtilleryFire::Cannon => Self::Scatter {
+                hexes: margin
+                    .div_ceil(2)
+                    .min(u16::try_from(hexes_to_target).unwrap_or(u16::MAX)),
+            },
+        }
+    }
+
+    /// Whether the round strikes its aim point.
+    pub fn is_hit(self) -> bool {
+        self == Self::Hit
     }
 }
 
@@ -35,7 +105,7 @@ pub struct ArtilleryFlight {
     target: HexCoordinate,
     weapon: Weapon,
     mode: ArtilleryMode,
-    hit: bool,
+    outcome: ArtilleryOutcome,
     remaining: u16,
 }
 
@@ -47,7 +117,7 @@ struct FlightRecord {
     target: HexCoordinate,
     weapon: Weapon,
     mode: ArtilleryMode,
-    hit: bool,
+    outcome: ArtilleryOutcome,
     remaining: u16,
 }
 
@@ -60,7 +130,7 @@ impl TryFrom<FlightRecord> for ArtilleryFlight {
             record.target,
             record.weapon,
             record.mode,
-            record.hit,
+            record.outcome,
             record.remaining,
         )
     }
@@ -75,9 +145,9 @@ pub enum ArtilleryEffect {
         packet_size: u8,
         table: HitTable,
     },
-    Smoke {
-        seconds: u16,
-    },
+    /// Heavy smoke two levels high, lasting until the End Phase three turns after it is laid
+    /// (Tactical Operations: Advanced Units & Equipment p. 168).
+    Smoke,
     Mine {
         strength: u16,
     },
@@ -96,6 +166,8 @@ pub struct ArtilleryCell {
 #[must_use = "Apply impact effects and publish feedback in the same transaction as the flight and dice"]
 pub struct ArtilleryImpactPattern {
     pub target: HexCoordinate,
+    /// Where the round came down. A round that scatters off the battlefield lands there,
+    /// outside the map, and affects nothing.
     pub impact: HexCoordinate,
     /// A failed attack can scatter back into its original target hex and still permits adjustment.
     pub missed: bool,
@@ -118,18 +190,27 @@ impl ArtilleryFlight {
         target: HexCoordinate,
         weapon: Weapon,
         mode: ArtilleryMode,
-        hit: bool,
+        outcome: ArtilleryOutcome,
     ) -> Result<Self> {
         validate_coordinate(origin)?;
         validate_coordinate(target)?;
         ensure!(weapon.is_artillery(), "Invalid artillery weapon");
+        ensure!(
+            mode.ammunition().supports(weapon),
+            "{} cannot fire that payload",
+            weapon.name()
+        );
+        ensure!(
+            !matches!(outcome, ArtilleryOutcome::Scatter { hexes } if hexes > MAXIMUM_SCATTER),
+            "Invalid artillery scatter"
+        );
         let remaining = flight_seconds(origin.center(), target.center())?;
         Ok(Self {
             origin,
             target,
             weapon,
             mode,
-            hit,
+            outcome,
             remaining,
         })
     }
@@ -140,18 +221,18 @@ impl ArtilleryFlight {
         target: HexCoordinate,
         weapon: Weapon,
         mode: ArtilleryMode,
-        hit: bool,
+        outcome: ArtilleryOutcome,
         remaining: u16,
     ) -> Result<Self> {
-        let mut flight = Self::new(origin, target, weapon, mode, hit)?;
+        let mut flight = Self::new(origin, target, weapon, mode, outcome)?;
         ensure!(remaining <= flight.remaining, "Invalid artillery countdown");
         flight.remaining = remaining;
         Ok(flight)
     }
 
-    /// Whether the launch hit its aim point; misses scatter on arrival.
-    pub(crate) fn hit(&self) -> bool {
-        self.hit
+    /// Whether the launch hit its aim point, or how far it scatters on arrival.
+    pub fn outcome(&self) -> ArtilleryOutcome {
+        self.outcome
     }
 
     /// Weapon identity is retained through arrival and supplies catalogue damage.
@@ -179,12 +260,35 @@ impl ArtilleryFlight {
         self.remaining
     }
 
-    /// Advance one second using the impact map's current bounds and wind strength.
+    /// Land a homing missile on the unit it homes on in its arrival second, without drawing
+    /// the unguided impact plan. Its pattern strikes the target's hex.
+    pub(super) fn home(&mut self, target: HexCoordinate) -> Result<ArtilleryImpactPattern> {
+        ensure!(
+            self.mode == ArtilleryMode::Homing && self.remaining == 1,
+            "Only an arriving homing missile can home"
+        );
+        self.remaining = 0;
+        Ok(ArtilleryImpactPattern {
+            target: self.target,
+            impact: target,
+            missed: false,
+            cells: vec![ArtilleryCell {
+                position: target,
+                direct: true,
+                effect: ArtilleryEffect::Damage {
+                    total: HOMING_SPLASH_DAMAGE,
+                    packet_size: 5,
+                    table: HitTable::Weapon,
+                },
+            }],
+        })
+    }
+
+    /// Advance one second using the impact map's current bounds.
     /// Failed validation leaves the countdown and random stream unchanged; completed flights cannot repeat.
     pub fn advance(
         &mut self,
         dimensions: (u16, u16),
-        wind_speed: u16,
         dice: &mut Dice,
     ) -> Result<Option<ArtilleryImpactPattern>> {
         ensure!(self.remaining > 0, "Artillery flight has already arrived");
@@ -192,10 +296,6 @@ impl ArtilleryFlight {
         ensure!(
             (1..=1000).contains(&width) && (1..=1000).contains(&height),
             "Invalid artillery map dimensions"
-        );
-        ensure!(
-            wind_speed <= i16::MAX as u16,
-            "Invalid artillery wind speed"
         );
         ensure!(
             contains(dimensions, self.target),
@@ -206,94 +306,97 @@ impl ArtilleryFlight {
             return Ok(None);
         }
         let mut candidate = dice.clone();
-        let pattern = self.pattern(dimensions, wind_speed, &mut candidate)?;
+        let pattern = self.pattern(dimensions, &mut candidate)?;
         self.remaining = 0;
         *dice = candidate;
         Ok(Some(pattern))
     }
 
     /// Resolve arrival randomness into a bounded effect list without modifying the world.
-    fn pattern(
-        &self,
-        dimensions: (u16, u16),
-        wind_speed: u16,
-        dice: &mut Dice,
-    ) -> Result<ArtilleryImpactPattern> {
-        let mut impact = self.target;
-        if !self.hit {
-            let angle = f32::from(dice.die(360)? - 1) * std::f32::consts::PI / 180.0;
-            let distance = u32::from(dice.die(6)? + 1);
-            let wind = u32::from(wind_speed);
-            let weight = 100 * distance * 6 / (distance * 6 + wind);
-            let distance = ((distance * weight + wind / 6 * (100 - weight)) / 100) as f32;
-            impact.x =
-                (impact.x + (distance * angle.cos()) as i32).clamp(0, i32::from(dimensions.0) - 1);
-            impact.y =
-                (impact.y + (distance * angle.sin()) as i32).clamp(0, i32::from(dimensions.1) - 1);
+    fn pattern(&self, dimensions: (u16, u16), dice: &mut Dice) -> Result<ArtilleryImpactPattern> {
+        let impact = match self.outcome {
+            ArtilleryOutcome::Hit => self.target,
+            ArtilleryOutcome::Scatter { hexes } => scatter(self.target, dice, |_| Ok(hexes))?,
+            ArtilleryOutcome::DirectMiss => scatter(self.target, dice, |dice| dice.die(6))?,
+        };
+        if !contains(dimensions, impact) {
+            return Ok(ArtilleryImpactPattern {
+                target: self.target,
+                impact,
+                missed: true,
+                cells: Vec::new(),
+            });
         }
         let mut cells = Vec::new();
-        if self.mode == ArtilleryMode::Cluster {
-            let mut totals = BTreeMap::<(i32, i32), u16>::new();
-            // Two-point bomblets, as many as the cluster round's own damage value.
-            for _ in 0..cluster_bomblets(self.weapon) {
-                let x = cluster_axis(impact.x, dimensions.0, dice)?;
-                let y = cluster_axis(impact.y, dimensions.1, dice)?;
-                *totals.entry((x, y)).or_default() += 2;
-            }
-            for ((x, y), total) in totals {
-                cells.push(ArtilleryCell {
-                    position: HexCoordinate { x, y },
-                    direct: true,
-                    effect: ArtilleryEffect::Damage {
-                        total,
-                        packet_size: 2,
-                        table: HitTable::Punch,
-                    },
-                });
-            }
-        } else {
-            let rings = blast_rings(self.weapon);
-            let mut positions = vec![(impact, true, rings[0])];
-            if self.mode != ArtilleryMode::Mine {
-                for (radius, &damage) in rings.iter().enumerate().skip(1) {
-                    positions.extend(
-                        ring(impact, radius as u64, dimensions)
-                            .into_iter()
-                            .map(|cell| (cell, false, damage)),
-                    );
-                }
-            }
-            for (position, direct, total) in positions {
-                let effect = match self.mode {
-                    ArtilleryMode::Smoke => ArtilleryEffect::Smoke {
-                        seconds: 89 + dice.die(61)?,
-                    },
-                    ArtilleryMode::Mine => ArtilleryEffect::Mine { strength: total },
-                    _ => ArtilleryEffect::Damage {
+        let rings = match self.mode {
+            ArtilleryMode::Standard => blast_rings(self.weapon),
+            ArtilleryMode::Cluster => cluster_rings(self.weapon),
+            // Smoke fills the target hex and its neighbours for every piece (Tactical
+            // Operations: Advanced Rules p. 152); FASCAM lays only in the target hex.
+            ArtilleryMode::Smoke => vec![0, 0],
+            ArtilleryMode::Mine => vec![fascam_density(self.weapon)],
+            // A homing missile that has no designated target falls on its hex unguided.
+            ArtilleryMode::Homing => vec![HOMING_SPLASH_DAMAGE],
+        };
+        let mut positions = vec![(impact, true, rings[0])];
+        for (radius, &damage) in rings.iter().enumerate().skip(1) {
+            positions.extend(
+                ring(impact, radius as u64, dimensions)
+                    .into_iter()
+                    .map(|cell| (cell, false, damage)),
+            );
+        }
+        for (position, direct, total) in positions {
+            let effect = match self.mode {
+                ArtilleryMode::Smoke => ArtilleryEffect::Smoke,
+                ArtilleryMode::Mine => ArtilleryEffect::Mine { strength: total },
+                ArtilleryMode::Standard | ArtilleryMode::Cluster | ArtilleryMode::Homing => {
+                    ArtilleryEffect::Damage {
                         total,
                         packet_size: 5,
                         table: HitTable::Weapon,
-                    },
-                };
-                cells.push(ArtilleryCell {
-                    position,
-                    direct,
-                    effect,
-                });
-            }
+                    }
+                }
+            };
+            cells.push(ArtilleryCell {
+                position,
+                direct,
+                effect,
+            });
         }
         Ok(ArtilleryImpactPattern {
             target: self.target,
             impact,
-            missed: !self.hit,
+            missed: !self.outcome.is_hit(),
             cells,
         })
     }
 }
 
+/// Farthest a round may be recorded to scatter: past the far corner of the largest map.
+const MAXIMUM_SCATTER: u16 = 2000;
+
+/// Walk a missed round from its aim point. One die picks the hexside on the Scatter Diagram,
+/// numbered clockwise from the map's north edge (Tactical Operations: Advanced Rules p. 150),
+/// then `distance` gives how many hexes it travels that way.
+fn scatter(
+    target: HexCoordinate,
+    dice: &mut Dice,
+    distance: impl FnOnce(&mut Dice) -> Result<u16>,
+) -> Result<HexCoordinate> {
+    let hexside = usize::from(dice.die(6)? - 1);
+    let mut impact = target;
+    for _ in 0..distance(dice)? {
+        impact = impact.neighbors()?[hexside];
+    }
+    Ok(impact)
+}
+
 /// Damage by distance from the impact hex for a high-explosive round, from the Artillery
-/// Ordnance Table (Tactical Operations p. 183): the Long Tom reaches two hexes out, the
-/// others one. Artillery cannons and other tubes halve their damage in the adjacent hexes.
+/// Ordnance Table (Tactical Operations: Advanced Rules p. 152): the Long Tom reaches two hexes
+/// out, the others one. An artillery cannon deals its Damage Value in the target hex and ten
+/// less for each hex beyond (Tactical Operations: Advanced Units & Equipment p. 97; Advanced
+/// Rules p. 150), so only the Long Tom cannon reaches the adjacent hexes.
 pub fn blast_rings(weapon: Weapon) -> Vec<u16> {
     match weapon {
         Weapon::LongTom => vec![25, 15, 5],
@@ -302,19 +405,33 @@ pub fn blast_rings(weapon: Weapon) -> Vec<u16> {
         Weapon::ArrowIv | Weapon::ClanArrowIv => vec![20, 10],
         other => {
             let damage = u16::from(other.profile().damage);
-            vec![damage, damage / 2]
+            (0..)
+                .map(|ring| damage.saturating_sub(ring * 10))
+                .take_while(|damage| *damage > 0)
+                .collect()
         }
     }
 }
 
-/// Two-point bomblets a cluster round scatters: its damage value on the Artillery Ordnance
-/// Table (Tactical Operations p. 183), one bomblet per two points.
-pub fn cluster_bomblets(weapon: Weapon) -> u16 {
+/// Damage by distance from the impact hex for a cluster round, which works as a standard round
+/// with its own Damage Values (Tactical Operations: Advanced Rules p. 152; Advanced Units &
+/// Equipment p. 166). Only the Arrow IV and the tube artillery fire cluster rounds.
+pub fn cluster_rings(weapon: Weapon) -> Vec<u16> {
     match weapon {
-        Weapon::LongTom | Weapon::ArrowIv | Weapon::ClanArrowIv => 20,
-        Weapon::Sniper => 15,
-        Weapon::Thumper => 10,
-        other => u16::from(other.profile().damage),
+        Weapon::LongTom | Weapon::ArrowIv | Weapon::ClanArrowIv => vec![20, 10],
+        Weapon::Sniper => vec![15, 5],
+        _ => vec![10, 1],
+    }
+}
+
+/// Density of the conventional minefield a FASCAM round lays in its target hex (Tactical
+/// Operations: Advanced Rules p. 152): Long Tom 25, Clan Arrow IV 30, Sniper and Inner Sphere
+/// Arrow IV 20. The Inner Sphere Thumper has no FASCAM round.
+pub fn fascam_density(weapon: Weapon) -> u16 {
+    match weapon {
+        Weapon::LongTom => 25,
+        Weapon::ClanArrowIv => 30,
+        _ => 20,
     }
 }
 
@@ -346,26 +463,6 @@ fn contains((width, height): (u16, u16), position: HexCoordinate) -> bool {
     (0..i32::from(width)).contains(&position.x) && (0..i32::from(height)).contains(&position.y)
 }
 
-/// Sample the reference triangular scatter conditioned on map bounds, without an unbounded retry loop.
-fn cluster_axis(center: i32, size: u16, dice: &mut Dice) -> Result<i32> {
-    let candidates: Vec<_> = (-2_i32..=2)
-        .filter_map(|offset| {
-            let value = center + offset;
-            (0..i32::from(size))
-                .contains(&value)
-                .then_some((value, (3 - offset.abs()) as u16))
-        })
-        .collect();
-    let mut roll = dice.die(candidates.iter().map(|(_, weight)| weight).sum())?;
-    for (value, weight) in candidates {
-        if roll <= weight {
-            return Ok(value);
-        }
-        roll -= weight;
-    }
-    unreachable!("Weighted cluster roll must select an in-bounds coordinate")
-}
-
 /// Shared timing for queued shells and moving-target prediction, including sub-hex positions.
 pub(super) fn flight_seconds(origin: super::Point, target: super::Point) -> Result<u16> {
     let range = origin.range(target)? as f32;
@@ -385,9 +482,16 @@ mod tests {
         assert_eq!(blast_rings(Weapon::ArrowIv), [20, 10]);
         assert_eq!(blast_rings(Weapon::ClanArrowIv), [20, 10]);
         assert_eq!(blast_rings(Weapon::LongTomCannon), [20, 10]);
-        assert_eq!(cluster_bomblets(Weapon::LongTom), 20);
-        assert_eq!(cluster_bomblets(Weapon::Sniper), 15);
-        assert_eq!(cluster_bomblets(Weapon::Thumper), 10);
+        assert_eq!(blast_rings(Weapon::SniperCannon), [10]);
+        assert_eq!(blast_rings(Weapon::ThumperCannon), [5]);
+        assert_eq!(cluster_rings(Weapon::LongTom), [20, 10]);
+        assert_eq!(cluster_rings(Weapon::Sniper), [15, 5]);
+        assert_eq!(cluster_rings(Weapon::Thumper), [10, 1]);
+        assert_eq!(cluster_rings(Weapon::ClanArrowIv), [20, 10]);
+        assert_eq!(fascam_density(Weapon::LongTom), 25);
+        assert_eq!(fascam_density(Weapon::Sniper), 20);
+        assert_eq!(fascam_density(Weapon::ArrowIv), 20);
+        assert_eq!(fascam_density(Weapon::ClanArrowIv), 30);
     }
 
     /// The second ring holds the twelve cells two hexes out, clipped to the map.
@@ -399,26 +503,5 @@ mod tests {
         assert_eq!(outer.len(), 12);
         assert!(outer.iter().all(|cell| cell.distance(center) == 2));
         assert!(ring(HexCoordinate { x: 0, y: 0 }, 2, (2, 2)).is_empty());
-    }
-
-    /// Interior and clipped-edge samples preserve triangular rather than uniform placement weights.
-    #[test]
-    fn cluster_axis_weighting_survives_edge_conditioning() {
-        for (center, size, expected) in [(2, 5, vec![1, 2, 3, 2, 1]), (0, 3, vec![3, 2, 1])] {
-            let mut dice = Dice::seeded([42; 32]);
-            let mut counts = vec![0_u32; usize::from(size)];
-            let trials = 30_000;
-            for _ in 0..trials {
-                counts[cluster_axis(center, size, &mut dice).unwrap() as usize] += 1;
-            }
-            let total_weight: u32 = expected.iter().sum();
-            for (observed, weight) in counts.into_iter().zip(expected) {
-                let expected = trials * weight / total_weight;
-                assert!(
-                    observed.abs_diff(expected) < expected / 10,
-                    "{observed} versus {expected}"
-                );
-            }
-        }
     }
 }

@@ -348,6 +348,7 @@ fn resolve_shot_inner(
     }
     let attacker = &world.btech.constructed_units()[&shooter];
     super::fire_target::check_target_safety_for_source(world, operator.source, target)?;
+    super::fire_target::check_unit_munition(world, shooter, weapon_index)?;
     let loadout = attacker.loadout()?;
     ensure!(
         attacker
@@ -518,7 +519,10 @@ fn resolve_shot_inner(
     super::shot_transaction::checkpoint(super::shot_transaction::FailurePoint::Expenditure)?;
     drop(launch_measurement);
     let damage_measurement = super::autopilot::diagnostics::combat("damage_recoil");
-    let salvo = if resolved.hit && launched && expenditure.ammunition_mode.is_swarm() {
+    // A Swarm flight that misses its first target flies on to others (Tactical Operations:
+    // Advanced Units & Equipment p. 183).
+    let salvo = if launched && expenditure.ammunition_mode.is_swarm() {
+        let target_number = target_number.unwrap_or_default();
         Some(super::TargetSalvo::Swarm(super::swarm::resolve(
             &mut candidate,
             super::swarm::SwarmRequest {
@@ -528,8 +532,9 @@ fn resolve_shot_inner(
                 rules,
                 first_hit: resolved.hit,
                 first_roll: roll,
-                target_number: target_number.unwrap_or_default(),
-                glancing: resolved.glancing,
+                first_glancing: resolved.glancing,
+                target_number,
+                base_target_number: super::swarm::base_target_number(&aim, target_number),
                 character,
                 experience,
                 ams_engaged,

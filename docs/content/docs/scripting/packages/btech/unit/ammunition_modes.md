@@ -33,3 +33,4 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 | `btech.unit.ammunition_modes.THUNDER_AUGMENTED` | `8388608` |  |
 | `btech.unit.ammunition_modes.THUNDER_VIBRABOMB` | `16777216` |  |
 | `btech.unit.ammunition_modes.THUNDER_ACTIVE` | `33554432` |  |
+| `btech.unit.ammunition_modes.HOMING` | `67108864` |  |

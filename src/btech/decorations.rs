@@ -88,6 +88,7 @@ pub(super) fn raise_smoke(
     map: ObjectId,
     coordinate: HexCoordinate,
     seconds: i64,
+    heavy: bool,
 ) -> Result<()> {
     let burning = world
         .btech
@@ -103,8 +104,22 @@ pub(super) fn raise_smoke(
         world,
         map,
         coordinate,
-        Some(Decoration::new(DecorationKind::Smoke, seconds, None)),
+        Some(Decoration::new(
+            if heavy {
+                DecorationKind::HeavySmoke
+            } else {
+                DecorationKind::Smoke
+            },
+            seconds,
+            None,
+        )),
     )
+}
+
+/// Seconds smoke laid now lasts: until the End Phase three turns after this one (Tactical
+/// Operations: Advanced Units & Equipment pp. 168, 183), each turn thirty seconds.
+pub(super) fn smoke_seconds(world: &World) -> i64 {
+    i64::from(world.btech.turn_clock.seconds_to_end()) + 90
 }
 
 /// Install an overlay, replacing any stored fire or smoke records at its hex. Generic

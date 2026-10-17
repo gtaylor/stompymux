@@ -91,7 +91,8 @@ fn shot_rules() -> ShotRules {
     }
 }
 
-/// Install the same Clan LRM-20 and full Swarm bin in either construction anatomy.
+/// Install the same Inner Sphere LRM-20 and full Swarm and Swarm-I bins in either construction
+/// anatomy; Swarm-I is Inner Sphere technology (Tactical Operations: AUE p. 183).
 fn launcher(source: &str, mode: &str) -> UnitTemplate {
     let mut definition =
         crate::support::templates::fitted_unit(UnitTemplate::parse("test", source).unwrap());
@@ -102,18 +103,18 @@ fn launcher(source: &str, mode: &str) -> UnitTemplate {
         .clone();
     let install = |section: &mut SectionDefinition, mech: bool| {
         let mut mount = part.clone();
-        mount.equipment = Weapon::ClanLrm20.name().into();
+        mount.equipment = Weapon::Lrm20.name().into();
         mount.modes = vec![mode.into()];
         mount.data = "-".into();
-        for slot in 0..if mech { 4 } else { 1 } {
+        for slot in 0..if mech { 5 } else { 1 } {
             section.criticals.insert(slot, mount.clone());
         }
         let mut bin = mount;
-        bin.equipment = format!("Ammo_{}", Weapon::ClanLrm20.name());
+        bin.equipment = format!("Ammo_{}", Weapon::Lrm20.name());
         bin.data = "6".into();
-        section.criticals.insert(5, bin.clone());
+        section.criticals.insert(6, bin.clone());
         bin.modes = vec![if mode == "Swarm" { "Swarm1" } else { "Swarm" }.into()];
-        section.criticals.insert(6, bin);
+        section.criticals.insert(7, bin);
     };
     match &mut definition {
         UnitTemplate::Mech(unit) => {
@@ -204,7 +205,8 @@ fn fire_with_rules(
     })
 }
 
-/// Construct real launchers on all seven chassis and replay the same capped missile flight.
+/// Construct real launchers on all seven chassis and replay the same missile flight; with no
+/// other unit near the target, the missiles that miss it fly no farther.
 #[tokio::test]
 async fn swarm_launchers_and_targets_share_damage_and_restart() {
     for source in templates() {
@@ -234,7 +236,10 @@ async fn swarm_launchers_and_targets_share_damage_and_restart() {
             let mut miss = before;
             gunnery(&mut miss, 8);
             dice(&mut miss, shooter, 2);
-            assert!(fire(&mut miss, shooter, target).is_none());
+            let missed = fire(&mut miss, shooter, target).unwrap();
+            assert_eq!(missed.hops.len(), 1);
+            assert!(missed.hops[0].salvo.is_none());
+            assert_eq!(missed.remaining, 20);
         }
     }
 }
@@ -269,17 +274,40 @@ fn candidate(
     id
 }
 
-/// Map order, acquired visibility, immunity and friend-or-foe filtering precede shared capped damage.
+/// Move a unit administratively to another hex of its battlefield.
+fn relocate(world: &mut World, id: ObjectId, y: i64) {
+    let map = if let Some(unit) = world.btech.vehicles().get(&id) {
+        unit.position().unwrap().map
+    } else {
+        world.btech.constructed_units()[&id].position().unwrap().map
+    };
+    let power = if let Some(unit) = world.btech.vehicles().get(&id) {
+        serde_json::to_value(unit).unwrap()["power"].clone()
+    } else {
+        serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["power"].clone()
+    };
+    edit(world, id, |unit| {
+        unit["power"] = serde_json::to_value(Power::Off).unwrap()
+    });
+    place_battle_unit(world, id, map, 0, y).unwrap();
+    edit(world, id, |unit| unit["power"] = power);
+}
+
+/// The missiles that miss a target fly on to the nearest unit, friend or foe, in its hex
+/// before the adjacent ones, needing no line of sight and skipping combat-safe units; the
+/// later attack rolls on the Cluster Hits column for the missiles still flying, and Swarm-I
+/// takes +2 against a friend (Tactical Operations: AUE p. 183).
 #[tokio::test]
-async fn swarm_retarget_selection_caps_hits_and_skips_ineligible_units() {
+async fn swarm_retarget_selection_follows_distance_and_identifies_friends() {
     for source in templates() {
         for friend_or_foe in [false, true] {
             let (_dir, config, mut initial, shooter, target) =
                 fixture(&source, &templates()[0], false).await;
-            let friendly = candidate(&mut initial, &config, target, &templates()[2], 0);
             let safe = candidate(&mut initial, &config, target, &templates()[1], 1);
             set_battle_combat_safe(&mut initial, safe, true).unwrap();
+            let friendly = candidate(&mut initial, &config, target, &templates()[2], 0);
             let hostile = candidate(&mut initial, &config, target, &templates()[6], 1);
+            relocate(&mut initial, hostile, 1);
             acquire(&mut initial, shooter, target);
             if friend_or_foe {
                 assert_eq!(
@@ -287,20 +315,8 @@ async fn swarm_retarget_selection_caps_hits_and_skips_ineligible_units() {
                     AmmunitionMode::Swarm1
                 );
             }
-            dice(&mut initial, shooter, 12);
             dice(&mut initial, target, 2);
-            let mut unseen = initial.clone();
-            assert_eq!(fire(&mut unseen, shooter, target).unwrap().hops.len(), 1);
-            set_battle_visibility(
-                &mut initial,
-                target,
-                Visibility {
-                    clairvoyant: true,
-                    invisible: false,
-                },
-            )
-            .unwrap();
-            // Secondary attack must hit so the target's maximum cluster exercises the incoming cap.
+            // The first secondary attack hits with a 12 so the column caps the hits.
             let seed = (0u32..65536)
                 .find_map(|n| {
                     let mut seed = [0; 32];
@@ -314,28 +330,50 @@ async fn swarm_retarget_selection_caps_hits_and_skips_ineligible_units() {
             });
             let report = fire(&mut initial, shooter, target).unwrap();
             assert_eq!(report.hops.len(), 2);
-            assert_eq!(
-                report.hops[1].target,
-                if friend_or_foe { hostile } else { friendly }
-            );
+            assert_eq!(report.hops[1].target, friendly);
             assert_eq!(report.hops[1].incoming, 14);
             assert_eq!(report.remaining, 0);
             let TargetSalvo::Vehicle(salvo) = report.hops[1].salvo.as_ref().unwrap() else {
                 panic!("Expected vehicle target")
             };
             assert_eq!(salvo.missiles_before_defense, Some(14));
+            // The hostile unit next door is never reached: the friend in the target's hex is
+            // nearer, and the missiles are spent on it.
+            assert!(report.hops.iter().all(|hop| hop.target != hostile));
             initial.validate(&config).unwrap();
         }
     }
 }
 
-/// Secondary misses keep their incoming missiles and proceed to the next unvisited map slot.
+/// Swarm-I takes +2 against a friendly unit that Swarm attacks at its ordinary target number.
+#[tokio::test]
+async fn swarm1_takes_two_against_friends() {
+    let mut numbers = Vec::new();
+    for friend_or_foe in [false, true] {
+        let (_dir, config, mut world, shooter, target) =
+            fixture(&templates()[0], &templates()[0], false).await;
+        let friendly = candidate(&mut world, &config, target, &templates()[2], 0);
+        acquire(&mut world, shooter, target);
+        if friend_or_foe {
+            toggle_battle_swarm(&mut world, shooter, ObjectId(1), 0, true).unwrap();
+        }
+        dice(&mut world, target, 2);
+        dice(&mut world, shooter, 12);
+        let report = fire(&mut world, shooter, target).unwrap();
+        assert_eq!(report.hops[1].target, friendly);
+        numbers.push(report.hops[1].target_number);
+    }
+    assert_eq!(numbers[1], numbers[0] + 2);
+}
+
+/// Secondary misses keep their incoming missiles and proceed to the next nearest unit.
 #[tokio::test]
 async fn swarm_secondary_misses_preserve_missiles() {
     let (_dir, config, mut world, shooter, target) =
         fixture(&templates()[0], &templates()[2], false).await;
     let second = candidate(&mut world, &config, target, &templates()[1], 1);
     let third = candidate(&mut world, &config, target, &templates()[2], 1);
+    relocate(&mut world, third, 1);
     for id in [target, second] {
         set_battle_visibility(
             &mut world,
@@ -471,22 +509,10 @@ fn gunnery(world: &mut World, target: u8) {
     support::seed_object_dice(world, ObjectId(1), support::FIXTURE_DICE_SEED);
 }
 
-/// A maximum first roll followed by ten misses against a target number of eleven preserves
-/// missiles through the visited-slot boundary without a glancing first hit.
-fn long_flight_seed() -> [u8; 32] {
-    (0u32..65536)
-        .find_map(|n| {
-            let mut seed = [0; 32];
-            seed[..4].copy_from_slice(&n.to_le_bytes());
-            let mut dice = Dice::seeded(seed);
-            (dice.two_d6() == 12 && (0..10).all(|_| dice.two_d6() < 11)).then_some(seed)
-        })
-        .unwrap()
-}
-
-/// Ten previously visited slots allow eleven total attacks, with no repeat or extra attack roll.
+/// No unit is attacked twice by one flight; it ends when no unvisited unit is near the last
+/// one attacked, however many it has attacked (Tactical Operations: AUE p. 183).
 #[tokio::test]
-async fn swarm_visited_boundary_allows_exactly_eleven_attacks() {
+async fn swarm_attacks_each_nearby_unit_once() {
     for source in [templates()[0].clone(), templates()[2].clone()] {
         let (_dir, config, mut world, shooter, target) =
             fixture(&source, &templates()[0], false).await;
@@ -500,47 +526,27 @@ async fn swarm_visited_boundary_allows_exactly_eleven_attacks() {
                 1,
             ));
         }
-        for id in &targets {
-            set_battle_visibility(
-                &mut world,
-                *id,
-                Visibility {
-                    clairvoyant: true,
-                    invisible: false,
-                },
-            )
-            .unwrap();
-        }
         acquire(&mut world, shooter, target);
-        gunnery(&mut world, 11);
-        let seed = long_flight_seed();
-        edit(&mut world, shooter, |unit| {
-            unit["dice"] = serde_json::to_value(Dice::seeded(seed)).unwrap()
-        });
+        // Every secondary attack misses, so the flight keeps all its missiles.
+        gunnery(&mut world, 12);
+        dice(&mut world, shooter, 12);
         dice(&mut world, target, 2);
         let report = fire(&mut world, shooter, target).unwrap();
-        assert_eq!(
-            report.hops.iter().map(|hop| hop.target).collect::<Vec<_>>(),
-            targets[..11]
-        );
-        assert_eq!(report.remaining, 14);
-        assert!(report.hops[1..].iter().all(|hop| hop.salvo.is_none()));
-        let mut expected = Dice::seeded(seed);
-        for _ in 0..11 {
-            expected.two_d6();
-        }
-        let actual = if let Some(unit) = world.btech.vehicles().get(&shooter) {
-            serde_json::to_value(unit).unwrap()
-        } else {
-            serde_json::to_value(&world.btech.constructed_units()[&shooter]).unwrap()
-        };
-        assert_eq!(actual["dice"], serde_json::to_value(expected).unwrap());
+        let mut attacked: Vec<_> = report.hops.iter().map(|hop| hop.target).collect();
+        assert_eq!(attacked[0], target);
+        attacked.sort();
+        attacked.dedup();
+        let mut expected = targets.clone();
+        expected.sort();
+        assert_eq!(attacked, expected);
+        assert_eq!(report.hops.len(), 13);
     }
 }
 
-/// Range is cumulative; the exact long-range endpoint is attacked and the following leg falls short.
+/// A flight is not limited by range or sight: it follows a line of units past the launcher's
+/// long range.
 #[tokio::test]
-async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
+async fn swarm_follows_units_beyond_long_range() {
     let (_dir, config, mut world, shooter, target) =
         fixture(&templates()[0], &templates()[0], false).await;
     let map = world.create(&config, "Long swarm field".into(), Kind::Room);
@@ -552,7 +558,7 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
     )
     .unwrap();
     support::seed_object_dice(&mut world, map, support::FIXTURE_DICE_SEED);
-    for (id, y) in [(shooter, 20), (target, 0)] {
+    for (id, y) in [(shooter, 21), (target, 0)] {
         edit(&mut world, id, |unit| {
             unit["power"] = serde_json::to_value(Power::Off).unwrap()
         });
@@ -565,39 +571,18 @@ async fn swarm_cumulative_range_stops_before_spending_another_attack_roll() {
     let third = candidate(&mut world, &config, target, &templates()[1], 1);
     place_battle_unit(&mut world, second, map, 0, 1).unwrap();
     place_battle_unit(&mut world, third, map, 0, 2).unwrap();
-    for id in [target, second] {
-        set_battle_visibility(
-            &mut world,
-            id,
-            Visibility {
-                clairvoyant: true,
-                invisible: false,
-            },
-        )
-        .unwrap();
-    }
     acquire(&mut world, shooter, target);
-    gunnery(&mut world, 5);
-    edit(&mut world, shooter, |unit| {
-        unit["dice"] = serde_json::to_value(Dice::seeded(long_flight_seed())).unwrap()
-    });
+    gunnery(&mut world, 12);
+    dice(&mut world, shooter, 12);
     dice(&mut world, target, 2);
     let report = fire(&mut world, shooter, target).unwrap();
     assert_eq!(
         report.hops.iter().map(|hop| hop.target).collect::<Vec<_>>(),
-        vec![target, second]
-    );
-    assert_eq!(report.traveled, 22.0);
-    assert_eq!(report.remaining, 14);
-    assert!(
-        report
-            .notices
-            .iter()
-            .any(|notice| notice.unit == third && notice.text.contains("fall short"))
+        vec![target, second, third]
     );
 }
 
-/// Ordinary Swarm can revisit the launcher, while Swarm-1 excludes it as a friendly candidate.
+/// A flight can turn on its own launcher; Swarm-1 attacks it too, two harder.
 #[tokio::test]
 async fn swarm_can_return_to_its_launcher() {
     for source in [templates()[0].clone(), templates()[2].clone()] {
@@ -628,10 +613,8 @@ async fn swarm_can_return_to_its_launcher() {
             dice(&mut world, shooter, 12);
             dice(&mut world, target, 2);
             let report = fire(&mut world, shooter, target).unwrap();
-            assert_eq!(report.hops.len(), if friend_or_foe { 1 } else { 2 });
-            if !friend_or_foe {
-                assert_eq!(report.hops[1].target, shooter);
-            }
+            assert_eq!(report.hops.len(), 2);
+            assert_eq!(report.hops[1].target, shooter);
         }
     }
 }
@@ -688,7 +671,12 @@ fn swarm_template_modes_cover_compatible_catalogue() {
             ("Swarm", AmmunitionMode::Swarm),
             ("Swarm1", AmmunitionMode::Swarm1),
         ] {
-            let compatible = weapon.supports_semiguided();
+            // Swarm-I is Inner Sphere technology (Tactical Operations: AUE p. 183).
+            let compatible = if mode == AmmunitionMode::Swarm {
+                weapon.is_standard_lrm()
+            } else {
+                weapon.supports_semiguided()
+            };
             assert_eq!(
                 weapon
                     .damage_groups_for_ammunition(mode, Some(7), 10.0)
@@ -780,6 +768,7 @@ async fn aimed_swarm_matrix(source: &str) {
             &defenders[(index + 2) % defenders.len()],
             1,
         );
+        relocate(&mut base, third, 1);
         for id in [target, second, third] {
             edit(&mut base, id, |state| {
                 state["power"] = serde_json::to_value(Power::Running).unwrap();
@@ -839,7 +828,7 @@ async fn aimed_swarm_matrix(source: &str) {
             };
             actual[key][shooter.0.to_string()]["aimed_section"] = serde_json::Value::Null;
             assert_eq!(actual, serde_json::to_value(&ordinary.btech).unwrap());
-            // Swarm rounds are not exempt from AMS (Tactical Operations: AUE p. 181): the
+            // Swarm rounds are not exempt from AMS (Tactical Operations: AUE p. 183): the
             // initial target engages, while secondary hops are not engaged.
             for id in [target, second, third] {
                 let recycle = if let Some(unit) = world.btech.vehicles().get(&id) {

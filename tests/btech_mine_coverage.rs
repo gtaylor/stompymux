@@ -32,8 +32,14 @@ fn mine() -> Minefield {
 
 /// Fire one mine-laying artillery shell at `center` and return the deposited field slots.
 fn shell(world: &mut World, map: ObjectId, center: HexCoordinate) -> Vec<u32> {
-    let mut flight =
-        ArtilleryFlight::new(center, center, Weapon::LongTom, ArtilleryMode::Mine, true).unwrap();
+    let mut flight = ArtilleryFlight::new(
+        center,
+        center,
+        Weapon::LongTom,
+        ArtilleryMode::Mine,
+        ArtilleryOutcome::Hit,
+    )
+    .unwrap();
     let mut result = None;
     for _ in 0..10 {
         result = advance_artillery_flight(world, map, &mut flight, MovementRules::STANDARD.fall)

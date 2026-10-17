@@ -33,6 +33,18 @@ pub struct HexShotReport {
     pub buildings: Vec<BuildingImpact>,
     /// Minefields a Thunder salvo laid in place of terrain damage.
     pub thunder: ThunderReport,
+    /// Smoke a Smoke missile salvo laid in place of terrain damage.
+    pub smoke: Option<SmokeCloud>,
+}
+
+/// Smoke a Smoke missile salvo laid: light when the salvo delivered 5 points of damage or
+/// less, heavy otherwise (Tactical Operations: Advanced Units & Equipment p. 183).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct SmokeCloud {
+    pub coordinate: HexCoordinate,
+    pub heavy: bool,
+    /// Seconds until it clears, in the End Phase three turns after this one.
+    pub seconds: i64,
 }
 
 /// Resolve a direct non-character terrain shot atomically.
@@ -168,7 +180,14 @@ fn resolve_hex_shot_inner(
         super::unit_gunnery_target(world, shooter, weapon_index, rules.extended_gunnery)?,
     )?;
     ensure!(aim.visible, "Target hex is not visible");
-    if aim.mode == HexTargetMode::UnitAtHex {
+    // Smoke and Thunder missiles fire at the hex whoever stands in it (Tactical Operations:
+    // Advanced Units & Equipment pp. 183, 185).
+    let hex_only = weapon.profile().missiles > 0
+        && super::with_unit!(world.btech.unit(shooter).expect("admitted unit"), |unit| {
+            unit.ammunition_mode(weapon_index)?
+        })
+        .targets_hexes_only();
+    if aim.mode == HexTargetMode::UnitAtHex && !hex_only {
         ensure!(
             hex_occupant(world, shooter, coordinate)?.is_none(),
             "Occupied coordinate requires a unit shot"
@@ -220,7 +239,73 @@ fn resolve_hex_shot_inner(
         let mut surfaces = Vec::new();
         let mut buildings = Vec::new();
         let mut thunder = ThunderReport::default();
-        if launch.launched && target_number.is_some() {
+        let mut smoke = None;
+        let munition = launch.expenditure.ammunition_mode;
+        if launch.launched
+            && let Some(number) = target_number
+            && hex_only
+            && munition.targets_hexes_only()
+        {
+            if munition.is_thunder() {
+                let launcher = u16::from(weapon.profile().missiles);
+                let landing = if launch.hit {
+                    Some(coordinate)
+                } else {
+                    let margin = indirect.map(|_| {
+                        u16::try_from(number - i32::from(launch.roll)).unwrap_or(u16::MAX)
+                    });
+                    super::thunder::scatter(world, shooter, map, coordinate, margin)?
+                };
+                if let Some(landing) = landing {
+                    thunder = super::thunder::lay(
+                        world,
+                        shooter,
+                        map,
+                        landing,
+                        munition,
+                        (launcher, !launch.hit),
+                    )?;
+                }
+            } else if launch.hit {
+                let packets = super::weapon_groups::roll_weapon_groups(
+                    super::weapon_groups::WeaponGroupRequest {
+                        weapon,
+                        ammunition: munition,
+                        fire_mode: launch.expenditure.fire_mode,
+                        gatling_damage: None,
+                        distance: Some(aim.modifiers.distance),
+                        glancing: false,
+                        guidance_blocked: false,
+                        angel_blocked: field.angel_disturbed,
+                        target_beacon: false,
+                        artemis_v: false,
+                        ams_engaged: false,
+                        indirect: indirect.is_some(),
+                        apollo: false,
+                        array: None,
+                        unit_without_heat: false,
+                        interference: super::planetary_conditions::under_interference(
+                            world, shooter,
+                        ),
+                    },
+                    super::dice::unit_dice_mut(world, shooter)?,
+                )?;
+                cluster_roll = packets.cluster_roll;
+                let cloud = SmokeCloud {
+                    coordinate,
+                    heavy: packets.damage.iter().sum::<u16>() > 5,
+                    seconds: super::decorations::smoke_seconds(world),
+                };
+                super::decorations::raise_smoke(
+                    world,
+                    map,
+                    coordinate,
+                    cloud.seconds,
+                    cloud.heavy,
+                )?;
+                smoke = Some(cloud);
+            }
+        } else if launch.launched && target_number.is_some() {
             if launch.hit {
                 let packets = super::weapon_groups::roll_weapon_groups(
                     super::weapon_groups::WeaponGroupRequest {
@@ -259,20 +344,7 @@ fn resolve_hex_shot_inner(
                 } else {
                     packets.damage
                 };
-                if aim.mode == HexTargetMode::Hex
-                    && launch.expenditure.ammunition_mode.is_thunder()
-                    && weapon.profile().missiles > 0
-                {
-                    // Thunder rounds scatter mines across the hex instead of blasting it.
-                    thunder = super::thunder::lay(
-                        world,
-                        shooter,
-                        map,
-                        coordinate,
-                        launch.expenditure.ammunition_mode,
-                        packets_damage.iter().sum(),
-                    )?;
-                } else if aim.mode != HexTargetMode::UnitAtHex {
+                if aim.mode != HexTargetMode::UnitAtHex {
                     let damage = if launch.expenditure.ammunition_mode == AmmunitionMode::Inferno {
                         // Inferno terrain exposure occurs once with no clearing or building damage.
                         vec![0]
@@ -368,6 +440,7 @@ fn resolve_hex_shot_inner(
             buildings,
             recoil,
             thunder,
+            smoke,
         })
     })
 }
@@ -405,6 +478,17 @@ impl HexShotReport {
             notices.extend(impact.notices.clone());
         }
         notices.extend(self.thunder.notices(self.shooter));
+        if let Some(smoke) = self.smoke {
+            notices.push(Notice {
+                unit: self.shooter,
+                text: format!(
+                    "Your smoke missiles fill {},{} with {} smoke.",
+                    smoke.coordinate.x,
+                    smoke.coordinate.y,
+                    if smoke.heavy { "heavy" } else { "light" }
+                ),
+            });
+        }
         for impact in &self.surfaces {
             super::piloting::append_feedback(
                 private,

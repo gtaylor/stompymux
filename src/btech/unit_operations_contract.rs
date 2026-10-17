@@ -547,12 +547,11 @@ pub(crate) fn configure_unit_ammunition(
         id,
         vec![super::CriticalLocation { section, slot }],
         |definition| {
-            let capacity =
-                u16::from(weapon.profile().ammunition_per_ton) / if half_ton { 2 } else { 1 };
             let mut flags = modes;
             if half_ton {
                 flags.push("Halfton".into());
             }
+            let (capacity, _, _) = super::AmmunitionBin::configuration_contract(weapon, &flags)?;
             definition
                 .sections
                 .get_mut(&section)
@@ -589,8 +588,7 @@ pub(crate) fn configure_vehicle_ammunition(
             if half_ton {
                 flags.push("Halfton".into())
             }
-            let capacity =
-                u16::from(weapon.profile().ammunition_per_ton) / if half_ton { 2 } else { 1 };
+            let (capacity, _, _) = super::AmmunitionBin::configuration_contract(weapon, &flags)?;
             definition
                 .sections
                 .get_mut(&section)
