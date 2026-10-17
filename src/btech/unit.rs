@@ -1194,6 +1194,10 @@ impl Mech {
         for (suite, mode) in [
             (super::ElectronicSuite::Guardian, self.electronics.guardian),
             (super::ElectronicSuite::Angel, self.electronics.angel),
+            (
+                super::ElectronicSuite::Communications,
+                self.electronics.communications,
+            ),
         ] {
             ensure!(
                 mode == super::ElectronicMode::Off

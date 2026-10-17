@@ -285,14 +285,25 @@ fn handweapon_slots(kind: stompymux_rs::ArmAttack) -> u8 {
 
 /// Lay out an arm holding `count` slots of `kind` behind its lower arm actuator: claws and
 /// flails replace the hand actuator, every other weapon keeps it.
+/// Weapons that take the place of their arm's hand actuator: claws and flails (Tactical
+/// Operations: Advanced Units & Equipment pp. 101-102), the dual saw and the wrecking ball
+/// (TechManual pp. 243, 249).
+fn replaces_hand(kind: stompymux_rs::ArmAttack) -> bool {
+    use stompymux_rs::ArmAttack;
+    matches!(
+        kind,
+        ArmAttack::Claw | ArmAttack::Flail | ArmAttack::Saw | ArmAttack::WreckingBall
+    )
+}
+
 fn arm_with_weapon(
     arm: &mut stompymux_rs::SectionDefinition,
     kind: stompymux_rs::ArmAttack,
     count: u8,
 ) {
-    use stompymux_rs::{ArmAttack, CriticalDefinition};
+    use stompymux_rs::CriticalDefinition;
     arm.criticals.retain(|slot, _| *slot < 2);
-    let replaces_hand = matches!(kind, ArmAttack::Claw | ArmAttack::Flail);
+    let replaces_hand = replaces_hand(kind);
     let first = if replaces_hand { 3 } else { 4 };
     let mut parts = vec![(2, "LowerActuator")];
     if !replaces_hand {
@@ -321,7 +332,7 @@ fn install_test_handweapons(
     use stompymux_rs::*;
     let mut definition = world.btech.constructed_units()[&id].definition().clone();
     if kind == ArmAttack::Saw {
-        // The dual saw fills the left arm behind a full set of actuators.
+        // The dual saw fills the left arm in place of its hand actuator (TechManual p. 243).
         for section in [MechSection::LeftArm, MechSection::RightArm] {
             arm_with_weapon(
                 definition.sections.get_mut(&section).unwrap(),
@@ -330,6 +341,7 @@ fn install_test_handweapons(
             );
         }
         let arm = definition.sections.get_mut(&MechSection::LeftArm).unwrap();
+        arm.criticals.remove(&3);
         for slot in 4..=10 {
             arm.criticals.insert(
                 slot,
@@ -896,8 +908,8 @@ async fn added_handweapon_profiles_slots_hands_and_heat() {
             "{kind:?}"
         );
 
-        // A flail replaces the hand actuator, so there is no hand to lose.
-        if kind != ArmAttack::Flail {
+        // A flail or wrecking ball replaces the hand actuator, so there is no hand to lose.
+        if !replaces_hand(kind) {
             let mut handless = base.clone();
             destroy_battle_critical(
                 &mut handless,
@@ -1424,7 +1436,8 @@ async fn saw_parts_damage_and_fixed_location() {
             install_test_myomer(&mut world, id);
             myomer_test_heat(&mut world, id, 20.0, 9.0);
         }
-        for slot in [1, 2, 3] {
+        // The upper and lower arm actuators go; the saw arm has no hand to lose.
+        for slot in [1, 2] {
             destroy_battle_critical(
                 &mut world,
                 id,

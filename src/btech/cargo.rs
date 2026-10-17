@@ -48,11 +48,12 @@ fn admit(
         .filter(|o| !o.flags.contains(Flag::Going))
         .context("Unit is unavailable")?;
     let unit = super::scanner::scanner_unit(world, id).context("Enter a constructed unit first")?;
-    let (pilot, recovery, cargo) =
+    let (pilot, recovery, cargo, hoists) =
         super::with_unit!(world.btech.unit(id).expect("scanned unit"), |unit| (
             unit.pilot(),
             unit.crew_recovery().remaining,
             unit.definition().has_special("CargoTech"),
+            unit.working_lift_hoists()?,
         ));
     let running = unit.power == Power::Running;
     if operation != CargoOperation::Unload {
@@ -82,8 +83,14 @@ fn admit(
         object.location == Some(position.map),
         "You ain't in hangar!"
     );
+    // A working lift hoist loads and unloads cargo as a cargo-handling unit does, but only
+    // while the unit runs and its crew can act (Total Warfare pp. 136, 261).
     if operation != CargoOperation::Stores {
-        ensure!(cargo, "This unit cannot haul cargo!");
+        ensure!(cargo || hoists > 0, "This unit cannot haul cargo!");
+        if !cargo {
+            ensure!(running, "Your lift hoists need the reactor online!");
+            ensure!(!unconscious, "You are unconscious....zzzzzzz");
+        }
     }
     if operation == CargoOperation::Load {
         ensure!(unit.speed == 0.0, "You're moving too fast!");
@@ -187,10 +194,33 @@ pub fn transfer_cargo(
                 name: name(&entry),
             });
         }
+        if load {
+            check_hoisted_cargo(world, unit)?;
+        }
         super::load::reconcile(world, unit, config.battletech.tsm_tow_bonus != 0)?;
         world.btech.validate(world)?;
         Ok(moved)
     })
+}
+
+/// A unit without cargo handling holds its stock in its lift hoists, which lift half its
+/// tonnage each, at most 200 tons (Total Warfare p. 136).
+fn check_hoisted_cargo(world: &World, unit: ObjectId) -> Result<()> {
+    let (cargo, capacity) =
+        super::with_unit!(world.btech.unit(unit).expect("loading unit"), |unit| (
+            unit.definition().has_special("CargoTech"),
+            unit.lift_hoist_capacity()?,
+        ));
+    if cargo {
+        return Ok(());
+    }
+    let carried = super::inventory_mass(world, unit)?;
+    ensure!(
+        carried <= capacity,
+        "Your lift hoists lift at most {} tons!",
+        super::format_tons(u32::try_from(capacity).unwrap_or(u32::MAX))
+    );
+    Ok(())
 }
 
 /// Transfer stock and publish economy diagnostics under one world/effects checkpoint.

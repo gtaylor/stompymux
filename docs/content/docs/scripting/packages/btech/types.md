@@ -1297,6 +1297,7 @@ Alias: `"off"|"ecm"|"eccm"`
 
 - `guardian`: `ElectronicMode`
 - `angel`: `ElectronicMode`
+- `communications`: `ElectronicMode` — Communications equipment's ECCM field, or off.
 - `field`: `ElectronicField`
 
 ## PodRow

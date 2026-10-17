@@ -72,7 +72,11 @@ pub(super) fn known_status(world: &World, observer: ObjectId, target: ObjectId) 
         Power::Running => ' ',
     };
     let electronics = unit.electronics();
-    let modes = [electronics.guardian, electronics.angel];
+    let modes = [
+        electronics.guardian,
+        electronics.angel,
+        electronics.communications,
+    ];
     let fifth = if unit.has_beacon(BeaconKind::Narc) || unit.has_beacon(BeaconKind::Homing) {
         if unit.signature().team == observer.signature.team {
             'n'

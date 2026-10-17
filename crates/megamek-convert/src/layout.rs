@@ -34,6 +34,9 @@ pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<Vec<Option<Slot
     if criticals.len() > limit {
         bail!("{} items do not fit in {limit} slots", criticals.len());
     }
+    if span == WeaponSpan::Catalogue {
+        check_communications_runs(criticals)?;
+    }
     let mut launchers = launcher_starts(criticals, span, |_| true);
     let mut mrm_launchers = launcher_starts(criticals, span, |weapon| weapon.is_mrm());
     let mut guns = gun_starts(criticals);
@@ -76,10 +79,37 @@ pub fn slots(criticals: &[Critical], span: WeaponSpan) -> Result<Vec<Option<Slot
             },
             link: link.map(|slot| slot as u8),
             links,
+            // A vehicle's communications equipment is one item stating its tons; a Mech's
+            // fills a slot per ton (TechManual p. 212).
+            tons: match critical {
+                Critical::Communications(tons) if span == WeaponSpan::Single => Some(*tons),
+                _ => None,
+            },
             modes: critical.modes(),
         });
     }
     Ok(slots)
+}
+
+/// A Mech's communications equipment fills a slot per ton (TechManual p. 212), so each run
+/// of it is as long as the tons its `SIZE` states.
+fn check_communications_runs(criticals: &[Critical]) -> Result<()> {
+    let mut index = 0;
+    while index < criticals.len() {
+        let Critical::Communications(tons) = criticals[index] else {
+            index += 1;
+            continue;
+        };
+        let run = criticals[index..]
+            .iter()
+            .take_while(|critical| **critical == Critical::Communications(tons))
+            .count();
+        if run != usize::from(tons) {
+            bail!("{tons} tons of communications equipment fill {run} slots, not one per ton");
+        }
+        index += run;
+    }
+    Ok(())
 }
 
 /// Zero-based first slots of every missile launcher instance in a section that `accept`s.

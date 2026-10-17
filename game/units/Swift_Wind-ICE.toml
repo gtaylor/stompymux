@@ -6,16 +6,20 @@ walk_mp = 10
 
 [construction]
 tech_base = "inner_sphere"
+engine = "ice"
 engine_rating = 60
 
 [sections.left_side]
-armor = 1
+armor = 6
 
 [sections.right_side]
-armor = 1
+armor = 6
 
 [sections.front_side]
-armor = 4
+armor = 6
+slots = [
+    { at = 1, item = "Communications_Equipment", tons = 2 },
+]
 
 [sections.aft_side]
-armor = 2
+armor = 6

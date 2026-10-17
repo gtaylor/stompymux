@@ -49,6 +49,21 @@ pub struct ElectronicSource {
     pub guardian: ElectronicMode,
     pub angel: ElectronicMode,
     pub personal: ElectronicMode,
+    /// ECCM from communications equipment, in halves of a Guardian ECM suite: 3 to 6 tons of
+    /// it generate half a suite's ECCM and 7 or more tons a whole suite's, over the Guardian
+    /// suite's area (Tactical Operations: Advanced Rules p. 98). Zero when it generates none.
+    pub communications_eccm: u8,
+}
+
+/// Half-suites of ECCM `tons` of communications equipment generate: none below 3 tons, one
+/// for 3 to 6 tons and two, a whole Guardian suite, for 7 or more (Tactical Operations:
+/// Advanced Rules p. 98).
+pub fn communications_eccm(tons: u8) -> u8 {
+    match tons {
+        0..=2 => 0,
+        3..=6 => 1,
+        _ => 2,
+    }
 }
 
 /// Observed ECM effects at one unit, retained between electronic-warfare checks.
@@ -106,17 +121,21 @@ impl ElectronicField {
     }
 }
 
-/// Counts ordinary and Angel emissions; an Angel suite has twice the cancellation strength.
+/// Counts ordinary and Angel emissions and communications ECCM; an Angel suite has twice the
+/// cancellation strength, and communications equipment counts in halves of a suite.
 #[derive(Default)]
 struct Strength {
     ordinary: u64,
     angel: u64,
+    /// Half-suites of communications ECCM.
+    halves: u64,
 }
 
 impl Strength {
-    /// Promote before weighting, avoiding overflow even at the count's maximum value.
+    /// Promote before weighting, avoiding overflow even at the count's maximum value; the
+    /// total counts half-suites.
     fn total(&self) -> u128 {
-        u128::from(self.ordinary) + 2 * u128::from(self.angel)
+        2 * u128::from(self.ordinary) + 4 * u128::from(self.angel) + u128::from(self.halves)
     }
 
     /// Count each active suite once, regardless of how many equipment slots it occupies.
@@ -181,6 +200,17 @@ pub fn resolve_electronic_field(
             };
             strength.add(angel)?;
         }
+        if source.communications_eccm > 0 {
+            let eccm = if friendly {
+                &mut friendly_eccm
+            } else {
+                &mut hostile_eccm
+            };
+            eccm.halves = eccm
+                .halves
+                .checked_add(u64::from(source.communications_eccm))
+                .ok_or_else(|| anyhow::anyhow!("Too many electronic sources"))?;
+        }
     }
     if self_interference {
         hostile_ecm.ordinary = hostile_ecm
@@ -210,6 +240,48 @@ pub fn resolve_electronic_field(
 mod tests {
     use super::*;
 
+    /// Communications equipment generates half a Guardian suite's ECCM from 3 tons and a whole
+    /// suite's from 7 (Tactical Operations: Advanced Rules p. 98): two half-suites counter one
+    /// hostile ECM suite, one does not.
+    #[test]
+    fn communications_equipment_generates_eccm_by_its_tons() {
+        assert_eq!([2, 3, 6, 7, 15].map(communications_eccm), [0, 1, 1, 2, 2]);
+        let ecm = ElectronicSource {
+            team: 2,
+            distance: 3.0,
+            range: ECM_RANGE,
+            guardian: ElectronicMode::Ecm,
+            angel: ElectronicMode::Off,
+            personal: ElectronicMode::Off,
+            communications_eccm: 0,
+        };
+        let comms = |team, halves| ElectronicSource {
+            team,
+            guardian: ElectronicMode::Off,
+            communications_eccm: halves,
+            ..ecm
+        };
+        let disturbed = |sources: Vec<ElectronicSource>| {
+            resolve_electronic_field(ElectronicField::default(), 1, sources, false)
+                .unwrap()
+                .disturbed
+        };
+        assert!(disturbed(vec![ecm]));
+        assert!(disturbed(vec![ecm, comms(1, 1)]));
+        assert!(!disturbed(vec![ecm, comms(1, 2)]));
+        assert!(!disturbed(vec![ecm, comms(1, 1), comms(1, 1)]));
+        // Hostile communications ECCM counters a friendly suite.
+        let friendly = ElectronicSource { team: 1, ..ecm };
+        let field = resolve_electronic_field(
+            ElectronicField::default(),
+            1,
+            [friendly, comms(2, 2)],
+            false,
+        )
+        .unwrap();
+        assert!(!field.protected && field.countered);
+    }
+
     /// A suite reaches six hexes, twelve under electromagnetic interference (Tactical
     /// Operations: Advanced Rules p. 53), and each source's own reach decides whether it
     /// touches the subject.
@@ -224,6 +296,7 @@ mod tests {
             guardian: ElectronicMode::Ecm,
             angel: ElectronicMode::Off,
             personal: ElectronicMode::Off,
+            communications_eccm: 0,
         };
         let disturbed = |source| {
             resolve_electronic_field(ElectronicField::default(), 1, [source], false)

@@ -61,44 +61,68 @@ pub fn vehicle_maximum_armor(tons: u16) -> u32 {
     u32::from(tons) * 7 / 2 + 40
 }
 
-/// Whether a resolved system claims an item slot. Heat sinks sit deep in the body and take no
-/// space (TechManual p. 104); armor, structure and actuator placeholders are chassis facts
-/// whose slot cost comes from the chassis choice itself (TechManual pp. 101, 105); and a
-/// combat vehicle counts an Artemis or MRM "Apollo" fire-control system as part of the
-/// launcher it serves (TechManual p. 206; Tactical Operations: Advanced Units & Equipment
-/// p. 142).
-pub fn occupies_vehicle_slot(system: System) -> bool {
-    !matches!(
-        system,
-        System::ArtemisIv
-            | System::ArtemisV
-            | System::ApolloFcs
-            | System::ShoulderOrHip
-            | System::UpperActuator
-            | System::LowerActuator
-            | System::HandOrFootActuator
-            | System::Engine
-            | System::Gyro
-            | System::Cockpit
-            | System::LifeSupport
-            | System::Sensors
-            | System::HeatSink
-            | System::FuelTank
-            | System::FerroFibrous
-            | System::EndoSteel
-            | System::HeavyFerroFibrous
-            | System::LightFerroFibrous
-            | System::StealthArmor
-            | System::LaserReflective
-            | System::NullSignature
-            | System::TripleStrengthMyomer
-    )
+/// Whether a resolved system claims an item slot. `clan_structure` is the vehicle's internal
+/// structure base. A combat vehicle counts an Artemis or MRM "Apollo" fire-control system as
+/// part of the launcher it serves (TechManual p. 206; Tactical Operations: Advanced Units &
+/// Equipment p. 142); auxiliary VTOL fuel tanks are fuel, not items. CASE costs one item slot
+/// on Inner Sphere structure, while Clan structure builds it in for none (TechManual p. 210).
+pub fn occupies_vehicle_slot(system: System, clan_structure: bool) -> bool {
+    match system {
+        System::ArtemisIv | System::ArtemisV | System::ApolloFcs | System::FuelTank => false,
+        System::Case => !clan_structure,
+        _ => true,
+    }
+}
+
+/// Why a combat vehicle may not mount `system` at all, or `None` when it may. BattleMech
+/// critical-slot entries for actuators, the engine, gyro, cockpit, life support, sensors,
+/// heat sinks and the slot-filling structure and armor types have no vehicle counterpart: a
+/// vehicle records its engine, heat sinks, structure and armor in the template (TechManual
+/// pp. 99-105), and its cargo bay in `cargo_tons` (TechManual p. 239). Jump jets, MASC and
+/// triple-strength myomer are Mech systems (TechManual
+/// pp. 102-103); CASE II and the null-signature system are not available to combat vehicles
+/// (Tactical Operations: Advanced Units & Equipment pp. 111, 148); and the hatchet, sword,
+/// retractable blade, claws, flail, lance, mace, chain whip, vibroblades, talons and spikes
+/// are BattleMech melee weapons (TechManual pp. 220, 236-237; ibid. pp. 100-104).
+pub fn vehicle_refusal(system: System) -> Option<&'static str> {
+    use System::*;
+    Some(match system {
+        ShoulderOrHip | UpperActuator | LowerActuator | HandOrFootActuator | Engine | Gyro
+        | Cockpit | LifeSupport | Sensors | HeatSink | FerroFibrous | EndoSteel
+        | HeavyFerroFibrous | LightFerroFibrous | StealthArmor | LaserReflective => {
+            "is a BattleMech critical-slot entry; a combat vehicle states its engine, heat sinks, structure and armor in the template (TechManual pp. 99-105)"
+        }
+        Cargo => {
+            "is a BattleMech cargo-bay slot; a combat vehicle's cargo bay is its cargo_tons alone, in one item slot (TechManual p. 239)"
+        }
+        JumpJet => "is a jump jet; combat vehicles cannot jump (TechManual p. 102)",
+        Masc => "is MASC, which combat vehicles cannot mount (TechManual p. 103)",
+        TripleStrengthMyomer => {
+            "is triple-strength myomer, which combat vehicles cannot use (TechManual p. 103)"
+        }
+        CaseIi => {
+            "is CASE II, available only to BattleMechs, IndustrialMechs and fighters (Tactical Operations: Advanced Units & Equipment p. 111)"
+        }
+        NullSignature => {
+            "is the null-signature system, available only to BattleMechs (Tactical Operations: Advanced Units & Equipment p. 148)"
+        }
+        Axe | Sword | RetractableBlade => {
+            "is a melee weapon only humanoid BattleMechs and IndustrialMechs carry (TechManual pp. 220, 236-237)"
+        }
+        Claw | Flail | Lance | Mace | ChainWhip | SmallVibroblade | MediumVibroblade
+        | LargeVibroblade | Talons | Spikes => {
+            "is a melee weapon only BattleMechs and IndustrialMechs carry (Tactical Operations: Advanced Units & Equipment pp. 100-104)"
+        }
+        _ => return None,
+    })
 }
 
 impl VehicleTemplate {
     /// Item slots the chassis offers: 5 plus 1 per 5 full tons (TechManual p. 98), less the
     /// slots an XL or light engine claims and plus the one a compact engine frees (TechManual
-    /// p. 101, Combat Vehicle Engine Space Table), less the slots ferro-fibrous armor claims
+    /// p. 101, Combat Vehicle Engine Space Table), less the 4 an Inner Sphere or 2 a Clan XXL
+    /// engine claims (Tactical Operations: Advanced Units & Equipment p. 120, Advanced Engine
+    /// Master Table), less the slots ferro-fibrous armor claims
     /// (TechManual p. 105, Combat Vehicle Armor Table) and the slots the advanced armors claim
     /// in the CV column of the Advanced Armor Table: 1 for hardened and for Inner Sphere or Clan
     /// laser-reflective armor, 2 for vehicular stealth armor (Tactical Operations: Advanced
@@ -108,6 +132,8 @@ impl VehicleTemplate {
         let engine = match self.engine_family() {
             Some(Engine::Xl) if self.clan_engine() => -1,
             Some(Engine::Xl) => -2,
+            Some(Engine::Xxl) if self.clan_engine() => -2,
+            Some(Engine::Xxl) => -4,
             Some(Engine::Light) => -1,
             Some(Engine::Compact) => 1,
             _ => 0,
@@ -136,10 +162,11 @@ impl VehicleTemplate {
     /// none (TechManual pp. 104, 106).
     pub fn item_slots(&self, loadout: &VehicleLoadout) -> u16 {
         let weapons = loadout.weapons.len();
+        let clan_structure = self.clan_structure();
         let systems = loadout
             .systems
             .iter()
-            .filter(|part| occupies_vehicle_slot(part.system))
+            .filter(|part| occupies_vehicle_slot(part.system, clan_structure))
             .count();
         let mut ammunition: Vec<(Weapon, AmmunitionMode)> = Vec::new();
         for bin in &loadout.ammunition {
@@ -169,9 +196,12 @@ impl VehicleTemplate {
 
     /// Whether a weapon's heat needs heat sinks on a combat vehicle: every energy weapon but
     /// the vehicle flamer, which burns chemical fuel and needs none, though it counts as an
-    /// energy weapon in play (TechManual pp. 104, 218).
+    /// energy weapon in play (TechManual pp. 104, 218), and the laser anti-missile system,
+    /// which counts as an energy weapon for a unit without a heat scale (Tactical
+    /// Operations: Advanced Units & Equipment p. 131).
     pub fn needs_heat_sinks(weapon: Weapon) -> bool {
-        weapon.is_energy() && weapon != Weapon::VehicleFlamer
+        (weapon.is_energy() && weapon != Weapon::VehicleFlamer)
+            || matches!(weapon, Weapon::LaserAms | Weapon::ClanLaserAms)
     }
 
     /// The fusion engine family, or `None` for an internal combustion engine.
@@ -382,8 +412,9 @@ impl VehicleTemplate {
     }
 
     /// Equipment the motive type or location forbids, and equipment of the other technology
-    /// base on a vehicle that does not declare mixed technology (TechManual p. 46). A VTOL's
-    /// turret is a chin turret, which follows the standard turret rules (TacOps AUE p. 160).
+    /// base on a vehicle that does not declare mixed technology, judged by the base each slot
+    /// states (TechManual p. 46). A VTOL's turret is a chin turret, which follows the standard
+    /// turret rules (TacOps AUE p. 160).
     fn check_equipment(&self, loadout: &VehicleLoadout) -> Result<()> {
         let clan = self.has_special("Clan");
         check_technology_base(TechnologyInventory {
@@ -394,8 +425,12 @@ impl VehicleTemplate {
                 .into_iter()
                 .filter(|component| self.has_special(component.flag(!clan)))
                 .collect(),
+            chassis_technologies: Vec::new(),
             weapons: loadout.weapons.iter().map(|mount| mount.weapon),
-            systems: loadout.systems.iter().map(|part| part.system),
+            systems: loadout
+                .systems
+                .iter()
+                .map(|part| (part.system, part.tech_base)),
         })?;
         let rotor = loadout
             .weapons
@@ -430,15 +465,90 @@ impl VehicleTemplate {
             computers <= 1,
             "A combat vehicle mounts one targeting computer, a single item sized by its direct-fire weapons; found {computers} entries (TechManual p. 238)"
         );
-        for part in &loadout.systems {
-            match part.system {
-                System::JumpJet => {
-                    bail!("Combat vehicles cannot mount jump jets (TechManual p. 102)")
-                }
-                System::Masc => bail!("Combat vehicles cannot mount MASC (TechManual p. 103)"),
-                _ => {}
+        // Only fusion and fission units mount standard flamers; a combustion engine takes
+        // vehicle flamers (TechManual p. 218).
+        if self.engine()?.powerplant == VehiclePowerplant::Combustion {
+            for mount in &loadout.weapons {
+                ensure!(
+                    !matches!(mount.weapon, Weapon::Flamer | Weapon::ClanFlamer),
+                    "{} needs a fusion engine; an internal combustion vehicle mounts vehicle flamers instead (TechManual p. 218)",
+                    mount.weapon.name()
+                );
             }
         }
+        let vtol = self.is_vtol();
+        let mut physical = Vec::new();
+        let mut hoists = 0;
+        let mut communications = 0;
+        for part in &loadout.systems {
+            let section = part.location.section;
+            let here = format!(
+                "{:?} in {} slot {}",
+                part.system,
+                section.name(),
+                u16::from(part.location.slot) + 1
+            );
+            if let Some(reason) = vehicle_refusal(part.system) {
+                bail!("{here} {reason}");
+            }
+            match part.system {
+                // Ground vehicles mount one dual saw in each of the front, rear and turret
+                // locations (TechManual p. 243).
+                System::DualSaw => ensure!(
+                    !vtol
+                        && matches!(
+                            section,
+                            VehicleSection::Front | VehicleSection::Rear | VehicleSection::Turret
+                        ),
+                    "{here}: a combat vehicle mounts a dual saw only in its front, rear or turret, and a VTOL none (TechManual p. 243)"
+                ),
+                // A ground vehicle mounts a wrecking ball only in its turret (TechManual p. 249).
+                System::WreckingBall => ensure!(
+                    !vtol && section == VehicleSection::Turret,
+                    "{here}: a combat vehicle mounts a wrecking ball only in its turret, and a VTOL none (TechManual p. 249)"
+                ),
+                // Ground vehicles mount one backhoe in each of the front, rear and turret
+                // (TechManual p. 241).
+                System::Backhoe => ensure!(
+                    !vtol
+                        && matches!(
+                            section,
+                            VehicleSection::Front | VehicleSection::Rear | VehicleSection::Turret
+                        ),
+                    "{here}: a combat vehicle mounts a backhoe only in its front, rear or turret, and a VTOL none (TechManual p. 241)"
+                ),
+                System::LiftHoist => hoists += 1,
+                System::CommunicationsEquipment => {
+                    communications += 1;
+                    let tons = self.communications_tons(part).unwrap_or(0);
+                    ensure!(
+                        (1..=15).contains(&tons),
+                        "{here}: communications equipment is a set of 1 to 15 whole tons stated with tons, not {tons} (TechManual p. 212)"
+                    );
+                }
+                _ => {}
+            }
+            // A location holds one of a vehicle's backhoe, dual saw and wrecking ball
+            // (TechManual pp. 241, 243, 249).
+            if matches!(
+                part.system,
+                System::Backhoe | System::DualSaw | System::WreckingBall
+            ) {
+                ensure!(
+                    !physical.contains(&section),
+                    "{here}: a location holds one backhoe, dual saw or wrecking ball (TechManual pp. 241, 243, 249)"
+                );
+                physical.push(section);
+            }
+        }
+        ensure!(
+            hoists <= 4,
+            "A combat vehicle mounts at most four lift hoists; found {hoists} (TechManual p. 245)"
+        );
+        ensure!(
+            communications <= 1,
+            "A unit adds one set of communications equipment, a single vehicle item; found {communications} (TechManual p. 212)"
+        );
         Ok(())
     }
 }
@@ -759,7 +869,8 @@ slots = [
         assert!(rejection(&crowded).contains("12 items exceed the 11 item slots"));
     }
 
-    /// Ferro-fibrous armor and XL engines claim item slots; a compact engine frees one.
+    /// Ferro-fibrous armor and XL and XXL engines claim item slots; a compact engine frees one
+    /// (TechManual pp. 101, 105; Tactical Operations: Advanced Units & Equipment p. 120).
     #[test]
     fn item_slots_follow_engine_and_armor_choices() {
         let jacket = parse(YELLOW_JACKET);
@@ -769,6 +880,8 @@ slots = [
             ("Clan XLEngine_Tech", 10),
             ("LightEngine_Tech", 10),
             ("CompactEngine_Tech", 12),
+            ("XXL_Tech", 7),
+            ("Clan XXL_Tech", 9),
             ("ICEEngine_Tech FerroFibrous_Tech", 9),
             ("Clan ICEEngine_Tech FerroFibrous_Tech", 10),
             ("ICEEngine_Tech LtFerroFibrous_Tech", 10),
@@ -1018,26 +1131,43 @@ slots = [
         assert_eq!(parse(YELLOW_JACKET).declared_engine_rating().unwrap(), None);
     }
 
-    /// ICE vehicles carry power amplifiers for energy weapons; fusion vehicles do not, and
-    /// Clan CASE weighs nothing.
+    /// ICE vehicles carry power amplifiers for energy weapons; fusion vehicles do not. CASE
+    /// on Clan internal structure is built in, weighing nothing and taking no item slot, while
+    /// on Inner Sphere structure it weighs half a ton in one slot, whatever the chassis's base
+    /// (TechManual p. 210).
     #[test]
-    fn amplifiers_and_case_follow_the_engine_and_technology_base() {
+    fn amplifiers_and_case_follow_the_engine_and_structure() {
         let lasers = YELLOW_JACKET.replace(
             "{ at = 1, item = \"IS.GaussRifle\" },",
             "{ at = 1, item = \"IS.LargeLaser\" },\n    { at = 4, item = \"CASE\" },",
         );
         let ice = parse(&lasers);
         assert_eq!(ice.mass().unwrap().power_amplifiers, 512);
-        assert_eq!(
-            ice.fixed_system_mass(System::Case, ice.has_special("Clan")),
-            512
-        );
+        let case = |template: &VehicleTemplate| {
+            let loadout = VehicleLoadout::resolve(template).unwrap();
+            let part = loadout
+                .systems
+                .iter()
+                .find(|part| part.system == System::Case)
+                .unwrap();
+            (
+                template.system_mass(&loadout, part),
+                occupies_vehicle_slot(part.system, template.clan_structure()),
+            )
+        };
+        assert_eq!(case(&ice), (512, true));
         let fusion = parse(&lasers.replace("engine = \"ice\"", "tech_base = \"clan\""));
         assert_eq!(fusion.mass().unwrap().power_amplifiers, 0);
-        assert_eq!(
-            fusion.fixed_system_mass(System::Case, fusion.has_special("Clan")),
-            0
-        );
+        assert_eq!(case(&fusion), (0, false));
+        let mixed = |source: &str, structure: &str| {
+            parse(&source.replace(
+                "[construction]\n",
+                &format!("[construction]\nmixed_tech = true\nstructure_tech = \"{structure}\"\n"),
+            ))
+        };
+        let clan = lasers.replace("engine = \"ice\"", "tech_base = \"clan\"");
+        assert_eq!(case(&mixed(&clan, "inner_sphere")), (512, true));
+        assert_eq!(case(&mixed(&lasers, "clan")), (0, false));
     }
 
     /// Beagle, ECM, CASE II and machine gun array masses follow each slot's own `IS.` or `CL.`
@@ -1106,6 +1236,32 @@ slots = [
             assert!(VehicleTemplate::needs_heat_sinks(weapon), "{weapon:?}");
         }
         assert!(!VehicleTemplate::needs_heat_sinks(Weapon::GaussRifle));
+        // A laser anti-missile system counts as an energy weapon for the heat sinks (Tactical
+        // Operations: Advanced Units & Equipment p. 131).
+        for weapon in [Weapon::LaserAms, Weapon::ClanLaserAms] {
+            assert!(VehicleTemplate::needs_heat_sinks(weapon), "{weapon:?}");
+        }
+        let laser_ams = YELLOW_JACKET.replace(
+            "{ at = 1, item = \"IS.GaussRifle\" },\n    { at = \"2-3\", item = \"Ammo_IS.GaussRifle\", rounds = 8 },",
+            "{ at = 1, item = \"IS.LaserAMS\" },",
+        );
+        let template = parse(&laser_ams);
+        let loadout = VehicleLoadout::resolve(&template).unwrap();
+        assert_eq!(VehicleTemplate::energy_heat(&loadout), 7);
+        assert!(rejection(&template).contains("heat sinks cannot vent the 7 heat"));
+        // A combustion engine mounts vehicle flamers, never standard ones (TechManual p. 218).
+        let standard = flamer
+            .replace("IS.VehicleFlamer\" }", "IS.Flamer\" }")
+            .replace(
+                "{ at = 2, item = \"Ammo_IS.VehicleFlamer\", rounds = 20 },",
+                "",
+            );
+        assert!(
+            rejection(&parse(&standard))
+                .contains("IS.Flamer needs a fusion engine; an internal combustion vehicle mounts vehicle flamers instead"),
+            "{}",
+            rejection(&parse(&standard))
+        );
         // The heavy flamer is a vehicle weapon too, and its heat needs sinks.
         let heavy = flamer
             .replace("IS.VehicleFlamer\" }", "IS.HeavyFlamer\" }")
@@ -1114,6 +1270,19 @@ slots = [
                 "Ammo_IS.HeavyFlamer\", rounds = 10",
             );
         assert!(rejection(&parse(&heavy)).contains("heat sinks cannot vent"));
+    }
+
+    /// A dual saw is one item weighing its full seven tons on a vehicle (TechManual p. 344).
+    #[test]
+    fn a_vehicle_dual_saw_weighs_seven_tons() {
+        let bare = parse(ZHUKOV).mass().unwrap().equipment;
+        let saw = with_rear(ZHUKOV, r#"{ at = 1, item = "Dual_Saw" }"#);
+        assert_eq!(saw.mass().unwrap().equipment, bare + 7 * 1024);
+        let loadout = VehicleLoadout::resolve(&saw).unwrap();
+        assert_eq!(
+            saw.item_slots(&loadout),
+            parse(ZHUKOV).item_slots(&VehicleLoadout::resolve(&parse(ZHUKOV)).unwrap()) + 1
+        );
     }
 
     /// A vehicle mounts its own technology base's weapons unless it declares mixed
@@ -1189,6 +1358,208 @@ slots = [
             refused.contains(
                 "The Apollo fire control system in Turret slot 5 links slot 1, which is not the first slot of an MRM launcher in Turret"
             ),
+            "{refused}"
+        );
+    }
+
+    /// The Zhukov source with `entry` alone in its rear location.
+    fn with_rear_text(source: &str, entry: &str) -> String {
+        source.replace(
+            "[sections.aft_side]\narmor = 24\n",
+            &format!("[sections.aft_side]\narmor = 24\nslots = [{entry}]\n"),
+        )
+    }
+
+    /// A Zhukov with `entry` alone in its rear location.
+    fn with_rear(source: &str, entry: &str) -> VehicleTemplate {
+        parse(&with_rear_text(source, entry))
+    }
+
+    /// Combat vehicles mount no BattleMech-only equipment: Mech critical-slot entries, jump
+    /// jets, MASC, triple-strength myomer, CASE II, the null-signature system or the Mech melee
+    /// weapons (TechManual pp. 99-105, 220, 236-237; Tactical Operations: Advanced Units &
+    /// Equipment pp. 100-104, 111, 148). A ground vehicle mounts a dual saw in its front, rear
+    /// or turret, one per location, and a wrecking ball in its turret; a VTOL mounts neither
+    /// (TechManual pp. 243, 249).
+    #[test]
+    fn vehicles_refuse_battlemech_equipment() {
+        for (item, reason) in [
+            ("HeatSink", "is a BattleMech critical-slot entry"),
+            ("Gyro", "is a BattleMech critical-slot entry"),
+            ("FerroFibrous", "is a BattleMech critical-slot entry"),
+            ("JumpJet", "combat vehicles cannot jump"),
+            ("Masc", "is MASC"),
+            ("TripleStrengthMyomer", "is triple-strength myomer"),
+            ("CASE-II", "is CASE II"),
+            ("NullSig_Device", "is the null-signature system"),
+            ("Axe", "only humanoid BattleMechs"),
+            ("Retractable_Blade", "only humanoid BattleMechs"),
+            ("Claw", "only BattleMechs and IndustrialMechs"),
+            ("Medium_Vibroblade", "only BattleMechs and IndustrialMechs"),
+            ("Spikes", "only BattleMechs and IndustrialMechs"),
+        ] {
+            let refused = rejection(&with_rear(
+                ZHUKOV,
+                &format!("{{ at = 1, item = \"{item}\" }}"),
+            ));
+            assert!(
+                refused.contains("in Aft_Side slot 1") && refused.contains(reason),
+                "{item}: {refused}"
+            );
+        }
+        // The dual saw passes every equipment rule in the rear and stops at the tonnage.
+        let saw = r#"{ at = 1, item = "Dual_Saw" }"#;
+        let refused = rejection(&with_rear(ZHUKOV, saw));
+        assert!(
+            refused.contains("more than the vehicle's 75 tons"),
+            "{refused}"
+        );
+        let refused = rejection(&parse(&ZHUKOV.replace(
+            "[sections.left_side]\narmor = 32\n",
+            &format!("[sections.left_side]\narmor = 32\nslots = [{saw}]\n"),
+        )));
+        assert!(
+            refused.contains("only in its front, rear or turret"),
+            "{refused}"
+        );
+        let pair = format!("{saw}, {}", saw.replace("at = 1", "at = 2"));
+        let refused = rejection(&with_rear(ZHUKOV, &pair));
+        assert!(
+            refused.contains("a location holds one backhoe, dual saw or wrecking ball"),
+            "{refused}"
+        );
+        let refused = rejection(&with_rear(ZHUKOV, r#"{ at = 1, item = "Wrecking_Ball" }"#));
+        assert!(
+            refused.contains("a wrecking ball only in its turret"),
+            "{refused}"
+        );
+        let refused = rejection(&parse(&YELLOW_JACKET.replace(
+            "[sections.aft_side]\narmor = 8\n",
+            &format!("[sections.aft_side]\narmor = 8\nslots = [{saw}]\n"),
+        )));
+        assert!(refused.contains("and a VTOL none"), "{refused}");
+    }
+
+    /// A vehicle mounts one set of communications equipment as a single item of the tons it
+    /// states, up to fifteen (TechManual p. 212); at most four lift hoists of three tons each
+    /// (TechManual pp. 245, 344); and one backhoe of five tons in each of the front, rear and
+    /// turret of a ground vehicle, never beside a dual saw or wrecking ball (TechManual
+    /// p. 241).
+    #[test]
+    fn vehicles_mount_communications_hoists_and_backhoes_by_the_book() {
+        let bare = parse(ZHUKOV);
+        let bare_slots = bare.item_slots(&VehicleLoadout::resolve(&bare).unwrap());
+        let bare_mass = bare.mass().unwrap().equipment;
+        let comms = with_rear(
+            ZHUKOV,
+            r#"{ at = 1, item = "Communications_Equipment", tons = 4 }"#,
+        );
+        assert_eq!(comms.mass().unwrap().equipment, bare_mass + 4 * 1024);
+        assert_eq!(
+            comms.item_slots(&VehicleLoadout::resolve(&comms).unwrap()),
+            bare_slots + 1
+        );
+        assert!(rejection(&comms).contains("more than the vehicle's 75 tons"));
+        let document = comms.to_document().unwrap();
+        assert!(
+            document.contains(r#"{ at = 1, item = "Communications_Equipment", tons = 4 }"#),
+            "{document}"
+        );
+        assert_eq!(parse(&document), comms);
+        let misplaced = VehicleTemplate::parse(
+            "test",
+            &with_rear_text(ZHUKOV, r#"{ at = 1, item = "Lift_Hoist", tons = 3 }"#),
+        )
+        .unwrap_err();
+        assert!(
+            format!("{misplaced:#}").contains("only communications equipment takes tons"),
+            "{misplaced:#}"
+        );
+        for tons in [0, 16] {
+            let refused = rejection(&with_rear(
+                ZHUKOV,
+                &format!(r#"{{ at = 1, item = "Communications_Equipment", tons = {tons} }}"#),
+            ));
+            assert!(refused.contains("a set of 1 to 15 whole tons"), "{refused}");
+        }
+        let refused = rejection(&with_rear(
+            ZHUKOV,
+            r#"{ at = 1, item = "Communications_Equipment", tons = 1 }, { at = 2, item = "Communications_Equipment", tons = 1 }"#,
+        ));
+        assert!(
+            refused.contains("one set of communications equipment"),
+            "{refused}"
+        );
+        let hoist = with_rear(ZHUKOV, r#"{ at = 1, item = "Lift_Hoist" }"#);
+        assert_eq!(hoist.mass().unwrap().equipment, bare_mass + 3 * 1024);
+        let refused = rejection(&with_rear(ZHUKOV, r#"{ at = "1-5", item = "Lift_Hoist" }"#));
+        assert!(
+            refused.contains("at most four lift hoists; found 5"),
+            "{refused}"
+        );
+        let backhoe = with_rear(ZHUKOV, r#"{ at = 1, item = "Backhoe" }"#);
+        assert_eq!(backhoe.mass().unwrap().equipment, bare_mass + 5 * 1024);
+        assert!(rejection(&backhoe).contains("more than the vehicle's 75 tons"));
+        let refused = rejection(&with_rear(
+            ZHUKOV,
+            r#"{ at = 1, item = "Backhoe" }, { at = 2, item = "Dual_Saw" }"#,
+        ));
+        assert!(
+            refused.contains("a location holds one backhoe, dual saw or wrecking ball"),
+            "{refused}"
+        );
+        let refused = rejection(&parse(&YELLOW_JACKET.replace(
+            "[sections.aft_side]\narmor = 8\n",
+            "[sections.aft_side]\narmor = 8\nslots = [{ at = 1, item = \"Backhoe\" }]\n",
+        )));
+        assert!(
+            refused.contains("a backhoe only in its front, rear or turret"),
+            "{refused}"
+        );
+    }
+
+    /// A slot's stated technology base must match a vehicle's chassis unless the design is
+    /// mixed technology, and Clan CASE, built into Clan structure, claims no item slot while
+    /// Inner Sphere CASE claims one (TechManual pp. 46, 210).
+    #[test]
+    fn vehicle_systems_follow_their_stated_technology_base() {
+        let refused = rejection(&with_rear(ZHUKOV, r#"{ at = 1, item = "CL.Ecm" }"#));
+        assert!(
+            refused.contains("CL.Ecm is Clan technology on an Inner Sphere vehicle"),
+            "{refused}"
+        );
+        assert!(occupies_vehicle_slot(System::Case, false));
+        assert!(!occupies_vehicle_slot(System::Case, true));
+        let case = r#"{ at = 1, item = "Case" }"#;
+        let slots = |source: &str| {
+            let template = parse(source);
+            template.item_slots(&VehicleLoadout::resolve(&template).unwrap())
+        };
+        assert_eq!(slots(&with_rear_text(ZHUKOV, case)), slots(ZHUKOV) + 1);
+        let clan = ZHUKOV.replace(
+            "engine = \"ice\"",
+            "tech_base = \"clan\"\nmixed_tech = true\nengine = \"ice\"",
+        );
+        assert_eq!(slots(&with_rear_text(&clan, case)), slots(&clan));
+    }
+
+    /// Artemis V is incompatible with Artemis IV, so a unit may not carry both (Tactical
+    /// Operations: Advanced Units & Equipment p. 94).
+    #[test]
+    fn artemis_iv_and_v_are_not_combined() {
+        let mixed = ZHUKOV
+            .replace("engine = \"ice\"", "engine = \"ice\"\nmixed_tech = true")
+            .replace(
+                "{ at = 2, item = \"Ammo_IS.SRM-6\", rounds = 15 },",
+                "{ at = 2, item = \"Ammo_IS.SRM-6\", rounds = 15 },\n    { at = 3, item = \"ArtemisIV\", link = 1 },",
+            )
+            .replace(
+                "{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },",
+                "{ at = \"3-4\", item = \"Ammo_IS.AC/10\", rounds = 10 },\n    { at = 5, item = \"IS.SRM-6\" },\n    { at = 6, item = \"ArtemisV\", link = 5 },",
+            );
+        let refused = rejection(&parse(&mixed));
+        assert!(
+            refused.contains("Artemis V is incompatible with Artemis IV"),
             "{refused}"
         );
     }

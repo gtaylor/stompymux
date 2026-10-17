@@ -79,8 +79,9 @@ pub fn critical_report(world: &World, id: ObjectId, section: &str) -> Result<Cri
         );
         let names = ConstructionNames {
             leg: false,
-            double_sinks: unit.definition().has_special("Clan")
-                || unit.definition().has_special("DoubleHS"),
+            // Combat vehicles of either technology base mount single heat sinks only, and
+            // never as slot entries (TechManual p. 104).
+            double_sinks: false,
             engine,
             improved_jets: false,
             small_cockpit: false,

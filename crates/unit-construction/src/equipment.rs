@@ -490,6 +490,20 @@ pub enum System {
     /// blunting physical attacks against its location (Tactical Operations: Advanced Units &
     /// Equipment pp. 100, 103).
     Spikes,
+    /// One critical slot of a BattleMech's standard cargo bay, which fills a slot per ton of
+    /// the capacity `cargo_tons` states, rounded up (TechManual p. 239). The bay's mass is
+    /// that capacity; a combat vehicle's bay takes a single item slot and lists no entries.
+    Cargo,
+    /// Communications equipment beyond the basic gear every combat unit carries: one set of
+    /// one to fifteen whole tons per unit, a ton per critical slot in one location of a Mech,
+    /// or one vehicle item whose slot states its `tons` (TechManual p. 212).
+    CommunicationsEquipment,
+    /// A lift hoist: three tons in three Mech critical slots or one vehicle item, at most two
+    /// on a Mech and four on a vehicle (TechManual pp. 245, 344).
+    LiftHoist,
+    /// A backhoe: five tons in six Mech critical slots or one vehicle item (TechManual
+    /// pp. 241, 344).
+    Backhoe,
 }
 
 impl System {
@@ -574,6 +588,12 @@ impl System {
             name if name.eq_ignore_ascii_case("Large_Vibroblade") => Some(Self::LargeVibroblade),
             name if name.eq_ignore_ascii_case("Talons") => Some(Self::Talons),
             name if name.eq_ignore_ascii_case("Spikes") => Some(Self::Spikes),
+            name if name.eq_ignore_ascii_case("Cargo") => Some(Self::Cargo),
+            name if name.eq_ignore_ascii_case("Communications_Equipment") => {
+                Some(Self::CommunicationsEquipment)
+            }
+            name if name.eq_ignore_ascii_case("Lift_Hoist") => Some(Self::LiftHoist),
+            name if name.eq_ignore_ascii_case("Backhoe") => Some(Self::Backhoe),
             name if name.eq_ignore_ascii_case("MGA") => Some(Self::MachineGunArray),
             name if name.eq_ignore_ascii_case("FerroFibrous") => Some(Self::FerroFibrous),
             name if name.eq_ignore_ascii_case("EndoSteel") => Some(Self::EndoSteel),

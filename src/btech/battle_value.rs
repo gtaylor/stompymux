@@ -88,6 +88,26 @@ fn whole_mp(kph: f64) -> u32 {
     (kph / super::MP_KPH + 1e-6).floor().max(0.0) as u32
 }
 
+/// A 'Mech's Movement Heat: the heat of running or of jumping `jumping` MP, whichever is
+/// greater (TechManual p. 303). Running makes 2 heat; jumping makes 1 per MP with a minimum of
+/// 3, and improved jump jets 1 per 2 MP or part thereof, still at least 3 (Total Warfare
+/// p. 53). An XXL engine runs at 6 heat and doubles the heat per hex jumped, with a minimum of
+/// 6 a jump, while improved jets and the XXL engine cancel each other's per-hex modifiers
+/// (Tactical Operations: Advanced Units & Equipment p. 121); the XXL minimum of 6 still
+/// applies to that jump.
+fn movement_heat(jumping: u32, improved_jets: bool, xxl: bool) -> u32 {
+    let running = if xxl { 6 } else { 2 };
+    if jumping == 0 {
+        return running;
+    }
+    let per_hex = match (improved_jets, xxl) {
+        (true, true) | (false, false) => jumping,
+        (true, false) => jumping.div_ceil(2),
+        (false, true) => jumping * 2,
+    };
+    running.max(per_hex.max(if xxl { 6 } else { 3 }))
+}
+
 /// One offensive weapon after its BV modifiers, ready for the heat-efficiency ordering.
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct ValuedWeapon {
@@ -355,20 +375,35 @@ fn armor_type_modifier(has: impl Fn(Technology) -> bool) -> f64 {
     }
 }
 
-/// BV of a physical weapon from its catalogue entry (TechManual p. 317; TO:AUE pp. 195-197).
-/// Damage-based values use the weapon's damage after triple-strength myomer doubling.
-fn physical_weapon_value(attack: ArmAttack, tons: u16, triple_myomer: bool) -> f64 {
-    let Some(value) = attack.system().and_then(System::physical_battle_value) else {
-        return 0.0;
-    };
-    match value {
-        PhysicalBattleValue::Fixed(value) => f64::from(value),
-        PhysicalBattleValue::DamageTimes(factor) => {
+/// BV of an installed physical weapon from its catalogue entry (TechManual p. 317; TO:AUE
+/// pp. 195-197). Damage-based values use the weapon's damage after triple-strength myomer
+/// doubling; fixed values, such as the backhoe's 8, need no attack profile.
+fn physical_weapon_value(system: System, tons: u16, triple_myomer: bool) -> f64 {
+    match system.physical_battle_value() {
+        None => 0.0,
+        Some(PhysicalBattleValue::Fixed(value)) => f64::from(value),
+        Some(PhysicalBattleValue::DamageTimes(factor)) => {
+            let Some(attack) = ArmAttack::from_system(system) else {
+                return 0.0;
+            };
             let damage = f64::from(attack.damage(tons));
             let doubled = triple_myomer && attack.myomer_doubles();
             factor * if doubled { damage * 2.0 } else { damage }
         }
     }
+}
+
+/// A vehicle's physical equipment, the dual saw, wrecking ball and backhoe, each one item
+/// worth its fixed catalogue value in the Weapon Battle Rating (TechManual pp. 307, 317).
+fn vehicle_physical_value<L>(loadout: &ResolvedLoadout<L>) -> f64 {
+    loadout
+        .systems
+        .iter()
+        .filter_map(|part| match part.system.physical_battle_value() {
+            Some(PhysicalBattleValue::Fixed(value)) => Some(f64::from(value)),
+            _ => None,
+        })
+        .sum()
 }
 
 /// Defensive equipment BV of the installed systems: each complete installation's catalogue
@@ -379,18 +414,20 @@ fn defensive_system_value<L>(
     context: SystemContext,
     slots: impl Fn(System, SystemContext) -> u16,
 ) -> f64 {
-    // Each installation is valued and sized by its own technology base.
-    let mut counts: BTreeMap<(System, Option<super::TechBase>), usize> = BTreeMap::new();
+    // Each installation is valued and sized by its own technology base, as the equipment
+    // tables key a probe's or ECM suite's value and slots to the base that built it
+    // (TechManual pp. 317-318).
+    let mut counts: BTreeMap<(System, bool), usize> = BTreeMap::new();
     for part in &loadout.systems {
-        let context = context.for_installation(part.tech_base);
+        let context = context.for_part(part);
         if part.system.defensive_battle_value(context).is_some() {
-            *counts.entry((part.system, part.tech_base)).or_default() += 1;
+            *counts.entry((part.system, context.clan)).or_default() += 1;
         }
     }
     counts
         .into_iter()
-        .map(|((system, base), count)| {
-            let context = context.for_installation(base);
+        .map(|((system, clan), count)| {
+            let context = SystemContext { clan, ..context };
             let value = system.defensive_battle_value(context).unwrap_or(0);
             let size = usize::from(slots(system, context).max(1));
             (count / size) as f64 * f64::from(value)
@@ -464,6 +501,7 @@ impl Mech {
             )
         });
         let clan_engine = definition.clan_engine();
+        let clan_structure = definition.clan_structure();
         // 'Mech Engine Type Modifier (TechManual p. 315; TO:AUE p. 193).
         let engine_modifier = match engine {
             Engine::Standard | Engine::Compact => 1.0,
@@ -562,8 +600,9 @@ impl Mech {
             if fragile_engine || core(section) {
                 return true;
             }
-            // Clan 'Mechs are assumed to carry CASE in every location.
-            !clan && !protected_by(System::Case, section)
+            // A 'Mech built with Clan internal structure carries CASE in every location
+            // (TechManual p. 210), whatever its other technology.
+            !clan_structure && !protected_by(System::Case, section)
         };
         let ammunition_slots = loadout
             .ammunition
@@ -593,7 +632,12 @@ impl Mech {
             envelope = envelope.with_walking_mp_delta(1.0);
         }
         let boosters = u8::from(self.masc_installed()?) + u8::from(self.supercharger_installed());
-        let running = whole_mp(envelope.with_boosters(boosters).running);
+        // Hardened armor costs a 'Mech one running MP, which the Defensive and Speed Factors
+        // count (Tactical Operations: Advanced Units & Equipment pp. 93, 193).
+        let hardened = u32::from(definition.has_technology(Technology::HardenedArmor));
+        let running = whole_mp(envelope.with_boosters(boosters).running)
+            .saturating_sub(hardened)
+            .max(whole_mp(envelope.walking));
         let jumping = whole_mp(definition.jump_speed);
         let stealth = self.has_stealth_armor()?;
         let ground = target_movement_modifier(running);
@@ -610,10 +654,14 @@ impl Mech {
         };
         let target_modifier = ground.max(jump) + concealment;
 
-        // Heat efficiency: 6 + heat dissipation - movement heat. Running makes 2 heat and
-        // jumping 1 per MP with a minimum of 3 (Total Warfare p. 159); stealth armor adds 10.
-        let jump_heat = if jumping > 0 { jumping.max(3) } else { 0 };
-        let movement_heat = f64::from(jump_heat.max(2)) + if stealth { 10.0 } else { 0.0 };
+        // Heat efficiency: 6 + heat dissipation - movement heat, the heat of running or of
+        // jumping at full capacity, whichever is greater (TechManual p. 303); stealth armor
+        // adds 10.
+        let movement_heat = f64::from(movement_heat(
+            jumping,
+            definition.has_special("ImprovedJJ_Tech"),
+            engine == Engine::Xxl,
+        )) + if stealth { 10.0 } else { 0.0 };
         let heat_efficiency = 6.0 + f64::from(definition.heat_dissipation()) - movement_heat;
 
         let offense = Offense::gather(
@@ -628,14 +676,24 @@ impl Mech {
                 _ => Arc::Forward,
             },
         );
+        // A biped's physical weapons sit in its arms, one to each; a quad's, the dual saw and
+        // the backhoe, in its side torsos (TechManual pp. 241, 243).
         let mut physical = 0.0;
-        if !quad {
-            for arm in [MechSection::LeftArm, MechSection::RightArm] {
-                for attack in ArmAttack::HAND_WEAPONS {
-                    if attack.system().is_some_and(|system| has(system, arm)) {
-                        physical += physical_weapon_value(attack, tons, triple_myomer);
-                    }
-                }
+        let mounts = if quad {
+            [MechSection::LeftTorso, MechSection::RightTorso]
+        } else {
+            [MechSection::LeftArm, MechSection::RightArm]
+        };
+        for mount in mounts {
+            let installed = loadout
+                .systems
+                .iter()
+                .find(|part| {
+                    part.location.section == mount && part.system.physical_battle_value().is_some()
+                })
+                .map(|part| part.system);
+            if let Some(system) = installed {
+                physical += physical_weapon_value(system, tons, triple_myomer);
             }
         }
         // Talons are worth their kick's final damage, after triple strength myomer and the
@@ -827,7 +885,7 @@ impl super::Vehicle {
             target_modifier,
             weapons: offense.weapons,
             ammunition: offense.ammunition,
-            equipment: machine_gun_array_value(&loadout),
+            equipment: machine_gun_array_value(&loadout) + vehicle_physical_value(&loadout),
             tonnage: f64::from(definition.tons) / 2.0,
             speed_mp: flanking,
             final_multiplier: 1.0,
@@ -872,6 +930,52 @@ mod tests {
 
     fn weapon(value: f64, heat: f64) -> ValuedWeapon {
         ValuedWeapon { value, heat }
+    }
+
+    /// A backhoe is worth a fixed 8 (TechManual p. 317) with no attack profile, damage-based
+    /// weapons their damage times the factor, and a vehicle's dual saw, wrecking ball and
+    /// backhoe their fixed values.
+    #[test]
+    fn physical_equipment_values_follow_the_bv_table() {
+        assert_eq!(physical_weapon_value(System::Backhoe, 40, false), 8.0);
+        // A 50-ton Mech's sword deals 6, and hot triple strength myomer doubles it.
+        assert!((physical_weapon_value(System::Sword, 50, false) - 6.0 * 1.725).abs() < 1e-9);
+        assert!((physical_weapon_value(System::Sword, 50, true) - 12.0 * 1.725).abs() < 1e-9);
+        assert_eq!(physical_weapon_value(System::Ecm, 50, false), 0.0);
+        let part = |system| super::super::SystemCritical {
+            location: (),
+            system,
+            tech_base: None,
+            links: Vec::new(),
+        };
+        let loadout = ResolvedLoadout {
+            weapons: Vec::new(),
+            ammunition: Vec::new(),
+            systems: vec![
+                part(System::Backhoe),
+                part(System::DualSaw),
+                part(System::Ecm),
+            ],
+        };
+        assert_eq!(vehicle_physical_value(&loadout), 8.0 + 9.0);
+    }
+
+    /// Movement Heat takes the hotter of running and jumping: improved jets halve the jump
+    /// heat, rounding up, at a minimum of 3 (Total Warfare p. 53); an XXL engine runs at 6 and
+    /// doubles the jump heat with a minimum of 6, and improved jets cancel the doubling
+    /// (Tactical Operations: Advanced Units & Equipment p. 121).
+    #[test]
+    fn movement_heat_follows_jets_and_engines() {
+        assert_eq!(movement_heat(0, false, false), 2);
+        assert_eq!(movement_heat(2, false, false), 3);
+        assert_eq!(movement_heat(8, false, false), 8);
+        assert_eq!(movement_heat(8, true, false), 4);
+        assert_eq!(movement_heat(5, true, false), 3);
+        assert_eq!(movement_heat(0, false, true), 6);
+        assert_eq!(movement_heat(2, false, true), 6);
+        assert_eq!(movement_heat(5, false, true), 10);
+        assert_eq!(movement_heat(8, true, true), 8);
+        assert_eq!(movement_heat(4, true, true), 6);
     }
 
     /// Every row of the TechManual p. 315 Speed Factor Table.

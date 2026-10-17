@@ -111,12 +111,19 @@ only a mixed-technology design builds components from both bases (TechManual p.
 Without `mixed_tech`, construction refuses anything from the other technology
 base, on mechs and vehicles alike: a weapon of the other base, and equipment
 only the other base builds. The Bloodhound probe, C3, the null signature system,
-Angel ECM, triple strength myomer, stealth armor and light and heavy
-ferro-fibrous armor are Inner Sphere equipment; the light active probe, light
-TAG, Artemis V, laser heat sinks and the Watchdog suite are Clan equipment.
-CASE is an Inner Sphere item that goes in a torso; Clan CASE is built into
-every location of a Clan-structure unit rather than installed (TechManual p.
-210).
+triple strength myomer, stealth armor, light and heavy ferro-fibrous armor, the
+hatchet, the sword, and the claws, flail, lance, mace, chain whip, vibroblades
+and spikes are Inner Sphere equipment; the light active probe, light TAG,
+Artemis V, laser heat sinks, talons and the Watchdog suite are Clan equipment.
+Both bases build the Angel ECM suite, the retractable blade, the dual saw and
+the wrecking ball. Compact, heavy-duty and XL gyros and the small cockpit are
+Inner Sphere chassis choices (TechManual pp. 50, 52), and composite structure is
+Inner Sphere structure: a Clan mech with it needs `mixed_tech` and
+`structure_tech = "inner_sphere"` (TacOps AUE p. 154). CASE is an Inner Sphere
+item that goes in a torso; Clan CASE is built into every location of a
+Clan-structure unit rather than installed, whatever the chassis's base, so a
+mech with Clan internal structure lists no `Case` item and pays the CASE price
+for each location holding ammunition (TechManual pp. 210, 292).
 
 CASE II, ECM suites, active probes, MASC, targeting computers, Artemis IV, jump
 jets and machine gun arrays (`MGA`) are built by both bases to their own
@@ -160,9 +167,19 @@ checks:
 - Hatchets, swords, maces, claws, lances and the other melee weapons sit in biped
   arms with the actuators they need, one per arm, at their tonnage-dependent slot
   counts (TechManual pp. 220, 237; Tactical Operations: Advanced Units &
-  Equipment).
+  Equipment). A retractable blade needs shoulder, upper and lower arm actuators;
+  a dual saw or wrecking ball replaces the arm's hand actuator; a quad mounts a
+  dual saw in a side torso and no other melee weapon (TechManual pp. 237, 243,
+  249).
+- Multi-slot electronics fill their whole slot count in contiguous slots of one
+  location: the Guardian ECM suite and Beagle probe two (their Clan counterparts
+  one, the Watchdog suite two), the Angel ECM suite and C3i two, the Bloodhound
+  probe three and the C3 master five. The null-signature system fills one slot in
+  every location but the head (TechManual pp. 45, 341-343; TacOps AUE pp. 148,
+  217).
 - Artemis IV serves every standard LRM, SRM and MML launcher from its location or
-  none, each controller linked to its own launcher (see [Slots](#slots)); Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
+  none, each controller linked to its own launcher (see [Slots](#slots)), and a
+  unit carries Artemis IV or Artemis V, never both (TacOps AUE p. 94); Inner Sphere CASE sits in a torso; rear-firing weapons sit in torsos, legs
   or the head; a Heavy Gauss Rifle sits in the torsos (TechManual pp. 46, 206,
   210, 218).
 - `OneShot` applies only to LRM, SRM, MRM and Streak SRM launchers and Narc and
@@ -191,11 +208,15 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   Sphere only, needs an ECM suite and generates 10 heat that the heat sinks must
   cover besides the energy weapons (TacOps AUE pp. 92-93).
 - Heat sinks are single, at a ton each beyond the ten a fusion engine carries
-  free, and must cover the heat of every energy weapon firing at once.
+  free, and must cover the heat of every energy weapon firing at once, laser
+  anti-missile systems included and vehicle flamers excepted (TechManual pp.
+  104, 218; TacOps AUE p. 131). An `ice` engine mounts vehicle flamers, never
+  standard flamers (TechManual p. 218); the same holds for an `ice` mech.
 - Armor may not exceed 3.5 points per ton plus 40, and a rotor carries at most
   2 points. Locations have a single armor value, so `rear` is refused.
 - The vehicle has 5 item slots plus 1 per 5 tons, less 2 for an Inner Sphere XL
-  engine (1 for Clan XL or light), 2 for Inner Sphere ferro-fibrous armor (1
+  engine (1 for Clan XL or light), 4 for an Inner Sphere XXL engine (2 for Clan
+  XXL; TacOps AUE p. 120), 2 for Inner Sphere ferro-fibrous armor (1
   for Clan or light, 3 for heavy), 1 for hardened or laser-reflective armor, 2
   for stealth armor, and plus 1 for a compact engine (TacOps AUE p. 92 for the
   advanced armors). Each weapon
@@ -210,6 +231,16 @@ Vehicle and VTOL templates follow the TechManual combat vehicle rules (pp.
   the full ton (TechManual p. 238).
 - Nothing is mounted in the rotor, and vehicles carry no jump jets, MASC or
   triple-strength myomer. A VTOL's turret is a chin turret (TacOps AUE p. 160).
+- Vehicles mount no BattleMech-only equipment: no Mech critical-slot entries
+  (actuators, engine, gyro, cockpit, heat sinks, or structure and armor slots,
+  which a vehicle states in its template), no CASE II or null-signature system,
+  and none of the Mech melee weapons (hatchet, sword, retractable blade, claws,
+  flail, lance, mace, chain whip, vibroblades, talons, spikes). A ground vehicle
+  mounts one dual saw in each of its front, rear and turret, each a single
+  7-ton item, and a wrecking ball in its turret; a VTOL mounts neither
+  (TechManual pp. 243, 249, 344; TacOps AUE pp.
+  100-104, 111, 148). Inner Sphere CASE takes an item slot; Clan CASE, built
+  into Clan structure, takes none (TechManual p. 210).
 - Everything together may not weigh more than the vehicle. Unspent tonnage is
   cargo space or wasted weight and is only reported. Controls weigh 5 percent of
   the vehicle and the turret 10 percent of the items in it, both rounded up to
@@ -222,6 +253,11 @@ installations (`movement = "none"`) are not combat vehicles and only have their
 mass calculated.
 
 ### Cargo and transport bays
+
+A mech's only bay is the standard cargo bay `cargo_tons` states. It weighs its
+capacity and fills one critical slot per ton, rounded up, each listed as a
+`Cargo` entry in any location: `cargo_tons = 1.5` needs two (TechManual p.
+239).
 
 A vehicle carries cargo in two ways (TechManual p. 239, Transport Bays):
 
@@ -322,6 +358,7 @@ Each slot entry places one item in a run of consecutive critical slots:
 | `rounds` | Ammunition only, and required: the rounds the bin is loaded with, at most what a ton holds. A machine gun bin is a full ton or a half-ton lot marked with the `Halfton` mode, and lists exactly what that lot holds: 200 or 100 rounds of standard or light machine gun ammunition, 100 or 50 heavy (TechManual pp. 57, 107). Construction never refills a bin or infers its size. |
 | `link` | Non-ammunition only. Required on every Artemis IV, Artemis V and `ApolloFCS` entry: the one-based slot of the first critical of the launcher it guides, in the same section. |
 | `links` | Machine gun arrays (`MGA`) only, and required on each: the one-based first slots of the two to four machine guns it links, in the same section. |
+| `tons` | A vehicle's `Communications_Equipment` only, and required on it: the set's 1 to 15 whole tons. A mech states its set's tons by its slots instead. |
 | `modes` | Ammunition flags or weapon modes, such as `["RearMount"]` or `["Inferno"]`. |
 
 A run fills every slot with the same item, so `{ at = "1-3", item = "HeatSink" }`
@@ -362,6 +399,25 @@ slots = [
 Construction refuses an array without links, with fewer than two or more than
 four, one that links anything but a machine gun's first slot in its section or
 guns of two size classes, and two arrays that share a gun.
+
+Industrial equipment follows the TechManual (pp. 212, 241, 245, 344):
+
+- `Communications_Equipment` is one set of 1 to 15 whole tons per unit. A mech
+  fills a slot per ton in one contiguous run of a single location; a vehicle
+  mounts it as one item stating its `tons`. Three or more tons generate an ECCM
+  field with `commseccm` (see `help piloting`).
+- `Lift_Hoist` weighs three tons in three mech slots, at most two on a mech, in
+  its arms and torsos, or one vehicle item, at most four on a vehicle. A working
+  hoist lets its unit load and unload stock (see `help cargo`).
+- `Backhoe` weighs five tons in six mech slots in an arm whose hand actuator it
+  replaces (a quad's side torso), or one vehicle item in the front, rear or
+  turret of a ground vehicle, never beside a dual saw or wrecking ball.
+
+```toml
+slots = [
+    { at = 1, item = "Communications_Equipment", tons = 7 },
+]
+```
 
 ## Split mounts
 
@@ -413,6 +469,8 @@ engine, structure or armor through the `[construction]` technology keys. A CASE 
 or jump jet of the other technology base keeps its base as an `IS.` or `CL.`
 prefix on its item. A machine gun array lists in `links` up to four machine
 guns of the size class its MegaMek name gives, in its location, nearest first.
+Communications equipment takes its tons from MegaMek's `SIZE` option: a
+vehicle's states them in `tons`, and a mech's fills that many slots.
 MegaMek loads every weapon from one of its own bins, while a stompymux weapon
 fires only the bins of the munition it has selected, so a launcher none of
 whose bins holds standard rounds (only Artemis-capable missiles, say) starts

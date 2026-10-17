@@ -1042,6 +1042,16 @@
 //|function btech_unit.angeleccm(dbref, pilot) end
 // lua-types-end
 
+// lua-types-begin btech 00554
+//|---Toggle communications equipment's ECCM field inside the callback transaction; three or
+//|---more tons of working communications equipment generate it (Tactical Operations: Advanced
+//|---Rules p. 98).
+//|---@param dbref integer
+//|---@param pilot integer
+//|---@return ElectronicMode
+//|function btech_unit.commseccm(dbref, pilot) end
+// lua-types-end
+
 // lua-types-begin btech 00306
 //|---Select iNarc homing (-), explosive (X), haywire (Y), ECM (E), or Nemesis (Z) ammunition.
 //|---@param dbref integer
