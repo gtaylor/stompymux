@@ -168,10 +168,10 @@ checks:
   arms with the actuators they need, one per arm, at their tonnage-dependent slot
   counts (TechManual pp. 220, 237; Tactical Operations: Advanced Units &
   Equipment). A retractable blade needs shoulder, upper and lower arm actuators;
-  a dual saw or wrecking ball replaces the arm's hand actuator. A quad mounts a
-  backhoe in a side torso and no other melee weapon; TechManual p. 243 would also
-  let it mount a dual saw there, but no rule lets a four-legged mech attack with
-  one, so construction refuses it (TechManual pp. 237, 241, 249).
+  a dual saw or wrecking ball replaces the arm's hand actuator. A quad mounts no
+  melee weapon: TechManual pp. 241 and 243 would let it put a backhoe or a dual
+  saw in a side torso, but no rule lets a four-legged mech attack with either, so
+  construction refuses them (TechManual pp. 237, 241, 243, 249).
 - Multi-slot electronics fill their whole slot count in contiguous slots of one
   location: the Guardian ECM suite and Beagle probe two (their Clan counterparts
   one, the Watchdog suite two), the Angel ECM suite and C3i two, the Bloodhound
@@ -410,9 +410,9 @@ Industrial equipment follows the TechManual (pp. 212, 241, 245, 344):
 - `Lift_Hoist` weighs three tons in three mech slots, at most two on a mech, in
   its arms and torsos, or one vehicle item, at most four on a vehicle. A working
   hoist lets its unit load and unload stock (see `help cargo`).
-- `Backhoe` weighs five tons in six mech slots in an arm whose hand actuator it
-  replaces (a quad's side torso), or one vehicle item in the front, rear or
-  turret of a ground vehicle, never beside a dual saw or wrecking ball.
+- `Backhoe` weighs five tons in six mech slots in a biped arm whose hand
+  actuator it replaces (a quad mounts none), or one vehicle item in the front,
+  rear or turret of a ground vehicle, never beside a dual saw or wrecking ball.
 
 ```toml
 slots = [
