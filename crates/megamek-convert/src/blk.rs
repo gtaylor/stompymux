@@ -10,7 +10,7 @@ use crate::equipment::{self, Critical, TechBase};
 use crate::layout::{self, WeaponSpan};
 use anyhow::{Context, Result, bail, ensure};
 use std::collections::BTreeMap;
-use stompymux_unit_construction::VehicleMovement;
+use stompymux_unit_construction::{VehicleMovement, Weapon};
 
 /// MegaMek equipment blocks with a stompymux location, and the template heading each fills.
 const LOCATIONS: [(&str, &str); 6] = [
@@ -293,7 +293,7 @@ pub fn convert(source: &str) -> Result<Converted> {
         .values()
         .flatten()
         .filter_map(|critical| match critical {
-            Critical::Weapon { weapon, .. } if weapon.is_energy() => {
+            Critical::Weapon { weapon, .. } if needs_heat_sinks(*weapon) => {
                 Some(u32::from(weapon.profile().heat))
             }
             _ => None,
@@ -455,6 +455,12 @@ fn transporters(lines: &[String], warnings: &mut Vec<String>) -> Result<Transpor
     })
 }
 
+/// Whether a vehicle weapon's heat calls for heat sinks: every energy weapon but the vehicle
+/// flamer, which needs none (TechManual pp. 104, 218).
+fn needs_heat_sinks(weapon: Weapon) -> bool {
+    weapon.is_energy() && weapon != Weapon::VehicleFlamer
+}
+
 /// Resolve one vehicle equipment line, refusing mech-only equipment.
 fn vehicle_critical(line: &str, tech: TechBase) -> Result<Critical> {
     let critical = equipment::parse_for(line, tech)?;
@@ -554,6 +560,32 @@ mod tests {
             template.contains("[construction]\ntech_base = \"inner_sphere\"\nengine_rating = 10\n"),
             "{template}"
         );
+    }
+
+    /// A vehicle flamer (`Flamer (Vehicle)`) mounts as the vehicle flamer and adds no heat sinks,
+    /// whatever its heat (TechManual p. 218).
+    #[test]
+    fn vehicle_flamers_need_no_heat_sinks() {
+        let source = BULLDOG
+            .replace("Machine Gun\n</Front", "Flamer (Vehicle)\n</Front")
+            .replace("IS Machine Gun Ammo - Half\n", "IS Vehicle Flamer Ammo\n");
+        let draft = convert(&source).unwrap().draft;
+        let front = draft
+            .sections
+            .iter()
+            .find(|section| section.heading == "front_side")
+            .unwrap();
+        let items: Vec<_> = front
+            .slots
+            .iter()
+            .flatten()
+            .map(|slot| slot.item.as_str())
+            .collect();
+        assert_eq!(items, ["IS.VehicleFlamer", "Ammo_IS.VehicleFlamer"]);
+        // The large laser's 8 heat alone sets the ICE tank's heat sinks.
+        assert_eq!(draft.heat_sinks, Some(8));
+        assert!(needs_heat_sinks(Weapon::Flamer));
+        assert!(!needs_heat_sinks(Weapon::VehicleFlamer));
     }
 
     /// An `<omni>` block marks an OmniVehicle, whose template carries the Omni technology that
