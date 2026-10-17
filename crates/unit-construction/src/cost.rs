@@ -499,8 +499,9 @@ pub fn template_base_cost(prices: &PartPrices, template: &MechTemplate) -> Resul
             id => part_price(prices, id)? as f64,
         };
     }
-    // Clan CASE is built into every location that holds ammunition.
-    if clan {
+    // Clan internal structure builds CASE into every location that holds ammunition, at the
+    // CASE price each (TechManual pp. 210, 292, 302), whatever the chassis's own base.
+    if template.clan_structure() {
         let sections: std::collections::BTreeSet<_> = loadout
             .ammunition
             .iter()
@@ -882,6 +883,44 @@ slots = [
                 legs: 2,
             }),
             Some(10_000.0)
+        );
+    }
+
+    /// Clan internal structure builds CASE, at 50,000 C-bills, into every location holding
+    /// ammunition, whatever the chassis's base: the Jenner's right torso bin (TechManual
+    /// pp. 210, 292, 302).
+    #[test]
+    fn built_in_clan_case_follows_the_internal_structure() {
+        let base = template_base_cost(&PartPrices::new(), &jenner()).unwrap() as f64;
+        let mut clan_structure = jenner();
+        clan_structure
+            .attributes
+            .entry("specials".into())
+            .or_default()
+            .push_str(" MixedTech ClanStructure_Tech");
+        assert!(clan_structure.clan_structure());
+        let cost = template_base_cost(&PartPrices::new(), &clan_structure).unwrap() as f64;
+        assert!(
+            (cost - base - 50_000.0 * 1.35).abs() <= 1.0,
+            "{base} {cost}"
+        );
+        // A Clan chassis keeps the Jenner's head sink a single sink.
+        let mut inner_sphere_structure = clan_structure.clone();
+        inner_sphere_structure.attributes.insert(
+            "specials".into(),
+            "Clan SingleHS MixedTech ISStructure_Tech".into(),
+        );
+        assert!(!inner_sphere_structure.clan_structure());
+        let mut clan_chassis = inner_sphere_structure.clone();
+        clan_chassis
+            .attributes
+            .insert("specials".into(), "Clan SingleHS".into());
+        let built_in = template_base_cost(&PartPrices::new(), &clan_chassis).unwrap() as f64;
+        let installed =
+            template_base_cost(&PartPrices::new(), &inner_sphere_structure).unwrap() as f64;
+        assert!(
+            (built_in - installed - 50_000.0 * 1.35).abs() <= 1.0,
+            "{built_in} {installed}"
         );
     }
 

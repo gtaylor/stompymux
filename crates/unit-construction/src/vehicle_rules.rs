@@ -61,15 +61,15 @@ pub fn vehicle_maximum_armor(tons: u16) -> u32 {
     u32::from(tons) * 7 / 2 + 40
 }
 
-/// Whether a resolved system claims an item slot. `clan` is the installation's technology
-/// base. A combat vehicle counts an Artemis or MRM "Apollo" fire-control system as part of
-/// the launcher it serves (TechManual p. 206; Tactical Operations: Advanced Units & Equipment
-/// p. 142); auxiliary VTOL fuel tanks are fuel, not items. Inner Sphere CASE costs one item
-/// slot, while Clan CASE is built into Clan structure and costs none (TechManual p. 210).
-pub fn occupies_vehicle_slot(system: System, clan: bool) -> bool {
+/// Whether a resolved system claims an item slot. `clan_structure` is the vehicle's internal
+/// structure base. A combat vehicle counts an Artemis or MRM "Apollo" fire-control system as
+/// part of the launcher it serves (TechManual p. 206; Tactical Operations: Advanced Units &
+/// Equipment p. 142); auxiliary VTOL fuel tanks are fuel, not items. CASE costs one item slot
+/// on Inner Sphere structure, while Clan structure builds it in for none (TechManual p. 210).
+pub fn occupies_vehicle_slot(system: System, clan_structure: bool) -> bool {
     match system {
         System::ArtemisIv | System::ArtemisV | System::ApolloFcs | System::FuelTank => false,
-        System::Case => !clan,
+        System::Case => !clan_structure,
         _ => true,
     }
 }
@@ -162,11 +162,11 @@ impl VehicleTemplate {
     /// none (TechManual pp. 104, 106).
     pub fn item_slots(&self, loadout: &VehicleLoadout) -> u16 {
         let weapons = loadout.weapons.len();
-        let clan = self.has_special("Clan");
+        let clan_structure = self.clan_structure();
         let systems = loadout
             .systems
             .iter()
-            .filter(|part| occupies_vehicle_slot(part.system, part.is_clan(clan)))
+            .filter(|part| occupies_vehicle_slot(part.system, clan_structure))
             .count();
         let mut ammunition: Vec<(Weapon, AmmunitionMode)> = Vec::new();
         for bin in &loadout.ammunition {
@@ -1131,26 +1131,43 @@ slots = [
         assert_eq!(parse(YELLOW_JACKET).declared_engine_rating().unwrap(), None);
     }
 
-    /// ICE vehicles carry power amplifiers for energy weapons; fusion vehicles do not, and
-    /// Clan CASE weighs nothing.
+    /// ICE vehicles carry power amplifiers for energy weapons; fusion vehicles do not. CASE
+    /// on Clan internal structure is built in, weighing nothing and taking no item slot, while
+    /// on Inner Sphere structure it weighs half a ton in one slot, whatever the chassis's base
+    /// (TechManual p. 210).
     #[test]
-    fn amplifiers_and_case_follow_the_engine_and_technology_base() {
+    fn amplifiers_and_case_follow_the_engine_and_structure() {
         let lasers = YELLOW_JACKET.replace(
             "{ at = 1, item = \"IS.GaussRifle\" },",
             "{ at = 1, item = \"IS.LargeLaser\" },\n    { at = 4, item = \"CASE\" },",
         );
         let ice = parse(&lasers);
         assert_eq!(ice.mass().unwrap().power_amplifiers, 512);
-        assert_eq!(
-            ice.fixed_system_mass(System::Case, ice.has_special("Clan")),
-            512
-        );
+        let case = |template: &VehicleTemplate| {
+            let loadout = VehicleLoadout::resolve(template).unwrap();
+            let part = loadout
+                .systems
+                .iter()
+                .find(|part| part.system == System::Case)
+                .unwrap();
+            (
+                template.system_mass(&loadout, part),
+                occupies_vehicle_slot(part.system, template.clan_structure()),
+            )
+        };
+        assert_eq!(case(&ice), (512, true));
         let fusion = parse(&lasers.replace("engine = \"ice\"", "tech_base = \"clan\""));
         assert_eq!(fusion.mass().unwrap().power_amplifiers, 0);
-        assert_eq!(
-            fusion.fixed_system_mass(System::Case, fusion.has_special("Clan")),
-            0
-        );
+        assert_eq!(case(&fusion), (0, false));
+        let mixed = |source: &str, structure: &str| {
+            parse(&source.replace(
+                "[construction]\n",
+                &format!("[construction]\nmixed_tech = true\nstructure_tech = \"{structure}\"\n"),
+            ))
+        };
+        let clan = lasers.replace("engine = \"ice\"", "tech_base = \"clan\"");
+        assert_eq!(case(&mixed(&clan, "inner_sphere")), (512, true));
+        assert_eq!(case(&mixed(&lasers, "clan")), (0, false));
     }
 
     /// Beagle, ECM, CASE II and machine gun array masses follow each slot's own `IS.` or `CL.`

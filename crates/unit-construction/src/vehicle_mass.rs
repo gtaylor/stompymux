@@ -261,6 +261,14 @@ impl VehicleTemplate {
     ) -> u32 {
         let clan = part.is_clan(self.has_special("Clan"));
         match part.system {
+            // CASE comes with Clan internal structure and weighs nothing (TechManual p. 210).
+            System::Case => {
+                if self.clan_structure() {
+                    0
+                } else {
+                    512
+                }
+            }
             System::TargetingComputer => {
                 targeting_computer_tons(loadout.weapons.iter().map(|mount| mount.weapon), clan)
                     * 1024
@@ -342,8 +350,7 @@ impl VehicleTemplate {
                     1536
                 }
             }
-            // Clan CASE weighs nothing (TechManual p. 210).
-            System::Case if clan => 0,
+            // CASE is weighed by the structure that builds it in (see [`Self::system_mass`]).
             System::Case | System::LightProbe | System::LightTag => 512,
             System::CaseIi => {
                 if clan {
@@ -411,6 +418,19 @@ impl VehicleTemplate {
             return true;
         }
         if self.has_special("ISArmor_Tech") {
+            return false;
+        }
+        self.has_special("Clan")
+    }
+
+    /// Whether the internal structure is Clan-made, which builds CASE into the vehicle (TechManual
+    /// p. 210): the chassis technology base unless a mixed-technology flag names the
+    /// structure's own.
+    pub fn clan_structure(&self) -> bool {
+        if self.has_special("ClanStructure_Tech") {
+            return true;
+        }
+        if self.has_special("ISStructure_Tech") {
             return false;
         }
         self.has_special("Clan")

@@ -121,7 +121,9 @@ Inner Sphere chassis choices (TechManual pp. 50, 52), and composite structure is
 Inner Sphere structure: a Clan mech with it needs `mixed_tech` and
 `structure_tech = "inner_sphere"` (TacOps AUE p. 154). CASE is an Inner Sphere
 item that goes in a torso; Clan CASE is built into every location of a
-Clan-structure unit rather than installed (TechManual p. 210).
+Clan-structure unit rather than installed, whatever the chassis's base, so a
+mech with Clan internal structure lists no `Case` item and pays the CASE price
+for each location holding ammunition (TechManual pp. 210, 292).
 
 CASE II, ECM suites, active probes, MASC, targeting computers, Artemis IV, jump
 jets and machine gun arrays (`MGA`) are built by both bases to their own

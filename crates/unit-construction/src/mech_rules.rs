@@ -991,16 +991,16 @@ impl MechTemplate {
                 citation: "TechManual p. 52",
             });
         }
-        // CASE as a BattleMech item is Inner Sphere CASE: Clan CASE is built into every
-        // location of a Clan-structure Mech rather than installed (TechManual p. 210).
+        // CASE as a BattleMech item is Inner Sphere CASE: Clan CASE comes with Clan internal
+        // structure in every location rather than being installed (TechManual p. 210), whatever
+        // the chassis's own base.
         ensure!(
-            !clan
-                || mixed_tech
+            !self.clan_structure()
                 || loadout
                     .systems
                     .iter()
                     .all(|part| part.system != System::Case),
-            "Case is Inner Sphere technology on a Clan Mech, whose CASE is built in; declare mixed_tech in [construction]"
+            "A Mech with Clan internal structure has CASE built into every location and installs no Case item (TechManual p. 210)"
         );
         check_technology_base(TechnologyInventory {
             unit: "Mech",
@@ -1549,6 +1549,41 @@ mod tests {
                 .unwrap_or_default()
                 .contains("fusion engine")
         );
+    }
+
+    /// Clan internal structure carries CASE in every location, so a Mech built on it installs
+    /// no Case item, whatever its chassis base; Inner Sphere structure takes CASE as an item in
+    /// a torso, on a mixed-technology Clan chassis too (TM p. 210).
+    #[test]
+    fn clan_case_follows_the_internal_structure() {
+        let case = JENNER.replacen(
+            "    { at = \"1-2\", item = \"JumpJet\" },\n]",
+            "    { at = \"1-2\", item = \"JumpJet\" },\n    { at = 3, item = \"Case\" },\n]",
+            1,
+        );
+        let mixed = |source: &str, structure: &str| {
+            source.replacen(
+                "[construction]\n",
+                &format!("[construction]\nmixed_tech = true\nstructure_tech = \"{structure}\"\n"),
+                1,
+            )
+        };
+        let built_in = "A Mech with Clan internal structure has CASE built into every location";
+        refused(&mixed(&case, "clan"), built_in);
+        let clan_chassis = |source: &str| {
+            source
+                .replace(
+                    "tech_base = \"inner_sphere\"",
+                    "tech_base = \"clan\"\nheat_sinks = \"single\"",
+                )
+                .replace("IS.MediumLaser", "CL.ERSmallLaser")
+                .replace("IS.SRM-4", "CL.SRM-4")
+        };
+        refused(&clan_chassis(&case), built_in);
+        let inner_sphere_structure = mixed(&clan_chassis(&case), "inner_sphere");
+        let installed = rejection(&inner_sphere_structure).unwrap_or_default();
+        assert!(!installed.contains("CASE"), "{installed}");
+        assert!(!rejection(&case).unwrap_or_default().contains("CASE"));
     }
 
     /// Weapons come from the chassis technology base unless the design is mixed technology.
