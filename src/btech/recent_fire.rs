@@ -1,5 +1,6 @@
 //! Transient "fired this heartbeat" marks used by status bits and the simulation scheduler,
-//! and the durable times of each unit's last launch and of each Mech section's last launch.
+//! and the durable times of each unit's last launch, of each Mech section's last launch and
+//! of its last jump, read against the 30-second turn.
 use super::{Mech, MechSection, Vehicle};
 use crate::{Flag, World};
 
@@ -40,6 +41,13 @@ impl Mech {
         self.section_fire
             .values()
             .any(|&time| within_turn(time, now))
+    }
+
+    /// Whether the unit launched a jump within the current turn. A Mech that jumped may not
+    /// charge that turn (Total Warfare p. 148).
+    pub fn jumped_this_turn(&self, now: i64) -> bool {
+        self.last_jump_launch
+            .is_some_and(|time| within_turn(time, now))
     }
 }
 

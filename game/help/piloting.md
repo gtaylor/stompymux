@@ -687,6 +687,20 @@ p. 144). Height does not count against that reach; instead the level rules decid
 a standing Mech one level up can be punched, clubbed or struck with a weapon but not
 kicked, one a level down can be kicked, clubbed or struck with a weapon but not
 punched, and nothing reaches a target two or more levels away (Total Warfare p. 150).
+A ground vehicle, or a landed VTOL, can be kicked, clubbed or struck with a weapon on
+your own level and punched, clubbed or struck one level up, and takes the blow on a
+random side. A flying VTOL is reached by the difference between its elevation and your
+hex's level: level with you anything but a punch, one or two levels up anything but a
+kick, three levels up only a club or physical weapon, and nothing else. Any physical
+blow that lands destroys a VTOL's rotor (Total Warfare pp. 147, 150 and 198).
+
+A four-legged Mech can kick into its rear arc at +1 with the rear leg on the chosen
+side; that leg's actuators count (Total Warfare p. 147). Only two-legged Mechs trip,
+and only two-legged Mechs can be tripped; a trip takes Piloting -1 (Tactical
+Operations: Advanced Rules p. 89). A club must be picked up with `grabclub` before
+you can swing it (Total Warfare p. 146). A charge or death from above that meets its
+target number exactly is a glancing blow and deals the target half damage, as other
+physical attacks do (Tactical Operations: Advanced Rules p. 78).
 
 A Mech makes one physical attack in a thirty-second turn (Total Warfare p. 144).
 Punching with both arms, or striking with both claws, in one command is a single
@@ -710,13 +724,20 @@ Travel toward the target accumulates the charge distance that sets its damage, a
 selection expires after 61 movement updates. Retargeting keeps accumulated time
 and distance; cancelling clears them. Jumping ages the timer without increasing charge distance. An in-range airborne
 charge attempt clears the selection without attacking. The charging unit takes
-one point of damage per ten tons of its target, as in Total Warfare.
+one point of damage per ten tons of its target, as in Total Warfare. You cannot
+charge within thirty seconds of launching a jump, at a target more than one level
+above or below you, or while your pilot is unconscious or stunned (Total Warfare
+pp. 148 and 150).
 
 
 Use `jump #unit` for a death-from-above attack, or `jump` with no arguments to
 use your current target. You jump toward the hex occupied by the target when
 you launch. If it moves out of that hex, you land normally. Status shows the
-selected DFA target during flight.
+selected DFA target during flight. Your Jumping MP must clear the target: the
+level of its hex above yours, plus two over a standing Mech (Total Warfare p. 149).
+After a hit you roll at +4 and the target at +2 to stay standing; each roll stands
+alone, so a target still rolls when your landing damage has already knocked you
+down (Total Warfare p. 150).
 
 A successful attack damages the target and your legs. A miss is a two-level fall
 onto your back: every hit strikes your rear and your pilot makes the fall's
@@ -1643,7 +1664,7 @@ swing. Use `punch` for bare fists.
 | Dual saw | `Dual_Saw` | 7 | 0 | no |
 | Claw | `Claw` | tons / 7, rounded up | +1 | no |
 | Retractable blade | `Retractable_Blade` | tons / 10, rounded up | -2 | yes |
-| Lance | `Lance` | tons / 5 | +1 | no |
+| Lance | `Lance` | tons / 5, rounded up | +1 | no |
 | Flail | `Flail` | 9 | 0 | no |
 | Wrecking ball | `Wrecking_Ball` | 8 | +1 | no |
 | Chain whip | `Chain_Whip` | 3 | -2 | yes |
@@ -1652,9 +1673,10 @@ swing. Use `punch` for bare fists.
 Triple-strength myomer doubles axe, sword, mace, claw, retractable blade and
 lance damage only. A missed mace swing forces a piloting check at +2. A roll of
 2 with a flail or wrecking ball swings it back into your own front for 5 or 4
-damage, followed by a piloting check. A wrecking ball hit forces the target to
-make a piloting check at +2, as a charge does. Each vibroblade swing adds 3, 5
-or 7 heat.
+damage, followed by a piloting check. A wrecking ball reaches only your forward
+arc; every other weapon also reaches its arm's side arc (Total Warfare p. 146).
+Claws strike as punches, so a damaged shoulder stops them. Each vibroblade swing
+adds 3, 5 or 7 heat.
 
 When a lance hits and armor still covers the struck location, roll 2d6: on 10 or
 more, one point of damage goes straight to internal structure, and its critical

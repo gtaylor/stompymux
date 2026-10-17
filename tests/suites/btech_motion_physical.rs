@@ -10,3 +10,6 @@ mod btech_motion_physical;
 
 #[path = "../btech_talons_spikes.rs"]
 mod btech_talons_spikes;
+
+#[path = "../btech_physical_rules.rs"]
+mod btech_physical_rules;

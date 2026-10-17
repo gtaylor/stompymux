@@ -313,7 +313,7 @@ fn arm_with_weapon(
 }
 
 /// Equip both hands while preserving the fixture's identity and ammunition layout.
-fn install_test_handweapons(
+pub(crate) fn install_test_handweapons(
     world: &mut stompymux_rs::World,
     id: ObjectId,
     kind: stompymux_rs::ArmAttack,
@@ -1593,8 +1593,23 @@ async fn claw_parts_actuators_damage_and_dice() {
             myomer_test_heat(&mut world, id, 20.0, 9.0);
         }
         // Claws replace the hand actuator (Tactical Operations: Advanced Units & Equipment),
-        // so the arm's actuators are the shoulder, upper and lower arm.
-        for slot in 0..=2 {
+        // so the arm's actuators are the shoulder, upper and lower arm. Claws strike as
+        // punches, which a damaged shoulder bars outright (Total Warfare p. 145).
+        let mut shoulderless = world.clone();
+        destroy_battle_critical(
+            &mut shoulderless,
+            id,
+            CriticalLocation {
+                section: MechSection::LeftArm,
+                slot: 0,
+            },
+        )
+        .unwrap();
+        assert!(
+            format!("{:#}", profile(&shoulderless, kick_rules()).unwrap_err())
+                .contains("hip or shoulder is destroyed")
+        );
+        for slot in 1..=2 {
             destroy_battle_critical(
                 &mut world,
                 id,
@@ -1711,7 +1726,7 @@ async fn claw_parts_actuators_damage_and_dice() {
 }
 
 /// Give the fixture working hands and trees without installing a manufactured physical weapon.
-fn prepare_test_club(world: &mut stompymux_rs::World, id: ObjectId) {
+pub(crate) fn prepare_test_club(world: &mut stompymux_rs::World, id: ObjectId) {
     use stompymux_rs::*;
     install_test_handweapons(world, id, ArmAttack::Axe);
     let mut state = serde_json::to_value(&world.btech).unwrap();
@@ -1842,8 +1857,19 @@ async fn club_attacks_damage_breakage_and_recovery() {
     use stompymux_rs::*;
     let (_dir, config, mut base, id, target) = kick_fixture().await;
     prepare_test_club(&mut base, id);
+    // Standing among trees is not enough: the club must be picked up first, in a turn of its
+    // own (Total Warfare p. 146).
+    assert!(
+        format!(
+            "{:#}",
+            battle_club_profile(&base, id, ObjectId(1), target, kick_rules()).unwrap_err()
+        )
+        .contains("Pick one up first")
+    );
     for hot in [false, true] {
         let mut world = base.clone();
+        grab_battle_club(&mut world, id, ObjectId(1), Some("right")).unwrap();
+        pass_seconds(&mut world, 30);
         if hot {
             install_test_myomer(&mut world, id);
             myomer_test_heat(&mut world, id, 20.0, 9.0);
@@ -2820,7 +2846,7 @@ async fn charge_immobility_includes_unconscious_pilots() {
 }
 
 /// Piloting five aims a DFA at five against an immobile target: a two misses and a twelve hits.
-fn dfa_piloting(world: &mut stompymux_rs::World) {
+pub(crate) fn dfa_piloting(world: &mut stompymux_rs::World) {
     stompymux_rs::set_battle_character_value(
         world,
         ObjectId(1),
@@ -2837,7 +2863,7 @@ fn dfa_piloting(world: &mut stompymux_rs::World) {
 /// Attacker dice whose resolved DFA satisfies `accept`, which inspects the report and the world
 /// it left behind. Sixteen seed bits keep rare combinations of attack, landing and injury rolls
 /// reachable.
-fn dfa_dice(
+pub(crate) fn dfa_dice(
     world: &stompymux_rs::World,
     id: ObjectId,
     target: ObjectId,

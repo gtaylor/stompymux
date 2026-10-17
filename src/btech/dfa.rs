@@ -183,6 +183,9 @@ pub struct DfaReport {
     pub profile: DfaProfile,
     pub roll: u8,
     pub hit: bool,
+    /// The roll met the target number exactly: the target takes half damage, less likely to
+    /// find a critical (Tactical Operations: Advanced Rules p. 78).
+    pub glancing: bool,
     pub target_impacts: Vec<TacticalImpact>,
     pub attacker_impacts: Vec<TacticalImpact>,
     pub balance: Vec<DfaBalance>,
@@ -218,6 +221,8 @@ struct DfaPackets {
 }
 
 /// Apply five-point groups, resampling posture and preserving location/damage dice order.
+/// `critical_penalty` comes off every Determining Critical Hits roll, as for a glancing blow.
+#[allow(clippy::too_many_arguments)]
 fn packets(
     world: &mut World,
     id: ObjectId,
@@ -226,6 +231,7 @@ fn packets(
     phase: DamagePhase,
     rules: FallRules,
     attack: (ObjectId, bool),
+    critical_penalty: u8,
 ) -> Result<DfaPackets> {
     let (attacker, character) = attack;
     let mut reports = Vec::new();
@@ -274,7 +280,7 @@ fn packets(
             experience.push(award.award);
             experience_messages.extend(award.message);
         }
-        let report = super::impact::resolve_attack_in_candidate(
+        let report = super::impact::resolve_attack_in_candidate_with_penalty(
             world,
             id,
             hit,
@@ -286,6 +292,7 @@ fn packets(
                 character,
                 followup: true,
             },
+            critical_penalty,
         )?;
         reports.push(report);
         damage -= group;
@@ -333,11 +340,15 @@ fn resolve_dfa_inner(
         let roll = source.dice.generic_roll();
         source.flight = None;
         let hit = i32::from(roll) >= profile.target_number;
+        // Tactical Operations glancing blows: meeting the target number exactly halves the
+        // damage the target takes (Tactical Operations: Advanced Rules p. 78).
+        let glancing = hit && i32::from(roll) == profile.target_number;
         let mut report = DfaReport {
             attacker,
             target,
             roll,
             hit,
+            glancing,
             pilot_notices: Vec::new(),
             notices: vec![Notice {
                 unit: attacker,
@@ -373,14 +384,34 @@ fn resolve_dfa_inner(
             report.notices.extend(super::broadcast::interaction_notices(
                 world, attacker, target, "lands on",
             ));
+            if glancing {
+                report.notices.extend(super::broadcast::observer_notices(
+                    world,
+                    target,
+                    "is nicked by a glancing blow!",
+                ));
+                report.notices.push(Notice {
+                    unit: target,
+                    text: "You are nicked by a glancing blow!".into(),
+                });
+            }
+            let (inflicted, penalty) = if glancing {
+                (
+                    report.profile.inflicted_damage / 2,
+                    super::impact::GLANCING_CRITICAL_PENALTY,
+                )
+            } else {
+                (report.profile.inflicted_damage, 0)
+            };
             let target_packets = packets(
                 world,
                 target,
-                report.profile.inflicted_damage,
+                inflicted,
                 report.profile.target_arc,
                 DamagePhase::Target,
                 target_rules,
                 (attacker, character),
+                penalty,
             )?;
             report.target_impacts = target_packets.impacts;
             report.experience = target_packets.experience;
@@ -407,6 +438,7 @@ fn resolve_dfa_inner(
                 DamagePhase::Legs,
                 attacker_rules,
                 (attacker, character),
+                0,
             )?;
             report.attacker_impacts = backlash.into_iter().chain(landing.impacts).collect();
         } else {
@@ -428,11 +460,16 @@ fn resolve_dfa_inner(
             );
             report.notices.extend(impact.notices.iter().cloned());
         }
-        if hit && world.btech.constructed_units()[&attacker].posture() != Posture::Prone {
+        // After a hit both 'Mechs roll to stay standing, the attacker at +4 and the target at
+        // +2 (Total Warfare p. 150). Each roll stands alone: a unit already down, such as an
+        // attacker its own landing damage felled, ignores its roll, and the other still makes
+        // its own (Total Warfare p. 151).
+        if hit {
             for (id, modifier, fall_rules) in
                 [(attacker, 4, attacker_rules), (target, 2, target_rules)]
             {
-                if world.btech.constructed_units()[&id].is_destroyed() {
+                let unit = &world.btech.constructed_units()[&id];
+                if unit.is_destroyed() || unit.posture() == Posture::Prone {
                     continue;
                 }
                 let mut check = roll_piloting(world, id, modifier, rules.fall.extended_piloting)?;

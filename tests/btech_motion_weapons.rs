@@ -8054,6 +8054,8 @@ async fn trip_profile_actuators_and_target_guards() {
             .unwrap();
             let profile =
                 battle_trip_profile(&world, id, ObjectId(1), target, leg, kick_rules()).unwrap();
+            // A trip takes Piloting -1 (Tactical Operations: Advanced Rules p. 89), against
+            // the kick's -2.
             assert_eq!(
                 (
                     profile.base,
@@ -8061,7 +8063,7 @@ async fn trip_profile_actuators_and_target_guards() {
                     profile.damage,
                     profile.target_number
                 ),
-                (9, 0, 0, 5)
+                (10, 0, 0, 6)
             );
             assert!(matches!(profile.attack, PhysicalAttack::Trip { .. }));
         }

@@ -336,16 +336,32 @@ fn biped_support_and_quad_gyro_standing_rules() {
     assert!(!damaged.stand_requires_roll().unwrap());
 }
 
-/// Quad kicks use front legs, allow one missing support and reject hip damage or arm attacks.
+/// Quad kicks use front legs, allow one missing support and reject hip damage, arm attacks
+/// and trips, which only bipeds make (Tactical Operations: Advanced Rules p. 89).
 #[test]
 fn quad_physical_support_uses_selected_front_leg_and_surviving_hips() {
     use stompymux_rs::{Arm, ArmAttack, Leg, PhysicalAttack as Attack};
     let base = quad();
+    for leg in [Leg::Left, Leg::Right] {
+        let error = Attack::Trip { leg }
+            .validate_chassis_support(&base)
+            .unwrap_err();
+        assert!(
+            format!("{error:#}").contains("Only two-legged"),
+            "{error:#}"
+        );
+        assert!(
+            Attack::Trip { leg }
+                .validate_chassis_support(&unit())
+                .is_ok()
+        );
+    }
     for (leg, section) in [
         (Leg::Left, Section::LeftArm),
         (Leg::Right, Section::RightArm),
     ] {
-        for attack in [Attack::Kick { leg }, Attack::Trip { leg }] {
+        {
+            let attack = Attack::Kick { leg };
             assert_eq!(attack.section(base.chassis()), section);
             assert!(attack.validate_chassis_support(&base).is_ok());
             for mask in 0u8..16 {
