@@ -34,10 +34,17 @@ kph per point and running is walking x 1.5 rounded up (Total Warfare p. 53); you
 may back up no faster than walking. Heat takes one walking MP per five points and
 caps the throttle rather than scaling it, hot triple-strength myomer adds two walking
 MP, and MASC doubles the walking figure that is left, running refigured each time
-(TW pp. 137, 139, 159). A Mech that runs during a thirty-second turn with a damaged
-hip or gyro makes one piloting roll at the turn's end (TW p. 53), and one that
-exceeds its normal running MP under light gravity rolls once a turn against a point
-of leg damage per MP over (Tactical Operations p. 53). Turns and speed changes are
+(TW pp. 137, 139, 159). A Mech that has lost a leg walks at 1 MP whatever would raise
+it, myomer and MASC included, and cannot run (TW p. 122). Away from standard gravity
+your walking MP is divided by the G-rating and rounded to the nearest whole MP, halves
+down, after every other modifier, and running is figured afresh from it; a unit left
+with no MP cannot move (Tactical Operations: Advanced Rules p. 53). A Mech that runs
+during a thirty-second turn with a damaged hip or gyro makes one piloting roll at the
+turn's end (TW p. 53), and one that exceeds its normal running MP under light gravity
+rolls once a turn against a point of leg damage per MP over; a vehicle that exceeds its
+normal flank speed rolls the same way against a point of front internal damage per MP
+over and a motive damage roll (Tactical Operations p. 53). Being shut down or having
+an unconscious MechWarrior forces no roll of its own. Turns and speed changes are
 gradual. Each hex costs movement for its ground, foliage, route, water and any ice,
 snow or mud, and your speed is divided by that cost, following the Total Warfare and
 Tactical Operations movement cost tables. A road or rail line replaces the
@@ -79,7 +86,9 @@ roll against your piloting or driving skill, harder the farther you have moved
 this turn. Failure drops a Mech and slides it along its old course for half the
 hexes it had moved, taking half a fall's damage in every hex it slides through,
 stopping against higher ground and tumbling over any drop too steep to walk
-down. A skidding unit that reaches another unit charges it with the +3 modifier
+down. Every hex the skid crosses uses up the movement points its terrain costs, so
+woods or rough ground cut it short; a building the skid brings down lets it go on,
+less the building's movement cost (Total Warfare pp. 62-63). A skidding unit that reaches another unit charges it with the +3 modifier
 for an unintentional charge (Total Warfare p. 63); a hit ends the skid, a miss
 slides on through. A vehicle slides the same way and rolls once for motive
 system damage, and a vehicle that skids into terrain its drive could never
@@ -87,7 +96,8 @@ enter takes a point of damage per five tons and is immobile there for good. A
 hovercraft does not skid but sideslips: whenever it changes facing at flank
 speed on any ground and then moves on, it rolls against its driving skill, and
 on a failure it drifts along its old course one hex for every point it missed
-by, without damage unless it drifts into something.
+by, without damage unless it drifts into something or off a drop deeper than one
+level, which is a fall.
 
 Swamp, mud, deep snow, tundra and sand can bog you down. Entering such a hex
 takes a piloting or driving roll, one easier on tundra, deep snow and mud, and a
@@ -98,11 +108,14 @@ start of every turn. Jumping out always works. Hovercraft never bog down.
 Stacking follows Total Warfare p. 57: a hex may hold at most two units a side and
 four in all, only one of them a Mech. You may drive or walk through a hex your
 friends hold, but you cannot stop in one that is already full, and you stop at the
-edge of any hex an enemy holds (a charge at that enemy goes through). A Mech that
-lands or falls into a hex another Mech holds makes an accidental fall from above
-(TW p. 152): roll 7 or better, modified for the target's movement and cover, to
-come down on it for your tonnage over ten per level fallen, then take your own
-fall onto your back; a miss leaves everyone standing.
+edge of any hex an enemy holds (a charge at that enemy goes through). You may not aim
+a jump at a full hex. A Mech brought down out of the air into a hex another Mech holds
+falls no levels, so it shoves that Mech out of the hex in the direction it was
+travelling, and the shoved Mech must make a piloting roll or fall (the domino effect,
+TW pp. 152-153). A Mech whose jump lands in a hex that filled while it flew makes an
+accidental fall from above (TW p. 152): roll 7 or better, modified for the target's
+movement and cover, to come down on it for your tonnage over ten per level fallen, then
+take your own fall onto your back; a miss leaves everyone standing.
 
 Water depth affects piloting checks. Entering water a level or more deep requires a
 piloting check, one easier at depth one, unmodified at depth two and one harder
@@ -114,9 +127,9 @@ Bridge travel selects the deck or a lower surface at elevation -1 according to
 your current height. Beneath a bridge you stand on the river bed: water checks
 still apply, and the deck overhead plays no part in slope checks.
 
-Stepping onto ice, over water or on land, takes a piloting or driving roll at +0
-for everything but a hovercraft; a Mech that fails falls, and a vehicle slews to a
-halt and rolls for motive damage. Each new hex of frozen water entered from
+Stepping onto ice takes no roll: the extra movement point it costs is the price of
+moving carefully across it (Tactical Operations: Advanced Rules pp. 48, 63). Each new
+hex of frozen water entered from
 elevation zero also has a one-in-six chance of breaking, and landing a jump on it
 breaks it half the time. A break can drop everyone on that hex into the water.
 Below intact ice, you follow the bottom and make water checks; falls and standing
@@ -280,9 +293,11 @@ Saved timers keep their remaining seconds; offline time does not advance repairs
 
 
 Use `stand check` to inspect your piloting target while prone. `stand` attempts to
-get up. `stand careful` spends the whole turn standing for a -2 modifier (Tactical
-Operations p. 20): it takes twice as long, and a failed careful attempt takes at least
-thirty seconds to recover. If your base target exceeds twelve, use `stand anyway` to
+get up. An attempt costs 2 MP (Total Warfare p. 50): at your running pace, a hex every
+sixty seconds per MP, it takes 120 seconds divided by your running MP, never more than
+a thirty-second turn. `stand careful` spends the whole thirty-second turn standing, for
+a -2 modifier if you have more than two walking MP (Tactical Operations: Advanced Rules
+pp. 21-22). If your base target exceeds twelve, use `stand anyway` to
 attempt it despite certain failure. Every attempt adds one point of heat (Total Warfare
 p. 159). Failed attempts cause another fall. Successful attempts make you upright but
 block forward or reverse movement until the stand timer finishes. You can use `heading`
@@ -1342,7 +1357,10 @@ match. C3 displays only contact rows; an empty list produces no output.
 
 Use `lateral ne` or `lateral fr` for Front/Right travel, `nw`/`fl` for Front/Left,
 `se`/`rr` for Rear/Right, and `sw`/`rl` for Rear/Left. `lateral -` restores straight
-travel. Only quads with all four legs intact can move laterally. A change takes six seconds; requesting
+travel. Only quads with all four legs intact can move laterally. A lateral shift costs
+one movement point more in every hex, and a shift into a rear side hex is backward
+movement, held to walking speed and taking the backward level-change check (Total
+Warfare p. 50). A change takes six seconds; requesting
 your current direction cancels a pending change. The chassis and weapon facing
 stay unchanged. Reverse speed travels opposite the chosen direction. Changes
 complete only if the unit is running when the timer expires.

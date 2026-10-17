@@ -31,11 +31,11 @@ impl Mech {
         let envelope = super::SpeedEnvelope::from_running(maximum);
         let loaded = load.maximum_speed(maximum)?;
         let factor = if maximum > 0.0 { loaded / maximum } else { 0.0 };
-        let running = self.equip_envelope(envelope).scaled(factor).running;
-        super::speed_bonus::gravity(
-            running as f32,
-            map.filter(|map| map.gravity != 100).map(|map| map.gravity),
-        )
+        let envelope = self.template_envelope(envelope, factor, map.map(|map| map.gravity));
+        envelope.validate()?;
+        // The figure keeps single precision, so load scaling's rounding noise never moves it
+        // across a speed band.
+        Ok(f64::from(envelope.running as f32))
     }
 }
 

@@ -502,6 +502,22 @@ fn prepare_jump(world: &World, id: ObjectId, request: JumpRequest<'_>) -> Result
         range <= f64::from(capacity.movement_points),
         "That target is out of range!"
     );
+    // A jump must obey stacking in its destination hex (Total Warfare p. 57); a death from
+    // above counts toward stacking only once it lands (TW p. 149).
+    if target.is_none()
+        && let (Ok(x), Ok(y)) = (u16::try_from(destination.x), u16::try_from(destination.y))
+    {
+        let landing = super::Position {
+            map: position.map,
+            x,
+            y,
+        };
+        let others = super::stacking::occupants(world, landing, id);
+        ensure!(
+            !super::stacking::exceeds_limit(true, unit.signature().team, &others),
+            "That hex is already full; you cannot land there."
+        );
+    }
     let destination_elevation = map
         .base_hex(i64::from(destination.x), i64::from(destination.y))?
         .standing_height();

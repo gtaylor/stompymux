@@ -153,14 +153,6 @@ fn footing(world: &World, id: ObjectId) -> Option<(super::Hex, i32, GroundMoveme
     ))
 }
 
-/// What the terrain under a unit adds to every piloting or driving roll it makes: the hex's
-/// Tactical Operations PSR modifier for where the unit stands. Unplaced units take none.
-pub(super) fn terrain_piloting_modifier(world: &World, id: ObjectId) -> i16 {
-    footing(world, id).map_or(0, |(tile, level, movement, _)| {
-        tile.piloting_modifier(movement, level)
-    })
-}
-
 /// What the terrain under a unit, the wind and the weather add to every piloting or driving
 /// roll it makes: the hex's Tactical Operations PSR modifier for where the unit stands, plus
 /// gale, storm and precipitation penalties. Unplaced units take none.

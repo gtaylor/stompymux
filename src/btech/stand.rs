@@ -1,5 +1,5 @@
 //! Durable stand attempts and retry delays, including water and ice fall consequences.
-use super::{FallRules, MechFallReport, Notice, PilotingCheck, Posture, Power};
+use super::{FallRules, MP_KPH, MechFallReport, Notice, PilotingCheck, Posture, Power};
 use crate::{Flag, ObjectId, World};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,8 @@ impl StandTimer {
 }
 
 /// Normal refuses impossible base targets; anyway overrides that refusal; careful spends the
-/// whole turn standing for -2 on the roll (Tactical Operations p. 20) and is always available.
+/// whole turn standing, for -2 on the roll when the 'Mech has more than two walking MP
+/// (Tactical Operations: Advanced Rules pp. 21-22), and is always available.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StandMode {
     Normal,
@@ -157,10 +158,13 @@ fn begin_stand_inner(
         unit.posture = Posture::Standing;
         // Each attempt to stand creates one point of heat (Total Warfare p. 159).
         unit.heat.stored += 1.0;
+        // Taking its time helps only a 'Mech with more than two walking MP to spend
+        // (Tactical Operations: Advanced Rules pp. 21-22).
+        let careful = mode == StandMode::Careful && unit.walking_speed() / MP_KPH > 2.0 + 1e-9;
         let check = super::piloting::roll_standing(
             world,
             id,
-            if mode == StandMode::Careful { -2 } else { 0 },
+            if careful { -2 } else { 0 },
             rules.extended_piloting,
         )?;
         super::piloting::capture_feedback(
@@ -195,16 +199,10 @@ fn begin_stand_inner(
         let timer = if unit.is_destroyed() {
             None
         } else {
-            let base =
-                (30.0 / (unit.movement_maximum_speed() / 21.5).clamp(1.0, 30.0)).floor() as u8;
             let remaining = if mode == StandMode::Careful {
-                if check.success {
-                    base * 2
-                } else {
-                    (base * 2).max(30)
-                }
+                TURN
             } else {
-                base
+                stand_seconds(unit.movement_maximum_speed())
             };
             Some(if check.success {
                 StandTimer::Rising { remaining }
@@ -221,6 +219,22 @@ fn begin_stand_inner(
             pilot_notices,
         })
     })
+}
+
+/// Seconds in a turn, which a careful stand spends whole.
+const TURN: u8 = super::spotter::TURN_SECONDS as u8;
+
+/// Seconds a normal attempt to stand takes: its 2 MP at the 'Mech's running pace, one MP being
+/// a hex every sixty seconds (Total Warfare p. 50). A 'Mech too slow to spend 2 MP within a
+/// turn spends the whole turn, as the minimum movement rule lets it (TW p. 49).
+fn stand_seconds(running_kph: f64) -> u8 {
+    let running_mp = running_kph / MP_KPH;
+    if running_mp <= 0.0 {
+        return TURN;
+    }
+    (2.0 * 60.0 / running_mp)
+        .floor()
+        .clamp(1.0, f64::from(TURN)) as u8
 }
 
 /// Finish stand/retry events on committed seconds, including while shut down.
@@ -293,4 +307,18 @@ pub(crate) fn configured_stand(
             toughness,
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Standing costs 2 MP at running pace, a whole turn at the most (Total Warfare pp. 49-50).
+    #[test]
+    fn standing_takes_two_mp_of_running_time() {
+        for (running_mp, seconds) in [(9.0, 13), (12.0, 10), (6.0, 20), (4.0, 30), (2.0, 30)] {
+            assert_eq!(stand_seconds(running_mp * MP_KPH), seconds, "{running_mp}");
+        }
+        assert_eq!(stand_seconds(0.0), TURN);
+    }
 }

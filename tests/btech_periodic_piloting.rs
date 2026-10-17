@@ -309,7 +309,8 @@ async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order
 }
 
 /// Hot myomer raises the walking ceiling by two MP (Total Warfare p. 139), so a speed that
-/// is a run just under nine heat is a walk at nine and records no run for the turn's check.
+/// is a run just under nine heat is a walk at nine and records no run for the turn's check;
+/// a shut-down unit, its crew awake or not, makes no recurring roll.
 #[tokio::test]
 async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
     let template = include_str!("../game/units/OTL-6D.toml");
@@ -357,21 +358,13 @@ async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
                         .conscious
                 );
             }
+            // Neither a shutdown nor an unconscious crew forces a roll by itself, on any
+            // tick of the turn (Total Warfare pp. 59-60); a vehicle never rolls at all (p. 68).
             for tick in [28, 29, 0, 1] {
                 let mut world = ready.clone();
                 phase(&mut world, tick);
                 let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
-                // A vehicle neither rolls nor falls (Total Warfare p. 68); only a 'Mech does.
-                let expected = unconscious
-                    && [29, 0].contains(&tick)
-                    && world.btech.constructed_units().contains_key(&unit);
-                assert_eq!(reports.len(), usize::from(expected));
-                if expected {
-                    assert_eq!(reports[0].check.roll, None);
-                    assert_eq!(reports[0].check.situational, 3);
-                    assert!(!reports[0].check.success);
-                    assert!(reports[0].fall.is_some());
-                }
+                assert!(reports.is_empty(), "{tick} {unconscious}");
             }
         }
     }

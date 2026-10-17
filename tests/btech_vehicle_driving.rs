@@ -901,13 +901,9 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
         (VehicleMovement::Tracked, true, 0, false),
     ] {
         let (_dir, config, mut world, id, map) = fixture_movement(movement).await;
-        // The fracture die comes first; a vehicle that stays on the ice then rolls at +0 to keep
-        // its grip, and these seeds keep it.
+        // The fracture die is the only roll entering the ice takes.
         let seed = (0..=255)
-            .find(|seed| {
-                let mut dice = Dice::seeded([*seed; 32]);
-                (dice.d6() == 1) == fracture && (fracture || dice.two_d6() >= 11)
-            })
+            .find(|seed| (Dice::seeded([*seed; 32]).d6() == 1) == fracture)
             .unwrap();
         let neighbor = world.create(&config, "Waterproof neighbor".into(), Kind::Thing);
         world.objects.get_mut(&neighbor).unwrap().home = Some(ObjectId(config.home()));
@@ -984,11 +980,10 @@ async fn tracked_and_wheeled_ice_entry_replays_shared_fracture_and_waterproof_ro
             );
             assert_eq!(unit.motion().unwrap().active(), !(fracture && depth > 0));
             if !fracture || depth == 0 {
+                // Only the fracture die: crossing ice carefully takes no driving roll
+                // (Tactical Operations: Advanced Rules pp. 48, 63).
                 let mut dice = Dice::seeded([seed; 32]);
                 dice.d6();
-                if !fracture {
-                    dice.two_d6();
-                }
                 assert_eq!(
                     serde_json::to_value(unit).unwrap()["dice"],
                     serde_json::to_value(dice).unwrap()
@@ -1086,10 +1081,11 @@ async fn amphibious_vehicle_rides_the_water_surface_at_half_speed() {
             continue;
         }
         entered = true;
-        // Stepping from the surface onto the ice sheet takes the ordinary fracture and
-        // driving rolls, so the dice have moved on.
+        // Stepping from the surface onto the ice sheet takes the ordinary fracture roll, so
+        // the dice have moved on; careful movement needs no driving roll (Tactical
+        // Operations: Advanced Rules pp. 48, 63).
         assert_ne!(serde_json::to_value(unit).unwrap()["dice"], dice);
-        assert!(notices.iter().any(|n| n.text.contains("ease onto the ice")));
+        assert!(!notices.iter().any(|n| n.text.contains("ease onto the ice")));
         persistence::save(&config.database(), &world).await.unwrap();
         assert_eq!(
             persistence::load(&config.database()).await.unwrap().btech,

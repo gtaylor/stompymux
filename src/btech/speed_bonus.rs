@@ -1,6 +1,6 @@
 //! Shared load policy and the environmental speed rules applied after equipment: map gravity
 //! for everything, and extreme temperature for vehicles.
-use anyhow::{Result, ensure};
+use anyhow::Result;
 
 /// Host policy shared by load accounting and myomer towing assistance.
 #[derive(Clone, Copy)]
@@ -22,38 +22,58 @@ impl SpeedPolicy {
     }
 }
 
-/// Bound retained vehicle controls by the largest allowed gravity bonus.
+/// The lightest gravity a map's percentage can stand for in movement arithmetic: a map of no
+/// gravity at all is treated as one hundredth of a G so the division stays defined, as for
+/// jumping.
+const LIGHTEST_GRAVITY: i64 = 1;
+
+/// Bound saved controls by the fastest an envelope of `base` km/h can become under the
+/// lightest gravity: divided by its G-rating, with a margin for rounding the walking MP and
+/// refiguring running from it.
 pub(super) fn saved_limit(base: f64) -> f64 {
-    gravity(base as f32, Some(50)).unwrap_or(f64::NAN)
+    base * 100.0 / LIGHTEST_GRAVITY as f64 + 3.0 * super::MP_KPH
 }
 
-/// Apply map gravity after chassis bonuses, preserving ordinary-map precision.
-pub(super) fn on_map(
-    world: &crate::World,
-    position: Option<super::Position>,
-    speed: f64,
-) -> Result<f64> {
-    ensure!(speed.is_finite() && speed >= 0.0, "Invalid effective speed");
-    let map = position
-        .and_then(|position| world.btech.maps().get(&position.map))
-        .filter(|map| map.gravity != 100);
-    match map {
-        Some(map) => gravity(speed as f32, Some(map.gravity)),
-        None => Ok(speed),
+/// Walking (cruising) MP at `gravity` percent of standard: divided by the G-rating and rounded
+/// to the nearest whole number, halves down (Tactical Operations: Advanced Rules p. 53).
+pub(super) fn gravity_walking_mp(walking_mp: f64, gravity: i64) -> f64 {
+    let scaled = walking_mp * 100.0 / gravity.max(LIGHTEST_GRAVITY) as f64;
+    (scaled - 0.5).ceil().max(0.0)
+}
+
+/// An envelope at `gravity` percent of standard: gravity changes the walking (cruising) MP
+/// after every other movement modifier, and running (flanking) is figured afresh from the
+/// walking MP left, keeping any running offset the envelope carried (Tactical Operations:
+/// Advanced Rules p. 53). A unit gravity leaves without MP cannot move.
+pub(super) fn under_gravity(envelope: super::SpeedEnvelope, gravity: i64) -> super::SpeedEnvelope {
+    if gravity == 100 || envelope.is_stopped() {
+        return envelope;
     }
+    let walking = gravity_walking_mp(envelope.walking_mp(), gravity);
+    if walking == 0.0 {
+        return super::SpeedEnvelope::STOPPED;
+    }
+    envelope.with_walking_mp_delta(walking - envelope.walking_mp())
 }
 
-/// Apply map gravity to both ceilings of a unit's envelope. Gravity is the last movement
-/// modifier (Tactical Operations p. 53), so it scales what equipment, heat, temperature
-/// and load left.
+/// The map gravity at `position`, in percent of standard.
+pub(super) fn map_gravity(world: &crate::World, position: Option<super::Position>) -> Option<i64> {
+    position
+        .and_then(|position| world.btech.maps().get(&position.map))
+        .map(|map| map.gravity)
+}
+
+/// Apply map gravity to both ceilings of a vehicle's envelope. Gravity is the last movement
+/// modifier (Tactical Operations p. 53), so it works on what temperature and load left.
 pub(super) fn envelope_on_map(
     world: &crate::World,
     position: Option<super::Position>,
     envelope: super::SpeedEnvelope,
 ) -> Result<super::SpeedEnvelope> {
-    Ok(super::SpeedEnvelope {
-        walking: on_map(world, position, envelope.walking)?,
-        running: on_map(world, position, envelope.running)?,
+    envelope.validate()?;
+    Ok(match map_gravity(world, position) {
+        Some(gravity) => under_gravity(envelope, gravity),
+        None => envelope,
     })
 }
 
@@ -85,18 +105,6 @@ fn temperature_limited(envelope: super::SpeedEnvelope, temperature: i8) -> super
     limited
 }
 
-/// Environmental rules operate last and retain single-precision arithmetic.
-pub(super) fn gravity(speed: f32, gravity: Option<i64>) -> Result<f64> {
-    let speed = if let Some(gravity) = gravity {
-        ensure!((0..=255).contains(&gravity), "Invalid map gravity");
-        speed * 100.0 / gravity.max(50) as f32
-    } else {
-        speed
-    };
-    ensure!(speed.is_finite() && speed >= 0.0, "Invalid effective speed");
-    Ok(f64::from(speed))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,14 +133,31 @@ mod tests {
         );
     }
 
-    /// Gravity scales speed inversely, no lighter than half a G; invalid gravity is rejected.
+    /// Gravity divides walking MP by the G-rating, rounded to the nearest whole MP with halves
+    /// down, and running is figured afresh from what is left (Tactical Operations: Advanced
+    /// Rules p. 53): a 4/6 moves 5/8 at 0.75 G, 3/5 at 1.25 G and 16/24 at 0.25 G, with no
+    /// lower bound on the gravity.
     #[test]
-    fn gravity_scaling_and_bounds() {
-        for (g, multiplier) in [(0, 2.0), (49, 2.0), (50, 2.0), (100, 1.0), (200, 0.5)] {
-            assert_eq!(gravity(64.5, Some(g)).unwrap(), 64.5 * multiplier);
+    fn gravity_rounds_walking_and_refigures_running() {
+        let mp = |envelope: super::super::SpeedEnvelope| {
+            (envelope.walking / 10.75, envelope.running / 10.75)
+        };
+        let unit = super::super::SpeedEnvelope::from_walking_mp(4.0);
+        for (gravity, expected) in [
+            (100, (4.0, 6.0)),
+            (75, (5.0, 8.0)),
+            (125, (3.0, 5.0)),
+            (25, (16.0, 24.0)),
+            (160, (2.0, 3.0)),
+            (200, (2.0, 3.0)),
+            (800, (0.0, 0.0)),
+        ] {
+            assert_eq!(mp(under_gravity(unit, gravity)), expected, "{gravity}");
         }
-        assert_eq!(saved_limit(64.5), 129.0);
-        assert!(gravity(1.0, Some(256)).is_err());
-        assert!(gravity(f32::INFINITY, None).is_err());
+        // 5 / 2 = 2.5 rounds down.
+        let five = super::super::SpeedEnvelope::from_walking_mp(5.0);
+        assert_eq!(mp(under_gravity(five, 200)), (2.0, 3.0));
+        assert_eq!(gravity_walking_mp(4.0, 0), 400.0);
+        assert!(saved_limit(64.5) >= under_gravity(unit, 1).running);
     }
 }

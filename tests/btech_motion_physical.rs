@@ -7080,14 +7080,18 @@ async fn effective_speed_tracks_mass_myomer_and_map_conditions() {
     let (_dir, config, mut world, id) = fixture('.').await;
     install_test_myomer(&mut world, id);
     let map_id = world.btech.constructed_units()[&id].position().unwrap().map;
+    // Away from standard gravity the walking MP is divided by the G-rating and rounded to the
+    // nearest whole MP, halves down, and running is figured from it; a map of no gravity counts
+    // as a hundredth of a G (Tactical Operations: Advanced Rules p. 53). The Jenner walks 7,
+    // 6 at heat 5 and 8 with hot myomer.
     for (heat, gravity, expected) in [
         (4.999, 100, 118.25),
         (8.999, 100, 96.75),
         (9.0, 100, 129.0),
         (9.0, 50, 258.0),
-        (9.0, 0, 258.0),
+        (9.0, 0, 12900.0),
         (9.0, 200, 64.5),
-        (4.999, 200, 59.125),
+        (4.999, 200, 53.75),
     ] {
         myomer_test_heat(&mut world, id, 30.0, heat);
         world

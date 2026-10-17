@@ -309,7 +309,7 @@ async fn vacuum_loss_of_last_jets_interrupts_flight() {
         "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n    { at = \"2-3\", item = \"IS.JumpJet\" },\n",
     );
     assert_ne!(jenner, include_str!("../game/units/JR7-D.toml"));
-    let (_dir, config, mut world, id, _, _) =
+    let (_dir, config, mut world, id, target, _) =
         firing::fixture_with_target(&jenner, None, include_str!("../game/units/AS7-D.toml")).await;
     let section = MechSection::RightTorso;
     let other_jets: Vec<_> = world.btech.constructed_units()[&id]
@@ -326,6 +326,10 @@ async fn vacuum_loss_of_last_jets_interrupts_flight() {
     for location in other_jets {
         destroy_battle_critical(&mut world, id, location).unwrap();
     }
+    // Clear the landing hex: a jump may not be aimed at a full hex (Total Warfare p. 57).
+    let map = world.btech.constructed_units()[&id].position().unwrap().map;
+    world.btech.set_unit_power(target, Power::Off).unwrap();
+    place_battle_unit(&mut world, target, map, 0, 5).unwrap();
     launch_battle_jump(&mut world, id, ObjectId(1), 0, 1.0).unwrap();
     advance_battle_jumps(&mut world, MovementRules::STANDARD).unwrap();
     assert!(world.btech.constructed_units()[&id].flight().is_some());

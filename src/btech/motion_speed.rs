@@ -21,20 +21,13 @@ impl Mech {
         maximum / steps * if advantage { 1.25 } else { 1.0 }
     }
 
-    /// Quad lateral travel subtracts one MP proportionally after terrain, heat and turning losses.
-    /// Reverse movement retains its sign; a nonpositive remaining maximum stops lateral travel.
-    pub fn lateral_speed(&self, target: f64) -> f64 {
-        self.lateral_speed_at(target, self.movement_maximum_speed())
-    }
-
-    /// Lateral movement uses the loaded ceiling after equipment bonuses.
-    pub(super) fn lateral_speed_at(&self, target: f64, maximum: f64) -> f64 {
+    /// Movement points a lateral shift adds to every hex a quad enters: one, on top of the
+    /// terrain (Total Warfare p. 50). Like any movement cost it is one more hex-equivalent in
+    /// the speed divisor.
+    pub fn lateral_cost(&self) -> f64 {
         if self.chassis() != MechChassis::Quad || self.lateral().active == LateralMode::None {
-            return target;
-        }
-        if maximum <= 10.75 {
             return 0.0;
         }
-        target * (maximum - 10.75) / maximum
+        1.0
     }
 }

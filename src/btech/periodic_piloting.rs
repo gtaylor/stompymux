@@ -77,13 +77,9 @@ fn required(world: &World, id: ObjectId, config: &Config) -> Result<Option<(i16,
     let _ = config;
     let mut modifier = None;
     let mut gravity_damage = 0;
-    if world.btech.turn_clock.due()
-        && unit.power() != Power::Running
-        && unit.posture() != super::Posture::Prone
-        && !unit.airborne()
-    {
-        modifier = Some(3);
-    }
+    // Being shut down, or having an unconscious MechWarrior, forces no roll of its own: the
+    // +3 for a shutdown is made only in the phase the reactor shuts down, and a roll the
+    // 'Mech must make then fails automatically (Total Warfare pp. 59-60).
     if !world.btech.turn_clock.starts_turn()
         || unit.posture() == super::Posture::Prone
         || unit.airborne()

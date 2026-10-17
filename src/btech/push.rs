@@ -74,11 +74,6 @@ pub fn push_profile(
     profile(world, attacker, pilot, target, rules, false)
 }
 
-/// The hexside, clockwise from north, a unit facing `heading` has directly ahead of its feet.
-fn hexside_ahead(heading: f64) -> usize {
-    ((heading.rem_euclid(360.0) / 60.0).round() as usize) % 6
-}
-
 /// Shared push eligibility and target number.
 fn profile(
     world: &World,
@@ -189,7 +184,7 @@ fn profile(
     // The target must stand in the hex directly ahead of the attacker's feet; a torso twist
     // does not count (Total Warfare p. 147).
     let heading = source.motion().context("Unit has no motion state")?.heading;
-    let direction = hexside_ahead(heading);
+    let direction = super::displacement::hexside_ahead(heading);
     let ahead = HexCoordinate {
         x: i32::from(position.x),
         y: i32::from(position.y),
@@ -542,26 +537,4 @@ pub(crate) fn command(
             crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
         }
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// The hexside ahead follows the heading, each covering sixty degrees around its centre.
-    #[test]
-    fn hexside_ahead_follows_the_heading() {
-        for (heading, hexside) in [
-            (0.0, 0),
-            (29.0, 0),
-            (31.0, 1),
-            (60.0, 1),
-            (180.0, 3),
-            (300.0, 5),
-            (331.0, 0),
-            (-60.0, 5),
-        ] {
-            assert_eq!(hexside_ahead(heading), hexside, "{heading}");
-        }
-    }
 }

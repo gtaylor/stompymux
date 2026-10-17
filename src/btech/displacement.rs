@@ -12,6 +12,11 @@ use super::{FallRules, HexCoordinate, MechFallReport, Notice, PilotNotice, Posit
 use crate::{Flag, ObjectId, World};
 use anyhow::{Context, Result};
 
+/// The hexside, clockwise from north, a unit facing `heading` has directly ahead of it.
+pub(super) fn hexside_ahead(heading: f64) -> usize {
+    ((heading.rem_euclid(360.0) / 60.0).round() as usize) % 6
+}
+
 /// The longest chain of 'Mechs one displacement may shove in turn.
 const DOMINO_LIMIT: usize = 8;
 
@@ -215,4 +220,26 @@ fn relocate(world: &mut World, id: ObjectId, position: Position, level: i32) -> 
     let identity = unit.identity();
     world.btech.units.insert(id, identity);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The hexside ahead follows the heading, each covering sixty degrees around its centre.
+    #[test]
+    fn hexside_ahead_follows_the_heading() {
+        for (heading, hexside) in [
+            (0.0, 0),
+            (29.0, 0),
+            (31.0, 1),
+            (60.0, 1),
+            (180.0, 3),
+            (300.0, 5),
+            (331.0, 0),
+            (-60.0, 5),
+        ] {
+            assert_eq!(hexside_ahead(heading), hexside, "{heading}");
+        }
+    }
 }

@@ -897,7 +897,8 @@ fn resolve_ground_segment(
             };
             // Backing across a level change takes the reverse-slope check, a kept house rule:
             // Total Warfare p. 49 forbids backward level changes outright.
-            let checked_height = stop.is_some() || (change != 0 && motion.speed < 0.0);
+            let backward = unit.moving_backward(motion.speed);
+            let checked_height = stop.is_some() || (change != 0 && backward);
             // Inside a building the floor entered is the level climbed to, not the roof.
             let climbed = if enters_building {
                 next_height
@@ -1118,7 +1119,8 @@ fn resolve_ground_segment(
             stopped = true;
             break;
         }
-        if change == 0 || motion.speed >= 0.0 {
+        let backward = world.btech.constructed_units()[&id].moving_backward(motion.speed);
+        if change == 0 || !backward {
             let entry = super::water_movement::enter_water(
                 world,
                 id,
@@ -1160,14 +1162,10 @@ fn resolve_ground_segment(
             );
             notices.extend(entry.notices);
             experience_messages.extend(entry.experience_messages);
-            if let Some(breach) = super::building_interior::breach(
-                world,
-                id,
-                motion.speed < 0.0,
-                fall_rules,
-                falls.is_some(),
-            )? && let Some(collapse) =
-                breach.append_to(&mut notices, &mut pilot_notices, &mut experience_messages)
+            if let Some(breach) =
+                super::building_interior::breach(world, id, backward, fall_rules, falls.is_some())?
+                && let Some(collapse) =
+                    breach.append_to(&mut notices, &mut pilot_notices, &mut experience_messages)
             {
                 vehicle_falls.extend(collapse.vehicle_falls.into_iter().map(|(_, fall)| fall));
                 if let Some(falls) = falls.as_deref_mut() {
@@ -1237,14 +1235,10 @@ fn resolve_ground_segment(
             );
             notices.extend(entry.notices);
             experience_messages.extend(entry.experience_messages);
-            if let Some(breach) = super::building_interior::breach(
-                world,
-                id,
-                motion.speed < 0.0,
-                fall_rules,
-                falls.is_some(),
-            )? && let Some(collapse) =
-                breach.append_to(&mut notices, &mut pilot_notices, &mut experience_messages)
+            if let Some(breach) =
+                super::building_interior::breach(world, id, backward, fall_rules, falls.is_some())?
+                && let Some(collapse) =
+                    breach.append_to(&mut notices, &mut pilot_notices, &mut experience_messages)
             {
                 vehicle_falls.extend(collapse.vehicle_falls.into_iter().map(|(_, fall)| fall));
                 if let Some(falls) = falls.as_deref_mut() {

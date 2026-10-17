@@ -67,21 +67,32 @@ pub fn propose_mech_ground_motion(
     // Fog adds to the cost of every hex a walker enters (Tactical Operations p. 55), so does
     // the building it walks through (Total Warfare p. 167), and so does every level it
     // climbed or descended to get in (TW pp. 48 and 52).
+    // A quad's lateral shift costs a point more in every hex (Total Warfare p. 50).
     let divisor = current.ground_speed_divisor(super::GroundMovement::Legged)
         + f64::from(map.weather_condition()?.movement_cost())
         + f64::from(unit.level_entry_cost())
         + f64::from(super::building_interior::floor_cost_at(
             current,
             unit.elevation_level(current),
-        ));
+        ))
+        + unit.lateral_cost();
+    // A shift into a rear side hex is backward movement, held to walking speed like any
+    // other (Total Warfare pp. 50 and 53).
+    let clamp = if unit.lateral().active.rearward() {
+        super::SpeedEnvelope {
+            running: envelope.walking,
+            ..envelope
+        }
+    } else {
+        envelope
+    };
     // Heat, damage and equipment cap the throttle rather than scaling it: a request within
     // the current envelope is honoured as made (Total Warfare p. 159).
-    let mut target = envelope.clamp(motion.desired_speed) / divisor;
+    let mut target = clamp.clamp(motion.desired_speed) / divisor;
     if motion.heading != old_heading {
         let remaining = (motion.desired_heading - motion.heading + 180.0).rem_euclid(360.0) - 180.0;
         target = super::motion_controls::turning_throttle(target, remaining);
     }
-    target = unit.lateral_speed_at(target, maximum);
     // Heat caps the throttle without slowing how quickly the unit reaches it.
     let acceleration = unit.ground_acceleration_at(
         world,

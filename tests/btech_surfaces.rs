@@ -650,7 +650,9 @@ async fn ice_surface_contacts_and_fire_match_native_lua_after_restart() {
         }
         world.btech = serde_json::from_value(state).unwrap();
         if airborne {
-            launch_battle_jump(&mut world, shooter, ObjectId(1), 0, 1.0).unwrap();
+            // Away from the target's hex: a jump may not be aimed at a full hex (Total
+            // Warfare p. 57).
+            launch_battle_jump(&mut world, shooter, ObjectId(1), 180, 1.0).unwrap();
             for _ in 0..6 {
                 advance_battle_jumps(
                     &mut world,
@@ -2714,11 +2716,9 @@ async fn ground_ice_entry_fractures_neighbors_and_replays_without_repeated_check
                 }
                 if !fracture || depth == 0 {
                     let mut dice: Dice = serde_json::from_value(serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"].clone()).unwrap();
+                    // The ice held or broke; crossing it carefully takes no roll of its own
+                    // (Tactical Operations: Advanced Rules pp. 48, 63).
                     assert_eq!(dice.d6() == 1, fracture);
-                    if !fracture {
-                        // The ice held, so the 'Mech rolled at +0 to keep its feet on it.
-                        dice.two_d6();
-                    }
                     assert_eq!(
                         serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
                         serde_json::to_value(&dice).unwrap()
@@ -2818,10 +2818,9 @@ async fn submerged_ice_routes_use_bottom_depth_and_depth_one_surface_transition(
                     .success
             );
         }
-        if height >= i32::from(tile.water_line()) && tile.is_ice() {
-            // Stepping onto the ice sheet rolls at +0 against slipping.
-            let _footing = roll_battle_piloting(&mut expected, id, 0, true).unwrap();
-        }
+        // Stepping onto the ice sheet takes no roll: its extra movement point pays for
+        // careful movement (Tactical Operations: Advanced Rules pp. 48, 63).
+        let _ = tile;
         assert_eq!(
             serde_json::to_value(&world.btech.constructed_units()[&id]).unwrap()["dice"],
             serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]

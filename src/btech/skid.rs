@@ -271,9 +271,12 @@ pub(super) fn resolve_mech(
         .motion()
         .context("Skidding unit has no motion")?
         .point;
+    // Hexes left to skid; terrain other than clear or paved ground uses them up faster
+    // (Total Warfare p. 62).
+    let mut left = i32::from(distance(speed));
     for (hex, _) in path(point, heading, distance(speed))? {
         let unit = &world.btech.constructed_units()[&id];
-        if unit.is_destroyed() {
+        if unit.is_destroyed() || left <= 0 {
             break;
         }
         let Ok(next) =
@@ -323,7 +326,7 @@ pub(super) fn resolve_mech(
                 }
             }
             Some(Obstacle::Building) => {
-                building_collision(
+                let destroyed = building_collision(
                     world,
                     id,
                     hex,
@@ -335,7 +338,17 @@ pub(super) fn resolve_mech(
                     character,
                     &mut report,
                 )?;
-                break;
+                // A building the skid brings down lets it go on, less the building's movement
+                // cost; one that stands ends it (Total Warfare p. 63).
+                left -= 1;
+                let class = next
+                    .construction_class()
+                    .unwrap_or(super::ConstructionClass::Light);
+                left -= i32::from(super::building_interior::floor_cost(class));
+                if !destroyed || left <= 0 || world.btech.constructed_units()[&id].is_destroyed() {
+                    break;
+                }
+                continue;
             }
             Some(Obstacle::Collision) => {
                 report.notices.push(Notice {
@@ -398,6 +411,7 @@ pub(super) fn resolve_mech(
             });
             break;
         }
+        left -= i32::from(skid_cost(next, GroundMovement::Legged));
     }
     report.falls.insert(0, fall);
     if let Some(motion) = world
@@ -414,10 +428,22 @@ pub(super) fn resolve_mech(
     Ok(report)
 }
 
+/// Hexes of a skid that crossing `tile` uses up: what the Movement Cost Table charges to enter
+/// it, so a clear or paved hex uses one and woods or rough ground more (Total Warfare p. 62).
+/// The ice a unit skids on is the slick surface itself and uses no more than the ground under
+/// it.
+fn skid_cost(tile: Hex, movement: GroundMovement) -> u8 {
+    let cost = tile.movement_cost(movement);
+    if tile.is_icy() {
+        return cost.saturating_sub(1).max(1);
+    }
+    cost
+}
+
 /// A sliding 'Mech crashes into a building hex (Total Warfare p. 63): it slides in and takes
 /// its skid damage for the hex, then a tenth of the construction factor, while the building
-/// takes the charge damage of the hexes moved before the skid. The skid ends in the hex, inside
-/// the building or on its rubble when that brings it down.
+/// takes the charge damage of the hexes moved before the skid. The skid stops in the hex,
+/// inside the building, unless that brings it down; returns whether it did.
 #[allow(clippy::too_many_arguments)]
 fn building_collision(
     world: &mut World,
@@ -430,7 +456,7 @@ fn building_collision(
     rules: FallRules,
     character: bool,
     report: &mut SkidReport,
-) -> Result<()> {
+) -> Result<bool> {
     let map = world.btech.constructed_units()[&id].position().unwrap().map;
     let level = super::building_interior::entry_level(tile, height);
     move_mech(world, id, hex, tile);
@@ -452,7 +478,7 @@ fn building_collision(
         character,
     )?;
     if world.btech.maps()[&map].has_flag(super::MapFlag::IndestructibleStructures) {
-        return Ok(());
+        return Ok(false);
     }
     let charge =
         super::charge::charge_damage(u16::try_from(tons).unwrap_or(u16::MAX), hexes_moved)?;
@@ -469,7 +495,7 @@ fn building_collision(
         );
         report.notices.extend(collapse.notices.iter().cloned());
         report.collapses.push(collapse);
-        return Ok(());
+        return Ok(true);
     }
     world.btech.maps.get_mut(&map).unwrap().write_hex(
         i64::from(hex.x),
@@ -483,7 +509,7 @@ fn building_collision(
             cf - charge
         ),
     });
-    Ok(())
+    Ok(false)
 }
 
 /// Put a prone, sliding 'Mech in `hex`, resting on its surface.
@@ -976,56 +1002,6 @@ fn vehicle_charge(
     fall.append_notices(target, &mut report.notices, &mut report.pilot_notices);
     report.falls.push(fall);
     Ok(Some(true))
-}
-
-/// A vehicle's driving roll to step onto ice (Tactical Operations p. 48). Failure is a loss of
-/// control: the vehicle halts where it is and rolls once for motive system damage.
-pub(super) fn vehicle_entry_check(
-    world: &mut World,
-    id: ObjectId,
-    tile: Hex,
-    modifier: i16,
-    rules: FallRules,
-    character: bool,
-) -> Result<SkidReport> {
-    let mut report = SkidReport::default();
-    report.notices.push(Notice {
-        unit: id,
-        text: format!("You ease onto the {}.", surface_name(tile)),
-    });
-    let control = super::terrain_control::check_entry(
-        world,
-        id,
-        modifier,
-        rules.extended_piloting,
-        character,
-    )?;
-    control.capture_feedback(id, &mut report.notices, &mut report.pilot_notices);
-    report
-        .experience_messages
-        .extend(control.experience_messages);
-    if control.success {
-        return Ok(report);
-    }
-    report.skidded = true;
-    report.notices.push(Notice {
-        unit: id,
-        text: "Your drive loses its grip and you slew to a halt!".into(),
-    });
-    report.notices.extend(super::broadcast::observer_notices(
-        world,
-        id,
-        "slews to a halt on the ice!",
-    ));
-    let (motive_notices, broadcasts) = motive_roll(world, id)?;
-    report.notices.extend(motive_notices);
-    for text in broadcasts {
-        report
-            .notices
-            .extend(super::broadcast::observer_notices(world, id, &text.text));
-    }
-    world.btech.vehicles.get_mut(&id).unwrap().halt();
-    Ok(report)
 }
 
 /// Put a sliding vehicle in `hex`, resting on its surface.
