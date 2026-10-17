@@ -332,25 +332,27 @@ pub fn convert(source: &str) -> Result<Converted> {
     } else {
         format!("{name} {model}")
     };
+    let mut draft = Draft {
+        name,
+        class,
+        movement,
+        tons,
+        walk_mp: cruise,
+        jump_mp: 0,
+        engine_rating,
+        heat_sinks: (heat_sinks != free).then_some(heat_sinks),
+        construction,
+        specials,
+        cargo_tons: transport.cargo_tons,
+        transport_bays: transport.bays,
+        sections,
+        split_mounts: Vec::new(),
+    };
+    draft.load_launchers();
     Ok(Converted {
         full_reference: reference.clone(),
         reference,
-        draft: Draft {
-            name,
-            class,
-            movement,
-            tons,
-            walk_mp: cruise,
-            jump_mp: 0,
-            engine_rating,
-            heat_sinks: (heat_sinks != free).then_some(heat_sinks),
-            construction,
-            specials,
-            cargo_tons: transport.cargo_tons,
-            transport_bays: transport.bays,
-            sections,
-            split_mounts: Vec::new(),
-        },
+        draft,
         warnings,
     })
 }

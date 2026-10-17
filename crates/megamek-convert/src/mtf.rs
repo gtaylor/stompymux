@@ -320,23 +320,25 @@ pub fn convert(source: &str) -> Result<Converted> {
     } else {
         full_reference.clone()
     };
+    let mut draft = Draft {
+        name: chassis,
+        class: "mech",
+        movement,
+        tons,
+        walk_mp: walk,
+        jump_mp: jump,
+        engine_rating,
+        heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
+        construction,
+        specials,
+        cargo_tons: None,
+        transport_bays: Vec::new(),
+        sections,
+        split_mounts,
+    };
+    draft.load_launchers();
     Ok(Converted {
-        draft: Draft {
-            name: chassis,
-            class: "mech",
-            movement,
-            tons,
-            walk_mp: walk,
-            jump_mp: jump,
-            engine_rating,
-            heat_sinks: Some(sink_count).filter(|count| *count != DEFAULT_HEAT_SINKS),
-            construction,
-            specials,
-            cargo_tons: None,
-            transport_bays: Vec::new(),
-            sections,
-            split_mounts,
-        },
+        draft,
         reference,
         full_reference,
         warnings: Vec::new(),
@@ -796,6 +798,23 @@ mod tests {
             );
         let draft = convert(&source).unwrap().draft;
         assert_eq!(draft.specials, ["OmniMech_Tech", "SearchLight"]);
+    }
+
+    /// MegaMek loads a launcher from its own bins, so one whose only bins hold Artemis-capable
+    /// missiles starts with them selected.
+    #[test]
+    fn launchers_start_with_the_munition_of_their_only_bins() {
+        let artemis = ATLAS.replace("IS Ammo LRM-20\n", "IS Ammo LRM-20 Artemis-capable\n");
+        let (_, loaded) = template(&artemis).unwrap();
+        assert!(
+            loaded.contains("{ at = \"2-6\", item = \"IS.LRM-20\", modes = [\"Artemis/Mine\"] },"),
+            "{loaded}"
+        );
+        let (_, standard) = template(ATLAS).unwrap();
+        assert!(
+            standard.contains("{ at = \"2-6\", item = \"IS.LRM-20\" },"),
+            "{standard}"
+        );
     }
 
     /// Either spelling of an OmniMech's `Config:` line marks the template with the Omni
