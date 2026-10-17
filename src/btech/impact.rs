@@ -1656,11 +1656,13 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             };
             rolls.push(critical_penalty.saturating_add(hardened));
         }
-        // Total Warfare p. 140: every armor-piercing hit that damages armor rolls once for a
-        // critical with the autocannon's modifier, on the location struck only. Hardened armor
-        // negates the round's effect (Tactical Operations: AUE p. 93).
+        // Total Warfare p. 140: an armor-piercing hit that damages armor rolls once for a
+        // critical with the autocannon's modifier, on the location struck only. A hit that
+        // also damages that location's internal structure makes only the standard roll below.
+        // Hardened armor negates the round's effect (Tactical Operations: AUE p. 93).
         if original
             && armor_damaged
+            && !structure_damaged
             && let Some(WeaponEffect::ArmorPiercing(weapon)) = weapon_effect
             && !context.unit().hardened_armor()
         {
@@ -2102,6 +2104,64 @@ mod tests {
             exercised[usize::from(critical)] = true;
         }
         assert_eq!(exercised, [true, true]);
+    }
+
+    /// An armor-piercing round that breaks through the armor into the structure makes only the
+    /// standard critical roll (Total Warfare p. 140).
+    #[test]
+    fn armor_piercing_breakthrough_rolls_once() {
+        let mut exercised = false;
+        for seed in 0..=63 {
+            let mut dice = super::super::Dice::seeded([seed; 32]);
+            dice.two_d6();
+            if dice.two_d6() >= 8 {
+                continue;
+            }
+            let (mut world, id) = world(false, seed);
+            // Six AC/10 damage: four armor points, two internal.
+            strike(
+                &mut world,
+                id,
+                6,
+                WeaponEffect::ArmorPiercing(super::super::Weapon::Ac10),
+            );
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 4);
+            assert_eq!(unit.dice, dice, "seed {seed}");
+            exercised = true;
+        }
+        assert!(exercised);
+    }
+
+    /// Damage from the rear arc that passes from an arm to its side torso strikes the torso's
+    /// rear armor (Total Warfare p. 123).
+    #[test]
+    fn rear_arc_limb_overflow_strikes_rear_torso_armor() {
+        let (mut world, id) = world(false, 9);
+        // Fifteen damage: four arm armor, six internal, then four rear torso armor and one
+        // internal point.
+        resolve_attack_in_candidate(
+            &mut world,
+            id,
+            Hit {
+                section: MechSection::LeftArm,
+                rear_armor: true,
+                through_armor_critical: false,
+            },
+            15,
+            None,
+            AttackImpact {
+                attacker: None,
+                weapon_effect: Some(WeaponEffect::Conventional),
+                character: false,
+                followup: false,
+            },
+        )
+        .unwrap();
+        let unit = &world.btech.constructed_units()[&id];
+        assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 0);
+        let torso = &unit.sections()[&MechSection::LeftTorso];
+        assert_eq!((torso.armor, torso.rear, torso.internal), (8, 0, 7));
     }
 
     /// A hit location critical rolls once on the location struck and once more for structure

@@ -33,8 +33,14 @@ pub(super) fn armor_level(unit: &Mech, section: MechSection, rear: bool) -> u8 {
     armor_severity(original.armor, state.armor)
 }
 
-/// A warning describes only the final severity reached by this armor phase.
+/// A warning describes only the final severity reached by this armor phase. Only the torsos
+/// have rear armor, so a rear-arc hit elsewhere warns about the front armor it struck.
 pub(super) fn armor_message(section: MechSection, rear: bool, severity: u8) -> String {
+    let rear = rear
+        && matches!(
+            section,
+            MechSection::LeftTorso | MechSection::RightTorso | MechSection::CenterTorso
+        );
     let location = match section {
         MechSection::LeftArm => "LA",
         MechSection::RightArm => "RA",

@@ -167,6 +167,9 @@ impl HitTable {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Hit {
     pub section: MechSection,
+    /// The hit came from the rear arc. A torso takes it on its rear armor, and damage that
+    /// passes from an arm or leg to its side torso strikes that torso's rear armor too (Total
+    /// Warfare p. 123); the limbs and the head have only front armor.
     pub rear_armor: bool,
     pub through_armor_critical: bool,
 }
@@ -201,7 +204,7 @@ pub fn resolve_hit(target: &Mech, arc: HitArc, roll: u8, dice: &mut Dice) -> Res
     let critical = roll == 2 && !critical_proof;
     Ok(Hit {
         section,
-        rear_armor: arc == HitArc::Rear && matches!(section, LeftTorso | RightTorso | CenterTorso),
+        rear_armor: arc == HitArc::Rear,
         through_armor_critical: critical,
     })
 }

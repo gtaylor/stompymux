@@ -895,13 +895,7 @@ fn resolve_salvo_with_effects(
         } else if let Some(super::UnitSection::Mech(section)) = preferred {
             Hit {
                 section,
-                rear_armor: arc == HitArc::Rear
-                    && matches!(
-                        section,
-                        super::MechSection::LeftTorso
-                            | super::MechSection::RightTorso
-                            | super::MechSection::CenterTorso
-                    ),
+                rear_armor: arc == HitArc::Rear,
                 through_armor_critical: false,
             }
         } else {
