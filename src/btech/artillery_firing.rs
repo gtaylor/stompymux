@@ -288,7 +288,8 @@ pub(super) fn prepare(
     let record = &world.btech.maps()[&map];
     record.base_hex(i64::from(coordinate.x), i64::from(coordinate.y))?;
     let source_tile = record.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let (_, distance) = super::los::unit_hex_los(world, shooter, coordinate)?;
+    // Artillery reach counts hexes, like every weapon range (Total Warfare p. 109).
+    let distance = super::geometry::unit_hex_range(world, shooter, coordinate)?;
     // Observed artillery uses indirect aim even when the shooter can see the hex.
     let visible =
         observer.is_none() && super::visibility::hex_unblocked(world, shooter, coordinate)?;

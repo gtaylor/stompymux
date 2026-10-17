@@ -70,6 +70,8 @@ pub struct AimModifiers {
     /// Observer sensor aim replaces the firing unit sensor aim when present.
     pub indirect: Option<IndirectAim>,
     pub gunnery: i16,
+    /// Weapon range in hexes from the shooter's hex to the target's (Total Warfare p. 109);
+    /// elevation does not add to it.
     pub distance: f64,
     /// Active command-network range calculation, independent of physical distance and visibility permission.
     pub network_range: Option<super::NetworkRange>,
@@ -539,7 +541,7 @@ pub(super) fn aim_modifiers_for_source(
         .get(weapon_index)
         .context("Weapon index out of bounds")?;
     let indirect = super::spotter::indirect_aim(world, source, target, weapon_index)?;
-    let distance = super::unit_range(world, shooter, target)?.spatial;
+    let distance = super::unit_range(world, shooter, target)?.hexes();
     let target_terms = target_modifiers(
         world,
         shooter,

@@ -496,7 +496,7 @@ Alias: `"none" | "front_left" | "front_right" | "rear_left" | "rear_right"`
 - `horizontal`: `number` — Horizontal Euclidean range in hex heights.
 - `spatial`: `number` — Euclidean range including signed ground elevation/depth.
 - `bearing`: `number|nil` — Degrees clockwise from north; nil for coincident centers.
-- `hex_distance`: `integer` — Minimum adjacent hex steps, without terrain costs.
+- `hex_distance`: `integer` — Minimum adjacent hex steps, without terrain costs; the weapon range, which elevation never adds to.
 
 ## Character
 
@@ -819,8 +819,8 @@ Alias: `"front"|"right"|"left"|"rear"|"turret"|"rotor"`
 
 - `indirect`: `{spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil` — Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
 - `gunnery`: `integer`
-- `distance`: `number`
-- `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}|nil` — Active command-network range; physical limits and firing visibility remain separate.
+- `distance`: `number` — Weapon range in hexes from the shooter's hex to the target's; elevation does not add to it.
+- `network_range`: `{kind: "c3"|"c3i", distance: number, source: integer|nil}|nil` — Active command-network range in hexes; physical limits and firing visibility remain separate.
 - `range`: `{bracket: string, modifier: integer}|nil`
 - `attacker_movement`: `integer`
 - `spotting`: `integer` — +1 while this unit spots for another unit's indirect fire.
@@ -1542,7 +1542,7 @@ Alias: `"follow_brief" | "include" | "exclude"`
 
 - `launched`: `integer`
 - `remaining`: `integer`
-- `traveled`: `number` — Cumulative distance, including a terminal leg that falls short.
+- `traveled`: `number` — Cumulative hexes flown, including a terminal leg that falls short.
 - `hops`: `SwarmHop[]` — Ordered attacks, at most eleven.
 - `notices`: `Notice[]`
 - `broadcasts`: `Notice[]`
@@ -1908,7 +1908,7 @@ Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"re
 - `friendly`: `boolean` — Whether the contact is allied.
 - `identified`: `boolean` — Whether sensors identified the contact well enough to determine allegiance.
 - `known_destroyed`: `boolean` — Whether the visible contact status reports destruction.
-- `range`: `number` — Observed range in map units.
+- `range`: `number` — Weapon range in hexes; the contact's height does not add to it.
 - `network_range`: `number|nil` — Shared C3/C3i aiming distance; nil without an active network.
 - `relayed`: `boolean` — Seen only by network peers; the unit cannot lock or fire on it yet.
 - `seen_at`: `integer` — Simulation time of the observation.

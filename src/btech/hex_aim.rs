@@ -56,7 +56,7 @@ pub(super) fn modifiers_for_source(
             .is_some_and(|object| !object.flags.contains(Flag::Going)),
         "Shooter is unavailable"
     );
-    let (_, distance) = super::los::unit_hex_los(world, shooter, hex)?;
+    let distance = super::geometry::unit_hex_range(world, shooter, hex)?;
     let (weapon, ammunition, mut modifiers) =
         if let Some(unit) = world.btech.vehicles().get(&shooter) {
             let weapon = unit

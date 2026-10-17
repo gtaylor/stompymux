@@ -317,6 +317,12 @@ an out-of-range attempt. Your cockpit sees the target number, roll and outcome.
 Glancing hits use the configured rule. Failed saves discard the shot and its
 messages together. `fire` and `weapons` take no switches.
 
+Weapon range is the number of hexes from your hex to the target's, counting the
+target's hex (Total Warfare p. 109). Height never adds to it: a VTOL hovering ten
+levels above an adjacent unit fires at range 1, minimum-range penalty and all.
+Range brackets, minimum range, maximum reach, C3 sharing and artillery reach all
+count hexes this way, and the `r:` column of `contacts` shows that count.
+
 Stun, temporarily disabled weapons, recycling, prone support and vehicle cover
 can prevent firing before the target is checked. A weapon in the arm carrying a
 club cannot fire. Drop the club or use a weapon mounted elsewhere. Ammunition
@@ -794,7 +800,7 @@ that suite off. Guardian and Angel suites operate independently; each requires
 working equipment and a running unit. Shutdown and equipment loss disable them.
 
 ECM protects friendly units and disturbs enemies within six hexes, twelve under
-electromagnetic interference. Enemy ECCM
+electromagnetic interference, however high either unit is. Enemy ECCM
 cancels protection, and friendly ECCM cancels disturbance; equal strength cancels.
 Angel suites count twice. Team identifiers determine which units are friendly.
 
@@ -1237,7 +1243,8 @@ contacts appear in your list, and never suppresses weapon-lock loss warnings.
 
 
 Compact unit rows use battlefield labels such as [ab], followed by B for a biped.
-The columns show x/y/z position, r range, b bearing, s speed, h heading, and S status.
+The columns show x/y/z position, r weapon range in hexes, b bearing, s speed,
+h heading, and S status.
 Names are shortened to fit the row; friendly labels use lowercase letters.
 
 
@@ -1279,7 +1286,8 @@ targets must still be visible. The answer is private to the requesting occupant.
 
 Use `range`, `range x y`, or `range x0 y0 x1 y1` for distance to a target,
 coordinate, or between two coordinates. Spatial distance includes elevation;
-ground distance appears alongside it when different. Dark maps hide terrain
+ground distance appears alongside it when different. Weapons do not use either:
+they count whole hexes, as `contacts` shows. Dark maps hide terrain
 height differences from coordinate measurements. Unit targets must be visible.
 
 Use `vector` to combine range and bearing to your selected target. You can also
@@ -1514,7 +1522,7 @@ LRM launchers and MMLs loaded with long-range rounds can use these modes.
 After an initial hit, unused missiles can attack nearby units in map order.
 Ordinary Swarm can hit friends and return to its launcher. Swarm-1 excludes
 friendly secondary targets. Retargeting requires the previous target to see the
-next unit within 1.9 hexes. Combat-safe units are skipped as secondary targets.
+next unit in its own hex or an adjacent one. Combat-safe units are skipped as secondary targets.
 The flight stops when its missiles are spent, its cumulative range runs out, or
 it has attacked eleven distinct targets. AMS engages the initial attack like
 any other LRM flight (Tactical Operations: AUE p. 181).

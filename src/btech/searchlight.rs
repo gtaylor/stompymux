@@ -4,6 +4,10 @@ use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 
+/// Hexes a mounted searchlight reaches (Tactical Operations: Advanced Rules p. 55), counted
+/// like any range, so a target's height does not take it out of the beam's reach.
+pub(super) const SEARCHLIGHT_REACH: u64 = 30;
+
 /// Durable hardware state; pending transitions invert the current setting after five seconds.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Searchlight {
@@ -570,7 +574,7 @@ fn external_sources_illuminate(
             return false;
         };
         let angle = (range.bearing.unwrap_or(heading) - heading).rem_euclid(360.0);
-        range.spatial <= 30.0
+        range.hex_distance <= SEARCHLIGHT_REACH
             && !(angle > 60.0 && angle < 300.0)
             && super::unit_terrain_los(world, source, target)
                 .is_ok_and(|los| !los.blocked && los.obscuring_points() <= 2)

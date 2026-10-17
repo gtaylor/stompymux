@@ -85,7 +85,7 @@ fn resolve_center(
             let view =
                 super::visible_contact(world, observer, target)?.context("No such target.")?;
             ensure!(
-                view.range.spatial.trunc() <= f64::from(maximum_range),
+                view.range.hex_distance <= u64::from(maximum_range),
                 "Target is out of scanner range."
             );
             let target = super::scanner::scanner_unit(world, target)

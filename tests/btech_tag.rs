@@ -215,7 +215,8 @@ fn relocate(world: &mut World, id: ObjectId, map: ObjectId, y: i64) {
     });
 }
 
-/// Range errors differ from lost contact and use the unrounded fifteen-hex boundary.
+/// Range errors differ from lost contact, and TAG's fifteen-hex reach counts hexes (Total
+/// Warfare p. 109): a target anywhere inside the fifteenth hex is in range.
 #[tokio::test]
 async fn tag_range_visibility_and_syntax_fail_without_mutation() {
     for source in [&templates()[0], &templates()[2]] {
@@ -259,14 +260,26 @@ async fn tag_range_visibility_and_syntax_fail_without_mutation() {
             assert_eq!(text::plain(&reply).trim(), expected);
             assert_eq!(scripts.world().btech, world.btech);
         }
+        let mut beyond = world.clone();
         relocate(&mut world, target, map, 2);
         refresh_battle_contacts(&mut world, &[id]).unwrap();
-        assert_eq!(battle_unit_range(&world, id, target).unwrap().spatial, 15.0);
-        let mut beyond = world.clone();
-        edit(&mut beyond, target, |state| {
+        assert_eq!(
+            battle_unit_range(&world, id, target).unwrap().hex_distance,
+            15
+        );
+        let mut offset = world.clone();
+        edit(&mut offset, target, |state| {
             let y = state["motion"]["point"]["y"].as_f64().unwrap();
-            state["motion"]["point"]["y"] = (y - 0.01).into();
+            state["motion"]["point"]["y"] = (y - 0.4).into();
         });
+        assert!(battle_unit_range(&offset, id, target).unwrap().spatial > 15.0);
+        select_battle_tag(&mut offset, id, ObjectId(1), Some(target), tag_rules()).unwrap();
+        assert_eq!(battle_tagged_by(&offset, target), Some(id));
+        refresh_battle_contacts(&mut beyond, &[id]).unwrap();
+        assert_eq!(
+            battle_unit_range(&beyond, id, target).unwrap().hex_distance,
+            16
+        );
         let before = beyond.btech.clone();
         assert_eq!(
             select_battle_tag(&mut beyond, id, ObjectId(1), Some(target), tag_rules())

@@ -62,8 +62,12 @@ pub fn hex_illuminated(world: &World, map: ObjectId, target: HexCoordinate) -> R
         if angle > 60.0 && angle < 300.0 {
             continue;
         }
-        let (los, distance) = super::los::unit_hex_los(world, id, target)?;
-        if distance <= 30.0 && !los.blocked && los.obscuring_points() <= 2 {
+        let (los, _) = super::los::unit_hex_los(world, id, target)?;
+        if super::geometry::unit_hex_range(world, id, target)?
+            <= super::searchlight::SEARCHLIGHT_REACH as f64
+            && !los.blocked
+            && los.obscuring_points() <= 2
+        {
             return Ok(true);
         }
     }

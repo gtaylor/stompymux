@@ -19,6 +19,7 @@ pub struct SwarmHop {
 pub struct SwarmReport {
     pub launched: u8,
     pub remaining: u8,
+    /// Hexes flown from target to target, counted like any weapon range.
     pub traveled: f64,
     pub hops: Vec<SwarmHop>,
     pub notices: Vec<Notice>,
@@ -75,7 +76,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
     let mut previous = shooter;
     let mut target = request.target;
     while report.remaining > 0 {
-        report.traveled += unit_range(world, previous, target)?.spatial;
+        report.traveled += unit_range(world, previous, target)?.hexes();
         if weapon.range_modifier(report.traveled)?.is_none() {
             report.notices.push(Notice {
                 unit: target,
@@ -100,7 +101,7 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
                 context.request.target = target;
             }
             let salvo = if world.btech.vehicles().contains_key(&target) {
-                let distance = unit_range(world, shooter, target)?.spatial;
+                let distance = unit_range(world, shooter, target)?.hexes();
                 super::target_salvo::resolve_vehicle_target(
                     world,
                     shooter,
@@ -207,7 +208,10 @@ pub(super) fn resolve(world: &mut World, request: SwarmRequest<'_>) -> Result<Sw
             {
                 continue;
             }
-            if unit_range(world, target, candidate)?.spatial < 1.9 && sees(world, target, candidate)
+            // Secondary targets stand in the target's hex or an adjacent one (Tactical
+            // Operations: Advanced Units & Equipment p. 183).
+            if unit_range(world, target, candidate)?.hex_distance <= 1
+                && sees(world, target, candidate)
             {
                 next = Some(candidate);
                 break;

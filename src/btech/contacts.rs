@@ -201,6 +201,7 @@ pub struct ContactView {
     pub target: ObjectId,
     pub name: String,
     pub friendly: bool,
+    /// Measurement to the contact; the rows show its weapon range in hexes.
     pub range: super::Range,
     /// Closest usable command-network sighting distance; absent when the observer has no active network.
     pub network_range: Option<f64>,
@@ -242,7 +243,7 @@ impl ContactView {
             ),
             format!(
                 "      Range: {:.1} hex\tBearing: {} degrees",
-                self.range.spatial,
+                self.range.hexes(),
                 self.range
                     .bearing
                     .unwrap_or(180.0)
@@ -287,7 +288,8 @@ impl ContactView {
     }
 
     /// Render compact contact data with the target movement marker and no embedded styles.
-    /// A networked observer gains a `c:` column with the shared aiming distance.
+    /// The `r:` column is the weapon range in hexes (Total Warfare p. 109); a networked
+    /// observer gains a `c:` column with the shared aiming distance.
     fn compact_text(&self, movement: &str) -> String {
         let name: String = crate::text::plain(&self.name).chars().take(12).collect();
         let network = self
@@ -304,7 +306,7 @@ impl ContactView {
             self.coordinate.x,
             self.coordinate.y,
             self.elevation,
-            self.range.spatial,
+            self.range.hexes(),
             self.range
                 .bearing
                 .unwrap_or(180.0)
@@ -626,7 +628,7 @@ fn attach_network_range(
     network: &super::network_contacts::NetworkSightings<'_>,
     view: &mut ContactView,
 ) -> Result<()> {
-    view.network_range = Some(network.range(view.target, view.range.spatial)?.distance);
+    view.network_range = Some(network.range(view.target, view.range.hexes())?.distance);
     view.short_text = view.compact_text(movement_type(world, view.target));
     Ok(())
 }
@@ -692,8 +694,9 @@ pub fn visible_contacts(world: &World, observer: ObjectId) -> Result<Vec<Contact
     }
     views.sort_by(|a, b| {
         a.range
-            .spatial
-            .total_cmp(&b.range.spatial)
+            .hex_distance
+            .cmp(&b.range.hex_distance)
+            .then(a.range.spatial.total_cmp(&b.range.spatial))
             .then(a.target.cmp(&b.target))
     });
     Ok(views)

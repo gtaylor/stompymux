@@ -747,7 +747,7 @@ fn resolve_salvo_with_effects(
     let distance = match geometry {
         HitGeometry::Fixed(_) => None,
         HitGeometry::Direct { shooter, .. } => {
-            Some(super::unit_range(world, shooter, target)?.spatial)
+            Some(super::unit_range(world, shooter, target)?.hexes())
         }
     };
     let artemis_v = match geometry {

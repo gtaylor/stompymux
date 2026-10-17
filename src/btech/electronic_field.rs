@@ -36,11 +36,13 @@ pub fn ecm_range(interference: bool) -> f64 {
     }
 }
 
-/// Emissions of one unit on the subject's map, with its actual three-dimensional range.
+/// Emissions of one unit on the subject's map, with its range in hexes.
 /// Equipment availability and lifecycle changes must be applied before building this input.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ElectronicSource {
     pub team: i32,
+    /// Hexes from the emitter to the subject: the effect radius is a hex count (Total Warfare
+    /// p. 134), so height above the ground never takes a unit out of it.
     pub distance: f64,
     /// How far the source's Guardian and Angel suites reach; see [`ecm_range`].
     pub range: f64,

@@ -6541,7 +6541,8 @@ async fn pulse_accuracy_changes_a_miss_to_a_glancing_hit() {
     }
 }
 
-/// Snub damage follows live fractional range through native/Lua fire and restart.
+/// Snub damage follows the hex range through native/Lua fire and restart: a target offset
+/// inside its hex is still at that hex's range (Total Warfare p. 109).
 #[tokio::test]
 async fn snub_ppc_range_damage_native_lua_and_restart() {
     use stompymux_rs::*;
@@ -6578,12 +6579,13 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
     // Fix scanner and damage streams so range assertions cannot fail on random contact loss.
     shot_seed(&mut base, id, 1);
     shot_seed(&mut base, target, 1);
-    for (distance, damage) in [
-        (9.0_f64, 10_u16),
-        (9.001, 8),
-        (13.0, 8),
-        (13.001, 5),
-        (15.0, 5),
+    for (distance, hexes, damage) in [
+        (9.0_f64, 9.0, 10_u16),
+        (9.3, 9.0, 10),
+        (10.0, 10.0, 8),
+        (13.0, 13.0, 8),
+        (14.0, 14.0, 5),
+        (15.0, 15.0, 5),
     ] {
         let mut world = base.clone();
         place_battle_unit(&mut world, target, map, 1, (25.0 - distance).round() as i64).unwrap();
@@ -6623,7 +6625,7 @@ async fn snub_ppc_range_damage_native_lua_and_restart() {
             ))
             .unwrap();
         let aim: mlua::Table = report.get("aim").unwrap();
-        assert!((aim.get::<f64>("distance").unwrap() - distance).abs() < 1e-9);
+        assert_eq!(aim.get::<f64>("distance").unwrap(), hexes, "{distance}");
         let salvo: mlua::Table = report
             .get::<mlua::Table>("salvo")
             .unwrap()
@@ -7624,7 +7626,8 @@ async fn heavy_gauss_recoil_weight_classes_misses_and_atomic_replay_80_tons() {
     heavy_gauss_recoil_matrix(&[(80, -1)]).await;
 }
 
-/// Heavy Gauss damage uses unrounded range through native/Lua firing and restart.
+/// Heavy Gauss damage follows the hex range through native/Lua firing and restart: a target
+/// offset inside its hex is still at that hex's range (Total Warfare p. 109).
 #[tokio::test]
 async fn heavy_gauss_range_damage_native_lua_and_restart() {
     use stompymux_rs::*;
@@ -7693,12 +7696,13 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
     // Fix scanner and damage streams so range assertions cannot fail on random contact loss.
     shot_seed(&mut base, id, 1);
     shot_seed(&mut base, target, 1);
-    for (distance, damage) in [
-        (6.0_f64, 25_u16),
-        (6.001, 20),
-        (13.0, 20),
-        (13.001, 10),
-        (20.0, 10),
+    for (distance, hexes, damage) in [
+        (6.0_f64, 6.0, 25_u16),
+        (6.3, 6.0, 25),
+        (7.0, 7.0, 20),
+        (13.0, 13.0, 20),
+        (14.0, 14.0, 10),
+        (20.0, 20.0, 10),
     ] {
         let mut world = base.clone();
         place_battle_unit(&mut world, target, map, 1, (25.0 - distance).round() as i64).unwrap();
@@ -7738,7 +7742,7 @@ async fn heavy_gauss_range_damage_native_lua_and_restart() {
             ))
             .unwrap();
         let aim: mlua::Table = report.get("aim").unwrap();
-        assert!((aim.get::<f64>("distance").unwrap() - distance).abs() < 1e-9);
+        assert_eq!(aim.get::<f64>("distance").unwrap(), hexes, "{distance}");
         let salvo: mlua::Table = report
             .get::<mlua::Table>("salvo")
             .unwrap()

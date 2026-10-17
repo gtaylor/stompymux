@@ -62,7 +62,7 @@ pub(crate) fn report(
         if short && lines.len() >= 250 {
             break;
         }
-        let sort_range = contact.range.spatial
+        let sort_range = contact.range.hexes()
             + if super::scanner::scanner_unit(&world, contact.target)
                 .is_some_and(|unit| unit.destroyed)
             {

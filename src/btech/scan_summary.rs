@@ -37,7 +37,7 @@ pub(super) fn render(world: &World, observer: ObjectId, view: &ContactView) -> R
         format!("[{label}]  {name:<25} Tonnage: {tons}"),
         format!(
             "      Range: {:.1} hex\t\tBearing: {bearing} degrees",
-            view.range.spatial
+            view.range.hexes()
         ),
         format!(
             "      Speed: {:.1} KPH\t\tHeading: {travel} degrees",

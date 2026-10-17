@@ -101,7 +101,7 @@ pub(crate) fn networked_contact_facts(
     for contact in &mut contacts {
         contact.network_range = Some(
             network
-                .range(contact.facts.target, contact.facts.range.spatial)?
+                .range(contact.facts.target, contact.facts.range.hexes())?
                 .distance,
         );
     }

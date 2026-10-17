@@ -80,5 +80,8 @@ mod btech_visibility;
 #[path = "../btech_vtol_critical.rs"]
 mod btech_vtol_critical;
 
+#[path = "../btech_weapon_range.rs"]
+mod btech_weapon_range;
+
 #[path = "../btech_writes.rs"]
 mod btech_writes;

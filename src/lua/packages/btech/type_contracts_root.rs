@@ -532,7 +532,7 @@
 //|---@field horizontal number Horizontal Euclidean range in hex heights.
 //|---@field spatial number Euclidean range including signed ground elevation/depth.
 //|---@field bearing number|nil Degrees clockwise from north; nil for coincident centers.
-//|---@field hex_distance integer Minimum adjacent hex steps, without terrain costs.
+//|---@field hex_distance integer Minimum adjacent hex steps, without terrain costs; the weapon range, which elevation never adds to.
 // lua-types-end
 
 // lua-types-begin btech 00088
@@ -828,8 +828,8 @@
 //|---@class AimModifiers
 //|---@field indirect {spotter: integer, movement: integer, spotter_attacked: boolean, tag_guided: boolean}|nil Indirect fire: +1, the spotter's movement and +1 when the spotter attacked this turn; TAG-guided semi-guided missiles ignore all of it. Perception then describes the spotter's view.
 //|---@field gunnery integer
-//|---@field distance number
-//|---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range; physical limits and firing visibility remain separate.
+//|---@field distance number Weapon range in hexes from the shooter's hex to the target's; elevation does not add to it.
+//|---@field network_range {kind: "c3"|"c3i", distance: number, source: integer|nil}|nil Active command-network range in hexes; physical limits and firing visibility remain separate.
 //|---@field range {bracket: string, modifier: integer}|nil
 //|---@field attacker_movement integer
 //|---@field spotting integer +1 while this unit spots for another unit's indirect fire.
@@ -1630,7 +1630,7 @@
 //|---@class SwarmReport
 //|---@field launched integer
 //|---@field remaining integer
-//|---@field traveled number Cumulative distance, including a terminal leg that falls short.
+//|---@field traveled number Cumulative hexes flown, including a terminal leg that falls short.
 //|---@field hops SwarmHop[] Ordered attacks, at most eleven.
 //|---@field notices Notice[]
 //|---@field broadcasts Notice[]
@@ -2056,7 +2056,7 @@
 //|---@field friendly boolean Whether the contact is allied.
 //|---@field identified boolean Whether sensors identified the contact well enough to determine allegiance.
 //|---@field known_destroyed boolean Whether the visible contact status reports destruction.
-//|---@field range number Observed range in map units.
+//|---@field range number Weapon range in hexes; the contact's height does not add to it.
 //|---@field network_range number|nil Shared C3/C3i aiming distance; nil without an active network.
 //|---@field relayed boolean Seen only by network peers; the unit cannot lock or fire on it yet.
 //|---@field seen_at integer Simulation time of the observation.
