@@ -18,6 +18,9 @@ pub struct DfaProfile {
     /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind
     /// (Tactical Operations: Advanced Units & Equipment p. 113).
     pub sensors: i32,
+    /// One while the attacker spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1 (Tactical Operations: Advanced Rules p. 149).
+    pub spotting: i32,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -139,7 +142,11 @@ fn dfa_profile_inner(
             rules.fall.extended_piloting,
         )?);
     let sensors = i32::from(source.blind_cockpit_modifier());
-    let target_number = base + skill + attacker_movement + target_movement + light + sensors;
+    let spotting = i32::from(super::recent_fire::artillery_spotter_modifier(
+        world, attacker,
+    ));
+    let target_number =
+        base + skill + attacker_movement + target_movement + light + sensors + spotting;
     ensure!(
         target_number <= 12,
         "DFA: BTH {target_number}\tYou choose not to attack and land from your jump."
@@ -159,6 +166,7 @@ fn dfa_profile_inner(
         skill,
         light,
         sensors,
+        spotting,
         inflicted_damage,
         received_damage,
         target_arc: if victim.vehicle {
@@ -422,6 +430,7 @@ fn resolve_dfa_inner(
 ) -> Result<DfaReport> {
     let profile = dfa_profile_inner(world, attacker, target, rules, character)?;
     world.attempt(|world| {
+        super::recent_fire::record_physical_attack(world, attacker);
         let source = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = source.dice.generic_roll();
         source.flight = None;

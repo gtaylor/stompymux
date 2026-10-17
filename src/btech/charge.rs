@@ -19,6 +19,9 @@ pub struct ChargeProfile {
     pub skill: i32,
     /// Woods and smoke over the target's hex.
     pub terrain: u8,
+    /// One while the charger spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1 (Tactical Operations: Advanced Rules p. 149).
+    pub spotting: u8,
     pub inflicted_damage: u16,
     pub received_damage: u16,
     pub target_arc: HitArc,
@@ -257,11 +260,13 @@ fn charge_profile_for(
         .context("Map not found")?
         .hex(i64::from(target_position.x), i64::from(target_position.y))?;
     let terrain = obscured.woods_density() + obscured.smoke_density();
+    let spotting = super::recent_fire::artillery_spotter_modifier(world, attacker);
     let target_number = i32::from(unit_piloting_target(
         world,
         attacker,
         rules.physical.fall.extended_piloting,
     )?) + skill
+        + i32::from(spotting)
         + i32::from(if specialist {
             (movement - 1).min(0)
         } else {
@@ -282,6 +287,7 @@ fn charge_profile_for(
         target_number,
         skill,
         terrain,
+        spotting,
         inflicted_damage: inflicted,
         received_damage: received,
         target_arc: HitArc::from_bearing(reverse.bearing.unwrap_or(180.0), opponent.heading)?,
@@ -440,6 +446,7 @@ fn resolve_charge_inner(
         },
     )?;
     super::recent_fire::mark_assaulted(&mut candidate, target);
+    super::recent_fire::record_physical_attack(&mut candidate, attacker);
     *world = candidate;
     Ok(report)
 }
@@ -501,6 +508,7 @@ pub(super) fn resolve_skid_charge(
         target_number,
         skill: 0,
         terrain,
+        spotting: 0,
         inflicted_damage: inflicted,
         received_damage: recoil_damage(recoil_tons),
         target_arc: HitArc::from_bearing(
@@ -989,6 +997,11 @@ fn resolve_mutual_charge_inner(
         for (unit, charged) in [first, second].into_iter().zip(charged) {
             if charged {
                 super::recent_fire::mark_assaulted(&mut candidate, unit);
+            }
+        }
+        for attempt in &report.attempts {
+            if attempt.rejection.is_none() {
+                super::recent_fire::record_physical_attack(&mut candidate, attempt.unit);
             }
         }
     }

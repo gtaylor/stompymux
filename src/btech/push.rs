@@ -30,6 +30,9 @@ pub struct PushProfile {
     pub light: i16,
     /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind.
     pub sensors: u8,
+    /// One while the attacker spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1 (Tactical Operations: Advanced Rules p. 149).
+    pub spotting: u8,
     /// Hexside, clockwise from north, the push drives the target across.
     pub direction: u8,
 }
@@ -231,6 +234,7 @@ fn profile(
     let terrain = obscured.woods_density() + obscured.smoke_density();
     let light = super::light_aim::modifier(world, target, true)?;
     let sensors = source.blind_cockpit_modifier();
+    let spotting = super::recent_fire::artillery_spotter_modifier(world, attacker);
     Ok(PushProfile {
         target_number: i32::from(base)
             + i32::from(shoulders)
@@ -238,7 +242,8 @@ fn profile(
             + i32::from(target_movement)
             + i32::from(terrain)
             + i32::from(light)
-            + i32::from(sensors),
+            + i32::from(sensors)
+            + i32::from(spotting),
         base,
         shoulders,
         attacker_movement,
@@ -246,6 +251,7 @@ fn profile(
         terrain,
         light,
         sensors,
+        spotting,
         direction: u8::try_from(direction)?,
     })
 }
@@ -272,6 +278,7 @@ fn resolve(
 ) -> Result<PushReport> {
     let profile = profile(world, attacker, pilot, target, rules, character)?;
     world.attempt(|world| {
+        super::recent_fire::record_physical_attack(world, attacker);
         let unit = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = unit.dice.generic_roll();
         for arm in [MechSection::LeftArm, MechSection::RightArm] {

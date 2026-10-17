@@ -1059,7 +1059,11 @@ rounds are not substituted. Lua uses `btech.unit.sguided(unit, pilot, weapon)`.
 Use `spot #your-unit` to declare yourself a spotter; `spot -` ends that role. A
 spotter keeps firing its own weapons (Total Warfare p. 111). While another unit
 fires through you, your own weapon attacks take +1, and an indirect shot you
-spot takes a further +1 if you launched a weapon within the last thirty seconds.
+spot takes a further +1 if you launched a weapon within the last thirty seconds;
+for missiles only weapon attacks count. While a unit with artillery has you
+selected, your physical attacks take +1 too, and the artillery shot you spot
+takes +1 if you launched a weapon or made any physical attack within the last
+thirty seconds (Tactical Operations: Advanced Rules p. 149).
 A unit carrying an iNarc Haywire pod cannot spot, and neither can one that is
 charging or making a death from above attack, or did so within the last thirty
 seconds. A friendly unit selects you with `spot #your-unit`; it needs no sight
@@ -1093,8 +1097,8 @@ sensor and actuator damage and the woods or smoke you fire through, with no rang
 or target modifiers. Direct fire cannot be made at a hex within six hexes. A
 direct-fire miss scatters 1D6 hexes. Every other artillery shot is indirect
 (pp. 148-150): gunnery +7, plus your observer's spotting modifier and +1 if it also
-attacked within the last thirty seconds, less one for each corrected miss, plus your
-movement when the hex lies within seventeen hexes.
+fired or made a physical attack within the last thirty seconds, less one for each
+corrected miss, plus your movement when the hex lies within seventeen hexes.
 An indirect miss scatters one hex for each point it missed by. A miss scatters in
 a direction rolled on one die, clockwise from north; a round that scatters off the
 map lands harmlessly. Once one of your rounds strikes its target hex, every later

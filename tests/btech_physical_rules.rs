@@ -978,3 +978,70 @@ async fn glancing_landings_and_rams_lower_vehicle_critical_rolls() {
         .unwrap();
     assert!(modifiers.iter().all(|&found| found == -2), "{modifiers:?}");
 }
+
+/// An artillery spotter's own physical attacks take +1 (Tactical Operations: Advanced Rules
+/// p. 149), and every attack it makes, hit or miss, marks it as having attacked that turn for
+/// the artillery attack it spots. Spotting for a unit with no artillery, as for LRM indirect
+/// fire, leaves its physical attacks alone: that rule counts only the Weapon Attack Phase
+/// (Total Warfare p. 111).
+#[tokio::test]
+async fn artillery_spotters_take_one_more_on_their_physical_attacks() {
+    let (_dir, config, mut base, id, target) = kick_fixture().await;
+    let kick = |world: &World| {
+        battle_kick_profile(world, id, ObjectId(1), target, Leg::Right, kick_rules()).unwrap()
+    };
+    let plain = kick(&base);
+    assert_eq!(plain.spotting, 0);
+    select_battle_spotter(&mut base, id, ObjectId(1), Some(id)).unwrap();
+    // A friendly 'Mech without artillery firing through the spotter adds nothing.
+    let lrm = add_mech(&mut base, &config, id, (1, 1));
+    base.btech
+        .rewrite_unit_record(lrm, |record| record["spotter"] = id.0.into())
+        .unwrap();
+    assert_eq!(kick(&base).spotting, 0);
+    let mut world = base.clone();
+    let piece = add_vehicle(
+        &mut world,
+        &config,
+        id,
+        include_str!("../game/units/Demolisher-Arrow.toml"),
+        (1, 2),
+    );
+    world
+        .btech
+        .rewrite_unit_record(piece, |record| record["spotter"] = id.0.into())
+        .unwrap();
+    let spotted = kick(&world);
+    assert_eq!(spotted.spotting, 1);
+    assert_eq!(spotted.target_number, plain.target_number + 1);
+    let mut pushing = world.clone();
+    let map = pushing.btech.constructed_units()[&id]
+        .position()
+        .unwrap()
+        .map;
+    place_battle_unit(&mut pushing, target, map, 5, 4).unwrap();
+    refresh_battle_contacts(&mut pushing, &[id]).unwrap();
+    let push = battle_push_profile(&pushing, id, ObjectId(1), target, kick_rules()).unwrap();
+    assert_eq!(push.spotting, 1);
+    // A missed kick still counts as the spotter's attack this turn.
+    assert_eq!(
+        world.btech.constructed_units()[&id].last_physical_attack(),
+        None
+    );
+    shot_seed(&mut world, id, roll_seed(2));
+    let report = resolve_battle_kick(
+        &mut world,
+        id,
+        ObjectId(1),
+        target,
+        Leg::Right,
+        kick_rules(),
+    )
+    .unwrap();
+    assert!(!report.hit);
+    assert_eq!(
+        world.btech.constructed_units()[&id].last_physical_attack(),
+        Some(world.btech.simulation_time())
+    );
+    world.validate(&config).unwrap();
+}

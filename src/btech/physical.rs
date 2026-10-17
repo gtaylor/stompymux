@@ -540,6 +540,10 @@ pub struct PhysicalProfile {
     /// Four while a torso-mounted cockpit's sensor damage leaves the attacker blind
     /// (Tactical Operations: Advanced Units & Equipment p. 113).
     pub sensors: u8,
+    /// One while the attacker spots for an artillery piece: all of an artillery spotter's
+    /// attacks take +1, physical attacks included (Tactical Operations: Advanced Rules
+    /// p. 149).
+    pub spotting: u8,
     /// Direct material damage; trips always have zero.
     pub damage: u16,
     /// Location table for direct impacts; unused by trips and against vehicles, which take the
@@ -1111,6 +1115,7 @@ fn attack_profile_inner(
     let terrain = obscured.woods_density() + obscured.smoke_density();
     let light = super::light_aim::modifier(world, target, true)?;
     let sensors = source.blind_cockpit_modifier();
+    let spotting = super::recent_fire::artillery_spotter_modifier(world, attacker);
     let tons = source.definition().tons;
     let mut damage = match attack {
         PhysicalAttack::Punch { .. } => ArmAttack::Punch.damage(tons),
@@ -1160,7 +1165,8 @@ fn attack_profile_inner(
             + i32::from(target_movement)
             + i32::from(terrain)
             + i32::from(light)
-            + i32::from(sensors),
+            + i32::from(sensors)
+            + i32::from(spotting),
         base,
         actuators,
         weapon_modifier,
@@ -1170,6 +1176,7 @@ fn attack_profile_inner(
         terrain,
         light,
         sensors,
+        spotting,
         damage,
         hit_table: if victim.prone || victim.vehicle {
             HitTable::Weapon
@@ -1327,6 +1334,7 @@ fn resolve_attack_inner(
     let character = context.character;
     let profile = attack_profile_inner(world, attacker, pilot, target, attack, rules, context)?;
     world.attempt(|world| {
+        super::recent_fire::record_physical_attack(world, attacker);
         let unit = world.btech.constructed.get_mut(&attacker).unwrap();
         let roll = unit.dice.generic_roll();
         for &section in &profile.limbs {
