@@ -45,11 +45,22 @@ pub fn apply_woodland_clearing(
     ensure!(!before.is_burning(), "Invalid woodland reduction");
     let reduction = super::reduce_woodland(before.with_overlay(None), total)
         .context("Invalid woodland reduction")?;
-    let after = reduction.hex;
+    // Woods or jungle that started as ultra-heavy fall to ultra-rough ground however many
+    // steps they thinned through (Tactical Operations p. 63).
+    let index = record.tile_index(coordinate)?;
+    let ultra = record.ultra_woodland.contains(&index)
+        || before.foliage().and_then(super::Foliage::density) == Some(super::Density::UltraHeavy);
+    let after = if ultra && reduction.clearing == super::WoodlandClearing::CutToRough {
+        reduction.hex.with_ground(super::Ground::UltraRough)
+    } else {
+        reduction.hex
+    };
     world.attempt(|world| {
         let record = world.btech.maps.get_mut(&map).unwrap();
         record.write_hex(i64::from(coordinate.x), i64::from(coordinate.y), after)?;
-        let index = record.tile_index(coordinate)?;
+        if ultra && after.is_woods() {
+            std::sync::Arc::make_mut(&mut record.ultra_woodland).insert(index);
+        }
         let damage = std::sync::Arc::make_mut(&mut record.terrain_damage);
         if reduction.carried == 0 {
             damage.remove(&index);

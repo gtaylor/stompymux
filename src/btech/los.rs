@@ -703,6 +703,7 @@ mod tests {
             fire_dice: None,
             sensor_dice: None,
             terrain_damage: Default::default(),
+            ultra_woodland: Default::default(),
             decorations: Default::default(),
             static_decorations: Default::default(),
             points_of_interest: Default::default(),

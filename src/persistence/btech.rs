@@ -60,6 +60,7 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
             fire_dice: None,
             sensor_dice: None,
             terrain_damage: Default::default(),
+            ultra_woodland: Default::default(),
             decorations: Default::default(),
             static_decorations: Default::default(),
             points_of_interest: Default::default(),
@@ -387,7 +388,9 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
                 &values,
             )
             .await?;
-            if previous.is_some_and(|old| old.terrain_damage != map.terrain_damage) {
+            if previous.is_some_and(|old| {
+                old.terrain_damage != map.terrain_damage || old.ultra_woodland != map.ultra_woodland
+            }) {
                 super::btech_terrain::save_damage(c, *id, map).await?;
             }
             sqlx::query("DELETE FROM btech_map_los WHERE map_dbref=?")

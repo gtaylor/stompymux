@@ -6,7 +6,7 @@
 //! after 41 damage and rough ground after 90, in one attack if it is big enough; crops are
 //! flattened once their factor is spent. Fires start by Tactical Operations' starting fires
 //! table (p. 41), with a target number by weapon class and a modifier for the ground.
-use super::{AmmunitionMode, Condition, Dice, Foliage, Ground, Hex, Weapon};
+use super::{AmmunitionMode, Condition, Density, Dice, Foliage, Ground, Hex, Weapon};
 use serde::{Deserialize, Serialize};
 
 /// Purpose of a terrain effect. Only a shot aimed at the hex clears its growth; a stray shot
@@ -51,7 +51,8 @@ pub enum WoodlandClearing {
     Thin,
     /// Planted fields are flattened to clear ground.
     CutToClear,
-    /// Light woods or jungle are felled, leaving rough ground.
+    /// Light woods or jungle are felled, leaving rough ground, or ultra-rough ground where the
+    /// growth started as ultra-heavy (Tactical Operations p. 63).
     CutToRough,
 }
 
@@ -97,16 +98,22 @@ pub struct WoodlandReduction {
 /// factor falls below a lighter type's factor, then takes the lightest type whose factor the
 /// remainder is still below, carrying the difference as damage against that type's factor: a
 /// heavy woods hex (90) with 41 damage is light woods (50) with 1 carried. Once the whole
-/// factor is spent woods and jungle fall to rough ground and crops to clear ground, whatever
-/// density they started at. `None` when the hex has no growth or the growth still stands
-/// unchanged.
+/// factor is spent woods and jungle fall to rough ground, or to ultra-rough ground when they
+/// are ultra-heavy (Tactical Operations p. 63), and crops to clear ground. Growth that thinned
+/// from ultra-heavy keeps that origin on its map (see `apply_woodland_clearing`). `None` when
+/// the hex has no growth or the growth still stands unchanged.
 pub fn reduce_woodland(hex: Hex, total: u16) -> Option<WoodlandReduction> {
     let foliage = hex.foliage()?;
     let factor = foliage.terrain_factor();
     if total >= factor {
+        let ground = if foliage.density() == Some(Density::UltraHeavy) {
+            Ground::UltraRough
+        } else {
+            Ground::Rough
+        };
         let (cleared, clearing) = if foliage.density().is_some() {
             (
-                hex.with_foliage(None).with_ground(Ground::Rough),
+                hex.with_foliage(None).with_ground(ground),
                 WoodlandClearing::CutToRough,
             )
         } else {
@@ -401,7 +408,8 @@ mod tests {
     /// Total Warfare p. 112: damage carries across density changes. A heavy woods hex that
     /// has taken 35 stays heavy, 6 more make it light woods, and it falls to rough at 90 in
     /// all; 90 at once fells it outright. Tactical Operations p. 63: ultra-heavy jungle needs
-    /// 130 to reach rough ground, and ultra-heavy woods (120) pass heavy (90) and light (50).
+    /// 130 to fall, to ultra-rough ground, and ultra-heavy woods (120) pass heavy (90) and
+    /// light (50).
     #[test]
     fn spent_terrain_factor_carries_across_density_changes() {
         let heavy = Hex::new(Terrain::HeavyWoods, 2);
@@ -450,9 +458,10 @@ mod tests {
             reduce_woodland(jungle, 129).unwrap().hex,
             Hex::new(Terrain::LightJungle, 0)
         );
+        // Felled outright, ultra-heavy growth leaves ultra-rough ground (p. 63).
         assert_eq!(
             reduce_woodland(jungle, 130).unwrap().hex.terrain(),
-            Terrain::Rough
+            Terrain::UltraRough
         );
         let ultra = Hex::new(Terrain::UltraHeavyWoods, 0);
         assert_eq!(reduce_woodland(ultra, 30), None);

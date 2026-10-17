@@ -30,6 +30,11 @@ impl super::StoredMap {
                 .as_mut()
                 .context("Map terrain is unavailable")?,
         )[index] = hex;
+        // Growth that is gone takes its ultra-heavy origin with it.
+        let tile = index as u32;
+        if !hex.is_woods() && self.ultra_woodland.contains(&tile) {
+            Arc::make_mut(&mut self.ultra_woodland).remove(&tile);
+        }
         Ok(())
     }
 }

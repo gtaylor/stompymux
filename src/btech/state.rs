@@ -85,6 +85,11 @@ pub struct StoredMap {
     /// row-major tile position. Like cleared woods, it lasts as long as the loaded terrain.
     #[serde(default)]
     pub(crate) terrain_damage: Arc<BTreeMap<u32, u16>>,
+    /// Tiles whose woods or jungle grew ultra-heavy before they thinned: felled, they leave
+    /// ultra-rough ground rather than rough (Tactical Operations p. 63). Writing a hex without
+    /// woods or jungle forgets its tile.
+    #[serde(default)]
+    pub(crate) ultra_woodland: Arc<BTreeSet<u32>>,
     /// Sparse overlays indexed by row-major tile position, independent of source terrain.
     #[serde(default)]
     pub(crate) decorations: Arc<BTreeMap<u32, super::Decoration>>,
@@ -138,6 +143,7 @@ impl StoredMap {
     pub(crate) fn establish_terrain(&mut self, hexes: Arc<Vec<Hex>>) -> Result<()> {
         self.decorations = Default::default();
         self.terrain_damage = Default::default();
+        self.ultra_woodland = Default::default();
         if hexes.iter().all(|hex| hex.overlay().is_none()) {
             self.terrain = Some(hexes);
             return Ok(());
@@ -202,6 +208,12 @@ impl StoredMap {
             point.validate(self)?;
         }
         self.validate_artillery()?;
+        ensure!(
+            self.ultra_woodland
+                .iter()
+                .all(|&tile| i64::from(tile) < self.width * self.height),
+            "Out-of-bounds ultra-heavy woodland origin"
+        );
         for point in self.points_of_interest.iter() {
             point.validate(self.width, self.height)?;
         }
@@ -1100,6 +1112,7 @@ pub(super) fn map_from_asset(name: &str, asset: MapAsset) -> Result<StoredMap> {
         sensor_dice: Some(super::Dice::fresh()),
         terrain: None,
         terrain_damage: Default::default(),
+        ultra_woodland: Default::default(),
         decorations: Default::default(),
         static_decorations: Default::default(),
         points_of_interest: Arc::new(asset.points_of_interest),

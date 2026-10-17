@@ -6808,6 +6808,45 @@ async fn artillery_thins_the_woods_it_strikes() {
     world.validate(&config).unwrap();
 }
 
+/// Ultra-heavy woods that area-effect fire thins through heavy and light woods still fall to
+/// ultra-rough ground, not rough (Tactical Operations p. 63), and the map remembers where they
+/// started across a restart: three Long Tom strikes of 50 points each against the 120, 90
+/// and 50 terrain factors.
+#[tokio::test]
+async fn felled_ultra_heavy_woods_leave_ultra_rough_ground() {
+    let row = format!("{}0", Terrain::UltraHeavyWoods.symbol()) + &".0".repeat(2);
+    let asset = MapAsset::from_cells(&format!("3 3\n{row}\n.0.0.0\n.0.0.0\n")).unwrap();
+    let (_dir, config, mut world, map, _units) = fixture_asset(asset).await;
+    let corner = HexCoordinate { x: 0, y: 0 };
+    for expected in [
+        Terrain::HeavyWoods,
+        Terrain::LightWoods,
+        Terrain::UltraRough,
+    ] {
+        let mut flight = ArtilleryFlight::new(
+            corner,
+            corner,
+            Weapon::LongTom,
+            ArtilleryMode::Standard,
+            ArtilleryOutcome::Hit,
+        )
+        .unwrap();
+        while advance_artillery_flight(&mut world, map, &mut flight, rules())
+            .unwrap()
+            .is_none()
+        {}
+        assert_eq!(
+            world.btech.maps()[&map].base_hex(0, 0).unwrap().terrain(),
+            expected
+        );
+        persistence::save(&config.database(), &world).await.unwrap();
+        let restored = persistence::load(&config.database()).await.unwrap();
+        assert_eq!(restored.btech.maps()[&map], world.btech.maps()[&map]);
+        world = restored;
+    }
+    world.validate(&config).unwrap();
+}
+
 /// Occupants across the cluster area receive 5-point groups; failed character admission restores
 /// the world and the flight cursor.
 #[tokio::test]
