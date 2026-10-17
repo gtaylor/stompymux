@@ -13,6 +13,21 @@ pub(super) fn paved_headroom(envelope: SpeedEnvelope) -> SpeedEnvelope {
     }
 }
 
+/// Actual-speed bounds for a vehicle of `movement` on `tile` whose throttle is held inside
+/// `envelope`. A ground vehicle on pavement, a road or a bridge deck keeps the point of
+/// movement the surface adds (Total Warfare p. 61), the same surfaces on which the motion
+/// engine grants it; a VTOL, a vehicle off pavement and a stopped vehicle keep the envelope.
+pub(super) fn actual_speed_bounds(
+    tile: Hex,
+    movement: VehicleMovement,
+    envelope: SpeedEnvelope,
+) -> SpeedEnvelope {
+    if envelope.is_stopped() || !tile.is_paved() || movement == VehicleMovement::Vtol {
+        return envelope;
+    }
+    paved_headroom(envelope)
+}
+
 /// The share by which the paved movement bonus speeds a ground vehicle's travel: one point of
 /// movement over its flanking ceiling, so a flanking vehicle gains exactly one MP (Total
 /// Warfare p. 61). A stopped envelope gains nothing.
@@ -160,6 +175,39 @@ mod tests {
         let headroom = paved_headroom(SpeedEnvelope::from_walking_mp(5.0));
         assert_eq!(headroom.walking, 64.5);
         assert_eq!(headroom.running, 96.75);
+    }
+
+    /// Load reconciliation bounds actual speed on the surfaces where the motion engine grants
+    /// the paved point: bare pavement as well as roads and bridge decks (Total Warfare p. 61).
+    /// Open ground, a VTOL and a stopped vehicle keep the throttle envelope.
+    #[test]
+    fn actual_speed_bounds_keep_the_paved_point_wherever_motion_grants_it() {
+        use super::super::Terrain;
+        let envelope = SpeedEnvelope::from_walking_mp(5.0);
+        let headroom = paved_headroom(envelope);
+        let pavement = Hex::new(Terrain::Pavement, 0);
+        assert!(pavement.is_paved() && !pavement.is_road() && !pavement.has_bridge());
+        let road = Hex::new(Terrain::Road, 0);
+        let bridge = Hex::new(Terrain::Bridge, 1);
+        let clear = Hex::new(Terrain::Clear, 0);
+        for movement in [
+            VehicleMovement::Wheeled,
+            VehicleMovement::Tracked,
+            VehicleMovement::Hover,
+        ] {
+            for paved in [pavement, road, bridge] {
+                assert_eq!(actual_speed_bounds(paved, movement, envelope), headroom);
+            }
+            assert_eq!(actual_speed_bounds(clear, movement, envelope), envelope);
+            assert_eq!(
+                actual_speed_bounds(pavement, movement, SpeedEnvelope::STOPPED),
+                SpeedEnvelope::STOPPED
+            );
+        }
+        assert_eq!(
+            actual_speed_bounds(pavement, VehicleMovement::Vtol, envelope),
+            envelope
+        );
     }
 
     /// A 5/8 vehicle cruises at its 53.75 km/h template figure off pavement; on pavement the

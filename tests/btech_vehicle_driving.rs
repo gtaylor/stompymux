@@ -1437,11 +1437,10 @@ async fn hovercraft_sideslips_after_a_flank_speed_turn_on_clear_ground() {
     }
 }
 
-/// Drive the 5/8 Flatbed Truck south across open pavement at a throttle of `speed`, bear off
-/// by a small turn once it is moving, and report whether any hex it left after turning asked
-/// for a skid roll.
-async fn turns_into_vehicle_skid_check(speed: f64) -> bool {
-    let (_dir, config, mut world) = support::isolated_world().await;
+/// The shipped 5/8 Flatbed Truck, its 6-ton cargo bay empty, started near the north edge of a
+/// 10 x 40 sheet of open pavement and facing south.
+async fn pavement_truck() -> (tempfile::TempDir, World, ObjectId) {
+    let (dir, config, mut world) = support::isolated_world().await;
     let map = world.create(&config, "Pavement".into(), Kind::Room);
     let cells = format!("10 40\n{}", format!("{}\n", "_0".repeat(10)).repeat(40));
     create_battle_map(
@@ -1471,11 +1470,19 @@ async fn turns_into_vehicle_skid_check(speed: f64) -> bool {
     for _ in 0..5 {
         advance_battle_units(&mut world, 0, true);
     }
-    assert_eq!(world.btech.vehicles()[&id].cruising_speed(), 53.75);
     set_battle_heading(&mut world, id, ObjectId(1), 180.0).unwrap();
     for _ in 0..30 {
         advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
     }
+    (dir, world, id)
+}
+
+/// Drive the 5/8 Flatbed Truck south across open pavement at a throttle of `speed`, bear off
+/// by a small turn once it is moving, and report whether any hex it left after turning asked
+/// for a skid roll.
+async fn turns_into_vehicle_skid_check(speed: f64) -> bool {
+    let (_dir, mut world, id) = pavement_truck().await;
+    assert_eq!(world.btech.vehicles()[&id].cruising_speed(), 53.75);
     set_battle_speed(&mut world, id, ObjectId(1), speed).unwrap();
     for _ in 0..30 {
         advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
@@ -1512,6 +1519,27 @@ async fn pavement_skid_checks_start_above_the_template_cruising_speed() {
     assert!(!turns_into_vehicle_skid_check(53.75).await);
     assert!(turns_into_vehicle_skid_check(57.0).await);
     assert!(turns_into_vehicle_skid_check(86.0).await);
+}
+
+/// Cargo is load and its bay is not: the Flatbed Truck's empty 6-ton bay leaves its 86 km/h
+/// flank alone, stock loaded into the bay lowers it, and the truck still gains the point of
+/// movement bare pavement adds over whatever flank is left (Total Warfare p. 61).
+#[tokio::test]
+async fn a_loaded_truck_keeps_the_pavement_point_over_its_loaded_flank() {
+    let (_dir, mut world, id) = pavement_truck().await;
+    assert_eq!(
+        battle_effective_maximum_speed(&world, id, true).unwrap(),
+        86.0
+    );
+    set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 30).unwrap();
+    let flank = battle_effective_maximum_speed(&world, id, true).unwrap();
+    assert!(flank < 86.0, "{flank}");
+    set_battle_speed(&mut world, id, ObjectId(1), flank).unwrap();
+    for _ in 0..40 {
+        advance_battle_motion(&mut world, MovementRules::STANDARD).unwrap();
+    }
+    let actual = world.btech.vehicles()[&id].motion().unwrap().speed;
+    assert!((actual - (flank + 10.75)).abs() < 1e-9, "{actual} {flank}");
 }
 
 /// A wheeled vehicle that skids on pavement charges any unit in its path (Total Warfare

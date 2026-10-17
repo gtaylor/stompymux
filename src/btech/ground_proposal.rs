@@ -138,11 +138,11 @@ pub fn propose_vehicle_ground_motion(
     if super::load::carries_load(world, id) {
         loaded.limit_load(
             envelope,
-            if !envelope.is_stopped() && (current.is_road() || current.has_bridge()) {
-                super::vehicle_speed::paved_headroom(envelope)
-            } else {
-                envelope
-            },
+            super::vehicle_speed::actual_speed_bounds(
+                current,
+                vehicle.definition().movement,
+                envelope,
+            ),
         );
     }
     let mut next = vehicle.definition().motion_within(
