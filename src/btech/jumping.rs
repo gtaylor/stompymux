@@ -331,6 +331,11 @@ fn launch(
         maximum,
     )?;
     ensure!(maximum - loaded <= 10.75, "No, with this cargo you won't!");
+    // A unit carrying cargo in its lift hoists may not jump (Total Warfare pp. 137, 261).
+    ensure!(
+        !super::load::carries_hoisted_cargo(world, id)?,
+        "You cannot jump with cargo in your lift hoists."
+    );
     ensure!(
         unit.dumping().is_none(),
         "You are too busy dumping ammunition!"

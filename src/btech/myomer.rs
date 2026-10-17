@@ -1,6 +1,6 @@
 //! Triple Strength Myomer activation and the live speed envelope it, heat, load, gravity and
 //! the boosters produce from damage-only mobility.
-use super::{Mech, SpeedEnvelope};
+use super::{LoadEffect, Mech, SpeedEnvelope};
 
 impl Mech {
     /// TSM activates at the last sampled excess heat of nine, independent of stored weapon heat.
@@ -13,7 +13,12 @@ impl Mech {
     /// is refigured as walking x 1.5 rounded up after each, and an active MASC or
     /// supercharger then runs at twice the walking figure left (TW p. 137).
     pub(super) fn equip_envelope(&self, base: SpeedEnvelope) -> SpeedEnvelope {
-        self.live_envelope(base, self.heat().walking_mp_penalty(), 1.0, None)
+        self.live_envelope(
+            base,
+            self.heat().walking_mp_penalty(),
+            LoadEffect::NONE,
+            None,
+        )
     }
 
     /// The template's envelope with myomer, heat, load and gravity applied but no damage: the
@@ -21,15 +26,17 @@ impl Mech {
     pub(super) fn template_envelope(
         &self,
         base: SpeedEnvelope,
-        load: f64,
+        load: LoadEffect,
         gravity: Option<i64>,
     ) -> SpeedEnvelope {
         self.envelope_with(base, self.heat().walking_mp_penalty(), load, gravity, false)
     }
 
     /// The live envelope from a damage-adjusted `base`: hot myomer, a walking-MP heat
-    /// penalty, towed `load` (a factor on both ceilings) and the boosters, on a map of
-    /// `gravity` percent of standard. Away from standard gravity the walking MP left is
+    /// penalty, the walking MP cargo in lift hoists takes off (Total Warfare p. 136), towed
+    /// `load` (a factor on both ceilings) and the boosters, on a map of `gravity` percent of
+    /// standard. Hoisted cargo that brings the walking MP to zero or less leaves 1 MP and no
+    /// running, boosters included (ibid.). Away from standard gravity the walking MP left is
     /// divided by the G-rating and rounded to the nearest whole MP, halves down, after every
     /// other modifier, and running is then figured from it, boosters included (Tactical
     /// Operations: Advanced Rules p. 53). A 'Mech that has lost a leg walks at 1 MP whatever
@@ -38,7 +45,7 @@ impl Mech {
         &self,
         base: SpeedEnvelope,
         heat_penalty: f64,
-        load: f64,
+        load: LoadEffect,
         gravity: Option<i64>,
     ) -> SpeedEnvelope {
         self.envelope_with(base, heat_penalty, load, gravity, true)
@@ -50,7 +57,7 @@ impl Mech {
         &self,
         base: SpeedEnvelope,
         heat_penalty: f64,
-        load: f64,
+        load: LoadEffect,
         gravity: Option<i64>,
         damaged: bool,
     ) -> SpeedEnvelope {
@@ -65,17 +72,22 @@ impl Mech {
         if heat_penalty > 0.0 {
             envelope = envelope.with_walking_mp_delta(-heat_penalty);
         }
-        let boosters = if crippled {
+        let (envelope, crawling) =
+            super::lift_hoist::hoisted_envelope(envelope, load.hoist_penalty);
+        let walking_only = crippled || crawling;
+        let boosters = if walking_only {
             0
         } else {
             u8::from(self.masc_active()) + u8::from(self.supercharger_active())
         };
         let mut envelope = match gravity.filter(|gravity| *gravity != 100) {
-            None => envelope.with_boosters(boosters).scaled(load),
-            Some(gravity) => super::speed_bonus::under_gravity(envelope.scaled(load), gravity)
-                .with_boosters(boosters),
+            None => envelope.with_boosters(boosters).scaled(load.factor),
+            Some(gravity) => {
+                super::speed_bonus::under_gravity(envelope.scaled(load.factor), gravity)
+                    .with_boosters(boosters)
+            }
         };
-        if crippled {
+        if walking_only {
             envelope.running = envelope.walking;
         }
         envelope
@@ -130,7 +142,8 @@ mod tests {
         unit.heat.excess = 9.0;
         assert!(unit.triple_myomer_active());
         let mp = |unit: &Mech| {
-            let envelope = unit.live_envelope(unit.mobility().envelope(), 0.0, 1.0, None);
+            let envelope =
+                unit.live_envelope(unit.mobility().envelope(), 0.0, LoadEffect::NONE, None);
             (
                 envelope.walking_mp(),
                 envelope.running / super::super::MP_KPH,

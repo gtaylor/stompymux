@@ -204,7 +204,8 @@ hexes, still at least three. Gravity does not change the heat.
 Jumping and death-from-above attacks are refused when load-adjusted effective
 speed is more than one MP (10.75 KPH) below the unloaded maximum. CargoTech,
 movement boosters, TSM and special gravity affect that calculation. A loss of
-exactly one MP is allowed. You cannot jump while towing another unit.
+exactly one MP is allowed. You cannot jump while towing another unit, or with
+any cargo in your lift hoists (Total Warfare pp. 137, 261).
 Wait twelve seconds after an ordinary landing before jumping again. Stabilizing adds two
 to firing difficulty. Damaged landing gear or loss of consciousness can cause
 a fall, and losing all jump thrust or overheating can cut the flight short; a

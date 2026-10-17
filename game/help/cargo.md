@@ -21,6 +21,11 @@ A unit without CargoTech holds its stock in its lift hoists. Each working hoist
 lifts half the unit's tonnage, at most 200 tons, and the hoists' limits add up;
 a Mech's active triple strength myomer doubles them. Hoists work only while the
 unit runs and its pilot is conscious, for unloading too (Total Warfare p. 136).
+Hoisted cargo up to half the unit's tonnage costs no movement; above that it
+takes one walking (cruising) MP, and above the unit's full tonnage two, with
+running refigured from what is left. A unit it would bring to no walking MP
+walks at 1 MP and cannot run. A unit with cargo in its hoists cannot jump
+(Total Warfare pp. 136-137, 261).
 
 `unloadcargo <pattern> <quantity>` moves carried stock onto the current map.
 It also works while shut down or moving, and does not require the loading point
@@ -45,7 +50,7 @@ wildcard names directly, without transfer abbreviation priority.
 
 The positive quantity applies to each matching stock row. Each row transfers
 at most 50,000 items and never more than its available stock. All selected rows
-transfer together: an error leaves the stock unchanged. Carried mass affects
+transfer together: an error leaves the stock unchanged. Carried cargo affects
 movement, and transfers immediately reduce throttle settings when needed.
 Stock and loading points survive restart.
 

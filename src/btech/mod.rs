@@ -1108,7 +1108,7 @@ mod towing;
 pub use towing::set_tow;
 
 mod load;
-pub use load::{UnitLoad, unit_load};
+pub use load::{LoadEffect, UnitLoad, unit_load};
 
 pub use motion_controls::throttle_maximum;
 

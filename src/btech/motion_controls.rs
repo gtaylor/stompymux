@@ -87,8 +87,9 @@ pub(crate) fn throttle_configured(
 
 /// A unit's live walking (cruising) and running (flanking) ceilings. A Mech's come from
 /// damage-only mobility with hot myomer, heat and boosters applied in whole MP; a vehicle's
-/// from its damage-adjusted cruising MP less extreme temperature. Either is then scaled for
-/// towed load, and map gravity applies last.
+/// from its damage-adjusted cruising MP less extreme temperature. Cargo held in lift hoists
+/// then takes its walking MP (Total Warfare p. 136), either is scaled for towed load, and map
+/// gravity applies last.
 pub(crate) fn throttle_envelope(
     world: &World,
     id: ObjectId,
@@ -98,13 +99,9 @@ pub(crate) fn throttle_envelope(
         let position = vehicle.position();
         let base =
             super::speed_bonus::vehicle_temperature(world, position, vehicle.speed_envelope());
-        let loaded = super::load::movement_maximum(world, id, base.running, policy.tsm_tow_bonus)?;
-        let factor = if base.running > 0.0 {
-            loaded / base.running
-        } else {
-            0.0
-        };
-        return super::speed_bonus::envelope_on_map(world, position, base.scaled(factor));
+        let load = super::load::load_effect(world, id, base.running, policy.tsm_tow_bonus)?;
+        let (base, _) = super::lift_hoist::hoisted_envelope(base, load.hoist_penalty);
+        return super::speed_bonus::envelope_on_map(world, position, base.scaled(load.factor));
     }
     let unit = world
         .btech
@@ -112,18 +109,14 @@ pub(crate) fn throttle_envelope(
         .get(&id)
         .context("Enter a constructed unit first")?;
     let base = unit.mobility().envelope();
-    let loaded = super::load::movement_maximum(world, id, base.running, policy.tsm_tow_bonus)?;
-    let factor = if base.running > 0.0 {
-        loaded / base.running
-    } else {
-        0.0
-    };
-    // Equipment and heat work in whole MP on the damaged figure; towed load then scales the
-    // result, and map gravity rounds the walking MP left and refigures running from it.
+    let load = super::load::load_effect(world, id, base.running, policy.tsm_tow_bonus)?;
+    // Equipment, heat and hoisted cargo work in whole MP on the damaged figure; towed load
+    // then scales the result, and map gravity rounds the walking MP left and refigures
+    // running from it.
     let envelope = unit.live_envelope(
         base,
         unit.heat().walking_mp_penalty(),
-        factor,
+        load,
         super::speed_bonus::map_gravity(world, unit.position()),
     );
     envelope.validate()?;
@@ -155,16 +148,11 @@ pub(crate) fn acceleration_ceiling(
         .get(&id)
         .context("Enter a constructed unit first")?;
     let base = unit.mobility().envelope();
-    let loaded = super::load::movement_maximum(world, id, base.running, policy.tsm_tow_bonus)?;
-    let factor = if base.running > 0.0 {
-        loaded / base.running
-    } else {
-        0.0
-    };
+    let load = super::load::load_effect(world, id, base.running, policy.tsm_tow_bonus)?;
     let envelope = unit.live_envelope(
         base,
         0.0,
-        factor,
+        load,
         super::speed_bonus::map_gravity(world, unit.position()),
     );
     Ok(envelope.running)

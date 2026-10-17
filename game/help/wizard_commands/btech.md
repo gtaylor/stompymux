@@ -305,7 +305,9 @@ with `btech.inventory.mass(object)`.
 Carried stock now contributes to the shared unit-load calculation and throttle
 limits. CargoTech halves its movement penalty; ordinary Mechs carry twice the
 physical stock mass for speed accounting, while ordinary vehicles carry its full
-mass. Towing bonuses do not discount cargo. Removing stock restores the unloaded
+mass. A unit without CargoTech that mounts a lift hoist holds its stock in the
+hoist instead: that stock costs walking MP by the lift hoist rule (`help cargo`)
+and is left out of the load calculation. Towing bonuses do not discount cargo. Removing stock restores the unloaded
 ceiling. Wizard corrections immediately reconcile the unit's speed limits and
 log the actual addition or removal at debug level to `btech::economy`.
 Assigning an unchanged quantity emits no record. Stock, speed changes, log records

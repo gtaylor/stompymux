@@ -9,9 +9,32 @@ pub struct UnitLoad {
     pub nominal_tons: u16,
     /// Current gameplay mass, including any temporary administrative correction.
     pub material_mass: u32,
-    /// Effective cargo and tow load after their separate equipment discounts.
+    /// Effective cargo and tow load after their separate equipment discounts. Stock a unit
+    /// holds in its lift hoists is not part of it: that costs walking MP instead.
     pub carried_mass: u64,
+    /// Walking (Cruising) MP that the stock the unit holds in its lift hoists takes off:
+    /// none up to half its tonnage, one above that and two above its full tonnage (Total
+    /// Warfare p. 136).
+    pub hoist_penalty: u8,
     pub destroyed: bool,
+}
+
+/// How carried load changes a live speed envelope: the carried-load formula's factor on
+/// both ceilings, and the walking MP that cargo held in lift hoists takes off before it
+/// (Total Warfare p. 136). The two never stack on the same cargo: hoisted stock is left out
+/// of the formula.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LoadEffect {
+    pub factor: f64,
+    pub hoist_penalty: u8,
+}
+
+impl LoadEffect {
+    /// No load at all.
+    pub const NONE: Self = Self {
+        factor: 1.0,
+        hoist_penalty: 0,
+    };
 }
 
 impl UnitLoad {
@@ -53,7 +76,8 @@ impl UnitLoad {
 
 /// Resolve current mass, ownership and towing discounts for any admitted chassis.
 /// Loose stock and external towing share this projection without sharing their equipment discounts.
-/// The flag supplies the world's configured hot-myomer towing bonus.
+/// Stock held in lift hoists is left to the hoist's walking-MP penalty instead (Total Warfare
+/// p. 136). The flag supplies the world's configured hot-myomer towing bonus.
 pub fn unit_load(world: &World, id: ObjectId, tsm_tow_bonus: bool) -> Result<UnitLoad> {
     let (nominal_tons, material_mass, destroyed, salvage, carrier, hot_myomer, cargo_multiplier) =
         if let Some(unit) = world.btech.vehicles().get(&id) {
@@ -110,7 +134,14 @@ pub fn unit_load(world: &World, id: ObjectId, tsm_tow_bonus: bool) -> Result<Uni
         .vehicles()
         .get(&id)
         .map_or(0, |unit| unit.auxiliary_fuel_mass());
-    let cargo = super::inventory_mass(world, id)?
+    let stock = super::inventory_mass(world, id)?;
+    let hoisted = holds_stock_in_hoists(world, id)?;
+    let hoist_penalty = if hoisted {
+        super::lift_hoist::hoisted_walking_penalty(nominal_tons, stock)
+    } else {
+        0
+    };
+    let cargo = if hoisted { 0 } else { stock }
         .checked_add(extra_fuel)
         .context("Unit fuel load overflow")?
         .checked_mul(cargo_multiplier)
@@ -123,7 +154,49 @@ pub fn unit_load(world: &World, id: ObjectId, tsm_tow_bonus: bool) -> Result<Uni
         nominal_tons,
         material_mass,
         carried_mass,
+        hoist_penalty,
         destroyed,
+    })
+}
+
+/// Whether the unit holds its loose stock in lift hoists: it mounts one, working or not, and
+/// has no cargo bay (`CargoTech`), so its stock went in through the hoists (Total Warfare
+/// p. 136; see `help cargo`). Such cargo costs walking MP by the lift hoist rule rather than
+/// entering the carried-load formula, and the unit may not jump while it carries any (Total
+/// Warfare pp. 137, 261).
+pub(super) fn holds_stock_in_hoists(world: &World, id: ObjectId) -> Result<bool> {
+    let Some(unit) = world.btech.unit(id) else {
+        return Ok(false);
+    };
+    super::with_unit!(unit, |unit| Ok(!unit.definition().has_special("CargoTech")
+        && unit
+            .loadout()?
+            .systems
+            .iter()
+            .any(|part| part.system == super::System::LiftHoist)))
+}
+
+/// Whether the unit carries any stock in its lift hoists.
+pub(super) fn carries_hoisted_cargo(world: &World, id: ObjectId) -> Result<bool> {
+    Ok(holds_stock_in_hoists(world, id)? && super::inventory_mass(world, id)? > 0)
+}
+
+/// The load effect on a live envelope whose running ceiling is `running`: the carried-load
+/// formula's factor and the lift hoists' walking-MP penalty.
+pub(super) fn load_effect(
+    world: &World,
+    id: ObjectId,
+    running: f64,
+    tsm_bonus: bool,
+) -> Result<LoadEffect> {
+    if !carries_load(world, id) {
+        return Ok(LoadEffect::NONE);
+    }
+    let load = unit_load(world, id, tsm_bonus)?;
+    let loaded = load.maximum_speed(running)?.min(running);
+    Ok(LoadEffect {
+        factor: if running > 0.0 { loaded / running } else { 0.0 },
+        hoist_penalty: load.hoist_penalty,
     })
 }
 
@@ -206,21 +279,6 @@ pub(super) fn carries_load(world: &World, id: ObjectId) -> bool {
                 .iter()
                 .any(|entry| super::Part::from_id(entry.part_id).is_some_and(|part| part.mass > 0))
         })
-}
-
-/// Apply external load to a damage-adjusted propulsion ceiling before chassis movement bonuses.
-pub(super) fn movement_maximum(
-    world: &World,
-    id: ObjectId,
-    maximum: f64,
-    tsm_bonus: bool,
-) -> Result<f64> {
-    if !carries_load(world, id) {
-        return Ok(maximum);
-    }
-    Ok(unit_load(world, id, tsm_bonus)?
-        .maximum_speed(maximum)?
-        .min(maximum))
 }
 
 /// Reconcile a changed external load immediately without advancing position, time or dice.
@@ -307,12 +365,15 @@ mod tests {
         assert_eq!(cargo_capacity(&world, id), 600);
         assert!(!carries_load(&world, id));
         assert_eq!(unit_load(&world, id, true).unwrap().carried_mass, 0);
-        assert_eq!(movement_maximum(&world, id, 86.0, true).unwrap(), 86.0);
+        assert_eq!(
+            load_effect(&world, id, 86.0, true).unwrap(),
+            LoadEffect::NONE
+        );
         let gold = super::super::Part::parse("Gold").unwrap().part_id;
         super::super::set_part_store_quantity(&mut world, id, gold, 30).unwrap();
         assert!(carries_load(&world, id));
         assert!(unit_load(&world, id, true).unwrap().carried_mass > 0);
-        assert!(movement_maximum(&world, id, 86.0, true).unwrap() < 86.0);
+        assert!(load_effect(&world, id, 86.0, true).unwrap().factor < 1.0);
     }
 
     #[test]
@@ -321,6 +382,7 @@ mod tests {
             nominal_tons: 3,
             material_mass: 3 * 1024,
             carried_mass: 6 * 1024,
+            hoist_penalty: 0,
             destroyed: false,
         };
         assert_eq!(load.maximum_speed(64.5).unwrap(), 21.5);

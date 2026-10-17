@@ -6,6 +6,9 @@ use stompymux_rs::*;
 /// Gold in the hangar: each unit weighs 204/1024 of a ton.
 const GOLD: i32 = 528;
 
+/// One movement point, in km/h.
+const MP: f64 = 10.75;
+
 /// Place `template` on a hangar map at its loading point, running with its pilot aboard, with
 /// `gold` units of hangar stock.
 async fn fixture(
@@ -160,4 +163,71 @@ async fn lift_hoists_need_power_and_their_slots() {
         refused.contains("This unit cannot haul cargo!"),
         "{refused}"
     );
+}
+
+/// Cargo in lift hoists costs nothing up to half the unit's tonnage and a cruising MP above
+/// it, with flanking refigured from what is left; the carried-load formula does not charge it
+/// as well (Total Warfare p. 136). The 80-ton Demolisher cruises at 3 MP and flanks at 5: with
+/// 200 Gold (39.8 tons) it still does, and with 201 (40 tons and a bit) it cruises at 2 and
+/// flanks at 3.
+#[tokio::test]
+async fn hoisted_cargo_costs_a_cruising_mp_above_half_the_tonnage() {
+    let (_dir, config, mut world, _, unit) = fixture(hauler(2), 400).await;
+    let flank = |world: &World| battle_throttle_maximum(world, unit, false).unwrap();
+    assert_eq!(flank(&world), 5.0 * MP);
+    transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "Gold", 200).unwrap();
+    assert_eq!(
+        battle_unit_load(&world, unit, false).unwrap().carried_mass,
+        0
+    );
+    assert_eq!(flank(&world), 5.0 * MP);
+    transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "Gold", 1).unwrap();
+    assert_eq!(
+        battle_unit_load(&world, unit, false).unwrap().hoist_penalty,
+        1
+    );
+    assert_eq!(flank(&world), 3.0 * MP);
+    transfer_battle_cargo(&mut world, &config, ObjectId(1), false, "Gold", 201).unwrap();
+    assert_eq!(flank(&world), 5.0 * MP);
+    world.validate(&config).unwrap();
+}
+
+/// A 'Mech carrying cargo in its lift hoists may not jump, however light the cargo (Total
+/// Warfare pp. 137, 261); once it sets the cargo down it may.
+#[tokio::test]
+async fn hoisted_cargo_bars_jumping() {
+    let mut jenner =
+        MechTemplate::parse("JR7-D", include_str!("../game/units/JR7-D.toml")).unwrap();
+    let torso = jenner.sections.get_mut(&MechSection::LeftTorso).unwrap();
+    for slot in 4..7 {
+        torso.criticals.insert(
+            slot,
+            CriticalDefinition {
+                equipment: "Lift_Hoist".into(),
+                data: "-".into(),
+                modes: vec![],
+            },
+        );
+    }
+    let jenner = support::templates::legal(jenner);
+    let (_dir, config, mut world, _, unit) = fixture(UnitTemplate::Mech(jenner), 10).await;
+    let walking = world.btech.constructed_units()[&unit].walking_speed();
+    transfer_battle_cargo(&mut world, &config, ObjectId(1), true, "Gold", 1).unwrap();
+    assert_eq!(
+        battle_unit_load(&world, unit, false).unwrap().hoist_penalty,
+        0
+    );
+    assert_eq!(
+        world.btech.constructed_units()[&unit].walking_speed(),
+        walking
+    );
+    let refused = launch_battle_jump(&mut world.clone(), unit, ObjectId(1), 180, 1.0)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        refused.contains("You cannot jump with cargo in your lift hoists."),
+        "{refused}"
+    );
+    transfer_battle_cargo(&mut world, &config, ObjectId(1), false, "Gold", 1).unwrap();
+    launch_battle_jump(&mut world, unit, ObjectId(1), 180, 1.0).unwrap();
 }
