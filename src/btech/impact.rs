@@ -816,21 +816,7 @@ impl<'a> ImpactContext<'a> {
                 .notices
                 .extend(super::club::dropped_notices(self.world, self.id));
         }
-        let mut explosion = match &loss {
-            CriticalLoss::Ammunition {
-                explosion_damage, ..
-            } => *explosion_damage,
-            CriticalLoss::Weapon {
-                explosion_damage, ..
-            } => u32::from(*explosion_damage),
-            _ => 0,
-        };
-        let explosion_section = if let CriticalLoss::Weapon { index, .. } = loss {
-            self.unit().loadout()?.weapons[index].criticals[0].section
-        } else {
-            location.section
-        };
-        if explosion == 0
+        if explosion_damage(&loss) == 0
             && let Some((intact, weapon)) = weapon_before
         {
             let name = weapon.name().split_once('.').expect("catalog namespace").1;
@@ -934,134 +920,150 @@ impl<'a> ImpactContext<'a> {
                 text: "One of your Gauss Rifle ammo feeds is destroyed".to_owned(),
             });
         }
+        self.explode(location, loss)
+    }
+
+    /// Detonate an explosive slot's loss: an ammunition bin, a Gauss rifle, a B-Pod, a jammed
+    /// autocannon or a hot-loaded launcher. The blast starts at the location's internal structure
+    /// and transfers onward unless CASE stops it (Total Warfare p. 125). Losses with nothing to
+    /// explode do nothing. `location` is the slot struck; its section may already have been
+    /// destroyed by the hit that set the slot off (Total Warfare p. 124, Destroyed Location).
+    fn explode(&mut self, location: CriticalLocation, loss: CriticalLoss) -> Result<()> {
+        let mut explosion = explosion_damage(&loss);
+        if explosion == 0 {
+            return Ok(());
+        }
+        let explosion_section = if let CriticalLoss::Weapon { index, .. } = loss {
+            self.unit().loadout()?.weapons[index].criticals[0].section
+        } else {
+            location.section
+        };
         let inferno = if let CriticalLoss::Ammunition { index, .. } = &loss {
             self.unit().loadout()?.ammunition[*index].mode == super::AmmunitionMode::Inferno
         } else {
             false
         };
-        if explosion > 0 {
-            if self.rules.is_some() {
-                if let CriticalLoss::Weapon { index, .. } = loss {
-                    let weapon = self.unit().loadout()?.weapons[index].weapon;
-                    let name = weapon.name().split_once('.').expect("catalog namespace").1;
-                    let detail = if weapon.weapon_explosion_damage() > 0 {
-                        format!("It explodes for {explosion} points damage.")
-                    } else if weapon.is_b_pod() {
-                        format!(
-                            "[fg=red bold]Your B-Pod explodes for {explosion} points of damage![reset]"
-                        )
-                    } else if weapon.jammed_explosion_damage() > 0 {
-                        format!(
-                            "[fg=red bold]Your jammed autocannon explodes for {explosion} points of damage![reset]"
-                        )
-                    } else {
-                        format!(
-                            "[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]"
-                        )
-                    };
-                    let notices = [format!("Your {name} has been destroyed!"), detail];
-                    for text in notices {
-                        self.report.notices.push(super::Notice {
-                            unit: self.id,
-                            text,
-                        });
-                    }
+        if self.rules.is_some() {
+            if let CriticalLoss::Weapon { index, .. } = loss {
+                let weapon = self.unit().loadout()?.weapons[index].weapon;
+                let name = weapon.name().split_once('.').expect("catalog namespace").1;
+                let detail = if weapon.weapon_explosion_damage() > 0 {
+                    format!("It explodes for {explosion} points damage.")
+                } else if weapon.is_b_pod() {
+                    format!(
+                        "[fg=red bold]Your B-Pod explodes for {explosion} points of damage![reset]"
+                    )
+                } else if weapon.jammed_explosion_damage() > 0 {
+                    format!(
+                        "[fg=red bold]Your jammed autocannon explodes for {explosion} points of damage![reset]"
+                    )
                 } else {
+                    format!(
+                        "[fg=red bold]Your hotloaded launcher explodes for {explosion} points of damage![reset]"
+                    )
+                };
+                let notices = [format!("Your {name} has been destroyed!"), detail];
+                for text in notices {
                     self.report.notices.push(super::Notice {
                         unit: self.id,
-                        text: "Ammunition explosion!".to_owned(),
+                        text,
                     });
                 }
-                let broadcast = match loss {
-                    CriticalLoss::Ammunition { .. } => Some(
-                        if inferno {
-                            "is suddenly enveloped by a brilliant fireball!"
-                        } else {
-                            "has an internal ammo explosion!"
-                        }
-                        .to_owned(),
-                    ),
-                    CriticalLoss::Weapon { index, .. } if !self.unit().is_destroyed() => {
-                        let weapon = self.unit().loadout()?.weapons[index].weapon;
-                        let section = self
-                            .unit()
-                            .chassis()
-                            .section_name(explosion_section)
-                            .replace('_', " ");
-                        Some(if weapon.weapon_explosion_damage() > 0 {
-                            format!("'s {section} is covered in a large electrical discharge!")
-                        } else if weapon.is_b_pod() {
-                            format!("'s {section} is rocked by a pod explosion!")
-                        } else if weapon.jammed_explosion_damage() > 0 {
-                            "loses an autocannon in a brilliant explosion!".to_owned()
-                        } else {
-                            "loses a launcher in a brilliant explosion!".to_owned()
-                        })
-                    }
-                    _ => None,
-                };
-                if let Some(text) = broadcast {
-                    self.report.notices.extend(
-                        super::observer_messages(self.world, self.id, &text)
-                            .into_iter()
-                            .map(|(unit, text)| super::Notice { unit, text }),
-                    );
-                }
-            }
-            if let CriticalLoss::Ammunition { index, rounds, .. } = loss
-                && inferno
-            {
-                // Total Warfare p. 141: an exploding inferno bin heats the carrying unit by two
-                // per missile, to at most 30, and explodes with the standard damage of SRM
-                // rounds.
-                let weapon = self.unit().loadout()?.ammunition[index].weapon;
-                let missiles = u32::from(rounds) * u32::from(weapon.profile().missiles.max(1));
-                self.unit_mut().heat.stored += f64::from((2 * missiles).min(30));
-                explosion = weapon
-                    .ammunition_explosion_damage_for_mode(rounds, super::AmmunitionMode::Normal);
-            }
-            // Total Warfare p. 60: internal explosions count toward the twenty damage points
-            // that force a piloting check; a completed fall clears the count.
-            if self.rules.is_some() && self.unit().posture() != super::Posture::Prone {
-                self.unit_mut()
-                    .stagger
-                    .record(u16::try_from(explosion.min(u32::from(u16::MAX)))?);
-            }
-            let pilot_before = self.unit().pilot();
-            let core_before = self.unit().sections()[&MechSection::CenterTorso].internal;
-            if self.unit().has_case_ii(explosion_section) {
-                self.vent_explosion(explosion_section, u16::try_from(explosion)?)?;
             } else {
-                resolve_path(
-                    self,
-                    DamagePacket {
-                        announced: false,
-                        direct_hit: false,
-                        section: explosion_section,
-                        damage: u16::try_from(explosion)?,
-                        internal_only: true,
-                        transfer: true,
-                        rear: false,
-                        tac: false,
-                        vented: false,
-                        weapon_effect: None,
-                        critical_penalty: 0,
-                    },
-                )?;
-            }
-            if core_before > 0 && self.unit().sections()[&MechSection::CenterTorso].internal == 0 {
-                self.kill_crew(pilot_before.is_some(), true)?;
-            }
-            if self.rules.is_some() && matches!(loss, CriticalLoss::Weapon { .. }) {
                 self.report.notices.push(super::Notice {
                     unit: self.id,
-                    text: "You take personal injury from the weapon's explosion!".to_owned(),
+                    text: "Ammunition explosion!".to_owned(),
                 });
             }
-            // Total Warfare p. 41: every ammunition explosion, a hot-loaded launcher's
-            // included, injures the MechWarrior.
-            self.effect(ImpactEffect::ExplosionInjury)?;
+            let broadcast = match loss {
+                CriticalLoss::Ammunition { .. } => Some(
+                    if inferno {
+                        "is suddenly enveloped by a brilliant fireball!"
+                    } else {
+                        "has an internal ammo explosion!"
+                    }
+                    .to_owned(),
+                ),
+                CriticalLoss::Weapon { index, .. } if !self.unit().is_destroyed() => {
+                    let weapon = self.unit().loadout()?.weapons[index].weapon;
+                    let section = self
+                        .unit()
+                        .chassis()
+                        .section_name(explosion_section)
+                        .replace('_', " ");
+                    Some(if weapon.weapon_explosion_damage() > 0 {
+                        format!("'s {section} is covered in a large electrical discharge!")
+                    } else if weapon.is_b_pod() {
+                        format!("'s {section} is rocked by a pod explosion!")
+                    } else if weapon.jammed_explosion_damage() > 0 {
+                        "loses an autocannon in a brilliant explosion!".to_owned()
+                    } else {
+                        "loses a launcher in a brilliant explosion!".to_owned()
+                    })
+                }
+                _ => None,
+            };
+            if let Some(text) = broadcast {
+                self.report.notices.extend(
+                    super::observer_messages(self.world, self.id, &text)
+                        .into_iter()
+                        .map(|(unit, text)| super::Notice { unit, text }),
+                );
+            }
         }
+        if let CriticalLoss::Ammunition { index, rounds, .. } = loss
+            && inferno
+        {
+            // Total Warfare p. 141: an exploding inferno bin heats the carrying unit by two
+            // per missile, to at most 30, and explodes with the standard damage of SRM
+            // rounds.
+            let weapon = self.unit().loadout()?.ammunition[index].weapon;
+            let missiles = u32::from(rounds) * u32::from(weapon.profile().missiles.max(1));
+            self.unit_mut().heat.stored += f64::from((2 * missiles).min(30));
+            explosion =
+                weapon.ammunition_explosion_damage_for_mode(rounds, super::AmmunitionMode::Normal);
+        }
+        // Total Warfare p. 60: internal explosions count toward the twenty damage points
+        // that force a piloting check; a completed fall clears the count.
+        if self.rules.is_some() && self.unit().posture() != super::Posture::Prone {
+            self.unit_mut()
+                .stagger
+                .record(u16::try_from(explosion.min(u32::from(u16::MAX)))?);
+        }
+        let pilot_before = self.unit().pilot();
+        let core_before = self.unit().sections()[&MechSection::CenterTorso].internal;
+        if self.unit().has_case_ii(explosion_section) {
+            self.vent_explosion(explosion_section, u16::try_from(explosion)?)?;
+        } else {
+            resolve_path(
+                self,
+                DamagePacket {
+                    announced: false,
+                    direct_hit: false,
+                    section: explosion_section,
+                    damage: u16::try_from(explosion)?,
+                    internal_only: true,
+                    transfer: true,
+                    rear: false,
+                    tac: false,
+                    vented: false,
+                    weapon_effect: None,
+                    critical_penalty: 0,
+                },
+            )?;
+        }
+        if core_before > 0 && self.unit().sections()[&MechSection::CenterTorso].internal == 0 {
+            self.kill_crew(pilot_before.is_some(), true)?;
+        }
+        if self.rules.is_some() && matches!(loss, CriticalLoss::Weapon { .. }) {
+            self.report.notices.push(super::Notice {
+                unit: self.id,
+                text: "You take personal injury from the weapon's explosion!".to_owned(),
+            });
+        }
+        // Total Warfare p. 41: every ammunition explosion, a hot-loaded launcher's
+        // included, injures the MechWarrior.
+        self.effect(ImpactEffect::ExplosionInjury)?;
         Ok(())
     }
 
@@ -1589,6 +1591,7 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
         if section == MechSection::Head && !context.unit().torso_mounted_cockpit() {
             context.effect(ImpactEffect::HeadInjury)?;
         }
+        let mut armor_damaged = false;
         if !internal_only {
             context.strike_searchlight(section, rear);
             let previous_warning =
@@ -1605,43 +1608,8 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             )?;
             let warning = super::combat_warnings::armor_level(context.unit(), section, rear);
             damage = special.map_or(armor.remaining, |(_, overflow)| overflow);
-            let armor_damaged = armor.absorbed > 0;
+            armor_damaged = armor.absorbed > 0;
             context.record_phase(armor)?;
-            // Total Warfare p. 124: a hit location roll of 2 adds one Determining Critical Hits
-            // roll on the location struck, besides any roll for damaging its structure. It
-            // follows the damage to the next location only when this one was already gone.
-            // Hardened armor lowers it by two (Tactical Operations: AUE p. 93).
-            if tac {
-                tac = false;
-                let hardened = if context.unit().hardened_armor() {
-                    super::Technology::HARDENED_CRITICAL_PENALTY
-                } else {
-                    0
-                };
-                let roll = context
-                    .unit_mut()
-                    .dice
-                    .generic_roll()
-                    .saturating_sub(critical_penalty.saturating_add(hardened));
-                if resolve_determining_roll(context, section, roll, false)? {
-                    break;
-                }
-            }
-            // Total Warfare p. 140: every armor-piercing hit that damages armor rolls once for
-            // a critical with the autocannon's modifier, on the location struck only. Hardened
-            // armor negates the round's effect (Tactical Operations: AUE p. 93).
-            if original
-                && armor_damaged
-                && let Some(WeaponEffect::ArmorPiercing(weapon)) = weapon_effect
-                && !context.unit().hardened_armor()
-            {
-                let roll = context.unit_mut().dice.generic_roll().saturating_sub(
-                    critical_penalty.saturating_add(weapon.armor_piercing_penalty()),
-                );
-                if resolve_determining_roll(context, section, roll, false)? {
-                    break;
-                }
-            }
             if warning > previous_warning
                 && context.rules.is_some()
                 && context.unit().armor_warning()
@@ -1653,32 +1621,61 @@ fn resolve_path(context: &mut ImpactContext<'_>, packet: DamagePacket) -> Result
             }
         }
         let penetrating = !internal_only && damage > 0;
-        // Total Warfare p. 123: each hit that damages internal structure makes one Determining
-        // Critical Hits roll, independently of the hit location roll. A location that an
-        // explosion from those criticals has just destroyed passes the damage on instead.
+        let head_pilot = (section == MechSection::Head && !context.unit().torso_mounted_cockpit())
+            .then(|| context.unit().pilot().is_some());
+        // Total Warfare pp. 122-124: damage past the armor is marked off the internal structure
+        // first (Step 3), and only then does the location roll for critical hits (Step 4). A
+        // location the hit destroys keeps a record of the slots it held, since only its
+        // explosive slots can still be struck.
+        let mut structure_damaged = false;
+        let mut destroyed = None;
         if damage > 0 && context.unit().sections()[&section].internal > 0 {
-            let roll = context
-                .unit_mut()
-                .dice
-                .generic_roll()
-                .saturating_sub(critical_penalty);
-            if resolve_determining_roll(context, section, roll, vented)? {
-                break;
-            }
             // Reinforced structure halves and composite structure doubles internal damage,
             // including any overflow that transfers onward.
             let structural = context.unit().structure_damage(damage);
-            let head_pilot = (section == MechSection::Head
-                && !context.unit().torso_mounted_cockpit())
-            .then(|| context.unit().pilot().is_some());
+            let survey = (structural >= context.unit().sections()[&section].internal)
+                .then(|| DestroyedLocation::survey(context.unit(), section))
+                .transpose()?;
             let phase = context.damage_phase(section, structural, DamagePhase::Internal)?;
             damage = phase.remaining;
             context.record_phase(phase)?;
-            if let Some(had_pilot) = head_pilot
-                && context.unit().sections()[&MechSection::Head].internal == 0
-            {
-                context.kill_crew(had_pilot, false)?;
-            }
+            structure_damaged = true;
+            destroyed = survey.filter(|_| context.unit().sections()[&section].internal == 0);
+        }
+        let mut rolls = Vec::new();
+        // Total Warfare p. 124: a hit location roll of 2 adds one Determining Critical Hits
+        // roll on the location struck, besides any roll for damaging its structure. It
+        // follows the damage to the next location only when this one was already gone.
+        // Hardened armor lowers it by two (Tactical Operations: AUE p. 93).
+        if tac {
+            tac = false;
+            let hardened = if context.unit().hardened_armor() {
+                super::Technology::HARDENED_CRITICAL_PENALTY
+            } else {
+                0
+            };
+            rolls.push(critical_penalty.saturating_add(hardened));
+        }
+        // Total Warfare p. 140: every armor-piercing hit that damages armor rolls once for a
+        // critical with the autocannon's modifier, on the location struck only. Hardened armor
+        // negates the round's effect (Tactical Operations: AUE p. 93).
+        if original
+            && armor_damaged
+            && let Some(WeaponEffect::ArmorPiercing(weapon)) = weapon_effect
+            && !context.unit().hardened_armor()
+        {
+            rolls.push(critical_penalty.saturating_add(weapon.armor_piercing_penalty()));
+        }
+        // Total Warfare p. 123: each hit that damages internal structure makes one Determining
+        // Critical Hits roll, independently of the hit location roll.
+        if structure_damaged {
+            rolls.push(critical_penalty);
+        }
+        resolve_location_criticals(context, section, &rolls, destroyed, vented)?;
+        if let Some(had_pilot) = head_pilot
+            && context.unit().sections()[&MechSection::Head].internal == 0
+        {
+            context.kill_crew(had_pilot, false)?;
         }
         original = false;
         if internal_only {
@@ -1779,32 +1776,167 @@ pub(super) fn critical_count(roll: u8) -> u8 {
     }
 }
 
-/// Apply one Determining Critical Hits Table result (Total Warfare p. 124) to a location and
-/// report whether the location was blown off. A 12 blows an arm, leg or head off; the hit's
-/// remaining damage is then lost, a case Total Warfare does not address.
+/// Whether a 12 on the Determining Critical Hits Table blows this location off rather than
+/// rolling three critical hits (Total Warfare p. 124).
+fn blown_off_by_twelve(section: MechSection) -> bool {
+    matches!(
+        section,
+        MechSection::LeftArm
+            | MechSection::RightArm
+            | MechSection::LeftLeg
+            | MechSection::RightLeg
+            | MechSection::Head
+    )
+}
+
+/// Damage a critical loss sets off: the bin's contents, or the explosive weapon's blast.
+fn explosion_damage(loss: &CriticalLoss) -> u32 {
+    match loss {
+        CriticalLoss::Ammunition {
+            explosion_damage, ..
+        } => *explosion_damage,
+        CriticalLoss::Weapon {
+            explosion_damage, ..
+        } => u32::from(*explosion_damage),
+        CriticalLoss::System { .. } => 0,
+    }
+}
+
+/// What a location held just before the hit that destroyed it, for the critical rolls that
+/// hit still makes there (Total Warfare p. 124, Destroyed Location).
+struct DestroyedLocation {
+    /// Slots that could have taken a critical hit.
+    candidates: Vec<CriticalLocation>,
+    /// The explosive slots among them, with the loss each would have suffered.
+    explosive: std::collections::BTreeMap<CriticalLocation, CriticalLoss>,
+}
+
+impl DestroyedLocation {
+    /// Record a location's eligible and explosive slots before its structure is destroyed.
+    fn survey(unit: &Mech, section: MechSection) -> Result<Self> {
+        let candidates = unit.critical_candidates(section);
+        let mut explosive = std::collections::BTreeMap::new();
+        for &location in &candidates {
+            if let Some(loss) = unit.critical_loss(location)?
+                && explosion_damage(&loss) > 0
+            {
+                explosive.insert(location, loss);
+            }
+        }
+        Ok(Self {
+            candidates,
+            explosive,
+        })
+    }
+}
+
+/// Make a location's Determining Critical Hits rolls for one hit, after its structure damage
+/// has been applied (Total Warfare p. 123, Step 4). Each entry of `penalties` is one roll and
+/// the amount subtracted from it. A location the hit destroyed (`destroyed`) is checked only
+/// when it held explosive slots: criticals striking those explode as normal and every other
+/// critical is discarded without transferring (Total Warfare p. 124, Destroyed Location).
+/// Otherwise the rolls apply to the location in turn until one of them blows it off or an
+/// explosion destroys it.
+fn resolve_location_criticals(
+    context: &mut ImpactContext<'_>,
+    section: MechSection,
+    penalties: &[u8],
+    destroyed: Option<DestroyedLocation>,
+    vented: bool,
+) -> Result<()> {
+    if let Some(mut destroyed) = destroyed {
+        if destroyed.explosive.is_empty() {
+            return Ok(());
+        }
+        for &penalty in penalties {
+            let roll = context
+                .unit_mut()
+                .dice
+                .generic_roll()
+                .saturating_sub(penalty);
+            resolve_destroyed_location_roll(context, section, roll, &mut destroyed, vented)?;
+        }
+        return Ok(());
+    }
+    for &penalty in penalties {
+        if context.unit().sections()[&section].internal == 0 {
+            break;
+        }
+        let roll = context
+            .unit_mut()
+            .dice
+            .generic_roll()
+            .saturating_sub(penalty);
+        resolve_determining_roll(context, section, roll, vented)?;
+    }
+    Ok(())
+}
+
+/// One Determining Critical Hits roll in a location its hit has just destroyed. A 12 on a limb
+/// or the head blows off what is already lost, and blown-off explosives do not explode (Total
+/// Warfare p. 125). Each other critical strikes one of the slots the location held, chosen
+/// uniformly among those not yet struck; an explosive slot explodes, any other is discarded.
+fn resolve_destroyed_location_roll(
+    context: &mut ImpactContext<'_>,
+    section: MechSection,
+    roll: u8,
+    destroyed: &mut DestroyedLocation,
+    vented: bool,
+) -> Result<()> {
+    let count = if roll == 12 && blown_off_by_twelve(section) {
+        0
+    } else {
+        critical_count(roll)
+    };
+    if count == 0
+        || context.unit().combat_safe
+        || context.unit().definition().has_special("CritProof_Tech")
+    {
+        return Ok(());
+    }
+    for _ in 0..count {
+        context.spend()?;
+        if vented && context.unit_mut().dice.generic_roll() >= 8 {
+            continue;
+        }
+        if destroyed.candidates.is_empty() {
+            break;
+        }
+        let slots = u16::try_from(destroyed.candidates.len()).unwrap_or(u16::MAX);
+        let index = context
+            .unit_mut()
+            .dice
+            .die(slots)
+            .expect("bounded occupied slots")
+            - 1;
+        let location = destroyed.candidates.remove(usize::from(index));
+        if let Some(loss) = destroyed.explosive.remove(&location) {
+            context
+                .report
+                .impact
+                .criticals
+                .push((location, loss.clone()));
+            context.explode(location, loss)?;
+        }
+    }
+    Ok(())
+}
+
+/// Apply one Determining Critical Hits Table result (Total Warfare p. 124) to a location that
+/// survived the hit's structure damage. A 12 blows an arm, leg or head off, destroying it with
+/// its components; the hit's damage has already been marked off, so none is lost.
 fn resolve_determining_roll(
     context: &mut ImpactContext<'_>,
     section: MechSection,
     roll: u8,
     vented: bool,
-) -> Result<bool> {
-    if roll == 12
-        && matches!(
-            section,
-            MechSection::LeftArm
-                | MechSection::RightArm
-                | MechSection::LeftLeg
-                | MechSection::RightLeg
-                | MechSection::Head
-        )
-    {
+) -> Result<()> {
+    if roll == 12 && blown_off_by_twelve(section) {
         let remaining = context.unit().sections()[&section].internal;
         let phase = context.damage_phase(section, remaining, DamagePhase::Internal)?;
-        context.record_phase(phase)?;
-        return Ok(true);
+        return context.record_phase(phase);
     }
-    resolve_criticals(context, section, critical_count(roll), vented)?;
-    Ok(false)
+    resolve_criticals(context, section, critical_count(roll), vented)
 }
 
 /// Apply `count` critical hits to a location. A location with no eligible slot left before
@@ -2047,6 +2179,168 @@ mod tests {
             exercised = true;
         }
         assert!(exercised);
+    }
+
+    /// A Jenner whose left arm carries its SRM-4 ammunition, `rounds` shots of eight damage
+    /// each, in place of the right torso bin.
+    fn armed_arm_world(rounds: u16, seed: u8) -> (World, ObjectId) {
+        let mut template = super::super::MechTemplate::parse(
+            "JR7-D",
+            &include_str!("../../tests/fixtures/btech/units/JR7-D.toml").replace(
+                "    { at = 1, item = \"Ammo_IS.SRM-4\", rounds = 25 },\n",
+                "",
+            ),
+        )
+        .unwrap();
+        let arm = template.sections.get_mut(&MechSection::LeftArm).unwrap();
+        arm.criticals.insert(
+            4,
+            super::super::CriticalDefinition {
+                equipment: "Ammo_IS.SRM-4".into(),
+                data: rounds.to_string(),
+                modes: Vec::new(),
+            },
+        );
+        super::super::test_designs::balance(&mut template, &["IS.SRM-4"]);
+        let mut unit = Mech::from_template(template).unwrap();
+        unit.dice = super::super::Dice::seeded([seed; 32]);
+        let mut world = World::default();
+        let id = ObjectId(41);
+        world.btech.constructed.insert(id, unit);
+        (world, id)
+    }
+
+    /// Structure damage lands before the location rolls for criticals (Total Warfare pp.
+    /// 122-124): a bin set off by the roll explodes into what the hit left of the arm, and
+    /// the rest of the blast goes straight to the side torso's structure.
+    #[test]
+    fn criticals_follow_the_structure_damage_of_their_hit() {
+        let mut exercised = false;
+        for seed in 0..=255 {
+            // One shot of SRM-4 ammunition explodes for eight.
+            let (mut world, id) = armed_arm_world(1, seed);
+            // Seven damage strip the arm's four armor points and three of its six internal.
+            let report = resolve_in_candidate(
+                &mut world,
+                id,
+                Hit {
+                    section: MechSection::LeftArm,
+                    rear_armor: false,
+                    through_armor_critical: false,
+                },
+                7,
+                None,
+                Some(WeaponEffect::Conventional),
+            )
+            .unwrap();
+            if !report
+                .impact
+                .criticals
+                .iter()
+                .any(|(_, loss)| matches!(loss, CriticalLoss::Ammunition { .. }))
+            {
+                continue;
+            }
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 0);
+            // Three of the blast finish the arm; five reach the torso's eight internal points,
+            // and its armor is untouched.
+            let torso = &unit.sections()[&MechSection::LeftTorso];
+            assert_eq!((torso.armor, torso.internal), (8, 3), "seed {seed}");
+            exercised = true;
+            break;
+        }
+        assert!(exercised);
+    }
+
+    /// A hit that destroys a location still sends its excess onward, whatever the critical
+    /// roll; a location with nothing explosive is not checked for criticals at all, and a
+    /// location with no eligible slot passes none inward (Total Warfare p. 124).
+    #[test]
+    fn destroyed_locations_keep_their_excess_and_their_criticals() {
+        for seed in 0..=63 {
+            let (mut world, id) = world(false, seed);
+            let unit = world.btech.constructed.get_mut(&id).unwrap();
+            for location in unit.critical_candidates(MechSection::LeftArm) {
+                unit.destroy_critical(location).unwrap();
+            }
+            let torso_candidates = unit.critical_candidates(MechSection::LeftTorso);
+            // Fifteen damage: four armor, six internal, five on to the torso's armor.
+            strike(&mut world, id, 15, WeaponEffect::Conventional);
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 0);
+            let torso = &unit.sections()[&MechSection::LeftTorso];
+            assert_eq!((torso.armor, torso.internal), (3, 8), "seed {seed}");
+            assert_eq!(
+                unit.critical_candidates(MechSection::LeftTorso),
+                torso_candidates,
+                "seed {seed}"
+            );
+        }
+        for seed in 0..=63 {
+            let (mut world, id) = world(false, seed);
+            let mut dice = world.btech.constructed_units()[&id].dice.clone();
+            strike(&mut world, id, 15, WeaponEffect::Conventional);
+            // The arm's entry and the torso's transfer entry are the only rolls made.
+            dice.two_d6();
+            dice.two_d6();
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.dice, dice, "seed {seed}");
+            let torso = &unit.sections()[&MechSection::LeftTorso];
+            assert_eq!((torso.armor, torso.internal), (3, 8), "seed {seed}");
+        }
+    }
+
+    /// A location the hit destroys is checked when it held explosive slots: a critical on the
+    /// bin explodes into the next location's structure ahead of the hit's own excess, and any
+    /// other critical is discarded.
+    #[test]
+    fn destroyed_locations_still_detonate_their_ammunition() {
+        let mut exercised = [false, false];
+        for seed in 0..=255 {
+            let (mut world, id) = armed_arm_world(1, seed);
+            let report = resolve_in_candidate(
+                &mut world,
+                id,
+                Hit {
+                    section: MechSection::LeftArm,
+                    rear_armor: false,
+                    through_armor_critical: false,
+                },
+                15,
+                None,
+                Some(WeaponEffect::Conventional),
+            )
+            .unwrap();
+            let unit = &world.btech.constructed_units()[&id];
+            assert_eq!(unit.sections()[&MechSection::LeftArm].internal, 0);
+            let exploded = report
+                .impact
+                .criticals
+                .iter()
+                .any(|(_, loss)| matches!(loss, CriticalLoss::Ammunition { .. }));
+            // Nothing but the bin can be struck in a destroyed location.
+            assert_eq!(
+                report.impact.criticals.len(),
+                usize::from(exploded),
+                "seed {seed}"
+            );
+            let torso = &unit.sections()[&MechSection::LeftTorso];
+            if exploded {
+                // Eight blast points take the torso's eight internal; the hit's five then
+                // pass through the destroyed torso to the center torso's armor.
+                assert_eq!(torso.internal, 0, "seed {seed}");
+                assert_eq!(
+                    unit.sections()[&MechSection::CenterTorso].armor,
+                    5,
+                    "seed {seed}"
+                );
+            } else {
+                assert_eq!((torso.armor, torso.internal), (3, 8), "seed {seed}");
+            }
+            exercised[usize::from(exploded)] = true;
+        }
+        assert_eq!(exercised, [true, true]);
     }
 
     /// A glancing blow's penalty lowers the structure critical roll by two.
